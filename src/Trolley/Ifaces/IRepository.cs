@@ -179,7 +179,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
 
     #region QueryFirst/Query
     /// <summary>
-    /// 使用原始SQL语句rawSql和参数parameters查询数据，并返回满足条件的第一条记录，记录不存在时返回TEntity类型的默认值
+    /// 使用原始SQL语句rawSql和参数parameters查询数据，并返回满足条件的第一条记录，记录不存在时返回TEntity类型的默认值，不支持分表
     /// </summary>
     /// <typeparam name="TEntity">实体TEntity类型</typeparam>
     /// <param name="rawSql">原始SQL</param>
@@ -187,7 +187,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
     TEntity QueryFirst<TEntity>(string rawSql, object parameters = null);
     /// <summary>
-    /// 使用原始SQL语句rawSql和参数parameters查询数据，并返回满足条件的第一条记录，记录不存在时返回TEntity类型的默认值
+    /// 使用原始SQL语句rawSql和参数parameters查询数据，并返回满足条件的第一条记录，记录不存在时返回TEntity类型的默认值，不支持分表
     /// </summary>
     /// <typeparam name="TEntity">返回的实体类型</typeparam>
     /// <param name="rawSql">查询SQL</param>
@@ -196,7 +196,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
     Task<TEntity> QueryFirstAsync<TEntity>(string rawSql, object parameters = null, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 从表TEntity中，查询与whereObj对象各属性值都相等的第一条记录，记录不存在时返回TEntity类型的默认值，用法：
+    /// 从表TEntity中，查询与whereObj对象各属性值都相等的第一条记录，记录不存在时返回TEntity类型的默认值，不支持分表，用法：
     /// <code>
     /// repository.QueryFirst&lt;User&gt;(new { Id = 1, IsEnabled = true })
     /// SQL: SELECT a.`Id`,a.`Name`, ... FROM `sys_user` a WHERE a.`Id`=@Id AND a.`IsEnabled`=@IsEnabled
@@ -207,7 +207,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
     TEntity QueryFirst<TEntity>(object whereObj);
     /// <summary>
-    /// 从表TEntity中，查询与whereObj对象各属性值都相等的第一条记录，记录不存在时返回TEntity类型的默认值，用法：
+    /// 从表TEntity中，查询与whereObj对象各属性值都相等的第一条记录，记录不存在时返回TEntity类型的默认值，不支持分表，用法：
     /// <code>
     /// await repository.QueryFirstAsync&lt;User&gt;(new { Id = 1, IsEnabled = true })
     /// SQL: SELECT a.`Id`,a.`Name`, ... FROM `sys_user` a WHERE a.`Id`=@Id AND a.`IsEnabled`=@IsEnabled
@@ -219,7 +219,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
     Task<TEntity> QueryFirstAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 使用原始SQL语句rawSql和参数parameters查询数据，并返回满足条件的所有TEntity实体记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表
+    /// 使用原始SQL语句rawSql和参数parameters查询数据，并返回满足条件的所有TEntity实体记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，不支持分表
     /// </summary>
     /// <typeparam name="TEntity">实体TEntity类型</typeparam>
     /// <param name="rawSql">原始SQL</param>
@@ -227,7 +227,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <returns>返回查询结果，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表</returns>
     List<TEntity> Query<TEntity>(string rawSql, object parameters = null);
     /// <summary>
-    /// 使用原始SQL语句rawSql和参数parameters查询数据，并返回满足条件的所有TEntity实体记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表
+    /// 使用原始SQL语句rawSql和参数parameters查询数据，并返回满足条件的所有TEntity实体记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，不支持分表
     /// </summary>
     /// <typeparam name="TEntity">实体TEntity类型</typeparam>
     /// <param name="rawSql">原始SQL</param>
@@ -236,7 +236,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <returns>返回查询结果，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表</returns>
     Task<List<TEntity>> QueryAsync<TEntity>(string rawSql, object parameters = null, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 从表TEntity中，查询与whereObj对象各属性值都相等的所有记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，用法：
+    /// 从表TEntity中，查询与whereObj对象各属性值都相等的所有记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，不支持分表，用法：
     /// <code>
     /// repository.Query&lt;User&gt;(new { Id = 1, IsEnabled = true })
     /// SQL: SELECT a.`Id`,a.`Name`, ... FROM `sys_user` a WHERE a.`Id`=@Id AND a.`IsEnabled`=@IsEnabled
@@ -247,7 +247,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <returns>返回查询结果，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表</returns>
     List<TEntity> Query<TEntity>(object whereObj);
     /// <summary>
-    /// 从表TEntity中，查询与whereObj对象各属性值都相等的所有记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，用法：
+    /// 从表TEntity中，查询与whereObj对象各属性值都相等的所有记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，不支持分表，用法：
     /// <code>
     /// await repository.QueryAsync&lt;User&gt;(new { Id = 1, IsEnabled = true })
     /// SQL: SELECT a.`Id`,a.`Name`, ... FROM `sys_user` a WHERE a.`Id`=@Id AND a.`IsEnabled`=@IsEnabled
@@ -262,7 +262,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
 
     #region Get
     /// <summary>
-    /// 根据主键信息查询表TEntity中数据，记录不存在时返回TEntity类型的默认值，用法：
+    /// 根据主键信息查询表TEntity中数据，记录不存在时返回TEntity类型的默认值，不支持分表，用法：
     /// <code>
     /// repository.Get&lt;User&gt;(1) //或是
     /// repository.Get&lt;User&gt;(new { Id = 1 }) //或是
@@ -276,7 +276,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <returns>返回实体对象或是TEntity类型默认值</returns>
     TEntity Get<TEntity>(object whereObj);
     /// <summary>
-    /// 根据主键信息查询表TEntity中数据，记录不存在时返回TEntity类型的默认值，用法：
+    /// 根据主键信息查询表TEntity中数据，记录不存在时返回TEntity类型的默认值，不支持分表，用法：
     /// <code>
     /// await repository.GetAsync&lt;User&gt;(1) //或是
     /// await repository.GetAsync&lt;User&gt;(new { Id = 1 }) //或是
@@ -294,7 +294,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
 
     #region Exists
     /// <summary>
-    /// 判断是否存在表TEntity中满足与whereObj对象各属性值都相等的记录，存在返回true，否则返回false。
+    /// 判断是否存在表TEntity中满足与whereObj对象各属性值都相等的记录，存在返回true，否则返回false，不支持分表
     /// <code>
     /// repository.Exists&lt;User&gt;(new { Id = 1, IsEnabled = true })
     /// SQL: SELECT COUNT(1) FROM `sys_user` WHERE `Id`=@Id AND `IsEnabled`=@IsEnabled
@@ -305,7 +305,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <returns>返回是否存在的布尔值</returns>
     bool Exists<TEntity>(object whereObj);
     /// <summary>
-    /// 判断是否存在表TEntity中满足与whereObj对象各属性值都相等的记录，存在返回true，否则返回false。
+    /// 判断是否存在表TEntity中满足与whereObj对象各属性值都相等的记录，存在返回true，否则返回false，不支持分表
     /// <code>
     /// await repository.ExistsAsync&lt;User&gt;(new { Id = 1, IsEnabled = true })
     /// SQL: SELECT COUNT(1) FROM `sys_user` WHERE `Id`=@Id AND `IsEnabled`=@IsEnabled
@@ -317,14 +317,14 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <returns>返回是否存在的布尔值</returns>
     Task<bool> ExistsAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 判断TEntity表是否存在满足predicate条件的记录，存在返回true，否则返回false。
+    /// 判断TEntity表是否存在满足predicate条件的记录，存在返回true，否则返回false，不支持分表
     /// </summary>
     /// <typeparam name="TEntity">实体对象类型</typeparam>
     /// <param name="predicate">where条件表达式</param>
     /// <returns>返回是否存在的布尔值</returns>
     bool Exists<TEntity>(Expression<Func<TEntity, bool>> predicate);
     /// <summary>
-    /// 判断TEntity表是否存在满足predicate条件的记录，存在返回true，否则返回false。
+    /// 判断TEntity表是否存在满足predicate条件的记录，存在返回true，否则返回false，不支持分表
     /// </summary>
     /// <typeparam name="TEntity">实体对象类型</typeparam>
     /// <param name="predicate">where条件表达式</param>
@@ -341,7 +341,8 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <returns>返回插入对象</returns>
     ICreate<TEntity> Create<TEntity>();
     /// <summary>
-    /// 使用插入对象部分字段插入，可单条也可多条数据插入，自动增长栏位，不需要传入，多条可分批次完成，每次插入bulkCount条数，批量插入,采用多表值方式，用法：
+    /// 使用插入对象部分字段插入，可单条也可多条数据插入，自动增长栏位，不需要传入，多条可分批次完成，每次插入bulkCount条数，批量插入,采用多表值方式，
+    /// 支持分表，在分表的情况下，会根据分表依赖的字段把数据自动插入到指定的分表中，如果插入的参数未包含分表的字段则会抛出异常，用法：
     /// <code>
     /// repository.Create&lt;User&gt;(new
     /// {
@@ -362,7 +363,8 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <returns>返回插入行数</returns>
     int Create<TEntity>(object insertObjs, int bulkCount = 500);
     /// <summary>
-    /// 使用插入对象部分字段插入，可单条也可多条数据插入，自动增长栏位，不需要传入，多条可分批次完成，每次插入bulkCount条数，批量插入,采用多表值方式，用法：
+    /// 使用插入对象部分字段插入，可单条也可多条数据插入，自动增长栏位，不需要传入，多条可分批次完成，每次插入bulkCount条数，批量插入,采用多表值方式，
+    /// 支持分表，在分表的情况下，会根据分表依赖的字段把数据自动插入到指定的分表中，如果插入的参数未包含分表的字段则会抛出异常，用法：
     /// <code>
     /// await repository.CreateAsync&lt;User&gt;(new
     /// {
@@ -384,14 +386,14 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <returns>返回插入行数</returns>
     Task<int> CreateAsync<TEntity>(object insertObjs, int bulkCount = 500, CancellationToken cancellationToken = default);
     /// <summary>
-    ///  使用插入对象部分字段插入，并返回自增长ID，自动增长栏位，不需要传入
+    ///  使用插入对象部分字段插入，并返回自增长ID，自动增长栏位，不需要传入，支持分表，在分表的情况下，会根据分表依赖的字段把数据自动插入到指定的分表中，如果插入的参数未包含分表的字段则会抛出异常
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="insertObj">插入对象，可以是匿名对象、实体对象、字典</param>
     /// <returns>返回自增长ID</returns>
     int CreateIdentity<TEntity>(object insertObj);
     /// <summary>
-    ///  使用插入对象部分字段插入，并返回自增长ID，自动增长栏位，不需要传入
+    ///  使用插入对象部分字段插入，并返回自增长ID，自动增长栏位，不需要传入，支持分表，在分表的情况下，会根据分表依赖的字段把数据自动插入到指定的分表中，如果插入的参数未包含分表的字段则会抛出异常
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="insertObj">插入对象，可以是匿名对象、实体对象、字典</param>
@@ -399,14 +401,14 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <returns>返回自增长ID</returns>
     Task<int> CreateIdentityAsync<TEntity>(object insertObj, CancellationToken cancellationToken = default);
     /// <summary>
-    ///  使用插入对象部分字段插入，并返回自增长ID，自动增长栏位，不需要传入
+    ///  使用插入对象部分字段插入，并返回自增长ID，自动增长栏位，不需要传入，支持分表，在分表的情况下，会根据分表依赖的字段把数据自动插入到指定的分表中，如果插入的参数未包含分表的字段则会抛出异常
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="insertObj">插入对象，可以是匿名对象、实体对象、字典</param>
     /// <returns>返回自增长ID</returns>
     long CreateIdentityLong<TEntity>(object insertObj);
     /// <summary>
-    ///  使用插入对象部分字段插入，并返回自增长ID，自动增长栏位，不需要传入
+    ///  使用插入对象部分字段插入，并返回自增长ID，自动增长栏位，不需要传入，支持分表，在分表的情况下，会根据分表依赖的字段把数据自动插入到指定的分表中，如果插入的参数未包含分表的字段则会抛出异常
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="insertObj">插入对象，可以是匿名对象、实体对象、字典</param>
@@ -423,7 +425,8 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <returns>返回更新对象</returns>
     IUpdate<TEntity> Update<TEntity>();
     /// <summary>
-    /// 使用更新对象updateObjs部分字段By主键更新，updateObjs对象内除主键字段外所有与当前实体表TEntity名称相同的栏位都将参与更新，updateObjs对象必须包含主键字段，可单条也可多条数据更新，多条可分批次完成，每次更新bulkCount条数，用法：
+    /// 使用更新对象updateObjs部分字段By主键更新，updateObjs对象内除主键字段外所有与当前实体表TEntity名称相同的栏位都将参与更新，updateObjs对象必须包含主键字段，可单条也可多条数据更新，
+    /// 多条可分批次完成，每次更新bulkCount条数，不支持分表，用法：
     /// <code>
     /// repository.Update&lt;User&gt;(new { Id = 1, Name = "kevin"});
     /// repository.Update&lt;User&gt;(new [] { new { Id = 1, Name = "kevin"}, new { Id = 2, Name = "cindy"} }, 200);
@@ -436,7 +439,8 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <returns>返回更新对象</returns> 
     int Update<TEntity>(object updateObjs, int bulkCount = 500);
     /// <summary>
-    /// 使用更新对象updateObj部分字段By主键更新，updateObj对象内除主键字段外所有与当前实体表TEntity名称相同的栏位都将参与更新，updateObj对象必须包含主键字段，可单条也可多条数据更新，多条可分批次完成，每次更新bulkCount条数，用法：
+    /// 使用更新对象updateObj部分字段By主键更新，updateObj对象内除主键字段外所有与当前实体表TEntity名称相同的栏位都将参与更新，updateObj对象必须包含主键字段，可单条也可多条数据更新，
+    /// 多条可分批次完成，每次更新bulkCount条数，不支持分表，用法：
     /// <code>
     /// repository.UpdateAsync&lt;User&gt;(new { Id = 1, Name = "kevin", SourceType = DBNull.Value});
     /// repository.UpdateAsync&lt;User&gt;(new [] { new { Id = 1, Name = "kevin"}, new { Id = 2, Name = "cindy"} }, 200);
@@ -459,7 +463,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <returns>返回删除对象</returns>
     IDelete<TEntity> Delete<TEntity>();
     /// <summary>
-    /// 根据主键删除数据，可以删除一条也可以删除多条记录，keys可以是主键值也可以是包含主键值的匿名对象，用法：
+    /// 根据主键删除数据，可以删除一条也可以删除多条记录，keys可以是主键值也可以是包含主键值的匿名对象，不支持分表，用法：
     /// <code>
     /// 单个删除,下面两个方法等效
     /// repository.Delete&lt;User&gt;(1);
@@ -474,7 +478,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <returns>返回删除行数</returns>
     int Delete<TEntity>(object whereKeys);
     /// <summary>
-    /// 根据主键删除数据，可以删除一条也可以删除多条记录，keys可以是主键值也可以是包含主键值的匿名对象，用法：
+    /// 根据主键删除数据，可以删除一条也可以删除多条记录，keys可以是主键值也可以是包含主键值的匿名对象，不支持分表，用法：
     /// <code>
     /// 单个删除,下面两个方法等效
     /// await repository.DeleteAsync&lt;User&gt;(1);

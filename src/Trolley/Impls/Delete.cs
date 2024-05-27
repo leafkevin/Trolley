@@ -25,31 +25,31 @@ public class Delete<TEntity> : IDelete<TEntity>
     #endregion
 
     #region Sharding
-    public IDelete<TEntity> UseTable(params string[] tableNames)
+    public virtual IDelete<TEntity> UseTable(params string[] tableNames)
     {
         var entityType = typeof(TEntity);
         this.Visitor.UseTable(entityType, tableNames);
         return this;
     }
-    public IDelete<TEntity> UseTable(Func<string, bool> tableNamePredicate)
+    public virtual IDelete<TEntity> UseTable(Func<string, bool> tableNamePredicate)
     {
         var entityType = typeof(TEntity);
         this.Visitor.UseTable(entityType, tableNamePredicate);
         return this;
     }
-    public IDelete<TEntity> UseTableBy(object field1Value, object field2Value = null)
+    public virtual IDelete<TEntity> UseTableBy(object field1Value, object field2Value = null)
     {
         var entityType = typeof(TEntity);
         this.Visitor.UseTableBy(entityType, field1Value, field2Value);
         return this;
     }
-    public IDelete<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue)
+    public virtual IDelete<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
         var entityType = typeof(TEntity);
         this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
         return this;
     }
-    public IDelete<TEntity> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public virtual IDelete<TEntity> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         var entityType = typeof(TEntity);
         this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
@@ -95,8 +95,7 @@ public class Deleted<TEntity> : IDeleted<TEntity>
     #endregion
 
     #region Execute
-    public int Execute()
-        => this.DbContext.Execute(f => f.CommandText = this.Visitor.BuildCommand(f));
+    public int Execute() => this.DbContext.Execute(f => f.CommandText = this.Visitor.BuildCommand(f));
     public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
         => await this.DbContext.ExecuteAsync(f => f.CommandText = this.Visitor.BuildCommand(f), cancellationToken);
     #endregion

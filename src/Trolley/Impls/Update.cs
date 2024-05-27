@@ -26,31 +26,31 @@ public class Update<TEntity> : IUpdate<TEntity>
     #endregion
 
     #region Sharding
-    public IUpdate<TEntity> UseTable(params string[] tableNames)
+    public virtual IUpdate<TEntity> UseTable(params string[] tableNames)
     {
         var entityType = typeof(TEntity);
         this.Visitor.UseTable(entityType, tableNames);
         return this;
     }
-    public IUpdate<TEntity> UseTable(Func<string, bool> tableNamePredicate)
+    public virtual IUpdate<TEntity> UseTable(Func<string, bool> tableNamePredicate)
     {
         var entityType = typeof(TEntity);
         this.Visitor.UseTable(entityType, tableNamePredicate);
         return this;
     }
-    public IUpdate<TEntity> UseTableBy(object field1Value, object field2Value = null)
+    public virtual IUpdate<TEntity> UseTableBy(object field1Value, object field2Value = null)
     {
         var entityType = typeof(TEntity);
         this.Visitor.UseTableBy(entityType, field1Value, field2Value);
         return this;
     }
-    public IUpdate<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue)
+    public virtual IUpdate<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
         var entityType = typeof(TEntity);
         this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
         return this;
     }
-    public IUpdate<TEntity> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public virtual IUpdate<TEntity> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         var entityType = typeof(TEntity);
         this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
@@ -185,7 +185,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
                     foreach (var updateObj in updateObjs)
                     {
                         if (index > 0) sqlBuilder.Append(';');
-                        commandInitializer.Invoke(sqlBuilder, updateObj, index.ToString());
+                        commandInitializer.Invoke(command.Parameters, sqlBuilder, updateObj, index.ToString());
                         if (index >= bulkCount)
                         {
                             command.CommandText = sqlBuilder.ToString();
@@ -254,7 +254,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
                     foreach (var updateObj in updateObjs)
                     {
                         if (index > 0) sqlBuilder.Append(';');
-                        commandInitializer.Invoke(sqlBuilder, updateObj, index.ToString());
+                        commandInitializer.Invoke(command.Parameters, sqlBuilder, updateObj, index.ToString());
                         if (index >= bulkCount)
                         {
                             command.CommandText = sqlBuilder.ToString();
@@ -313,37 +313,8 @@ public class Updated<TEntity> : IUpdated<TEntity>
     #region ToSql
     public string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        dbParameters = null;
-        string sql = null;
         using var command = this.DbContext.CreateCommand();
-        switch (this.Visitor.ActionMode)
-        {
-            case ActionMode.Bulk:
-                int index = 0;
-                var sqlBuilder = new StringBuilder();
-                (var updateObjs, var bulkCount, var commandInitializer, var firstCommandInitializer) = this.Visitor.BuildSetBulk(command);
-                firstCommandInitializer?.Invoke(command.Parameters);
-                foreach (var updateObj in updateObjs)
-                {
-                    if (index > 0) sqlBuilder.Append(';');
-                    commandInitializer.Invoke(sqlBuilder, updateObj, index.ToString());
-                    if (index >= bulkCount)
-                    {
-                        sql = sqlBuilder.ToString();
-                        break;
-                    }
-                    index++;
-                }
-                if (index > 0)
-                    sql = sqlBuilder.ToString();
-                break;
-            default:
-                if (!hasWhere)
-                    throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
-
-                sql = this.Visitor.BuildCommand(command);
-                break;
-        }
+        var sql = this.Visitor.BuildCommand(command);
         dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
         return sql;

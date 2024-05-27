@@ -9,6 +9,7 @@ namespace Trolley;
 
 public class DeleteVisitor : SqlVisitor, IDeleteVisitor
 {
+    private bool isWhereKeys = false;
     private List<CommandSegment> deferredSegments = new();
     public DeleteVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", List<IDbDataParameter> dbParameters = null)
     {
@@ -38,26 +39,31 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
     {
         string sql = null;
         this.DbParameters = command.Parameters;
-        foreach (var deferredSegment in this.deferredSegments)
+        if (this.isWhereKeys)
+            sql = this.VisitWhereWith(command, this.deferredSegments[0].Value);
+        else
         {
-            switch (deferredSegment.Type)
+            foreach (var deferredSegment in this.deferredSegments)
             {
-                case "WhereWith":
-                    sql = this.VisitWhereWith(command, deferredSegment.Value);
-                    break;
-                case "Where":
-                    this.VisitWhere(deferredSegment.Value as Expression);
-                    break;
-                case "And":
-                    this.VisitAnd(deferredSegment.Value as Expression);
-                    break;
+                switch (deferredSegment.Type)
+                {
+                    case "Where":
+                        this.VisitWhere(deferredSegment.Value as Expression);
+                        break;
+                    case "And":
+                        this.VisitAnd(deferredSegment.Value as Expression);
+                        break;
+                }
             }
-        }
-        if (sql == null)
-        {
             var entityMapper = this.Tables[0].Mapper;
-            var entityTableName = this.OrmProvider.GetTableName(entityMapper.TableName);
-            var builder = new StringBuilder($"DELETE FROM {entityTableName}");
+            var tableName = entityMapper.TableName;
+            if (this.ShardingProvider.TryGetShardingTable(entityMapper.EntityType, out _))
+            {
+                if (string.IsNullOrEmpty(this.Tables[0].Body))
+                    throw new Exception($"实体表{entityMapper.EntityType.FullName}有配置分表，当前操作未指定分表，请调用UseTable或UseTableBy方法指定分表");
+                tableName = this.Tables[0].Body;
+            }
+            var builder = new StringBuilder($"DELETE FROM {this.OrmProvider.GetTableName(tableName)}");
             if (!string.IsNullOrEmpty(this.WhereSql))
                 builder.Append(" WHERE " + this.WhereSql);
             sql = builder.ToString();
@@ -89,6 +95,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
     }
     public virtual IDeleteVisitor WhereWith(object wherKeys)
     {
+        this.isWhereKeys = true;
         this.deferredSegments.Add(new CommandSegment
         {
             Type = "WhereWith",
@@ -253,73 +260,70 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
     {
         string sql = null;
         var entityType = this.Tables[0].EntityType;
+        var entityMapper = this.Tables[0].Mapper;
+        var tableName = entityMapper.TableName;
+        if (this.ShardingProvider.TryGetShardingTable(entityType, out _))
+        {
+            if (string.IsNullOrEmpty(this.Tables[0].Body))
+                throw new Exception($"实体表{entityType.FullName}有配置分表，当前操作未指定分表，请调用UseTable或UseTableBy方法指定分表");
+            tableName = this.Tables[0].Body;
+        }
+
         var isBulk = whereKeys is IEnumerable && whereKeys is not string && whereKeys is not IDictionary<string, object>;
         if (isBulk)
         {
             int index = 0;
-            var builder = new StringBuilder();
-            (var isMultiKeys, var headSql, var commandInitializer) = RepositoryHelper.BuildDeleteBulkCommandInitializer(this.OrmProvider, this.MapProvider, entityType, whereKeys);
+            string separator = null;
             var entities = whereKeys as IEnumerable;
+            Type whereObjType = null;
+            foreach (var entity in entities)
+            {
+                whereObjType = entity.GetType();
+                break;
+            }
+
+            (var isMultiKeys, _, var headSqlSetter, var commandInitializer) =
+                RepositoryHelper.BuildDeleteBulkCommandInitializer(this.OrmProvider, this.MapProvider, entityType, whereObjType);
+            var sqlBuilder = new StringBuilder();
+            if (isMultiKeys) separator = ";";
+            else
+            {
+                separator = ",";
+                headSqlSetter(sqlBuilder, tableName);
+            }
             if (this.IsMultiple)
             {
-                if (isMultiKeys)
+                foreach (var entity in entities)
                 {
-                    foreach (var entity in entities)
-                    {
-                        if (index > 0) builder.Append(';');
-                        commandInitializer.Invoke(command.Parameters, this.OrmProvider, builder, entity, $"_m{this.CommandIndex}_{index}");
-                        index++;
-                    }
-                }
-                else
-                {
-                    builder.Append(headSql);
-                    foreach (var entity in entities)
-                    {
-                        if (index > 0) builder.Append(',');
-                        commandInitializer.Invoke(command.Parameters, this.OrmProvider, builder, entity, $"_m{index}");
-                        index++;
-                    }
-                    builder.Append(')');
+                    if (index > 0) sqlBuilder.Append(separator);
+                    commandInitializer.Invoke(command.Parameters, sqlBuilder, this.OrmProvider, tableName, entity, $"_m{this.CommandIndex}_{index}");
+                    index++;
                 }
             }
             else
             {
-                if (isMultiKeys)
+                foreach (var entity in entities)
                 {
-                    foreach (var entity in entities)
-                    {
-                        if (index > 0) builder.Append(';');
-                        commandInitializer.Invoke(command.Parameters, this.OrmProvider, builder, entity, $"{index}");
-                        index++;
-                    }
-                }
-                else
-                {
-                    builder.Append(headSql);
-                    foreach (var entity in entities)
-                    {
-                        if (index > 0) builder.Append(',');
-                        commandInitializer.Invoke(command.Parameters, this.OrmProvider, builder, entity, $"{index}");
-                        index++;
-                    }
-                    builder.Append(')');
+                    if (index > 0) sqlBuilder.Append(separator);
+                    commandInitializer.Invoke(command.Parameters, sqlBuilder, this.OrmProvider, tableName, entity, $"{index}");
+                    index++;
                 }
             }
-            sql = builder.ToString();
+            if (!isMultiKeys) sqlBuilder.Append(')');
+            sql = sqlBuilder.ToString();
         }
         else
         {
-            var commandInitializer = RepositoryHelper.BuildDeleteCommandInitializer(this.OrmProvider, this.MapProvider, entityType, whereKeys, this.IsMultiple);
+            (_, var commandInitializer) = RepositoryHelper.BuildDeleteCommandInitializer(this.OrmProvider, this.MapProvider, entityType, whereKeys, this.IsMultiple);
             if (this.IsMultiple)
             {
-                var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string, string>;
-                sql = typedCommandInitializer.Invoke(command.Parameters, this.OrmProvider, whereKeys, $"_m{this.CommandIndex}");
+                var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, string, object, string, string>;
+                sql = typedCommandInitializer.Invoke(command.Parameters, this.OrmProvider, tableName, whereKeys, $"_m{this.CommandIndex}");
             }
             else
             {
-                var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
-                sql = typedCommandInitializer.Invoke(command.Parameters, this.OrmProvider, whereKeys);
+                var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, string, object, string>;
+                sql = typedCommandInitializer.Invoke(command.Parameters, this.OrmProvider, tableName, whereKeys);
             }
         }
         return sql;

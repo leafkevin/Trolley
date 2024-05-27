@@ -46,7 +46,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                     foreach (var updateObj in updateObjs)
                     {
                         if (index > 0) sqlBuilder.Append(';');
-                        commandInitializer.Invoke(sqlBuilder, updateObj, index.ToString());
+                        commandInitializer.Invoke(command.Parameters, sqlBuilder, updateObj, index.ToString());
                         if (index >= bulkCount)
                         {
                             command.CommandText = sqlBuilder.ToString();
@@ -199,7 +199,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                     foreach (var updateObj in updateObjs)
                     {
                         if (index > 0) sqlBuilder.Append(';');
-                        commandInitializer.Invoke(sqlBuilder, updateObj, index.ToString());
+                        commandInitializer.Invoke(command.Parameters, sqlBuilder, updateObj, index.ToString());
                         if (index >= bulkCount)
                         {
                             command.CommandText = sqlBuilder.ToString();

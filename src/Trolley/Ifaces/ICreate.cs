@@ -21,17 +21,11 @@ public interface ICreate<TEntity>
 
     #region Sharding
     /// <summary>
-    /// 使用固定表名确定TEntity表一个或多个分表名执行插入操作，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 使用固定表名确定TEntity表分表名执行插入操作，完整的表名，如：.UseTable("sys_order_202001")，按月分表
     /// </summary>
-    /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
+    /// <param name="tableName">完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回插入对象</returns>
-    ICreate<TEntity> UseTable(params string[] tableNames);
-    /// <summary>
-    /// 使用表名断言确定TEntity表一个或多个分表执行插入操作，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
-    /// </summary>
-    /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
-    /// <returns>返回插入对象</returns>
-    ICreate<TEntity> UseTable(Func<string, bool> tableNamePredicate);
+    ICreate<TEntity> UseTable(string tableName);
     /// <summary>
     /// 根据字段值确定TEntity表分表名执行插入操作，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
     /// </summary>
@@ -39,23 +33,6 @@ public interface ICreate<TEntity>
     /// <param name="field2Value">字段2值</param>
     /// <returns>返回插入对象</returns>
     ICreate<TEntity> UseTableBy(object field1Value, object field2Value = null);
-    /// <summary>
-    /// 根据单个字段值范围确定TEntity表分表名执行插入操作，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Parse("2020-01-01"), DateTime.Now)
-    /// </summary>
-    /// <param name="beginFieldValue">字段起始值</param>
-    /// <param name="endFieldValue">字段结束值</param>
-    /// <returns>返回插入对象</returns>
-    ICreate<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue);
-    /// <summary>
-    /// 根据1个固定字段值和1个字段值范围确定TEntity表分表名执行插入操作，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTable&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
-    /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
-    /// </summary>
-    /// <param name="fieldValue1">第一个值</param>
-    /// <param name="fieldValue2">第二个值</param>
-    /// <param name="fieldValue3">第三个值</param>
-    /// <returns>返回插入对象</returns>
-    ICreate<TEntity> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
     #endregion
 
     #region WithBy

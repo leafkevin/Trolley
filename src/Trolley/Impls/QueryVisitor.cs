@@ -15,7 +15,7 @@ namespace Trolley;
 
 public class QueryVisitor : SqlVisitor, IQueryVisitor
 {
-    private static ConcurrentDictionary<int, (string, Action<IOrmProvider, StringBuilder, object>)> includeSqlGetterCache = new();
+    private static ConcurrentDictionary<int, (string, Action<StringBuilder, IOrmProvider, object>)> includeSqlGetterCache = new();
     private static ConcurrentDictionary<Type, Func<object>> typedListGetters = new();
     private static ConcurrentDictionary<Type, Action<object, IDataReader, IOrmProvider, IEntityMapProvider>> typedReaderElementSetters = new();
     private static ConcurrentDictionary<int, Action<object, object>> targetIncludeValuesSetters = new();
@@ -84,11 +84,13 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         readerFields = this.ReaderFields;
 
+        string sql = null;
         if (!string.IsNullOrEmpty(this.UnionSql))
         {
             builder.Append(this.UnionSql);
-            var sql = builder.ToString();
+            sql = builder.ToString();
             builder.Clear();
+            builder = null;
             return sql;
         }
         var headSql = builder.ToString();
@@ -110,8 +112,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         builder.Clear();
         string tableSql = null;
-        if (this.IsSharding && this.ShardingTables == null)
-            this.ShardingTables = new();
 
         if (this.Tables.Count > 0)
         {
@@ -121,16 +121,21 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 string tableName = string.Empty;
                 //有分表的实体表才设置ShardingId，并添加到ShardingTables中
                 //有分表的子查询当作普通表处理，因为子查询中的分表已经处理过了
-                if (tableSegment.IsSharding && tableSegment.TableType == TableType.Entity)
+                if (this.ShardingProvider.TryGetShardingTable(tableSegment.EntityType, out _))
                 {
-                    var shardingTable = this.ShardingTables.Find(f => f.EntityType == tableSegment.EntityType);
-                    if (shardingTable == null)
+                    if (!tableSegment.IsSharding) throw new Exception($"实体表{tableSegment.EntityType.FullName}有配置分表，当前操作未指定分表，请调用UseTable或UseTableBy方法指定分表");
+                    if (tableSegment.ShardingType > ShardingTableType.TableName && tableSegment.TableType == TableType.Entity)
                     {
-                        tableSegment.ShardingId = Guid.NewGuid().ToString("N");
-                        this.ShardingTables.Add(tableSegment);
-                        shardingTable = tableSegment;
+                        var shardingTable = this.ShardingTables.Find(f => f.EntityType == tableSegment.EntityType);
+                        if (shardingTable == null)
+                        {
+                            tableSegment.ShardingId = Guid.NewGuid().ToString("N");
+                            this.ShardingTables.Add(tableSegment);
+                            shardingTable = tableSegment;
+                        }
+                        tableName = $"__SHARDING_{shardingTable.ShardingId}_{shardingTable.Mapper.TableName}";
                     }
-                    tableName = $"__SHARDING_{shardingTable.ShardingId}_{shardingTable.Mapper.TableName}";
+                    else tableName = tableSegment.Body;
                 }
                 else tableName = tableSegment.Body ?? tableSegment.Mapper.TableName;
                 if (tableSegment.TableType != TableType.FromQuery)
@@ -200,7 +205,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             builder.Insert(0, "SELECT * FROM (");
             builder.Append($") a");
         }
-        return builder.ToString();
+        sql = builder.ToString();
+        builder.Clear();
+        builder = null;
+        return sql;
     }
     public virtual string BuildCommandSql(Type targetType, out IDataParameterCollection dbParameters)
     {
@@ -241,11 +249,13 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             }
         }
         dbParameters = this.DbParameters;
+        string sql = null;
         if (!string.IsNullOrEmpty(this.UnionSql))
         {
             builder.Append(this.UnionSql);
-            var sql = builder.ToString();
+            sql = builder.ToString();
             builder.Clear();
+            builder = null;
             return sql;
         }
         var headSql = builder.ToString();
@@ -262,26 +272,28 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         else selectSql = builder.ToString();
 
         builder.Clear();
-
         string tableSql = null;
-        if (this.IsSharding && this.ShardingTables == null)
-            this.ShardingTables = new();
 
         if (this.Tables.Count > 0)
         {
             foreach (var tableSegment in this.Tables)
             {
                 string tableName = string.Empty;
-                if (tableSegment.IsSharding && tableSegment.TableType == TableType.Entity)
+                if (this.ShardingProvider.TryGetShardingTable(tableSegment.EntityType, out _))
                 {
-                    var shardingTable = this.ShardingTables.Find(f => f.EntityType == tableSegment.EntityType);
-                    if (shardingTable == null)
+                    if (!tableSegment.IsSharding) throw new Exception($"实体表{tableSegment.EntityType.FullName}有配置分表，当前操作未指定分表，请调用UseTable或UseTableBy方法指定分表");
+                    if (tableSegment.ShardingType > ShardingTableType.TableName && tableSegment.TableType == TableType.Entity)
                     {
-                        tableSegment.ShardingId = Guid.NewGuid().ToString("N");
-                        this.ShardingTables.Add(tableSegment);
-                        shardingTable = tableSegment;
+                        var shardingTable = this.ShardingTables.Find(f => f.EntityType == tableSegment.EntityType);
+                        if (shardingTable == null)
+                        {
+                            tableSegment.ShardingId = Guid.NewGuid().ToString("N");
+                            this.ShardingTables.Add(tableSegment);
+                            shardingTable = tableSegment;
+                        }
+                        tableName = $"__SHARDING_{shardingTable.ShardingId}_{shardingTable.Mapper.TableName}";
                     }
-                    tableName = $"__SHARDING_{shardingTable.ShardingId}_{shardingTable.Mapper.TableName}";
+                    else tableName = tableSegment.Body;
                 }
                 else tableName = tableSegment.Body ?? tableSegment.Mapper.TableName;
                 tableName = this.OrmProvider.GetTableName(tableName);
@@ -347,7 +359,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             builder.Insert(0, "SELECT * FROM (");
             builder.Append($") a");
         }
-        return builder.ToString();
+        sql = builder.ToString();
+        builder.Clear();
+        builder = null;
+        return sql;
     }
     public virtual string BuildCteTableSql(string tableName, out List<ReaderField> readerFields, out bool isRecursive)
     {
@@ -389,12 +404,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         builder.Append(')');
         this.IsUseCteTable = true;
         this.SelfRefQueryObj = null;
-        return builder.ToString();
-    }
-    public virtual bool IsNeedFetchShardingTables(string tableSchema, out string fetchSql)
-    {
-        fetchSql = null;
-        return false;
+        var sql = builder.ToString();
+        builder.Clear();
+        builder = null;
+        return sql;
     }
     public virtual void From(char tableAsStart = 'a', string suffixRawSql = null, params Type[] entityTypes)
     {
@@ -587,12 +600,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             this.TableAliases.Add(b[0].Name, this.LastIncludeSegment);
         }, isIncludeMany, filter);
     }
-    public virtual bool HasIncludeTables() => this.IncludeSegments != null && this.IncludeSegments.Count > 0;
+    public virtual bool HasIncludeTables() => this.IncludeTables != null && this.IncludeTables.Count > 0;
     public virtual bool BuildIncludeSql<TTarget>(Type targetType, TTarget target, out string sql)
     {
         sql = null;
         if (target == null) return false;
-        if (this.IncludeSegments == null)
+        if (this.IncludeTables == null)
         {
             if (this.deferredRefIncludeValuesSetters == null) return false;
             this.deferredRefIncludeValuesSetters.ForEach(f => f.Invoke(target));
@@ -600,7 +613,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         sql = this.BuildIncludeSql(targetType, (builder, foreignKeysSetter) =>
         {
-            foreignKeysSetter.Invoke(this.OrmProvider, builder, target);
+            foreignKeysSetter.Invoke(builder, this.OrmProvider, target);
             builder.Append(')');
         });
         return true;
@@ -609,7 +622,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     {
         sql = null;
         if (targets == null) return false;
-        if (this.IncludeSegments == null)
+        if (this.IncludeTables == null)
         {
             if (this.deferredRefIncludeValuesSetters == null) return false;
             targets.ForEach(t => this.deferredRefIncludeValuesSetters.ForEach(f => f.Invoke(t)));
@@ -621,38 +634,38 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             foreach (var target in targets)
             {
                 if (index > 0) builder.Append(',');
-                foreignKeysSetter.Invoke(this.OrmProvider, builder, target);
+                foreignKeysSetter.Invoke(builder, this.OrmProvider, target);
                 index++;
             }
             builder.Append(')');
         });
         return true;
     }
-    private string BuildIncludeSql(Type targetType, Action<StringBuilder, Action<IOrmProvider, StringBuilder, object>> sqlBuilderInitializer)
+    private string BuildIncludeSql(Type targetType, Action<StringBuilder, Action<StringBuilder, IOrmProvider, object>> sqlBuilderInitializer)
     {
         var builder = new StringBuilder();
-        for (int i = 0; i < this.IncludeSegments.Count; i++)
+        for (int i = 0; i < this.IncludeTables.Count; i++)
         {
             if (i > 0) builder.Append(';');
-            var includeSegment = this.IncludeSegments[i];
-            var rootPath = includeSegment.Path.Substring(0, 1);
+            var includeTableSegment = this.IncludeTables[i];
+            var rootPath = includeTableSegment.Path.Substring(0, 1);
             var rootReaderField = this.ReaderFields.Find(f => f.Path == rootPath);
             if (rootReaderField == null)
                 throw new NotSupportedException("Include导航属性成员，一定要Select对应的实体表，如：\r\nrepository.From<Order>()\r\n    .InnerJoin<User>((x, y) => x.SellerId == y.Id)\r\n    .Include((x, y) => x.Buyer)\r\n    .Include((x, y) => y.Company)\r\n    .Select((x, y) => new { Order = x, Seller = y, ... })");
             var firstMember = rootReaderField.TargetMember;
 
-            (var headSql, Action<IOrmProvider, StringBuilder, object> sqlInitializer) = this.BuildIncludeSqlGetter(targetType, firstMember, includeSegment);
+            (var headSql, Action<StringBuilder, IOrmProvider, object> sqlInitializer) = this.BuildIncludeSqlGetter(targetType, firstMember, includeTableSegment);
             builder.Append(headSql);
             sqlBuilderInitializer.Invoke(builder, sqlInitializer);
-            if (!string.IsNullOrEmpty(includeSegment.Filter))
-                builder.Append($" AND {includeSegment.Filter}");
+            if (!string.IsNullOrEmpty(includeTableSegment.Filter))
+                builder.Append($" AND {includeTableSegment.Filter}");
         }
         return builder.ToString();
     }
     public void SetIncludeValues<TTarget>(Type targetType, TTarget target, IDataReader reader)
     {
         var deferredInitializers = new List<(object IncludeValues, Action<object> SetIncludeValues)>();
-        foreach (var includeSegment in this.IncludeSegments)
+        foreach (var includeSegment in this.IncludeTables)
         {
             var navigationType = includeSegment.FromMember.NavigationType;
             var includeValues = this.CreateIncludeValues(navigationType);
@@ -679,7 +692,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public async Task SetIncludeValuesAsync<TTarget>(Type targetType, TTarget target, DbDataReader reader, CancellationToken cancellationToken = default)
     {
         var deferredInitializers = new List<(object IncludeValues, Action<object> SetIncludeValues)>();
-        foreach (var includeSegment in this.IncludeSegments)
+        foreach (var includeSegment in this.IncludeTables)
         {
             var navigationType = includeSegment.FromMember.NavigationType;
             var includeValues = this.CreateIncludeValues(navigationType);
@@ -706,7 +719,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual void SetIncludeValues<TTarget>(Type targetType, List<TTarget> targets, IDataReader reader)
     {
         var deferredInitializers = new List<(object IncludeValues, Action<object> SetIncludeValues)>();
-        foreach (var includeSegment in this.IncludeSegments)
+        foreach (var includeSegment in this.IncludeTables)
         {
             var navigationType = includeSegment.FromMember.NavigationType;
             var includeValues = this.CreateIncludeValues(navigationType);
@@ -733,7 +746,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual async Task SetIncludeValueAsync<TTarget>(Type targetType, List<TTarget> targets, DbDataReader reader, CancellationToken cancellationToken = default)
     {
         var deferredInitializers = new List<(object IncludeValues, Action<object> SetIncludeValues)>();
-        foreach (var includeSegment in this.IncludeSegments)
+        foreach (var includeSegment in this.IncludeTables)
         {
             var navigationType = includeSegment.FromMember.NavigationType;
             var includeValues = this.CreateIncludeValues(navigationType);
@@ -938,8 +951,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             {
                 if (fromSegment.Mapper.KeyMembers.Count > 1)
                     throw new NotSupportedException($"导航属性表，暂时不支持多个主键字段，实体：{fromSegment.EntityType.FullName}");
-                this.IncludeSegments ??= new();
-                this.IncludeSegments.Add(tableSegment = new TableSegment
+                this.IncludeTables ??= new();
+                this.IncludeTables.Add(tableSegment = new TableSegment
                 {
                     TableType = TableType.Include,
                     JoinType = "LEFT JOIN",
@@ -956,7 +969,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         return tableSegment;
     }
-    private (string, Action<IOrmProvider, StringBuilder, object>) BuildIncludeSqlGetter(Type targetType, MemberInfo firstMember, TableSegment includeSegment)
+    private (string, Action<StringBuilder, IOrmProvider, object>) BuildIncludeSqlGetter(Type targetType, MemberInfo firstMember, TableSegment includeSegment)
     {
         var cacheKey = this.GetIncludeKey(targetType, firstMember, includeSegment);
         return includeSqlGetterCache.GetOrAdd(cacheKey, f =>
@@ -982,7 +995,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             var foreignKeyMember = includeSegment.FromTable.Mapper.KeyMembers[0];
             Expression foreignKeyValueExpr = Expression.PropertyOrField(parentExpr, foreignKeyMember.MemberName);
 
-            //TODO:
+            //TODO:includeMany需要支持分表，UNION SQL处理
             foreignKeyValueExpr = Expression.Convert(foreignKeyValueExpr, typeof(object));
             var methedInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.GetQuotedValue));
             var fieldTypeExpr = Expression.Constant(foreignKeyMember.MemberType);
@@ -995,7 +1008,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             var tableName = this.OrmProvider.GetTableName(includeSegment.Mapper.TableName);
             var headSql = $"SELECT {fields} FROM {tableName} WHERE {foreignKey} IN (";
 
-            var sqlInitializer = Expression.Lambda<Action<IOrmProvider, StringBuilder, object>>(Expression.Block(blockParameters, blockBodies), ormProviderExpr, builderExpr, targetExpr).Compile();
+            var sqlInitializer = Expression.Lambda<Action<StringBuilder, IOrmProvider, object>>(Expression.Block(blockParameters, blockBodies), builderExpr, ormProviderExpr, targetExpr).Compile();
             return (headSql, sqlInitializer);
         });
     }
@@ -1513,7 +1526,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                             if (memberInfo is PropertyInfo propertyInfo && propertyInfo.GetSetMethod() == null)
                                 throw new NotSupportedException($"类型{propertyInfo.DeclaringType.FullName}的成员{propertyInfo.Name}不支持Set操作");
 
-                            var includeSegment = this.IncludeSegments.Find(f => f.Path == path);
+                            var includeSegment = this.IncludeTables.Find(f => f.Path == path);
                             var rootReaderField = this.ReaderFields.Find(f => f.Path == parameterName);
                             var refRootPath = rootReaderField.TargetMember.Name;
                             var refPath = refRootPath + path.Substring(path.IndexOf("."));
@@ -1878,7 +1891,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             //不能更改原CTE表中的ReaderFields，更改了后续的SQL使用时，就不正确了，这里只能更改一个副本用于SQL解析
             cteQuery.ReaderFields.ForEach(f => readerFields.Add(f.Clone()));
             tableType = TableType.CteSelfRef;
-            body = this.OrmProvider.GetTableName(cteQuery.TableName);
+            //当作正常表名处理
+            body = cteQuery.TableName;
         }
         else body = $"({subQuery.Visitor.BuildSql(out readerFields)})";
 
@@ -1889,7 +1903,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //因为表别名发生变化，需要更新ReaderField的body栏位
         this.InitFromQueryReaderFields(tableSegment, readerFields);
 
-        //子查询中引用了分表，最外层也需要设置分表信息IsSharding、ShardingIds
+        //子查询中引用了分表，最外层也需要设置分表信息IsSharding、ShardingTables
         if (subQuery.Visitor.IsSharding)
         {
             this.IsSharding = subQuery.Visitor.IsSharding;
@@ -1980,7 +1994,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.HavingSql = null;
         this.OrderBySql = null;
         this.IsDistinct = false;
-        this.IncludeSegments?.Clear();
+        this.IncludeTables?.Clear();
         this.LastIncludeSegment = null;
         this.GroupFields?.Clear();
         this.IsUseFieldAlias = true;

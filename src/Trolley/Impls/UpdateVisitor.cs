@@ -19,7 +19,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     public bool IsJoin { get; set; }
     public List<string> UpdateFields { get; set; }
     public string FixedSql { get; set; }
-    public List<IDbDataParameter> FixedDbParameters { get; set; }
+    public TheaDbParameterCollection FixedDbParameters { get; set; }
 
     public UpdateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
     {
@@ -49,43 +49,46 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     public virtual string BuildCommand(IDbCommand command)
     {
         string sql = null;
-        this.DbParameters = command.Parameters;
         this.UpdateFields = new();
-        foreach (var deferredSegment in this.deferredSegments)
-        {
-            switch (deferredSegment.Type)
-            {
-                case "Set":
-                    this.VisitSet(deferredSegment.Value as Expression);
-                    break;
-                case "SetFrom":
-                    this.IsNeedTableAlias = true;
-                    this.VisitSet(deferredSegment.Value as Expression);
-                    break;
-                case "SetField":
-                    this.VisitSetField(deferredSegment.Value);
-                    break;
-                case "SetWith":
-                    this.VisitSetWith(deferredSegment.Value);
-                    break;
-                case "SetFromField":
-                    this.IsNeedTableAlias = true;
-                    this.VisitSetFromField(deferredSegment.Value);
-                    break;
-                case "Where":
-                    this.VisitWhere(deferredSegment.Value as Expression);
-                    break;
-                case "WhereWith":
-                    this.VisitWhereWith(deferredSegment.Value);
-                    break;
-                case "And":
-                    this.VisitAnd(deferredSegment.Value as Expression);
-                    break;
-            }
-        }
         if (this.ActionMode == ActionMode.Bulk)
-            sql = this.BuildMutilBulkSql(command);
-        if (sql == null) sql = this.BuildSql();
+            sql = this.BuildSetBulkSql(command);
+        else
+        {
+            this.DbParameters ??= command.Parameters;
+            foreach (var deferredSegment in this.deferredSegments)
+            {
+                switch (deferredSegment.Type)
+                {
+                    case "Set":
+                        this.VisitSet(deferredSegment.Value as Expression);
+                        break;
+                    case "SetFrom":
+                        this.IsNeedTableAlias = true;
+                        this.VisitSet(deferredSegment.Value as Expression);
+                        break;
+                    case "SetField":
+                        this.VisitSetField(deferredSegment.Value);
+                        break;
+                    case "SetWith":
+                        this.VisitSetWith(deferredSegment.Value);
+                        break;
+                    case "SetFromField":
+                        this.IsNeedTableAlias = true;
+                        this.VisitSetFromField(deferredSegment.Value);
+                        break;
+                    case "Where":
+                        this.VisitWhere(deferredSegment.Value as Expression);
+                        break;
+                    case "WhereWith":
+                        this.VisitWhereWith(deferredSegment.Value);
+                        break;
+                    case "And":
+                        this.VisitAnd(deferredSegment.Value as Expression);
+                        break;
+                }
+            }
+            sql = this.BuildSql();
+        }
         return sql;
     }
     public virtual MultipleCommand CreateMultipleCommand()
@@ -115,12 +118,23 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         this.IsJoin = multiCommand.IsJoin;
         this.IsNeedTableAlias = multiCommand.IsNeedTableAlias;
         if (sqlBuilder.Length > 0) sqlBuilder.Append(';');
+        if (this.deferredSegments.Count > 0 && this.deferredSegments[0].Type == "SetBulk")
+            this.ActionMode = ActionMode.Bulk;
         sqlBuilder.Append(this.BuildCommand(command));
     }
     public virtual string BuildSql()
     {
-        var entityTableName = this.OrmProvider.GetTableName(this.Tables[0].Mapper.TableName);
-        var builder = new StringBuilder($"UPDATE {entityTableName} ");
+        //支持分表
+        var entityMapper = this.Tables[0].Mapper;
+        var tableName = entityMapper.TableName;
+        if (this.ShardingProvider.TryGetShardingTable(entityMapper.EntityType, out _))
+        {
+            if (!this.Tables[0].IsSharding)
+                throw new Exception($"实体表{entityMapper.EntityType.FullName}有配置分表，当前操作未指定分表，请调用UseTable或UseTableBy方法指定分表");
+            if (!string.IsNullOrEmpty(this.Tables[0].Body))
+                tableName = this.Tables[0].Body;
+        }
+        var builder = new StringBuilder($"UPDATE {this.OrmProvider.GetTableName(tableName)} ");
         var aliasName = this.Tables[0].AliasName;
         if (this.IsNeedTableAlias)
             builder.Append($"{aliasName} ");
@@ -130,7 +144,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             for (var i = 1; i < this.Tables.Count; i++)
             {
                 var tableSegment = this.Tables[i];
-                var tableName = tableSegment.Body;
+                tableName = tableSegment.Body;
                 if (string.IsNullOrEmpty(tableName))
                     tableName = this.OrmProvider.GetTableName(tableSegment.Mapper.TableName);
                 builder.Append($"{tableSegment.JoinType} {tableName} {tableSegment.AliasName}");
@@ -156,7 +170,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             for (var i = 1; i < this.Tables.Count; i++)
             {
                 var tableSegment = this.Tables[i];
-                var tableName = tableSegment.Body;
+                tableName = tableSegment.Body;
                 if (string.IsNullOrEmpty(tableName))
                     tableName = this.OrmProvider.GetTableName(tableSegment.Mapper.TableName);
                 builder.Append($"{tableName} {tableSegment.AliasName}");
@@ -293,24 +307,37 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         });
         return this;
     }
-    public virtual (IEnumerable, int, Action<StringBuilder, object, string>, Action<IDataParameterCollection>) BuildSetBulk(IDbCommand command)
+    public virtual (IEnumerable, int, Action<IDataParameterCollection, StringBuilder, object, string>, Action<IDataParameterCollection>) BuildSetBulk(IDbCommand command)
     {
-        var entityMapper = this.Tables[0].Mapper;
-        this.DbParameters = command.Parameters;
-        string fixedHeadUpdateSql = null;
-        List<IDbDataParameter> fixedDbParameters = null;
+        bool isNeedFetchSharding = false;
+        object firstUpdateObj = null;
+        Type updateObjType = null;
 
-        var builder = new StringBuilder($"UPDATE {this.OrmProvider.GetTableName(entityMapper.TableName)} SET ");
-        var aliasName = this.Tables[0].AliasName;
-        //sql server表别名就是表名，长度>1
-        if (this.IsNeedTableAlias && aliasName.Length == 1)
-            builder.Append($"{aliasName} ");
-
-        if (this.deferredSegments.Count > 1 && !this.IsMultiple)
+        (var updateObjs, var bulkCount) = ((IEnumerable, int))this.deferredSegments[0].Value;
+        foreach (var entity in updateObjs)
         {
+            firstUpdateObj = entity;
+            break;
+        }
+        updateObjType = firstUpdateObj.GetType();
+        var tableName = this.Tables[0].Mapper.TableName;
+        var entityType = this.Tables[0].EntityType;
+
+        if (this.ShardingProvider.TryGetShardingTable(entityType, out _))
+        {
+            //有设置分表，优先使用分表，没有设置分表，则根据数据的字段确定分表
+            if (!string.IsNullOrEmpty(this.Tables[0].Body))
+                tableName = this.Tables[0].Body;
+            //未指定分表，需要根据数据字段确定分表
+            else isNeedFetchSharding = true;
+        }
+        if (this.deferredSegments.Count > 1)
+        {
+            this.FixedDbParameters = new TheaDbParameterCollection();
+            this.DbParameters = this.FixedDbParameters;
             //先解析其他sql，生成固定sql
             this.UpdateFields = new();
-            this.FixedDbParameters = new();
+
             for (int i = 1; i < this.deferredSegments.Count; i++)
             {
                 var deferredSegment = this.deferredSegments[i];
@@ -328,11 +355,17 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     default: throw new NotSupportedException("SetBulk操作后，只支持Set/IgnoreFields/OnlyFields操作");
                 }
             }
-            if (this.DbParameters.Count > 0)
-                fixedDbParameters = this.DbParameters.Cast<IDbDataParameter>().ToList();
-            this.DbParameters.Clear();
+            this.DbParameters = command.Parameters;
         }
+        else this.DbParameters ??= command.Parameters;
+
         int index = 0;
+        var builder = new StringBuilder();
+        var aliasName = this.Tables[0].AliasName;
+        //sql server表别名就是表名，长度>1
+        if (this.IsNeedTableAlias && aliasName.Length == 1)
+            builder.Append($"{aliasName} ");
+        builder.Append("SET ");
         if (this.UpdateFields != null && this.UpdateFields.Count > 0)
         {
             foreach (var setField in this.UpdateFields)
@@ -344,47 +377,66 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             }
             builder.Append(',');
         }
-        fixedHeadUpdateSql = builder.ToString();
+        var fixedHeadUpdateSql = builder.ToString();
         builder.Clear();
 
-        var entityType = this.Tables[0].EntityType;
-        (var updateObjs, int bulkCount) = ((IEnumerable, int))this.deferredSegments[0].Value;
-        object updateObj = null;
-        foreach (var entity in updateObjs)
-        {
-            updateObj = entity;
-            break;
-        }
-        var updateObjType = updateObj.GetType();
         var setCommandInitializer = RepositoryHelper.BuildUpdateSetPartSqlParameters(this.OrmProvider, this.MapProvider, entityType, updateObjType, this.OnlyFieldNames, this.IgnoreFieldNames, true);
-        var typedSetCommandInitializer = setCommandInitializer as Action<IDataParameterCollection, IOrmProvider, StringBuilder, object, string>;
-        var whereCommandInitializer = RepositoryHelper.BuildWhereSqlParameters(this.OrmProvider, this.MapProvider, entityType, updateObjType, true, true, true, nameof(updateObj), null);
-        var typeWhereCommandInitializer = whereCommandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string, string>;
+        var typedSetCommandInitializer = setCommandInitializer as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
+        var whereCommandInitializer = RepositoryHelper.BuildWhereSqlParameters(false, this.OrmProvider, this.MapProvider, entityType, updateObjType, true, true, true, false, nameof(updateObjs));
+        var typeWhereCommandInitializer = whereCommandInitializer as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
 
-        Action<StringBuilder, object, string> commandInitializer = null;
-        commandInitializer = (builder, updateObj, suffix) =>
+        Action<IDataParameterCollection, StringBuilder, object, string> commandInitializer = null;
+        if (isNeedFetchSharding)
         {
-            builder.Append(fixedHeadUpdateSql);
-            typedSetCommandInitializer.Invoke(this.DbParameters, this.OrmProvider, builder, updateObj, suffix);
-            builder.Append(" WHERE ");
-            builder.Append(typeWhereCommandInitializer.Invoke(this.DbParameters, this.OrmProvider, updateObj, suffix));
-        };
+            commandInitializer = (dbParameters, builder, updateObj, suffix) =>
+            {
+                var tableName = RepositoryHelper.GetShardingTableName(this.DbKey, this.MapProvider, this.ShardingProvider, entityType, updateObjType, updateObj);
+                builder.Append($"UPDATE {this.OrmProvider.GetTableName(tableName)} {fixedHeadUpdateSql}");
+                typedSetCommandInitializer.Invoke(dbParameters, builder, this.OrmProvider, updateObj, suffix);
+                builder.Append(" WHERE ");
+                typeWhereCommandInitializer.Invoke(dbParameters, builder, this.OrmProvider, updateObj, suffix);
+            };
+        }
+        else
+        {
+            commandInitializer = (dbParameters, builder, updateObj, suffix) =>
+            {
+                builder.Append($"UPDATE {this.OrmProvider.GetTableName(tableName)} {fixedHeadUpdateSql}");
+                typedSetCommandInitializer.Invoke(dbParameters, builder, this.OrmProvider, updateObj, suffix);
+                builder.Append(" WHERE ");
+                typeWhereCommandInitializer.Invoke(dbParameters, builder, this.OrmProvider, updateObj, suffix);
+            };
+        }
+
         Action<IDataParameterCollection> firstCommandInitializer = null;
-        if (fixedDbParameters != null)
-            firstCommandInitializer = dbParameters => fixedDbParameters.ForEach(f => dbParameters.Add(f));
+        if (this.FixedDbParameters != null && this.FixedDbParameters.Count > 0)
+            firstCommandInitializer = dbParameters => this.FixedDbParameters.ToList().ForEach(f => dbParameters.Add(f));
         return (updateObjs, bulkCount, commandInitializer, firstCommandInitializer);
     }
-    public virtual string BuildMutilBulkSql(IDbCommand command)
+    public virtual string BuildSetBulkSql(IDbCommand command)
     {
-        (var updateObjs, _, var commandInitializer, var firstCommandInitializer) = this.BuildSetBulk(command);
+        (var updateObjs, var bulkCount, var commandInitializer, var firstCommandInitializer) = this.BuildSetBulk(command);
         int index = 0;
         var builder = new StringBuilder();
         firstCommandInitializer?.Invoke(command.Parameters);
-        foreach (var updateObj in updateObjs)
+        //分批次也一起都返回了SQL
+        if (this.IsMultiple)
         {
-            if (index > 0) builder.Append(';');
-            commandInitializer.Invoke(builder, updateObj, $"_m{this.CommandIndex}{index}");
-            index++;
+            foreach (var updateObj in updateObjs)
+            {
+                if (index > 0) builder.Append(';');
+                commandInitializer.Invoke(command.Parameters, builder, updateObj, $"_m{this.CommandIndex}{index}");
+                index++;
+            }
+        }
+        else
+        {
+            foreach (var updateObj in updateObjs)
+            {
+                if (index > 0) builder.Append(';');
+                commandInitializer.Invoke(command.Parameters, builder, updateObj, $"{index}");
+                index++;
+            }
         }
         return builder.ToString();
     }
@@ -590,7 +642,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     {
         var entityType = this.Tables[0].EntityType;
         var whereObjType = whereObj.GetType();
-        var commandInitializer = RepositoryHelper.BuildWhereSqlParameters(this.OrmProvider, this.MapProvider, entityType, whereObjType, true, this.IsMultiple, true, "whereObj", null);
+        var commandInitializer = RepositoryHelper.BuildWhereSqlParameters(true, this.OrmProvider, this.MapProvider, entityType, whereObjType, true, this.IsMultiple, true, false, "whereObj");
         string whereSql = null;
         if (this.IsMultiple)
         {

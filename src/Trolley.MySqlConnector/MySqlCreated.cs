@@ -33,69 +33,83 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
         bool isNeedClose = this.DbContext.IsNeedClose;
         try
         {
+            var entityType = typeof(TEntity);
             switch (this.Visitor.ActionMode)
             {
                 case ActionMode.Bulk:
-                    int index = 0;
-                    bool isFirst = true;
-                    var sqlBuilder = new StringBuilder();
                     command = this.DbContext.CreateCommand();
-                    (insertObjs, var bulkCount, var headSqlSetter, var commandInitializer) = this.Visitor.BuildWithBulk(command);
-                    headSqlSetter.Invoke(sqlBuilder);
+                    var sqlBuilder = new StringBuilder();
+                    (var isNeedSplit, var tableName, insertObjs, var bulkCount, var firstInsertObj,
+                        var headSqlSetter, var commandInitializer) = this.Visitor.BuildWithBulk(command);
 
-                    foreach (var insertObj in insertObjs)
+                    Action<string, object> clearCommand = (tableName, insertObj) =>
                     {
-                        if (index > 0) sqlBuilder.Append(',');
-                        commandInitializer.Invoke(sqlBuilder, insertObj, index.ToString());
-                        if (index >= bulkCount)
+                        sqlBuilder.Clear();
+                        command.Parameters.Clear();
+                        headSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName, insertObj);
+                    };
+                    Func<string, IEnumerable, int> executor = (tableName, insertObjs) =>
+                    {
+                        var isFirst = true;
+                        int count = 0, index = 0;
+                        foreach (var insertObj in insertObjs)
+                        {
+                            if (index > 0) sqlBuilder.Append(',');
+                            commandInitializer.Invoke(command.Parameters, sqlBuilder, insertObj, index.ToString());
+                            if (index >= bulkCount)
+                            {
+                                command.CommandText = sqlBuilder.ToString();
+                                if (isFirst)
+                                {
+                                    this.DbContext.Open();
+                                    isFirst = false;
+                                }
+                                count += command.ExecuteNonQuery();
+                                clearCommand.Invoke(tableName, insertObj);
+                                index = 0;
+                                continue;
+                            }
+                            index++;
+                        }
+                        if (index > 0)
                         {
                             command.CommandText = sqlBuilder.ToString();
-                            if (isFirst)
-                            {
-                                this.DbContext.Open();
-                                isFirst = false;
-                            }
-                            result += command.ExecuteNonQuery();
-                            command.Parameters.Clear();
-                            sqlBuilder.Clear();
-                            headSqlSetter.Invoke(sqlBuilder);
-                            index = 0;
-                            continue;
+                            if (isFirst) this.DbContext.Open();
+                            count += command.ExecuteNonQuery();
                         }
-                        index++;
-                    }
-                    if (index > 0)
+                        return count;
+                    };
+
+                    if (isNeedSplit)
                     {
-                        command.CommandText = sqlBuilder.ToString();
-                        if (isFirst) this.DbContext.Open();
-                        result += command.ExecuteNonQuery();
+                        var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
+                        foreach (var tabledInsertObj in tabledInsertObjs)
+                        {
+                            headSqlSetter.Invoke(command.Parameters, sqlBuilder, tabledInsertObj.Key, tabledInsertObj);
+                            result += executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
+                        }
+                    }
+                    else
+                    {
+                        headSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName, firstInsertObj);
+                        result = executor.Invoke(tableName, insertObjs);
                     }
                     sqlBuilder.Clear();
+                    sqlBuilder = null;
                     break;
                 case ActionMode.BulkCopy:
                     (insertObjs, var timeoutSeconds) = this.DialectVisitor.BuildWithBulkCopy();
-                    Type entityType = null;
-                    foreach (var insertObj in insertObjs)
-                    {
-                        entityType = insertObj.GetType();
-                        break;
-                    }
-                    var entityMapper = this.Visitor.Tables[0].Mapper;
-                    var dataTable = this.Visitor.ToDataTable(entityType, insertObjs, entityMapper);
-                    if (dataTable.Rows.Count == 0) return 0;
 
-                    this.DbContext.Open();
-                    var connection = this.DbContext.Connection as MySqlConnection;
-                    var transaction = this.DbContext.Transaction as MySqlTransaction;
-                    var bulkCopy = new MySqlBulkCopy(connection, transaction);
-                    if (timeoutSeconds.HasValue) bulkCopy.BulkCopyTimeout = timeoutSeconds.Value;
-                    bulkCopy.DestinationTableName = dataTable.TableName;
-                    for (int i = 0; i < dataTable.Columns.Count; i++)
+                    bool isOpened = false;
+                    if (this.DbContext.ShardingProvider.TryGetShardingTable(entityType, out var shardingTable))
                     {
-                        bulkCopy.ColumnMappings.Add(new MySqlBulkCopyColumnMapping(i, dataTable.Columns[i].ColumnName));
+                        var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
+                        foreach (var tabledInsertObj in tabledInsertObjs)
+                        {
+                            result += this.ExecuteBulkCopy(ref isOpened, entityType, tabledInsertObj.Value, timeoutSeconds, tabledInsertObj.Key);
+                        }
                     }
-                    var bulkCopyResult = bulkCopy.WriteToServer(dataTable);
-                    result = bulkCopyResult.RowsInserted;
+                    else result = this.ExecuteBulkCopy(ref isOpened, entityType, insertObjs, timeoutSeconds);
                     break;
                 default:
                     //默认单条
@@ -128,68 +142,83 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
         bool isNeedClose = this.DbContext.IsNeedClose;
         try
         {
+            var entityType = typeof(TEntity);
             switch (this.Visitor.ActionMode)
             {
                 case ActionMode.Bulk:
-                    int index = 0;
-                    bool isFirst = true;
-                    var sqlBuilder = new StringBuilder();
                     command = this.DbContext.CreateDbCommand();
-                    (insertObjs, var bulkCount, var headSqlSetter, var commandInitializer) = this.Visitor.BuildWithBulk(command);
-                    headSqlSetter.Invoke(sqlBuilder);
-                    foreach (var insertObj in insertObjs)
+                    var sqlBuilder = new StringBuilder();
+                    (var isNeedSplit, var tableName, insertObjs, var bulkCount, var firstInsertObj,
+                        var headSqlSetter, var commandInitializer) = this.Visitor.BuildWithBulk(command);
+
+                    Action<string, object> clearCommand = (tableName, insertObj) =>
                     {
-                        if (index > 0) sqlBuilder.Append(',');
-                        commandInitializer.Invoke(sqlBuilder, insertObj, index.ToString());
-                        if (index >= bulkCount)
+                        sqlBuilder.Clear();
+                        command.Parameters.Clear();
+                        headSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName, insertObj);
+                    };
+                    Func<string, IEnumerable, Task<int>> executor = async (tableName, insertObjs) =>
+                    {
+                        var isFirst = true;
+                        int count = 0, index = 0;
+                        foreach (var insertObj in insertObjs)
+                        {
+                            if (index > 0) sqlBuilder.Append(',');
+                            commandInitializer.Invoke(command.Parameters, sqlBuilder, insertObj, index.ToString());
+                            if (index >= bulkCount)
+                            {
+                                command.CommandText = sqlBuilder.ToString();
+                                if (isFirst)
+                                {
+                                    await this.DbContext.OpenAsync(cancellationToken);
+                                    isFirst = false;
+                                }
+                                count += await command.ExecuteNonQueryAsync(cancellationToken);
+                                clearCommand.Invoke(tableName, insertObj);
+                                index = 0;
+                                continue;
+                            }
+                            index++;
+                        }
+                        if (index > 0)
                         {
                             command.CommandText = sqlBuilder.ToString();
-                            if (isFirst)
-                            {
-                                await this.DbContext.OpenAsync(cancellationToken);
-                                isFirst = false;
-                            }
-                            result += await command.ExecuteNonQueryAsync(cancellationToken);
-                            command.Parameters.Clear();
-                            sqlBuilder.Clear();
-                            headSqlSetter.Invoke(sqlBuilder);
-                            index = 0;
-                            continue;
+                            if (isFirst) await this.DbContext.OpenAsync(cancellationToken);
+                            count += await command.ExecuteNonQueryAsync(cancellationToken);
                         }
-                        index++;
-                    }
-                    if (index > 0)
+                        return count;
+                    };
+
+                    if (isNeedSplit)
                     {
-                        command.CommandText = sqlBuilder.ToString();
-                        if (isFirst) await this.DbContext.OpenAsync(cancellationToken);
-                        result += await command.ExecuteNonQueryAsync(cancellationToken);
+                        var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
+                        foreach (var tabledInsertObj in tabledInsertObjs)
+                        {
+                            headSqlSetter.Invoke(command.Parameters, sqlBuilder, tabledInsertObj.Key, tabledInsertObj);
+                            result += await executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
+                        }
+                    }
+                    else
+                    {
+                        headSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName, firstInsertObj);
+                        result = await executor.Invoke(tableName, insertObjs);
                     }
                     sqlBuilder.Clear();
+                    sqlBuilder = null;
                     break;
                 case ActionMode.BulkCopy:
                     (insertObjs, var timeoutSeconds) = this.DialectVisitor.BuildWithBulkCopy();
-                    Type entityType = null;
-                    foreach (var insertObj in insertObjs)
+                    bool isOpened = false;
+                    if (this.DbContext.ShardingProvider.TryGetShardingTable(entityType, out var shardingTable))
                     {
-                        entityType = insertObj.GetType();
-                        break;
+                        var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
+                        foreach (var tabledInsertObj in tabledInsertObjs)
+                        {
+                            result += await this.ExecuteBulkCopyAsync(isOpened, entityType, tabledInsertObj.Value, timeoutSeconds, cancellationToken, tabledInsertObj.Key);
+                            if (!isOpened) isOpened = true;
+                        }
                     }
-                    var entityMapper = this.Visitor.Tables[0].Mapper;
-                    var dataTable = this.Visitor.ToDataTable(entityType, insertObjs, entityMapper);
-                    if (dataTable.Rows.Count == 0) return 0;
-
-                    await this.DbContext.OpenAsync(cancellationToken);
-                    var connection = this.DbContext.Connection as MySqlConnection;
-                    var transaction = this.DbContext.Transaction as MySqlTransaction;
-                    var bulkCopy = new MySqlBulkCopy(connection, transaction);
-                    if (timeoutSeconds.HasValue) bulkCopy.BulkCopyTimeout = timeoutSeconds.Value;
-                    bulkCopy.DestinationTableName = dataTable.TableName;
-                    for (int i = 0; i < dataTable.Columns.Count; i++)
-                    {
-                        bulkCopy.ColumnMappings.Add(new MySqlBulkCopyColumnMapping(i, dataTable.Columns[i].ColumnName));
-                    }
-                    var bulkCopyResult = await bulkCopy.WriteToServerAsync(dataTable);
-                    result = bulkCopyResult.RowsInserted;
+                    else result = await this.ExecuteBulkCopyAsync(isOpened, entityType, insertObjs, timeoutSeconds, cancellationToken);
                     break;
                 default:
                     //默认单条
@@ -213,6 +242,49 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
         }
         if (exception != null) throw exception;
         return result;
+    }
+    private int ExecuteBulkCopy(ref bool isOpened, Type entityType, IEnumerable insertObjs, int? timeoutSeconds, string tableName = null)
+    {
+        var entityMapper = this.Visitor.Tables[0].Mapper;
+        var dataTable = this.Visitor.ToDataTable(entityType, insertObjs, entityMapper, tableName);
+        if (dataTable.Rows.Count == 0) return 0;
+
+        if (!isOpened)
+        {
+            this.DbContext.Open();
+            isOpened = true;
+        }
+        var connection = this.DbContext.Connection as MySqlConnection;
+        var transaction = this.DbContext.Transaction as MySqlTransaction;
+        var bulkCopy = new MySqlBulkCopy(connection, transaction);
+        if (timeoutSeconds.HasValue) bulkCopy.BulkCopyTimeout = timeoutSeconds.Value;
+        bulkCopy.DestinationTableName = dataTable.TableName;
+        for (int i = 0; i < dataTable.Columns.Count; i++)
+        {
+            bulkCopy.ColumnMappings.Add(new MySqlBulkCopyColumnMapping(i, dataTable.Columns[i].ColumnName));
+        }
+        var bulkCopyResult = bulkCopy.WriteToServer(dataTable);
+        return bulkCopyResult.RowsInserted;
+    }
+    private async Task<int> ExecuteBulkCopyAsync(bool isOpened, Type entityType, IEnumerable insertObjs, int? timeoutSeconds, CancellationToken cancellationToken = default, string tableName = null)
+    {
+        var entityMapper = this.Visitor.Tables[0].Mapper;
+        var dataTable = this.Visitor.ToDataTable(entityType, insertObjs, entityMapper, tableName);
+        if (dataTable.Rows.Count == 0) return 0;
+
+        if (!isOpened)
+            await this.DbContext.OpenAsync(cancellationToken);
+        var connection = this.DbContext.Connection as MySqlConnection;
+        var transaction = this.DbContext.Transaction as MySqlTransaction;
+        var bulkCopy = new MySqlBulkCopy(connection, transaction);
+        if (timeoutSeconds.HasValue) bulkCopy.BulkCopyTimeout = timeoutSeconds.Value;
+        bulkCopy.DestinationTableName = dataTable.TableName;
+        for (int i = 0; i < dataTable.Columns.Count; i++)
+        {
+            bulkCopy.ColumnMappings.Add(new MySqlBulkCopyColumnMapping(i, dataTable.Columns[i].ColumnName));
+        }
+        var bulkCopyResult = await bulkCopy.WriteToServerAsync(dataTable);
+        return bulkCopyResult.RowsInserted;
     }
     #endregion
 }

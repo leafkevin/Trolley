@@ -286,49 +286,74 @@ public class Repository : IRepository
             bool isBulk = insertObjs is IEnumerable && insertObjs is not string && insertObjs is not IDictionary<string, object>;
             if (isBulk)
             {
-                int index = 0;
-                bool isFirst = true;
                 var sqlBuilder = new StringBuilder();
                 var entities = insertObjs as IEnumerable;
-                (var headSqlSetter, var commandInitializer) = RepositoryHelper.BuildCreateMultiSqlParameters(this.ormProvider, this.mapProvider, entityType, insertObjs, null, null, true);
-                headSqlSetter.Invoke(sqlBuilder);
-
-                foreach (var insertObj in entities)
+                object firstInsertObj = null;
+                Type insertObjType = null;
+                foreach (var entity in entities)
                 {
-                    if (index > 0) sqlBuilder.Append(',');
-                    commandInitializer.Invoke(command.Parameters, this.ormProvider, sqlBuilder, insertObj, index.ToString());
-                    if (index >= bulkCount)
+                    firstInsertObj = entity;
+                    break;
+                }
+                insertObjType = firstInsertObj.GetType();
+
+                (var tableName, var headSqlSetter, var valuesSqlSetter) = RepositoryHelper.BuildCreateBulkSqlParameters(
+                    this.ormProvider, this.mapProvider, entityType, insertObjType, null, null);
+
+                Func<string, IEnumerable, int> executor = (tableName, insertObjs) =>
+                {
+                    var isFirst = true;
+                    int count = 0, index = 0;
+                    foreach (var insertObj in insertObjs)
+                    {
+                        if (index > 0) sqlBuilder.Append(',');
+                        valuesSqlSetter.Invoke(command.Parameters, sqlBuilder, insertObj, index.ToString());
+                        if (index >= bulkCount)
+                        {
+                            command.CommandText = sqlBuilder.ToString();
+                            if (isFirst)
+                            {
+                                this.DbContext.Open();
+                                isFirst = false;
+                            }
+                            count += command.ExecuteNonQuery();
+                            sqlBuilder.Clear();
+                            command.Parameters.Clear();
+                            headSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName, insertObj);
+                            index = 0;
+                            continue;
+                        }
+                        index++;
+                    }
+                    if (index > 0)
                     {
                         command.CommandText = sqlBuilder.ToString();
-                        if (isFirst)
-                        {
-                            this.DbContext.Open();
-                            isFirst = false;
-                        }
-                        result += command.ExecuteNonQuery();
-                        command.Parameters.Clear();
-                        sqlBuilder.Clear();
-                        headSqlSetter.Invoke(sqlBuilder);
-                        index = 0;
-                        continue;
+                        if (isFirst) this.DbContext.Open();
+                        count += command.ExecuteNonQuery();
                     }
-                    index++;
-                }
-                if (index > 0)
+                    return count;
+                };
+
+                if (this.shardingProvider.TryGetShardingTable(entityType, out _))
                 {
-                    command.CommandText = sqlBuilder.ToString();
-                    if (isFirst) this.DbContext.Open();
-                    result = command.ExecuteNonQuery();
+                    var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, entities);
+                    foreach (var tabledInsertObj in tabledInsertObjs)
+                    {
+                        headSqlSetter.Invoke(command.Parameters, sqlBuilder, tabledInsertObj.Key, tabledInsertObj);
+                        result += executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
+                        sqlBuilder.Clear();
+                        command.Parameters.Clear();
+                    }
+                }
+                else
+                {
+                    headSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName, firstInsertObj);
+                    result = executor.Invoke(tableName, entities);
                 }
                 sqlBuilder.Clear();
+                sqlBuilder = null;
             }
-            else
-            {
-                var commandInitializer = RepositoryHelper.BuildCreateSqlParameters(this.ormProvider, this.mapProvider, entityType, insertObjs, null, null, false);
-                command.CommandText = commandInitializer.Invoke(command.Parameters, ormProvider, insertObjs);
-                this.DbContext.Open();
-                result = command.ExecuteNonQuery();
-            }
+            else result = this.DbContext.Create(command, entityType, insertObjs);
         }
         catch (Exception ex)
         {
@@ -358,49 +383,73 @@ public class Repository : IRepository
             bool isBulk = insertObjs is IEnumerable && insertObjs is not string && insertObjs is not IDictionary<string, object>;
             if (isBulk)
             {
-                int index = 0;
-                bool isFirst = true;
                 var sqlBuilder = new StringBuilder();
                 var entities = insertObjs as IEnumerable;
-                (var headSqlSetter, var commandInitializer) = RepositoryHelper.BuildCreateMultiSqlParameters(this.ormProvider, this.mapProvider, entityType, insertObjs, null, null, true);
-                headSqlSetter.Invoke(sqlBuilder);
-
-                foreach (var insertObj in entities)
+                object firstInsertObj = null;
+                Type insertObjType = null;
+                foreach (var entity in entities)
                 {
-                    if (index > 0) sqlBuilder.Append(',');
-                    commandInitializer.Invoke(command.Parameters, this.ormProvider, sqlBuilder, insertObj, index.ToString());
-                    if (index >= bulkCount)
+                    firstInsertObj = entity;
+                    break;
+                }
+                insertObjType = firstInsertObj.GetType();
+
+                (var tableName, var headSqlSetter, var valuesSqlSetter) = RepositoryHelper.BuildCreateBulkSqlParameters(
+                    this.ormProvider, this.mapProvider, entityType, insertObjType, null, null);
+
+                Func<string, IEnumerable, Task<int>> executor = async (tableName, insertObjs) =>
+                {
+                    var isFirst = true;
+                    int count = 0, index = 0;
+                    foreach (var insertObj in insertObjs)
+                    {
+                        if (index > 0) sqlBuilder.Append(',');
+                        valuesSqlSetter.Invoke(command.Parameters, sqlBuilder, insertObj, index.ToString());
+                        if (index >= bulkCount)
+                        {
+                            command.CommandText = sqlBuilder.ToString();
+                            if (isFirst)
+                            {
+                                await this.DbContext.OpenAsync(cancellationToken);
+                                isFirst = false;
+                            }
+                            count += await command.ExecuteNonQueryAsync(cancellationToken);
+                            sqlBuilder.Clear();
+                            command.Parameters.Clear();
+                            headSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName, insertObj);
+                            index = 0;
+                            continue;
+                        }
+                        index++;
+                    }
+                    if (index > 0)
                     {
                         command.CommandText = sqlBuilder.ToString();
-                        if (isFirst)
-                        {
-                            await this.DbContext.OpenAsync(cancellationToken);
-                            isFirst = false;
-                        }
-                        result += await command.ExecuteNonQueryAsync(cancellationToken);
-                        command.Parameters.Clear();
-                        sqlBuilder.Clear();
-                        headSqlSetter.Invoke(sqlBuilder);
-                        index = 0;
-                        continue;
+                        if (isFirst) await this.DbContext.OpenAsync(cancellationToken);
+                        count += await command.ExecuteNonQueryAsync(cancellationToken);
                     }
-                    index++;
-                }
-                if (index > 0)
+                    return count;
+                };
+                if (this.shardingProvider.TryGetShardingTable(entityType, out _))
                 {
-                    command.CommandText = sqlBuilder.ToString();
-                    if (isFirst) await this.DbContext.OpenAsync(cancellationToken);
-                    result = await command.ExecuteNonQueryAsync(cancellationToken);
+                    var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, entities);
+                    foreach (var tabledInsertObj in tabledInsertObjs)
+                    {
+                        headSqlSetter.Invoke(command.Parameters, sqlBuilder, tabledInsertObj.Key, tabledInsertObj);
+                        result += await executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
+                        sqlBuilder.Clear();
+                        command.Parameters.Clear();
+                    }
+                }
+                else
+                {
+                    headSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName, firstInsertObj);
+                    result = await executor.Invoke(tableName, entities);
                 }
                 sqlBuilder.Clear();
+                sqlBuilder = null;
             }
-            else
-            {
-                var commandInitializer = RepositoryHelper.BuildCreateSqlParameters(this.ormProvider, this.mapProvider, entityType, insertObjs, null, null, false);
-                command.CommandText = commandInitializer.Invoke(command.Parameters, ormProvider, insertObjs);
-                await this.DbContext.OpenAsync(cancellationToken);
-                result = await command.ExecuteNonQueryAsync(cancellationToken);
-            }
+            else result = await this.DbContext.CreateAsync(command, entityType, insertObjs, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -421,13 +470,7 @@ public class Repository : IRepository
             throw new ArgumentNullException(nameof(insertObj));
         bool isBulk = insertObj is IEnumerable && insertObj is not string && insertObj is not IDictionary<string, object>;
         if (isBulk) throw new NotSupportedException("CreateIdentity方法只支持单条数据插入，不支持批量插入返回Identity");
-
-        return this.DbContext.CreateIdentity<int>(f =>
-        {
-            var entityType = typeof(TEntity);
-            var commandInitializer = RepositoryHelper.BuildCreateSqlParameters(this.ormProvider, this.mapProvider, entityType, insertObj, null, null, true);
-            f.CommandText = commandInitializer.Invoke(f.Parameters, this.ormProvider, insertObj);
-        });
+        return this.DbContext.CreateIdentity<int>(typeof(TEntity), insertObj);
     }
     public virtual async Task<int> CreateIdentityAsync<TEntity>(object insertObj, CancellationToken cancellationToken = default)
     {
@@ -435,13 +478,7 @@ public class Repository : IRepository
             throw new ArgumentNullException(nameof(insertObj));
         bool isBulk = insertObj is IEnumerable && insertObj is not string && insertObj is not IDictionary<string, object>;
         if (isBulk) throw new NotSupportedException("CreateIdentity方法只支持单条数据插入，不支持批量插入返回Identity");
-
-        return await this.DbContext.CreateIdentityAsync<int>(f =>
-        {
-            var entityType = typeof(TEntity);
-            var commandInitializer = RepositoryHelper.BuildCreateSqlParameters(this.ormProvider, this.mapProvider, entityType, insertObj, null, null, true);
-            f.CommandText = commandInitializer.Invoke(f.Parameters, this.ormProvider, insertObj);
-        }, cancellationToken);
+        return await this.DbContext.CreateIdentityAsync<int>(typeof(TEntity), insertObj, cancellationToken);
     }
     public virtual long CreateIdentityLong<TEntity>(object insertObj)
     {
@@ -449,13 +486,7 @@ public class Repository : IRepository
             throw new ArgumentNullException(nameof(insertObj));
         bool isBulk = insertObj is IEnumerable && insertObj is not string && insertObj is not IDictionary<string, object>;
         if (isBulk) throw new NotSupportedException("CreateIdentity方法只支持单条数据插入，不支持批量插入返回Identity");
-
-        return this.DbContext.CreateIdentity<int>(f =>
-        {
-            var entityType = typeof(TEntity);
-            var commandInitializer = RepositoryHelper.BuildCreateSqlParameters(this.ormProvider, this.mapProvider, entityType, insertObj, null, null, true);
-            f.CommandText = commandInitializer.Invoke(f.Parameters, this.ormProvider, insertObj);
-        });
+        return this.DbContext.CreateIdentity<long>(typeof(TEntity), insertObj);
     }
     public virtual async Task<long> CreateIdentityLongAsync<TEntity>(object insertObj, CancellationToken cancellationToken = default)
     {
@@ -464,12 +495,7 @@ public class Repository : IRepository
         bool isBulk = insertObj is IEnumerable && insertObj is not string && insertObj is not IDictionary<string, object>;
         if (isBulk) throw new NotSupportedException("CreateIdentity方法只支持单条数据插入，不支持批量插入返回Identity");
 
-        return await this.DbContext.CreateIdentityAsync<long>(f =>
-        {
-            var entityType = typeof(TEntity);
-            var commandInitializer = RepositoryHelper.BuildCreateSqlParameters(this.ormProvider, this.mapProvider, entityType, insertObj, null, null, true);
-            f.CommandText = commandInitializer.Invoke(f.Parameters, this.ormProvider, insertObj);
-        }, cancellationToken);
+        return await this.DbContext.CreateIdentityAsync<long>(typeof(TEntity), insertObj, cancellationToken);
     }
     #endregion
 
@@ -494,7 +520,7 @@ public class Repository : IRepository
                 bool isFirst = true;
                 var sqlBuilder = new StringBuilder();
                 var entities = updateObjs as IEnumerable;
-                var commandInitializer = RepositoryHelper.BuildUpdateMultiSqlParameters(this.ormProvider, this.mapProvider, entityType, updateObjs, null, null);
+                var commandInitializer = RepositoryHelper.BuildUpdateMultiSqlParameters(this.dbKey, this.ormProvider, this.mapProvider, this.shardingProvider, entityType, updateObjs, null, null);
                 foreach (var updateObj in entities)
                 {
                     if (index > 0) sqlBuilder.Append(';');
@@ -525,7 +551,7 @@ public class Repository : IRepository
             }
             else
             {
-                var commandInitializer = RepositoryHelper.BuildUpdateSqlParameters(this.ormProvider, this.mapProvider, entityType, updateObjs, null, null);
+                var commandInitializer = RepositoryHelper.BuildUpdateSqlParameters(this.dbKey, this.ormProvider, this.mapProvider, this.shardingProvider, entityType, updateObjs, null, null);
                 command.CommandText = commandInitializer.Invoke(command.Parameters, this.ormProvider, updateObjs);
                 this.DbContext.Open();
                 result = command.ExecuteNonQuery();
@@ -563,7 +589,7 @@ public class Repository : IRepository
                 bool isFirst = true;
                 var sqlBuilder = new StringBuilder();
                 var entities = updateObjs as IEnumerable;
-                var commandInitializer = RepositoryHelper.BuildUpdateMultiSqlParameters(this.ormProvider, this.mapProvider, entityType, updateObjs, null, null);
+                var commandInitializer = RepositoryHelper.BuildUpdateMultiSqlParameters(this.dbKey, this.ormProvider, this.mapProvider, this.shardingProvider, entityType, updateObjs, null, null);
                 foreach (var updateObj in entities)
                 {
                     if (index > 0) sqlBuilder.Append(';');
@@ -594,7 +620,7 @@ public class Repository : IRepository
             }
             else
             {
-                var commandInitializer = RepositoryHelper.BuildUpdateSqlParameters(this.ormProvider, this.mapProvider, entityType, updateObjs, null, null);
+                var commandInitializer = RepositoryHelper.BuildUpdateSqlParameters(this.dbKey, this.ormProvider, this.mapProvider, this.shardingProvider, entityType, updateObjs, null, null);
                 command.CommandText = commandInitializer.Invoke(command.Parameters, this.ormProvider, updateObjs);
                 await this.DbContext.OpenAsync(cancellationToken);
                 result = await command.ExecuteNonQueryAsync(cancellationToken);
@@ -629,35 +655,46 @@ public class Repository : IRepository
         try
         {
             var entityType = typeof(TEntity);
+            if (this.shardingProvider.TryGetShardingTable(entityType, out _))
+                throw new NotSupportedException($"实体表{entityType.FullName}有配置分表，当前方法不支持分表，请使用repository.Delete<T>().UseTable或UseTableBy方法可指定分表");
+
             bool isBulk = whereKeys is IEnumerable && whereKeys is not string && whereKeys is not IDictionary<string, object>;
             if (isBulk)
             {
                 int index = 0;
-                var sqlBuilder = new StringBuilder();
-                var entities = whereKeys as IEnumerable;
-                (var isMultiKeys, var headSql, var commandInitializer) = RepositoryHelper.BuildDeleteBulkCommandInitializer(this.ormProvider, this.mapProvider, entityType, whereKeys);
                 string separator = null;
+                var entities = whereKeys as IEnumerable;
+                Type whereObjType = null;
+                foreach (var entity in entities)
+                {
+                    whereObjType = entity.GetType();
+                    break;
+                }
+                (var isMultiKeys, var origName, var headSqlSetter, var commandInitializer) = RepositoryHelper.BuildDeleteBulkCommandInitializer(this.ormProvider, this.mapProvider, entityType, whereObjType);
+
+                var sqlBuilder = new StringBuilder();
                 if (isMultiKeys) separator = ";";
                 else
                 {
                     separator = ",";
-                    sqlBuilder.Append(headSql);
+                    headSqlSetter(sqlBuilder, origName);
                 }
                 foreach (var entity in entities)
                 {
                     if (index > 0) sqlBuilder.Append(separator);
-                    commandInitializer.Invoke(command.Parameters, this.ormProvider, sqlBuilder, entity, $"{index}");
+                    commandInitializer.Invoke(command.Parameters, sqlBuilder, this.ormProvider, origName, entity, $"{index}");
                     index++;
                 }
                 if (!isMultiKeys) sqlBuilder.Append(')');
                 command.CommandText = sqlBuilder.ToString();
                 sqlBuilder.Clear();
+                sqlBuilder = null;
             }
             else
             {
-                var commandInitializer = RepositoryHelper.BuildDeleteCommandInitializer(this.ormProvider, this.mapProvider, entityType, whereKeys, false);
-                var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
-                command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this.ormProvider, whereKeys);
+                (var origName, var commandInitializer) = RepositoryHelper.BuildDeleteCommandInitializer(this.ormProvider, this.mapProvider, entityType, whereKeys, false);
+                var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, string, object, string>;
+                command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this.ormProvider, origName, whereKeys);
             }
             this.DbContext.Open();
             result = command.ExecuteNonQuery();
@@ -687,35 +724,46 @@ public class Repository : IRepository
         try
         {
             var entityType = typeof(TEntity);
+            if (this.shardingProvider.TryGetShardingTable(entityType, out _))
+                throw new NotSupportedException($"实体表{entityType.FullName}有配置分表，当前方法不支持分表，请使用repository.Delete<T>().UseTable或UseTableBy方法可指定分表");
+
             bool isBulk = whereKeys is IEnumerable && whereKeys is not string && whereKeys is not IDictionary<string, object>;
             if (isBulk)
             {
                 int index = 0;
-                var sqlBuilder = new StringBuilder();
-                var entities = whereKeys as IEnumerable;
-                (var isMultiKeys, var headSql, var commandInitializer) = RepositoryHelper.BuildDeleteBulkCommandInitializer(this.ormProvider, this.mapProvider, entityType, whereKeys);
                 string separator = null;
+                var entities = whereKeys as IEnumerable;
+                Type whereObjType = null;
+                foreach (var entity in entities)
+                {
+                    whereObjType = entity.GetType();
+                    break;
+                }
+                (var isMultiKeys, var origName, var headSqlSetter, var commandInitializer) = RepositoryHelper.BuildDeleteBulkCommandInitializer(this.ormProvider, this.mapProvider, entityType, whereObjType);
+
+                var sqlBuilder = new StringBuilder();
                 if (isMultiKeys) separator = ";";
                 else
                 {
                     separator = ",";
-                    sqlBuilder.Append(headSql);
+                    headSqlSetter(sqlBuilder, origName);
                 }
                 foreach (var entity in entities)
                 {
                     if (index > 0) sqlBuilder.Append(separator);
-                    commandInitializer.Invoke(command.Parameters, this.ormProvider, sqlBuilder, entity, $"{index}");
+                    commandInitializer.Invoke(command.Parameters, sqlBuilder, this.ormProvider, origName, entity, $"{index}");
                     index++;
                 }
                 if (!isMultiKeys) sqlBuilder.Append(')');
                 command.CommandText = sqlBuilder.ToString();
                 sqlBuilder.Clear();
+                sqlBuilder = null;
             }
             else
             {
-                var commandInitializer = RepositoryHelper.BuildDeleteCommandInitializer(this.ormProvider, this.mapProvider, entityType, whereKeys, false);
-                var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
-                command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this.ormProvider, whereKeys);
+                (var origName, var commandInitializer) = RepositoryHelper.BuildDeleteCommandInitializer(this.ormProvider, this.mapProvider, entityType, whereKeys, false);
+                var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, string, object, string>;
+                command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this.ormProvider, origName, whereKeys);
             }
             await this.DbContext.OpenAsync(cancellationToken);
             result = await command.ExecuteNonQueryAsync(cancellationToken);

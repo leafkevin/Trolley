@@ -26,7 +26,7 @@
 	var dbProvider = new MySqlProvider(connectionString);
 
     var databaseName = "fengling";
-	var tableName = "sys_user";
+	var tableName = "sys_function";
     var removePrefix = "sys_";
     var separator = '_';
     var className = dbProvider.ToClassName(tableName, removePrefix, separator);
@@ -44,15 +44,25 @@ class ModelConfiguration : IModelConfiguration
     {
         builder.Entity<<#=className#>>(f =>
         {
-<#
-    foreach(ColumnInfo columnInfo in columnList)
+            f.ToTable("<#=tableName#>").Key(t =><#
+    var keyColumnInfos = columnList.FindAll(f => f.IsPrimaryKey);
+    if(keyColumnInfos.Count > 1)
     {
-        var propertyName = columnInfo.ColumnName;
-        if(columnInfo.IsPrimaryKey)
-        {#>
-            f.ToTable("<#=tableName#>").Key(t => t.<#=propertyName#>);
-<#      }
-    }#>
+        #> new {<#
+        for(int i = 0; i< keyColumnInfos.Count; i++)
+        {
+            var propertyName = keyColumnInfos[i].ColumnName;
+            if(i > 0)
+            {
+                #>,<#
+            }
+            #> t.<#=propertyName#><#      
+        }#> }<#  
+    }
+    else
+    {
+        #> t.<#=keyColumnInfos[0].ColumnName#><#  
+    }#>);
 <#
     foreach(ColumnInfo columnInfo in columnList)
     {

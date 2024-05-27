@@ -146,8 +146,8 @@ public class MySqlQueryVisitor : QueryVisitor
         }
         return builder.ToString();
     }
-    public override bool IsNeedFetchShardingTables(string tableSchema, out string fetchSql)
-    {        
+    public override string BuildShardingTablesSql(string tableSchema)
+    {
         var count = 0;
         foreach (var tableSegment in this.Tables)
         {
@@ -160,6 +160,7 @@ public class MySqlQueryVisitor : QueryVisitor
         }
         if (count > 1)
             throw new NotSupportedException($"当有多个表使用多分表查询时，主表可指定多个分表，从表使用方法UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)指定主从表名映射委托获取从表分表名称");
+
         var builder = new StringBuilder($"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_SCHEMA='{tableSchema}'");
         if (this.ShardingTables.Exists(f => f.ShardingType > ShardingTableType.TableName))
         {
@@ -173,7 +174,6 @@ public class MySqlQueryVisitor : QueryVisitor
             builder.Append(')');
         }
         else builder.Append($" AND TABLE_NAME LIKE '{this.ShardingTables[0].Mapper.TableName}%'");
-        fetchSql = builder.ToString();
-        return true;
+        return builder.ToString();
     }
 }

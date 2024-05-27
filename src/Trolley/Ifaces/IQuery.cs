@@ -875,7 +875,10 @@ public interface IQuery<T1, T2> : IQueryBase
     ///         return tableName.Substring(0, tableName.Length - 7);
     ///     })
     ///     ...
-    /// 原表名：sys_order,sys_user 分表名称：sys_order_104_202001,sys_user_104,sys_order_105_202001,sys_user_105，关联结果：sys_order_104_202001 -&gt; sys_user_104, sys_order_105_202001 -&gt; sys_user_105
+    /// SQL:
+    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// UNION ALL
+    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
     /// </code>
     /// </summary>
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
@@ -1418,7 +1421,10 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     ///         return tableName.Substring(0, tableName.Length - 7);
     ///     })
     ///     ...
-    /// 原表名：sys_order,sys_user 分表名称：sys_order_104_202001,sys_user_104,sys_order_105_202001,sys_user_105，关联结果：sys_order_104_202001 -&gt; sys_user_104, sys_order_105_202001 -&gt; sys_user_105
+    /// SQL:
+    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// UNION ALL
+    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
     /// </code>
     /// </summary>
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
@@ -1962,7 +1968,10 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     ///         return tableName.Substring(0, tableName.Length - 7);
     ///     })
     ///     ...
-    /// 原表名：sys_order,sys_user 分表名称：sys_order_104_202001,sys_user_104,sys_order_105_202001,sys_user_105，关联结果：sys_order_104_202001 -&gt; sys_user_104, sys_order_105_202001 -&gt; sys_user_105
+    /// SQL:
+    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// UNION ALL
+    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
     /// </code>
     /// </summary>
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
@@ -2507,7 +2516,10 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     ///         return tableName.Substring(0, tableName.Length - 7);
     ///     })
     ///     ...
-    /// 原表名：sys_order,sys_user 分表名称：sys_order_104_202001,sys_user_104,sys_order_105_202001,sys_user_105，关联结果：sys_order_104_202001 -&gt; sys_user_104, sys_order_105_202001 -&gt; sys_user_105
+    /// SQL:
+    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// UNION ALL
+    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
     /// </code>
     /// </summary>
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
@@ -3053,7 +3065,10 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     ///         return tableName.Substring(0, tableName.Length - 7);
     ///     })
     ///     ...
-    /// 原表名：sys_order,sys_user 分表名称：sys_order_104_202001,sys_user_104,sys_order_105_202001,sys_user_105，关联结果：sys_order_104_202001 -&gt; sys_user_104, sys_order_105_202001 -&gt; sys_user_105
+    /// SQL:
+    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// UNION ALL
+    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
     /// </code>
     /// </summary>
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
@@ -3600,7 +3615,10 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     ///         return tableName.Substring(0, tableName.Length - 7);
     ///     })
     ///     ...
-    /// 原表名：sys_order,sys_user 分表名称：sys_order_104_202001,sys_user_104,sys_order_105_202001,sys_user_105，关联结果：sys_order_104_202001 -&gt; sys_user_104, sys_order_105_202001 -&gt; sys_user_105
+    /// SQL:
+    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// UNION ALL
+    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
     /// </code>
     /// </summary>
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
@@ -4148,7 +4166,10 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     ///         return tableName.Substring(0, tableName.Length - 7);
     ///     })
     ///     ...
-    /// 原表名：sys_order,sys_user 分表名称：sys_order_104_202001,sys_user_104,sys_order_105_202001,sys_user_105，关联结果：sys_order_104_202001 -&gt; sys_user_104, sys_order_105_202001 -&gt; sys_user_105
+    /// SQL:
+    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// UNION ALL
+    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
     /// </code>
     /// </summary>
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
@@ -4697,7 +4718,10 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     ///         return tableName.Substring(0, tableName.Length - 7);
     ///     })
     ///     ...
-    /// 原表名：sys_order,sys_user 分表名称：sys_order_104_202001,sys_user_104,sys_order_105_202001,sys_user_105，关联结果：sys_order_104_202001 -&gt; sys_user_104, sys_order_105_202001 -&gt; sys_user_105
+    /// SQL:
+    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// UNION ALL
+    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
     /// </code>
     /// </summary>
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
@@ -5247,7 +5271,10 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     ///         return tableName.Substring(0, tableName.Length - 7);
     ///     })
     ///     ...
-    /// 原表名：sys_order,sys_user 分表名称：sys_order_104_202001,sys_user_104,sys_order_105_202001,sys_user_105，关联结果：sys_order_104_202001 -&gt; sys_user_104, sys_order_105_202001 -&gt; sys_user_105
+    /// SQL:
+    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// UNION ALL
+    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
     /// </code>
     /// </summary>
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
@@ -5798,7 +5825,10 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     ///         return tableName.Substring(0, tableName.Length - 7);
     ///     })
     ///     ...
-    /// 原表名：sys_order,sys_user 分表名称：sys_order_104_202001,sys_user_104,sys_order_105_202001,sys_user_105，关联结果：sys_order_104_202001 -&gt; sys_user_104, sys_order_105_202001 -&gt; sys_user_105
+    /// SQL:
+    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// UNION ALL
+    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
     /// </code>
     /// </summary>
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
@@ -6350,7 +6380,10 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     ///         return tableName.Substring(0, tableName.Length - 7);
     ///     })
     ///     ...
-    /// 原表名：sys_order,sys_user 分表名称：sys_order_104_202001,sys_user_104,sys_order_105_202001,sys_user_105，关联结果：sys_order_104_202001 -&gt; sys_user_104, sys_order_105_202001 -&gt; sys_user_105
+    /// SQL:
+    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// UNION ALL
+    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
     /// </code>
     /// </summary>
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
@@ -6903,7 +6936,10 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     ///         return tableName.Substring(0, tableName.Length - 7);
     ///     })
     ///     ...
-    /// 原表名：sys_order,sys_user 分表名称：sys_order_104_202001,sys_user_104,sys_order_105_202001,sys_user_105，关联结果：sys_order_104_202001 -&gt; sys_user_104, sys_order_105_202001 -&gt; sys_user_105
+    /// SQL:
+    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// UNION ALL
+    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
     /// </code>
     /// </summary>
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
@@ -7457,7 +7493,10 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     ///         return tableName.Substring(0, tableName.Length - 7);
     ///     })
     ///     ...
-    /// 原表名：sys_order,sys_user 分表名称：sys_order_104_202001,sys_user_104,sys_order_105_202001,sys_user_105，关联结果：sys_order_104_202001 -&gt; sys_user_104, sys_order_105_202001 -&gt; sys_user_105
+    /// SQL:
+    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// UNION ALL
+    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
     /// </code>
     /// </summary>
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
@@ -8012,7 +8051,10 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     ///         return tableName.Substring(0, tableName.Length - 7);
     ///     })
     ///     ...
-    /// 原表名：sys_order,sys_user 分表名称：sys_order_104_202001,sys_user_104,sys_order_105_202001,sys_user_105，关联结果：sys_order_104_202001 -&gt; sys_user_104, sys_order_105_202001 -&gt; sys_user_105
+    /// SQL:
+    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// UNION ALL
+    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
     /// </code>
     /// </summary>
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
@@ -8568,7 +8610,10 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     ///         return tableName.Substring(0, tableName.Length - 7);
     ///     })
     ///     ...
-    /// 原表名：sys_order,sys_user 分表名称：sys_order_104_202001,sys_user_104,sys_order_105_202001,sys_user_105，关联结果：sys_order_104_202001 -&gt; sys_user_104, sys_order_105_202001 -&gt; sys_user_105
+    /// SQL:
+    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// UNION ALL
+    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
     /// </code>
     /// </summary>
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>

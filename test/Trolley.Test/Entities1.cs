@@ -19,6 +19,7 @@ public enum UserSourceType
 public class User
 {
     public int Id { get; set; }
+    public string TenantId { get; set; }
     public string Name { get; set; }
     public Gender Gender { get; set; }
     public int Age { get; set; }

@@ -76,20 +76,12 @@ public class QueryBase : IQueryBase
     protected TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
     {
         this.Visitor.Select(sqlFormat, fieldExpr);
-        return this.DbContext.QueryFirst<TTarget>(f =>
-        {
-            f.CommandText = this.Visitor.BuildSql(out _);
-            this.Visitor.DbParameters.CopyTo(f.Parameters);
-        });
+        return this.DbContext.QueryFirst<TTarget>(this.Visitor);
     }
     protected async Task<TTarget> QueryFirstValueAsync<TTarget>(string sqlFormat, Expression fieldExpr = null, CancellationToken cancellationToken = default)
     {
         this.Visitor.Select(sqlFormat, fieldExpr);
-        return await this.DbContext.QueryFirstAsync<TTarget>(f =>
-        {
-            f.CommandText = this.Visitor.BuildSql(out _);
-            this.Visitor.DbParameters.CopyTo(f.Parameters);
-        }, cancellationToken);
+        return await this.DbContext.QueryFirstAsync<TTarget>(this.Visitor, cancellationToken);
     }
     #endregion
 }
@@ -113,31 +105,31 @@ public class Query<T> : QueryBase, IQuery<T>
     #endregion
 
     #region Sharding
-    public IQuery<T> UseTable(params string[] tableNames)
+    public virtual IQuery<T> UseTable(params string[] tableNames)
     {
         var entityType = typeof(T);
         this.Visitor.UseTable(entityType, tableNames);
         return this;
     }
-    public IQuery<T> UseTable(Func<string, bool> tableNamePredicate)
+    public virtual IQuery<T> UseTable(Func<string, bool> tableNamePredicate)
     {
         var entityType = typeof(T);
         this.Visitor.UseTable(entityType, tableNamePredicate);
         return this;
     }
-    public IQuery<T> UseTableBy(object field1Value, object field2Value = null)
+    public virtual IQuery<T> UseTableBy(object field1Value, object field2Value = null)
     {
         var entityType = typeof(T);
         this.Visitor.UseTableBy(entityType, field1Value, field2Value);
         return this;
     }
-    public IQuery<T> UseTableByRange(object beginFieldValue, object endFieldValue)
+    public virtual IQuery<T> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
         var entityType = typeof(T);
         this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
         return this;
     }
-    public IQuery<T> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public virtual IQuery<T> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         var entityType = typeof(T);
         this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);

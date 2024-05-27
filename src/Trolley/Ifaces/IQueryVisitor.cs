@@ -40,7 +40,7 @@ public interface IQueryVisitor : IDisposable
     string BuildSql(out List<ReaderField> readerFields);
     string BuildCommandSql(Type targetType, out IDataParameterCollection dbParameters);
     string BuildCteTableSql(string tableName, out List<ReaderField> readerFields, out bool isRecursive);
-    bool IsNeedFetchShardingTables(string tableSchema, out string fetchSql);
+    string BuildShardingTablesSql(string tableSchema);
     void SetShardingTables(List<string> shardingTables);
     void UseTable(Type entityType, params string[] tableNames);
     void UseTable(Type entityType, Func<string, bool> tableNamePredicate);

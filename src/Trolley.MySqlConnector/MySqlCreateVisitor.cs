@@ -22,35 +22,48 @@ public class MySqlCreateVisitor : CreateVisitor
     {
         string sql = null;
         this.IsReturnIdentity = isReturnIdentity;
-        this.DbParameters = command.Parameters;
-        foreach (var deferredSegment in this.deferredSegments)
-        {
-            switch (deferredSegment.Type)
-            {
-                case "WithBy":
-                    this.VisitWithBy(deferredSegment.Value);
-                    break;
-                case "WithByField":
-                    this.VisitWithByField(deferredSegment.Value);
-                    break;
-                case "SetObject":
-                    this.UpdateFields ??= new();
-                    this.VisitSetObject(deferredSegment.Value);
-                    break;
-                case "SetExpression":
-                    this.UpdateFields ??= new();
-                    this.VisitSetExpression(deferredSegment.Value as LambdaExpression);
-                    break;
-            }
-        }
         if (this.ActionMode == ActionMode.Bulk)
-            sql = this.BuildMultiBulkSql(command);
-        else sql = this.BuildSql();
+            sql = this.BuildWithBulkSql(command);
+        else
+        {
+            this.DbParameters ??= command.Parameters;
+            foreach (var deferredSegment in this.deferredSegments)
+            {
+                switch (deferredSegment.Type)
+                {
+                    case "WithBy":
+                        this.VisitWithBy(deferredSegment.Value);
+                        break;
+                    case "WithByField":
+                        this.VisitWithByField(deferredSegment.Value);
+                        break;
+                    case "SetObject":
+                        this.UpdateFields ??= new();
+                        this.VisitSetObject(deferredSegment.Value);
+                        break;
+                    case "SetExpression":
+                        this.UpdateFields ??= new();
+                        this.VisitSetExpression(deferredSegment.Value as LambdaExpression);
+                        break;
+                }
+            }
+            sql = this.BuildSql();
+        }
         return sql;
     }
     public override string BuildSql()
     {
-        var tableName = this.OrmProvider.GetTableName(this.Tables[0].Mapper.TableName);
+        var entityType = this.Tables[0].EntityType;
+        var entityMapper = this.Tables[0].Mapper;
+        var tableName = entityMapper.TableName;
+        if (this.ShardingProvider.TryGetShardingTable(entityType, out _))
+        {
+            if (string.IsNullOrEmpty(this.Tables[0].Body))
+                throw new Exception($"实体表{entityType.FullName}有配置分表，当前操作未指定分表，请调用UseTable或UseTableBy方法指定分表");
+            tableName = this.Tables[0].Body;
+        }
+        tableName = this.OrmProvider.GetTableName(tableName);
+
         var fieldsBuilder = new StringBuilder($"{this.BuildHeadSql()} {tableName} (");
         var valuesBuilder = new StringBuilder(" VALUES(");
         for (int i = 0; i < this.InsertFields.Count; i++)
@@ -77,15 +90,19 @@ public class MySqlCreateVisitor : CreateVisitor
 
         if (this.IsReturnIdentity)
         {
-            if (!this.Tables[0].Mapper.IsAutoIncrement)
-                throw new NotSupportedException($"实体{this.Tables[0].Mapper.EntityType.FullName}表未配置自增长字段，无法返回Identity值");
+            if (!entityMapper.IsAutoIncrement)
+                throw new NotSupportedException($"实体{entityMapper.EntityType.FullName}表未配置自增长字段，无法返回Identity值");
             if (hasUpdateFields) throw new NotSupportedException("包含更新子句，不支持返回Identity");
-            valuesBuilder.Append(this.OrmProvider.GetIdentitySql(this.Tables[0].EntityType));
+            valuesBuilder.Append(this.OrmProvider.GetIdentitySql(entityMapper.EntityType));
         }
 
         fieldsBuilder.Append(valuesBuilder);
         valuesBuilder.Clear();
-        return fieldsBuilder.ToString();
+        var sql = fieldsBuilder.ToString();
+        fieldsBuilder.Clear();
+        fieldsBuilder = null;
+        valuesBuilder = null;
+        return sql;
     }
     public void WithBulkCopy(IEnumerable insertObjs, int? timeoutSeconds)
     {
@@ -125,13 +142,13 @@ public class MySqlCreateVisitor : CreateVisitor
         var setFieldsInitializer = RepositoryHelper.BuildUpdateSetPartSqlParameters(this.OrmProvider, this.MapProvider, entityType, updateObjType, this.OnlyFieldNames, this.IgnoreFieldNames, this.IsMultiple, true);
         if (this.IsMultiple)
         {
-            var typedSetFieldsInitializer = setFieldsInitializer as Action<IDataParameterCollection, IOrmProvider, StringBuilder, object, string>;
-            typedSetFieldsInitializer.Invoke(this.DbParameters, this.OrmProvider, this.UpdateFields, updateObj, $"_m{this.CommandIndex}");
+            var typedSetFieldsInitializer = setFieldsInitializer as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
+            typedSetFieldsInitializer.Invoke(this.DbParameters, this.UpdateFields, this.OrmProvider, updateObj, $"_m{this.CommandIndex}");
         }
         else
         {
-            var typedSetFieldsInitializer = setFieldsInitializer as Action<IDataParameterCollection, IOrmProvider, StringBuilder, object>;
-            typedSetFieldsInitializer.Invoke(this.DbParameters, this.OrmProvider, this.UpdateFields, updateObj);
+            var typedSetFieldsInitializer = setFieldsInitializer as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object>;
+            typedSetFieldsInitializer.Invoke(this.DbParameters, this.UpdateFields, this.OrmProvider, updateObj);
         }
     }
     public void VisitSetExpression(LambdaExpression lambdaExpr)

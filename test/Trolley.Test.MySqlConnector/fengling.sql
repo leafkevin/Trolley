@@ -196,6 +196,7 @@ INSERT INTO `sys_product` VALUES (3, 'PN-003', '优衣库保暖内衣', 3, 3, 18
 DROP TABLE IF EXISTS `sys_user`;
 CREATE TABLE `sys_user`  (
   `Id` int NOT NULL,
+  `TenantId` varchar(50) NOT NULL,
   `Name` varchar(50) NULL DEFAULT NULL,
   `Gender` tinyint NULL DEFAULT NULL,
   `Age` int NULL DEFAULT NULL,
@@ -214,8 +215,8 @@ CREATE TABLE `sys_user`  (
 -- ----------------------------
 -- Records of sys_user
 -- ----------------------------
-INSERT INTO `sys_user` VALUES (1, 'leafkevin', 2, 25, 1, 'e09d9d46-1783-475b-9d57-2721d163c29f', '01:19:29.000000', 'Douyin', 1, '2023-03-03 00:00:00', 1, '2023-04-29 00:05:28', 1);
-INSERT INTO `sys_user` VALUES (2, 'cindy', 2, 21, 2, '20687f1c-3f27-4741-894e-fa59bcd43dbc', '01:35:30.000000', 'Taobao', 1, '2023-03-03 06:06:06', 1, '2023-04-29 00:05:28', 1);
+INSERT INTO `sys_user` VALUES (1, '1', 'leafkevin', 2, 25, 1, 'e09d9d46-1783-475b-9d57-2721d163c29f', '01:19:29.000000', 'Douyin', 1, '2023-03-03 00:00:00', 1, '2023-04-29 00:05:28', 1);
+INSERT INTO `sys_user` VALUES (2, '2', 'cindy', 2, 21, 2, '20687f1c-3f27-4741-894e-fa59bcd43dbc', '01:35:30.000000', 'Taobao', 1, '2023-03-03 06:06:06', 1, '2023-04-29 00:05:28', 1);
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ----------------------------

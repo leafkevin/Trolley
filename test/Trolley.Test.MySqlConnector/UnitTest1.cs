@@ -33,6 +33,7 @@ public class UnitTest1 : UnitTestBase
         count = await repository.CreateAsync<User>(new
         {
             Id = 4,
+            TenantId = "1",
             Name = "leafkevin",
             Age = 25,
             CompanyId = 1,
@@ -144,6 +145,7 @@ public class UnitTest1 : UnitTestBase
             .WithBy(new
             {
                 Id = 1,
+                TenantId = "1",
                 Name = "leafkevin",
                 Age = 25,
                 CompanyId = 1,
@@ -156,21 +158,22 @@ public class UnitTest1 : UnitTestBase
             })
             .ToSql(out var dbParameters);
         repository.Commit();
-        Assert.True(sql == "INSERT INTO `sys_user` (`Id`,`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)");
+        Assert.True(sql == "INSERT INTO `sys_user` (`Id`,`TenantId`,`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@TenantId,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)");
         Assert.True((int)dbParameters[0].Value == 1);
-        Assert.True((string)dbParameters[1].Value == "leafkevin");
-        Assert.True((int)dbParameters[2].Value == 25);
-        Assert.True((int)dbParameters[3].Value == 1);
-        if (dbParameters[4] is MySqlParameter dbParameter)
+        Assert.True((string)dbParameters[1].Value == "1");
+        Assert.True((string)dbParameters[2].Value == "leafkevin");
+        Assert.True((int)dbParameters[3].Value == 25);
+        Assert.True((int)dbParameters[4].Value == 1);
+        if (dbParameters[5] is MySqlParameter dbParameter)
         {
             Assert.True(dbParameter.MySqlDbType == MySqlDbType.UByte);
             Assert.True((byte)dbParameter.Value == (byte)Gender.Male);
         }
-        Assert.True((int)dbParameters[5].Value == 1);
-        Assert.True((DateTime)dbParameters[6].Value == now);
-        Assert.True((int)dbParameters[7].Value == 1);
-        Assert.True((DateTime)dbParameters[8].Value == now);
-        Assert.True((int)dbParameters[9].Value == 1);
+        Assert.True((int)dbParameters[6].Value == 1);
+        Assert.True((DateTime)dbParameters[7].Value == now);
+        Assert.True((int)dbParameters[8].Value == 1);
+        Assert.True((DateTime)dbParameters[9].Value == now);
+        Assert.True((int)dbParameters[10].Value == 1);
     }
     [Fact]
     public void Insert_WithBy_IgnoreFields()
@@ -181,6 +184,7 @@ public class UnitTest1 : UnitTestBase
            .WithBy(new
            {
                Id = 1,
+               TenantId = "1",
                Name = "leafkevin",
                Age = 25,
                CompanyId = 1,
@@ -193,7 +197,7 @@ public class UnitTest1 : UnitTestBase
            })
            .IgnoreFields("Gender", "CompanyId")
            .ToSql(out var dbParameters);
-        Assert.True(sql == "INSERT INTO `sys_user` (`Id`,`Name`,`Age`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@Name,@Age,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)");
+        Assert.True(sql == "INSERT INTO `sys_user` (`Id`,`TenantId`,`Name`,`Age`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@TenantId,@Name,@Age,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)");
 
         repository.BeginTransaction();
         repository.Delete<User>().Where(f => f.Id == 1).Execute();
@@ -201,6 +205,7 @@ public class UnitTest1 : UnitTestBase
             .WithBy(new
             {
                 Id = 1,
+                TenantId = "1",
                 Name = "leafkevin",
                 Age = 25,
                 CompanyId = 1,
@@ -222,6 +227,7 @@ public class UnitTest1 : UnitTestBase
            .WithBy(new
            {
                Id = 1,
+               TenantId = "1",
                Name = "leafkevin",
                Age = 25,
                CompanyId = 1,
@@ -234,7 +240,7 @@ public class UnitTest1 : UnitTestBase
            })
            .IgnoreFields(f => new { f.Gender, f.CompanyId })
            .ToSql(out dbParameters);
-        Assert.True(sql == "INSERT INTO `sys_user` (`Id`,`Name`,`Age`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@Name,@Age,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)");
+        Assert.True(sql == "INSERT INTO `sys_user` (`Id`,`TenantId`,`Name`,`Age`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@TenantId,@Name,@Age,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)");
 
         repository.BeginTransaction();
         repository.Delete<User>().Where(f => f.Id == 1).Execute();
@@ -242,6 +248,7 @@ public class UnitTest1 : UnitTestBase
             .WithBy(new
             {
                 Id = 1,
+                TenantId = "1",
                 Name = "leafkevin",
                 Age = 25,
                 CompanyId = 1,
@@ -272,6 +279,7 @@ public class UnitTest1 : UnitTestBase
             .WithBy(new
             {
                 Id = 1,
+                TenantId = "1",
                 Name = "leafkevin",
                 Age = 25,
                 CompanyId = 1,
@@ -286,13 +294,14 @@ public class UnitTest1 : UnitTestBase
             .WithBy(guidField.HasValue, new { GuidField = guidField })
             .ToSql(out _);
         repository.Commit();
-        Assert.True(sql == "INSERT INTO `sys_user` (`Id`,`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`,`SomeTimes`,`GuidField`) VALUES(@Id,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy,@SomeTimes,@GuidField)");
+        Assert.True(sql == "INSERT INTO `sys_user` (`Id`,`TenantId`,`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`,`SomeTimes`,`GuidField`) VALUES(@Id,@TenantId,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy,@SomeTimes,@GuidField)");
         repository.BeginTransaction();
         count = repository.Delete<User>().Where(f => f.Id == 1).Execute();
         count = await repository.Create<User>()
             .WithBy(new
             {
                 Id = 1,
+                TenantId = "1",
                 Name = "leafkevin",
                 Age = 25,
                 CompanyId = 1,
@@ -824,6 +833,7 @@ public class UnitTest1 : UnitTestBase
             .WithBy(new
             {
                 Id = 1,
+                TenantId = "1",
                 Name = "leafkevin",
                 Age = 25,
                 CompanyId = 1,
@@ -835,10 +845,10 @@ public class UnitTest1 : UnitTestBase
                 UpdatedBy = 1
             })
             .ToSql(out var parameters1);
-        Assert.True(sql1 == "INSERT INTO `sys_user` (`Id`,`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)");
-        Assert.True(parameters1[4].ParameterName == "@Gender");
-        Assert.True(parameters1[4].Value.GetType() == typeof(byte));
-        Assert.True((byte)parameters1[4].Value == (byte)Gender.Male);
+        Assert.True(sql1 == "INSERT INTO `sys_user` (`Id`,`TenantId`,`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@TenantId,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)");
+        Assert.True(parameters1[5].ParameterName == "@Gender");
+        Assert.True(parameters1[5].Value.GetType() == typeof(byte));
+        Assert.True((byte)parameters1[5].Value == (byte)Gender.Male);
 
         var sql2 = repository.Create<Company>()
              .WithBy(new Company
@@ -868,6 +878,7 @@ public class UnitTest1 : UnitTestBase
             .WithBy(new
             {
                 Id = 1,
+                TenantId = "1",
                 Name = "leafkevin",
                 Age = 25,
                 CompanyId = 1,
@@ -879,12 +890,13 @@ public class UnitTest1 : UnitTestBase
                 UpdatedBy = 1
             })
             .ToSql(out var parameters1);
-        Assert.True(sql1 == "INSERT IGNORE INTO `sys_user` (`Id`,`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)");
+        Assert.True(sql1 == "INSERT IGNORE INTO `sys_user` (`Id`,`TenantId`,`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@TenantId,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)");
         var count = await repository.Create<User>()
             .IgnoreInto()
             .WithBy(new
             {
                 Id = 1,
+                TenantId = "1",
                 Name = "leafkevin",
                 Age = 25,
                 CompanyId = 1,
@@ -908,6 +920,7 @@ public class UnitTest1 : UnitTestBase
             .WithBy(new
             {
                 Id = 1,
+                TenantId = "1",
                 Name = "leafkevin",
                 Age = 25,
                 CompanyId = 1,
@@ -929,6 +942,7 @@ public class UnitTest1 : UnitTestBase
             .WithBy(new
             {
                 Id = 1,
+                TenantId = "1",
                 Name = "leafkevin",
                 Age = 25,
                 CompanyId = 1,
@@ -950,6 +964,7 @@ public class UnitTest1 : UnitTestBase
             .WithBy(new
             {
                 Id = 1,
+                TenantId = "1",
                 Name = "leafkevin",
                 Age = 25,
                 CompanyId = 1,

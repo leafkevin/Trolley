@@ -135,4 +135,5 @@ public class TheaDbParameterCollection : IDataParameterCollection
         this.namedIndices.Remove(parameterName);
         this.parameters.RemoveAt(index);
     }
+    public List<IDbDataParameter> ToList() => this.parameters;
 }

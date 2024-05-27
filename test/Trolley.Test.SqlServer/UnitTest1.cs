@@ -30,6 +30,7 @@ public class UnitTest1 : UnitTestBase
         count = await repository.CreateAsync<User>(new
         {
             Id = 4,
+            TenantId = "1",
             Name = "leafkevin",
             Age = 25,
             CompanyId = 1,
@@ -140,6 +141,7 @@ public class UnitTest1 : UnitTestBase
             .WithBy(new
             {
                 Id = 1,
+                TenantId = "1",
                 Name = "leafkevin",
                 Age = 25,
                 CompanyId = 1,

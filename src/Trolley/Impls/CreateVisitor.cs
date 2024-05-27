@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -11,10 +10,6 @@ namespace Trolley;
 
 public class CreateVisitor : SqlVisitor, ICreateVisitor
 {
-    private static ConcurrentDictionary<int, Action<StringBuilder, object>> headSqlSetterCache = new();
-    private static ConcurrentDictionary<int, object> valuesSqlParametersCache = new();
-    private static ConcurrentDictionary<int, object> multiValuesSqlParametersCache = new();
-
     protected List<CommandSegment> deferredSegments = new();
 
     public List<string> OnlyFieldNames { get; set; }
@@ -53,22 +48,25 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     {
         string sql = null;
         this.IsReturnIdentity = isReturnIdentity;
-        this.DbParameters = command.Parameters;
-        foreach (var deferredSegment in this.deferredSegments)
-        {
-            switch (deferredSegment.Type)
-            {
-                case "WithBy":
-                    this.VisitWithBy(deferredSegment.Value);
-                    break;
-                case "WithByField":
-                    this.VisitWithByField(deferredSegment.Value);
-                    break;
-            }
-        }
         if (this.ActionMode == ActionMode.Bulk)
-            sql = this.BuildMultiBulkSql(command);
-        if (sql == null) sql = this.BuildSql();
+            sql = this.BuildWithBulkSql(command);
+        else
+        {
+            this.DbParameters ??= command.Parameters;
+            foreach (var deferredSegment in this.deferredSegments)
+            {
+                switch (deferredSegment.Type)
+                {
+                    case "WithBy":
+                        this.VisitWithBy(deferredSegment.Value);
+                        break;
+                    case "WithByField":
+                        this.VisitWithByField(deferredSegment.Value);
+                        break;
+                }
+            }
+            sql = this.BuildSql();
+        }
         return sql;
     }
     public virtual MultipleCommand CreateMultipleCommand()
@@ -96,11 +94,22 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         this.RefQueries = multiCommand.RefQueries;
         this.IsNeedTableAlias = multiCommand.IsNeedTableAlias;
         if (sqlBuilder.Length > 0) sqlBuilder.Append(';');
+        if (this.deferredSegments.Count > 0 && this.deferredSegments[0].Type == "WithBulk")
+            this.ActionMode = ActionMode.Bulk;
         sqlBuilder.Append(this.BuildCommand(command, false));
     }
     public virtual string BuildSql()
     {
-        var tableName = this.OrmProvider.GetTableName(this.Tables[0].Mapper.TableName);
+        var entityType = this.Tables[0].EntityType;
+        var entityMapper = this.Tables[0].Mapper;
+        var tableName = entityMapper.TableName;
+        if (this.ShardingProvider.TryGetShardingTable(entityType, out _))
+        {
+            if (!this.Tables[0].IsSharding)
+                throw new Exception($"实体表{entityType.FullName}有配置分表，当前操作未指定分表，请调用UseTable或UseTableBy方法指定分表");
+            tableName = this.Tables[0].Body;
+        }
+        tableName = this.OrmProvider.GetTableName(tableName);
         var fieldsBuilder = new StringBuilder($"INSERT INTO {tableName} (");
 
         var valuesBuilder = new StringBuilder();
@@ -121,13 +130,17 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
 
         if (this.IsReturnIdentity)
         {
-            if (!this.Tables[0].Mapper.IsAutoIncrement)
-                throw new Exception($"实体{this.Tables[0].Mapper.EntityType.FullName}表未配置自增长字段，无法返回Identity值");
+            if (!entityMapper.IsAutoIncrement)
+                throw new Exception($"实体{entityMapper.EntityType.FullName}表未配置自增长字段，无法返回Identity值");
             valuesBuilder.Append(this.OrmProvider.GetIdentitySql(this.Tables[0].EntityType));
         }
         fieldsBuilder.Append(valuesBuilder);
         valuesBuilder.Clear();
-        return fieldsBuilder.ToString();
+        var sql = fieldsBuilder.ToString();
+        fieldsBuilder.Clear();
+        fieldsBuilder = null;
+        valuesBuilder = null;
+        return sql;
     }
     public virtual void WithBy(object insertObj)
     {
@@ -170,45 +183,78 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     }
     public virtual void OnlyFields(Expression fieldsSelector)
         => this.OnlyFieldNames = this.VisitFields(fieldsSelector);
-    public virtual string BuildMultiBulkSql(IDbCommand command)
+    public virtual string BuildWithBulkSql(IDbCommand command)
     {
-        //多语句查询才会走到此分支
-        if (!this.IsMultiple) return null;
-
-        int index = 0;
-        var builder = new StringBuilder();
-        (var insertObjs, var bulkCount) = ((IEnumerable, int))this.deferredSegments[0].Value;
-        var entityType = this.Tables[0].EntityType;
+        //多命令查询或是ToSql才会走到此分支
         //多语句执行，一次性不分批次
-        (var headSqlSetter, var commandInitializer) = RepositoryHelper.BuildCreateMultiSqlParameters(this.OrmProvider, this.MapProvider, entityType, insertObjs, this.OnlyFieldNames, this.IgnoreFieldNames, true);
-        foreach (var insertObj in insertObjs)
+        var sqlBuilder = new StringBuilder();
+        (var isNeedSplit, var tableName, var insertObjs, _, var firstInsertObj,
+            var headSqlSetter, var valuesSqlSetter) = this.BuildWithBulk(command);
+
+        Action<string, IEnumerable> executor = (tableName, insertObjs) =>
         {
-            if (index > 0) builder.Append(',');
-            commandInitializer.Invoke(command.Parameters, this.OrmProvider, builder, insertObj, $"_m{this.CommandIndex}");
-            index++;
+            headSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName, firstInsertObj);
+            int index = 0;
+            foreach (var insertObj in insertObjs)
+            {
+                if (index > 0) sqlBuilder.Append(',');
+                valuesSqlSetter.Invoke(command.Parameters, sqlBuilder, insertObj, index.ToString());
+                index++;
+            }
+        };
+        if (isNeedSplit)
+        {
+            var entityType = this.Tables[0].EntityType;
+            var tabledInsertObjs = RepositoryHelper.SplitShardingParameters(this.DbKey, this.MapProvider, this.ShardingProvider, entityType, insertObjs);
+            int index = 0;
+            foreach (var tabledInsertObj in tabledInsertObjs)
+            {
+                //TODO:待测试
+                if (index > 0)
+                    sqlBuilder.Append(';');
+                executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
+                index++;
+            }
         }
-        return builder.ToString();
+        else executor.Invoke(tableName, insertObjs);
+        var sql = sqlBuilder.ToString();
+        sqlBuilder.Clear();
+        sqlBuilder = null;
+        return sql;
     }
-    public virtual (IEnumerable, int, Action<StringBuilder>, Action<StringBuilder, object, string>) BuildWithBulk(IDbCommand command)
+    public virtual (bool, string, IEnumerable, int, object, Action<IDataParameterCollection, StringBuilder, string, object>,
+        Action<IDataParameterCollection, StringBuilder, object, string>) BuildWithBulk(IDbCommand command)
     {
-        this.DbParameters = command.Parameters;
-        var entityType = this.Tables[0].EntityType;
+        bool isNeedSplit = false;
+        object firstInsertObj = null;
+        Type insertObjType = null;
+
         (var insertObjs, var bulkCount) = ((IEnumerable, int))this.deferredSegments[0].Value;
+        foreach (var entity in insertObjs)
+        {
+            firstInsertObj = entity;
+            break;
+        }
+        insertObjType = firstInsertObj.GetType();
+        var tableName = this.Tables[0].Mapper.TableName;
+        var entityType = this.Tables[0].EntityType;
+
+        if (this.ShardingProvider.TryGetShardingTable(entityType, out _))
+        {
+            //有设置分表，优先使用分表，没有设置分表，则根据数据的字段确定分表
+            if (!string.IsNullOrEmpty(this.Tables[0].Body))
+                tableName = this.Tables[0].Body;
+            //未指定分表，需要根据数据字段确定分表
+            else isNeedSplit = true;
+        }
+        Action<IDataParameterCollection, StringBuilder, string, object> headSqlSetter = null;
+        Action<IDataParameterCollection, StringBuilder, object, string> valuesSqlSetter = null;
+        var fieldsSqlPartSetter = RepositoryHelper.BuildCreateFieldsSqlPart(this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames);
+        var valuesSqlPartSetter = RepositoryHelper.BuildCreateValuesSqlParametes(this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames, true);
+
         if (this.deferredSegments.Count > 1)
         {
-            object insertObj = null;
-            foreach (var entity in insertObjs)
-            {
-                insertObj = entity;
-                break;
-            }
-            var insertObjType = insertObjs.GetType();
-            var entityMapper = this.Tables[0].Mapper;
-
-            var cacheKey = RepositoryHelper.BuildInsertHashKey(this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames);
-            var headSqlBulkSetter = headSqlSetterCache.GetOrAdd(cacheKey, f => RepositoryHelper.BuildCreateHeadSqlPart(
-                 this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames));
-
+            this.DbParameters = new TheaDbParameterCollection();
             for (int i = 1; i < this.deferredSegments.Count; i++)
             {
                 var deferredSegment = this.deferredSegments[i];
@@ -223,28 +269,25 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                     default: throw new NotSupportedException("批量插入后，只支持WithBy/IgnoreFields/OnlyFields操作");
                 }
             }
+
             var fixedDbParameters = this.DbParameters.Cast<IDbDataParameter>().ToList();
-            Action<StringBuilder> headSqlSetter = (builder) =>
+            headSqlSetter = (dbParameters, builder, tableName, insertObj) =>
             {
-                builder.Append($"INSERT INTO {this.OrmProvider.GetFieldName(entityMapper.TableName)} (");
+                builder.Append($"INSERT INTO {this.OrmProvider.GetFieldName(tableName)} (");
                 for (int i = 0; i < this.InsertFields.Count; i++)
                 {
                     var insertField = this.InsertFields[i];
                     if (i > 0) builder.Append(',');
                     builder.Append(insertField.Fields);
                 }
-                headSqlBulkSetter.Invoke(builder, insertObj);
+                fieldsSqlPartSetter.Invoke(builder, insertObj);
                 builder.Append(") VALUES ");
                 if (fixedDbParameters.Count > 0)
-                    fixedDbParameters.ForEach(f => this.DbParameters.Add(f));
+                    fixedDbParameters.ForEach(f => dbParameters.Add(f));
             };
-            var valuesPartSqlParameters = multiValuesSqlParametersCache.GetOrAdd(cacheKey, f => RepositoryHelper.BuildCreateValuesPartSqlParametes(
-                 this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames, true));
-            var typedValuesPartSqlParameters = valuesPartSqlParameters as Action<IDataParameterCollection, IOrmProvider, StringBuilder, object, string>;
+            var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
 
-            this.DbParameters.Clear();
-            Action<StringBuilder, object, string> commandInitializer = null;
-            commandInitializer = (builder, insertObj, suffix) =>
+            valuesSqlSetter = (dbParameters, builder, insertObj, suffix) =>
             {
                 builder.Append('(');
                 for (int i = 0; i < this.InsertFields.Count; i++)
@@ -253,48 +296,42 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                     if (i > 0) builder.Append(',');
                     builder.Append(insertField.Values);
                 }
-                fixedDbParameters.ForEach(f => this.DbParameters.Add(f));
-                typedValuesPartSqlParameters.Invoke(this.DbParameters, this.OrmProvider, builder, insertObj, suffix);
+                typedValuesSqlPartSetter.Invoke(dbParameters, builder, this.OrmProvider, insertObj, suffix);
                 builder.Append(')');
             };
-            return (insertObjs, bulkCount, headSqlSetter, commandInitializer);
+            this.DbParameters = command.Parameters;
         }
-        else
-        {
-            (var headSqlSetter, var typedCommandInitializer) = RepositoryHelper.BuildCreateMultiSqlParameters(this.OrmProvider, this.MapProvider, entityType, insertObjs, this.OnlyFieldNames, this.IgnoreFieldNames, true);
-            Action<StringBuilder, object, string> commandInitializer = null;
-            commandInitializer = (builder, insertObj, suffix) => typedCommandInitializer.Invoke(this.DbParameters, this.OrmProvider, builder, insertObj, suffix);
-            return (insertObjs, bulkCount, headSqlSetter, commandInitializer);
-        }
+        else (_, headSqlSetter, valuesSqlSetter) = RepositoryHelper.BuildCreateBulkSqlParameters(this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames);
+        return (isNeedSplit, tableName, insertObjs, bulkCount, firstInsertObj, headSqlSetter, valuesSqlSetter);
     }
     public virtual void VisitWithBy(object insertObj)
     {
         var entityType = this.Tables[0].EntityType;
         var insertObjType = insertObj.GetType();
-        var cacheKey = RepositoryHelper.BuildInsertHashKey(this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames);
-        var headSqlSetter = headSqlSetterCache.GetOrAdd(cacheKey, f =>
-            RepositoryHelper.BuildCreateHeadSqlPart(this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames));
-        var commandInitializerCache = this.IsMultiple ? multiValuesSqlParametersCache : valuesSqlParametersCache;
-        var commandInitializer = commandInitializerCache.GetOrAdd(cacheKey, f =>
-            RepositoryHelper.BuildCreateValuesPartSqlParametes(this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames, this.IsMultiple));
+        var fieldsSqlPartSetter = RepositoryHelper.BuildCreateFieldsSqlPart(this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames);
+        var valuesSqlPartSetter = RepositoryHelper.BuildCreateValuesSqlParametes(this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames, this.IsMultiple);
+
         var fieldsBuilder = new StringBuilder();
-        headSqlSetter.Invoke(fieldsBuilder, insertObj);
+        fieldsSqlPartSetter.Invoke(fieldsBuilder, insertObj);
         var valuesBuilder = new StringBuilder();
         if (this.IsMultiple)
         {
-            var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, IOrmProvider, StringBuilder, object, string>;
-            typedCommandInitializer.Invoke(this.DbParameters, this.OrmProvider, valuesBuilder, insertObj, $"_m{this.CommandIndex}");
+            var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
+            typedValuesSqlPartSetter.Invoke(this.DbParameters, valuesBuilder, this.OrmProvider, insertObj, $"_m{this.CommandIndex}");
         }
         else
         {
-            var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, IOrmProvider, StringBuilder, object>;
-            typedCommandInitializer.Invoke(this.DbParameters, this.OrmProvider, valuesBuilder, insertObj);
+            var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object>;
+            typedValuesSqlPartSetter.Invoke(this.DbParameters, valuesBuilder, this.OrmProvider, insertObj);
         }
         this.InsertFields.Add(new FieldsSegment
         {
             Fields = fieldsBuilder.ToString(),
             Values = valuesBuilder.ToString()
         });
+        //未明确指定分表，根据字段数据进行分表
+        if (this.ShardingProvider.TryGetShardingTable(entityType, out var shardingTable) && string.IsNullOrEmpty(this.Tables[0].Body))
+            this.Tables[0].Body = RepositoryHelper.GetShardingTableName(this.DbKey, this.MapProvider, this.ShardingProvider, entityType, insertObjType, insertObj);
     }
     public virtual void VisitWithByField(object deferredSegmentValue)
     {

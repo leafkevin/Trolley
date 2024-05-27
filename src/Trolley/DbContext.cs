@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
@@ -62,7 +63,6 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             var entityType = typeof(TResult);
             commandInitializer.Invoke(command);
-
             this.Open();
             var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
             reader = command.ExecuteReader(behavior);
@@ -647,17 +647,29 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     }
     #endregion
 
-    #region CreateIdentity
-    public TResult CreateIdentity<TResult>(Action<IDbCommand> commandInitializer)
+    #region Create
+    public int Create(IDbCommand command, Type entityType, object insertObj)
     {
-        using var command = this.CreateCommand();
+        this.BuildCreateCommand(command, entityType, insertObj, false);
+        this.Open();
+        return command.ExecuteNonQuery();
+    }
+    public async Task<int> CreateAsync(DbCommand command, Type entityType, object insertObj, CancellationToken cancellationToken = default)
+    {
+        this.BuildCreateCommand(command, entityType, insertObj, false);
+        await this.OpenAsync(cancellationToken);
+        return await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+    public TResult CreateIdentity<TResult>(Type entityType, object insertObj)
+    {
         TResult result = default;
         IDataReader reader = null;
         bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
+        using var command = this.CreateCommand();
         try
         {
-            commandInitializer.Invoke(command);
+            this.BuildCreateCommand(command, entityType, insertObj, true);
             this.Open();
             var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
             reader = command.ExecuteReader(behavior);
@@ -677,16 +689,16 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         if (exception != null) throw exception;
         return result;
     }
-    public async Task<TResult> CreateIdentityAsync<TResult>(Action<IDbCommand> commandInitializer, CancellationToken cancellationToken = default)
+    public async Task<TResult> CreateIdentityAsync<TResult>(Type entityType, object insertObj, CancellationToken cancellationToken = default)
     {
-        using var command = this.CreateDbCommand();
         TResult result = default;
         DbDataReader reader = null;
         bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
+        using var command = this.CreateDbCommand();
         try
         {
-            commandInitializer.Invoke(command);
+            this.BuildCreateCommand(command, entityType, insertObj, true);
             await this.OpenAsync(cancellationToken);
             var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
             reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
@@ -707,6 +719,77 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         }
         if (exception != null) throw exception;
         return result;
+    }
+    public TResult CreateIdentity<TResult>(ICreateVisitor visitor)
+    {
+        TResult result = default;
+        IDataReader reader = null;
+        bool isNeedClose = this.IsNeedClose;
+        Exception exception = null;
+        using var command = this.CreateCommand();
+        try
+        {
+            command.CommandText = visitor.BuildCommand(command, true);
+            this.Open();
+            var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+            reader = command.ExecuteReader(behavior);
+            if (reader.Read()) result = reader.To<TResult>(this.OrmProvider);
+        }
+        catch (Exception ex)
+        {
+            isNeedClose = true;
+            exception = ex;
+        }
+        finally
+        {
+            reader?.Dispose();
+            command.Dispose();
+            if (isNeedClose) this.Close();
+        }
+        if (exception != null) throw exception;
+        return result;
+    }
+    public async Task<TResult> CreateIdentityAsync<TResult>(ICreateVisitor visitor, CancellationToken cancellationToken = default)
+    {
+        TResult result = default;
+        DbDataReader reader = null;
+        bool isNeedClose = this.IsNeedClose;
+        Exception exception = null;
+        using var command = this.CreateDbCommand();
+        try
+        {
+            command.CommandText = visitor.BuildCommand(command, true);
+            await this.OpenAsync(cancellationToken);
+            var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+            reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
+            if (await reader.ReadAsync(cancellationToken)) result = reader.To<TResult>(this.OrmProvider);
+        }
+        catch (Exception ex)
+        {
+            isNeedClose = true;
+            exception = ex;
+        }
+        finally
+        {
+            if (reader != null)
+                await reader.DisposeAsync();
+            await command.DisposeAsync();
+            if (isNeedClose) await this.CloseAsync();
+        }
+        if (exception != null) throw exception;
+        return result;
+    }
+    private void BuildCreateCommand(IDbCommand command, Type entityType, object insertObj, bool isReturnIdentity)
+    {
+        var insertObjType = insertObj.GetType();
+        (var tableName, var headSqlSetter, var valuesSqlSetter) = RepositoryHelper.BuildCreateSqlParameters(
+            this.OrmProvider, this.MapProvider, entityType, insertObjType, null, null, isReturnIdentity);
+        var builder = new StringBuilder();
+        if (this.ShardingProvider.TryGetShardingTable(entityType, out _))
+            tableName = this.GetShardingTableName(entityType, insertObjType, insertObj);
+        headSqlSetter.Invoke(command.Parameters, builder, tableName, insertObj);
+        valuesSqlSetter.Invoke(command.Parameters, builder, insertObj);
+        command.CommandText = builder.ToString();
     }
     #endregion
 
@@ -863,13 +946,13 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
 
     public (bool, string, List<ReaderField>) BuildSql(IQueryVisitor visitor, IDbCommand command)
     {
-        bool isNeedFetch = false;
+        bool isOpened = false;
         var sql = visitor.BuildSql(out var readerFields);
-        if (visitor.IsSharding && visitor.ShardingTables != null)
+        if (visitor.ShardingTables != null && visitor.ShardingTables.Count > 0)
         {
-            isNeedFetch = visitor.IsNeedFetchShardingTables(this.Connection.Database, out var fetchSql);
-            if (isNeedFetch)
+            if (visitor.ShardingTables.Exists(f => f.ShardingType > ShardingTableType.TableName))
             {
+                var fetchSql = visitor.BuildShardingTablesSql(this.Connection.Database);
                 command.CommandText = fetchSql;
                 command.Parameters.Clear();
                 this.Open();
@@ -883,21 +966,22 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                 command.CommandText = null;
                 command.Parameters.Clear();
                 visitor.SetShardingTables(shardingTables);
+                isOpened = true;
             }
-            if (visitor.IsSharding && visitor.ShardingTables.Count > 0 && visitor.ShardingTables[0].TableNames.Count > 1)
+            if (visitor.ShardingTables.Exists(f => f.TableNames.Count > 1))
                 sql = this.BuildShardingTablesUnionSql(visitor, sql);
         }
-        return (isNeedFetch, sql, readerFields);
+        return (isOpened, sql, readerFields);
     }
     public async Task<(bool, string, List<ReaderField>)> BuildSqlAsync(IQueryVisitor visitor, DbCommand command, CancellationToken cancellationToken = default)
     {
-        bool isNeedFetch = false;
+        bool isOpened = false;
         var sql = visitor.BuildSql(out var readerFields);
-        if (visitor.IsSharding && visitor.ShardingTables != null)
+        if (visitor.ShardingTables != null && visitor.ShardingTables.Count > 0)
         {
-            isNeedFetch = visitor.IsNeedFetchShardingTables(this.Connection.Database, out var fetchSql);
-            if (isNeedFetch)
+            if (visitor.ShardingTables.Exists(f => f.ShardingType > ShardingTableType.TableName))
             {
+                var fetchSql = visitor.BuildShardingTablesSql(this.Connection.Database);
                 command.CommandText = fetchSql;
                 command.Parameters.Clear();
                 await this.OpenAsync(cancellationToken);
@@ -911,12 +995,17 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                 command.CommandText = null;
                 command.Parameters.Clear();
                 visitor.SetShardingTables(shardingTables);
+                isOpened = true;
             }
-            if (visitor.IsSharding && visitor.ShardingTables.Count > 0 && visitor.ShardingTables[0].TableNames.Count > 1)
+            if (visitor.ShardingTables.Exists(f => f.TableNames.Count > 1))
                 sql = this.BuildShardingTablesUnionSql(visitor, sql);
         }
-        return (isNeedFetch, sql, readerFields);
+        return (isOpened, sql, readerFields);
     }
+    public Dictionary<string, List<object>> SplitShardingParameters(Type entityType, IEnumerable parameters)
+        => RepositoryHelper.SplitShardingParameters(this.DbKey, this.MapProvider, this.ShardingProvider, entityType, parameters);
+    public string GetShardingTableName(Type entityType, Type parameterType, object parameter)
+        => RepositoryHelper.GetShardingTableName(this.DbKey, this.MapProvider, this.ShardingProvider, entityType, parameterType, parameter);
     private string BuildShardingTablesUnionSql(IQueryVisitor visitor, string formatSql)
     {
         var firstTableSegment = visitor.ShardingTables[0];
@@ -968,6 +1057,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             }
             builder.Append(sql);
         }
+        tableNameMap.Clear();
         tableNameMap = null;
         return builder.ToString();
     }

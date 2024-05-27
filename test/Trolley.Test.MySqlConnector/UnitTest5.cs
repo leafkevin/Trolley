@@ -66,11 +66,11 @@ public class UnitTest5 : UnitTestBase
     public async void MultipleCommand()
     {
         using var repository = dbFactory.Create();
-        int id = 2;
+        int[] productIds = new int[] { 2, 4, 5, 6 };
         int category = 1;
         var commands = new List<MultipleCommand>();
         var deleteCommand = repository.Delete<Product>()
-            .Where(f => f.Id == id)
+            .Where(f => productIds.Contains(f.Id))
             .ToMultipleCommand();
 
         var insertCommand = repository.Create<Product>()
@@ -89,6 +89,52 @@ public class UnitTest5 : UnitTestBase
                UpdatedAt = DateTime.Now
            })
            .ToMultipleCommand();
+
+        var insertCommand2 = repository.Create<Product>()
+            .WithBulk(new[]
+            {
+                new
+                {
+                    Id = 4,
+                    ProductNo="PN-004",
+                    Name = "波司登羽绒服",
+                    BrandId = 1,
+                    CategoryId = 1,
+                    IsEnabled = true,
+                    CreatedAt = DateTime.Now,
+                    CreatedBy = 1,
+                    UpdatedAt = DateTime.Now,
+                    UpdatedBy = 1
+                },
+                new
+                {
+                    Id = 5,
+                    ProductNo="PN-005",
+                    Name = "雪中飞羽绒裤",
+                    BrandId = 2,
+                    CategoryId = 2,
+                    IsEnabled = true,
+                    CreatedAt = DateTime.Now,
+                    CreatedBy = 1,
+                    UpdatedAt = DateTime.Now,
+                    UpdatedBy = 1
+                },
+                new
+                {
+                    Id = 6,
+                    ProductNo="PN-006",
+                    Name = "优衣库保暖内衣",
+                    BrandId = 3,
+                    CategoryId = 3,
+                    IsEnabled = true,
+                    CreatedAt = DateTime.Now,
+                    CreatedBy = 1,
+                    UpdatedAt = DateTime.Now,
+                    UpdatedBy = 1
+                }
+            })
+            .OnlyFields(f => new { f.Id, f.ProductNo, f.Name, f.IsEnabled, f.CreatedBy, f.CreatedAt, f.UpdatedAt, f.UpdatedBy })
+            .ToMultipleCommand();
 
         var updateCommand = repository.Update<Order>()
            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
@@ -117,7 +163,7 @@ public class UnitTest5 : UnitTestBase
             .Set(f => new { Price = f.Price + 10 })
             .ToMultipleCommand();
 
-        commands.AddRange(new[] { deleteCommand, insertCommand, updateCommand, bulkUpdateCommand });
+        commands.AddRange(new[] { deleteCommand, insertCommand, insertCommand2, updateCommand, bulkUpdateCommand });
         var count = repository.MultipleExecute(commands);
         Assert.True(count > 0);
     }

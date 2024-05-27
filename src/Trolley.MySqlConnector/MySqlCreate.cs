@@ -17,6 +17,19 @@ public class MySqlCreate<TEntity> : Create<TEntity>, IMySqlCreate<TEntity>
     }
     #endregion
 
+    #region Sharding
+    public new IMySqlCreate<TEntity> UseTable(string tableName)
+    {
+        base.UseTable(tableName);
+        return this;
+    }
+    public new IMySqlCreate<TEntity> UseTableBy(object field1Value, object field2Value = null)
+    {
+        base.UseTableBy(field1Value, field2Value);
+        return this;
+    }
+    #endregion
+
     #region IgnoreInto
     public IMySqlCreate<TEntity> IgnoreInto()
     {

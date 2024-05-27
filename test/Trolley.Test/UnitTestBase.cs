@@ -17,6 +17,7 @@ public class UnitTestBase
             new User
             {
                 Id = 1,
+                TenantId = "1",
                 Name = "leafkevin",
                 Age = 25,
                 CompanyId = 1,
@@ -33,6 +34,7 @@ public class UnitTestBase
             new User
             {
                 Id = 2,
+                TenantId = "2",
                 Name = "cindy",
                 Age = 21,
                 CompanyId = 2,

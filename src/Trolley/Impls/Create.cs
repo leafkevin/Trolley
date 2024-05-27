@@ -29,34 +29,16 @@ public class Create<TEntity> : ICreate<TEntity>
     #endregion
 
     #region Sharding
-    public ICreate<TEntity> UseTable(params string[] tableNames)
+    public ICreate<TEntity> UseTable(string tableName)
     {
         var entityType = typeof(TEntity);
-        this.Visitor.UseTable(entityType, tableNames);
-        return this;
-    }
-    public ICreate<TEntity> UseTable(Func<string, bool> tableNamePredicate)
-    {
-        var entityType = typeof(TEntity);
-        this.Visitor.UseTable(entityType, tableNamePredicate);
+        this.Visitor.UseTable(entityType, tableName);
         return this;
     }
     public ICreate<TEntity> UseTableBy(object field1Value, object field2Value = null)
     {
         var entityType = typeof(TEntity);
         this.Visitor.UseTableBy(entityType, field1Value, field2Value);
-        return this;
-    }
-    public ICreate<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue)
-    {
-        var entityType = typeof(TEntity);
-        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
-        return this;
-    }
-    public ICreate<TEntity> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
-    {
-        var entityType = typeof(TEntity);
-        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -68,6 +50,10 @@ public class Create<TEntity> : ICreate<TEntity>
             throw new ArgumentNullException(nameof(insertObj));
         if (insertObj is IEnumerable && insertObj is not string && insertObj is not IDictionary<string, object>)
             throw new NotSupportedException("只能插入单个实体，批量插入请使用WithBulk方法");
+
+        var insertObjType = typeof(TInsertObject);
+        if (!insertObjType.IsEntityType(out _))
+            throw new NotSupportedException("单个实体必须是类或结构类型，不能是基础类型");
 
         this.Visitor.WithBy(insertObj);
         return new ContinuedCreate<TEntity>(this.DbContext, this.Visitor);
@@ -139,11 +125,6 @@ public class Create<TEntity> : ICreate<TEntity>
         return this.OrmProvider.NewFromCommand<TTarget>(typeof(TEntity), this.DbContext, queryVisitor);
     }
     #endregion
-
-    #region ExecuteBulkCopy
-    public virtual int ExecuteBulkCopy(IEnumerable<TEntity> insertObjs, int? bulkCopyTimeout = null) => 0;
-    public virtual Task<int> ExecuteBulkCopyAsync(IEnumerable<TEntity> insertObjs, int? bulkCopyTimeout = null, CancellationToken cancellationToken = default) => Task.FromResult(0);
-    #endregion
 }
 public class Created<TEntity> : ICreated<TEntity>
 {
@@ -172,38 +153,62 @@ public class Created<TEntity> : ICreated<TEntity>
             switch (this.Visitor.ActionMode)
             {
                 case ActionMode.Bulk:
-                    int index = 0;
-                    bool isFirst = true;
                     var sqlBuilder = new StringBuilder();
-                    (var insertObjs, var bulkCount, var headSqlSetter, var commandInitializer) = this.Visitor.BuildWithBulk(command);
-                    headSqlSetter.Invoke(sqlBuilder);
+                    (var isNeedSplit, var tableName, var insertObjs, var bulkCount, var firstInsertObj,
+                        var headSqlSetter, var commandInitializer) = this.Visitor.BuildWithBulk(command);
 
-                    foreach (var insertObj in insertObjs)
+                    Action<string, object> clearCommand = (tableName, insertObj) =>
                     {
-                        if (index > 0) sqlBuilder.Append(',');
-                        commandInitializer.Invoke(sqlBuilder, insertObj, index.ToString());
-                        if (index >= bulkCount)
+                        sqlBuilder.Clear();
+                        command.Parameters.Clear();
+                        headSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName, insertObj);
+                    };
+                    Func<string, IEnumerable, int> executor = (tableName, insertObjs) =>
+                    {
+                        var isFirst = true;
+                        int count = 0, index = 0;
+                        foreach (var insertObj in insertObjs)
+                        {
+                            if (index > 0) sqlBuilder.Append(',');
+                            commandInitializer.Invoke(command.Parameters, sqlBuilder, insertObj, index.ToString());
+                            if (index >= bulkCount)
+                            {
+                                command.CommandText = sqlBuilder.ToString();
+                                if (isFirst)
+                                {
+                                    this.DbContext.Open();
+                                    isFirst = false;
+                                }
+                                count += command.ExecuteNonQuery();
+                                clearCommand.Invoke(tableName, insertObj);
+                                index = 0;
+                                continue;
+                            }
+                            index++;
+                        }
+                        if (index > 0)
                         {
                             command.CommandText = sqlBuilder.ToString();
-                            if (isFirst)
-                            {
-                                this.DbContext.Open();
-                                isFirst = false;
-                            }
-                            result += command.ExecuteNonQuery();
-                            command.Parameters.Clear();
-                            sqlBuilder.Clear();
-                            headSqlSetter.Invoke(sqlBuilder);
-                            index = 0;
-                            continue;
+                            if (isFirst) this.DbContext.Open();
+                            count += command.ExecuteNonQuery();
                         }
-                        index++;
-                    }
-                    if (index > 0)
+                        return count;
+                    };
+
+                    if (isNeedSplit)
                     {
-                        command.CommandText = sqlBuilder.ToString();
-                        if (isFirst) this.DbContext.Open();
-                        result += command.ExecuteNonQuery();
+                        var entityType = typeof(TEntity);
+                        var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
+                        foreach (var tabledInsertObj in tabledInsertObjs)
+                        {
+                            headSqlSetter.Invoke(command.Parameters, sqlBuilder, tabledInsertObj.Key, tabledInsertObj);
+                            result += executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
+                        }
+                    }
+                    else
+                    {
+                        headSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName, firstInsertObj);
+                        result = executor.Invoke(tableName, insertObjs);
                     }
                     sqlBuilder.Clear();
                     sqlBuilder = null;
@@ -240,37 +245,62 @@ public class Created<TEntity> : ICreated<TEntity>
             switch (this.Visitor.ActionMode)
             {
                 case ActionMode.Bulk:
-                    int index = 0;
-                    bool isFirst = true;
                     var sqlBuilder = new StringBuilder();
-                    (var insertObjs, var bulkCount, var headSqlSetter, var commandInitializer) = this.Visitor.BuildWithBulk(command);
-                    headSqlSetter.Invoke(sqlBuilder);
-                    foreach (var insertObj in insertObjs)
+                    (var isNeedSplit, var tableName, var insertObjs, var bulkCount, var firstInsertObj,
+                        var headSqlSetter, var commandInitializer) = this.Visitor.BuildWithBulk(command);
+
+                    Action<string, object> clearCommand = (tableName, insertObj) =>
                     {
-                        if (index > 0) sqlBuilder.Append(',');
-                        commandInitializer.Invoke(sqlBuilder, insertObj, index.ToString());
-                        if (index >= bulkCount)
+                        sqlBuilder.Clear();
+                        command.Parameters.Clear();
+                        headSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName, insertObj);
+                    };
+                    Func<string, IEnumerable, Task<int>> executor = async (tableName, insertObjs) =>
+                    {
+                        var isFirst = true;
+                        int count = 0, index = 0;
+                        foreach (var insertObj in insertObjs)
+                        {
+                            if (index > 0) sqlBuilder.Append(',');
+                            commandInitializer.Invoke(command.Parameters, sqlBuilder, insertObj, index.ToString());
+                            if (index >= bulkCount)
+                            {
+                                command.CommandText = sqlBuilder.ToString();
+                                if (isFirst)
+                                {
+                                    await this.DbContext.OpenAsync(cancellationToken);
+                                    isFirst = false;
+                                }
+                                count += await command.ExecuteNonQueryAsync(cancellationToken);
+                                clearCommand.Invoke(tableName, insertObj);
+                                index = 0;
+                                continue;
+                            }
+                            index++;
+                        }
+                        if (index > 0)
                         {
                             command.CommandText = sqlBuilder.ToString();
-                            if (isFirst)
-                            {
-                                await this.DbContext.OpenAsync(cancellationToken);
-                                isFirst = false;
-                            }
-                            result += await command.ExecuteNonQueryAsync(cancellationToken);
-                            command.Parameters.Clear();
-                            sqlBuilder.Clear();
-                            headSqlSetter.Invoke(sqlBuilder);
-                            index = 0;
-                            continue;
+                            if (isFirst) await this.DbContext.OpenAsync(cancellationToken);
+                            count += await command.ExecuteNonQueryAsync(cancellationToken);
                         }
-                        index++;
-                    }
-                    if (index > 0)
+                        return count;
+                    };
+
+                    if (isNeedSplit)
                     {
-                        command.CommandText = sqlBuilder.ToString();
-                        if (isFirst) await this.DbContext.OpenAsync(cancellationToken);
-                        result += await command.ExecuteNonQueryAsync(cancellationToken);
+                        var entityType = typeof(TEntity);
+                        var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
+                        foreach (var tabledInsertObj in tabledInsertObjs)
+                        {
+                            headSqlSetter.Invoke(command.Parameters, sqlBuilder, tabledInsertObj.Key, tabledInsertObj);
+                            result += await executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
+                        }
+                    }
+                    else
+                    {
+                        headSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName, firstInsertObj);
+                        result = await executor.Invoke(tableName, insertObjs);
                     }
                     sqlBuilder.Clear();
                     sqlBuilder = null;
@@ -299,34 +329,12 @@ public class Created<TEntity> : ICreated<TEntity>
     #endregion
 
     #region ExecuteIdentity
-    public int ExecuteIdentity()
-    {
-        var result = this.DbContext.CreateIdentity<int>(f => f.CommandText = this.Visitor.BuildCommand(f, true));
-        this.Visitor.Dispose();
-        this.Visitor = null;
-        return result;
-    }
+    public int ExecuteIdentity() => this.DbContext.CreateIdentity<int>(this.Visitor);
     public async Task<int> ExecuteIdentityAsync(CancellationToken cancellationToken = default)
-    {
-        var result = await this.DbContext.CreateIdentityAsync<int>(f => f.CommandText = this.Visitor.BuildCommand(f, true), cancellationToken);
-        this.Visitor.Dispose();
-        this.Visitor = null;
-        return result;
-    }
-    public long ExecuteIdentityLong()
-    {
-        var result = this.DbContext.CreateIdentity<long>(f => f.CommandText = this.Visitor.BuildCommand(f, true));
-        this.Visitor.Dispose();
-        this.Visitor = null;
-        return result;
-    }
+        => await this.DbContext.CreateIdentityAsync<int>(this.Visitor, cancellationToken);
+    public long ExecuteIdentityLong() => this.DbContext.CreateIdentity<long>(this.Visitor);
     public async Task<long> ExecuteIdentityLongAsync(CancellationToken cancellationToken = default)
-    {
-        var result = await this.DbContext.CreateIdentityAsync<long>(f => f.CommandText = this.Visitor.BuildCommand(f, true), cancellationToken);
-        this.Visitor.Dispose();
-        this.Visitor = null;
-        return result;
-    }
+        => await this.DbContext.CreateIdentityAsync<long>(this.Visitor, cancellationToken);
     #endregion
 
     #region ToMultipleCommand
@@ -342,38 +350,9 @@ public class Created<TEntity> : ICreated<TEntity>
     #region ToSql
     public string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        dbParameters = null;
-        string sql = null;
         using var command = this.DbContext.CreateCommand();
-        switch (this.Visitor.ActionMode)
-        {
-            case ActionMode.Single:
-                sql = this.Visitor.BuildCommand(command, false);
-                break;
-            case ActionMode.Bulk:
-                int index = 0;
-                var sqlBuilder = new StringBuilder();
-                (var insertObjs, var bulkCount, var headSqlSetter, var commandInitializer) = this.Visitor.BuildWithBulk(command);
-                headSqlSetter.Invoke(sqlBuilder);
-
-                foreach (var insertObj in insertObjs)
-                {
-                    if (index > 0) sqlBuilder.Append(',');
-                    commandInitializer.Invoke(sqlBuilder, insertObj, index.ToString());
-                    if (index >= bulkCount)
-                    {
-                        sql = sqlBuilder.ToString();
-                        index = 0;
-                        break;
-                    }
-                    index++;
-                }
-                if (index > 0) sql = sqlBuilder.ToString();
-                sqlBuilder.Clear();
-                break;
-        }
+        var sql = this.Visitor.BuildCommand(command, false);
         dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
-        command.Dispose();
         return sql;
     }
     #endregion

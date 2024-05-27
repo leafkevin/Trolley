@@ -5,6 +5,22 @@ namespace Trolley.MySqlConnector;
 
 public interface IMySqlCreate<TEntity> : ICreate<TEntity>
 {
+    #region Sharding
+    /// <summary>
+    /// 使用固定表名确定TEntity表分表名执行插入操作，完整的表名，如：.UseTable("sys_order_202001")，按月分表
+    /// </summary>
+    /// <param name="tableName">完整的表名，如：sys_order_202001，按月分表</param>
+    /// <returns>返回插入对象</returns>
+    new IMySqlCreate<TEntity> UseTable(string tableName);
+    /// <summary>
+    /// 根据字段值确定TEntity表分表名执行插入操作，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// </summary>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="field2Value">字段2值</param>
+    /// <returns>返回插入对象</returns>
+    new IMySqlCreate<TEntity> UseTableBy(object field1Value, object field2Value = null);
+    #endregion
+
     #region IgnoreInto
     /// <summary>
     /// 相同主键或唯一索引存在时不执行插入动作，INSERT IGNORE INTO...
