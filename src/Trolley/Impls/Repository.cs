@@ -29,70 +29,124 @@ public class Repository : IRepository
     public Repository(DbContext dbContext) => this.DbContext = dbContext;
     #endregion
 
-    public virtual bool TryGetShardingTableNames(Type entityType, out List<string> tableNames)
+    #region GetShardingTableNames
+    public virtual List<string> GetShardingTableNames(params Type[] entityTypes)
     {
-        tableNames = null;
-        return false;
+        if (entityTypes == null)
+            throw new ArgumentNullException(nameof(entityTypes));
+        var tableSchema = this.DbContext.Connection.Database;
+        var builder = new StringBuilder($"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_SCHEMA='{tableSchema}' AND ");
+
+        if (entityTypes.Length > 1)
+        {
+            builder.Append('(');
+            int index = 0;
+            Array.ForEach(entityTypes, f =>
+            {
+                var entityMapper = this.mapProvider.GetEntityMap(f);
+                if (index > 0) builder.Append(" OR ");
+                builder.Append($"TABLE_NAME LIKE '{entityMapper.TableName}%'");
+                index++;
+            });
+            builder.Append(')');
+        }
+        else
+        {
+            var entityMapper = this.mapProvider.GetEntityMap(entityTypes[0]);
+            builder.Append($"TABLE_NAME LIKE '{entityMapper.TableName}%'");
+        }
+        var sql = builder.ToString();
+        return this.DbContext.Query<string>(f => f.CommandText = sql);
     }
+    public virtual async Task<List<string>> GetShardingTableNamesAsync(params Type[] entityTypes)
+    {
+        if (entityTypes == null)
+            throw new ArgumentNullException(nameof(entityTypes));
+        var tableSchema = this.DbContext.Connection.Database;
+        var builder = new StringBuilder($"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_SCHEMA='{tableSchema}' AND ");
+
+        if (entityTypes.Length > 1)
+        {
+            builder.Append('(');
+            int index = 0;
+            Array.ForEach(entityTypes, f =>
+            {
+                var entityMapper = this.mapProvider.GetEntityMap(f);
+                if (index > 0) builder.Append(" OR ");
+                builder.Append($"TABLE_NAME LIKE '{entityMapper.TableName}%'");
+                index++;
+            });
+            builder.Append(')');
+        }
+        else
+        {
+            var entityMapper = this.mapProvider.GetEntityMap(entityTypes[0]);
+            builder.Append($"TABLE_NAME LIKE '{entityMapper.TableName}%'");
+        }
+        var sql = builder.ToString();
+        return await this.DbContext.QueryAsync<string>(f => f.CommandText = sql);
+    }
+    #endregion
+
     #region From
-    public virtual IQuery<T> From<T>(char tableAsStart = 'a', string suffixRawSql = null)
+    public virtual IQuery<T> From<T>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
-        visitor.From(tableAsStart, suffixRawSql, typeof(T));
+        visitor.From(tableAsStart, typeof(T));
         return this.ormProvider.NewQuery<T>(this.DbContext, visitor);
     }
     public virtual IQuery<T1, T2> From<T1, T2>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
-        visitor.From(tableAsStart, null, typeof(T1), typeof(T2));
+        visitor.From(tableAsStart, typeof(T1), typeof(T2));
         return this.ormProvider.NewQuery<T1, T2>(this.DbContext, visitor);
     }
     public virtual IQuery<T1, T2, T3> From<T1, T2, T3>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
-        visitor.From(tableAsStart, null, typeof(T1), typeof(T2), typeof(T3));
+        visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3));
         return this.ormProvider.NewQuery<T1, T2, T3>(this.DbContext, visitor);
     }
     public virtual IQuery<T1, T2, T3, T4> From<T1, T2, T3, T4>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
-        visitor.From(tableAsStart, null, typeof(T1), typeof(T2), typeof(T3), typeof(T4));
+        visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4));
         return this.ormProvider.NewQuery<T1, T2, T3, T4>(this.DbContext, visitor);
     }
     public virtual IQuery<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
-        visitor.From(tableAsStart, null, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
+        visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
         return this.ormProvider.NewQuery<T1, T2, T3, T4, T5>(this.DbContext, visitor);
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
-        visitor.From(tableAsStart, null, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
+        visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
         return this.ormProvider.NewQuery<T1, T2, T3, T4, T5, T6>(this.DbContext, visitor);
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> From<T1, T2, T3, T4, T5, T6, T7>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
-        visitor.From(tableAsStart, null, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7));
+        visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7));
         return this.ormProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7>(this.DbContext, visitor);
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> From<T1, T2, T3, T4, T5, T6, T7, T8>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
-        visitor.From(tableAsStart, null, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8));
+        visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8));
         return this.ormProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8>(this.DbContext, visitor);
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> From<T1, T2, T3, T4, T5, T6, T7, T8, T9>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
-        visitor.From(tableAsStart, null, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9));
+        visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9));
         return this.ormProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this.DbContext, visitor);
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
-        visitor.From(tableAsStart, null, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10));
+        visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10));
         return this.ormProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this.DbContext, visitor);
     }
     #endregion
@@ -1027,17 +1081,17 @@ public class Repository : IRepository
                 {
                     case MultipleCommandType.Insert:
                         var insertVisitor = visitor as ICreateVisitor;
-                        insertVisitor.Initialize(multiCcommand.EntityType, isFirst);
+                        insertVisitor.Initialize(multiCcommand.EntityType, true, isFirst);
                         insertVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
                         break;
                     case MultipleCommandType.Update:
                         var updateVisitor = visitor as IUpdateVisitor;
-                        updateVisitor.Initialize(multiCcommand.EntityType, isFirst);
+                        updateVisitor.Initialize(multiCcommand.EntityType, true, isFirst);
                         updateVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
                         break;
                     case MultipleCommandType.Delete:
                         var deleteVisitor = visitor as IDeleteVisitor;
-                        deleteVisitor.Initialize(multiCcommand.EntityType, isFirst);
+                        deleteVisitor.Initialize(multiCcommand.EntityType, true, isFirst);
                         deleteVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
                         break;
                 }

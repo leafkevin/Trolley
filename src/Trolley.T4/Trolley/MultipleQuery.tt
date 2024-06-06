@@ -38,10 +38,10 @@ public class MultipleQuery : IMultipleQuery, IDisposable
     #endregion
 
     #region From
-    public IMultiQuery<T> From<T>(char tableAsStart = 'a', string suffixRawSql = null)
+    public IMultiQuery<T> From<T>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
-        visitor.From(tableAsStart, suffixRawSql, typeof(T));
+        visitor.From(tableAsStart, typeof(T));
         return new MultiQuery<T>(this, visitor);
     }
 <#
@@ -56,7 +56,7 @@ public class MultipleQuery : IMultipleQuery, IDisposable
     public IMultiQuery<<#=tables#>> From<<#=tables#>>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
-        visitor.From(tableAsStart, null, <#=typeOfTables#>);
+        visitor.From(tableAsStart, <#=typeOfTables#>);
         return new MultiQuery<<#=tables#>>(this, visitor);
     }
 <#  }#>

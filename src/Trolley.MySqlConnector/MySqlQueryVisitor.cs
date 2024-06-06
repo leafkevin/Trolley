@@ -148,32 +148,32 @@ public class MySqlQueryVisitor : QueryVisitor
     }
     public override string BuildShardingTablesSql(string tableSchema)
     {
-        var count = 0;
-        foreach (var tableSegment in this.Tables)
-        {
-            if (!this.ShardingProvider.TryGetShardingTable(tableSegment.EntityType, out var shardingTable))
-                continue;
-            if (tableSegment.ShardingType < ShardingTableType.MasterFilter && tableSegment.TableNames != null && tableSegment.TableNames.Count > 1)
-                count++;
-            if (tableSegment.ShardingType == ShardingTableType.MasterFilter)
-                count++;
-        }
+        var count = this.ShardingTables.FindAll(f => f.ShardingType > ShardingTableType.MultiTable).Count;
+        var builder = new StringBuilder($"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_SCHEMA='{tableSchema}' AND ");
         if (count > 1)
-            throw new NotSupportedException($"当有多个表使用多分表查询时，主表可指定多个分表，从表使用方法UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)指定主从表名映射委托获取从表分表名称");
-
-        var builder = new StringBuilder($"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_SCHEMA='{tableSchema}'");
-        if (this.ShardingTables.Exists(f => f.ShardingType > ShardingTableType.TableName))
         {
-            builder.Append(" AND (");
-            for (int i = 0; i < this.ShardingTables.Count; i++)
+            builder.Append('(');
+            int index = 0;
+            foreach (var tableSegment in this.ShardingTables)
             {
-                if (i > 0) builder.Append(" OR ");
-                var tableName = this.ShardingTables[i].Mapper.TableName;
-                builder.Append($"TABLE_NAME LIKE '{tableName}%'");
+                if (tableSegment.ShardingType > ShardingTableType.MultiTable)
+                {
+                    if (index > 0) builder.Append(" OR ");
+                    builder.Append($"TABLE_NAME LIKE '{tableSegment.Mapper.TableName}%'");
+                    index++;
+                }
             }
             builder.Append(')');
         }
-        else builder.Append($" AND TABLE_NAME LIKE '{this.ShardingTables[0].Mapper.TableName}%'");
+        else
+        {
+            if (this.ShardingTables.Count > 1)
+            {
+                var tableSegment = this.ShardingTables.Find(f => f.ShardingType > ShardingTableType.MultiTable);
+                builder.Append($"TABLE_NAME LIKE '{tableSegment.Mapper.TableName}%'");
+            }
+            else builder.Append($"TABLE_NAME LIKE '{this.ShardingTables[0].Mapper.TableName}%'");
+        }
         return builder.ToString();
     }
 }

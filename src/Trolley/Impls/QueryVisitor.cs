@@ -118,29 +118,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             //每个表都要有单独的GUID值，否则有类似的表前缀名，也会被替换导致表名替换错误
             foreach (var tableSegment in this.Tables)
             {
-                string tableName = string.Empty;
-                //有分表的实体表才设置ShardingId，并添加到ShardingTables中
-                //有分表的子查询当作普通表处理，因为子查询中的分表已经处理过了
-                if (this.ShardingProvider.TryGetShardingTable(tableSegment.EntityType, out _))
-                {
-                    if (!tableSegment.IsSharding) throw new Exception($"实体表{tableSegment.EntityType.FullName}有配置分表，当前操作未指定分表，请调用UseTable或UseTableBy方法指定分表");
-                    if (tableSegment.ShardingType > ShardingTableType.TableName && tableSegment.TableType == TableType.Entity)
-                    {
-                        var shardingTable = this.ShardingTables.Find(f => f.EntityType == tableSegment.EntityType);
-                        if (shardingTable == null)
-                        {
-                            tableSegment.ShardingId = Guid.NewGuid().ToString("N");
-                            this.ShardingTables.Add(tableSegment);
-                            shardingTable = tableSegment;
-                        }
-                        tableName = $"__SHARDING_{shardingTable.ShardingId}_{shardingTable.Mapper.TableName}";
-                    }
-                    else tableName = tableSegment.Body;
-                }
-                else tableName = tableSegment.Body ?? tableSegment.Mapper.TableName;
-                if (tableSegment.TableType != TableType.FromQuery)
-                    tableName = this.OrmProvider.GetTableName(tableName);
-
+                string tableName = this.GetTableName(tableSegment);
                 if (builder.Length > 0)
                 {
                     if (!string.IsNullOrEmpty(tableSegment.JoinType))
@@ -278,26 +256,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         {
             foreach (var tableSegment in this.Tables)
             {
-                string tableName = string.Empty;
-                if (this.ShardingProvider.TryGetShardingTable(tableSegment.EntityType, out _))
-                {
-                    if (!tableSegment.IsSharding) throw new Exception($"实体表{tableSegment.EntityType.FullName}有配置分表，当前操作未指定分表，请调用UseTable或UseTableBy方法指定分表");
-                    if (tableSegment.ShardingType > ShardingTableType.TableName && tableSegment.TableType == TableType.Entity)
-                    {
-                        var shardingTable = this.ShardingTables.Find(f => f.EntityType == tableSegment.EntityType);
-                        if (shardingTable == null)
-                        {
-                            tableSegment.ShardingId = Guid.NewGuid().ToString("N");
-                            this.ShardingTables.Add(tableSegment);
-                            shardingTable = tableSegment;
-                        }
-                        tableName = $"__SHARDING_{shardingTable.ShardingId}_{shardingTable.Mapper.TableName}";
-                    }
-                    else tableName = tableSegment.Body;
-                }
-                else tableName = tableSegment.Body ?? tableSegment.Mapper.TableName;
-                tableName = this.OrmProvider.GetTableName(tableName);
-
+                string tableName = this.GetTableName(tableSegment);
                 if (builder.Length > 0)
                 {
                     if (!string.IsNullOrEmpty(tableSegment.JoinType))
@@ -409,7 +368,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         builder = null;
         return sql;
     }
-    public virtual void From(char tableAsStart = 'a', string suffixRawSql = null, params Type[] entityTypes)
+    public virtual void From(char tableAsStart = 'a', params Type[] entityTypes)
     {
         this.TableAsStart = tableAsStart;
         foreach (var entityType in entityTypes)
@@ -420,7 +379,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 EntityType = entityType,
                 Mapper = this.MapProvider.GetEntityMap(entityType),
                 AliasName = $"{(char)tableIndex}",
-                SuffixRawSql = suffixRawSql,
                 Path = $"{(char)tableIndex}",
                 TableType = TableType.Entity,
                 IsMaster = true
@@ -518,7 +476,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         //此时产生的queryObj是一个新的对象，只能用于解析sql，与传进来的queryObj不是同一个对象，舍弃
         //临时产生一个随机表名，在后面的AsCteTable时，再做替换
-        var tempTableName = $"__CTE_TABLE_{Guid.NewGuid()}__";
+        var tempTableName = $"__CTE_TABLE_{Guid.NewGuid():N}__";
         selfQueryObj.TableName = tempTableName;
         selfQueryObj.ReaderFields = readerFields;
         selfQueryObj.IsRecursive = true;
@@ -550,7 +508,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     {
         this.Join(joinOn, f =>
         {
-            this.From(this.TableAsStart, null, newEntityType);
+            this.From(this.TableAsStart, newEntityType);
             var tableSegment = this.InitTableAlias(f);
             tableSegment.JoinType = joinType;
             return tableSegment;
@@ -1904,10 +1862,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.InitFromQueryReaderFields(tableSegment, readerFields);
 
         //子查询中引用了分表，最外层也需要设置分表信息IsSharding、ShardingTables
-        if (subQuery.Visitor.IsSharding)
+        if (subQuery.Visitor.ShardingTables != null)
         {
-            this.IsSharding = subQuery.Visitor.IsSharding;
-            tableSegment.IsSharding = subQuery.Visitor.IsSharding;
+            tableSegment.IsSharding = true;
             if (this.ShardingTables == null)
                 this.ShardingTables = subQuery.Visitor.ShardingTables;
             else

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -177,47 +176,16 @@ public class Updated<TEntity> : IUpdated<TEntity>
             switch (this.Visitor.ActionMode)
             {
                 case ActionMode.Bulk:
-                    int index = 0;
-                    bool isFirst = true;
-                    var sqlBuilder = new StringBuilder();
-                    (var updateObjs, var bulkCount, var commandInitializer, var firstCommandInitializer) = this.Visitor.BuildSetBulk(command);
-                    firstCommandInitializer?.Invoke(command.Parameters);
-                    foreach (var updateObj in updateObjs)
-                    {
-                        if (index > 0) sqlBuilder.Append(';');
-                        commandInitializer.Invoke(command.Parameters, sqlBuilder, updateObj, index.ToString());
-                        if (index >= bulkCount)
-                        {
-                            command.CommandText = sqlBuilder.ToString();
-                            if (isFirst)
-                            {
-                                this.DbContext.Open();
-                                isFirst = false;
-                            }
-                            result += command.ExecuteNonQuery();
-                            command.Parameters.Clear();
-                            firstCommandInitializer?.Invoke(command.Parameters);
-                            sqlBuilder.Clear();
-                            index = 0;
-                            continue;
-                        }
-                        index++;
-                    }
-                    if (index > 0)
-                    {
-                        command.CommandText = sqlBuilder.ToString();
-                        if (isFirst) this.DbContext.Open();
-                        result += command.ExecuteNonQuery();
-                    }
-                    sqlBuilder.Clear();
-                    sqlBuilder = null;
+                    result = this.DbContext.UpdateBulk(this.Visitor, command);
                     break;
                 default:
                     if (!hasWhere)
                         throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
 
-                    command.CommandText = this.Visitor.BuildCommand(command);
-                    this.DbContext.Open();
+                    var sql = this.Visitor.BuildCommand(command);
+                    (var isOpened, sql) = this.DbContext.BuildSql(this.Visitor as SqlVisitor, command, sql, ";");
+                    command.CommandText = sql;
+                    if (!isOpened) this.DbContext.Open();
                     result = command.ExecuteNonQuery();
                     break;
             }
@@ -246,47 +214,16 @@ public class Updated<TEntity> : IUpdated<TEntity>
             switch (this.Visitor.ActionMode)
             {
                 case ActionMode.Bulk:
-                    int index = 0;
-                    bool isFirst = true;
-                    var sqlBuilder = new StringBuilder();
-                    (var updateObjs, var bulkCount, var commandInitializer, var firstCommandInitializer) = this.Visitor.BuildSetBulk(command);
-                    firstCommandInitializer?.Invoke(command.Parameters);
-                    foreach (var updateObj in updateObjs)
-                    {
-                        if (index > 0) sqlBuilder.Append(';');
-                        commandInitializer.Invoke(command.Parameters, sqlBuilder, updateObj, index.ToString());
-                        if (index >= bulkCount)
-                        {
-                            command.CommandText = sqlBuilder.ToString();
-                            if (isFirst)
-                            {
-                                await this.DbContext.OpenAsync(cancellationToken);
-                                isFirst = false;
-                            }
-                            result += await command.ExecuteNonQueryAsync(cancellationToken);
-                            command.Parameters.Clear();
-                            firstCommandInitializer?.Invoke(command.Parameters);
-                            sqlBuilder.Clear();
-                            index = 0;
-                            continue;
-                        }
-                        index++;
-                    }
-                    if (index > 0)
-                    {
-                        command.CommandText = sqlBuilder.ToString();
-                        if (isFirst) await this.DbContext.OpenAsync(cancellationToken);
-                        result += await command.ExecuteNonQueryAsync(cancellationToken);
-                    }
-                    sqlBuilder.Clear();
-                    sqlBuilder = null;
+                    result = await this.DbContext.UpdateBulkAsync(this.Visitor, command, cancellationToken);
                     break;
                 default:
                     if (!hasWhere)
                         throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
 
-                    command.CommandText = this.Visitor.BuildCommand(command);
-                    await this.DbContext.OpenAsync(cancellationToken);
+                    var sql = this.Visitor.BuildCommand(command);
+                    (var isOpened, sql) = await this.DbContext.BuildSqlAsync(this.Visitor as SqlVisitor, command, sql, ";", cancellationToken);
+                    command.CommandText = sql;
+                    if (!isOpened) await this.DbContext.OpenAsync(cancellationToken);
                     result = await command.ExecuteNonQueryAsync(cancellationToken);
                     break;
             }
@@ -313,8 +250,18 @@ public class Updated<TEntity> : IUpdated<TEntity>
     #region ToSql
     public string ToSql(out List<IDbDataParameter> dbParameters)
     {
+        string sql = null;
         using var command = this.DbContext.CreateCommand();
-        var sql = this.Visitor.BuildCommand(command);
+        switch (this.Visitor.ActionMode)
+        {
+            case ActionMode.Bulk:
+                sql = this.DbContext.BuildUpdateBulkSql(this.Visitor, command);
+                break;
+            case ActionMode.Single:
+                sql = this.Visitor.BuildCommand(command);
+                (_, sql) = this.DbContext.BuildSql(this.Visitor as SqlVisitor, command, sql, ";");
+                break;
+        }
         dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
         return sql;

@@ -37,41 +37,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
             switch (this.Visitor.ActionMode)
             {
                 case ActionMode.Bulk:
-                    int index = 0;
-                    bool isFirst = true;
-                    var sqlBuilder = new StringBuilder();
-                    command = this.DbContext.CreateCommand();
-                    (updateObjs, var bulkCount, var commandInitializer, var firstCommandInitializer) = this.Visitor.BuildSetBulk(command);
-                    firstCommandInitializer?.Invoke(command.Parameters);
-                    foreach (var updateObj in updateObjs)
-                    {
-                        if (index > 0) sqlBuilder.Append(';');
-                        commandInitializer.Invoke(command.Parameters, sqlBuilder, updateObj, index.ToString());
-                        if (index >= bulkCount)
-                        {
-                            command.CommandText = sqlBuilder.ToString();
-                            if (isFirst)
-                            {
-                                this.DbContext.Open();
-                                isFirst = false;
-                            }
-                            result += command.ExecuteNonQuery();
-                            command.Parameters.Clear();
-                            firstCommandInitializer?.Invoke(command.Parameters);
-                            sqlBuilder.Clear();
-                            index = 0;
-                            continue;
-                        }
-                        index++;
-                    }
-                    if (index > 0)
-                    {
-                        command.CommandText = sqlBuilder.ToString();
-                        if (isFirst) this.DbContext.Open();
-                        result += command.ExecuteNonQuery();
-                    }
-                    sqlBuilder.Clear();
-                    sqlBuilder = null;
+                    result = this.DbContext.UpdateBulk(this.Visitor, command);
                     break;
                 case ActionMode.BulkCopy:
                     (updateObjs, var timeoutSeconds) = this.DialectVisitor.BuildWithBulkCopy();
@@ -126,7 +92,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                     result = bulkCopyResult.RowsInserted;
 
                     builder.Clear();
-                    builder.Append($"UPDATE {ormProvider.GetTableName(fromMapper.TableName)} a INNER JOIN {tableName} b ON ");
+                    builder.Append($"UPDATE {this.Visitor.GetTableName(this.Visitor.Tables[0])} a INNER JOIN {tableName} b ON ");
                     for (int i = 0; i < pkColumns.Count; i++)
                     {
                         if (i > 0) builder.Append(" AND ");
@@ -143,8 +109,10 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                         setIndex++;
                     }
 
+                    var formatSql = builder.ToString();
+                    (_, var sql) = this.DbContext.BuildSql(this.Visitor as SqlVisitor, command, formatSql, ";");
                     command = this.DbContext.CreateCommand();
-                    command.CommandText = builder.ToString();
+                    command.CommandText = sql;
                     result = command.ExecuteNonQuery();
                     command.Dispose();
 
@@ -190,41 +158,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
             switch (this.Visitor.ActionMode)
             {
                 case ActionMode.Bulk:
-                    int index = 0;
-                    bool isFirst = true;
-                    var sqlBuilder = new StringBuilder();
-                    command = this.DbContext.CreateDbCommand();
-                    (updateObjs, var bulkCount, var commandInitializer, var firstCommandInitializer) = this.Visitor.BuildSetBulk(command);
-                    firstCommandInitializer?.Invoke(command.Parameters);
-                    foreach (var updateObj in updateObjs)
-                    {
-                        if (index > 0) sqlBuilder.Append(';');
-                        commandInitializer.Invoke(command.Parameters, sqlBuilder, updateObj, index.ToString());
-                        if (index >= bulkCount)
-                        {
-                            command.CommandText = sqlBuilder.ToString();
-                            if (isFirst)
-                            {
-                                await this.DbContext.OpenAsync(cancellationToken);
-                                isFirst = false;
-                            }
-                            result += await command.ExecuteNonQueryAsync(cancellationToken);
-                            command.Parameters.Clear();
-                            firstCommandInitializer?.Invoke(command.Parameters);
-                            sqlBuilder.Clear();
-                            index = 0;
-                            continue;
-                        }
-                        index++;
-                    }
-                    if (index > 0)
-                    {
-                        command.CommandText = sqlBuilder.ToString();
-                        if (isFirst) await this.DbContext.OpenAsync(cancellationToken);
-                        result += await command.ExecuteNonQueryAsync(cancellationToken);
-                    }
-                    sqlBuilder.Clear();
-                    sqlBuilder = null;
+                    result = await this.DbContext.UpdateBulkAsync(this.Visitor, command, cancellationToken);
                     break;
                 case ActionMode.BulkCopy:
                     (updateObjs, var timeoutSeconds) = this.DialectVisitor.BuildWithBulkCopy();
@@ -296,8 +230,10 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                         setIndex++;
                     }
 
+                    var formatSql = builder.ToString();
+                    (_, var sql) = this.DbContext.BuildSql(this.Visitor as SqlVisitor, command, formatSql, ";");
                     command = this.DbContext.CreateDbCommand();
-                    command.CommandText = builder.ToString();
+                    command.CommandText = sql;
                     result = await command.ExecuteNonQueryAsync(cancellationToken);
                     await command.DisposeAsync();
 

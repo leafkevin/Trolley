@@ -34,12 +34,12 @@ public interface IQueryVisitor : IDisposable
     /// 解析子查询时，父亲查询的TableAliases
     /// </summary>
     Dictionary<string, TableSegment> RefTableAliases { get; set; }
-    bool IsSharding { get; set; }
     List<TableSegment> ShardingTables { get; set; }
 
     string BuildSql(out List<ReaderField> readerFields);
     string BuildCommandSql(Type targetType, out IDataParameterCollection dbParameters);
     string BuildCteTableSql(string tableName, out List<ReaderField> readerFields, out bool isRecursive);
+
     string BuildShardingTablesSql(string tableSchema);
     void SetShardingTables(List<string> shardingTables);
     void UseTable(Type entityType, params string[] tableNames);
@@ -49,7 +49,7 @@ public interface IQueryVisitor : IDisposable
     void UseTableByRange(Type entityType, object beginFieldValue, object endFieldValue);
     void UseTableByRange(Type entityType, object fieldValue1, object fieldValue2, object fieldValue3);
 
-    void From(char tableAsStart = 'a', string suffixRawSql = null, params Type[] entityTypes);
+    void From(char tableAsStart = 'a', params Type[] entityTypes);
     void From(Type targetType, IQuery subQueryObj);
     void From(Type targetType, DbContext dbContext, Delegate subQueryGetter);
 

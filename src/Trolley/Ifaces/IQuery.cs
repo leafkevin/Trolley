@@ -118,6 +118,30 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
+    /// 使用TMasterSharding主表分表名与当前表分表映射关系表名获取委托获取当前表分表表名，只需要指定主表分表的分表范围或条件即可，从表分表不需要指定分表名，会根据这个委托执行结果确定分表名称，通常适用于主表和从表都分表且一次查询多个分表的场景。第一个参数：dbKey，第二个参数是主表分表的原始名称，
+    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第三个参数是当前从表分表的原始名称，第四个参数是主表的分表名称，返回值是当前从表的分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// <code>
+    /// repository.From&lt;Order&gt;()
+    ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
+    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    ///     .UseTable&lt;Order&gt;((dbKey, orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     {
+    ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
+    ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+    ///         return tableName.Substring(0, tableName.Length - 7);
+    ///     })
+    ///     ...
+    /// SQL:
+    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// UNION ALL
+    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
+    /// <param name="tableNameGetter">当前表分表名获取委托</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
+    /// <summary>
     /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
     /// </summary>
     /// <param name="field1Value">字段1值</param>
@@ -770,6 +794,11 @@ public interface IQuery<T> : IQueryBase
     /// <param name="cancellationToken"></param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default);
+    #endregion
+
+    #region Exists
+    bool Exists(Expression<Func<T, bool>> predicate);
+    Task<bool> ExistsAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default);
     #endregion
 
     #region AsCteTable

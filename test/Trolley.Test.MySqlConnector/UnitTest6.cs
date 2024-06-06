@@ -109,11 +109,7 @@ namespace Trolley.Test.MySqlConnector
                 .ExecuteAsync();
             await repository.Delete<User>()
                .UseTableBy("105")
-               .Where(102)
-               .ExecuteAsync();
-            await repository.Delete<User>()
-               .UseTableBy("105")
-               .Where(103)
+               .Where(new[] { 102, 103 })
                .ExecuteAsync();
             repository.Create<User>(new[]
             {
@@ -169,7 +165,8 @@ namespace Trolley.Test.MySqlConnector
                     UpdatedBy = 1
                 }
             });
-            var createdAt = DateTime.Now;
+
+            var createdAt = DateTime.Parse("2024-05-24");
             var orders = new List<Order>();
             var orderDetails = new List<OrderDetail>();
             for (int i = 1000; i < 2000; i++)
@@ -183,6 +180,7 @@ namespace Trolley.Test.MySqlConnector
                     BuyerId = 101,
                     SellerId = 2,
                     TotalAmount = 420,
+                    ProductCount = 2,
                     Products = new List<int> { 1, 2 },
                     Disputes = new Dispute
                     {
@@ -200,7 +198,7 @@ namespace Trolley.Test.MySqlConnector
                 });
                 orderDetails.Add(new OrderDetail
                 {
-                    Id = $"OND_{i + 1}",
+                    Id = $"OND_{1000 + (i - 1000) * 2 + 1}",
                     TenantId = "104",
                     Amount = 240,
                     OrderId = orderId,
@@ -215,7 +213,7 @@ namespace Trolley.Test.MySqlConnector
                 });
                 orderDetails.Add(new OrderDetail
                 {
-                    Id = $"OND_{i + 2}",
+                    Id = $"OND_{1000 + (i - 1000) * 2 + 2}",
                     TenantId = "104",
                     Amount = 180,
                     OrderId = orderId,
@@ -240,6 +238,7 @@ namespace Trolley.Test.MySqlConnector
                     BuyerId = 102,
                     SellerId = 2,
                     TotalAmount = 630,
+                    ProductCount = 2,
                     Products = new List<int> { 1, 2 },
                     Disputes = new Dispute
                     {
@@ -257,7 +256,7 @@ namespace Trolley.Test.MySqlConnector
                 });
                 orderDetails.Add(new OrderDetail
                 {
-                    Id = $"OND_{i * 2 + 1}",
+                    Id = $"OND_{2000 + (i - 2000) * 2 + 1}",
                     TenantId = "105",
                     Amount = 230,
                     OrderId = orderId,
@@ -272,7 +271,7 @@ namespace Trolley.Test.MySqlConnector
                 });
                 orderDetails.Add(new OrderDetail
                 {
-                    Id = $"OND_{i + 2}",
+                    Id = $"OND_{2000 + (i - 2000) * 2 + 2}",
                     TenantId = "105",
                     Amount = 400,
                     OrderId = orderId,
@@ -286,8 +285,8 @@ namespace Trolley.Test.MySqlConnector
                     UpdatedBy = 1
                 });
             }
-
             var removeIds = orders.Select(f => f.Id).ToList();
+
             await repository.BeginTransactionAsync();
             await repository.Delete<Order>()
                 .UseTableBy("104", createdAt)
@@ -298,10 +297,19 @@ namespace Trolley.Test.MySqlConnector
                 .Where(f => removeIds.Contains(f.Id))
                 .ExecuteAsync();
             await repository.Delete<OrderDetail>()
-               .Where(f => removeIds.Contains(f.Id))
-               .ExecuteAsync();
-            var count = await repository.Create<Order>()
+                .UseTableBy("104", createdAt)
+                .Where(f => removeIds.Contains(f.OrderId))
+                .ExecuteAsync();
+            await repository.Delete<OrderDetail>()
+                .UseTableBy("105", createdAt)
+                .Where(f => removeIds.Contains(f.OrderId))
+                .ExecuteAsync();
+
+            var count1 = await repository.Create<Order>()
                 .WithBulkCopy(orders)
+                .ExecuteAsync();
+            var count2 = await repository.Create<OrderDetail>()
+                .WithBulkCopy(orderDetails)
                 .ExecuteAsync();
             await repository.CommitAsync();
         }
@@ -604,7 +612,7 @@ namespace Trolley.Test.MySqlConnector
         [Fact]
         public async void Create_BulkCopy_UseTable()
         {
-            var createdAt = DateTime.Now;
+            var createdAt = DateTime.Parse("2024-05-24");
             var orders = new List<Order>();
             var orderDetails = new List<OrderDetail>();
             for (int i = 1000; i < 2000; i++)
@@ -618,6 +626,7 @@ namespace Trolley.Test.MySqlConnector
                     BuyerId = 101,
                     SellerId = 2,
                     TotalAmount = 420,
+                    ProductCount = 2,
                     Products = new List<int> { 1, 2 },
                     Disputes = new Dispute
                     {
@@ -635,7 +644,7 @@ namespace Trolley.Test.MySqlConnector
                 });
                 orderDetails.Add(new OrderDetail
                 {
-                    Id = $"OND_{i + 1}",
+                    Id = $"OND_{1000 + (i - 1000) * 2 + 1}",
                     TenantId = "104",
                     Amount = 240,
                     OrderId = orderId,
@@ -650,7 +659,7 @@ namespace Trolley.Test.MySqlConnector
                 });
                 orderDetails.Add(new OrderDetail
                 {
-                    Id = $"OND_{i + 2}",
+                    Id = $"OND_{1000 + (i - 1000) * 2 + 2}",
                     TenantId = "104",
                     Amount = 180,
                     OrderId = orderId,
@@ -668,15 +677,18 @@ namespace Trolley.Test.MySqlConnector
             var removeIds = orders.Select(f => f.Id).ToList();
 
             await repository.BeginTransactionAsync();
-            await repository.Delete<Order>()
-                .UseTableBy("104", createdAt)
-                .Where(f => removeIds.Contains(f.Id))
-                .ExecuteAsync();
-            await repository.Delete<OrderDetail>()
-                .UseTableBy("104", createdAt)
-                .Where(f => removeIds.Contains(f.Id))
-                .ExecuteAsync();
-
+            var deleteOrders = repository.Delete<Order>()
+               .UseTableBy("104", createdAt)
+               .Where(f => removeIds.Contains(f.Id))
+               .ToMultipleCommand();
+            var deleteOrderDetails = repository.Delete<OrderDetail>()
+               .UseTableBy("104", createdAt)
+               .Where(f => removeIds.Contains(f.OrderId))
+               .ToMultipleCommand();
+            await repository.MultipleExecuteAsync(new List<MultipleCommand>
+            {
+                deleteOrders, deleteOrderDetails
+            });
             var count1 = await repository.Create<Order>()
                 .UseTableBy("104", createdAt)
                 .WithBulkCopy(orders)
@@ -690,6 +702,7 @@ namespace Trolley.Test.MySqlConnector
             Assert.True(count2 == 2000);
 
             orders.Clear();
+            orderDetails.Clear();
             for (int i = 2000; i < 3000; i++)
             {
                 var orderId = $"ON_{i + 1}";
@@ -701,6 +714,7 @@ namespace Trolley.Test.MySqlConnector
                     BuyerId = 102,
                     SellerId = 2,
                     TotalAmount = 630,
+                    ProductCount = 2,
                     Products = new List<int> { 1, 2 },
                     Disputes = new Dispute
                     {
@@ -718,7 +732,7 @@ namespace Trolley.Test.MySqlConnector
                 });
                 orderDetails.Add(new OrderDetail
                 {
-                    Id = $"OND_{i * 2 + 1}",
+                    Id = $"OND_{2000 + (i - 2000) * 2 + 1}",
                     TenantId = "105",
                     Amount = 230,
                     OrderId = orderId,
@@ -733,7 +747,7 @@ namespace Trolley.Test.MySqlConnector
                 });
                 orderDetails.Add(new OrderDetail
                 {
-                    Id = $"OND_{i + 2}",
+                    Id = $"OND_{2000 + (i - 2000) * 2 + 2}",
                     TenantId = "105",
                     Amount = 400,
                     OrderId = orderId,
@@ -747,6 +761,8 @@ namespace Trolley.Test.MySqlConnector
                     UpdatedBy = 1
                 });
             }
+
+            removeIds = orders.Select(f => f.Id).ToList();
             await repository.BeginTransactionAsync();
             await repository.Delete<Order>()
                 .UseTableBy("105", createdAt)
@@ -754,7 +770,7 @@ namespace Trolley.Test.MySqlConnector
                 .ExecuteAsync();
             await repository.Delete<OrderDetail>()
                 .UseTableBy("105", createdAt)
-                .Where(f => removeIds.Contains(f.Id))
+                .Where(f => removeIds.Contains(f.OrderId))
                 .ExecuteAsync();
 
             count1 = await repository.Create<Order>()
@@ -762,17 +778,17 @@ namespace Trolley.Test.MySqlConnector
                 .WithBulkCopy(orders)
                 .ExecuteAsync();
             count2 = await repository.Create<OrderDetail>()
-                 .UseTableBy("105", createdAt)
-                 .WithBulkCopy(orderDetails)
-                 .ExecuteAsync();
+                .UseTableBy("105", createdAt)
+                .WithBulkCopy(orderDetails)
+                .ExecuteAsync();
             await repository.CommitAsync();
             Assert.True(count1 == 1000);
-            Assert.True(count2 == 3000);
+            Assert.True(count2 == 2000);
         }
         [Fact]
         public async void Create_BulkCopy_WithoutUseTable()
         {
-            var createdAt = DateTime.Now;
+            var createdAt = DateTime.Parse("2024-05-24");
             var orders = new List<Order>();
             var orderDetails = new List<OrderDetail>();
             for (int i = 1000; i < 2000; i++)
@@ -786,6 +802,7 @@ namespace Trolley.Test.MySqlConnector
                     BuyerId = 101,
                     SellerId = 2,
                     TotalAmount = 420,
+                    ProductCount = 2,
                     Products = new List<int> { 1, 2 },
                     Disputes = new Dispute
                     {
@@ -803,7 +820,7 @@ namespace Trolley.Test.MySqlConnector
                 });
                 orderDetails.Add(new OrderDetail
                 {
-                    Id = $"OND_{i + 1}",
+                    Id = $"OND_{1000 + (i - 1000) * 2 + 1}",
                     TenantId = "104",
                     Amount = 240,
                     OrderId = orderId,
@@ -818,7 +835,7 @@ namespace Trolley.Test.MySqlConnector
                 });
                 orderDetails.Add(new OrderDetail
                 {
-                    Id = $"OND_{i + 2}",
+                    Id = $"OND_{1000 + (i - 1000) * 2 + 2}",
                     TenantId = "104",
                     Amount = 180,
                     OrderId = orderId,
@@ -843,6 +860,7 @@ namespace Trolley.Test.MySqlConnector
                     BuyerId = 102,
                     SellerId = 2,
                     TotalAmount = 630,
+                    ProductCount = 2,
                     Products = new List<int> { 1, 2 },
                     Disputes = new Dispute
                     {
@@ -860,7 +878,7 @@ namespace Trolley.Test.MySqlConnector
                 });
                 orderDetails.Add(new OrderDetail
                 {
-                    Id = $"OND_{i * 2 + 1}",
+                    Id = $"OND_{2000 + (i - 2000) * 2 + 1}",
                     TenantId = "105",
                     Amount = 230,
                     OrderId = orderId,
@@ -875,7 +893,7 @@ namespace Trolley.Test.MySqlConnector
                 });
                 orderDetails.Add(new OrderDetail
                 {
-                    Id = $"OND_{i + 2}",
+                    Id = $"OND_{2000 + (i - 2000) * 2 + 2}",
                     TenantId = "105",
                     Amount = 400,
                     OrderId = orderId,
@@ -913,12 +931,12 @@ namespace Trolley.Test.MySqlConnector
             var count1 = await repository.Create<Order>()
                 .WithBulkCopy(orders)
                 .ExecuteAsync();
-            var count2 = await repository.Create<Order>()
-                .WithBulkCopy(orders)
+            var count2 = await repository.Create<OrderDetail>()
+                .WithBulkCopy(orderDetails)
                 .ExecuteAsync();
             await repository.CommitAsync();
             Assert.True(count1 == 2000);
-            Assert.True(count2 == 5000);
+            Assert.True(count2 == 4000);
         }
         [Fact]
         public async void Query_ManySharding_SingleTable()
@@ -930,7 +948,7 @@ namespace Trolley.Test.MySqlConnector
                 .UseTable("sys_order_104_202405", "sys_order_105_202405")
                 .Where(f => f.ProductCount > productCount)
                 .ToSql(out _);
-            Assert.True(sql == "SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_order_104_202405` a WHERE a.`ProductCount`>@p0\r\nUNION ALL\r\nSELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_order_105_202405` a WHERE a.`ProductCount`>@p0");
+            Assert.True(sql == "SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_order_104_202405` a WHERE a.`ProductCount`>@p0 UNION ALL SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_order_105_202405` a WHERE a.`ProductCount`>@p0");
 
             var result = repository.From<Order>()
                 .UseTable("sys_order_104_202405", "sys_order_105_202405")
@@ -939,12 +957,11 @@ namespace Trolley.Test.MySqlConnector
             if (result.Count > 0)
             {
                 var tenantIds = result.Select(f => f.TenantId).ToList();
-                Assert.True(tenantIds.Exists(f => f == "104" || f == "105"));
-                Assert.True(!tenantIds.Exists(f => f != "104" && f != "105"));
+                Assert.True(tenantIds.Exists(f => "104,105".Contains(f)));
             }
         }
         [Fact]
-        public async void Query_Sharding_Value()
+        public async void Query_SingleSharding_Value()
         {
             await this.InitSharding();
             var orderId = "ON_1015";
@@ -973,7 +990,7 @@ namespace Trolley.Test.MySqlConnector
         [Fact]
         public async void Query_ManySharding_SingleTable_SubQuery()
         {
-            //await this.InitSharding();
+            await this.InitSharding();
             using var repository = dbFactory.Create();
             var sql = repository
                 .From(f => f.From<OrderDetail>()
@@ -983,7 +1000,7 @@ namespace Trolley.Test.MySqlConnector
                     .GroupBy((a, b) => new { OrderId = b.Id, b.BuyerId })
                     .Select((x, a, b) => new { Group = x.Grouping, ProductCount = x.CountDistinct(a.ProductId) }))
                 .InnerJoin<User>((x, y) => x.Group.BuyerId == y.Id)
-                .UseTable<Order>((dbKey, orderOrigName, userOrigName, orderTableName) =>
+                .UseTable<OrderDetail>((dbKey, orderOrigName, userOrigName, orderTableName) =>
                 {
                     var tableName = orderTableName.Replace(orderOrigName, userOrigName);
                     return tableName.Substring(0, tableName.Length - 7);
@@ -997,7 +1014,7 @@ namespace Trolley.Test.MySqlConnector
                     x.ProductCount
                 })
                 .ToSql(out _);
-            Assert.True(sql == "SELECT a.`OrderId`,a.`BuyerId`,b.`TenantId`,b.`Id`,b.`TenantId`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,a.`ProductCount` FROM (SELECT b.`Id` AS `OrderId`,b.`BuyerId`,COUNT(DISTINCT a.`ProductId`) AS `ProductCount` FROM `sys_order_detail_104_202405` a INNER JOIN `sys_order_104_202405` b ON a.`OrderId`=b.`Id` GROUP BY b.`Id`,b.`BuyerId`) a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>1\r\nUNION ALL\r\nSELECT a.`OrderId`,a.`BuyerId`,b.`TenantId`,b.`Id`,b.`TenantId`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,a.`ProductCount` FROM (SELECT b.`Id` AS `OrderId`,b.`BuyerId`,COUNT(DISTINCT a.`ProductId`) AS `ProductCount` FROM `sys_order_detail_105_202405` a INNER JOIN `sys_order_105_202405` b ON a.`OrderId`=b.`Id` GROUP BY b.`Id`,b.`BuyerId`) a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>1");
+            Assert.True(sql == "SELECT a.`OrderId`,a.`BuyerId`,b.`TenantId`,b.`Id`,b.`TenantId`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,a.`ProductCount` FROM (SELECT b.`Id` AS `OrderId`,b.`BuyerId`,COUNT(DISTINCT a.`ProductId`) AS `ProductCount` FROM `sys_order_detail_104_202405` a INNER JOIN `sys_order_104_202405` b ON a.`OrderId`=b.`Id` GROUP BY b.`Id`,b.`BuyerId`) a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>1 UNION ALL SELECT a.`OrderId`,a.`BuyerId`,b.`TenantId`,b.`Id`,b.`TenantId`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,a.`ProductCount` FROM (SELECT b.`Id` AS `OrderId`,b.`BuyerId`,COUNT(DISTINCT a.`ProductId`) AS `ProductCount` FROM `sys_order_detail_105_202405` a INNER JOIN `sys_order_105_202405` b ON a.`OrderId`=b.`Id` GROUP BY b.`Id`,b.`BuyerId`) a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>1");
 
             var result = await repository
                 .From(f => f.From<OrderDetail>()
@@ -1034,11 +1051,11 @@ namespace Trolley.Test.MySqlConnector
         [Fact]
         public async void Query_ManySharding_MultiTable1()
         {
-            //await this.InitSharding();
+            await this.InitSharding();
             var productCount = 1;
             using var repository = dbFactory.Create();
             var sql = repository.From<Order>()
-                .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f.Substring(f.Length - 6)) > 202001)
+                .UseTable("sys_order_104_202405", "sys_order_105_202405")
                 .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
                 .UseTable<Order>((dbKey, orderOrigName, userOrigName, orderTableName) =>
                 {
@@ -1052,7 +1069,7 @@ namespace Trolley.Test.MySqlConnector
                     Buyer = y
                 })
                 .ToSql(out _);
-            Assert.True(sql == "SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,b.`Id`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy` FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>@p0\r\nUNION ALL\r\nSELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,b.`Id`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy` FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>@p0");
+            Assert.True(sql == "SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,b.`Id`,b.`TenantId`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy` FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>@p0 UNION ALL SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,b.`Id`,b.`TenantId`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy` FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>@p0");
 
             var result = repository.From<Order>()
                 .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f.Substring(f.Length - 6)) > 202001)
@@ -1072,14 +1089,57 @@ namespace Trolley.Test.MySqlConnector
             if (result.Count > 0)
             {
                 var tenantIds = result.Select(f => f.Order.TenantId).ToList();
-                Assert.True(tenantIds.Exists(f => f == "104" || f == "105"));
-                Assert.True(!tenantIds.Exists(f => f != "104" && f != "105"));
+                Assert.True(tenantIds.Exists(f => "104,105".Contains(f)));
             }
         }
         [Fact]
         public async void Query_ManySharding_MultiTable2()
         {
-            //await this.InitSharding();
+            await this.InitSharding();
+            var productCount = 1;
+            using var repository = dbFactory.Create();
+            var sql = repository.From<Order>()
+                .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f.Substring(f.Length - 6)) > 202001)
+                .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
+                .UseTable<Order>((dbKey, orderOrigName, userOrigName, orderTableName) =>
+                {
+                    var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+                    return tableName.Substring(0, tableName.Length - 7);
+                })
+                .Where((a, b) => a.ProductCount > productCount)
+                .Select((x, y) => new
+                {
+                    Order = x,
+                    Buyer = y
+                })
+                .ToSql(out _);
+            Assert.True(sql == "SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,b.`Id`,b.`TenantId`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy` FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>@p0 UNION ALL SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,b.`Id`,b.`TenantId`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy` FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>@p0");
+
+            var result = repository.From<Order>()
+                .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f.Substring(f.Length - 6)) > 202001)
+                .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
+                .UseTable<Order>((dbKey, orderOrigName, userOrigName, orderTableName) =>
+                {
+                    var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+                    return tableName.Substring(0, tableName.Length - 7);
+                })
+                .Where((a, b) => a.ProductCount > productCount)
+                .Select((x, y) => new
+                {
+                    Order = x,
+                    Buyer = y
+                })
+                .ToList();
+            if (result.Count > 0)
+            {
+                var tenantIds = result.Select(f => f.Order.TenantId).ToList();
+                Assert.True(tenantIds.Exists(f => "104,105".Contains(f)));
+            }
+        }
+        [Fact]
+        public async void Query_ManySharding_MultiTable3()
+        {
+            await this.InitSharding();
             var productCount = 1;
             using var repository = dbFactory.Create();
             var sql = repository.From<Order>()
@@ -1093,7 +1153,7 @@ namespace Trolley.Test.MySqlConnector
                     Detail = y
                 })
                 .ToSql(out _);
-            Assert.True(sql == "SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,b.`Id`,b.`TenantId`,b.`OrderId`,b.`ProductId`,b.`Price`,b.`Quantity`,b.`Amount`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy` FROM `sys_order_104_202405` a INNER JOIN `sys_order_detail_104_202405` b ON a.`Id`=b.`OrderId` WHERE a.`ProductCount`>@p0\r\nUNION ALL\r\nSELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,b.`Id`,b.`TenantId`,b.`OrderId`,b.`ProductId`,b.`Price`,b.`Quantity`,b.`Amount`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy` FROM `sys_order_105_202405` a INNER JOIN `sys_order_detail_105_202405` b ON a.`Id`=b.`OrderId` WHERE a.`ProductCount`>@p0");
+            Assert.True(sql == "SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,b.`Id`,b.`TenantId`,b.`OrderId`,b.`ProductId`,b.`Price`,b.`Quantity`,b.`Amount`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy` FROM `sys_order_104_202405` a INNER JOIN `sys_order_detail_104_202405` b ON a.`Id`=b.`OrderId` WHERE a.`ProductCount`>@p0 UNION ALL SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,b.`Id`,b.`TenantId`,b.`OrderId`,b.`ProductId`,b.`Price`,b.`Quantity`,b.`Amount`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy` FROM `sys_order_105_202405` a INNER JOIN `sys_order_detail_105_202405` b ON a.`Id`=b.`OrderId` WHERE a.`ProductCount`>@p0");
 
             var result = repository.From<Order>()
                 .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f.Substring(f.Length - 6)) > 202001)
@@ -1109,7 +1169,7 @@ namespace Trolley.Test.MySqlConnector
             if (result.Count > 0)
             {
                 var tenantIds = result.Select(f => f.Order.TenantId).Distinct().ToList();
-                Assert.True(!tenantIds.Exists(f => f != "104" && f != "105"));
+                Assert.True(tenantIds.Exists(f => "104,105".Contains(f)));
             }
         }
     }

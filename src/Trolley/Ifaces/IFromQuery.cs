@@ -17,15 +17,6 @@ public interface IFromQuery
     /// <returns>返回查询对象</returns>
     IQuery<T> From<T>(char tableAsStart = 'a');
     /// <summary>
-    /// 创建子查询，生成SQL: FROM T
-    /// </summary>
-    /// <typeparam name="T">实体类型</typeparam>
-    /// <param name="tableAsStart">表别名起始字母，默认从字母'a'开始</param>
-    /// <param name="suffixRawSql">额外的原始SQL, SqlServer会有With用法，如：<code>SELECT * FROM sys_user WITH(NOLOCK)</code>
-    /// </param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T> From<T>(char tableAsStart, string suffixRawSql);
-    /// <summary>
     /// 使用2个表创建查询对象
     /// </summary>
     /// <typeparam name="T1">表T1实体类型</typeparam>

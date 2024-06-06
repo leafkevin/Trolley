@@ -13,9 +13,12 @@ public interface IUpdateVisitor : IDisposable
     IDataParameterCollection DbParameters { get; set; }
     IOrmProvider OrmProvider { get; }
     IEntityMapProvider MapProvider { get; }
+    bool IsMultiple { get; set; }
+    int CommandIndex { get; set; }
     IShardingProvider ShardingProvider { get; }
     ActionMode ActionMode { get; set; }
     List<TableSegment> Tables { get; }
+    List<TableSegment> ShardingTables { get; set; }
 
     void Initialize(Type entityType, bool isMultiple = false, bool isFirst = true);
     MultipleCommand CreateMultipleCommand();
@@ -26,6 +29,7 @@ public interface IUpdateVisitor : IDisposable
     #region Sharding
     void UseTable(Type entityType, params string[] tableNames);
     void UseTable(Type entityType, Func<string, bool> tableNamePredicate);
+    void UseTable(Type entityType, Type masterEntityType, Func<string, string, string, string, string> tableNameGetter);
     void UseTableBy(Type entityType, object field1Value, object field2Value = null);
     void UseTableByRange(Type entityType, object beginFieldValue, object endFieldValue);
     void UseTableByRange(Type entityType, object fieldValue1, object fieldValue2, object fieldValue3);
@@ -43,10 +47,13 @@ public interface IUpdateVisitor : IDisposable
     IUpdateVisitor OnlyFields(params string[] fieldNames);
     IUpdateVisitor OnlyFields(Expression fieldsSelector);
     IUpdateVisitor SetBulk(IEnumerable updateObjs, int bulkCount);
-    (IEnumerable, int, Action<IDataParameterCollection, StringBuilder, object, string>, Action<IDataParameterCollection>) BuildSetBulk(IDbCommand command);
+    (IEnumerable, int, string, Action<IDataParameterCollection>, Action<StringBuilder, string>, Action<IDataParameterCollection, StringBuilder, object, string>) BuildSetBulk(IDbCommand command);
     IUpdateVisitor WhereWith(object whereObj);
     IUpdateVisitor Where(Expression whereExpr);
     IUpdateVisitor And(Expression whereExpr);
     DataTable ToDataTable(Type entityType, IEnumerable entities, EntityMap fromMapper, string tableName = null);
     List<(MemberInfo MemberInfo, MemberMap RefMemberMapper)> GetRefMemberMappers(Type entityType, EntityMap refEntityMapper);
+    string BuildShardingTablesSql(string tableSchema);
+    void SetShardingTables(List<string> shardingTables);
+    string GetTableName(TableSegment tableSegment);
 }

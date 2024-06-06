@@ -16,7 +16,8 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     #endregion
 
     #region Sharding
-    bool TryGetShardingTableNames(Type entityType, out List<string> tableNames);
+    List<string> GetShardingTableNames(params Type[] entityTypes);
+    Task<List<string>> GetShardingTableNamesAsync(params Type[] entityTypes);
     #endregion
 
     #region From
@@ -29,10 +30,9 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// </summary>
     /// <typeparam name="T">实体类型</typeparam>
     /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
-    /// <param name="suffixRawSql">额外的原始SQL, SqlServer会有With用法，如：<cdoe>SELECT * FROM sys_user WITH(NOLOCK)</cdoe>
     /// </param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> From<T>(char tableAsStart = 'a', string suffixRawSql = null);
+    IQuery<T> From<T>(char tableAsStart = 'a');
     /// <summary>
     /// 使用2个表创建查询对象
     /// </summary>

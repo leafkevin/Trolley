@@ -31,64 +31,64 @@ public class MultipleQuery : IMultipleQuery, IDisposable
     #endregion
 
     #region From
-    public IMultiQuery<T> From<T>(char tableAsStart = 'a', string suffixRawSql = null)
+    public IMultiQuery<T> From<T>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
-        visitor.From(tableAsStart, suffixRawSql, typeof(T));
+        visitor.From(tableAsStart, typeof(T));
         return new MultiQuery<T>(this, visitor);
     }
     public IMultiQuery<T1, T2> From<T1, T2>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
-        visitor.From(tableAsStart, null, typeof(T1), typeof(T2));
+        visitor.From(tableAsStart, typeof(T1), typeof(T2));
         return new MultiQuery<T1, T2>(this, visitor);
     }
     public IMultiQuery<T1, T2, T3> From<T1, T2, T3>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
-        visitor.From(tableAsStart, null, typeof(T1), typeof(T2), typeof(T3));
+        visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3));
         return new MultiQuery<T1, T2, T3>(this, visitor);
     }
     public IMultiQuery<T1, T2, T3, T4> From<T1, T2, T3, T4>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
-        visitor.From(tableAsStart, null, typeof(T1), typeof(T2), typeof(T3), typeof(T4));
+        visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4));
         return new MultiQuery<T1, T2, T3, T4>(this, visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
-        visitor.From(tableAsStart, null, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
+        visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
         return new MultiQuery<T1, T2, T3, T4, T5>(this, visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
-        visitor.From(tableAsStart, null, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
+        visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
         return new MultiQuery<T1, T2, T3, T4, T5, T6>(this, visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7> From<T1, T2, T3, T4, T5, T6, T7>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
-        visitor.From(tableAsStart, null, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7));
+        visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7));
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7>(this, visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> From<T1, T2, T3, T4, T5, T6, T7, T8>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
-        visitor.From(tableAsStart, null, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8));
+        visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8));
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8>(this, visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> From<T1, T2, T3, T4, T5, T6, T7, T8, T9>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
-        visitor.From(tableAsStart, null, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9));
+        visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9));
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this, visitor);
     }
     public IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
-        visitor.From(tableAsStart, null, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10));
+        visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10));
         return new MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this, visitor);
     }
     #endregion

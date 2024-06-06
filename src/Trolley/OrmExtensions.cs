@@ -8,6 +8,13 @@ namespace Trolley;
 
 public static class OrmExtensions
 {
+    #region GetShardingTableNames
+    public static List<string> GetShardingTableNames<TEntity>(this IRepository repository)
+        => repository.GetShardingTableNames(typeof(TEntity));
+    public static async Task<List<string>> GetShardingTableNamesAsync<TEntity>(this IRepository repository)
+        => await repository.GetShardingTableNamesAsync(typeof(TEntity));
+    #endregion
+
     #region QueryFirst/Query/QueryDictionary
     /// <summary>
     /// 查询TEntity实体表满足表达式wherePredicate条件的第一条记录，条件表达式wherePredicate可以为null，为null时，查询所有记录的第一条

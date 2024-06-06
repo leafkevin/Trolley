@@ -99,7 +99,7 @@ public class TableSegment
     public List<MemberInfo> ParentMemberVisits { get; set; }
 
     /// <summary>
-    /// 是否使用分表，使用分表此值为true
+    /// 是否已经指定分表，指定了分表此值为true
     /// </summary>
     public bool IsSharding { get; set; }
     /// <summary>

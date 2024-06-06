@@ -99,7 +99,7 @@ public class Create<TEntity> : ICreate<TEntity>
     public IFromCommand<T> From<T>()
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
-        queryVisitor.From('b', null, typeof(T));
+        queryVisitor.From('b', typeof(T));
         return this.OrmProvider.NewFromCommand<T>(typeof(TEntity), this.DbContext, queryVisitor);
     }
 <#
@@ -114,7 +114,7 @@ public class Create<TEntity> : ICreate<TEntity>
     public IFromCommand<<#=tables#>> From<<#=tables#>>()
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
-        queryVisitor.From('b', null, <#=typeOfTables#>);
+        queryVisitor.From('b', <#=typeOfTables#>);
         return this.OrmProvider.NewFromCommand<<#=tables#>>(typeof(TEntity), this.DbContext, queryVisitor);
     }
 <#  }#>

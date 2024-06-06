@@ -135,7 +135,8 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
             visitor.SelectDefault(defaultExpr);
-            (var isOpened, var sql, var readerFields) = this.BuildSql(visitor, command);
+            var sql = visitor.BuildSql(out var readerFields);
+            (var isOpened, sql) = this.BuildSql(visitor as SqlVisitor, command, sql, " UNOIN ALL ");
             command.CommandText = sql;
             visitor.DbParameters.CopyTo(command.Parameters);
 
@@ -185,7 +186,8 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
             visitor.SelectDefault(defaultExpr);
-            (var isOpened, var sql, var readerFields) = await this.BuildSqlAsync(visitor, command, cancellationToken);
+            var sql = visitor.BuildSql(out var readerFields);
+            (var isOpened, sql) = await this.BuildSqlAsync(visitor as SqlVisitor, command, sql, " UNION ALL ", cancellationToken);
             command.CommandText = sql;
             visitor.DbParameters.CopyTo(command.Parameters);
 
@@ -328,7 +330,8 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
             visitor.SelectDefault(defaultExpr);
-            (var isOpened, var sql, var readerFields) = this.BuildSql(visitor, command);
+            var sql = visitor.BuildSql(out var readerFields);
+            (var isOpened, sql) = this.BuildSql(visitor as SqlVisitor, command, sql, " UNION ALL ");
             command.CommandText = sql;
             visitor.DbParameters.CopyTo(command.Parameters);
 
@@ -387,7 +390,8 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
             visitor.SelectDefault(defaultExpr);
-            (var isOpened, var sql, var readerFields) = await this.BuildSqlAsync(visitor, command, cancellationToken);
+            var sql = visitor.BuildSql(out var readerFields);
+            (var isOpened, sql) = await this.BuildSqlAsync(visitor as SqlVisitor, command, sql, " UNION ALL ", cancellationToken);
             command.CommandText = sql;
             visitor.DbParameters.CopyTo(command.Parameters);
 
@@ -793,6 +797,429 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     }
     #endregion
 
+    #region UpdateBulk
+    public int UpdateBulk(IUpdateVisitor visitor, IDbCommand command)
+    {
+        int result = 0;
+        bool isOpened = false;
+        (var updateObjs, var bulkCount, var origName, var firstCommandInitializer,
+            var headSqlSetter, var commandSqlSetter) = visitor.BuildSetBulk(command);
+        firstCommandInitializer?.Invoke(command.Parameters);
+
+        int index = 0;
+        var builder = new StringBuilder();
+
+        if (visitor.ShardingTables != null && visitor.ShardingTables.Count > 0)
+        {
+            //需要访问数据库捞取所有分表，并设置到对应的TableSegment上
+            if (visitor.ShardingTables.Exists(f => f.ShardingType > ShardingTableType.MultiTable))
+            {
+                var fetchSql = visitor.BuildShardingTablesSql(this.Connection.Database);
+                command.CommandText = fetchSql;
+                command.Parameters.Clear();
+                this.Open();
+                var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
+                var shardingTables = new List<string>();
+                while (reader.Read())
+                {
+                    shardingTables.Add(reader.To<string>(this.OrmProvider));
+                }
+                reader.Dispose();
+                command.CommandText = null;
+                command.Parameters.Clear();
+                visitor.SetShardingTables(shardingTables);
+                isOpened = true;
+            }
+
+            var sqlBuilder = new StringBuilder();
+            if (visitor.IsMultiple)
+            {
+                foreach (var updateObj in updateObjs)
+                {
+                    this.AddShardingTablesBulkSql(visitor, command, builder, sqlBuilder, headSqlSetter,
+                        commandSqlSetter, updateObj, $"_m{visitor.CommandIndex}{index}");
+                    sqlBuilder.Clear();
+                    if (index >= bulkCount)
+                    {
+                        command.CommandText = sqlBuilder.ToString();
+                        if (!isOpened)
+                        {
+                            this.Open();
+                            isOpened = true;
+                        }
+                        result += command.ExecuteNonQuery();
+                        command.Parameters.Clear();
+                        firstCommandInitializer?.Invoke(command.Parameters);
+                        sqlBuilder.Clear();
+                        index = 0;
+                        continue;
+                    }
+                    index++;
+                }
+                if (index > 0)
+                {
+                    command.CommandText = sqlBuilder.ToString();
+                    if (!isOpened) this.Open();
+                    result += command.ExecuteNonQuery();
+                }
+            }
+            else
+            {
+                foreach (var updateObj in updateObjs)
+                {
+                    this.AddShardingTablesBulkSql(visitor, command, builder, sqlBuilder, headSqlSetter,
+                        commandSqlSetter, updateObj, $"{index}");
+                    sqlBuilder.Clear();
+                    if (index >= bulkCount)
+                    {
+                        command.CommandText = sqlBuilder.ToString();
+                        if (!isOpened)
+                        {
+                            this.Open();
+                            isOpened = true;
+                        }
+                        result += command.ExecuteNonQuery();
+                        command.Parameters.Clear();
+                        firstCommandInitializer?.Invoke(command.Parameters);
+                        sqlBuilder.Clear();
+                        index = 0;
+                        continue;
+                    }
+                    index++;
+                }
+                if (index > 0)
+                {
+                    command.CommandText = sqlBuilder.ToString();
+                    if (!isOpened) this.Open();
+                    result += command.ExecuteNonQuery();
+                }
+            }
+        }
+        else
+        {
+            if (visitor.IsMultiple)
+            {
+                foreach (var updateObj in updateObjs)
+                {
+                    if (index > 0) builder.Append(';');
+                    headSqlSetter.Invoke(builder, origName);
+                    commandSqlSetter.Invoke(command.Parameters, builder, updateObj, $"_m{visitor.CommandIndex}{index}");
+                    if (index >= bulkCount)
+                    {
+                        command.CommandText = builder.ToString();
+                        if (!isOpened)
+                        {
+                            this.Open();
+                            isOpened = true;
+                        }
+                        result += command.ExecuteNonQuery();
+                        command.Parameters.Clear();
+                        firstCommandInitializer?.Invoke(command.Parameters);
+                        builder.Clear();
+                        index = 0;
+                        continue;
+                    }
+                    index++;
+                }
+                if (index > 0)
+                {
+                    command.CommandText = builder.ToString();
+                    if (!isOpened) this.Open();
+                    result += command.ExecuteNonQuery();
+                }
+            }
+            else
+            {
+                foreach (var updateObj in updateObjs)
+                {
+                    if (index > 0) builder.Append(';');
+                    headSqlSetter.Invoke(builder, origName);
+                    commandSqlSetter.Invoke(command.Parameters, builder, updateObj, $"{index}");
+                    if (index >= bulkCount)
+                    {
+                        command.CommandText = builder.ToString();
+                        if (!isOpened)
+                        {
+                            this.Open();
+                            isOpened = true;
+                        }
+                        result += command.ExecuteNonQuery();
+                        command.Parameters.Clear();
+                        firstCommandInitializer?.Invoke(command.Parameters);
+                        builder.Clear();
+                        index = 0;
+                        continue;
+                    }
+                    index++;
+                }
+                if (index > 0)
+                {
+                    command.CommandText = builder.ToString();
+                    if (!isOpened) this.Open();
+                    result += command.ExecuteNonQuery();
+                }
+            }
+        }
+        builder.Clear();
+        builder = null;
+        return result;
+    }
+    public async Task<int> UpdateBulkAsync(IUpdateVisitor visitor, DbCommand command, CancellationToken cancellationToken = default)
+    {
+        int result = 0;
+        bool isOpened = false;
+        (var updateObjs, var bulkCount, var origName, var firstCommandInitializer,
+            var headSqlSetter, var commandSqlSetter) = visitor.BuildSetBulk(command);
+        firstCommandInitializer?.Invoke(command.Parameters);
+
+        int index = 0;
+        var builder = new StringBuilder();
+
+        if (visitor.ShardingTables != null && visitor.ShardingTables.Count > 0)
+        {
+            //需要访问数据库捞取所有分表，并设置到对应的TableSegment上
+            if (visitor.ShardingTables.Exists(f => f.ShardingType > ShardingTableType.MultiTable))
+            {
+                var fetchSql = visitor.BuildShardingTablesSql(this.Connection.Database);
+                command.CommandText = fetchSql;
+                command.Parameters.Clear();
+                await this.OpenAsync(cancellationToken);
+                var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
+                var shardingTables = new List<string>();
+                while (reader.Read())
+                {
+                    shardingTables.Add(reader.To<string>(this.OrmProvider));
+                }
+                await reader.DisposeAsync();
+                command.CommandText = null;
+                command.Parameters.Clear();
+                visitor.SetShardingTables(shardingTables);
+                isOpened = true;
+            }
+
+            var sqlBuilder = new StringBuilder();
+            var tableCount = visitor.ShardingTables[0].TableNames.Count;
+            if (visitor.IsMultiple)
+            {
+                foreach (var updateObj in updateObjs)
+                {
+                    this.AddShardingTablesBulkSql(visitor, command, builder, sqlBuilder, headSqlSetter,
+                        commandSqlSetter, updateObj, $"_m{visitor.CommandIndex}{index}");
+                    sqlBuilder.Clear();
+                    if (index * tableCount >= bulkCount)
+                    {
+                        command.CommandText = sqlBuilder.ToString();
+                        if (!isOpened)
+                        {
+                            await this.OpenAsync(cancellationToken);
+                            isOpened = true;
+                        }
+                        result += await command.ExecuteNonQueryAsync(cancellationToken);
+                        command.Parameters.Clear();
+                        firstCommandInitializer?.Invoke(command.Parameters);
+                        sqlBuilder.Clear();
+                        index = 0;
+                        continue;
+                    }
+                    index++;
+                }
+                if (index > 0)
+                {
+                    command.CommandText = sqlBuilder.ToString();
+                    if (!isOpened) await this.OpenAsync(cancellationToken);
+                    result += await command.ExecuteNonQueryAsync(cancellationToken);
+                }
+            }
+            else
+            {
+                foreach (var updateObj in updateObjs)
+                {
+                    this.AddShardingTablesBulkSql(visitor, command, builder, sqlBuilder, headSqlSetter,
+                        commandSqlSetter, updateObj, $"{index}");
+                    sqlBuilder.Clear();
+                    if (index * tableCount >= bulkCount)
+                    {
+                        command.CommandText = sqlBuilder.ToString();
+                        if (!isOpened)
+                        {
+                            await this.OpenAsync(cancellationToken);
+                            isOpened = true;
+                        }
+                        result += await command.ExecuteNonQueryAsync(cancellationToken);
+                        command.Parameters.Clear();
+                        firstCommandInitializer?.Invoke(command.Parameters);
+                        sqlBuilder.Clear();
+                        index = 0;
+                        continue;
+                    }
+                    index++;
+                }
+                if (index > 0)
+                {
+                    command.CommandText = sqlBuilder.ToString();
+                    if (!isOpened) await this.OpenAsync(cancellationToken);
+                    result += await command.ExecuteNonQueryAsync(cancellationToken);
+                }
+            }
+        }
+        else
+        {
+            if (visitor.IsMultiple)
+            {
+                foreach (var updateObj in updateObjs)
+                {
+                    if (index > 0) builder.Append(';');
+                    headSqlSetter.Invoke(builder, origName);
+                    commandSqlSetter.Invoke(command.Parameters, builder, updateObj, $"_m{visitor.CommandIndex}{index}");
+                    if (index >= bulkCount)
+                    {
+                        command.CommandText = builder.ToString();
+                        if (!isOpened)
+                        {
+                            await this.OpenAsync(cancellationToken);
+                            isOpened = true;
+                        }
+                        result += await command.ExecuteNonQueryAsync(cancellationToken);
+                        command.Parameters.Clear();
+                        firstCommandInitializer?.Invoke(command.Parameters);
+                        builder.Clear();
+                        index = 0;
+                        continue;
+                    }
+                    index++;
+                }
+                if (index > 0)
+                {
+                    command.CommandText = builder.ToString();
+                    if (!isOpened) await this.OpenAsync(cancellationToken);
+                    result += await command.ExecuteNonQueryAsync(cancellationToken);
+                }
+            }
+            else
+            {
+                foreach (var updateObj in updateObjs)
+                {
+                    if (index > 0) builder.Append(';');
+                    headSqlSetter.Invoke(builder, origName);
+                    commandSqlSetter.Invoke(command.Parameters, builder, updateObj, $"{index}");
+                    if (index >= bulkCount)
+                    {
+                        command.CommandText = builder.ToString();
+                        if (!isOpened)
+                        {
+                            await this.OpenAsync(cancellationToken);
+                            isOpened = true;
+                        }
+                        result += await command.ExecuteNonQueryAsync(cancellationToken);
+                        command.Parameters.Clear();
+                        firstCommandInitializer?.Invoke(command.Parameters);
+                        builder.Clear();
+                        index = 0;
+                        continue;
+                    }
+                    index++;
+                }
+                if (index > 0)
+                {
+                    command.CommandText = builder.ToString();
+                    if (!isOpened) await this.OpenAsync(cancellationToken);
+                    result += await command.ExecuteNonQueryAsync(cancellationToken);
+                }
+            }
+        }
+        builder.Clear();
+        builder = null;
+        return result;
+    }
+    public string BuildUpdateBulkSql(IUpdateVisitor visitor, IDbCommand command)
+    {
+        (var updateObjs, var bulkCount, var origName, var firstCommandInitializer,
+           var headSqlSetter, var commandSqlSetter) = visitor.BuildSetBulk(command);
+        firstCommandInitializer?.Invoke(command.Parameters);
+
+        int index = 0;
+        var builder = new StringBuilder();
+        if (visitor.ShardingTables != null && visitor.ShardingTables.Count > 0)
+        {
+            //需要访问数据库捞取所有分表，并设置到对应的TableSegment上
+            if (visitor.ShardingTables.Exists(f => f.ShardingType > ShardingTableType.MultiTable))
+            {
+                var fetchSql = visitor.BuildShardingTablesSql(this.Connection.Database);
+                command.CommandText = fetchSql;
+                command.Parameters.Clear();
+                this.Open();
+                var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
+                var shardingTables = new List<string>();
+                while (reader.Read())
+                {
+                    shardingTables.Add(reader.To<string>(this.OrmProvider));
+                }
+                reader.Dispose();
+                command.CommandText = null;
+                command.Parameters.Clear();
+                visitor.SetShardingTables(shardingTables);
+            }
+
+            var sqlBuilder = new StringBuilder();
+            if (visitor.IsMultiple)
+            {
+                foreach (var updateObj in updateObjs)
+                {
+                    this.AddShardingTablesBulkSql(visitor, command, builder, sqlBuilder, headSqlSetter,
+                        commandSqlSetter, updateObj, $"_m{visitor.CommandIndex}{index}");
+                    sqlBuilder.Clear();
+                    if (index >= bulkCount)
+                        break;
+                    index++;
+                }
+            }
+            else
+            {
+                foreach (var updateObj in updateObjs)
+                {
+                    this.AddShardingTablesBulkSql(visitor, command, builder, sqlBuilder, headSqlSetter,
+                        commandSqlSetter, updateObj, $"{index}");
+                    sqlBuilder.Clear();
+                    if (index >= bulkCount)
+                        break;
+                    index++;
+                }
+            }
+        }
+        else
+        {
+            if (visitor.IsMultiple)
+            {
+                foreach (var updateObj in updateObjs)
+                {
+                    if (index > 0) builder.Append(';');
+                    headSqlSetter.Invoke(builder, origName);
+                    commandSqlSetter.Invoke(command.Parameters, builder, updateObj, $"_m{visitor.CommandIndex}{index}");
+                    if (index >= bulkCount)
+                        break;
+                    index++;
+                }
+            }
+            else
+            {
+                foreach (var updateObj in updateObjs)
+                {
+                    if (index > 0) builder.Append(';');
+                    headSqlSetter.Invoke(builder, origName);
+                    commandSqlSetter.Invoke(command.Parameters, builder, updateObj, $"{index}");
+                    if (index >= bulkCount)
+                        break;
+                    index++;
+                }
+            }
+        }
+        var sql = builder.ToString();
+        builder.Clear();
+        builder = null;
+        return sql;
+    }
+    #endregion
+
     #region Execute
     public int Execute(Action<IDbCommand> commandInitializer)
     {
@@ -944,13 +1371,13 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     }
     #endregion
 
-    public (bool, string, List<ReaderField>) BuildSql(IQueryVisitor visitor, IDbCommand command)
+    public (bool, string) BuildSql(SqlVisitor visitor, IDbCommand command, string formatSql, string jointMark)
     {
         bool isOpened = false;
-        var sql = visitor.BuildSql(out var readerFields);
+        var sql = formatSql;
         if (visitor.ShardingTables != null && visitor.ShardingTables.Count > 0)
         {
-            if (visitor.ShardingTables.Exists(f => f.ShardingType > ShardingTableType.TableName))
+            if (visitor.ShardingTables.Exists(f => f.ShardingType > ShardingTableType.MultiTable))
             {
                 var fetchSql = visitor.BuildShardingTablesSql(this.Connection.Database);
                 command.CommandText = fetchSql;
@@ -969,17 +1396,17 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                 isOpened = true;
             }
             if (visitor.ShardingTables.Exists(f => f.TableNames.Count > 1))
-                sql = this.BuildShardingTablesUnionSql(visitor, sql);
+                sql = this.BuildShardingTablesSqlByFormat(visitor, formatSql, jointMark);
         }
-        return (isOpened, sql, readerFields);
+        return (isOpened, sql);
     }
-    public async Task<(bool, string, List<ReaderField>)> BuildSqlAsync(IQueryVisitor visitor, DbCommand command, CancellationToken cancellationToken = default)
+    public async Task<(bool, string)> BuildSqlAsync(SqlVisitor visitor, DbCommand command, string formatSql, string jointMark, CancellationToken cancellationToken = default)
     {
         bool isOpened = false;
-        var sql = visitor.BuildSql(out var readerFields);
+        var sql = formatSql;
         if (visitor.ShardingTables != null && visitor.ShardingTables.Count > 0)
         {
-            if (visitor.ShardingTables.Exists(f => f.ShardingType > ShardingTableType.TableName))
+            if (visitor.ShardingTables.Exists(f => f.ShardingType > ShardingTableType.MultiTable))
             {
                 var fetchSql = visitor.BuildShardingTablesSql(this.Connection.Database);
                 command.CommandText = fetchSql;
@@ -998,67 +1425,83 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                 isOpened = true;
             }
             if (visitor.ShardingTables.Exists(f => f.TableNames.Count > 1))
-                sql = this.BuildShardingTablesUnionSql(visitor, sql);
+                sql = this.BuildShardingTablesSqlByFormat(visitor, formatSql, jointMark);
         }
-        return (isOpened, sql, readerFields);
+        return (isOpened, sql);
     }
+
     public Dictionary<string, List<object>> SplitShardingParameters(Type entityType, IEnumerable parameters)
-        => RepositoryHelper.SplitShardingParameters(this.DbKey, this.MapProvider, this.ShardingProvider, entityType, parameters);
+      => RepositoryHelper.SplitShardingParameters(this.DbKey, this.MapProvider, this.ShardingProvider, entityType, parameters);
     public string GetShardingTableName(Type entityType, Type parameterType, object parameter)
         => RepositoryHelper.GetShardingTableName(this.DbKey, this.MapProvider, this.ShardingProvider, entityType, parameterType, parameter);
-    private string BuildShardingTablesUnionSql(IQueryVisitor visitor, string formatSql)
+    public string BuildShardingTablesSqlByFormat(SqlVisitor visitor, string formatSql, string jointMark)
     {
-        var firstTableSegment = visitor.ShardingTables[0];
-        var loopCount = firstTableSegment.TableNames.Count;
-        string tableName = null;
-        var tableNameMap = new Dictionary<Type, string>();
+        //查询，分表多个表时，都使用表名替换生成分表sql
         var builder = new StringBuilder();
-
         if (visitor.ShardingTables.Count > 1)
-            visitor.ShardingTables.Sort((x, y) => x.ShardingType.CompareTo(y.ShardingType));
-        for (int i = 0; i < loopCount; i++)
         {
-            if (i > 0)
+            var masterTableSegment = visitor.ShardingTables[0];
+            var loopCount = masterTableSegment.TableNames.Count;
+            var origMasterName = masterTableSegment.Mapper.TableName;
+            for (int i = 0; i < loopCount; i++)
             {
-                tableNameMap.Clear();
-                builder.AppendLine();
-                builder.AppendLine("UNION ALL");
-            }
-            var sql = formatSql;
-            foreach (var tableSegment in visitor.ShardingTables)
-            {
-                var origTableName = tableSegment.Mapper.TableName;
-                switch (tableSegment.ShardingType)
+                if (i > 0) builder.Append(jointMark);
+                var masterTableName = masterTableSegment.TableNames[i];
+                var sql = formatSql.Replace($"__SHARDING_{masterTableSegment.ShardingId}_{origMasterName}", masterTableName);
+
+                for (int j = 1; j < visitor.ShardingTables.Count; j++)
                 {
-                    case ShardingTableType.TableName:
-                    case ShardingTableType.TableRange:
-                    case ShardingTableType.MasterFilter:
-                        tableName = tableSegment.TableNames[i];
-                        sql = sql.Replace($"__SHARDING_{tableSegment.ShardingId}_{origTableName}", tableName);
-                        tableNameMap.Add(tableSegment.EntityType, tableName);
-                        break;
-                    case ShardingTableType.SubordinateMap:
-                        var origMasterTableName = tableSegment.ShardingDependent.Mapper.TableName;
-                        //如果主表分表名不存在，直接忽略本次关联
-                        //TOTO:此处需要记录日志
-                        if (!tableNameMap.TryGetValue(tableSegment.ShardingDependent.EntityType, out var masterTableName))
-                            continue;
+                    var tableSegment = visitor.ShardingTables[j];
+                    var origName = tableSegment.Mapper.TableName;
 
-                        tableName = tableSegment.ShardingMapGetter.Invoke(this.DbKey, origMasterTableName, origTableName, masterTableName);
-                        //主表存在分表，但从表不存在分表，直接忽略本次关联
-                        //TOTO:此处需要记录日志
-                        if (!tableSegment.TableNames.Exists(f => f == tableName))
-                            continue;
-
-                        sql = sql.Replace($"__SHARDING_{tableSegment.ShardingId}_{origTableName}", tableName);
-                        tableNameMap.Add(tableSegment.EntityType, tableName);
-                        break;
+                    //如果主表分表名不存在，直接忽略本次关联                       
+                    var tableName = tableSegment.ShardingMapGetter.Invoke(this.DbKey, origMasterName, origName, masterTableName);
+                    //主表存在分表，但从表不存在分表，直接忽略本次关联
+                    //TOTO:此处需要记录日志
+                    if (!tableSegment.TableNames.Exists(f => f == tableName))
+                        continue;
+                    sql = sql.Replace($"__SHARDING_{tableSegment.ShardingId}_{origName}", tableName);
                 }
+                builder.Append(sql);
             }
-            builder.Append(sql);
         }
-        tableNameMap.Clear();
-        tableNameMap = null;
-        return builder.ToString();
+        else
+        {
+            var tableNames = visitor.ShardingTables[0].TableNames;
+            var tableSegment = visitor.ShardingTables[0];
+            var origName = tableSegment.Mapper.TableName;
+            for (int i = 0; i < tableNames.Count; i++)
+            {
+                if (i > 0) builder.Append(jointMark);
+                var tableName = tableSegment.TableNames[i];
+                var sql = formatSql.Replace($"__SHARDING_{tableSegment.ShardingId}_{origName}", tableName);
+                builder.Append(sql);
+            }
+        }
+        var result = builder.ToString();
+        builder.Clear();
+        builder = null;
+        return result;
+    }
+    public void AddShardingTablesBulkSql(IUpdateVisitor visitor, IDbCommand command, StringBuilder builder, StringBuilder sqlBuilder, Action<StringBuilder, string> headSqlSetter,
+        Action<IDataParameterCollection, StringBuilder, object, string> commandSqlSetter, object updateObj, string suffix)
+    {
+        var tableNames = visitor.ShardingTables[0].TableNames;
+        var tableSegment = visitor.ShardingTables[0];
+        var origName = tableSegment.Mapper.TableName;
+
+        var tableName = tableSegment.TableNames[0];
+        headSqlSetter.Invoke(builder, tableName);
+        commandSqlSetter.Invoke(command.Parameters, sqlBuilder, updateObj, suffix);
+        builder.Append(sqlBuilder);
+
+        for (int i = 1; i < tableNames.Count; i++)
+        {
+            builder.Append(';');
+
+            tableName = tableSegment.TableNames[i];
+            headSqlSetter.Invoke(builder, tableName);
+            builder.Append(sqlBuilder);
+        }
     }
 }

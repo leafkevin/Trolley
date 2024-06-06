@@ -7,15 +7,19 @@ public enum ShardingTableType : byte
     /// </summary>
     None,
     /// <summary>
-    /// 指定分表
+    /// 指定一个分表
     /// </summary>
-    TableName,
+    SingleTable,
+    /// <summary>
+    /// 指定多个分表
+    /// </summary>
+    MultiTable,
     /// <summary>
     /// 范围区间表，通常是时间分表场景
     /// </summary>
     TableRange,
     /// <summary>
-    /// 主表分表筛选表达式
+    /// 主表表达式条件过滤
     /// </summary>
     MasterFilter,
     /// <summary>

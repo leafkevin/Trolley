@@ -103,11 +103,16 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                     bool isOpened = false;
                     if (this.DbContext.ShardingProvider.TryGetShardingTable(entityType, out var shardingTable))
                     {
-                        var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
-                        foreach (var tabledInsertObj in tabledInsertObjs)
+                        isNeedSplit = this.Visitor.Tables[0].Body == null;
+                        if (isNeedSplit)
                         {
-                            result += this.ExecuteBulkCopy(ref isOpened, entityType, tabledInsertObj.Value, timeoutSeconds, tabledInsertObj.Key);
+                            var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
+                            foreach (var tabledInsertObj in tabledInsertObjs)
+                            {
+                                result += this.ExecuteBulkCopy(ref isOpened, entityType, tabledInsertObj.Value, timeoutSeconds, tabledInsertObj.Key);
+                            }
                         }
+                        else result = this.ExecuteBulkCopy(ref isOpened, entityType, insertObjs, timeoutSeconds, this.Visitor.Tables[0].Body);
                     }
                     else result = this.ExecuteBulkCopy(ref isOpened, entityType, insertObjs, timeoutSeconds);
                     break;
@@ -143,12 +148,13 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
         try
         {
             var entityType = typeof(TEntity);
+            bool isNeedSplit = false;
             switch (this.Visitor.ActionMode)
             {
                 case ActionMode.Bulk:
                     command = this.DbContext.CreateDbCommand();
                     var sqlBuilder = new StringBuilder();
-                    (var isNeedSplit, var tableName, insertObjs, var bulkCount, var firstInsertObj,
+                    (isNeedSplit, var tableName, insertObjs, var bulkCount, var firstInsertObj,
                         var headSqlSetter, var commandInitializer) = this.Visitor.BuildWithBulk(command);
 
                     Action<string, object> clearCommand = (tableName, insertObj) =>
@@ -209,14 +215,20 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                 case ActionMode.BulkCopy:
                     (insertObjs, var timeoutSeconds) = this.DialectVisitor.BuildWithBulkCopy();
                     bool isOpened = false;
-                    if (this.DbContext.ShardingProvider.TryGetShardingTable(entityType, out var shardingTable))
+
+                    if (this.DbContext.ShardingProvider.TryGetShardingTable(entityType, out _))
                     {
-                        var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
-                        foreach (var tabledInsertObj in tabledInsertObjs)
+                        isNeedSplit = this.Visitor.Tables[0].Body == null;
+                        if (isNeedSplit)
                         {
-                            result += await this.ExecuteBulkCopyAsync(isOpened, entityType, tabledInsertObj.Value, timeoutSeconds, cancellationToken, tabledInsertObj.Key);
-                            if (!isOpened) isOpened = true;
+                            var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
+                            foreach (var tabledInsertObj in tabledInsertObjs)
+                            {
+                                result += await this.ExecuteBulkCopyAsync(isOpened, entityType, tabledInsertObj.Value, timeoutSeconds, cancellationToken, tabledInsertObj.Key);
+                                if (!isOpened) isOpened = true;
+                            }
                         }
+                        else result = await this.ExecuteBulkCopyAsync(isOpened, entityType, insertObjs, timeoutSeconds, cancellationToken, this.Visitor.Tables[0].Body);
                     }
                     else result = await this.ExecuteBulkCopyAsync(isOpened, entityType, insertObjs, timeoutSeconds, cancellationToken);
                     break;

@@ -117,6 +117,13 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.UseTable(entityType, tableNamePredicate);
         return this;
     }
+    public virtual IQuery<T> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    {
+        var entityType = typeof(T);
+        var masterEntityType = typeof(TMasterSharding);
+        this.Visitor.UseTable(entityType, masterEntityType, tableNameGetter);
+        return this;
+    }
     public virtual IQuery<T> UseTableBy(object field1Value, object field2Value = null)
     {
         var entityType = typeof(T);
@@ -654,7 +661,8 @@ public class Query<T> : QueryBase, IQuery<T>
         Expression<Func<T, T>> defaultExpr = f => f;
         this.Visitor.SelectDefault(defaultExpr);
         var command = this.DbContext.CreateCommand();
-        (_, var sql, _) = this.DbContext.BuildSql(Visitor, command);
+        var sql = this.Visitor.BuildSql(out _);
+        (_, sql) = this.DbContext.BuildSql(this.Visitor as SqlVisitor, command, sql, " UNION ALL ");
         dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         this.Visitor.Dispose();
         return sql;

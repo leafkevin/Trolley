@@ -40,11 +40,6 @@ public class FromQuery : IFromQuery
         this.visitor.From(tableAsStart, typeof(T));
         return new Query<T>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
-    public IQuery<T> From<T>(char tableAsStart, string suffixRawSql)
-    {
-        this.visitor.From(tableAsStart, typeof(T), suffixRawSql);
-        return new Query<T>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
-    }
 <#
     var count = 16;
     var tables = "T1";

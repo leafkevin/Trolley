@@ -559,8 +559,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                         });
                         if (resultSegment.IsConstant || resultSegment.IsVariable)
                             return resultSegment.Change(methodInfo.Invoke(null, arguments.ToArray()));
-
-                        throw new NotSupportedException("不支持的表达式访问，Enum.Parse方法只支持常量、变量参数");
+                        return resultSegment.Change(this.CastTo(methodInfo.ReturnType, args[0]));
                     });
                     return true;
                 }
@@ -618,8 +617,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                         }
                         if (resultSegment.IsConstant || resultSegment.IsVariable)
                             return resultSegment.Change(methodInfo.Invoke(null, arguments.ToArray()));
-
-                        throw new NotSupportedException("不支持的表达式访问，Enum.Parse方法只支持常量、变量参数");
+                        return resultSegment.Change(this.CastTo(methodInfo.ReturnType, args[0]));
                     });
                     return true;
                 }
