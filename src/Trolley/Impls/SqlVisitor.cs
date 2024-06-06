@@ -430,7 +430,7 @@ public class SqlVisitor : ISqlVisitor
                 var leftSegment = this.Visit(sqlSegment.Next(binaryExpr.Left));
                 var rightSegment = this.Visit(new SqlSegment { Expression = binaryExpr.Right });
 
-                //计算数组访问，a??bb
+                //计算数组访问，a??b
                 if (leftSegment.IsConstant && rightSegment.IsConstant)
                     return sqlSegment.Change(Expression.Lambda(binaryExpr).Compile().DynamicInvoke(), true);
 
@@ -639,21 +639,18 @@ public class SqlVisitor : ISqlVisitor
     public virtual SqlSegment VisitMethodCall(SqlSegment sqlSegment)
     {
         var methodCallExpr = sqlSegment.Expression as MethodCallExpression;
-        if (methodCallExpr.Method.DeclaringType == typeof(Sql) || methodCallExpr.Method.DeclaringType == typeof(IRepository)
-            || typeof(IAggregateSelect).IsAssignableFrom(methodCallExpr.Method.DeclaringType))
+        if (this.IsSqlMethodCall(methodCallExpr))
         {
             sqlSegment = this.VisitSqlMethodCall(sqlSegment);
             sqlSegment.SegmentType = methodCallExpr.Type;
             return sqlSegment;
         }
-
         if (!sqlSegment.IsDeferredFields && this.OrmProvider.TryGetMethodCallSqlFormatter(methodCallExpr, out var formatter))
         {
             sqlSegment = formatter.Invoke(this, methodCallExpr, methodCallExpr.Object, sqlSegment.DeferredExprs, methodCallExpr.Arguments.ToArray());
             sqlSegment.SegmentType = methodCallExpr.Type;
             return sqlSegment;
         }
-
         if (this.IsSelect)
         {
             //延迟方法调用，两种场景：
@@ -981,80 +978,88 @@ public class SqlVisitor : ISqlVisitor
             case "Exists":
             case "ExistsAsync":
                 string existsSql = null;
-                //Exists<T>(IQuery<T> subQuery)
-                if (methodCallExpr.Arguments.Count == 1 && typeof(IQuery).IsAssignableFrom(methodCallExpr.Arguments[0].Type))
-                    existsSql = this.VisitFromQuery(lambdaExpr);
-                else if (methodCallExpr.Arguments[0].Type == typeof(Func<IFromQuery, IQueryAnonymousObject>))
+                if (methodCallExpr.Method.DeclaringType == typeof(Sql))
                 {
-                    //Exists(Func<IFromQuery, IQueryAnonymousObject> subQuery)
-                    lambdaExpr = this.EnsureLambda(methodCallExpr.Arguments[0]);
-                    existsSql = this.VisitFromQuery(lambdaExpr);
-                }
-                else
-                {
-                    var genericArguments = methodCallExpr.Method.GetGenericArguments();
-                    //保存现场，临时添加这几个新表及别名，解析之后再删除
-                    var removeTables = new List<TableSegment>();
-                    var builder = new StringBuilder("SELECT * FROM ");
-                    int index = 0;
-                    //Exists<T>(ICteQuery<T> subQuery, Expression<Func<T, bool>> predicate)
-                    if (methodCallExpr.Arguments.Count > 1)
+                    //Exists<T>(IQuery<T> subQuery)
+                    if (methodCallExpr.Arguments.Count == 1 && typeof(IQuery).IsAssignableFrom(methodCallExpr.Arguments[0].Type))
+                        existsSql = this.VisitFromQuery(lambdaExpr);
+                    else if (methodCallExpr.Arguments[0].Type == typeof(Func<IFromQuery, IQueryAnonymousObject>))
                     {
-                        lambdaExpr = this.EnsureLambda(methodCallExpr.Arguments[1]);
-                        var cteQuery = this.Evaluate(methodCallExpr.Arguments[0]) as ICteQuery;
-                        methodCallExpr.Arguments[1].GetParameterNames(out var parameterNames);
-                        var aliasName = parameterNames[0];
-                        var tableSegment = new TableSegment
-                        {
-                            TableType = TableType.CteSelfRef,
-                            EntityType = genericArguments[0],
-                            AliasName = aliasName,
-                            ReaderFields = cteQuery.ReaderFields,
-                            Body = cteQuery.Body
-                        };
-                        this.TableAliases.Add(aliasName, tableSegment);
-                        cteQuery.CopyTo(this);
-
-                        removeTables.Add(tableSegment);
-                        builder.Append(this.OrmProvider.GetTableName(cteQuery.TableName));
-                        builder.Append($" {aliasName}");
+                        //Exists(Func<IFromQuery, IQueryAnonymousObject> subQuery)
+                        lambdaExpr = this.EnsureLambda(methodCallExpr.Arguments[0]);
+                        existsSql = this.VisitFromQuery(lambdaExpr);
                     }
                     else
                     {
-                        //Exists<T1, T2>(Expression<Func<T1, T2, bool>> predicate)
-                        lambdaExpr = this.EnsureLambda(methodCallExpr.Arguments[0]);
-                        foreach (var tableType in genericArguments)
+                        var genericArguments = methodCallExpr.Method.GetGenericArguments();
+                        //保存现场，临时添加这几个新表及别名，解析之后再删除
+                        var removeTables = new List<TableSegment>();
+                        var builder = new StringBuilder("SELECT * FROM ");
+                        int index = 0;
+                        //Exists<T>(ICteQuery<T> subQuery, Expression<Func<T, bool>> predicate)
+                        if (methodCallExpr.Arguments.Count > 1)
                         {
-                            var tableMapper = this.MapProvider.GetEntityMap(tableType);
-                            var aliasName = lambdaExpr.Parameters[index].Name;
+                            lambdaExpr = this.EnsureLambda(methodCallExpr.Arguments[1]);
+                            var cteQuery = this.Evaluate(methodCallExpr.Arguments[0]) as ICteQuery;
+                            methodCallExpr.Arguments[1].GetParameterNames(out var parameterNames);
+                            var aliasName = parameterNames[0];
                             var tableSegment = new TableSegment
                             {
-                                EntityType = tableType,
+                                TableType = TableType.CteSelfRef,
+                                EntityType = genericArguments[0],
                                 AliasName = aliasName,
-                                Mapper = tableMapper
+                                ReaderFields = cteQuery.ReaderFields,
+                                Body = cteQuery.Body
                             };
-                            this.Tables.Add(tableSegment);
                             this.TableAliases.Add(aliasName, tableSegment);
-                            removeTables.Add(tableSegment);
-                            if (index > 0) builder.Append(',');
-                            builder.Append(this.OrmProvider.GetTableName(tableMapper.TableName));
-                            builder.Append($" {tableSegment.AliasName}");
-                            index++;
-                        }
-                    }
-                    builder.Append(" WHERE ");
-                    builder.Append(this.VisitConditionExpr(lambdaExpr.Body));
+                            cteQuery.CopyTo(this);
 
-                    //恢复现场
-                    if (removeTables.Count > 0)
-                    {
-                        removeTables.ForEach(f =>
+                            removeTables.Add(tableSegment);
+                            builder.Append(this.OrmProvider.GetTableName(cteQuery.TableName));
+                            builder.Append($" {aliasName}");
+                        }
+                        else
                         {
-                            this.Tables.Remove(f);
-                            this.TableAliases.Remove(f.AliasName);
-                        });
+                            //Exists<T1, T2>(Expression<Func<T1, T2, bool>> predicate)
+                            lambdaExpr = this.EnsureLambda(methodCallExpr.Arguments[0]);
+                            foreach (var tableType in genericArguments)
+                            {
+                                var tableMapper = this.MapProvider.GetEntityMap(tableType);
+                                var aliasName = lambdaExpr.Parameters[index].Name;
+                                var tableSegment = new TableSegment
+                                {
+                                    EntityType = tableType,
+                                    AliasName = aliasName,
+                                    Mapper = tableMapper
+                                };
+                                this.Tables.Add(tableSegment);
+                                this.TableAliases.Add(aliasName, tableSegment);
+                                removeTables.Add(tableSegment);
+                                if (index > 0) builder.Append(',');
+                                builder.Append(this.OrmProvider.GetTableName(tableMapper.TableName));
+                                builder.Append($" {tableSegment.AliasName}");
+                                index++;
+                            }
+                        }
+                        builder.Append(" WHERE ");
+                        builder.Append(this.VisitConditionExpr(lambdaExpr.Body));
+
+                        //恢复现场
+                        if (removeTables.Count > 0)
+                        {
+                            removeTables.ForEach(f =>
+                            {
+                                this.Tables.Remove(f);
+                                this.TableAliases.Remove(f.AliasName);
+                            });
+                        }
+                        existsSql = builder.ToString();
                     }
-                    existsSql = builder.ToString();
+                }
+                else if (methodCallExpr.GetParameters(out var parameters))
+                {
+                    lambdaExpr = Expression.Lambda(methodCallExpr, parameters);
+                    existsSql = this.VisitFromQuery(lambdaExpr);
                 }
                 if (sqlSegment.HasDeferrdNot())
                     sqlSegment.Change($"NOT EXISTS({existsSql})", false, false, false, true);
@@ -1369,16 +1374,14 @@ public class SqlVisitor : ISqlVisitor
         {
             var methodInfo = callExpr.Method;
             var genericArguments = methodInfo.GetGenericArguments();
+            Type entityType = null;
             LambdaExpression lambdaArgsExpr = null;
             switch (methodInfo.Name)
             {
                 case "From":
                     char tableAsStart = 'a';
-                    //string suffixRawSql = null;
                     if (callExpr.Arguments.Count > 0)
                         tableAsStart = this.Evaluate<char>(callExpr.Arguments[0]);
-                    //if (callExpr.Arguments.Count > 1)
-                    //    suffixRawSql = this.Evaluate<string>(callExpr.Arguments[1]);
                     queryVisitor.From(tableAsStart, genericArguments);
                     break;
                 case "Union":
@@ -1473,6 +1476,56 @@ public class SqlVisitor : ISqlVisitor
                 case "Page":
                     queryVisitor.Page(this.Evaluate<int>(callExpr.Arguments[0]), this.Evaluate<int>(callExpr.Arguments[1]));
                     break;
+                case "UseTable":
+                    entityType = methodInfo.DeclaringType.GetGenericArguments().Last();
+                    var parameterInfos = methodInfo.GetParameters();
+                    if (parameterInfos[0].ParameterType.IsArray)
+                    {
+                        var tableNames = this.Evaluate<string[]>(callExpr.Arguments[0]);
+                        queryVisitor.UseTable(entityType, tableNames);
+                    }
+                    else throw new NotSupportedException("不支持的方法调用");
+                    break;
+                case "UseTableBy":
+                    var args0 = this.Evaluate(callExpr.Arguments[0]);
+                    object args1 = null;
+                    if (callExpr.Arguments.Count > 1)
+                        args1 = this.Evaluate(callExpr.Arguments[1]);
+                    entityType = methodInfo.DeclaringType.GetGenericArguments().Last();
+                    queryVisitor.UseTableBy(entityType, args0, args1);
+                    break;
+                case "Exists":
+                case "ExistsAsync":
+                    lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
+                    var sqlVisitor = queryVisitor as SqlVisitor;
+                    var builder = new StringBuilder("SELECT * FROM ");
+                    queryVisitor.InitTableAlias(lambdaArgsExpr);
+
+                    int index = 0;
+                    foreach (var tableAlias in sqlVisitor.TableAliases)
+                    {
+                        if (index > 0) builder.Append(',');
+                        builder.Append(this.GetTableName(tableAlias.Value));
+                        builder.Append($" {tableAlias.Value.AliasName}");
+                        index++;
+                    }
+                    builder.Append(" WHERE ");
+
+                    if (lambdaArgsExpr.Body.GetParameterNames(out var parameterNames) && parameterNames.Count > lambdaArgsExpr.Parameters.Count)
+                    {
+                        foreach (var parameterName in parameterNames)
+                        {
+                            if (sqlVisitor.TableAliases.ContainsKey(parameterName))
+                                continue;
+                            if (this.TableAliases.TryGetValue(parameterName, out var tableSegment))
+                                sqlVisitor.TableAliases.TryAdd(parameterName, tableSegment);
+                        }
+                    }
+                    builder.Append(sqlVisitor.VisitConditionExpr(lambdaArgsExpr.Body));
+                    var sql = builder.ToString();
+                    builder.Clear();
+                    builder = null;
+                    return sql;
                 default:
                     throw new NotSupportedException("不支持的表达式解析");
             }
@@ -2036,6 +2089,17 @@ public class SqlVisitor : ISqlVisitor
             sqlSegment.DeferredExprs.Push(new DeferredExpr { OperationType = OperationType.Equal, Value = SqlSegment.True });
         }
         return sqlSegment;
+    }
+    private bool IsSqlMethodCall(MethodCallExpression methodCallExpr)
+    {
+        if (methodCallExpr.Method.DeclaringType == typeof(Sql) || methodCallExpr.Method.DeclaringType == typeof(IRepository)
+            || typeof(IAggregateSelect).IsAssignableFrom(methodCallExpr.Method.DeclaringType))
+            return true;
+        var methodInfo = methodCallExpr.Method;
+        var declaringType = methodCallExpr.Method.DeclaringType;
+        if (declaringType.IsGenericType && declaringType.FullName.StartsWith("Trolley.IQuery"))
+            return true;
+        return false;
     }
     class ConditionOperator
     {

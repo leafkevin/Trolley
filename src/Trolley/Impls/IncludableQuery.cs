@@ -24,7 +24,7 @@ public class IncludableQuery<T, TMember> : Query<T>, IIncludableQuery<T, TMember
         this.Visitor.UseTable(entityType, tableNamePredicate);
         return this;
     }
-    public IIncludableQuery<T, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public new IIncludableQuery<T, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
     {
         var entityType = typeof(TMember);
         var masterEntityType = typeof(TMasterSharding);

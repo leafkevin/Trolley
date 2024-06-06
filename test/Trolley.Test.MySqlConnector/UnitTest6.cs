@@ -1172,5 +1172,59 @@ namespace Trolley.Test.MySqlConnector
                 Assert.True(tenantIds.Exists(f => "104,105".Contains(f)));
             }
         }
+        [Fact]
+        public async void Query_SingleSharding_Exists1()
+        {
+            await this.InitSharding();
+            using var repository = dbFactory.Create();
+            var sql = repository.From<Order>()
+                .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                .Where(f => repository.From<User>('b')
+                    .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                    .Exists(t => t.Id == f.BuyerId && t.Age < 25))
+                .ToSql(out _);
+            Assert.True(sql == "SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_order_104_202405` a WHERE EXISTS(SELECT * FROM `sys_user_104` b WHERE b.`Id`=a.`BuyerId` AND b.`Age`<25)");
+
+            var result = repository.From<Order>()
+                .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                .Where(f => repository.From<User>('b')
+                    .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                    .Exists(t => t.Id == f.BuyerId && t.Age < 25))
+                .ToList();
+            if (result.Count > 0)
+            {
+                var tenantIds = result.Select(f => f.TenantId).Distinct().ToList();
+                Assert.Contains("104", tenantIds);
+            }
+        }
+        [Fact]
+        public async void Query_SingleSharding_Exists2()
+        {
+            await this.InitSharding();
+            using var repository = dbFactory.Create();
+            var sql = repository.From<Order>()
+                .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                .Where(f => repository.From<User>('b')
+                    .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                    .InnerJoin<OrderDetail>((x, y) => f.Id == y.OrderId)
+                    .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                    .Exists((x, y) => x.Id == f.BuyerId && x.Age <= 25 && y.Price > 100))
+                .ToSql(out _);
+            Assert.True(sql == "SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_order_104_202405` a WHERE EXISTS(SELECT * FROM `sys_user_104` b,`sys_order_detail_104_202405` c WHERE b.`Id`=a.`BuyerId` AND b.`Age`<=25 AND c.`Price`>100)");
+
+            var result = repository.From<Order>()
+                .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                .Where(f => repository.From<User>('b')
+                    .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                    .InnerJoin<OrderDetail>((x, y) => f.Id == y.OrderId)
+                    .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                    .Exists((x, y) => x.Id == f.BuyerId && x.Age <= 25 && y.Price > 100))
+                .ToList();
+            if (result.Count > 0)
+            {
+                var tenantIds = result.Select(f => f.TenantId).Distinct().ToList();
+                Assert.Contains("104", tenantIds);
+            }
+        }
     }
 }

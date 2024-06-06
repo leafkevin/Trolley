@@ -453,5 +453,11 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
         return await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
     }
     #endregion
+
+    #region Exists
+    public bool Exists(Expression<Func<<#=tables#>, bool>> predicate) => this.QueryFirstValue<int>("COUNT(1)") > 0;
+    public async Task<bool> ExistsAsync(Expression<Func<<#=tables#>, bool>> predicate, CancellationToken cancellationToken = default)
+        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken) > 0;
+    #endregion
 }
 <#  }#>
