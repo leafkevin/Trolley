@@ -18,6 +18,34 @@ public class MySqlUpdate<TEntity> : Update<TEntity>, IMySqlUpdate<TEntity>
     }
     #endregion
 
+    #region Sharding
+    public override IMySqlUpdate<TEntity> UseTable(params string[] tableNames)
+    {
+        base.UseTable(tableNames);
+        return this;
+    }
+    public override IMySqlUpdate<TEntity> UseTable(Func<string, bool> tableNamePredicate)
+    {
+        base.UseTable(tableNamePredicate);
+        return this;
+    }
+    public override IMySqlUpdate<TEntity> UseTableBy(object field1Value, object field2Value = null)
+    {
+        base.UseTableBy(field1Value, field2Value);
+        return this;
+    }
+    public override IMySqlUpdate<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue)
+    {
+        base.UseTableByRange(beginFieldValue, endFieldValue);
+        return this;
+    }
+    public override IMySqlUpdate<TEntity> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    {
+        base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3);
+        return this;
+    }
+    #endregion
+
     #region Join
     public IUpdateJoin<TEntity, T> InnerJoin<T>(Expression<Func<TEntity, T, bool>> joinOn)
     {

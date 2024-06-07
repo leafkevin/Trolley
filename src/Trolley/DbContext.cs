@@ -136,7 +136,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
             visitor.SelectDefault(defaultExpr);
             var sql = visitor.BuildSql(out var readerFields);
-            (var isOpened, sql) = this.BuildSql(visitor as SqlVisitor, command, sql, " UNOIN ALL ");
+            (var isOpened, sql) = this.BuildSql(visitor as SqlVisitor, sql, " UNOIN ALL ");
             command.CommandText = sql;
             visitor.DbParameters.CopyTo(command.Parameters);
 
@@ -187,7 +187,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
             visitor.SelectDefault(defaultExpr);
             var sql = visitor.BuildSql(out var readerFields);
-            (var isOpened, sql) = await this.BuildSqlAsync(visitor as SqlVisitor, command, sql, " UNION ALL ", cancellationToken);
+            (var isOpened, sql) = await this.BuildSqlAsync(visitor as SqlVisitor, sql, " UNION ALL ", cancellationToken);
             command.CommandText = sql;
             visitor.DbParameters.CopyTo(command.Parameters);
 
@@ -331,7 +331,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
             visitor.SelectDefault(defaultExpr);
             var sql = visitor.BuildSql(out var readerFields);
-            (var isOpened, sql) = this.BuildSql(visitor as SqlVisitor, command, sql, " UNION ALL ");
+            (var isOpened, sql) = this.BuildSql(visitor as SqlVisitor, sql, " UNION ALL ");
             command.CommandText = sql;
             visitor.DbParameters.CopyTo(command.Parameters);
 
@@ -391,7 +391,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
             visitor.SelectDefault(defaultExpr);
             var sql = visitor.BuildSql(out var readerFields);
-            (var isOpened, sql) = await this.BuildSqlAsync(visitor as SqlVisitor, command, sql, " UNION ALL ", cancellationToken);
+            (var isOpened, sql) = await this.BuildSqlAsync(visitor as SqlVisitor, sql, " UNION ALL ", cancellationToken);
             command.CommandText = sql;
             visitor.DbParameters.CopyTo(command.Parameters);
 
@@ -781,6 +781,138 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             if (isNeedClose) await this.CloseAsync();
         }
         if (exception != null) throw exception;
+        return result;
+    }
+    public int CreateBulk(ICreateVisitor visitor)
+    {
+        int result = 0;
+        var sqlBuilder = new StringBuilder();
+        using var command = this.CreateCommand();
+        (var isNeedSplit, var tableName, var insertObjs, var bulkCount, var firstInsertObj,
+            var headSqlSetter, var commandInitializer) = visitor.BuildWithBulk(command);
+
+        Action<string, object> clearCommand = (tableName, insertObj) =>
+        {
+            sqlBuilder.Clear();
+            command.Parameters.Clear();
+            headSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName, insertObj);
+        };
+        Func<string, IEnumerable, int> executor = (tableName, insertObjs) =>
+        {
+            var isFirst = true;
+            int count = 0, index = 0;
+            foreach (var insertObj in insertObjs)
+            {
+                if (index > 0) sqlBuilder.Append(',');
+                commandInitializer.Invoke(command.Parameters, sqlBuilder, insertObj, index.ToString());
+                if (index >= bulkCount)
+                {
+                    command.CommandText = sqlBuilder.ToString();
+                    if (isFirst)
+                    {
+                        this.Open();
+                        isFirst = false;
+                    }
+                    count += command.ExecuteNonQuery();
+                    clearCommand.Invoke(tableName, insertObj);
+                    index = 0;
+                    continue;
+                }
+                index++;
+            }
+            if (index > 0)
+            {
+                command.CommandText = sqlBuilder.ToString();
+                if (isFirst) this.Open();
+                count += command.ExecuteNonQuery();
+            }
+            return count;
+        };
+
+        if (isNeedSplit)
+        {
+            var entityType = visitor.Tables[0].EntityType;
+            var tabledInsertObjs = this.SplitShardingParameters(entityType, insertObjs);
+            foreach (var tabledInsertObj in tabledInsertObjs)
+            {
+                headSqlSetter.Invoke(command.Parameters, sqlBuilder, tabledInsertObj.Key, tabledInsertObj);
+                result += executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
+            }
+        }
+        else
+        {
+            headSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName, firstInsertObj);
+            result = executor.Invoke(tableName, insertObjs);
+        }
+        sqlBuilder.Clear();
+        sqlBuilder = null;
+        command.Dispose();
+        return result;
+    }
+    public async Task<int> CreateBulkAsync(ICreateVisitor visitor, CancellationToken cancellationToken = default)
+    {
+        int result = 0;
+        var sqlBuilder = new StringBuilder();
+        using var command = this.CreateDbCommand();
+        (var isNeedSplit, var tableName, var insertObjs, var bulkCount, var firstInsertObj,
+            var headSqlSetter, var commandInitializer) = visitor.BuildWithBulk(command);
+
+        Action<string, object> clearCommand = (tableName, insertObj) =>
+        {
+            sqlBuilder.Clear();
+            command.Parameters.Clear();
+            headSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName, insertObj);
+        };
+        Func<string, IEnumerable, Task<int>> executor = async (tableName, insertObjs) =>
+        {
+            var isFirst = true;
+            int count = 0, index = 0;
+            foreach (var insertObj in insertObjs)
+            {
+                if (index > 0) sqlBuilder.Append(',');
+                commandInitializer.Invoke(command.Parameters, sqlBuilder, insertObj, index.ToString());
+                if (index >= bulkCount)
+                {
+                    command.CommandText = sqlBuilder.ToString();
+                    if (isFirst)
+                    {
+                        await this.OpenAsync(cancellationToken);
+                        isFirst = false;
+                    }
+                    count += await command.ExecuteNonQueryAsync(cancellationToken);
+                    clearCommand.Invoke(tableName, insertObj);
+                    index = 0;
+                    continue;
+                }
+                index++;
+            }
+            if (index > 0)
+            {
+                command.CommandText = sqlBuilder.ToString();
+                if (isFirst) await this.OpenAsync(cancellationToken);
+                count += await command.ExecuteNonQueryAsync(cancellationToken);
+            }
+            return count;
+        };
+
+        if (isNeedSplit)
+        {
+            var entityType = visitor.Tables[0].EntityType;
+            var tabledInsertObjs = this.SplitShardingParameters(entityType, insertObjs);
+            foreach (var tabledInsertObj in tabledInsertObjs)
+            {
+                headSqlSetter.Invoke(command.Parameters, sqlBuilder, tabledInsertObj.Key, tabledInsertObj);
+                result += await executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
+            }
+        }
+        else
+        {
+            headSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName, firstInsertObj);
+            result = await executor.Invoke(tableName, insertObjs);
+        }
+        sqlBuilder.Clear();
+        sqlBuilder = null;
+        await command.DisposeAsync();
         return result;
     }
     private void BuildCreateCommand(IDbCommand command, Type entityType, object insertObj, bool isReturnIdentity)
@@ -1371,7 +1503,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     }
     #endregion
 
-    public (bool, string) BuildSql(SqlVisitor visitor, IDbCommand command, string formatSql, string jointMark)
+    public (bool, string) BuildSql(SqlVisitor visitor, string formatSql, string jointMark)
     {
         bool isOpened = false;
         var sql = formatSql;
@@ -1380,8 +1512,8 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             if (visitor.ShardingTables.Exists(f => f.ShardingType > ShardingTableType.MultiTable))
             {
                 var fetchSql = visitor.BuildShardingTablesSql(this.Connection.Database);
+                using var command = this.CreateCommand();
                 command.CommandText = fetchSql;
-                command.Parameters.Clear();
                 this.Open();
                 var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
                 var shardingTables = new List<string>();
@@ -1390,8 +1522,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                     shardingTables.Add(reader.To<string>(this.OrmProvider));
                 }
                 reader.Dispose();
-                command.CommandText = null;
-                command.Parameters.Clear();
+                command.Dispose();
                 visitor.SetShardingTables(shardingTables);
                 isOpened = true;
             }
@@ -1400,7 +1531,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         }
         return (isOpened, sql);
     }
-    public async Task<(bool, string)> BuildSqlAsync(SqlVisitor visitor, DbCommand command, string formatSql, string jointMark, CancellationToken cancellationToken = default)
+    public async Task<(bool, string)> BuildSqlAsync(SqlVisitor visitor, string formatSql, string jointMark, CancellationToken cancellationToken = default)
     {
         bool isOpened = false;
         var sql = formatSql;
@@ -1409,6 +1540,8 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             if (visitor.ShardingTables.Exists(f => f.ShardingType > ShardingTableType.MultiTable))
             {
                 var fetchSql = visitor.BuildShardingTablesSql(this.Connection.Database);
+                using var command = this.CreateDbCommand();
+                command.CommandText = fetchSql;
                 command.CommandText = fetchSql;
                 command.Parameters.Clear();
                 await this.OpenAsync(cancellationToken);
@@ -1419,8 +1552,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                     shardingTables.Add(reader.To<string>(this.OrmProvider));
                 }
                 await reader.DisposeAsync();
-                command.CommandText = null;
-                command.Parameters.Clear();
+                await command.DisposeAsync();
                 visitor.SetShardingTables(shardingTables);
                 isOpened = true;
             }

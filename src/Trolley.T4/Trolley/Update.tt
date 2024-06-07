@@ -10,13 +10,12 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Trolley;
 
-class Update<TEntity> : IUpdate<TEntity>
+public class Update<TEntity> : IUpdate<TEntity>
 {
     #region Properties
     public DbContext DbContext { get; protected set; }
@@ -27,15 +26,48 @@ class Update<TEntity> : IUpdate<TEntity>
     public Update(DbContext dbContext)
     {
         this.DbContext = dbContext;
-        this.Visitor = this.DbContext.OrmProvider.NewUpdateVisitor(this.DbContext.DbKey, this.DbContext.MapProvider, this.DbContext.IsParameterized);
+        this.Visitor = this.DbContext.OrmProvider.NewUpdateVisitor(dbContext.DbKey, dbContext.MapProvider, dbContext.ShardingProvider, dbContext.IsParameterized);
         this.Visitor.Initialize(typeof(TEntity));
     }
     #endregion
 
+    #region Sharding
+    public virtual IUpdate<TEntity> UseTable(params string[] tableNames)
+    {
+        var entityType = typeof(TEntity);
+        this.Visitor.UseTable(entityType, tableNames);
+        return this;
+    }
+    public virtual IUpdate<TEntity> UseTable(Func<string, bool> tableNamePredicate)
+    {
+        var entityType = typeof(TEntity);
+        this.Visitor.UseTable(entityType, tableNamePredicate);
+        return this;
+    }
+    public virtual IUpdate<TEntity> UseTableBy(object field1Value, object field2Value = null)
+    {
+        var entityType = typeof(TEntity);
+        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
+        return this;
+    }
+    public virtual IUpdate<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue)
+    {
+        var entityType = typeof(TEntity);
+        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
+        return this;
+    }
+    public virtual IUpdate<TEntity> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    {
+        var entityType = typeof(TEntity);
+        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
+        return this;
+    }
+    #endregion
+
     #region Set
-    public IContinuedUpdate<TEntity> Set<TFields>(TFields setObj)
+    public virtual IContinuedUpdate<TEntity> Set<TFields>(TFields setObj)
         => this.Set(true, setObj);
-    public IContinuedUpdate<TEntity> Set<TFields>(bool condition, TFields setObj)
+    public virtual IContinuedUpdate<TEntity> Set<TFields>(bool condition, TFields setObj)
     {
         if (setObj == null)
             throw new ArgumentNullException(nameof(setObj));
@@ -45,9 +77,9 @@ class Update<TEntity> : IUpdate<TEntity>
         if (condition) this.Visitor.SetWith(setObj);
         return new ContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
     }
-    public IContinuedUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
+    public virtual IContinuedUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
         => this.Set(true, fieldSelector, fieldValue);
-    public IContinuedUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
+    public virtual IContinuedUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
     {
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));
@@ -59,9 +91,9 @@ class Update<TEntity> : IUpdate<TEntity>
         if (condition) this.Visitor.SetField(fieldSelector, fieldValue);
         return new ContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
     }
-    public IContinuedUpdate<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsAssignment)
+    public virtual IContinuedUpdate<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsAssignment)
         => this.Set(true, fieldsAssignment);
-    public IContinuedUpdate<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment)
+    public virtual IContinuedUpdate<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment)
     {
         if (fieldsAssignment == null)
             throw new ArgumentNullException(nameof(fieldsAssignment));
@@ -74,9 +106,9 @@ class Update<TEntity> : IUpdate<TEntity>
     #endregion
 
     #region SetFrom    
-    public IContinuedUpdate<TEntity> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
-     => this.SetFrom(true, fieldSelector, valueSelector);
-    public IContinuedUpdate<TEntity> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
+    public virtual IContinuedUpdate<TEntity> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
+        => this.SetFrom(true, fieldSelector, valueSelector);
+    public virtual IContinuedUpdate<TEntity> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
     {
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));
@@ -88,9 +120,9 @@ class Update<TEntity> : IUpdate<TEntity>
         if (condition) this.Visitor.SetFrom(fieldSelector, valueSelector);
         return new ContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
     }
-    public IContinuedUpdate<TEntity> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
+    public virtual IContinuedUpdate<TEntity> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
         => this.SetFrom(true, fieldsAssignment);
-    public IContinuedUpdate<TEntity> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
+    public virtual IContinuedUpdate<TEntity> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
     {
         if (fieldsAssignment == null)
             throw new ArgumentNullException(nameof(fieldsAssignment));
@@ -103,7 +135,7 @@ class Update<TEntity> : IUpdate<TEntity>
     #endregion
 
     #region SetBulk
-    public IContinuedUpdate<TEntity> SetBulk<TUpdateObj>(IEnumerable<TUpdateObj> updateObjs, int bulkCount = 500)
+    public virtual IContinuedUpdate<TEntity> SetBulk<TUpdateObj>(IEnumerable<TUpdateObj> updateObjs, int bulkCount = 500)
     {
         if (updateObjs == null)
             throw new ArgumentNullException(nameof(updateObjs));
@@ -119,44 +151,8 @@ class Update<TEntity> : IUpdate<TEntity>
         return new ContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
     }
     #endregion
-
-    #region From
-    public IUpdateFrom<TEntity, T> From<T>()
-    {
-        this.Visitor.From(typeof(T));
-        return new UpdateFrom<TEntity, T>(this.DbContext, this.Visitor);
-    }
-<#
-    var count = 6;
-    var tables = "T1";
-    var typeOfTables = "typeof(T1)";
-    for (int i = 2; i < count; i++)
-    {
-        tables += $", T{i}";
-        typeOfTables += $", typeof(T{i})";
-#>
-    public IUpdateFrom<TEntity, <#=tables#>> From<<#=tables#>>()
-    {
-        this.Visitor.From(<#=typeOfTables#>);
-        return new UpdateFrom<TEntity, <#=tables#>>(this.DbContext, this.Visitor);
-    }
-<#  }#>
-    #endregion
-
-    #region Join
-    public IUpdateJoin<TEntity, T> InnerJoin<T>(Expression<Func<TEntity, T, bool>> joinOn)
-    {
-        this.Visitor.Join("INNER JOIN", typeof(T), joinOn);
-        return new UpdateJoin<TEntity, T>(this.DbContext, this.Visitor);
-    }
-    public IUpdateJoin<TEntity, T> LeftJoin<T>(Expression<Func<TEntity, T, bool>> joinOn)
-    {
-        this.Visitor.Join("LEFT JOIN", typeof(T), joinOn);
-        return new UpdateJoin<TEntity, T>(this.DbContext, this.Visitor);
-    }
-    #endregion
 }
-class UpdateSet<TEntity> : IUpdateSet<TEntity>, IDisposable
+public class Updated<TEntity> : IUpdated<TEntity>
 {
     #region Fields
     protected bool hasWhere;
@@ -168,7 +164,7 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>, IDisposable
     #endregion
 
     #region Constructor
-    public UpdateSet(DbContext dbContext, IUpdateVisitor visitor)
+    public Updated(DbContext dbContext, IUpdateVisitor visitor)
     {
         this.DbContext = dbContext;
         this.Visitor = visitor;
@@ -176,166 +172,102 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>, IDisposable
     #endregion
 
     #region Execute
-    public int Execute()
+    public virtual int Execute()
     {
-        using var command = this.DbContext.CreateCommand();
         int result = 0;
+        Exception exception = null;
         bool isNeedClose = this.DbContext.IsNeedClose;
+        using var command = this.DbContext.CreateCommand();
         try
         {
-            if (this.Visitor.IsBulk)
+            switch (this.Visitor.ActionMode)
             {
-                int index = 0;
-                bool isFirst = true;
-                var sqlBuilder = new StringBuilder();
-                (var updateObjs, var bulkCount, var commandInitializer) = this.Visitor.BuildSetBulk(command);
-                foreach (var updateObj in updateObjs)
-                {
-                    if (index > 0) sqlBuilder.Append(';');
-                    commandInitializer.Invoke(sqlBuilder, updateObj, index.ToString());
-                    if (index >= bulkCount)
-                    {
-                        command.CommandText = sqlBuilder.ToString();
-                        if (isFirst)
-                        {
-                            this.DbContext.Connection.Open();
-                            isFirst = false;
-                        }
-                        result += command.ExecuteNonQuery();
-                        command.Parameters.Clear();
-                        sqlBuilder.Clear();
-                        index = 0;
-                        continue;
-                    }
-                    index++;
-                }
-                if (index > 0)
-                {
-                    command.CommandText = sqlBuilder.ToString();
-                    if (isFirst) this.DbContext.Connection.Open();
-                    result += command.ExecuteNonQuery();
-                }
-            }
-            else
-            {
-                if (!hasWhere)
-                    throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
+                case ActionMode.Bulk:
+                    result = this.DbContext.UpdateBulk(this.Visitor, command);
+                    break;
+                default:
+                    if (!hasWhere)
+                        throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
 
-                this.Visitor.BuildCommand(command);
-                this.DbContext.Connection.Open();
-                result = command.ExecuteNonQuery();
+                    var sql = this.Visitor.BuildCommand(command);
+                    (var isOpened, sql) = this.DbContext.BuildSql(this.Visitor as SqlVisitor, sql, ";");
+                    command.CommandText = sql;
+                    if (!isOpened) this.DbContext.Open();
+                    result = command.ExecuteNonQuery();
+                    break;
             }
         }
-        catch
+        catch (Exception ex)
         {
             isNeedClose = true;
+            exception = ex;
         }
         finally
         {
             command.Dispose();
-            if (isNeedClose) this.Dispose();
+            if (isNeedClose) this.Close();
         }
+        if (exception != null) throw exception;
         return result;
     }
-    public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
+    public virtual async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
-        using var command = this.DbContext.CreateDbCommand();
         int result = 0;
+        Exception exception = null;
         bool isNeedClose = this.DbContext.IsNeedClose;
+        using var command = this.DbContext.CreateDbCommand();
         try
         {
-            if (this.Visitor.IsBulk)
+            switch (this.Visitor.ActionMode)
             {
-                int index = 0;
-                bool isFirst = true;
-                var sqlBuilder = new StringBuilder();
-                (var updateObjs, var bulkCount, var commandInitializer) = this.Visitor.BuildSetBulk(command);
-                foreach (var updateObj in updateObjs)
-                {
-                    if (index > 0) sqlBuilder.Append(';');
-                    commandInitializer.Invoke(sqlBuilder, updateObj, index.ToString());
-                    if (index >= bulkCount)
-                    {
-                        command.CommandText = sqlBuilder.ToString();
-                        if (isFirst)
-                        {
-                            await this.DbContext.Connection.OpenAsync(cancellationToken);
-                            isFirst = false;
-                        }
-                        result += await command.ExecuteNonQueryAsync(cancellationToken);
-                        command.Parameters.Clear();
-                        sqlBuilder.Clear();
-                        index = 0;
-                        continue;
-                    }
-                    index++;
-                }
-                if (index > 0)
-                {
-                    command.CommandText = sqlBuilder.ToString();
-                    if (isFirst) await this.DbContext.Connection.OpenAsync(cancellationToken);
-                    result += await command.ExecuteNonQueryAsync(cancellationToken);
-                }
-            }
-            else
-            {
-                if (!hasWhere)
-                    throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
+                case ActionMode.Bulk:
+                    result = await this.DbContext.UpdateBulkAsync(this.Visitor, command, cancellationToken);
+                    break;
+                default:
+                    if (!hasWhere)
+                        throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
 
-                this.Visitor.BuildCommand(command);
-                await this.DbContext.Connection.OpenAsync(cancellationToken);
-                result = await command.ExecuteNonQueryAsync(cancellationToken);
+                    var sql = this.Visitor.BuildCommand(command);
+                    (var isOpened, sql) = await this.DbContext.BuildSqlAsync(this.Visitor as SqlVisitor, sql, ";", cancellationToken);
+                    command.CommandText = sql;
+                    if (!isOpened) await this.DbContext.OpenAsync(cancellationToken);
+                    result = await command.ExecuteNonQueryAsync(cancellationToken);
+                    break;
             }
         }
-        catch
+        catch (Exception ex)
         {
             isNeedClose = true;
+            exception = ex;
         }
         finally
         {
-            command.Dispose();
-            if (isNeedClose) this.Dispose();
+            await command.DisposeAsync();
+            if (isNeedClose) await this.CloseAsync();
         }
+        if (exception != null) throw exception;
         return result;
     }
     #endregion
 
     #region ToMultipleCommand
-    public MultipleCommand ToMultipleCommand() => this.Visitor.CreateMultipleCommand();
+    public virtual MultipleCommand ToMultipleCommand() => this.Visitor.CreateMultipleCommand();
     #endregion
 
     #region ToSql
-    public string ToSql(out List<IDbDataParameter> dbParameters)
+    public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        dbParameters = null;
         string sql = null;
         using var command = this.DbContext.CreateCommand();
-        if (this.Visitor.IsBulk)
+        switch (this.Visitor.ActionMode)
         {
-            int index = 0;
-            var sqlBuilder = new StringBuilder();
-            (var updateObjs, var bulkCount, var commandInitializer) = this.Visitor.BuildSetBulk(command);
-            foreach (var updateObj in updateObjs)
-            {
-                if (index > 0) sqlBuilder.Append(';');
-                commandInitializer.Invoke(sqlBuilder, updateObj, index.ToString());
-
-                if (index >= bulkCount)
-                {
-                    sql = sqlBuilder.ToString();
-                    break;
-                }
-                index++;
-            }
-            if (index > 0)
-                sql = sqlBuilder.ToString();
-        }
-        else
-        {
-            if (!hasWhere)
-                throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
-
-            sql = this.Visitor.BuildSql();
+            case ActionMode.Bulk:
+                sql = this.DbContext.BuildUpdateBulkSql(this.Visitor, command);
+                break;
+            case ActionMode.Single:
+                sql = this.Visitor.BuildCommand(command);
+                (_, sql) = this.DbContext.BuildSql(this.Visitor as SqlVisitor, sql, ";");
+                break;
         }
         dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
@@ -343,15 +275,22 @@ class UpdateSet<TEntity> : IUpdateSet<TEntity>, IDisposable
     }
     #endregion
 
-    #region Dispose
-    public void Dispose()
+    #region Close
+    public virtual void Close()
     {
+        this.DbContext.Close();
         this.Visitor.Dispose();
-        this.DbContext.Dispose();
+        this.Visitor = null;
+    }
+    public virtual async ValueTask CloseAsync()
+    {
+        await this.DbContext.CloseAsync();
+        this.Visitor.Dispose();
+        this.Visitor = null;
     }
     #endregion
 }
-class ContinuedUpdate<TEntity> : UpdateSet<TEntity>, IContinuedUpdate<TEntity>
+public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEntity>
 {
     #region Constructor
     public ContinuedUpdate(DbContext dbContext, IUpdateVisitor Visitor)
@@ -359,9 +298,9 @@ class ContinuedUpdate<TEntity> : UpdateSet<TEntity>, IContinuedUpdate<TEntity>
     #endregion
 
     #region Set
-    public IContinuedUpdate<TEntity> Set<TUpdateObj>(TUpdateObj updateObj)
+    public virtual IContinuedUpdate<TEntity> Set<TUpdateObj>(TUpdateObj updateObj)
        => this.Set(true, updateObj);
-    public IContinuedUpdate<TEntity> Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
+    public virtual IContinuedUpdate<TEntity> Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
     {
         if (updateObj == null)
             throw new ArgumentNullException(nameof(updateObj));
@@ -369,9 +308,9 @@ class ContinuedUpdate<TEntity> : UpdateSet<TEntity>, IContinuedUpdate<TEntity>
         if (condition) this.Visitor.SetWith(updateObj);
         return this;
     }
-    public IContinuedUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
+    public virtual IContinuedUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
         => this.Set(true, fieldSelector, fieldValue);
-    public IContinuedUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
+    public virtual IContinuedUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
     {
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));
@@ -383,9 +322,9 @@ class ContinuedUpdate<TEntity> : UpdateSet<TEntity>, IContinuedUpdate<TEntity>
         if (condition) this.Visitor.SetField(fieldSelector, fieldValue);
         return this;
     }
-    public IContinuedUpdate<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsAssignment)
+    public virtual IContinuedUpdate<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsAssignment)
        => this.Set(true, fieldsAssignment);
-    public IContinuedUpdate<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment)
+    public virtual IContinuedUpdate<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment)
     {
         if (fieldsAssignment == null)
             throw new ArgumentNullException(nameof(fieldsAssignment));
@@ -395,12 +334,12 @@ class ContinuedUpdate<TEntity> : UpdateSet<TEntity>, IContinuedUpdate<TEntity>
         if (condition) this.Visitor.Set(fieldsAssignment);
         return this;
     }
-    #endregion 
+    #endregion
 
     #region SetFrom
-    public IContinuedUpdate<TEntity> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
+    public virtual IContinuedUpdate<TEntity> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
         => this.SetFrom(true, fieldSelector, valueSelector);
-    public IContinuedUpdate<TEntity> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
+    public virtual IContinuedUpdate<TEntity> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
     {
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));
@@ -412,9 +351,9 @@ class ContinuedUpdate<TEntity> : UpdateSet<TEntity>, IContinuedUpdate<TEntity>
         if (condition) this.Visitor.SetFrom(fieldSelector, valueSelector);
         return this;
     }
-    public IContinuedUpdate<TEntity> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
+    public virtual IContinuedUpdate<TEntity> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
         => this.SetFrom(true, fieldsAssignment);
-    public IContinuedUpdate<TEntity> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
+    public virtual IContinuedUpdate<TEntity> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
     {
         if (fieldsAssignment == null)
             throw new ArgumentNullException(nameof(fieldsAssignment));
@@ -427,7 +366,7 @@ class ContinuedUpdate<TEntity> : UpdateSet<TEntity>, IContinuedUpdate<TEntity>
     #endregion
 
     #region IgnoreFields
-    public IContinuedUpdate<TEntity> IgnoreFields(params string[] fieldNames)
+    public virtual IContinuedUpdate<TEntity> IgnoreFields(params string[] fieldNames)
     {
         if (fieldNames == null)
             throw new ArgumentNullException(nameof(fieldNames));
@@ -435,11 +374,11 @@ class ContinuedUpdate<TEntity> : UpdateSet<TEntity>, IContinuedUpdate<TEntity>
         this.Visitor.IgnoreFields(fieldNames);
         return this;
     }
-    public IContinuedUpdate<TEntity> IgnoreFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector)
+    public virtual IContinuedUpdate<TEntity> IgnoreFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector)
     {
         if (fieldsSelector == null)
             throw new ArgumentNullException(nameof(fieldsSelector));
-        if (fieldsSelector.Body.NodeType != ExpressionType.New && fieldsSelector.Body.NodeType != ExpressionType.MemberInit)
+        if (fieldsSelector.Body.NodeType != ExpressionType.MemberAccess && fieldsSelector.Body.NodeType != ExpressionType.New && fieldsSelector.Body.NodeType != ExpressionType.MemberInit)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelector)},只支持MemberAccess、New或MemberInit类型表达式");
 
         this.Visitor.IgnoreFields(fieldsSelector);
@@ -448,7 +387,7 @@ class ContinuedUpdate<TEntity> : UpdateSet<TEntity>, IContinuedUpdate<TEntity>
     #endregion
 
     #region OnlyFields
-    public IContinuedUpdate<TEntity> OnlyFields(params string[] fieldNames)
+    public virtual IContinuedUpdate<TEntity> OnlyFields(params string[] fieldNames)
     {
         if (fieldNames == null)
             throw new ArgumentNullException(nameof(fieldNames));
@@ -456,11 +395,11 @@ class ContinuedUpdate<TEntity> : UpdateSet<TEntity>, IContinuedUpdate<TEntity>
         this.Visitor.OnlyFields(fieldNames);
         return this;
     }
-    public IContinuedUpdate<TEntity> OnlyFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector)
+    public virtual IContinuedUpdate<TEntity> OnlyFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector)
     {
         if (fieldsSelector == null)
             throw new ArgumentNullException(nameof(fieldsSelector));
-        if (fieldsSelector.Body.NodeType != ExpressionType.New && fieldsSelector.Body.NodeType != ExpressionType.MemberInit)
+        if (fieldsSelector.Body.NodeType != ExpressionType.MemberAccess && fieldsSelector.Body.NodeType != ExpressionType.New && fieldsSelector.Body.NodeType != ExpressionType.MemberInit)
             throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelector)},只支持MemberAccess、New或MemberInit类型表达式");
 
         this.Visitor.OnlyFields(fieldsSelector);
@@ -469,7 +408,7 @@ class ContinuedUpdate<TEntity> : UpdateSet<TEntity>, IContinuedUpdate<TEntity>
     #endregion
 
     #region Where/And
-    public IUpdateSet<TEntity> Where<TWhereObj>(TWhereObj whereObj)
+    public virtual IUpdated<TEntity> Where<TWhereObj>(TWhereObj whereObj)
     {
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
@@ -477,18 +416,9 @@ class ContinuedUpdate<TEntity> : UpdateSet<TEntity>, IContinuedUpdate<TEntity>
         this.hasWhere = true;
         return this;
     }
-    public IContinuedUpdate<TEntity> Where<TWhereObj>(Expression<Func<TEntity, TWhereObj>> whereExpr)
-    {
-        if (whereExpr == null)
-            throw new ArgumentNullException(nameof(whereExpr));
-
-        this.Visitor.Where(whereExpr, true);
-        this.hasWhere = true;
-        return this;
-    }
-    public IContinuedUpdate<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
+    public virtual IContinuedUpdate<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
         => this.Where(true, predicate);
-    public IContinuedUpdate<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
+    public virtual IContinuedUpdate<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
             throw new ArgumentNullException(nameof(ifPredicate));
@@ -499,9 +429,9 @@ class ContinuedUpdate<TEntity> : UpdateSet<TEntity>, IContinuedUpdate<TEntity>
         this.hasWhere = true;
         return this;
     }
-    public IContinuedUpdate<TEntity> And(Expression<Func<TEntity, bool>> predicate)
+    public virtual IContinuedUpdate<TEntity> And(Expression<Func<TEntity, bool>> predicate)
         => this.And(true, predicate);
-    public IContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
+    public virtual IContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
             throw new ArgumentNullException(nameof(ifPredicate));
@@ -509,19 +439,18 @@ class ContinuedUpdate<TEntity> : UpdateSet<TEntity>, IContinuedUpdate<TEntity>
         if (condition)
             this.Visitor.And(ifPredicate);
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
-        this.hasWhere = true;
         return this;
     }
     #endregion
 }
 <#
-    count = 6;
-    tables = "TEntity";    
+    var count = 6;
+    var tables = "TEntity";    
     for (int i = 1; i < count; i++)
     {
         tables += $", T{i}";
 #>
-class UpdateFrom<<#=tables#>> : UpdateSet<TEntity>, IUpdateFrom<<#=tables#>>
+public class UpdateFrom<<#=tables#>> : Updated<TEntity>, IUpdateFrom<<#=tables#>>
 {
     #region Constructor
     public UpdateFrom(DbContext dbContext, IUpdateVisitor visitor)
@@ -529,9 +458,9 @@ class UpdateFrom<<#=tables#>> : UpdateSet<TEntity>, IUpdateFrom<<#=tables#>>
     #endregion
 
     #region Set
-    public IUpdateFrom<<#=tables#>> Set<TUpdateObj>(TUpdateObj updateObj)
+    public virtual IUpdateFrom<<#=tables#>> Set<TUpdateObj>(TUpdateObj updateObj)
         => this.Set(true, updateObj);
-    public IUpdateFrom<<#=tables#>> Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
+    public virtual IUpdateFrom<<#=tables#>> Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
     {
         if (updateObj == null)
             throw new ArgumentNullException(nameof(updateObj));
@@ -541,9 +470,9 @@ class UpdateFrom<<#=tables#>> : UpdateSet<TEntity>, IUpdateFrom<<#=tables#>>
         if (condition) this.Visitor.SetWith(updateObj);
         return this;
     }    
-    public IUpdateFrom<<#=tables#>> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
+    public virtual IUpdateFrom<<#=tables#>> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
         => this.Set(true, fieldSelector, fieldValue);
-    public IUpdateFrom<<#=tables#>> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
+    public virtual IUpdateFrom<<#=tables#>> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
     {
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));
@@ -556,9 +485,9 @@ class UpdateFrom<<#=tables#>> : UpdateSet<TEntity>, IUpdateFrom<<#=tables#>>
             this.Visitor.SetField(fieldSelector, fieldValue);
         return this;
     }
-    public IUpdateFrom<<#=tables#>> Set<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsAssignment)
+    public virtual IUpdateFrom<<#=tables#>> Set<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsAssignment)
         => this.Set(true, fieldsAssignment);
-    public IUpdateFrom<<#=tables#>> Set<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsAssignment)
+    public virtual IUpdateFrom<<#=tables#>> Set<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsAssignment)
     {
         if (fieldsAssignment == null)
             throw new ArgumentNullException(nameof(fieldsAssignment));
@@ -572,9 +501,9 @@ class UpdateFrom<<#=tables#>> : UpdateSet<TEntity>, IUpdateFrom<<#=tables#>>
     #endregion
 
     #region SetFrom
-    public IUpdateFrom<<#=tables#>> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
+    public virtual IUpdateFrom<<#=tables#>> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
         => this.SetFrom(true, fieldSelector, valueSelector);
-    public IUpdateFrom<<#=tables#>> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
+    public virtual IUpdateFrom<<#=tables#>> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
     {
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));
@@ -587,9 +516,9 @@ class UpdateFrom<<#=tables#>> : UpdateSet<TEntity>, IUpdateFrom<<#=tables#>>
             this.Visitor.SetFrom(fieldSelector, valueSelector);
         return this;
     }
-    public IUpdateFrom<<#=tables#>> SetFrom<TFields>(Expression<Func<IFromQuery, <#=tables#>, TFields>> fieldsAssignment)
+    public virtual IUpdateFrom<<#=tables#>> SetFrom<TFields>(Expression<Func<IFromQuery, <#=tables#>, TFields>> fieldsAssignment)
         => this.SetFrom(true, fieldsAssignment);
-    public IUpdateFrom<<#=tables#>> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, <#=tables#>, TFields>> fieldsAssignment)
+    public virtual IUpdateFrom<<#=tables#>> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, <#=tables#>, TFields>> fieldsAssignment)
     {
         if (fieldsAssignment == null)
             throw new ArgumentNullException(nameof(fieldsAssignment));
@@ -603,9 +532,9 @@ class UpdateFrom<<#=tables#>> : UpdateSet<TEntity>, IUpdateFrom<<#=tables#>>
     #endregion
 
     #region Where/And
-    public IUpdateFrom<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> wherePredicate)
+    public virtual IUpdateFrom<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> wherePredicate)
         => this.Where(true, wherePredicate);
-    public IUpdateFrom<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
+    public virtual IUpdateFrom<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
             throw new ArgumentNullException(nameof(ifPredicate));
@@ -613,11 +542,12 @@ class UpdateFrom<<#=tables#>> : UpdateSet<TEntity>, IUpdateFrom<<#=tables#>>
         if (condition)
             this.Visitor.Where(ifPredicate);
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
+        this.hasWhere = true;
         return this;
     }
-    public IUpdateFrom<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> andPredicate)
+    public virtual IUpdateFrom<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> andPredicate)
         => this.And(true, andPredicate);
-    public IUpdateFrom<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
+    public virtual IUpdateFrom<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
             throw new ArgumentNullException(nameof(ifPredicate));
@@ -638,7 +568,7 @@ class UpdateFrom<<#=tables#>> : UpdateSet<TEntity>, IUpdateFrom<<#=tables#>>
         tables += $", T{i}";
         var nextTable = $"T{i+1}";
 #>
-class UpdateJoin<<#=tables#>> : UpdateSet<TEntity>, IUpdateJoin<<#=tables#>>
+public class UpdateJoin<<#=tables#>> : Updated<TEntity>, IUpdateJoin<<#=tables#>>
 {
     #region Constructor
     public UpdateJoin(DbContext dbContext, IUpdateVisitor Visitor)
@@ -650,7 +580,7 @@ class UpdateJoin<<#=tables#>> : UpdateSet<TEntity>, IUpdateJoin<<#=tables#>>
         {
 #>
     #region Join
-    public IUpdateJoin<<#=tables#>, <#=nextTable#>> InnerJoin<<#=nextTable#>>(Expression<Func<<#=tables#>, <#=nextTable#>, bool>> joinOn)
+    public virtual IUpdateJoin<<#=tables#>, <#=nextTable#>> InnerJoin<<#=nextTable#>>(Expression<Func<<#=tables#>, <#=nextTable#>, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
@@ -658,7 +588,7 @@ class UpdateJoin<<#=tables#>> : UpdateSet<TEntity>, IUpdateJoin<<#=tables#>>
         this.Visitor.Join("INNER JOIN", typeof(<#=nextTable#>), joinOn);
         return new UpdateJoin<<#=tables#>, <#=nextTable#>>(this.DbContext, this.Visitor);
     }
-    public IUpdateJoin<<#=tables#>, <#=nextTable#>> LeftJoin<<#=nextTable#>>(Expression<Func<<#=tables#>, <#=nextTable#>, bool>> joinOn)
+    public virtual IUpdateJoin<<#=tables#>, <#=nextTable#>> LeftJoin<<#=nextTable#>>(Expression<Func<<#=tables#>, <#=nextTable#>, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
@@ -670,9 +600,9 @@ class UpdateJoin<<#=tables#>> : UpdateSet<TEntity>, IUpdateJoin<<#=tables#>>
 
 <#      }#>
     #region Set
-    public IUpdateJoin<<#=tables#>> Set<TUpdateObj>(TUpdateObj updateObj)
+    public virtual IUpdateJoin<<#=tables#>> Set<TUpdateObj>(TUpdateObj updateObj)
         => this.Set(true, updateObj);
-    public IUpdateJoin<<#=tables#>> Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
+    public virtual IUpdateJoin<<#=tables#>> Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
     {
         if (updateObj == null)
             throw new ArgumentNullException(nameof(updateObj));
@@ -682,9 +612,9 @@ class UpdateJoin<<#=tables#>> : UpdateSet<TEntity>, IUpdateJoin<<#=tables#>>
         if (condition) this.Visitor.SetWith(updateObj);
         return this;
     }
-    public IUpdateJoin<<#=tables#>> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
+    public virtual IUpdateJoin<<#=tables#>> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
         => this.Set(true, fieldSelector, fieldValue);
-    public IUpdateJoin<<#=tables#>> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
+    public virtual IUpdateJoin<<#=tables#>> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
     {
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));
@@ -697,9 +627,9 @@ class UpdateJoin<<#=tables#>> : UpdateSet<TEntity>, IUpdateJoin<<#=tables#>>
             this.Visitor.SetField(fieldSelector, fieldValue);
         return this;
     }
-    public IUpdateJoin<<#=tables#>> Set<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsAssignment)
+    public virtual IUpdateJoin<<#=tables#>> Set<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsAssignment)
         => this.Set(true, fieldsAssignment);
-    public IUpdateJoin<<#=tables#>> Set<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsAssignment)
+    public virtual IUpdateJoin<<#=tables#>> Set<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsAssignment)
     {
         if (fieldsAssignment == null)
             throw new ArgumentNullException(nameof(fieldsAssignment));
@@ -713,9 +643,9 @@ class UpdateJoin<<#=tables#>> : UpdateSet<TEntity>, IUpdateJoin<<#=tables#>>
     #endregion
 
     #region SetFrom
-    public IUpdateJoin<<#=tables#>> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
+    public virtual IUpdateJoin<<#=tables#>> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
         => this.SetFrom(true, fieldSelector, valueSelector);
-    public IUpdateJoin<<#=tables#>> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
+    public virtual IUpdateJoin<<#=tables#>> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
     {
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));
@@ -728,9 +658,9 @@ class UpdateJoin<<#=tables#>> : UpdateSet<TEntity>, IUpdateJoin<<#=tables#>>
             this.Visitor.SetFrom(fieldSelector, valueSelector);
         return this;
     }
-    public IUpdateJoin<<#=tables#>> SetFrom<TFields>(Expression<Func<IFromQuery, <#=tables#>, TFields>> fieldsAssignment)
+    public virtual IUpdateJoin<<#=tables#>> SetFrom<TFields>(Expression<Func<IFromQuery, <#=tables#>, TFields>> fieldsAssignment)
         => this.SetFrom(true, fieldsAssignment);
-    public IUpdateJoin<<#=tables#>> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, <#=tables#>, TFields>> fieldsAssignment)
+    public virtual IUpdateJoin<<#=tables#>> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, <#=tables#>, TFields>> fieldsAssignment)
     {
         if (fieldsAssignment == null)
             throw new ArgumentNullException(nameof(fieldsAssignment));
@@ -740,13 +670,13 @@ class UpdateJoin<<#=tables#>> : UpdateSet<TEntity>, IUpdateJoin<<#=tables#>>
         if (condition)
             this.Visitor.SetFrom(fieldsAssignment);
         return this;
-    }    
+    }
     #endregion
 
     #region Where/And
-    public IUpdateJoin<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> wherePredicate)
+    public virtual IUpdateJoin<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> wherePredicate)
         => this.Where(true, wherePredicate);
-    public IUpdateJoin<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
+    public virtual IUpdateJoin<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
             throw new ArgumentNullException(nameof(ifPredicate));
@@ -756,9 +686,9 @@ class UpdateJoin<<#=tables#>> : UpdateSet<TEntity>, IUpdateJoin<<#=tables#>>
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
-    public IUpdateJoin<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> andPredicate)
+    public virtual IUpdateJoin<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> andPredicate)
         => this.And(true, andPredicate);
-    public IUpdateJoin<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
+    public virtual IUpdateJoin<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
             throw new ArgumentNullException(nameof(ifPredicate));

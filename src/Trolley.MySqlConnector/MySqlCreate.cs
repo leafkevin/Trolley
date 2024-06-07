@@ -18,12 +18,12 @@ public class MySqlCreate<TEntity> : Create<TEntity>, IMySqlCreate<TEntity>
     #endregion
 
     #region Sharding
-    public new IMySqlCreate<TEntity> UseTable(string tableName)
+    public override IMySqlCreate<TEntity> UseTable(string tableName)
     {
         base.UseTable(tableName);
         return this;
     }
-    public new IMySqlCreate<TEntity> UseTableBy(object field1Value, object field2Value = null)
+    public override IMySqlCreate<TEntity> UseTableBy(object field1Value, object field2Value = null)
     {
         base.UseTableBy(field1Value, field2Value);
         return this;
@@ -31,7 +31,7 @@ public class MySqlCreate<TEntity> : Create<TEntity>, IMySqlCreate<TEntity>
     #endregion
 
     #region IgnoreInto
-    public IMySqlCreate<TEntity> IgnoreInto()
+    public virtual IMySqlCreate<TEntity> IgnoreInto()
     {
         this.DialectVisitor.IsUseIgnoreInto = true;
         return this;
@@ -39,7 +39,7 @@ public class MySqlCreate<TEntity> : Create<TEntity>, IMySqlCreate<TEntity>
     #endregion
 
     #region WithBy
-    public new IMySqlContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj)
+    public override IMySqlContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj)
     {
         base.WithBy(insertObj);
         return new MySqlContinuedCreate<TEntity>(this.DbContext, this.Visitor);
@@ -47,7 +47,7 @@ public class MySqlCreate<TEntity> : Create<TEntity>, IMySqlCreate<TEntity>
     #endregion
 
     #region WithBulk
-    public new IMySqlContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount)
+    public override IMySqlContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount)
     {
         bool isEmpty = true;
         foreach (var insertObj in insertObjs)

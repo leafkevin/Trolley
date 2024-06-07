@@ -35,7 +35,7 @@ public class FromCommand : IFromCommand
     #endregion
 
     #region Select
-    public IFromCommand<TTarget> Select<TTarget>(string fields = "*")
+    public virtual IFromCommand<TTarget> Select<TTarget>(string fields = "*")
     {
         if (string.IsNullOrEmpty(fields))
             throw new ArgumentNullException(nameof(fields));
@@ -46,7 +46,7 @@ public class FromCommand : IFromCommand
     #endregion
 
     #region Execute
-    public int Execute()
+    public virtual int Execute()
     {
         var sql = this.Visitor.BuildCommandSql(this.EntityType, out var dbParameters);
         var result = this.DbContext.Execute(f =>
@@ -57,7 +57,7 @@ public class FromCommand : IFromCommand
         this.Dispose();
         return result;
     }
-    public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
+    public virtual async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         var sql = this.Visitor.BuildCommandSql(this.EntityType, out var dbParameters);
         var result = await this.DbContext.ExecuteAsync(f =>
@@ -71,7 +71,7 @@ public class FromCommand : IFromCommand
     #endregion
 
     #region ToSql
-    public string ToSql(out List<IDbDataParameter> dbParameters)
+    public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
         var sql = this.Visitor.BuildCommandSql(this.EntityType, out var dbDataParameters);
         dbParameters = dbDataParameters.Cast<IDbDataParameter>().ToList();
@@ -81,7 +81,7 @@ public class FromCommand : IFromCommand
     #endregion
 
     #region Dispose
-    public void Dispose()
+    public virtual void Dispose()
     {
         this.EntityType = null;
         //DbContext自己会处理释放，此处什么也不做
@@ -99,31 +99,31 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
     #endregion
 
     #region Sharding
-    public IFromCommand<T> UseTable(params string[] tableNames)
+    public virtual IFromCommand<T> UseTable(params string[] tableNames)
     {
         var entityType = typeof(T);
         this.Visitor.UseTable(entityType, tableNames);
         return this;
     }
-    public IFromCommand<T> UseTable(Func<string, bool> tableNamePredicate)
+    public virtual IFromCommand<T> UseTable(Func<string, bool> tableNamePredicate)
     {
         var entityType = typeof(T);
         this.Visitor.UseTable(entityType, tableNamePredicate);
         return this;
     }
-    public IFromCommand<T> UseTableBy(object field1Value, object field2Value = null)
+    public virtual IFromCommand<T> UseTableBy(object field1Value, object field2Value = null)
     {
         var entityType = typeof(T);
         this.Visitor.UseTableBy(entityType, field1Value, field2Value);
         return this;
     }
-    public IFromCommand<T> UseTableByRange(object beginFieldValue, object endFieldValue)
+    public virtual IFromCommand<T> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
         var entityType = typeof(T);
         this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
         return this;
     }
-    public IFromCommand<T> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public virtual IFromCommand<T> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         var entityType = typeof(T);
         this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
@@ -132,7 +132,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
     #endregion
 
     #region Union/UnionAll
-    public IFromCommand<T> Union(IQuery<T> subQuery)
+    public virtual IFromCommand<T> Union(IQuery<T> subQuery)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
@@ -140,7 +140,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
         this.Visitor.Union(" UNION", typeof(T), subQuery);
         return this;
     }
-    public IFromCommand<T> Union(Func<IFromQuery, IQuery<T>> subQuery)
+    public virtual IFromCommand<T> Union(Func<IFromQuery, IQuery<T>> subQuery)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
@@ -148,7 +148,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
         this.Visitor.Union(" UNION", typeof(T), this.DbContext, subQuery);
         return this;
     }
-    public IFromCommand<T> UnionAll(IQuery<T> subQuery)
+    public virtual IFromCommand<T> UnionAll(IQuery<T> subQuery)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
@@ -156,7 +156,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
         this.Visitor.Union(" UNION ALL", typeof(T), subQuery);
         return this;
     }
-    public IFromCommand<T> UnionAll(Func<IFromQuery, IQuery<T>> subQuery)
+    public virtual IFromCommand<T> UnionAll(Func<IFromQuery, IQuery<T>> subQuery)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
@@ -167,7 +167,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
     #endregion
 
     #region Join   
-    public IFromCommand<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
+    public virtual IFromCommand<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
@@ -175,7 +175,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
         this.Visitor.Join("INNER JOIN", typeof(TOther), joinOn);
         return this.OrmProvider.NewFromCommand<T, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
-    public IFromCommand<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
+    public virtual IFromCommand<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
@@ -183,7 +183,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
         this.Visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
         return this.OrmProvider.NewFromCommand<T, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
-    public IFromCommand<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
+    public virtual IFromCommand<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
@@ -191,7 +191,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
         this.Visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
         return this.OrmProvider.NewFromCommand<T, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
-    public IFromCommand<T, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+    public virtual IFromCommand<T, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
@@ -201,7 +201,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
         this.Visitor.Join("INNER JOIN", typeof(TOther), subQuery, joinOn);
         return this.OrmProvider.NewFromCommand<T, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
-    public IFromCommand<T, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+    public virtual IFromCommand<T, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
@@ -211,7 +211,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
         this.Visitor.Join("LEFT JOIN", typeof(TOther), subQuery, joinOn);
         return this.OrmProvider.NewFromCommand<T, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
-    public IFromCommand<T, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+    public virtual IFromCommand<T, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
@@ -221,7 +221,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
         this.Visitor.Join("RIGHT JOIN", typeof(TOther), subQuery, joinOn);
         return this.OrmProvider.NewFromCommand<T, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
-    public IFromCommand<T, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+    public virtual IFromCommand<T, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
@@ -231,7 +231,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
         this.Visitor.Join("INNER JOIN", typeof(TOther), this.DbContext, subQuery, joinOn);
         return this.OrmProvider.NewFromCommand<T, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
-    public IFromCommand<T, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+    public virtual IFromCommand<T, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
@@ -241,7 +241,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
         this.Visitor.Join("LEFT JOIN", typeof(TOther), this.DbContext, subQuery, joinOn);
         return this.OrmProvider.NewFromCommand<T, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
-    public IFromCommand<T, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+    public virtual IFromCommand<T, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
@@ -254,7 +254,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
     #endregion
 
     #region Where/And
-    public IFromCommand<T> Where(Expression<Func<T, bool>> predicate)
+    public virtual IFromCommand<T> Where(Expression<Func<T, bool>> predicate)
     {
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
@@ -262,7 +262,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
         this.Visitor.Where(predicate);
         return this;
     }
-    public IFromCommand<T> Where(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
+    public virtual IFromCommand<T> Where(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
             throw new ArgumentNullException(nameof(ifPredicate));
@@ -272,7 +272,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
-    public IFromCommand<T> And(Expression<Func<T, bool>> predicate)
+    public virtual IFromCommand<T> And(Expression<Func<T, bool>> predicate)
     {
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
@@ -280,7 +280,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
         this.Visitor.And(predicate);
         return this;
     }
-    public IFromCommand<T> And(bool condition, Expression<Func<T, bool>> ifPredicate = null, Expression<Func<T, bool>> elsePredicate = null)
+    public virtual IFromCommand<T> And(bool condition, Expression<Func<T, bool>> ifPredicate = null, Expression<Func<T, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
             throw new ArgumentNullException(nameof(ifPredicate));
@@ -293,7 +293,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
     #endregion
 
     #region GroupBy
-    public IGroupingCommand<T, TGrouping> GroupBy<TGrouping>(Expression<Func<T, TGrouping>> groupingExpr)
+    public virtual IGroupingCommand<T, TGrouping> GroupBy<TGrouping>(Expression<Func<T, TGrouping>> groupingExpr)
     {
         if (groupingExpr == null)
             throw new ArgumentNullException(nameof(groupingExpr));
@@ -304,9 +304,9 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
     #endregion
 
     #region OrderBy
-    public IFromCommand<T> OrderBy<TFields>(Expression<Func<T, TFields>> fieldsExpr)
+    public virtual IFromCommand<T> OrderBy<TFields>(Expression<Func<T, TFields>> fieldsExpr)
          => this.OrderBy(true, fieldsExpr);
-    public IFromCommand<T> OrderBy<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr)
+    public virtual IFromCommand<T> OrderBy<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
@@ -315,9 +315,9 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
             this.Visitor.OrderBy("ASC", fieldsExpr);
         return this;
     }
-    public IFromCommand<T> OrderByDescending<TFields>(Expression<Func<T, TFields>> fieldsExpr)
+    public virtual IFromCommand<T> OrderByDescending<TFields>(Expression<Func<T, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-    public IFromCommand<T> OrderByDescending<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr)
+    public virtual IFromCommand<T> OrderByDescending<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
@@ -329,7 +329,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
     #endregion
 
     #region Select
-    public IFromCommand<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr)
+    public virtual IFromCommand<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
@@ -337,7 +337,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
         this.Visitor.Select(null, fieldsExpr, true);
         return this.OrmProvider.NewFromCommand<TTarget>(this.EntityType, this.DbContext, this.Visitor);
     }
-    public IFromCommand<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr)
+    public virtual IFromCommand<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
@@ -348,25 +348,25 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
     #endregion   
 
     #region Distinct
-    public IFromCommand<T> Distinct()
+    public virtual IFromCommand<T> Distinct()
     {
         this.Visitor.Distinct();
         return this;
     }
     #endregion
 
-    #region Take 
-    public IFromCommand<T> Skip(int offset)
+    #region Skip/Take
+    public virtual IFromCommand<T> Skip(int offset)
     {
         this.Visitor.Skip(offset);
         return this;
     }
-    public IFromCommand<T> Take(int limit)
+    public virtual IFromCommand<T> Take(int limit)
     {
         this.Visitor.Take(limit);
         return this;
     }
-    #endregion      
+    #endregion
 }
 <#
     var count = 6;
@@ -385,31 +385,31 @@ public class FromCommand<<#=tables#>> : FromCommand, IFromCommand<<#=tables#>>
     #endregion
 
     #region Sharding
-    public IFromCommand<<#=tables#>> UseTable(params string[] tableNames)
+    public virtual IFromCommand<<#=tables#>> UseTable(params string[] tableNames)
     {
         var entityType = typeof(<#=currentTable#>);
         this.Visitor.UseTable(entityType, tableNames);
         return this;
     }
-    public IFromCommand<<#=tables#>> UseTable(Func<string, bool> tableNamePredicate)
+    public virtual IFromCommand<<#=tables#>> UseTable(Func<string, bool> tableNamePredicate)
     {
         var entityType = typeof(<#=currentTable#>);
         this.Visitor.UseTable(entityType, tableNamePredicate);
         return this;
     }
-    public IFromCommand<<#=tables#>> UseTableBy(object field1Value, object field2Value = null)
+    public virtual IFromCommand<<#=tables#>> UseTableBy(object field1Value, object field2Value = null)
     {
         var entityType = typeof(<#=currentTable#>);
         this.Visitor.UseTableBy(entityType, field1Value, field2Value);
         return this;
     }
-    public IFromCommand<<#=tables#>> UseTableByRange(object beginFieldValue, object endFieldValue)
+    public virtual IFromCommand<<#=tables#>> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
         var entityType = typeof(<#=currentTable#>);
         this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
         return this;
     }
-    public IFromCommand<<#=tables#>> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public virtual IFromCommand<<#=tables#>> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         var entityType = typeof(<#=currentTable#>);
         this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
@@ -418,7 +418,7 @@ public class FromCommand<<#=tables#>> : FromCommand, IFromCommand<<#=tables#>>
     #endregion
 
     #region Join
-    public IFromCommand<<#=tables#>> InnerJoin(Expression<Func<<#=tables#>, bool>> joinOn)
+    public virtual IFromCommand<<#=tables#>> InnerJoin(Expression<Func<<#=tables#>, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
@@ -426,7 +426,7 @@ public class FromCommand<<#=tables#>> : FromCommand, IFromCommand<<#=tables#>>
         this.Visitor.Join("INNER JOIN", joinOn);
         return this;
     }
-    public IFromCommand<<#=tables#>> LeftJoin(Expression<Func<<#=tables#>, bool>> joinOn)
+    public virtual IFromCommand<<#=tables#>> LeftJoin(Expression<Func<<#=tables#>, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
@@ -434,7 +434,7 @@ public class FromCommand<<#=tables#>> : FromCommand, IFromCommand<<#=tables#>>
         this.Visitor.Join("LEFT JOIN", joinOn);
         return this;
     }
-    public IFromCommand<<#=tables#>> RightJoin(Expression<Func<<#=tables#>, bool>> joinOn)
+    public virtual IFromCommand<<#=tables#>> RightJoin(Expression<Func<<#=tables#>, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
@@ -446,7 +446,7 @@ public class FromCommand<<#=tables#>> : FromCommand, IFromCommand<<#=tables#>>
         if(i < count)
         {
 #>
-    public IFromCommand<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+    public virtual IFromCommand<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
@@ -454,7 +454,7 @@ public class FromCommand<<#=tables#>> : FromCommand, IFromCommand<<#=tables#>>
         this.Visitor.Join("INNER JOIN", typeof(TOther), joinOn);
         return this.OrmProvider.NewFromCommand<<#=tables#>, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
-    public IFromCommand<<#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+    public virtual IFromCommand<<#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
@@ -462,7 +462,7 @@ public class FromCommand<<#=tables#>> : FromCommand, IFromCommand<<#=tables#>>
         this.Visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
         return this.OrmProvider.NewFromCommand<<#=tables#>, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
-    public IFromCommand<<#=tables#>, TOther> RightJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+    public virtual IFromCommand<<#=tables#>, TOther> RightJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
@@ -470,7 +470,7 @@ public class FromCommand<<#=tables#>> : FromCommand, IFromCommand<<#=tables#>>
         this.Visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
         return this.OrmProvider.NewFromCommand<<#=tables#>, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
-    public IFromCommand<<#=tables#>, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+    public virtual IFromCommand<<#=tables#>, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
@@ -480,7 +480,7 @@ public class FromCommand<<#=tables#>> : FromCommand, IFromCommand<<#=tables#>>
         this.Visitor.Join("INNER JOIN", typeof(TOther), subQuery, joinOn);
         return this.OrmProvider.NewFromCommand<<#=tables#>, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
-    public IFromCommand<<#=tables#>, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+    public virtual IFromCommand<<#=tables#>, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
@@ -490,7 +490,7 @@ public class FromCommand<<#=tables#>> : FromCommand, IFromCommand<<#=tables#>>
         this.Visitor.Join("LEFT JOIN", typeof(TOther), subQuery, joinOn);
         return this.OrmProvider.NewFromCommand<<#=tables#>, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
-    public IFromCommand<<#=tables#>, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+    public virtual IFromCommand<<#=tables#>, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
@@ -500,7 +500,7 @@ public class FromCommand<<#=tables#>> : FromCommand, IFromCommand<<#=tables#>>
         this.Visitor.Join("RIGHT JOIN", typeof(TOther), subQuery, joinOn);
         return this.OrmProvider.NewFromCommand<<#=tables#>, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
-    public IFromCommand<<#=tables#>, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+    public virtual IFromCommand<<#=tables#>, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
@@ -510,7 +510,7 @@ public class FromCommand<<#=tables#>> : FromCommand, IFromCommand<<#=tables#>>
         this.Visitor.Join("INNER JOIN", typeof(TOther), this.DbContext, subQuery, joinOn);
         return this.OrmProvider.NewFromCommand<<#=tables#>, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
-    public IFromCommand<<#=tables#>, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+    public virtual IFromCommand<<#=tables#>, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
@@ -520,7 +520,7 @@ public class FromCommand<<#=tables#>> : FromCommand, IFromCommand<<#=tables#>>
         this.Visitor.Join("LEFT JOIN", typeof(TOther), this.DbContext, subQuery, joinOn);
         return this.OrmProvider.NewFromCommand<<#=tables#>, TOther>(this.EntityType, this.DbContext, this.Visitor);
     }
-    public IFromCommand<<#=tables#>, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+    public virtual IFromCommand<<#=tables#>, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
@@ -534,7 +534,7 @@ public class FromCommand<<#=tables#>> : FromCommand, IFromCommand<<#=tables#>>
     #endregion
 
     #region Where/And
-    public IFromCommand<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate)
+    public virtual IFromCommand<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate)
     {
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
@@ -542,7 +542,7 @@ public class FromCommand<<#=tables#>> : FromCommand, IFromCommand<<#=tables#>>
         this.Visitor.Where(predicate);
         return this;
     }
-    public IFromCommand<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
+    public virtual IFromCommand<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
             throw new ArgumentNullException(nameof(ifPredicate));
@@ -552,7 +552,7 @@ public class FromCommand<<#=tables#>> : FromCommand, IFromCommand<<#=tables#>>
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
-    public IFromCommand<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate)
+    public virtual IFromCommand<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate)
     {
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
@@ -560,7 +560,7 @@ public class FromCommand<<#=tables#>> : FromCommand, IFromCommand<<#=tables#>>
         this.Visitor.And(predicate);
         return this;
     }
-    public IFromCommand<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate = null, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
+    public virtual IFromCommand<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate = null, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
             throw new ArgumentNullException(nameof(ifPredicate));
@@ -573,7 +573,7 @@ public class FromCommand<<#=tables#>> : FromCommand, IFromCommand<<#=tables#>>
     #endregion
 
     #region GroupBy
-    public IGroupingCommand<<#=tables#>, TGrouping> GroupBy<TGrouping>(Expression<Func<<#=tables#>, TGrouping>> groupingExpr)
+    public virtual IGroupingCommand<<#=tables#>, TGrouping> GroupBy<TGrouping>(Expression<Func<<#=tables#>, TGrouping>> groupingExpr)
     {
         if (groupingExpr == null)
             throw new ArgumentNullException(nameof(groupingExpr));
@@ -584,9 +584,9 @@ public class FromCommand<<#=tables#>> : FromCommand, IFromCommand<<#=tables#>>
     #endregion
 
     #region OrderBy
-    public IFromCommand<<#=tables#>> OrderBy<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr)
+    public virtual IFromCommand<<#=tables#>> OrderBy<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr)
          => this.OrderBy(true, fieldsExpr);
-    public IFromCommand<<#=tables#>> OrderBy<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr)
+    public virtual IFromCommand<<#=tables#>> OrderBy<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
@@ -595,9 +595,9 @@ public class FromCommand<<#=tables#>> : FromCommand, IFromCommand<<#=tables#>>
             this.Visitor.OrderBy("ASC", fieldsExpr);
         return this;
     }
-    public IFromCommand<<#=tables#>> OrderByDescending<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr)
+    public virtual IFromCommand<<#=tables#>> OrderByDescending<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-    public IFromCommand<<#=tables#>> OrderByDescending<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr)
+    public virtual IFromCommand<<#=tables#>> OrderByDescending<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
@@ -609,7 +609,7 @@ public class FromCommand<<#=tables#>> : FromCommand, IFromCommand<<#=tables#>>
     #endregion
 
     #region Select
-    public IFromCommand<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr)
+    public virtual IFromCommand<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
@@ -617,7 +617,7 @@ public class FromCommand<<#=tables#>> : FromCommand, IFromCommand<<#=tables#>>
         this.Visitor.Select(null, fieldsExpr);
         return this.OrmProvider.NewFromCommand<TTarget>(this.EntityType, this.DbContext, this.Visitor);
     }
-    public IFromCommand<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, <#=tables#>, TTarget>> fieldsExpr)
+    public virtual IFromCommand<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, <#=tables#>, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
@@ -627,10 +627,16 @@ public class FromCommand<<#=tables#>> : FromCommand, IFromCommand<<#=tables#>>
     }
     #endregion
 
-    #region Take    
-    public IFromCommand<<#=tables#>> Take(int limit)
+    #region Skip/Take
+    public virtual IFromCommand<<#=tables#>> Skip(int offset)
     {
-        throw new NotImplementedException();
+        this.Visitor.Skip(offset);
+        return this;
+    }
+    public virtual IFromCommand<<#=tables#>> Take(int limit)
+    {
+        this.Visitor.Take(limit);
+        return this;
     }
     #endregion
 }

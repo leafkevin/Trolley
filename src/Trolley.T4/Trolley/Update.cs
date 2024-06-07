@@ -455,7 +455,7 @@ public class UpdateFrom<TEntity, T1> : Updated<TEntity>, IUpdateFrom<TEntity, T1
 
         if (condition) this.Visitor.SetWith(updateObj);
         return this;
-    }
+    }    
     public virtual IUpdateFrom<TEntity, T1> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
         => this.Set(true, fieldSelector, fieldValue);
     public virtual IUpdateFrom<TEntity, T1> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
@@ -514,7 +514,7 @@ public class UpdateFrom<TEntity, T1> : Updated<TEntity>, IUpdateFrom<TEntity, T1
         if (condition)
             this.Visitor.SetFrom(fieldsAssignment);
         return this;
-    }
+    }    
     #endregion
 
     #region Where/And
@@ -564,7 +564,7 @@ public class UpdateFrom<TEntity, T1, T2> : Updated<TEntity>, IUpdateFrom<TEntity
 
         if (condition) this.Visitor.SetWith(updateObj);
         return this;
-    }
+    }    
     public virtual IUpdateFrom<TEntity, T1, T2> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
         => this.Set(true, fieldSelector, fieldValue);
     public virtual IUpdateFrom<TEntity, T1, T2> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
@@ -623,7 +623,7 @@ public class UpdateFrom<TEntity, T1, T2> : Updated<TEntity>, IUpdateFrom<TEntity
         if (condition)
             this.Visitor.SetFrom(fieldsAssignment);
         return this;
-    }
+    }    
     #endregion
 
     #region Where/And
@@ -673,7 +673,7 @@ public class UpdateFrom<TEntity, T1, T2, T3> : Updated<TEntity>, IUpdateFrom<TEn
 
         if (condition) this.Visitor.SetWith(updateObj);
         return this;
-    }
+    }    
     public virtual IUpdateFrom<TEntity, T1, T2, T3> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
         => this.Set(true, fieldSelector, fieldValue);
     public virtual IUpdateFrom<TEntity, T1, T2, T3> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
@@ -732,7 +732,7 @@ public class UpdateFrom<TEntity, T1, T2, T3> : Updated<TEntity>, IUpdateFrom<TEn
         if (condition)
             this.Visitor.SetFrom(fieldsAssignment);
         return this;
-    }
+    }    
     #endregion
 
     #region Where/And
@@ -782,7 +782,7 @@ public class UpdateFrom<TEntity, T1, T2, T3, T4> : Updated<TEntity>, IUpdateFrom
 
         if (condition) this.Visitor.SetWith(updateObj);
         return this;
-    }
+    }    
     public virtual IUpdateFrom<TEntity, T1, T2, T3, T4> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
         => this.Set(true, fieldSelector, fieldValue);
     public virtual IUpdateFrom<TEntity, T1, T2, T3, T4> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
@@ -841,7 +841,7 @@ public class UpdateFrom<TEntity, T1, T2, T3, T4> : Updated<TEntity>, IUpdateFrom
         if (condition)
             this.Visitor.SetFrom(fieldsAssignment);
         return this;
-    }
+    }    
     #endregion
 
     #region Where/And
@@ -891,7 +891,7 @@ public class UpdateFrom<TEntity, T1, T2, T3, T4, T5> : Updated<TEntity>, IUpdate
 
         if (condition) this.Visitor.SetWith(updateObj);
         return this;
-    }
+    }    
     public virtual IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
         => this.Set(true, fieldSelector, fieldValue);
     public virtual IUpdateFrom<TEntity, T1, T2, T3, T4, T5> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
@@ -950,7 +950,7 @@ public class UpdateFrom<TEntity, T1, T2, T3, T4, T5> : Updated<TEntity>, IUpdate
         if (condition)
             this.Visitor.SetFrom(fieldsAssignment);
         return this;
-    }
+    }    
     #endregion
 
     #region Where/And

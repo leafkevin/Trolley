@@ -12,7 +12,7 @@ public enum TableType : byte
     /// <summary>
     /// 实体表，真实表，主表或是Include表
     /// </summary>
-    Entity = 1,
+    Entity,
     /// <summary>
     /// 子查询表，临时表
     /// </summary>

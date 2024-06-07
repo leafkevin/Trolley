@@ -58,7 +58,7 @@ public class Delete<TEntity> : IDelete<TEntity>
     #endregion
 
     #region Where
-    public IDeleted<TEntity> Where(object keys)
+    public virtual IDeleted<TEntity> Where(object keys)
     {
         if (keys == null)
             throw new ArgumentNullException(nameof(keys));
@@ -66,9 +66,9 @@ public class Delete<TEntity> : IDelete<TEntity>
         this.Visitor.WhereWith(keys);
         return new Deleted<TEntity>(this.DbContext, this.Visitor);
     }
-    public IContinuedDelete<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
+    public virtual IContinuedDelete<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
         => this.Where(true, predicate);
-    public IContinuedDelete<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
+    public virtual IContinuedDelete<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
             throw new ArgumentNullException(nameof(ifPredicate));
@@ -95,17 +95,17 @@ public class Deleted<TEntity> : IDeleted<TEntity>
     #endregion
 
     #region Execute
-    public int Execute() => this.DbContext.Execute(f => f.CommandText = this.Visitor.BuildCommand(f));
-    public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
+    public virtual int Execute() => this.DbContext.Execute(f => f.CommandText = this.Visitor.BuildCommand(f));
+    public virtual async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
         => await this.DbContext.ExecuteAsync(f => f.CommandText = this.Visitor.BuildCommand(f), cancellationToken);
     #endregion
 
     #region ToMultipleCommand
-    public MultipleCommand ToMultipleCommand() => this.Visitor.CreateMultipleCommand();
+    public virtual MultipleCommand ToMultipleCommand() => this.Visitor.CreateMultipleCommand();
     #endregion
 
     #region ToSql
-    public string ToSql(out List<IDbDataParameter> dbParameters)
+    public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
         using var command = this.DbContext.CreateCommand();
         var sql = this.Visitor.BuildCommand(command);
@@ -123,9 +123,9 @@ public class ContinuedDelete<TEntity> : Deleted<TEntity>, IContinuedDelete<TEnti
     #endregion
 
     #region And
-    public IContinuedDelete<TEntity> And(Expression<Func<TEntity, bool>> predicate)
+    public virtual IContinuedDelete<TEntity> And(Expression<Func<TEntity, bool>> predicate)
         => this.And(true, predicate);
-    public IContinuedDelete<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
+    public virtual IContinuedDelete<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
     {
         if (ifPredicate == null)
             throw new ArgumentNullException(nameof(ifPredicate));

@@ -110,7 +110,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                     }
 
                     var formatSql = builder.ToString();
-                    (_, var sql) = this.DbContext.BuildSql(this.Visitor as SqlVisitor, command, formatSql, ";");
+                    (_, var sql) = this.DbContext.BuildSql(this.Visitor as SqlVisitor, formatSql, ";");
                     command = this.DbContext.CreateCommand();
                     command.CommandText = sql;
                     result = command.ExecuteNonQuery();
@@ -231,7 +231,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                     }
 
                     var formatSql = builder.ToString();
-                    (_, var sql) = this.DbContext.BuildSql(this.Visitor as SqlVisitor, command, formatSql, ";");
+                    (_, var sql) = this.DbContext.BuildSql(this.Visitor as SqlVisitor, formatSql, ";");
                     command = this.DbContext.CreateDbCommand();
                     command.CommandText = sql;
                     result = await command.ExecuteNonQueryAsync(cancellationToken);

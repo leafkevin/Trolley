@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -22,20 +21,20 @@ public class Create<TEntity> : ICreate<TEntity>
     public Create(DbContext dbContext)
     {
         this.DbContext = dbContext;
-        this.Visitor = this.DbContext.OrmProvider.NewCreateVisitor(dbContext.DbKey, this.DbContext.MapProvider, this.DbContext.ShardingProvider, this.DbContext.IsParameterized);
+        this.Visitor = this.DbContext.OrmProvider.NewCreateVisitor(dbContext.DbKey, dbContext.MapProvider, dbContext.ShardingProvider, dbContext.IsParameterized);
         this.Visitor.Initialize(typeof(TEntity));
         this.DbContext = dbContext;
     }
     #endregion
 
     #region Sharding
-    public ICreate<TEntity> UseTable(string tableName)
+    public virtual ICreate<TEntity> UseTable(string tableName)
     {
         var entityType = typeof(TEntity);
         this.Visitor.UseTable(entityType, tableName);
         return this;
     }
-    public ICreate<TEntity> UseTableBy(object field1Value, object field2Value = null)
+    public virtual ICreate<TEntity> UseTableBy(object field1Value, object field2Value = null)
     {
         var entityType = typeof(TEntity);
         this.Visitor.UseTableBy(entityType, field1Value, field2Value);
@@ -44,7 +43,7 @@ public class Create<TEntity> : ICreate<TEntity>
     #endregion
 
     #region WithBy
-    public IContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj)
+    public virtual IContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj)
     {
         if (insertObj == null)
             throw new ArgumentNullException(nameof(insertObj));
@@ -61,7 +60,7 @@ public class Create<TEntity> : ICreate<TEntity>
     #endregion
 
     #region WithBulk
-    public IContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount = 500)
+    public virtual IContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount = 500)
     {
         if (insertObjs == null)
             throw new ArgumentNullException(nameof(insertObjs));
@@ -75,50 +74,50 @@ public class Create<TEntity> : ICreate<TEntity>
     #endregion
 
     #region From
-    public IFromCommand<T> From<T>()
+    public virtual IFromCommand<T> From<T>()
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
         queryVisitor.From('b', typeof(T));
         return this.OrmProvider.NewFromCommand<T>(typeof(TEntity), this.DbContext, queryVisitor);
     }
-    public IFromCommand<T1, T2> From<T1, T2>()
+    public virtual IFromCommand<T1, T2> From<T1, T2>()
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
         queryVisitor.From('b', typeof(T1), typeof(T2));
         return this.OrmProvider.NewFromCommand<T1, T2>(typeof(TEntity), this.DbContext, queryVisitor);
     }
-    public IFromCommand<T1, T2, T3> From<T1, T2, T3>()
+    public virtual IFromCommand<T1, T2, T3> From<T1, T2, T3>()
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
         queryVisitor.From('b', typeof(T1), typeof(T2), typeof(T3));
         return this.OrmProvider.NewFromCommand<T1, T2, T3>(typeof(TEntity), this.DbContext, queryVisitor);
     }
-    public IFromCommand<T1, T2, T3, T4> From<T1, T2, T3, T4>()
+    public virtual IFromCommand<T1, T2, T3, T4> From<T1, T2, T3, T4>()
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
         queryVisitor.From('b', typeof(T1), typeof(T2), typeof(T3), typeof(T4));
         return this.OrmProvider.NewFromCommand<T1, T2, T3, T4>(typeof(TEntity), this.DbContext, queryVisitor);
     }
-    public IFromCommand<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>()
+    public virtual IFromCommand<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>()
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
         queryVisitor.From('b', typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
         return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5>(typeof(TEntity), this.DbContext, queryVisitor);
     }
-    public IFromCommand<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>()
+    public virtual IFromCommand<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>()
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
         queryVisitor.From('b', typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
         return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5, T6>(typeof(TEntity), this.DbContext, queryVisitor);
     }
 
-    public IFromCommand<TTarget> From<TTarget>(IQuery<TTarget> subQuery)
+    public virtual IFromCommand<TTarget> From<TTarget>(IQuery<TTarget> subQuery)
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
         queryVisitor.From(typeof(TTarget), subQuery);
         return this.OrmProvider.NewFromCommand<TTarget>(typeof(TEntity), this.DbContext, queryVisitor);
     }
-    public IFromCommand<TTarget> From<TTarget>(Func<IFromQuery, IQuery<TTarget>> cteSubQuery)
+    public virtual IFromCommand<TTarget> From<TTarget>(Func<IFromQuery, IQuery<TTarget>> cteSubQuery)
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
         queryVisitor.From(typeof(TTarget), this.DbContext, cteSubQuery);
@@ -147,77 +146,22 @@ public class Created<TEntity> : ICreated<TEntity>
         int result = 0;
         Exception exception = null;
         bool isNeedClose = this.DbContext.IsNeedClose;
-        using var command = this.DbContext.CreateCommand();
         try
         {
             switch (this.Visitor.ActionMode)
             {
                 case ActionMode.Bulk:
-                    var sqlBuilder = new StringBuilder();
-                    (var isNeedSplit, var tableName, var insertObjs, var bulkCount, var firstInsertObj,
-                        var headSqlSetter, var commandInitializer) = this.Visitor.BuildWithBulk(command);
-
-                    Action<string, object> clearCommand = (tableName, insertObj) =>
-                    {
-                        sqlBuilder.Clear();
-                        command.Parameters.Clear();
-                        headSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName, insertObj);
-                    };
-                    Func<string, IEnumerable, int> executor = (tableName, insertObjs) =>
-                    {
-                        var isFirst = true;
-                        int count = 0, index = 0;
-                        foreach (var insertObj in insertObjs)
-                        {
-                            if (index > 0) sqlBuilder.Append(',');
-                            commandInitializer.Invoke(command.Parameters, sqlBuilder, insertObj, index.ToString());
-                            if (index >= bulkCount)
-                            {
-                                command.CommandText = sqlBuilder.ToString();
-                                if (isFirst)
-                                {
-                                    this.DbContext.Open();
-                                    isFirst = false;
-                                }
-                                count += command.ExecuteNonQuery();
-                                clearCommand.Invoke(tableName, insertObj);
-                                index = 0;
-                                continue;
-                            }
-                            index++;
-                        }
-                        if (index > 0)
-                        {
-                            command.CommandText = sqlBuilder.ToString();
-                            if (isFirst) this.DbContext.Open();
-                            count += command.ExecuteNonQuery();
-                        }
-                        return count;
-                    };
-
-                    if (isNeedSplit)
-                    {
-                        var entityType = typeof(TEntity);
-                        var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
-                        foreach (var tabledInsertObj in tabledInsertObjs)
-                        {
-                            headSqlSetter.Invoke(command.Parameters, sqlBuilder, tabledInsertObj.Key, tabledInsertObj);
-                            result += executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
-                        }
-                    }
-                    else
-                    {
-                        headSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName, firstInsertObj);
-                        result = executor.Invoke(tableName, insertObjs);
-                    }
-                    sqlBuilder.Clear();
-                    sqlBuilder = null;
+                    result = this.DbContext.CreateBulk(this.Visitor);
                     break;
                 default:
-                    //默认单条
-                    command.CommandText = this.Visitor.BuildCommand(command, false);
-                    this.DbContext.Open();
-                    result = command.ExecuteNonQuery();
+                    {
+                        //默认单条
+                        using var command = this.DbContext.CreateCommand();
+                        command.CommandText = this.Visitor.BuildCommand(command, false);
+                        this.DbContext.Open();
+                        result = command.ExecuteNonQuery();
+                        command.Dispose();
+                    }
                     break;
             }
         }
@@ -228,7 +172,6 @@ public class Created<TEntity> : ICreated<TEntity>
         }
         finally
         {
-            command.Dispose();
             if (isNeedClose) this.Close();
         }
         if (exception != null) throw exception;
@@ -239,77 +182,21 @@ public class Created<TEntity> : ICreated<TEntity>
         int result = 0;
         Exception exception = null;
         bool isNeedClose = this.DbContext.IsNeedClose;
-        using var command = this.DbContext.CreateDbCommand();
         try
         {
             switch (this.Visitor.ActionMode)
             {
                 case ActionMode.Bulk:
-                    var sqlBuilder = new StringBuilder();
-                    (var isNeedSplit, var tableName, var insertObjs, var bulkCount, var firstInsertObj,
-                        var headSqlSetter, var commandInitializer) = this.Visitor.BuildWithBulk(command);
-
-                    Action<string, object> clearCommand = (tableName, insertObj) =>
-                    {
-                        sqlBuilder.Clear();
-                        command.Parameters.Clear();
-                        headSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName, insertObj);
-                    };
-                    Func<string, IEnumerable, Task<int>> executor = async (tableName, insertObjs) =>
-                    {
-                        var isFirst = true;
-                        int count = 0, index = 0;
-                        foreach (var insertObj in insertObjs)
-                        {
-                            if (index > 0) sqlBuilder.Append(',');
-                            commandInitializer.Invoke(command.Parameters, sqlBuilder, insertObj, index.ToString());
-                            if (index >= bulkCount)
-                            {
-                                command.CommandText = sqlBuilder.ToString();
-                                if (isFirst)
-                                {
-                                    await this.DbContext.OpenAsync(cancellationToken);
-                                    isFirst = false;
-                                }
-                                count += await command.ExecuteNonQueryAsync(cancellationToken);
-                                clearCommand.Invoke(tableName, insertObj);
-                                index = 0;
-                                continue;
-                            }
-                            index++;
-                        }
-                        if (index > 0)
-                        {
-                            command.CommandText = sqlBuilder.ToString();
-                            if (isFirst) await this.DbContext.OpenAsync(cancellationToken);
-                            count += await command.ExecuteNonQueryAsync(cancellationToken);
-                        }
-                        return count;
-                    };
-
-                    if (isNeedSplit)
-                    {
-                        var entityType = typeof(TEntity);
-                        var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
-                        foreach (var tabledInsertObj in tabledInsertObjs)
-                        {
-                            headSqlSetter.Invoke(command.Parameters, sqlBuilder, tabledInsertObj.Key, tabledInsertObj);
-                            result += await executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
-                        }
-                    }
-                    else
-                    {
-                        headSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName, firstInsertObj);
-                        result = await executor.Invoke(tableName, insertObjs);
-                    }
-                    sqlBuilder.Clear();
-                    sqlBuilder = null;
+                    result = await this.DbContext.CreateBulkAsync(this.Visitor, cancellationToken);
                     break;
                 default:
-                    //默认单条
-                    command.CommandText = this.Visitor.BuildCommand(command, false);
-                    await this.DbContext.OpenAsync(cancellationToken);
-                    result = await command.ExecuteNonQueryAsync(cancellationToken);
+                    {
+                        //默认单条
+                        using var command = this.DbContext.CreateDbCommand();
+                        command.CommandText = this.Visitor.BuildCommand(command, false);
+                        await this.DbContext.OpenAsync(cancellationToken);
+                        result = await command.ExecuteNonQueryAsync(cancellationToken);
+                    }
                     break;
             }
         }
@@ -320,7 +207,6 @@ public class Created<TEntity> : ICreated<TEntity>
         }
         finally
         {
-            await command.DisposeAsync();
             if (isNeedClose) await this.CloseAsync();
         }
         if (exception != null) throw exception;
@@ -329,16 +215,16 @@ public class Created<TEntity> : ICreated<TEntity>
     #endregion
 
     #region ExecuteIdentity
-    public int ExecuteIdentity() => this.DbContext.CreateIdentity<int>(this.Visitor);
-    public async Task<int> ExecuteIdentityAsync(CancellationToken cancellationToken = default)
+    public virtual int ExecuteIdentity() => this.DbContext.CreateIdentity<int>(this.Visitor);
+    public virtual async Task<int> ExecuteIdentityAsync(CancellationToken cancellationToken = default)
         => await this.DbContext.CreateIdentityAsync<int>(this.Visitor, cancellationToken);
-    public long ExecuteIdentityLong() => this.DbContext.CreateIdentity<long>(this.Visitor);
-    public async Task<long> ExecuteIdentityLongAsync(CancellationToken cancellationToken = default)
+    public virtual long ExecuteIdentityLong() => this.DbContext.CreateIdentity<long>(this.Visitor);
+    public virtual async Task<long> ExecuteIdentityLongAsync(CancellationToken cancellationToken = default)
         => await this.DbContext.CreateIdentityAsync<long>(this.Visitor, cancellationToken);
     #endregion
 
     #region ToMultipleCommand
-    public MultipleCommand ToMultipleCommand()
+    public virtual MultipleCommand ToMultipleCommand()
     {
         var result = this.Visitor.CreateMultipleCommand();
         this.Visitor.Dispose();
@@ -348,7 +234,7 @@ public class Created<TEntity> : ICreated<TEntity>
     #endregion
 
     #region ToSql
-    public string ToSql(out List<IDbDataParameter> dbParameters)
+    public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
         using var command = this.DbContext.CreateCommand();
         var sql = this.Visitor.BuildCommand(command, false);
@@ -358,13 +244,13 @@ public class Created<TEntity> : ICreated<TEntity>
     #endregion
 
     #region Close
-    public void Close()
+    public virtual void Close()
     {
         this.DbContext.Close();
         this.Visitor.Dispose();
         this.Visitor = null;
     }
-    public async ValueTask CloseAsync()
+    public virtual async ValueTask CloseAsync()
     {
         await this.DbContext.CloseAsync();
         this.Visitor.Dispose();
@@ -380,9 +266,9 @@ public class ContinuedCreate<TEntity> : Created<TEntity>, IContinuedCreate<TEnti
     #endregion
 
     #region WithBy
-    public IContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj)
+    public virtual IContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj)
         => this.WithBy(true, insertObj);
-    public IContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj)
+    public virtual IContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj)
     {
         if (insertObj == null)
             throw new ArgumentNullException(nameof(insertObj));
@@ -394,9 +280,9 @@ public class ContinuedCreate<TEntity> : Created<TEntity>, IContinuedCreate<TEnti
         if (condition) this.Visitor.WithBy(insertObj);
         return this;
     }
-    public IContinuedCreate<TEntity> WithBy<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
+    public virtual IContinuedCreate<TEntity> WithBy<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
         => this.WithBy(true, fieldSelector, fieldValue);
-    public IContinuedCreate<TEntity> WithBy<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
+    public virtual IContinuedCreate<TEntity> WithBy<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
     {
         if (fieldSelector == null)
             throw new ArgumentNullException(nameof(fieldSelector));
@@ -407,7 +293,7 @@ public class ContinuedCreate<TEntity> : Created<TEntity>, IContinuedCreate<TEnti
     #endregion
 
     #region IgnoreFields
-    public IContinuedCreate<TEntity> IgnoreFields(params string[] fieldNames)
+    public virtual IContinuedCreate<TEntity> IgnoreFields(params string[] fieldNames)
     {
         if (fieldNames == null)
             throw new ArgumentNullException(nameof(fieldNames));
@@ -415,7 +301,7 @@ public class ContinuedCreate<TEntity> : Created<TEntity>, IContinuedCreate<TEnti
         this.Visitor.IgnoreFields(fieldNames);
         return this;
     }
-    public IContinuedCreate<TEntity> IgnoreFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector)
+    public virtual IContinuedCreate<TEntity> IgnoreFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector)
     {
         if (fieldsSelector == null)
             throw new ArgumentNullException(nameof(fieldsSelector));
@@ -428,7 +314,7 @@ public class ContinuedCreate<TEntity> : Created<TEntity>, IContinuedCreate<TEnti
     #endregion
 
     #region OnlyFields
-    public IContinuedCreate<TEntity> OnlyFields(params string[] fieldNames)
+    public virtual IContinuedCreate<TEntity> OnlyFields(params string[] fieldNames)
     {
         if (fieldNames == null)
             throw new ArgumentNullException(nameof(fieldNames));
@@ -436,7 +322,7 @@ public class ContinuedCreate<TEntity> : Created<TEntity>, IContinuedCreate<TEnti
         this.Visitor.OnlyFields(fieldNames);
         return this;
     }
-    public IContinuedCreate<TEntity> OnlyFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector)
+    public virtual IContinuedCreate<TEntity> OnlyFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector)
     {
         if (fieldsSelector == null)
             throw new ArgumentNullException(nameof(fieldsSelector));

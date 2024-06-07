@@ -29,16 +29,12 @@ partial class SqlServerProvider
                         var elementSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
                         var arraySegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
 
-                        //TODO:数组优化
                         var enumerable = arraySegment.Value as IEnumerable;
                         foreach (var item in enumerable)
                         {
                             if (builder.Length > 0)
                                 builder.Append(',');
-                            string sqlArgument = null;
-                            if (item is SqlSegment sqlSegment)
-                                sqlArgument = visitor.GetQuotedValue(sqlSegment);
-                            else sqlArgument = visitor.GetQuotedValue(item, arraySegment, elementSegment);
+                            var sqlArgument = visitor.GetQuotedValue(item, arraySegment, elementSegment);
                             builder.Append(sqlArgument);
                         }
                         if (builder.Length > 0)
@@ -68,10 +64,7 @@ partial class SqlServerProvider
                         {
                             if (builder.Length > 0)
                                 builder.Append(',');
-                            string sqlArgument = null;
-                            if (item is SqlSegment sqlSegment)
-                                sqlArgument = visitor.GetQuotedValue(sqlSegment);
-                            else sqlArgument = visitor.GetQuotedValue(item, targetSegment, elementSegment);
+                            var sqlArgument = visitor.GetQuotedValue(item, targetSegment, elementSegment);
                             builder.Append(sqlArgument);
                         }
                         if (builder.Length > 0)

@@ -404,17 +404,6 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.Select(null, defaultExpr);
         return this;
     }
-    //TODO:
-    //public virtual IQuery<TTarget> Select<TTarget>(TTarget parameters)
-    //{
-    //    if (parameters == null)
-    //        throw new ArgumentNullException(nameof(parameters));
-    //    //TODO:
-    //    this.Visitor.Select(fields, null, true);
-    //    var fromQuery = new FromQuery<TTarget>(this.connection, this.transaction,this.ormProvider, this.mapProvider, this.Visitor, this.insertType);
-    //    //this.Visitor.Select()
-    //    return fromQuery;
-    //}
     public virtual IQuery<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
@@ -633,7 +622,7 @@ public class Query<T> : QueryBase, IQuery<T>
     #endregion
 
     #region AsCteTable
-    public ICteQuery<T> AsCteTable(string tableName)
+    public virtual ICteQuery<T> AsCteTable(string tableName)
     {
         //防止重复创建对象
         if (this is ICteQuery<T> cteQueryObj)
@@ -660,9 +649,8 @@ public class Query<T> : QueryBase, IQuery<T>
     {
         Expression<Func<T, T>> defaultExpr = f => f;
         this.Visitor.SelectDefault(defaultExpr);
-        var command = this.DbContext.CreateCommand();
         var sql = this.Visitor.BuildSql(out _);
-        (_, sql) = this.DbContext.BuildSql(this.Visitor as SqlVisitor, command, sql, " UNION ALL ");
+        (_, sql) = this.DbContext.BuildSql(this.Visitor as SqlVisitor, sql, " UNION ALL ");
         dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         this.Visitor.Dispose();
         return sql;
@@ -672,9 +660,9 @@ public class Query<T> : QueryBase, IQuery<T>
 public class CteQuery<T> : Query<T>, ICteQuery<T>
 {
     #region Properties
-    public virtual string TableName { get; set; }
-    public virtual List<ReaderField> ReaderFields { get; set; }
-    public virtual bool IsRecursive { get; set; }
+    public string TableName { get; set; }
+    public List<ReaderField> ReaderFields { get; set; }
+    public bool IsRecursive { get; set; }
     #endregion
 
     #region Constructor

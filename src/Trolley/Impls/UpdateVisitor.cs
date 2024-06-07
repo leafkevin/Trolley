@@ -39,6 +39,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             this.TableAliases = new();
             this.Tables.Add(new TableSegment
             {
+                TableType = TableType.Entity,
                 EntityType = entityType,
                 AliasName = "a",
                 Mapper = this.MapProvider.GetEntityMap(entityType)
@@ -602,7 +603,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var lambdaExpr = whereExpr as LambdaExpression;
         this.InitTableAlias(lambdaExpr);
         this.LastWhereNodeType = OperationType.None;
-        //TODO:别名测试
         var whereSql = this.VisitConditionExpr(lambdaExpr.Body);
         if (!string.IsNullOrEmpty(this.WhereSql))
             this.WhereSql += " AND ";

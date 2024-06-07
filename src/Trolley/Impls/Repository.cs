@@ -1117,11 +1117,6 @@ public class Repository : IRepository
     #endregion
 
     #region Others
-    public IRepository UseTenant<TTenantId>(TTenantId tenantId)
-    {
-
-        return this;
-    }
     public virtual void Close() => this.Dispose();
     public virtual async Task CloseAsync() => await this.DisposeAsync();
     public virtual IRepository Timeout(int timeout)

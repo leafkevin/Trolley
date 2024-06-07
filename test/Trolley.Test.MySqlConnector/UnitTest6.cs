@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using MySqlConnector;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -1224,6 +1225,164 @@ namespace Trolley.Test.MySqlConnector
             {
                 var tenantIds = result.Select(f => f.TenantId).Distinct().ToList();
                 Assert.Contains("104", tenantIds);
+            }
+        }
+        [Fact]
+        public async void Update_SingleSharding()
+        {
+            await this.InitSharding();
+            using var repository = dbFactory.Create();
+            var orderIds = new string[] { "ON_1001", "ON_1002", "ON_1003", "ON_1004" };
+            var sql = repository.Update<Order>()
+                .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                .Set(new { TotalAmount = 400 })
+                .Where(f => orderIds.Contains(f.Id))
+                .ToSql(out var dbParameters);
+            Assert.True(sql == "UPDATE `sys_order_104_202405` SET `TotalAmount`=@TotalAmount WHERE `Id` IN (@p1,@p2,@p3,@p4)");
+            Assert.True((int)dbParameters[0].Value == 400);
+            Assert.True(((MySqlParameter)dbParameters[0]).MySqlDbType == MySqlDbType.Double);
+            Assert.True((string)dbParameters[1].Value == orderIds[0]);
+            Assert.True((string)dbParameters[2].Value == orderIds[1]);
+            Assert.True((string)dbParameters[3].Value == orderIds[2]);
+            Assert.True((string)dbParameters[4].Value == orderIds[3]);
+
+            var result = await repository.Update<Order>()
+                .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                .Set(new { TotalAmount = 400 })
+                .Where(f => orderIds.Contains(f.Id))
+                .ExecuteAsync();
+            Assert.True(result > 0);
+        }
+        [Fact]
+        public async void Update_ManySharding1()
+        {
+            await this.InitSharding();
+            using var repository = dbFactory.Create();
+            var orderIds = new string[] { "ON_1001", "ON_1002", "ON_2003", "ON_2004" };
+            var sql = repository.Update<Order>()
+                .UseTable("sys_order_104_202405", "sys_order_105_202405")
+                .Set(new { TotalAmount = 400 })
+                .Where(f => orderIds.Contains(f.Id))
+                .ToSql(out var dbParameters);
+            Assert.True(sql == "UPDATE `sys_order_104_202405` SET `TotalAmount`=@TotalAmount WHERE `Id` IN (@p1,@p2,@p3,@p4);UPDATE `sys_order_105_202405` SET `TotalAmount`=@TotalAmount WHERE `Id` IN (@p1,@p2,@p3,@p4)");
+            Assert.True((int)dbParameters[0].Value == 400);
+            Assert.True(((MySqlParameter)dbParameters[0]).MySqlDbType == MySqlDbType.Double);
+            Assert.True((string)dbParameters[1].Value == orderIds[0]);
+            Assert.True((string)dbParameters[2].Value == orderIds[1]);
+            Assert.True((string)dbParameters[3].Value == orderIds[2]);
+            Assert.True((string)dbParameters[4].Value == orderIds[3]);
+
+            await repository.BeginTransactionAsync();
+            var result = await repository.Update<Order>()
+                .UseTable("sys_order_104_202405", "sys_order_105_202405")
+                .Set(new { TotalAmount = 400 })
+                .Where(f => orderIds.Contains(f.Id))
+                .ExecuteAsync();
+            var orders = await repository.From<Order>()
+                .UseTable("sys_order_104_202405", "sys_order_105_202405")
+                .Where(f => orderIds.Contains(f.Id))
+                .ToListAsync();
+            await repository.CommitAsync();
+
+            Assert.True(result > 0);
+            foreach (var order in orders)
+            {
+                Assert.True(order.TotalAmount == 400);
+                Assert.True(order.TenantId == "104" || order.TenantId == "105");
+                Assert.Contains(order.Id, orderIds);
+            }
+        }
+        [Fact]
+        public async void Update_ManySharding2()
+        {
+            await this.InitSharding();
+            using var repository = dbFactory.Create();
+            var orderIds = new string[] { "ON_1001", "ON_1002", "ON_2003", "ON_2004" };
+            var sql = repository.Update<Order>()
+                .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f.Substring(f.Length - 6)) > 202001)
+                .Set(new { TotalAmount = 400 })
+                .Where(f => orderIds.Contains(f.Id))
+                .ToSql(out var dbParameters);
+            Assert.True(sql == "UPDATE `sys_order_104_202405` SET `TotalAmount`=@TotalAmount WHERE `Id` IN (@p1,@p2,@p3,@p4);UPDATE `sys_order_105_202405` SET `TotalAmount`=@TotalAmount WHERE `Id` IN (@p1,@p2,@p3,@p4)");
+            Assert.True((int)dbParameters[0].Value == 400);
+            Assert.True(((MySqlParameter)dbParameters[0]).MySqlDbType == MySqlDbType.Double);
+            Assert.True((string)dbParameters[1].Value == orderIds[0]);
+            Assert.True((string)dbParameters[2].Value == orderIds[1]);
+            Assert.True((string)dbParameters[3].Value == orderIds[2]);
+            Assert.True((string)dbParameters[4].Value == orderIds[3]);
+
+            await repository.BeginTransactionAsync();
+            var result = await repository.Update<Order>()
+                .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f.Substring(f.Length - 6)) > 202001)
+                .Set(new { TotalAmount = 400 })
+                .Where(f => orderIds.Contains(f.Id))
+                .ExecuteAsync();
+            var orders = await repository.From<Order>()
+                .UseTable("sys_order_104_202405", "sys_order_105_202405")
+                .Where(f => orderIds.Contains(f.Id))
+                .ToListAsync();
+            await repository.CommitAsync();
+
+            Assert.True(result > 0);
+            foreach (var order in orders)
+            {
+                Assert.True(order.TotalAmount == 400);
+                Assert.True(order.TenantId == "104" || order.TenantId == "105");
+                Assert.Contains(order.Id, orderIds);
+            }
+        }
+        [Fact]
+        public async void Update_SetBulk_ManySharding()
+        {
+            await this.InitSharding();
+            var createdAt = DateTime.Parse("2024-05-24");
+            using var repository = dbFactory.Create();
+            var orders = repository.From<Order>()
+                .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f.Substring(f.Length - 6)) > 202001)
+                .OrderByDescending(f => f.Id)
+                .Take(500)
+                .ToList();
+            orders.ForEach(f =>
+            {
+                f.TotalAmount = 300;
+                f.ProductCount = 3;
+                f.UpdatedAt = DateTime.Now;
+            });
+            var orderIds = orders.Select(f => f.Id).ToList();
+
+            var sql = repository.Update<Order>()
+                .UseTable("sys_order_104_202405", "sys_order_105_202405")
+                .SetBulk(orders, 200)
+                .IgnoreFields(f => new { f.OrderNo, f.BuyerId, f.SellerId })
+                .ToSql(out var dbParameters);
+
+
+            Assert.True(sql == "UPDATE `sys_order_104_202405` SET `TotalAmount`=@TotalAmount WHERE `Id` IN (@p1,@p2,@p3,@p4);UPDATE `sys_order_105_202405` SET `TotalAmount`=@TotalAmount WHERE `Id` IN (@p1,@p2,@p3,@p4)");
+            Assert.True((int)dbParameters[0].Value == 400);
+            Assert.True(((MySqlParameter)dbParameters[0]).MySqlDbType == MySqlDbType.Double);
+            Assert.True((string)dbParameters[1].Value == orderIds[0]);
+            Assert.True((string)dbParameters[2].Value == orderIds[1]);
+            Assert.True((string)dbParameters[3].Value == orderIds[2]);
+            Assert.True((string)dbParameters[4].Value == orderIds[3]);
+
+            //await repository.BeginTransactionAsync();
+            //var result = await repository.Update<Order>()
+            //    .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            //    .Set(new { TotalAmount = 400 })
+            //    .Where(f => orderIds.Contains(f.Id))
+            //    .ExecuteAsync();
+            //var orders = await repository.From<Order>()
+            //    .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            //    .Where(f => orderIds.Contains(f.Id))
+            //    .ToListAsync();
+            //await repository.CommitAsync();
+
+            //Assert.True(result > 0);
+            foreach (var order in orders)
+            {
+                Assert.True(order.TotalAmount == 400);
+                Assert.True(order.TenantId == "104" || order.TenantId == "105");
+                Assert.Contains(order.Id, orderIds);
             }
         }
     }
