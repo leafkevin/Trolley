@@ -127,22 +127,22 @@ public interface IOrmProvider
     IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>(MultipleQuery multiQuery, IQueryVisitor visitor);
     IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember>(MultipleQuery multiQuery, IQueryVisitor visitor);
 
-    IMultiGroupingQuery<T, TGrouping> NewMultiGroupQuery<T, TGrouping>(MultipleQuery multiQuery, IQueryVisitor visitor);
-    IMultiGroupingQuery<T1, T2, TGrouping> NewMultiGroupQuery<T1, T2, TGrouping>(MultipleQuery multiQuery, IQueryVisitor visitor);
-    IMultiGroupingQuery<T1, T2, T3, TGrouping> NewMultiGroupQuery<T1, T2, T3, TGrouping>(MultipleQuery multiQuery, IQueryVisitor visitor);
-    IMultiGroupingQuery<T1, T2, T3, T4, TGrouping> NewMultiGroupQuery<T1, T2, T3, T4, TGrouping>(MultipleQuery multiQuery, IQueryVisitor visitor);
-    IMultiGroupingQuery<T1, T2, T3, T4, T5, TGrouping> NewMultiGroupQuery<T1, T2, T3, T4, T5, TGrouping>(MultipleQuery multiQuery, IQueryVisitor visitor);
-    IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> NewMultiGroupQuery<T1, T2, T3, T4, T5, T6, TGrouping>(MultipleQuery multiQuery, IQueryVisitor visitor);
-    IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> NewMultiGroupQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping>(MultipleQuery multiQuery, IQueryVisitor visitor);
-    IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> NewMultiGroupQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping>(MultipleQuery multiQuery, IQueryVisitor visitor);
-    IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> NewMultiGroupQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping>(MultipleQuery multiQuery, IQueryVisitor visitor);
-    IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> NewMultiGroupQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping>(MultipleQuery multiQuery, IQueryVisitor visitor);
-    IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> NewMultiGroupQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping>(MultipleQuery multiQuery, IQueryVisitor visitor);
-    IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping> NewMultiGroupQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping>(MultipleQuery multiQuery, IQueryVisitor visitor);
-    IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping> NewMultiGroupQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping>(MultipleQuery multiQuery, IQueryVisitor visitor);
-    IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping> NewMultiGroupQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping>(MultipleQuery multiQuery, IQueryVisitor visitor);
-    IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> NewMultiGroupQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>(MultipleQuery multiQuery, IQueryVisitor visitor);
-    IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping> NewMultiGroupQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping>(MultipleQuery multiQuery, IQueryVisitor visitor);
+    IMultiGroupingQuery<T, TGrouping> NewMultiGroupingQuery<T, TGrouping>(MultipleQuery multiQuery, IQueryVisitor visitor);
+    IMultiGroupingQuery<T1, T2, TGrouping> NewMultiGroupingQuery<T1, T2, TGrouping>(MultipleQuery multiQuery, IQueryVisitor visitor);
+    IMultiGroupingQuery<T1, T2, T3, TGrouping> NewMultiGroupingQuery<T1, T2, T3, TGrouping>(MultipleQuery multiQuery, IQueryVisitor visitor);
+    IMultiGroupingQuery<T1, T2, T3, T4, TGrouping> NewMultiGroupingQuery<T1, T2, T3, T4, TGrouping>(MultipleQuery multiQuery, IQueryVisitor visitor);
+    IMultiGroupingQuery<T1, T2, T3, T4, T5, TGrouping> NewMultiGroupingQuery<T1, T2, T3, T4, T5, TGrouping>(MultipleQuery multiQuery, IQueryVisitor visitor);
+    IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> NewMultiGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping>(MultipleQuery multiQuery, IQueryVisitor visitor);
+    IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> NewMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping>(MultipleQuery multiQuery, IQueryVisitor visitor);
+    IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> NewMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping>(MultipleQuery multiQuery, IQueryVisitor visitor);
+    IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> NewMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping>(MultipleQuery multiQuery, IQueryVisitor visitor);
+    IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> NewMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping>(MultipleQuery multiQuery, IQueryVisitor visitor);
+    IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> NewMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping>(MultipleQuery multiQuery, IQueryVisitor visitor);
+    IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping> NewMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping>(MultipleQuery multiQuery, IQueryVisitor visitor);
+    IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping> NewMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping>(MultipleQuery multiQuery, IQueryVisitor visitor);
+    IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping> NewMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping>(MultipleQuery multiQuery, IQueryVisitor visitor);
+    IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> NewMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>(MultipleQuery multiQuery, IQueryVisitor visitor);
+    IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping> NewMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping>(MultipleQuery multiQuery, IQueryVisitor visitor);
 
     ICreate<TEntity> NewCreate<TEntity>(DbContext dbContext);
     ICreated<TEntity> NewCreated<TEntity>(DbContext dbContext, ICreateVisitor visitor);
@@ -151,6 +151,11 @@ public interface IOrmProvider
     IUpdate<TEntity> NewUpdate<TEntity>(DbContext dbContext) => new Update<TEntity>(dbContext);
     IUpdated<TEntity> NewUpdated<TEntity>(DbContext dbContext, IUpdateVisitor visitor);
     IContinuedUpdate<TEntity> NewContinuedUpdate<TEntity>(DbContext dbContext, IUpdateVisitor visitor);
+    IUpdateJoin<TEntity, T1> NewUpdateJoin<TEntity, T1>(DbContext dbContext, IUpdateVisitor visitor);
+    IUpdateJoin<TEntity, T1, T2> NewUpdateJoin<TEntity, T1, T2>(DbContext dbContext, IUpdateVisitor visitor);
+    IUpdateJoin<TEntity, T1, T2, T3> NewUpdateJoin<TEntity, T1, T2, T3>(DbContext dbContext, IUpdateVisitor visitor);
+    IUpdateJoin<TEntity, T1, T2, T3, T4> NewUpdateJoin<TEntity, T1, T2, T3, T4>(DbContext dbContext, IUpdateVisitor visitor);
+    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> NewUpdateJoin<TEntity, T1, T2, T3, T4, T5>(DbContext dbContext, IUpdateVisitor visitor);
 
     IDelete<TEntity> NewDelete<TEntity>(DbContext dbContext);
     IDeleted<TEntity> NewDeleted<TEntity>(DbContext dbContext, IDeleteVisitor visitor);

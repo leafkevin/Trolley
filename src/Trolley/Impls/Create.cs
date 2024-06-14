@@ -55,7 +55,7 @@ public class Create<TEntity> : ICreate<TEntity>
             throw new NotSupportedException("单个实体必须是类或结构类型，不能是基础类型");
 
         this.Visitor.WithBy(insertObj);
-        return new ContinuedCreate<TEntity>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewContinuedCreate<TEntity>(this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -67,9 +67,16 @@ public class Create<TEntity> : ICreate<TEntity>
 
         if (insertObjs is string || insertObjs is IDictionary<string, object>)
             throw new NotSupportedException("批量插入，单个对象类型只支持命名对象、匿名对象或是字典对象");
+        bool isEmpty = true;
+        foreach (var insertObj in insertObjs)
+        {
+            isEmpty = false;
+            break;
+        }
+        if (isEmpty) throw new Exception("批量插入，insertObjs参数至少要有一条数据");
 
         this.Visitor.WithBulk(insertObjs, bulkCount);
-        return new ContinuedCreate<TEntity>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewContinuedCreate<TEntity>(this.DbContext, this.Visitor);
     }
     #endregion
 

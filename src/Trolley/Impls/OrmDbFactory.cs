@@ -93,23 +93,6 @@ public sealed class OrmDbFactory : IOrmDbFactory
         => this.shardingProvider.TryGetShardingTable(entityType, out shardingTable);
     public void AddShardingTable(Type entityType, ShardingTable shardingTable)
         => this.shardingProvider.AddShardingTable(entityType, shardingTable);
-    //public  IRepository Create(string dbKey = null, string tenantId = null)
-    //{
-    //    var database = this.GetDatabase(dbKey);
-    //    if (!this.TryGetOrmProvider(database.OrmProviderType, out var ormProvider))
-    //        throw new Exception($"未注册类型为{database.OrmProviderType.FullName}的OrmProvider");
-    //    var tenantDatabase = database.GetTenantDatabase(tenantId);
-    //    if (!this.TryGetMapProvider(database.OrmProviderType, out var mapProvider))
-    //        throw new Exception($"未注册Key为{database.OrmProviderType.FullName}的EntityMapProvider");
-    //    var connection = new TheaConnection
-    //    {
-    //        DbKey = dbKey,
-    //        BaseConnection = ormProvider.CreateConnection(tenantDatabase.ConnectionString),
-    //        OrmProvider = ormProvider
-    //    };
-    //    return new Repository(dbKey, connection, ormProvider, mapProvider).With(this.options);
-    //}
-
 
     public IRepository CreateRepository(string dbKey = null)
     {
@@ -124,6 +107,7 @@ public sealed class OrmDbFactory : IOrmDbFactory
         {
             DbKey = localDbKey,
             ConnectionString = database.ConnectionString,
+            Connection = ormProvider.CreateConnection(database.ConnectionString),
             OrmProvider = ormProvider,
             MapProvider = mapProvider,
             ShardingProvider = this.shardingProvider,

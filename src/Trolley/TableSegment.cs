@@ -115,10 +115,6 @@ public class TableSegment
     /// </summary>
     public TableSegment ShardingDependent { get; set; }
     /// <summary>
-    /// 主表ShardingDependent中的每一个分表名映射的当前表的分表名
-    /// </summary>
-    public Dictionary<string, string> ShardingMaps { get; set; }
-    /// <summary>
     /// 当前表的分表名筛选委托
     /// </summary>
     public Func<string, bool> ShardingFilter { get; set; }

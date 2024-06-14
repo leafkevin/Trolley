@@ -49,7 +49,7 @@ public interface IIncludableQuery<T, TMember> : IQuery<T>
     /// <returns>返回导航属性查询对象</returns>
     new IIncludableQuery<T, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定TMember表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定TMember表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -152,7 +152,7 @@ public interface IIncludableQuery<T1, T2, TMember> : IQuery<T1, T2>
     /// <returns>返回导航属性查询对象</returns>
     new IIncludableQuery<T1, T2, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -256,7 +256,7 @@ public interface IIncludableQuery<T1, T2, T3, TMember> : IQuery<T1, T2, T3>
     /// <returns>返回导航属性查询对象</returns>
     new IIncludableQuery<T1, T2, T3, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -361,7 +361,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, TMember> : IQuery<T1, T2, T3, 
     /// <returns>返回导航属性查询对象</returns>
     new IIncludableQuery<T1, T2, T3, T4, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -467,7 +467,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, TMember> : IQuery<T1, T2, 
     /// <returns>返回导航属性查询对象</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -574,7 +574,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : IQuery<T1, 
     /// <returns>返回导航属性查询对象</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -682,7 +682,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : IQuery<
     /// <returns>返回导航属性查询对象</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -791,7 +791,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> : IQu
     /// <returns>返回导航属性查询对象</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -901,7 +901,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> :
     /// <returns>返回导航属性查询对象</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -1012,7 +1012,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMemb
     /// <returns>返回导航属性查询对象</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -1124,7 +1124,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <returns>返回导航属性查询对象</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -1237,7 +1237,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <returns>返回导航属性查询对象</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -1351,7 +1351,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <returns>返回导航属性查询对象</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -1466,7 +1466,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <returns>返回导航属性查询对象</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -1582,7 +1582,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <returns>返回导航属性查询对象</returns>
     new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>

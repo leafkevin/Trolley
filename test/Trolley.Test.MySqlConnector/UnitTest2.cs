@@ -985,6 +985,38 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
         Assert.True(sql == "SELECT a.`Id`,a.`TenantId`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`SourceType`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_user` a WHERE EXISTS(SELECT * FROM `sys_company` t WHERE t.`Name` LIKE '%Microsoft%' AND a.`CompanyId`=t.`Id`)");
 
         sql = repository.From<User>()
+            .Where(f => repository.From<Company>('b').Exists(t => t.Name.Contains("Microsoft") && f.CompanyId == t.Id))
+            .ToSql(out _);
+        Assert.True(sql == "SELECT a.`Id`,a.`TenantId`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`SourceType`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_user` a WHERE EXISTS(SELECT * FROM `sys_company` b WHERE b.`Name` LIKE '%Microsoft%' AND a.`CompanyId`=b.`Id`)");
+
+        sql = repository.From<User>()
+            .Where(f => repository.From<Order>('b')
+                .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
+                .Exists((x, y) => x.BuyerId == f.Id && y.Price > 200))
+            .ToSql(out _);
+        Assert.True(sql == "SELECT a.`Id`,a.`TenantId`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`SourceType`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_user` a WHERE EXISTS(SELECT * FROM `sys_order` b INNER JOIN `sys_order_detail` c ON b.`Id`=c.`OrderId` WHERE b.`BuyerId`=a.`Id` AND c.`Price`>200)");
+
+        sql = repository.From<User>()
+            .Where(f => repository.From<Order, OrderDetail>('b')
+               .InnerJoin((x, y) => x.Id == y.OrderId)
+               .Exists((x, y) => x.BuyerId == f.Id && y.Price > 200))
+            .ToSql(out _);
+        Assert.True(sql == "SELECT a.`Id`,a.`TenantId`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`SourceType`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_user` a WHERE EXISTS(SELECT * FROM `sys_order` b INNER JOIN `sys_order_detail` c ON b.`Id`=c.`OrderId` WHERE b.`BuyerId`=a.`Id` AND c.`Price`>200)");
+
+        sql = repository.From<User>()
+            .Where(f => repository.From<Order, OrderDetail>('b')
+               .Exists((x, y) => x.Id == y.OrderId && x.BuyerId == f.Id && y.Price > 200))
+            .ToSql(out _);
+        Assert.True(sql == "SELECT a.`Id`,a.`TenantId`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`SourceType`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_user` a WHERE EXISTS(SELECT * FROM `sys_order` b,`sys_order_detail` c WHERE b.`Id`=c.`OrderId` AND b.`BuyerId`=a.`Id` AND c.`Price`>200)");
+
+        sql = repository.From<User>()
+            .Where(f => repository.From<Order, OrderDetail>('b')
+                .Where((x, y) => x.Id == y.OrderId)
+                .Exists((x, y) => x.BuyerId == f.Id && y.Price > 200))
+            .ToSql(out _);
+        Assert.True(sql == "SELECT a.`Id`,a.`TenantId`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`SourceType`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_user` a WHERE EXISTS(SELECT * FROM `sys_order` b,`sys_order_detail` c WHERE b.`Id`=c.`OrderId` AND b.`BuyerId`=a.`Id` AND c.`Price`>200)");
+
+        sql = repository.From<User>()
             .Where(f => Sql.Exists<Company>(t => t.Name.Contains("Microsoft") && f.CompanyId == t.Id))
             .ToSql(out _);
         Assert.True(sql == "SELECT a.`Id`,a.`TenantId`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`SourceType`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_user` a WHERE EXISTS(SELECT * FROM `sys_company` t WHERE t.`Name` LIKE '%Microsoft%' AND a.`CompanyId`=t.`Id`)");

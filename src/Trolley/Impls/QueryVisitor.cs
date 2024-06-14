@@ -112,7 +112,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         builder.Clear();
         string tableSql = null;
-
+        bool hasSharding = false;
         if (this.Tables.Count > 0)
         {
             //每个表都要有单独的GUID值，否则有类似的表前缀名，也会被替换导致表名替换错误
@@ -128,6 +128,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     }
                     else builder.Append(',');
                 }
+                if (tableSegment.IsSharding) hasSharding = true;
                 builder.Append(tableName);
                 //子查询要设置表别名               
                 builder.Append(" " + tableSegment.AliasName);
@@ -178,7 +179,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
 
         //UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不对
-        if (this.IsUnion && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue))
+        if ((this.IsUnion || hasSharding) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue))
         {
             builder.Insert(0, "SELECT * FROM (");
             builder.Append($") a");
@@ -251,7 +252,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         builder.Clear();
         string tableSql = null;
-
+        bool hasSharding = false;
         if (this.Tables.Count > 0)
         {
             foreach (var tableSegment in this.Tables)
@@ -266,6 +267,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     }
                     else builder.Append(',');
                 }
+                if (tableSegment.IsSharding) hasSharding = true;
                 builder.Append(tableName);
                 //子查询要设置表别名               
                 builder.Append(" " + tableSegment.AliasName);
@@ -313,7 +315,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
 
         //UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不对
-        if (this.IsUnion && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue))
+        if ((this.IsUnion || hasSharding) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue))
         {
             builder.Insert(0, "SELECT * FROM (");
             builder.Append($") a");
@@ -973,6 +975,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
     public virtual void Where(Expression whereExpr)
     {
+        //为了兼容，Where条件中的Exists，多个表联合查询时，有Where+Exists的场景
+        if (!string.IsNullOrEmpty(this.WhereSql))
+        {
+            this.And(whereExpr);
+            return;
+        }
         this.IsWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
         this.ClearUnionSql();
@@ -1862,7 +1870,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.InitFromQueryReaderFields(tableSegment, readerFields);
 
         //子查询中引用了分表，最外层也需要设置分表信息IsSharding、ShardingTables
-        if (subQuery.Visitor.ShardingTables != null)
+        if (subQuery.Visitor.ShardingTables != null && subQuery.Visitor.ShardingTables.Count > 0)
         {
             tableSegment.IsSharding = true;
             if (this.ShardingTables == null)
@@ -1900,21 +1908,24 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             return tableSegment;
         }
         var masterTables = this.Tables.FindAll(f => f.IsMaster);
-        int index = 0;
-        foreach (var parameterExpr in lambdaExpr.Parameters)
+        if (masterTables.Count > 0)
         {
-            if (typeof(IAggregateSelect).IsAssignableFrom(parameterExpr.Type))
-                continue;
-            if (typeof(IFromQuery).IsAssignableFrom(parameterExpr.Type))
-                continue;
-            if (!parameterNames.Contains(parameterExpr.Name))
+            int index = 0;
+            foreach (var parameterExpr in lambdaExpr.Parameters)
             {
+                if (typeof(IAggregateSelect).IsAssignableFrom(parameterExpr.Type))
+                    continue;
+                if (typeof(IFromQuery).IsAssignableFrom(parameterExpr.Type))
+                    continue;
+                if (!parameterNames.Contains(parameterExpr.Name))
+                {
+                    index++;
+                    continue;
+                }
+                this.TableAliases.Add(parameterExpr.Name, masterTables[index]);
+                tableSegment = masterTables[index];
                 index++;
-                continue;
             }
-            this.TableAliases.Add(parameterExpr.Name, masterTables[index]);
-            tableSegment = masterTables[index];
-            index++;
         }
         if (this.RefTableAliases != null && parameterNames.Count > this.TableAliases.Count)
         {

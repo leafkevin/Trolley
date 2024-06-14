@@ -63,12 +63,12 @@ public class IncludableQuery<T, TMember> : Query<T>, IIncludableQuery<T, TMember
     public IIncludableQuery<T, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
     {
         this.Visitor.ThenInclude(member);
-        return new IncludableQuery<T, TNavigation>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewIncludableQuery<T, TNavigation>(this.DbContext, this.Visitor);
     }
     public IIncludableQuery<T, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null)
     {
         this.Visitor.ThenInclude(member, true, filter);
-        return new IncludableQuery<T, TElment>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewIncludableQuery<T, TElment>(this.DbContext, this.Visitor);
     }
     #endregion
 }
@@ -134,12 +134,12 @@ public class IncludableQuery<<#=tables#>, TMember> : Query<<#=tables#>>, IInclud
     public IIncludableQuery<<#=tables#>, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
     {
         this.Visitor.ThenInclude(member);
-        return new IncludableQuery<<#=tables#>, TNavigation>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewIncludableQuery<<#=tables#>, TNavigation>(this.DbContext, this.Visitor);
     }
     public IIncludableQuery<<#=tables#>, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null)
     {
         this.Visitor.ThenInclude(member, true, filter);
-        return new IncludableQuery<<#=tables#>, TElment>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewIncludableQuery<<#=tables#>, TElment>(this.DbContext, this.Visitor);
     }
     #endregion
 <#      }#>

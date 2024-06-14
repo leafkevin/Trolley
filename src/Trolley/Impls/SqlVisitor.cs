@@ -33,6 +33,9 @@ public class SqlVisitor : ISqlVisitor
     /// </summary>
     public List<TableSegment> Tables { get; set; } = new();
     public Dictionary<string, TableSegment> TableAliases { get; set; } = new();
+    /// <summary>
+    /// 在解析子查询中，会用到父查询中的所有表，父查询中所有表别名引用
+    /// </summary> 
     public Dictionary<string, TableSegment> RefTableAliases { get; set; }
     public bool IsSelect { get; set; }
     public bool IsWhere { get; set; }
@@ -47,6 +50,7 @@ public class SqlVisitor : ISqlVisitor
     public List<ReaderField> GroupFields { get; set; }
     public List<TableSegment> IncludeTables { get; set; }
     public List<IQuery> RefQueries { get; set; } = new();
+    public bool IsNeedFetchShardingTables { get; set; }
     public List<TableSegment> ShardingTables { get; set; }
 
     public void UseTable(Type entityType, params string[] tableNames)
@@ -95,6 +99,7 @@ public class SqlVisitor : ISqlVisitor
         {
             tableSegment.ShardingId = Guid.NewGuid().ToString("N");
             this.ShardingTables.Add(tableSegment);
+            this.IsNeedFetchShardingTables = true;
         }
     }
     public void UseTable(Type entityType, Type masterEntityType, Func<string, string, string, string, string> tableNameGetter)
@@ -118,6 +123,7 @@ public class SqlVisitor : ISqlVisitor
         {
             tableSegment.ShardingId = Guid.NewGuid().ToString("N");
             this.ShardingTables.Add(tableSegment);
+            this.IsNeedFetchShardingTables = true;
         }
     }
     public void UseTableBy(Type entityType, object field1Value, object field2Value = null)
@@ -148,7 +154,21 @@ public class SqlVisitor : ISqlVisitor
             tableName = shardingRule.Invoke(this.DbKey, origTableName, field1Value);
         }
         //单个分表，直接设置body表名，当作不分表处理
-        tableSegment.Body = tableName;
+        if (tableSegment.TableNames == null)
+        {
+            if (string.IsNullOrEmpty(tableSegment.Body))
+                tableSegment.Body = tableName;
+            else
+            {
+                tableSegment.TableNames = new List<string> { tableSegment.Body, tableName };
+                tableSegment.Body = null;
+                tableSegment.ShardingType = ShardingTableType.MultiTable;
+                this.ShardingTables ??= new();
+                if (!this.ShardingTables.Exists(f => f.EntityType == tableSegment.EntityType))
+                    this.ShardingTables.Add(tableSegment);
+            }
+        }
+        else tableSegment.TableNames.Add(tableName);
     }
     public void UseTableByRange(Type entityType, object beginFieldValue, object endFieldValue)
     {
@@ -232,17 +252,32 @@ public class SqlVisitor : ISqlVisitor
                         tableNames = shardingTables.FindAll(f => oldTableNames.Contains(f) && Regex.IsMatch(f, shardingTable.ValidateRegex));
                         if (tableNames.Count > 1)
                             tableSegment.TableNames = tableNames;
-                        else tableSegment.Body = tableNames[0];
+                        else
+                        {
+                            tableSegment.Body = tableNames[0];
+                            this.ShardingTables.Remove(tableSegment);
+                        }
                         break;
                     case ShardingTableType.MasterFilter:
                         tableNames = shardingTables.FindAll(f => f.Contains(tableName) && Regex.IsMatch(f, shardingTable.ValidateRegex));
-                        if (shardingTables.Count > 1)
+                        if (tableNames.Count > 1)
                             tableSegment.TableNames = tableNames;
-                        else tableSegment.Body = tableNames[0];
+                        else
+                        {
+                            tableSegment.Body = tableNames[0];
+                            this.ShardingTables.Remove(tableSegment);
+                        }
                         break;
                     case ShardingTableType.SubordinateMap:
                         //此处只是把所有可能的分表名称设置一下，在执行前，再做过滤
-                        tableSegment.TableNames = shardingTables.FindAll(f => Regex.IsMatch(f, shardingTable.ValidateRegex));
+                        tableNames = shardingTables.FindAll(f => Regex.IsMatch(f, shardingTable.ValidateRegex));
+                        if (tableNames.Count > 1)
+                            tableSegment.TableNames = tableNames;
+                        else
+                        {
+                            tableSegment.Body = tableNames[0];
+                            this.ShardingTables.Remove(tableSegment);
+                        }
                         break;
                 }
             }
@@ -1344,7 +1379,7 @@ public class SqlVisitor : ISqlVisitor
             {
                 if (currentExpr.NodeType == ExpressionType.Parameter)
                 {
-                    queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.ShardingProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
+                    queryVisitor = this.CreateQueryVisitor();
                     fromQuery = new FromQuery(this.OrmProvider, this.MapProvider, queryVisitor, this.IsParameterized);
                     dbContext = fromQuery.dbContext;
                     break;
@@ -1354,7 +1389,7 @@ public class SqlVisitor : ISqlVisitor
                     var sqlSegment = this.VisitMemberAccess(new SqlSegment { Expression = memberExpr });
                     if (sqlSegment.Value is IRepository)
                     {
-                        queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.ShardingProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
+                        queryVisitor = this.CreateQueryVisitor();
                         fromQuery = new FromQuery(this.OrmProvider, this.MapProvider, queryVisitor, this.IsParameterized);
                         dbContext = fromQuery.dbContext;
                     }
@@ -1370,6 +1405,7 @@ public class SqlVisitor : ISqlVisitor
             callStack.Push(callExpr);
             currentExpr = callExpr.Object;
         }
+        char tableAsStart = 'a';
         while (callStack.TryPop(out var callExpr))
         {
             var methodInfo = callExpr.Method;
@@ -1379,7 +1415,6 @@ public class SqlVisitor : ISqlVisitor
             switch (methodInfo.Name)
             {
                 case "From":
-                    char tableAsStart = 'a';
                     if (callExpr.Arguments.Count > 0)
                         tableAsStart = this.Evaluate<char>(callExpr.Arguments[0]);
                     queryVisitor.From(tableAsStart, genericArguments);
@@ -1402,7 +1437,9 @@ public class SqlVisitor : ISqlVisitor
                     };
                     lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
                     queryVisitor.RefTableAliases = this.TableAliases;
-                    queryVisitor.Join(joinType, genericArguments[0], lambdaArgsExpr);
+                    if (genericArguments.Length > 0)
+                        queryVisitor.Join(joinType, genericArguments[0], lambdaArgsExpr);
+                    else queryVisitor.Join(joinType, lambdaArgsExpr);
                     queryVisitor.RefTableAliases = null;
                     break;
                 case "Where":
@@ -1497,35 +1534,19 @@ public class SqlVisitor : ISqlVisitor
                 case "Exists":
                 case "ExistsAsync":
                     lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
-                    var sqlVisitor = queryVisitor as SqlVisitor;
                     var builder = new StringBuilder("SELECT * FROM ");
-                    queryVisitor.InitTableAlias(lambdaArgsExpr);
-
-                    int index = 0;
-                    foreach (var tableAlias in sqlVisitor.TableAliases)
+                    if (genericArguments.Length > 0)
                     {
-                        if (index > 0) builder.Append(',');
-                        builder.Append(this.GetTableName(tableAlias.Value));
-                        builder.Append($" {tableAlias.Value.AliasName}");
-                        index++;
-                    }
-                    builder.Append(" WHERE ");
-
-                    if (lambdaArgsExpr.Body.GetParameterNames(out var parameterNames) && parameterNames.Count > lambdaArgsExpr.Parameters.Count)
-                    {
-                        foreach (var parameterName in parameterNames)
+                        foreach (var argsExpr in lambdaArgsExpr.Parameters)
                         {
-                            if (sqlVisitor.TableAliases.ContainsKey(parameterName))
-                                continue;
-                            if (this.TableAliases.TryGetValue(parameterName, out var tableSegment))
-                                sqlVisitor.TableAliases.TryAdd(parameterName, tableSegment);
+                            queryVisitor.From(argsExpr.Name[0], argsExpr.Type);
                         }
                     }
-                    builder.Append(sqlVisitor.VisitConditionExpr(lambdaArgsExpr.Body));
-                    var sql = builder.ToString();
-                    builder.Clear();
-                    builder = null;
-                    return sql;
+                    queryVisitor.RefTableAliases = this.TableAliases;
+                    queryVisitor.Where(lambdaArgsExpr);
+                    queryVisitor.Select("*");
+                    queryVisitor.RefTableAliases = null;
+                    break;
                 default:
                     throw new NotSupportedException("不支持的表达式解析");
             }

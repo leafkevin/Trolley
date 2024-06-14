@@ -38,7 +38,7 @@ public class FromQuery : IFromQuery
     public IQuery<T> From<T>(char tableAsStart = 'a')
     {
         this.visitor.From(tableAsStart, typeof(T));
-        return new Query<T>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        return this.ormProvider.NewQuery<T>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
 <#
     var count = 16;
@@ -52,7 +52,7 @@ public class FromQuery : IFromQuery
     public IQuery<<#=tables#>> From<<#=tables#>>(char tableAsStart = 'a')
     {
         this.visitor.From(tableAsStart, <#=typeOfTables#>);
-        return new Query<<#=tables#>>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        return this.ormProvider.NewQuery<<#=tables#>>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
     }
 <#  }#>
     #endregion

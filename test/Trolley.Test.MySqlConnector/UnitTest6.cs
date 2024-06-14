@@ -106,12 +106,9 @@ namespace Trolley.Test.MySqlConnector
             using var repository = this.dbFactory.Create();
             await repository.Delete<User>()
                 .UseTableBy("104")
-                .Where(101)
+                .UseTableBy("105")
+                .Where(new[] { 101, 102, 103 })
                 .ExecuteAsync();
-            await repository.Delete<User>()
-               .UseTableBy("105")
-               .Where(new[] { 102, 103 })
-               .ExecuteAsync();
             repository.Create<User>(new[]
             {
                 new User
@@ -289,19 +286,13 @@ namespace Trolley.Test.MySqlConnector
             var removeIds = orders.Select(f => f.Id).ToList();
 
             await repository.BeginTransactionAsync();
-            await repository.Delete<Order>()
+            var count = await repository.Delete<Order>()
                 .UseTableBy("104", createdAt)
-                .Where(f => removeIds.Contains(f.Id))
-                .ExecuteAsync();
-            await repository.Delete<Order>()
                 .UseTableBy("105", createdAt)
                 .Where(f => removeIds.Contains(f.Id))
                 .ExecuteAsync();
-            await repository.Delete<OrderDetail>()
+            count = await repository.Delete<OrderDetail>()
                 .UseTableBy("104", createdAt)
-                .Where(f => removeIds.Contains(f.OrderId))
-                .ExecuteAsync();
-            await repository.Delete<OrderDetail>()
                 .UseTableBy("105", createdAt)
                 .Where(f => removeIds.Contains(f.OrderId))
                 .ExecuteAsync();
@@ -323,9 +314,9 @@ namespace Trolley.Test.MySqlConnector
                 .Where(101)
                 .ExecuteAsync();
             var count = repository.From<User>()
-               .UseTable("sys_user_104")
-               .Where(f => f.Id == 101)
-               .Count();
+                .UseTable("sys_user_104")
+                .Where(f => f.Id == 101)
+                .Count();
             Assert.True(count == 0);
 
             repository.Create<User>()
@@ -364,9 +355,9 @@ namespace Trolley.Test.MySqlConnector
                 .Where(101)
                 .ExecuteAsync();
             var count = repository.From<User>()
-               .UseTableBy("104")
-               .Where(f => f.Id == 101)
-               .Count();
+                .UseTableBy("104")
+                .Where(f => f.Id == 101)
+                .Count();
             Assert.True(count == 0);
 
             await repository.Create<User>()
@@ -404,9 +395,9 @@ namespace Trolley.Test.MySqlConnector
                 .Where(101)
                 .ExecuteAsync();
             var count = repository.From<User>()
-               .UseTableBy("104")
-               .Where(f => f.Id == 101)
-               .Count();
+                .UseTableBy("104")
+                .Where(f => f.Id == 101)
+                .Count();
             Assert.True(count == 0);
 
             repository.Create<User>()
@@ -442,15 +433,8 @@ namespace Trolley.Test.MySqlConnector
             using var repository = this.dbFactory.Create();
             await repository.Delete<User>()
                 .UseTableBy("104")
-                .Where(101)
-                .ExecuteAsync();
-            await repository.Delete<User>()
                 .UseTableBy("105")
-                .Where(102)
-                .ExecuteAsync();
-            await repository.Delete<User>()
-                .UseTableBy("105")
-                .Where(103)
+                .Where(new object[] { 101, 102, 103 })
                 .ExecuteAsync();
             await repository.CreateAsync<User>(new
             {
@@ -532,13 +516,9 @@ namespace Trolley.Test.MySqlConnector
         public async void Create_WithBulk_WithoutUseTable()
         {
             using var repository = this.dbFactory.Create();
+            var userIds = new[] { 101, 102, 103 };
             await repository.Delete<User>()
-                .UseTableBy("104")
-                .Where(101)
-                .ExecuteAsync();
-            var userIds = new[] { 102, 103 };
-            await repository.Delete<User>()
-                .UseTableBy("105")
+                .UseTable(f => f.Contains("104") || f.Contains("105"))
                 .Where(userIds)
                 .ExecuteAsync();
             repository.Create<User>(new[]
@@ -1211,7 +1191,17 @@ namespace Trolley.Test.MySqlConnector
                     .UseTableBy("104", DateTime.Parse("2024-05-24"))
                     .Exists((x, y) => x.Id == f.BuyerId && x.Age <= 25 && y.Price > 100))
                 .ToSql(out _);
-            Assert.True(sql == "SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_order_104_202405` a WHERE EXISTS(SELECT * FROM `sys_user_104` b,`sys_order_detail_104_202405` c WHERE b.`Id`=a.`BuyerId` AND b.`Age`<=25 AND c.`Price`>100)");
+            Assert.True(sql == "SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_order_104_202405` a WHERE EXISTS(SELECT * FROM `sys_user_104` b INNER JOIN `sys_order_detail_104_202405` c ON a.`Id`=c.`OrderId` WHERE b.`Id`=a.`BuyerId` AND b.`Age`<=25 AND c.`Price`>100)");
+
+            sql = repository.From<Order>()
+                .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                .Where(f => repository.From<User>('b')
+                    .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                    .InnerJoin<OrderDetail>((x, y) => f.Id == y.OrderId)
+                    .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                    .Exists((x, y) => x.Id == f.BuyerId && x.Age <= 25 && y.Price > 100))
+                .ToSql(out _);
+            Assert.True(sql == "SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_order_104_202405` a WHERE EXISTS(SELECT * FROM `sys_user_104` b INNER JOIN `sys_order_detail_104_202405` c ON a.`Id`=c.`OrderId` WHERE b.`Id`=a.`BuyerId` AND b.`Age`<=25 AND c.`Price`>100)");
 
             var result = repository.From<Order>()
                 .UseTableBy("104", DateTime.Parse("2024-05-24"))
@@ -1303,7 +1293,7 @@ namespace Trolley.Test.MySqlConnector
                 .Set(new { TotalAmount = 400 })
                 .Where(f => orderIds.Contains(f.Id))
                 .ToSql(out var dbParameters);
-            Assert.True(sql == "UPDATE `sys_order_104_202405` SET `TotalAmount`=@TotalAmount WHERE `Id` IN (@p1,@p2,@p3,@p4);UPDATE `sys_order_105_202405` SET `TotalAmount`=@TotalAmount WHERE `Id` IN (@p1,@p2,@p3,@p4)");
+            Assert.True(sql == "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_SCHEMA='fengling' AND TABLE_NAME LIKE 'sys_order%';UPDATE `sys_order_104_202405` SET `TotalAmount`=@TotalAmount WHERE `Id` IN (@p1,@p2,@p3,@p4);UPDATE `sys_order_105_202405` SET `TotalAmount`=@TotalAmount WHERE `Id` IN (@p1,@p2,@p3,@p4)");
             Assert.True((int)dbParameters[0].Value == 400);
             Assert.True(((MySqlParameter)dbParameters[0]).MySqlDbType == MySqlDbType.Double);
             Assert.True((string)dbParameters[1].Value == orderIds[0]);
@@ -1339,50 +1329,100 @@ namespace Trolley.Test.MySqlConnector
             using var repository = dbFactory.Create();
             var orders = repository.From<Order>()
                 .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f.Substring(f.Length - 6)) > 202001)
+                .Select(f => new
+                {
+                    f.Id,
+                    f.OrderNo,
+                    f.BuyerId,
+                    f.SellerId,
+                    TotalAmount = f.TotalAmount + 50,
+                    ProductCount = 3,
+                    UpdatedAt = DateTime.Now
+                })
                 .OrderByDescending(f => f.Id)
-                .Take(500)
+                .Take(20)
                 .ToList();
-            orders.ForEach(f =>
-            {
-                f.TotalAmount = 300;
-                f.ProductCount = 3;
-                f.UpdatedAt = DateTime.Now;
-            });
             var orderIds = orders.Select(f => f.Id).ToList();
 
             var sql = repository.Update<Order>()
                 .UseTable("sys_order_104_202405", "sys_order_105_202405")
-                .SetBulk(orders, 200)
+                .SetBulk(orders, 10)
+                .Set(f => f.BuyerSource, UserSourceType.Wechat)
                 .IgnoreFields(f => new { f.OrderNo, f.BuyerId, f.SellerId })
                 .ToSql(out var dbParameters);
 
+            Assert.True(sql == "UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount0,`ProductCount`=@ProductCount0,`UpdatedAt`=@UpdatedAt0 WHERE `Id`=@kId0;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount0,`ProductCount`=@ProductCount0,`UpdatedAt`=@UpdatedAt0 WHERE `Id`=@kId0;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount1,`ProductCount`=@ProductCount1,`UpdatedAt`=@UpdatedAt1 WHERE `Id`=@kId1;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount1,`ProductCount`=@ProductCount1,`UpdatedAt`=@UpdatedAt1 WHERE `Id`=@kId1;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount2,`ProductCount`=@ProductCount2,`UpdatedAt`=@UpdatedAt2 WHERE `Id`=@kId2;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount2,`ProductCount`=@ProductCount2,`UpdatedAt`=@UpdatedAt2 WHERE `Id`=@kId2;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount3,`ProductCount`=@ProductCount3,`UpdatedAt`=@UpdatedAt3 WHERE `Id`=@kId3;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount3,`ProductCount`=@ProductCount3,`UpdatedAt`=@UpdatedAt3 WHERE `Id`=@kId3;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount4,`ProductCount`=@ProductCount4,`UpdatedAt`=@UpdatedAt4 WHERE `Id`=@kId4;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount4,`ProductCount`=@ProductCount4,`UpdatedAt`=@UpdatedAt4 WHERE `Id`=@kId4;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount5,`ProductCount`=@ProductCount5,`UpdatedAt`=@UpdatedAt5 WHERE `Id`=@kId5;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount5,`ProductCount`=@ProductCount5,`UpdatedAt`=@UpdatedAt5 WHERE `Id`=@kId5;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount6,`ProductCount`=@ProductCount6,`UpdatedAt`=@UpdatedAt6 WHERE `Id`=@kId6;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount6,`ProductCount`=@ProductCount6,`UpdatedAt`=@UpdatedAt6 WHERE `Id`=@kId6;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount7,`ProductCount`=@ProductCount7,`UpdatedAt`=@UpdatedAt7 WHERE `Id`=@kId7;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount7,`ProductCount`=@ProductCount7,`UpdatedAt`=@UpdatedAt7 WHERE `Id`=@kId7;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount8,`ProductCount`=@ProductCount8,`UpdatedAt`=@UpdatedAt8 WHERE `Id`=@kId8;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount8,`ProductCount`=@ProductCount8,`UpdatedAt`=@UpdatedAt8 WHERE `Id`=@kId8;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount9,`ProductCount`=@ProductCount9,`UpdatedAt`=@UpdatedAt9 WHERE `Id`=@kId9;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount9,`ProductCount`=@ProductCount9,`UpdatedAt`=@UpdatedAt9 WHERE `Id`=@kId9;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount10,`ProductCount`=@ProductCount10,`UpdatedAt`=@UpdatedAt10 WHERE `Id`=@kId10;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount10,`ProductCount`=@ProductCount10,`UpdatedAt`=@UpdatedAt10 WHERE `Id`=@kId10;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount11,`ProductCount`=@ProductCount11,`UpdatedAt`=@UpdatedAt11 WHERE `Id`=@kId11;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount11,`ProductCount`=@ProductCount11,`UpdatedAt`=@UpdatedAt11 WHERE `Id`=@kId11;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount12,`ProductCount`=@ProductCount12,`UpdatedAt`=@UpdatedAt12 WHERE `Id`=@kId12;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount12,`ProductCount`=@ProductCount12,`UpdatedAt`=@UpdatedAt12 WHERE `Id`=@kId12;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount13,`ProductCount`=@ProductCount13,`UpdatedAt`=@UpdatedAt13 WHERE `Id`=@kId13;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount13,`ProductCount`=@ProductCount13,`UpdatedAt`=@UpdatedAt13 WHERE `Id`=@kId13;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount14,`ProductCount`=@ProductCount14,`UpdatedAt`=@UpdatedAt14 WHERE `Id`=@kId14;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount14,`ProductCount`=@ProductCount14,`UpdatedAt`=@UpdatedAt14 WHERE `Id`=@kId14;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount15,`ProductCount`=@ProductCount15,`UpdatedAt`=@UpdatedAt15 WHERE `Id`=@kId15;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount15,`ProductCount`=@ProductCount15,`UpdatedAt`=@UpdatedAt15 WHERE `Id`=@kId15;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount16,`ProductCount`=@ProductCount16,`UpdatedAt`=@UpdatedAt16 WHERE `Id`=@kId16;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount16,`ProductCount`=@ProductCount16,`UpdatedAt`=@UpdatedAt16 WHERE `Id`=@kId16;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount17,`ProductCount`=@ProductCount17,`UpdatedAt`=@UpdatedAt17 WHERE `Id`=@kId17;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount17,`ProductCount`=@ProductCount17,`UpdatedAt`=@UpdatedAt17 WHERE `Id`=@kId17;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount18,`ProductCount`=@ProductCount18,`UpdatedAt`=@UpdatedAt18 WHERE `Id`=@kId18;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount18,`ProductCount`=@ProductCount18,`UpdatedAt`=@UpdatedAt18 WHERE `Id`=@kId18;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount19,`ProductCount`=@ProductCount19,`UpdatedAt`=@UpdatedAt19 WHERE `Id`=@kId19;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount19,`ProductCount`=@ProductCount19,`UpdatedAt`=@UpdatedAt19 WHERE `Id`=@kId19;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount20,`ProductCount`=@ProductCount20,`UpdatedAt`=@UpdatedAt20 WHERE `Id`=@kId20;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount20,`ProductCount`=@ProductCount20,`UpdatedAt`=@UpdatedAt20 WHERE `Id`=@kId20;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount21,`ProductCount`=@ProductCount21,`UpdatedAt`=@UpdatedAt21 WHERE `Id`=@kId21;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount21,`ProductCount`=@ProductCount21,`UpdatedAt`=@UpdatedAt21 WHERE `Id`=@kId21;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount22,`ProductCount`=@ProductCount22,`UpdatedAt`=@UpdatedAt22 WHERE `Id`=@kId22;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount22,`ProductCount`=@ProductCount22,`UpdatedAt`=@UpdatedAt22 WHERE `Id`=@kId22;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount23,`ProductCount`=@ProductCount23,`UpdatedAt`=@UpdatedAt23 WHERE `Id`=@kId23;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount23,`ProductCount`=@ProductCount23,`UpdatedAt`=@UpdatedAt23 WHERE `Id`=@kId23;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount24,`ProductCount`=@ProductCount24,`UpdatedAt`=@UpdatedAt24 WHERE `Id`=@kId24;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount24,`ProductCount`=@ProductCount24,`UpdatedAt`=@UpdatedAt24 WHERE `Id`=@kId24;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount25,`ProductCount`=@ProductCount25,`UpdatedAt`=@UpdatedAt25 WHERE `Id`=@kId25;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount25,`ProductCount`=@ProductCount25,`UpdatedAt`=@UpdatedAt25 WHERE `Id`=@kId25;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount26,`ProductCount`=@ProductCount26,`UpdatedAt`=@UpdatedAt26 WHERE `Id`=@kId26;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount26,`ProductCount`=@ProductCount26,`UpdatedAt`=@UpdatedAt26 WHERE `Id`=@kId26;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount27,`ProductCount`=@ProductCount27,`UpdatedAt`=@UpdatedAt27 WHERE `Id`=@kId27;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount27,`ProductCount`=@ProductCount27,`UpdatedAt`=@UpdatedAt27 WHERE `Id`=@kId27;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount28,`ProductCount`=@ProductCount28,`UpdatedAt`=@UpdatedAt28 WHERE `Id`=@kId28;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount28,`ProductCount`=@ProductCount28,`UpdatedAt`=@UpdatedAt28 WHERE `Id`=@kId28;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount29,`ProductCount`=@ProductCount29,`UpdatedAt`=@UpdatedAt29 WHERE `Id`=@kId29;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount29,`ProductCount`=@ProductCount29,`UpdatedAt`=@UpdatedAt29 WHERE `Id`=@kId29;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount30,`ProductCount`=@ProductCount30,`UpdatedAt`=@UpdatedAt30 WHERE `Id`=@kId30;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount30,`ProductCount`=@ProductCount30,`UpdatedAt`=@UpdatedAt30 WHERE `Id`=@kId30;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount31,`ProductCount`=@ProductCount31,`UpdatedAt`=@UpdatedAt31 WHERE `Id`=@kId31;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount31,`ProductCount`=@ProductCount31,`UpdatedAt`=@UpdatedAt31 WHERE `Id`=@kId31;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount32,`ProductCount`=@ProductCount32,`UpdatedAt`=@UpdatedAt32 WHERE `Id`=@kId32;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount32,`ProductCount`=@ProductCount32,`UpdatedAt`=@UpdatedAt32 WHERE `Id`=@kId32;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount33,`ProductCount`=@ProductCount33,`UpdatedAt`=@UpdatedAt33 WHERE `Id`=@kId33;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount33,`ProductCount`=@ProductCount33,`UpdatedAt`=@UpdatedAt33 WHERE `Id`=@kId33;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount34,`ProductCount`=@ProductCount34,`UpdatedAt`=@UpdatedAt34 WHERE `Id`=@kId34;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount34,`ProductCount`=@ProductCount34,`UpdatedAt`=@UpdatedAt34 WHERE `Id`=@kId34;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount35,`ProductCount`=@ProductCount35,`UpdatedAt`=@UpdatedAt35 WHERE `Id`=@kId35;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount35,`ProductCount`=@ProductCount35,`UpdatedAt`=@UpdatedAt35 WHERE `Id`=@kId35;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount36,`ProductCount`=@ProductCount36,`UpdatedAt`=@UpdatedAt36 WHERE `Id`=@kId36;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount36,`ProductCount`=@ProductCount36,`UpdatedAt`=@UpdatedAt36 WHERE `Id`=@kId36;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount37,`ProductCount`=@ProductCount37,`UpdatedAt`=@UpdatedAt37 WHERE `Id`=@kId37;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount37,`ProductCount`=@ProductCount37,`UpdatedAt`=@UpdatedAt37 WHERE `Id`=@kId37;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount38,`ProductCount`=@ProductCount38,`UpdatedAt`=@UpdatedAt38 WHERE `Id`=@kId38;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount38,`ProductCount`=@ProductCount38,`UpdatedAt`=@UpdatedAt38 WHERE `Id`=@kId38;UPDATE `sys_order_104_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount39,`ProductCount`=@ProductCount39,`UpdatedAt`=@UpdatedAt39 WHERE `Id`=@kId39;UPDATE `sys_order_105_202405` SET `BuyerSource`=@BuyerSource,`TotalAmount`=@TotalAmount39,`ProductCount`=@ProductCount39,`UpdatedAt`=@UpdatedAt39 WHERE `Id`=@kId39");
 
-            Assert.True(sql == "UPDATE `sys_order_104_202405` SET `TotalAmount`=@TotalAmount WHERE `Id` IN (@p1,@p2,@p3,@p4);UPDATE `sys_order_105_202405` SET `TotalAmount`=@TotalAmount WHERE `Id` IN (@p1,@p2,@p3,@p4)");
-            Assert.True((int)dbParameters[0].Value == 400);
-            Assert.True(((MySqlParameter)dbParameters[0]).MySqlDbType == MySqlDbType.Double);
-            Assert.True((string)dbParameters[1].Value == orderIds[0]);
-            Assert.True((string)dbParameters[2].Value == orderIds[1]);
-            Assert.True((string)dbParameters[3].Value == orderIds[2]);
-            Assert.True((string)dbParameters[4].Value == orderIds[3]);
-
-            //await repository.BeginTransactionAsync();
-            //var result = await repository.Update<Order>()
-            //    .UseTable("sys_order_104_202405", "sys_order_105_202405")
-            //    .Set(new { TotalAmount = 400 })
-            //    .Where(f => orderIds.Contains(f.Id))
-            //    .ExecuteAsync();
-            //var orders = await repository.From<Order>()
-            //    .UseTable("sys_order_104_202405", "sys_order_105_202405")
-            //    .Where(f => orderIds.Contains(f.Id))
-            //    .ToListAsync();
-            //await repository.CommitAsync();
-
-            //Assert.True(result > 0);
-            foreach (var order in orders)
+            await repository.BeginTransactionAsync();
+            var result = await repository.Update<Order>()
+                .UseTable("sys_order_104_202405", "sys_order_105_202405")
+                .SetBulk(orders, 10)
+                .Set(f => f.BuyerSource, UserSourceType.Wechat)
+                .IgnoreFields(f => new { f.OrderNo, f.BuyerId, f.SellerId })
+                .ExecuteAsync();
+            var updatedOrders = await repository.From<Order>()
+                .UseTable("sys_order_104_202405", "sys_order_105_202405")
+                .Where(f => orderIds.Contains(f.Id))
+                .ToListAsync();
+            await repository.CommitAsync();
+            orders.Sort((x, y) => x.Id.CompareTo(y.Id));
+            updatedOrders.Sort((x, y) => x.Id.CompareTo(y.Id));
+            Assert.True(result > 0);
+            for (int i = 0; i < orders.Count; i++)
             {
-                Assert.True(order.TotalAmount == 400);
-                Assert.True(order.TenantId == "104" || order.TenantId == "105");
-                Assert.Contains(order.Id, orderIds);
+                Assert.True(orders[i].TotalAmount == updatedOrders[i].TotalAmount);
+                Assert.True(orders[i].ProductCount == updatedOrders[i].ProductCount);
+
+                Assert.True(orders[i].OrderNo == updatedOrders[i].OrderNo);
+                Assert.True(orders[i].BuyerId == updatedOrders[i].BuyerId);
+                Assert.True(orders[i].SellerId == updatedOrders[i].SellerId);
+                Assert.True(updatedOrders[i].TenantId == "104" || updatedOrders[i].TenantId == "105");
+            }
+        }
+        [Fact]
+        public async void Update_BulkCopy_ManySharding()
+        {
+            await this.InitSharding();
+            var createdAt = DateTime.Parse("2024-05-24");
+            using var repository = dbFactory.Create();
+            var orders = repository.From<Order>()
+                .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f.Substring(f.Length - 6)) > 202001)
+                .Select(f => new
+                {
+                    f.Id,
+                    TotalAmount = f.TotalAmount + 50,
+                    ProductCount = 3,
+                    UpdatedAt = DateTime.Now
+                })
+                .OrderByDescending(f => f.Id)
+                .Take(20)
+                .ToList();
+            var orderIds = orders.Select(f => f.Id).ToList();
+
+            var sql = repository.Update<Order>()
+                .UseTable("sys_order_104_202405", "sys_order_105_202405")
+                .SetBulkCopy(orders)
+                .ToSql(out var dbParameters);
+            //Assert.True(sql == "CREATE TEMPORARY TABLE `sys_order_0c0f27d1c0224df38030d8e78b03f8c4`(\r\n`Id` varchar(50) NOT NULL,\r\n`TotalAmount` double,\r\n`ProductCount` int,\r\n`UpdatedAt` datetime,\r\nPRIMARY KEY(`Id`)\r\n);\r\nUPDATE `sys_order_104_202405` a INNER JOIN `sys_order_0c0f27d1c0224df38030d8e78b03f8c4` b ON a.`Id`=b.`Id` SET a.`TotalAmount`=b.`TotalAmount`,a.`ProductCount`=b.`ProductCount`,a.`UpdatedAt`=b.`UpdatedAt`;UPDATE `sys_order_105_202405` a INNER JOIN `sys_order_0c0f27d1c0224df38030d8e78b03f8c4` b ON a.`Id`=b.`Id` SET a.`TotalAmount`=b.`TotalAmount`,a.`ProductCount`=b.`ProductCount`,a.`UpdatedAt`=b.`UpdatedAt`;DROP TABLE `sys_order_0c0f27d1c0224df38030d8e78b03f8c4`");
+
+            await repository.BeginTransactionAsync();
+            var result = await repository.Update<Order>()
+                .UseTable("sys_order_104_202405", "sys_order_105_202405")
+                .SetBulkCopy(orders)
+                .ExecuteAsync();
+            var updatedOrders = await repository.From<Order>()
+                .UseTable("sys_order_104_202405", "sys_order_105_202405")
+                .Where(f => orderIds.Contains(f.Id))
+                .ToListAsync();
+            await repository.CommitAsync();
+            orders.Sort((x, y) => x.Id.CompareTo(y.Id));
+            updatedOrders.Sort((x, y) => x.Id.CompareTo(y.Id));
+            Assert.True(result == orders.Count);
+            for (int i = 0; i < orders.Count; i++)
+            {
+                Assert.True(orders[i].TotalAmount == updatedOrders[i].TotalAmount);
+                Assert.True(orders[i].ProductCount == updatedOrders[i].ProductCount);
+                Assert.True(updatedOrders[i].TenantId == "104" || updatedOrders[i].TenantId == "105");
             }
         }
     }

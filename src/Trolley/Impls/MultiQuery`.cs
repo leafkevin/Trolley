@@ -206,7 +206,7 @@ public class MultiQuery<T1, T2> : MultiQueryBase, IMultiQuery<T1, T2>
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.Visitor.GroupBy(groupingExpr);
-        return this.OrmProvider.NewMultiGroupQuery<T1, T2, TGrouping>(this.MultipleQuery, this.Visitor);
+        return this.OrmProvider.NewMultiGroupingQuery<T1, T2, TGrouping>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -520,7 +520,7 @@ public class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.Visitor.GroupBy(groupingExpr);
-        return this.OrmProvider.NewMultiGroupQuery<T1, T2, T3, TGrouping>(this.MultipleQuery, this.Visitor);
+        return this.OrmProvider.NewMultiGroupingQuery<T1, T2, T3, TGrouping>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -834,7 +834,7 @@ public class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.Visitor.GroupBy(groupingExpr);
-        return this.OrmProvider.NewMultiGroupQuery<T1, T2, T3, T4, TGrouping>(this.MultipleQuery, this.Visitor);
+        return this.OrmProvider.NewMultiGroupingQuery<T1, T2, T3, T4, TGrouping>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -1148,7 +1148,7 @@ public class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.Visitor.GroupBy(groupingExpr);
-        return this.OrmProvider.NewMultiGroupQuery<T1, T2, T3, T4, T5, TGrouping>(this.MultipleQuery, this.Visitor);
+        return this.OrmProvider.NewMultiGroupingQuery<T1, T2, T3, T4, T5, TGrouping>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -1462,7 +1462,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.Visitor.GroupBy(groupingExpr);
-        return this.OrmProvider.NewMultiGroupQuery<T1, T2, T3, T4, T5, T6, TGrouping>(this.MultipleQuery, this.Visitor);
+        return this.OrmProvider.NewMultiGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -1776,7 +1776,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7> : MultiQueryBase, IMultiQuer
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.Visitor.GroupBy(groupingExpr);
-        return this.OrmProvider.NewMultiGroupQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping>(this.MultipleQuery, this.Visitor);
+        return this.OrmProvider.NewMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -2090,7 +2090,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : MultiQueryBase, IMulti
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.Visitor.GroupBy(groupingExpr);
-        return this.OrmProvider.NewMultiGroupQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping>(this.MultipleQuery, this.Visitor);
+        return this.OrmProvider.NewMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -2404,7 +2404,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : MultiQueryBase, IM
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.Visitor.GroupBy(groupingExpr);
-        return this.OrmProvider.NewMultiGroupQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping>(this.MultipleQuery, this.Visitor);
+        return this.OrmProvider.NewMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -2718,7 +2718,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : MultiQueryBas
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.Visitor.GroupBy(groupingExpr);
-        return this.OrmProvider.NewMultiGroupQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping>(this.MultipleQuery, this.Visitor);
+        return this.OrmProvider.NewMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -3032,7 +3032,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : MultiQue
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.Visitor.GroupBy(groupingExpr);
-        return this.OrmProvider.NewMultiGroupQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping>(this.MultipleQuery, this.Visitor);
+        return this.OrmProvider.NewMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -3346,7 +3346,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : Mul
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.Visitor.GroupBy(groupingExpr);
-        return this.OrmProvider.NewMultiGroupQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping>(this.MultipleQuery, this.Visitor);
+        return this.OrmProvider.NewMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -3660,7 +3660,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.Visitor.GroupBy(groupingExpr);
-        return this.OrmProvider.NewMultiGroupQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping>(this.MultipleQuery, this.Visitor);
+        return this.OrmProvider.NewMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -3974,7 +3974,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.Visitor.GroupBy(groupingExpr);
-        return this.OrmProvider.NewMultiGroupQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping>(this.MultipleQuery, this.Visitor);
+        return this.OrmProvider.NewMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -4288,7 +4288,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.Visitor.GroupBy(groupingExpr);
-        return this.OrmProvider.NewMultiGroupQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>(this.MultipleQuery, this.Visitor);
+        return this.OrmProvider.NewMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 
@@ -4499,7 +4499,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.Visitor.GroupBy(groupingExpr);
-        return this.OrmProvider.NewMultiGroupQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping>(this.MultipleQuery, this.Visitor);
+        return this.OrmProvider.NewMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 

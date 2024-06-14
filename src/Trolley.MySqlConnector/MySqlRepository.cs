@@ -1,6 +1,4 @@
-﻿using System.Data;
-
-namespace Trolley.MySqlConnector;
+﻿namespace Trolley.MySqlConnector;
 
 public class MySqlRepository : Repository, IMySqlRepository
 {
@@ -9,6 +7,6 @@ public class MySqlRepository : Repository, IMySqlRepository
     public MySqlRepository(DbContext dbContext) : base(dbContext) { }
     #endregion 
 
-    public override IMySqlCreate<TEntity> Create<TEntity>() => new MySqlCreate<TEntity>(this.DbContext);
-    public override IMySqlUpdate<TEntity> Update<TEntity>() => new MySqlUpdate<TEntity>(this.DbContext);
+    public override IMySqlCreate<TEntity> Create<TEntity>() => this.ormProvider.NewCreate<TEntity>(this.DbContext) as IMySqlCreate<TEntity>;
+    public override IMySqlUpdate<TEntity> Update<TEntity>() => this.ormProvider.NewUpdate<TEntity>(this.DbContext) as IMySqlUpdate<TEntity>;
 }

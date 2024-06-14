@@ -32,7 +32,7 @@ public interface IUpdate<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdate<TEntity> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 根据字段值确定TEntity表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定TEntity表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>

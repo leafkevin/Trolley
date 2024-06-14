@@ -139,16 +139,16 @@ public class MySqlCreateVisitor : CreateVisitor
     {
         var entityType = this.Tables[0].EntityType;
         var updateObjType = updateObj.GetType();
-        var setFieldsInitializer = RepositoryHelper.BuildUpdateSetPartSqlParameters(this.OrmProvider, this.MapProvider, entityType, updateObjType, this.OnlyFieldNames, this.IgnoreFieldNames, this.IsMultiple, true);
+        var setFieldsInitializer = RepositoryHelper.BuildSqlParametersPart(this.OrmProvider, this.MapProvider, entityType, updateObjType, false, true, false, false, false, this.IsMultiple, false, this.OnlyFieldNames, this.IgnoreFieldNames, ",", null);
         if (this.IsMultiple)
         {
-            var typedSetFieldsInitializer = setFieldsInitializer as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
-            typedSetFieldsInitializer.Invoke(this.DbParameters, this.UpdateFields, this.OrmProvider, updateObj, $"_m{this.CommandIndex}");
+            var typedSetFieldsInitializer = setFieldsInitializer as Action<StringBuilder, IOrmProvider, object, string>;
+            typedSetFieldsInitializer.Invoke(this.UpdateFields, this.OrmProvider, updateObj, $"_m{this.CommandIndex}");
         }
         else
         {
-            var typedSetFieldsInitializer = setFieldsInitializer as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object>;
-            typedSetFieldsInitializer.Invoke(this.DbParameters, this.UpdateFields, this.OrmProvider, updateObj);
+            var typedSetFieldsInitializer = setFieldsInitializer as Action<StringBuilder, IOrmProvider, object>;
+            typedSetFieldsInitializer.Invoke(this.UpdateFields, this.OrmProvider, updateObj);
         }
     }
     public void VisitSetExpression(LambdaExpression lambdaExpr)

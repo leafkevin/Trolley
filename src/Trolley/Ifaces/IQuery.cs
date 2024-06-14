@@ -142,7 +142,7 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -926,7 +926,7 @@ public interface IQuery<T1, T2> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T2表分表名执行查询，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定T2表分表名执行查询，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -1488,7 +1488,7 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T3表分表名执行查询，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定T3表分表名执行查询，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -2051,7 +2051,7 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T4表分表名执行查询，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定T4表分表名执行查询，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -2615,7 +2615,7 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T5表分表名执行查询，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定T5表分表名执行查询，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -3180,7 +3180,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T6表分表名执行查询，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定T6表分表名执行查询，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -3746,7 +3746,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T7表分表名执行查询，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定T7表分表名执行查询，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -4313,7 +4313,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T8表分表名执行查询，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定T8表分表名执行查询，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -4881,7 +4881,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T9表分表名执行查询，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定T9表分表名执行查询，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -5450,7 +5450,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T10表分表名执行查询，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定T10表分表名执行查询，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -6020,7 +6020,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T11表分表名执行查询，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定T11表分表名执行查询，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -6591,7 +6591,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T12表分表名执行查询，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定T12表分表名执行查询，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -7163,7 +7163,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T13表分表名执行查询，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定T13表分表名执行查询，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -7736,7 +7736,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T14表分表名执行查询，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定T14表分表名执行查询，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -8310,7 +8310,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T15表分表名执行查询，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定T15表分表名执行查询，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -8885,7 +8885,7 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T16表分表名执行查询，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定T16表分表名执行查询，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>

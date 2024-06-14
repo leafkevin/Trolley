@@ -29,7 +29,7 @@ public class SqlServerUpdate<TEntity> : Update<TEntity>, ISqlServerUpdate<TEntit
     public IUpdateJoin<TEntity, T> InnerJoin<T>(Expression<Func<TEntity, T, bool>> joinOn)
     {
         this.Visitor.Join("INNER JOIN", typeof(T), joinOn);
-        return new UpdateJoin<TEntity, T>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewUpdateJoin<TEntity, T>(this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -37,7 +37,7 @@ public class SqlServerUpdate<TEntity> : Update<TEntity>, ISqlServerUpdate<TEntit
     public IUpdateJoin<TEntity, T> LeftJoin<T>(Expression<Func<TEntity, T, bool>> joinOn)
     {
         this.Visitor.Join("LEFT JOIN", typeof(T), joinOn);
-        return new UpdateJoin<TEntity, T>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewUpdateJoin<TEntity, T>(this.DbContext, this.Visitor);
     }
     #endregion
 }

@@ -13,18 +13,19 @@ public interface IUpdateVisitor : IDisposable
     IDataParameterCollection DbParameters { get; set; }
     IOrmProvider OrmProvider { get; }
     IEntityMapProvider MapProvider { get; }
+    bool HasWhere { get; }
     bool IsMultiple { get; set; }
     int CommandIndex { get; set; }
     IShardingProvider ShardingProvider { get; }
     ActionMode ActionMode { get; set; }
     List<TableSegment> Tables { get; }
+    bool IsNeedFetchShardingTables { get; }
     List<TableSegment> ShardingTables { get; set; }
 
     void Initialize(Type entityType, bool isMultiple = false, bool isFirst = true);
     MultipleCommand CreateMultipleCommand();
-    string BuildCommand(IDbCommand command);
-    void BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex);
-    string BuildSql();
+    string BuildCommand(DbContext dbContext, IDbCommand command);
+    void BuildMultiCommand(DbContext dbContext, IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex);
 
     #region Sharding
     void UseTable(Type entityType, params string[] tableNames);
@@ -35,22 +36,22 @@ public interface IUpdateVisitor : IDisposable
     void UseTableByRange(Type entityType, object fieldValue1, object fieldValue2, object fieldValue3);
     #endregion
 
-    IUpdateVisitor From(params Type[] entityTypes);
-    IUpdateVisitor Join(string joinType, Type entityType, Expression joinOn);
-    IUpdateVisitor Set(Expression fieldsAssignment);
-    IUpdateVisitor SetWith(object updateObj);
-    IUpdateVisitor SetField(Expression fieldSelector, object fieldValue);
-    IUpdateVisitor SetFrom(Expression fieldsAssignment);
-    IUpdateVisitor SetFrom(Expression fieldSelector, Expression valueSelector);
-    IUpdateVisitor IgnoreFields(params string[] fieldNames);
-    IUpdateVisitor IgnoreFields(Expression fieldsSelector);
-    IUpdateVisitor OnlyFields(params string[] fieldNames);
-    IUpdateVisitor OnlyFields(Expression fieldsSelector);
-    IUpdateVisitor SetBulk(IEnumerable updateObjs, int bulkCount);
-    (IEnumerable, int, string, Action<IDataParameterCollection>, Action<StringBuilder, string>, Action<IDataParameterCollection, StringBuilder, object, string>) BuildSetBulk(IDbCommand command);
-    IUpdateVisitor WhereWith(object whereObj);
-    IUpdateVisitor Where(Expression whereExpr);
-    IUpdateVisitor And(Expression whereExpr);
+    void Join(string joinType, Type entityType, Expression joinOn);
+    void Set(Expression fieldsAssignment);
+    void SetWith(object updateObj);
+    void SetField(Expression fieldSelector, object fieldValue);
+    void SetFrom(Expression fieldsAssignment);
+    void SetFrom(Expression fieldSelector, Expression valueSelector);
+    void IgnoreFields(params string[] fieldNames);
+    void IgnoreFields(Expression fieldsSelector);
+    void OnlyFields(params string[] fieldNames);
+    void OnlyFields(Expression fieldsSelector);
+    void SetBulk(IEnumerable updateObjs, int bulkCount);
+    (IEnumerable, int, string, Action<IDataParameterCollection>, Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>,
+        Action<StringBuilder, string>, Action<StringBuilder, IOrmProvider, object, string>) BuildWithBulk(IDbCommand command);
+    void WhereWith(object whereObj);
+    void Where(Expression whereExpr);
+    void And(Expression whereExpr);
     DataTable ToDataTable(Type entityType, IEnumerable entities, EntityMap fromMapper, string tableName = null);
     List<(MemberInfo MemberInfo, MemberMap RefMemberMapper)> GetRefMemberMappers(Type entityType, EntityMap refEntityMapper);
     string BuildShardingTablesSql(string tableSchema);

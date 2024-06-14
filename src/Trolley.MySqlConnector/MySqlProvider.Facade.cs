@@ -14,6 +14,13 @@ partial class MySqlProvider
         => new MySqlCreated<TEntity>(dbContext, visitor);
     public override ICreateVisitor NewCreateVisitor(string dbKey, IEntityMapProvider mapProvider, IShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
         => new MySqlCreateVisitor(dbKey, this, mapProvider, shardingProvider, isParameterized, tableAsStart, parameterPrefix);
+    public override IUpdate<TEntity> NewUpdate<TEntity>(DbContext dbContext) => new MySqlUpdate<TEntity>(dbContext);
+    public override IContinuedUpdate<TEntity> NewContinuedUpdate<TEntity>(DbContext dbContext, IUpdateVisitor visitor)
+        => new MySqlContinuedUpdate<TEntity>(dbContext, visitor);
+    public override IUpdated<TEntity> NewUpdated<TEntity>(DbContext dbContext, IUpdateVisitor visitor)
+        => new MySqlUpdated<TEntity>(dbContext, visitor);
     public override IUpdateVisitor NewUpdateVisitor(string dbKey, IEntityMapProvider mapProvider, IShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
         => new MySqlUpdateVisitor(dbKey, this, mapProvider, shardingProvider, isParameterized, tableAsStart, parameterPrefix);
+    public override IDeleteVisitor NewDeleteVisitor(string dbKey, IEntityMapProvider mapProvider, IShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
+        => new MySqlDeleteVisitor(dbKey, this, mapProvider, shardingProvider, isParameterized, tableAsStart, parameterPrefix);
 }

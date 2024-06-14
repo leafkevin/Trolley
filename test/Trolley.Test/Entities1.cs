@@ -5,7 +5,7 @@ namespace Trolley.Test;
 
 public enum Gender : byte
 {
-    Unknown = 0,
+    Unknown,
     Female,
     Male
 }

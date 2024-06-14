@@ -75,7 +75,7 @@ public class Update<TEntity> : IUpdate<TEntity>
             throw new NotSupportedException("Set方法参数setObj支持实体类对象，不支持基础类型，可以是匿名对、命名对象或是字典");
 
         if (condition) this.Visitor.SetWith(setObj);
-        return new ContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
     }
     public virtual IContinuedUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
         => this.Set(true, fieldSelector, fieldValue);
@@ -89,7 +89,7 @@ public class Update<TEntity> : IUpdate<TEntity>
             throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
 
         if (condition) this.Visitor.SetField(fieldSelector, fieldValue);
-        return new ContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
     }
     public virtual IContinuedUpdate<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsAssignment)
         => this.Set(true, fieldsAssignment);
@@ -101,7 +101,7 @@ public class Update<TEntity> : IUpdate<TEntity>
             throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
 
         if (condition) this.Visitor.Set(fieldsAssignment);
-        return new ContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -118,7 +118,7 @@ public class Update<TEntity> : IUpdate<TEntity>
             throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
 
         if (condition) this.Visitor.SetFrom(fieldSelector, valueSelector);
-        return new ContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
     }
     public virtual IContinuedUpdate<TEntity> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
         => this.SetFrom(true, fieldsAssignment);
@@ -130,7 +130,7 @@ public class Update<TEntity> : IUpdate<TEntity>
             throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
 
         if (condition) this.Visitor.SetFrom(fieldsAssignment);
-        return new ContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -148,7 +148,7 @@ public class Update<TEntity> : IUpdate<TEntity>
             break;
         }
         this.Visitor.SetBulk(updateObjs, bulkCount);
-        return new ContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
     }
     #endregion
 }
@@ -586,7 +586,7 @@ public class UpdateJoin<<#=tables#>> : Updated<TEntity>, IUpdateJoin<<#=tables#>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("INNER JOIN", typeof(<#=nextTable#>), joinOn);
-        return new UpdateJoin<<#=tables#>, <#=nextTable#>>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewUpdateJoin<<#=tables#>, <#=nextTable#>>(this.DbContext, this.Visitor);
     }
     public virtual IUpdateJoin<<#=tables#>, <#=nextTable#>> LeftJoin<<#=nextTable#>>(Expression<Func<<#=tables#>, <#=nextTable#>, bool>> joinOn)
     {
@@ -594,7 +594,7 @@ public class UpdateJoin<<#=tables#>> : Updated<TEntity>, IUpdateJoin<<#=tables#>
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("LEFT JOIN", typeof(<#=nextTable#>), joinOn);
-        return new UpdateJoin<<#=tables#>, <#=nextTable#>>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewUpdateJoin<<#=tables#>, <#=nextTable#>>(this.DbContext, this.Visitor);
     }
     #endregion
 

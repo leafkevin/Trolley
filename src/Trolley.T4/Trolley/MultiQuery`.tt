@@ -232,7 +232,7 @@ public class MultiQuery<<#=tables#>> : MultiQueryBase, IMultiQuery<<#=tables#>>
             throw new ArgumentNullException(nameof(groupingExpr));
 
         this.Visitor.GroupBy(groupingExpr);
-        return this.OrmProvider.NewMultiGroupQuery<<#=tables#>, TGrouping>(this.MultipleQuery, this.Visitor);
+        return this.OrmProvider.NewMultiGroupingQuery<<#=tables#>, TGrouping>(this.MultipleQuery, this.Visitor);
     }
     #endregion
 

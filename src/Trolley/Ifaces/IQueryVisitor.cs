@@ -14,6 +14,12 @@ public interface IQueryVisitor : IDisposable
     string DbKey { get; }
     bool IsMultiple { get; set; }
     int CommandIndex { get; set; }
+    string WhereSql { get; }
+    Dictionary<string, TableSegment> TableAliases { get; }
+    /// <summary>
+    /// 在解析子查询中，会用到父查询中的所有表，父查询中所有表别名引用
+    /// </summary>
+    Dictionary<string, TableSegment> RefTableAliases { get; set; }
     /// <summary>
     /// 在SQL查询中，引用到子查询或是CTE表对象，防止重复添加参数，同时也为了解析CTE表引用SQL
     /// </summary>
@@ -29,11 +35,7 @@ public interface IQueryVisitor : IDisposable
     bool IsUseCteTable { get; set; }
     char TableAsStart { get; set; }
     int PageNumber { get; set; }
-    int PageSize { get; set; }
-    /// <summary>
-    /// 解析子查询时，父亲查询的TableAliases
-    /// </summary>
-    Dictionary<string, TableSegment> RefTableAliases { get; set; }
+    bool IsNeedFetchShardingTables { get; }
     List<TableSegment> ShardingTables { get; set; }
 
     string BuildSql(out List<ReaderField> readerFields);
@@ -57,7 +59,7 @@ public interface IQueryVisitor : IDisposable
     void Union(string union, Type targetType, DbContext dbContext, Delegate subQueryGetter);
     void UnionRecursive(string union, DbContext dbContext, ICteQuery subQueryObj, Delegate selfSubQueryGetter);
 
-    public void Join(string joinType, Expression joinOn);
+    void Join(string joinType, Expression joinOn);
     void Join(string joinType, Type newEntityType, Expression joinOn);
     void Join(string joinType, Type newEntityType, IQuery subQuery, Expression joinOn);
     void Join(string joinType, Type newEntityType, DbContext dbContext, Delegate subQueryGetter, Expression joinOn);

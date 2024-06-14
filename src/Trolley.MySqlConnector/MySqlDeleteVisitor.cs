@@ -1,13 +1,14 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections.Generic;
+using System.Data;
 using System.Text;
 
 namespace Trolley.MySqlConnector;
 
-public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
+public class MySqlDeleteVisitor : DeleteVisitor
 {
-    public MySqlUpdateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
-      : base(dbKey, ormProvider, mapProvider, shardingProvider, isParameterized, tableAsStart, parameterPrefix) { }
+    public MySqlDeleteVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", List<IDbDataParameter> dbParameters = null)
+      : base(dbKey, ormProvider, mapProvider, shardingProvider, isParameterized, tableAsStart, parameterPrefix, dbParameters) { }
+
     public override string BuildShardingTablesSql(string tableSchema)
     {
         var count = this.ShardingTables.FindAll(f => f.ShardingType > ShardingTableType.MultiTable).Count;
@@ -38,14 +39,4 @@ public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
         }
         return builder.ToString();
     }
-    public void WithBulkCopy(IEnumerable updateObjs, int? timeoutSeconds)
-    {
-        this.ActionMode = ActionMode.BulkCopy;
-        this.deferredSegments.Add(new CommandSegment
-        {
-            Type = "WithBulkCopy",
-            Value = (updateObjs, timeoutSeconds)
-        });
-    }
-    public (IEnumerable, int?) BuildWithBulkCopy() => ((IEnumerable, int?))this.deferredSegments[0].Value;
 }

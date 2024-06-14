@@ -198,12 +198,12 @@ CREATE TABLE `sys_user`  (
   `Id` int NOT NULL,
   `TenantId` varchar(50) NOT NULL,
   `Name` varchar(50) NULL DEFAULT NULL,
-  `Gender` tinyint NULL DEFAULT NULL,
+  `Gender` enum('Unknown','Male','Female') NULL DEFAULT NULL,
   `Age` int NULL DEFAULT NULL,
   `CompanyId` int NULL DEFAULT NULL,
   `GuidField` char(36) NULL DEFAULT NULL,
   `SomeTimes` time(6) NULL DEFAULT NULL,
-  `SourceType` varchar(50) NULL DEFAULT NULL,
+  `SourceType` enum('Website','Wechat','Douyin','Taobao') NULL DEFAULT NULL,
   `IsEnabled` tinyint(1) NULL DEFAULT NULL,
   `CreatedAt` datetime NULL DEFAULT NULL,
   `CreatedBy` int NULL DEFAULT NULL,
@@ -217,7 +217,47 @@ CREATE TABLE `sys_user`  (
 -- ----------------------------
 INSERT INTO `sys_user` VALUES (1, '1', 'leafkevin', 2, 25, 1, 'e09d9d46-1783-475b-9d57-2721d163c29f', '01:19:29.000000', 'Douyin', 1, '2023-03-03 00:00:00', 1, '2023-04-29 00:05:28', 1);
 INSERT INTO `sys_user` VALUES (2, '2', 'cindy', 2, 21, 2, '20687f1c-3f27-4741-894e-fa59bcd43dbc', '01:35:30.000000', 'Taobao', 1, '2023-03-03 06:06:06', 1, '2023-04-29 00:05:28', 1);
-SET FOREIGN_KEY_CHECKS = 1;
+
+
+DROP TABLE IF EXISTS `sys_user_104`;
+CREATE TABLE `sys_user_104`  (
+  `Id` int NOT NULL,
+  `TenantId` varchar(50) NOT NULL,
+  `Name` varchar(50) NULL DEFAULT NULL,
+  `Gender` enum('Unknown','Male','Female') NULL DEFAULT NULL,
+  `Age` int NULL DEFAULT NULL,
+  `CompanyId` int NULL DEFAULT NULL,
+  `GuidField` char(36) NULL DEFAULT NULL,
+  `SomeTimes` time(6) NULL DEFAULT NULL,
+  `SourceType` enum('Website','Wechat','Douyin','Taobao') NULL DEFAULT NULL,
+  `IsEnabled` tinyint(1) NULL DEFAULT NULL,
+  `CreatedAt` datetime NULL DEFAULT NULL,
+  `CreatedBy` int NULL DEFAULT NULL,
+  `UpdatedAt` datetime NULL DEFAULT NULL,
+  `UpdatedBy` int NULL DEFAULT NULL,
+  PRIMARY KEY (`Id`) USING BTREE
+);
+
+DROP TABLE IF EXISTS `sys_user_105`;
+CREATE TABLE `sys_user_105`  (
+  `Id` int NOT NULL,
+  `TenantId` varchar(50) NOT NULL,
+  `Name` varchar(50) NULL DEFAULT NULL,
+  `Gender` enum('Unknown','Male','Female') NULL DEFAULT NULL,
+  `Age` int NULL DEFAULT NULL,
+  `CompanyId` int NULL DEFAULT NULL,
+  `GuidField` char(36) NULL DEFAULT NULL,
+  `SomeTimes` time(6) NULL DEFAULT NULL,
+  `SourceType` enum('Website','Wechat','Douyin','Taobao') NULL DEFAULT NULL,
+  `IsEnabled` tinyint(1) NULL DEFAULT NULL,
+  `CreatedAt` datetime NULL DEFAULT NULL,
+  `CreatedBy` int NULL DEFAULT NULL,
+  `UpdatedAt` datetime NULL DEFAULT NULL,
+  `UpdatedBy` int NULL DEFAULT NULL,
+  PRIMARY KEY (`Id`) USING BTREE
+);
+
+
 
 -- ----------------------------
 -- Table structure for sys_function

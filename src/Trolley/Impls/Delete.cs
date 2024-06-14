@@ -13,6 +13,7 @@ public class Delete<TEntity> : IDelete<TEntity>
     #region Properties
     public DbContext DbContext { get; set; }
     public IDeleteVisitor Visitor { get; set; }
+    public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
     #endregion
 
     #region Constructor
@@ -64,7 +65,7 @@ public class Delete<TEntity> : IDelete<TEntity>
             throw new ArgumentNullException(nameof(keys));
 
         this.Visitor.WhereWith(keys);
-        return new Deleted<TEntity>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewDeleted<TEntity>(this.DbContext, this.Visitor);
     }
     public virtual IContinuedDelete<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
         => this.Where(true, predicate);
@@ -75,7 +76,7 @@ public class Delete<TEntity> : IDelete<TEntity>
 
         if (condition) this.Visitor.Where(ifPredicate);
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
-        return new ContinuedDelete<TEntity>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewContinuedDelete<TEntity>(this.DbContext, this.Visitor);
     }
     #endregion
 }
@@ -95,9 +96,30 @@ public class Deleted<TEntity> : IDeleted<TEntity>
     #endregion
 
     #region Execute
-    public virtual int Execute() => this.DbContext.Execute(f => f.CommandText = this.Visitor.BuildCommand(f));
+    public virtual int Execute()
+    {
+        if (!this.Visitor.HasWhere)
+            throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
+        if (this.Visitor.IsNeedFetchShardingTables)
+            this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
+        return this.DbContext.Execute(f =>
+        {
+            f.CommandText = this.Visitor.BuildCommand(this.DbContext, f);
+            return this.Visitor.IsNeedFetchShardingTables;
+        });
+    }
     public virtual async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
-        => await this.DbContext.ExecuteAsync(f => f.CommandText = this.Visitor.BuildCommand(f), cancellationToken);
+    {
+        if (!this.Visitor.HasWhere)
+            throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
+        if (this.Visitor.IsNeedFetchShardingTables)
+            await this.DbContext.FetchShardingTablesAsync(this.Visitor as SqlVisitor, cancellationToken);
+        return await this.DbContext.ExecuteAsync(f =>
+        {
+            f.CommandText = this.Visitor.BuildCommand(this.DbContext, f);
+            return this.Visitor.IsNeedFetchShardingTables;
+        }, cancellationToken);
+    }
     #endregion
 
     #region ToMultipleCommand
@@ -108,7 +130,7 @@ public class Deleted<TEntity> : IDeleted<TEntity>
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
         using var command = this.DbContext.CreateCommand();
-        var sql = this.Visitor.BuildCommand(command);
+        var sql = this.Visitor.BuildCommand(this.DbContext, command);
         dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
         return sql;

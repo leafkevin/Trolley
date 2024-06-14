@@ -310,7 +310,7 @@ public class Query<T> : QueryBase, IQuery<T>
             throw new ArgumentNullException(nameof(memberSelector));
 
         this.Visitor.Include(memberSelector);
-        return new IncludableQuery<T, TMember>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewIncludableQuery<T, TMember>(this.DbContext, this.Visitor);
     }
     public virtual IIncludableQuery<T, TElment> IncludeMany<TElment>(Expression<Func<T, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
@@ -318,7 +318,7 @@ public class Query<T> : QueryBase, IQuery<T>
             throw new ArgumentNullException(nameof(memberSelector));
 
         this.Visitor.Include(memberSelector, true, filter);
-        return new IncludableQuery<T, TElment>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewIncludableQuery<T, TElment>(this.DbContext, this.Visitor);
     }
     #endregion
 
@@ -628,6 +628,9 @@ public class Query<T> : QueryBase, IQuery<T>
         if (this is ICteQuery<T> cteQueryObj)
             return cteQueryObj;
         ICteQuery<T> queryObj = null;
+        if (this.Visitor.ShardingTables != null && this.Visitor.ShardingTables.Count > 0)
+            throw new NotSupportedException("CTE暂时不支持多分表，只支持单个分表");
+
         if (this.Visitor.SelfRefQueryObj != null)
         {
             queryObj = this.Visitor.SelfRefQueryObj as CteQuery<T>;

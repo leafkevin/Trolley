@@ -166,8 +166,8 @@ public class UnitTest1 : UnitTestBase
         Assert.True((int)dbParameters[4].Value == 1);
         if (dbParameters[5] is MySqlParameter dbParameter)
         {
-            Assert.True(dbParameter.MySqlDbType == MySqlDbType.UByte);
-            Assert.True((byte)dbParameter.Value == (byte)Gender.Male);
+            Assert.True(dbParameter.MySqlDbType == MySqlDbType.Enum);
+            Assert.True((string)dbParameter.Value == Gender.Male.ToString());
         }
         Assert.True((int)dbParameters[6].Value == 1);
         Assert.True((DateTime)dbParameters[7].Value == now);
@@ -189,15 +189,16 @@ public class UnitTest1 : UnitTestBase
                Age = 25,
                CompanyId = 1,
                Gender = Gender.Male,
+               SourceType = UserSourceType.Douyin,
                IsEnabled = true,
                CreatedAt = now,
                CreatedBy = 1,
                UpdatedAt = now,
                UpdatedBy = 1
            })
-           .IgnoreFields("Gender", "CompanyId")
+           .IgnoreFields("CompanyId", "SourceType")
            .ToSql(out var dbParameters);
-        Assert.True(sql == "INSERT INTO `sys_user` (`Id`,`TenantId`,`Name`,`Age`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@TenantId,@Name,@Age,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)");
+        Assert.True(sql == "INSERT INTO `sys_user` (`Id`,`TenantId`,`Name`,`Age`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@TenantId,@Name,@Age,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)");
 
         repository.BeginTransaction();
         repository.Delete<User>().Where(f => f.Id == 1).Execute();
@@ -210,18 +211,20 @@ public class UnitTest1 : UnitTestBase
                 Age = 25,
                 CompanyId = 1,
                 Gender = Gender.Male,
+                SourceType = UserSourceType.Douyin,
                 IsEnabled = true,
                 CreatedAt = now,
                 CreatedBy = 1,
                 UpdatedAt = now,
                 UpdatedBy = 1
             })
-            .IgnoreFields("Gender", "CompanyId")
+            .IgnoreFields("CompanyId", "SourceType")
             .Execute();
         var user = repository.Get<User>(1);
         repository.Commit();
-        Assert.True(user.Gender == Gender.Unknown);
+        Assert.True(user.Gender == Gender.Male);
         Assert.True(user.CompanyId == 0);
+        Assert.True(!user.SourceType.HasValue);
 
         sql = repository.Create<User>()
            .WithBy(new
@@ -847,8 +850,8 @@ public class UnitTest1 : UnitTestBase
             .ToSql(out var parameters1);
         Assert.True(sql1 == "INSERT INTO `sys_user` (`Id`,`TenantId`,`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Id,@TenantId,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)");
         Assert.True(parameters1[5].ParameterName == "@Gender");
-        Assert.True(parameters1[5].Value.GetType() == typeof(byte));
-        Assert.True((byte)parameters1[5].Value == (byte)Gender.Male);
+        Assert.True(parameters1[5].Value.GetType() == typeof(string));
+        Assert.True((string)parameters1[5].Value == Gender.Male.ToString());
 
         var sql2 = repository.Create<Company>()
              .WithBy(new Company

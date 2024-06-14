@@ -63,7 +63,7 @@ public interface IFromCommand<T> : IFromCommand
     /// <returns>返回查询对象</returns>
     IFromCommand<T> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -353,7 +353,7 @@ public interface IFromCommand<T1, T2> : IFromCommand
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 根据字段值确定T2表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定T2表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -656,7 +656,7 @@ public interface IFromCommand<T1, T2, T3> : IFromCommand
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2, T3> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 根据字段值确定T3表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定T3表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -959,7 +959,7 @@ public interface IFromCommand<T1, T2, T3, T4> : IFromCommand
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2, T3, T4> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 根据字段值确定T4表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定T4表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -1262,7 +1262,7 @@ public interface IFromCommand<T1, T2, T3, T4, T5> : IFromCommand
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2, T3, T4, T5> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 根据字段值确定T5表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定T5表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
@@ -1565,7 +1565,7 @@ public interface IFromCommand<T1, T2, T3, T4, T5, T6> : IFromCommand
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2, T3, T4, T5, T6> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 根据字段值确定T6表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致
+    /// 根据字段值确定T6表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>

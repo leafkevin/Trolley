@@ -762,8 +762,8 @@ public class UnitTest3 : UnitTestBase
             .ToSql(out var parameters1);
         Assert.True(sql1 == "UPDATE `sys_user` SET `Gender`=@Gender WHERE `Id`=@kId");
         Assert.True(parameters1[0].ParameterName == "@Gender");
-        Assert.True(parameters1[0].Value.GetType() == typeof(byte));
-        Assert.True((byte)parameters1[0].Value == (byte)Gender.Male);
+        Assert.True(parameters1[0].Value.GetType() == typeof(string));
+        Assert.True((string)parameters1[0].Value == Gender.Male.ToString());
 
         var sql2 = repository.Update<User>()
             .Set(f => new { Gender = Gender.Male })
@@ -771,8 +771,8 @@ public class UnitTest3 : UnitTestBase
             .ToSql(out var parameters2);
         Assert.True(sql2 == "UPDATE `sys_user` SET `Gender`=@p0 WHERE `Id`=1");
         Assert.True(parameters2[0].ParameterName == "@p0");
-        Assert.True(parameters2[0].Value.GetType() == typeof(byte));
-        Assert.True((byte)parameters2[0].Value == (byte)Gender.Male);
+        Assert.True(parameters2[0].Value.GetType() == typeof(string));
+        Assert.True((string)parameters2[0].Value == Gender.Male.ToString());
 
         var sql4 = repository.Update<Company>()
              .Set(new { Nature = CompanyNature.Internet })
@@ -920,14 +920,14 @@ public class UnitTest3 : UnitTestBase
                 SellerId = 2,
                 TotalAmount = 500,
                 Products = new List<int> { 1, 2 },
-                Disputes = new Dispute
-                {
-                    Id = i + 1,
-                    Content = "无良商家",
-                    Result = "同意退款",
-                    Users = "Buyer2,Seller2",
-                    CreatedAt = DateTime.Now
-                },
+                //Disputes = new Dispute
+                //{
+                //    Id = i + 1,
+                //    Content = "无良商家",
+                //    Result = "同意退款",
+                //    Users = "Buyer2,Seller2",
+                //    CreatedAt = DateTime.Now
+                //},
                 IsEnabled = true,
                 CreatedAt = DateTime.Now,
                 CreatedBy = 1,
@@ -960,10 +960,9 @@ public class UnitTest3 : UnitTestBase
                 CreatedAt = DateTime.Now
             }
         });
-        count = repository.Update<Order>()
-            .WithBulkCopy(updateObjs)
-            .Execute();
-
+        count = await repository.Update<Order>()
+            .SetBulkCopy(updateObjs)
+            .ExecuteAsync();
 
         Assert.True(count == orders.Count);
     }

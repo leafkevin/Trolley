@@ -40,26 +40,12 @@ public class MySqlCreate<TEntity> : Create<TEntity>, IMySqlCreate<TEntity>
 
     #region WithBy
     public override IMySqlContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj)
-    {
-        base.WithBy(insertObj);
-        return new MySqlContinuedCreate<TEntity>(this.DbContext, this.Visitor);
-    }
+        => base.WithBy(insertObj) as IMySqlContinuedCreate<TEntity>;
     #endregion
 
     #region WithBulk
     public override IMySqlContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount)
-    {
-        bool isEmpty = true;
-        foreach (var insertObj in insertObjs)
-        {
-            isEmpty = false;
-            break;
-        }
-        if (isEmpty) throw new Exception("批量更新，updateObjs参数至少要有一条数据");
-
-        base.WithBulk(insertObjs, bulkCount);
-        return new MySqlContinuedCreate<TEntity>(this.DbContext, this.Visitor);
-    }
+        => base.WithBulk(insertObjs, bulkCount) as IMySqlContinuedCreate<TEntity>;
     #endregion
 
     #region WithBulkCopy
@@ -80,7 +66,7 @@ public class MySqlCreate<TEntity> : Create<TEntity>, IMySqlCreate<TEntity>
         if (isEmpty) throw new Exception("批量更新，updateObjs参数至少要有一条数据");
 
         this.DialectVisitor.WithBulkCopy(insertObjs, timeoutSeconds);
-        return new MySqlCreated<TEntity>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewCreated<TEntity>(this.DbContext, this.Visitor) as IMySqlCreated<TEntity>;
     }
     #endregion
 }

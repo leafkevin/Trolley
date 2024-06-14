@@ -11,20 +11,20 @@ class ModelConfiguration : IModelConfiguration
         builder.Entity<User>(f =>
         {
             f.ToTable("sys_user").Key(t => t.Id);
-            f.Member(t => t.Id).Field(nameof(User.Id)).DbColumnType("int").NativeDbType(MySqlDbType.Int32).Position(1).AutoIncrement().Required();
-            f.Member(t => t.TenantId).Field(nameof(User.TenantId)).DbColumnType("varchar(50)").NativeDbType(MySqlDbType.VarChar).Position(2).Length(50);
-            f.Member(t => t.Name).Field(nameof(User.Name)).DbColumnType("varchar(50)").NativeDbType(MySqlDbType.VarChar).Position(3).Length(50);
-            f.Member(t => t.Gender).Field(nameof(User.Gender)).DbColumnType("tinyint(4)").NativeDbType(MySqlDbType.UByte).Position(4);
-            f.Member(t => t.Age).Field(nameof(User.Age)).DbColumnType("int").NativeDbType(MySqlDbType.Int32).Position(5);
+            f.Member(t => t.Id).Field(nameof(User.Id)).DbColumnType("int").NativeDbType(MySqlDbType.Int32).Position(1).Required();
+            f.Member(t => t.TenantId).Field(nameof(User.TenantId)).DbColumnType("varchar(255)").NativeDbType(MySqlDbType.VarChar).Position(2).Length(255);
+            f.Member(t => t.Name).Field(nameof(User.Name)).DbColumnType("varchar(255)").NativeDbType(MySqlDbType.VarChar).Position(3).Length(255);
+            f.Member(t => t.Gender).Field(nameof(User.Gender)).DbColumnType("enum('Unknown','Male','Female')").NativeDbType(MySqlDbType.Enum).Position(4);
+            f.Member(t => t.Age).Field(nameof(User.Age)).DbColumnType("int").NativeDbType(MySqlDbType.Int32).Position(5).Required();
             f.Member(t => t.CompanyId).Field(nameof(User.CompanyId)).DbColumnType("int").NativeDbType(MySqlDbType.Int32).Position(6);
             f.Member(t => t.GuidField).Field(nameof(User.GuidField)).DbColumnType("char(36)").NativeDbType(MySqlDbType.Guid).Position(7);
             f.Member(t => t.SomeTimes).Field(nameof(User.SomeTimes)).DbColumnType("time(6)").NativeDbType(MySqlDbType.Time).Position(8);
-            f.Member(t => t.SourceType).Field(nameof(User.SourceType)).DbColumnType("varchar(50)").NativeDbType(MySqlDbType.VarChar).Position(9).Length(50);
-            f.Member(t => t.IsEnabled).Field(nameof(User.IsEnabled)).DbColumnType("tinyint(1)").NativeDbType(MySqlDbType.Bool).Position(10);
-            f.Member(t => t.CreatedAt).Field(nameof(User.CreatedAt)).DbColumnType("datetime").NativeDbType(MySqlDbType.DateTime).Position(11);
-            f.Member(t => t.CreatedBy).Field(nameof(User.CreatedBy)).DbColumnType("int").NativeDbType(MySqlDbType.Int32).Position(12);
-            f.Member(t => t.UpdatedAt).Field(nameof(User.UpdatedAt)).DbColumnType("datetime").NativeDbType(MySqlDbType.DateTime).Position(13);
-            f.Member(t => t.UpdatedBy).Field(nameof(User.UpdatedBy)).DbColumnType("int").NativeDbType(MySqlDbType.Int32).Position(14);
+            f.Member(t => t.SourceType).Field(nameof(User.SourceType)).DbColumnType("enum('Website','Wechat','Douyin','Taobao')").NativeDbType(MySqlDbType.Enum).Position(9);
+            f.Member(t => t.IsEnabled).Field(nameof(User.IsEnabled)).DbColumnType("bit(1)").NativeDbType(MySqlDbType.Bool).Position(10).Required();
+            f.Member(t => t.CreatedAt).Field(nameof(User.CreatedAt)).DbColumnType("datetime(3)").NativeDbType(MySqlDbType.DateTime).Position(11).Required();
+            f.Member(t => t.CreatedBy).Field(nameof(User.CreatedBy)).DbColumnType("int").NativeDbType(MySqlDbType.Int32).Position(12).Required();
+            f.Member(t => t.UpdatedAt).Field(nameof(User.UpdatedAt)).DbColumnType("datetime(3)").NativeDbType(MySqlDbType.DateTime).Position(13).Required();
+            f.Member(t => t.UpdatedBy).Field(nameof(User.UpdatedBy)).DbColumnType("int").NativeDbType(MySqlDbType.Int32).Position(14).Required();
 
             f.HasOne(t => t.Company).HasForeignKey(t => t.CompanyId).MapTo<Company>();
             f.HasMany(t => t.Orders).HasForeignKey(t => t.BuyerId);
@@ -146,7 +146,7 @@ class ModelConfiguration : IModelConfiguration
             f.Member(t => t.CreatedBy).Field(nameof(Page.CreatedBy)).DbColumnType("int").NativeDbType(MySqlDbType.Int32).Position(5);
             f.Member(t => t.UpdatedAt).Field(nameof(Page.UpdatedAt)).DbColumnType("datetime").NativeDbType(MySqlDbType.DateTime).Position(6);
             f.Member(t => t.UpdatedBy).Field(nameof(Page.UpdatedBy)).DbColumnType("int").NativeDbType(MySqlDbType.Int32).Position(7);
-        });        
+        });
         builder.Entity<Function>(f =>
         {
             f.ToTable("sys_function").Key(t => new { t.MenuId, t.PageId });

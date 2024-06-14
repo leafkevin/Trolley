@@ -567,29 +567,38 @@ public class Repository : IRepository
         try
         {
             var entityType = typeof(TEntity);
+            var builder = new StringBuilder();
             bool isBulk = updateObjs is IEnumerable && updateObjs is not string && updateObjs is not IDictionary<string, object>;
             if (isBulk)
             {
                 int index = 0;
-                bool isFirst = true;
-                var sqlBuilder = new StringBuilder();
+                bool isOpened = false;
                 var entities = updateObjs as IEnumerable;
-                var commandInitializer = RepositoryHelper.BuildUpdateMultiSqlParameters(this.dbKey, this.ormProvider, this.mapProvider, this.shardingProvider, entityType, updateObjs, null, null);
+                Type updateObjType = null;
                 foreach (var updateObj in entities)
                 {
-                    if (index > 0) sqlBuilder.Append(';');
-                    commandInitializer.Invoke(command.Parameters, this.ormProvider, sqlBuilder, updateObj, index.ToString());
+                    updateObjType = updateObj.GetType();
+                    break;
+                }
+                (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.ormProvider, this.mapProvider, entityType, updateObjType, true, null, null);
+                var typedSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
+
+                foreach (var updateObj in entities)
+                {
+                    if (index > 0) builder.Append(';');
+                    headSqlSetter.Invoke(builder, tableName);
+                    typedSqlSetter.Invoke(command.Parameters, builder, this.ormProvider, updateObj, index.ToString());
                     if (index >= bulkCount)
                     {
-                        command.CommandText = sqlBuilder.ToString();
-                        if (isFirst)
+                        command.CommandText = builder.ToString();
+                        if (!isOpened)
                         {
                             this.DbContext.Open();
-                            isFirst = false;
+                            isOpened = true;
                         }
                         result += command.ExecuteNonQuery();
                         command.Parameters.Clear();
-                        sqlBuilder.Clear();
+                        builder.Clear();
                         index = 0;
                         continue;
                     }
@@ -597,19 +606,24 @@ public class Repository : IRepository
                 }
                 if (index > 0)
                 {
-                    command.CommandText = sqlBuilder.ToString();
-                    if (isFirst) this.DbContext.Open();
+                    command.CommandText = builder.ToString();
+                    if (!isOpened) this.DbContext.Open();
                     result += command.ExecuteNonQuery();
                 }
-                sqlBuilder.Clear();
             }
             else
             {
-                var commandInitializer = RepositoryHelper.BuildUpdateSqlParameters(this.dbKey, this.ormProvider, this.mapProvider, this.shardingProvider, entityType, updateObjs, null, null);
-                command.CommandText = commandInitializer.Invoke(command.Parameters, this.ormProvider, updateObjs);
+                var updateObjType = updateObjs.GetType();
+                (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.ormProvider, this.mapProvider, entityType, updateObjType, false, null, null);
+                headSqlSetter.Invoke(builder, tableName);
+                var typedSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object>;
+                typedSqlSetter.Invoke(command.Parameters, builder, this.ormProvider, updateObjs);
+                command.CommandText = builder.ToString();
                 this.DbContext.Open();
                 result = command.ExecuteNonQuery();
             }
+            builder.Clear();
+            builder = null;
         }
         catch (Exception ex)
         {
@@ -636,29 +650,38 @@ public class Repository : IRepository
         try
         {
             var entityType = typeof(TEntity);
+            var builder = new StringBuilder();
             bool isBulk = updateObjs is IEnumerable && updateObjs is not string && updateObjs is not IDictionary<string, object>;
             if (isBulk)
             {
                 int index = 0;
-                bool isFirst = true;
-                var sqlBuilder = new StringBuilder();
+                bool isOpened = false;
                 var entities = updateObjs as IEnumerable;
-                var commandInitializer = RepositoryHelper.BuildUpdateMultiSqlParameters(this.dbKey, this.ormProvider, this.mapProvider, this.shardingProvider, entityType, updateObjs, null, null);
+                Type updateObjType = null;
                 foreach (var updateObj in entities)
                 {
-                    if (index > 0) sqlBuilder.Append(';');
-                    commandInitializer.Invoke(command.Parameters, this.ormProvider, sqlBuilder, updateObj, index.ToString());
+                    updateObjType = updateObj.GetType();
+                    break;
+                }
+                (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.ormProvider, this.mapProvider, entityType, updateObjType, true, null, null);
+                var typedSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
+
+                foreach (var updateObj in entities)
+                {
+                    if (index > 0) builder.Append(';');
+                    headSqlSetter.Invoke(builder, tableName);
+                    typedSqlSetter.Invoke(command.Parameters, builder, this.ormProvider, updateObj, index.ToString());
                     if (index >= bulkCount)
                     {
-                        command.CommandText = sqlBuilder.ToString();
-                        if (isFirst)
+                        command.CommandText = builder.ToString();
+                        if (!isOpened)
                         {
                             await this.DbContext.OpenAsync(cancellationToken);
-                            isFirst = false;
+                            isOpened = true;
                         }
                         result += await command.ExecuteNonQueryAsync(cancellationToken);
                         command.Parameters.Clear();
-                        sqlBuilder.Clear();
+                        builder.Clear();
                         index = 0;
                         continue;
                     }
@@ -666,19 +689,24 @@ public class Repository : IRepository
                 }
                 if (index > 0)
                 {
-                    command.CommandText = sqlBuilder.ToString();
-                    if (isFirst) await this.DbContext.OpenAsync(cancellationToken);
+                    command.CommandText = builder.ToString();
+                    if (!isOpened) await this.DbContext.OpenAsync(cancellationToken);
                     result += await command.ExecuteNonQueryAsync(cancellationToken);
                 }
-                sqlBuilder.Clear();
             }
             else
             {
-                var commandInitializer = RepositoryHelper.BuildUpdateSqlParameters(this.dbKey, this.ormProvider, this.mapProvider, this.shardingProvider, entityType, updateObjs, null, null);
-                command.CommandText = commandInitializer.Invoke(command.Parameters, this.ormProvider, updateObjs);
+                var updateObjType = updateObjs.GetType();
+                (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.ormProvider, this.mapProvider, entityType, updateObjType, false, null, null);
+                headSqlSetter.Invoke(builder, tableName);
+                var typedSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object>;
+                typedSqlSetter.Invoke(command.Parameters, builder, this.ormProvider, updateObjs);
+                command.CommandText = builder.ToString();
                 await this.DbContext.OpenAsync(cancellationToken);
                 result = await command.ExecuteNonQueryAsync(cancellationToken);
             }
+            builder.Clear();
+            builder = null;
         }
         catch (Exception ex)
         {
@@ -712,44 +740,7 @@ public class Repository : IRepository
             if (this.shardingProvider.TryGetShardingTable(entityType, out _))
                 throw new NotSupportedException($"实体表{entityType.FullName}有配置分表，当前方法不支持分表，请使用repository.Delete<T>().UseTable或UseTableBy方法可指定分表");
 
-            bool isBulk = whereKeys is IEnumerable && whereKeys is not string && whereKeys is not IDictionary<string, object>;
-            if (isBulk)
-            {
-                int index = 0;
-                string separator = null;
-                var entities = whereKeys as IEnumerable;
-                Type whereObjType = null;
-                foreach (var entity in entities)
-                {
-                    whereObjType = entity.GetType();
-                    break;
-                }
-                (var isMultiKeys, var origName, var headSqlSetter, var commandInitializer) = RepositoryHelper.BuildDeleteBulkCommandInitializer(this.ormProvider, this.mapProvider, entityType, whereObjType);
-
-                var sqlBuilder = new StringBuilder();
-                if (isMultiKeys) separator = ";";
-                else
-                {
-                    separator = ",";
-                    headSqlSetter(sqlBuilder, origName);
-                }
-                foreach (var entity in entities)
-                {
-                    if (index > 0) sqlBuilder.Append(separator);
-                    commandInitializer.Invoke(command.Parameters, sqlBuilder, this.ormProvider, origName, entity, $"{index}");
-                    index++;
-                }
-                if (!isMultiKeys) sqlBuilder.Append(')');
-                command.CommandText = sqlBuilder.ToString();
-                sqlBuilder.Clear();
-                sqlBuilder = null;
-            }
-            else
-            {
-                (var origName, var commandInitializer) = RepositoryHelper.BuildDeleteCommandInitializer(this.ormProvider, this.mapProvider, entityType, whereKeys, false);
-                var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, string, object, string>;
-                command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this.ormProvider, origName, whereKeys);
-            }
+            this.BuildDeleteCommand(command, entityType, whereKeys);
             this.DbContext.Open();
             result = command.ExecuteNonQuery();
         }
@@ -781,44 +772,7 @@ public class Repository : IRepository
             if (this.shardingProvider.TryGetShardingTable(entityType, out _))
                 throw new NotSupportedException($"实体表{entityType.FullName}有配置分表，当前方法不支持分表，请使用repository.Delete<T>().UseTable或UseTableBy方法可指定分表");
 
-            bool isBulk = whereKeys is IEnumerable && whereKeys is not string && whereKeys is not IDictionary<string, object>;
-            if (isBulk)
-            {
-                int index = 0;
-                string separator = null;
-                var entities = whereKeys as IEnumerable;
-                Type whereObjType = null;
-                foreach (var entity in entities)
-                {
-                    whereObjType = entity.GetType();
-                    break;
-                }
-                (var isMultiKeys, var origName, var headSqlSetter, var commandInitializer) = RepositoryHelper.BuildDeleteBulkCommandInitializer(this.ormProvider, this.mapProvider, entityType, whereObjType);
-
-                var sqlBuilder = new StringBuilder();
-                if (isMultiKeys) separator = ";";
-                else
-                {
-                    separator = ",";
-                    headSqlSetter(sqlBuilder, origName);
-                }
-                foreach (var entity in entities)
-                {
-                    if (index > 0) sqlBuilder.Append(separator);
-                    commandInitializer.Invoke(command.Parameters, sqlBuilder, this.ormProvider, origName, entity, $"{index}");
-                    index++;
-                }
-                if (!isMultiKeys) sqlBuilder.Append(')');
-                command.CommandText = sqlBuilder.ToString();
-                sqlBuilder.Clear();
-                sqlBuilder = null;
-            }
-            else
-            {
-                (var origName, var commandInitializer) = RepositoryHelper.BuildDeleteCommandInitializer(this.ormProvider, this.mapProvider, entityType, whereKeys, false);
-                var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, string, object, string>;
-                command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this.ormProvider, origName, whereKeys);
-            }
+            this.BuildDeleteCommand(command, entityType, whereKeys);
             await this.DbContext.OpenAsync(cancellationToken);
             result = await command.ExecuteNonQueryAsync(cancellationToken);
         }
@@ -834,6 +788,51 @@ public class Repository : IRepository
         }
         if (exception != null) throw exception;
         return result;
+    }
+    private void BuildDeleteCommand(IDbCommand command, Type entityType, object whereKeys)
+    {
+        Type whereObjType = null;
+        var isBulk = whereKeys is IEnumerable && whereKeys is not string && whereKeys is not IDictionary<string, object>;
+        var entities = whereKeys as IEnumerable;
+        if (isBulk)
+        {
+            foreach (var entity in entities)
+            {
+                whereObjType = entity.GetType();
+                break;
+            }
+        }
+        else whereObjType = whereKeys.GetType();
+        (var isMultiKeys, var tableName, var whereSqlParametersSetter, var sqlSetter) = RepositoryHelper.BuildDeleteCommandInitializer(this.ormProvider, this.mapProvider, entityType, whereObjType, isBulk, isBulk);
+
+        int index = 0;
+        var builder = new StringBuilder();
+        var whereSqlBuilder = new StringBuilder();
+        if (isBulk)
+        {
+            var jointMark = isMultiKeys ? " OR " : ",";
+            var typedWhereSqlParametersSetter = whereSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
+
+            foreach (var entity in entities)
+            {
+                if (index > 0) whereSqlBuilder.Append(jointMark);
+                typedWhereSqlParametersSetter.Invoke(command.Parameters, whereSqlBuilder, this.ormProvider, entity, $"{index}");
+                index++;
+            }
+            if (!isMultiKeys) whereSqlBuilder.Append(')');
+        }
+        else
+        {
+            var typedWhereSqlParametersSetter = whereSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object>;
+            typedWhereSqlParametersSetter.Invoke(command.Parameters, whereSqlBuilder, this.ormProvider, whereKeys);
+        }
+        sqlSetter.Invoke(builder, tableName);
+        builder.Append(whereSqlBuilder);
+        command.CommandText = builder.ToString();
+        builder.Clear();
+        builder = null;
+        whereSqlBuilder.Clear();
+        whereSqlBuilder = null;
     }
     #endregion
 
@@ -886,6 +885,7 @@ public class Repository : IRepository
                 var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.ormProvider, rawSql, parameters);
                 commandInitializer.Invoke(f.Parameters, this.ormProvider, parameters);
             }
+            return false;
         });
     }
     public virtual async Task<int> ExecuteAsync(string rawSql, object parameters = null, CancellationToken cancellationToken = default)
@@ -901,6 +901,7 @@ public class Repository : IRepository
                 var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.ormProvider, rawSql, parameters);
                 commandInitializer.Invoke(f.Parameters, this.ormProvider, parameters);
             }
+            return false;
         }, cancellationToken);
     }
     #endregion
@@ -1021,12 +1022,12 @@ public class Repository : IRepository
                     case MultipleCommandType.Update:
                         var updateVisitor = visitor as IUpdateVisitor;
                         updateVisitor.Initialize(multiCcommand.EntityType, true, isFirst);
-                        updateVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
+                        updateVisitor.BuildMultiCommand(this.DbContext, command, sqlBuilder, multiCcommand, commandIndex);
                         break;
                     case MultipleCommandType.Delete:
                         var deleteVisitor = visitor as IDeleteVisitor;
                         deleteVisitor.Initialize(multiCcommand.EntityType, true, isFirst);
-                        deleteVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
+                        deleteVisitor.BuildMultiCommand(this.DbContext, command, sqlBuilder, multiCcommand, commandIndex);
                         break;
                 }
                 commandIndex++;
@@ -1087,12 +1088,12 @@ public class Repository : IRepository
                     case MultipleCommandType.Update:
                         var updateVisitor = visitor as IUpdateVisitor;
                         updateVisitor.Initialize(multiCcommand.EntityType, true, isFirst);
-                        updateVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
+                        updateVisitor.BuildMultiCommand(this.DbContext, command, sqlBuilder, multiCcommand, commandIndex);
                         break;
                     case MultipleCommandType.Delete:
                         var deleteVisitor = visitor as IDeleteVisitor;
                         deleteVisitor.Initialize(multiCcommand.EntityType, true, isFirst);
-                        deleteVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
+                        deleteVisitor.BuildMultiCommand(this.DbContext, command, sqlBuilder, multiCcommand, commandIndex);
                         break;
                 }
                 commandIndex++;

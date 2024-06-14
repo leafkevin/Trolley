@@ -42,7 +42,7 @@ public class MultipleQuery : IMultipleQuery, IDisposable
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T));
-        return new MultiQuery<T>(this, visitor);
+        return this.OrmProvider.NewMultiQuery<T>(this, visitor);
     }
 <#
     var count = 10;
@@ -57,7 +57,7 @@ public class MultipleQuery : IMultipleQuery, IDisposable
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, <#=typeOfTables#>);
-        return new MultiQuery<<#=tables#>>(this, visitor);
+        return this.OrmProvider.NewMultiQuery<<#=tables#>>(this, visitor);
     }
 <#  }#>
     #endregion
@@ -67,7 +67,7 @@ public class MultipleQuery : IMultipleQuery, IDisposable
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(typeof(T), this.DbContext, subQuery);
-        return new MultiQuery<T>(this, visitor);
+        return this.OrmProvider.NewMultiQuery<T>(this, visitor);
     }
     #endregion
 

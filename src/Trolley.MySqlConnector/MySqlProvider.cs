@@ -54,6 +54,7 @@ public partial class MySqlProvider : BaseOrmProvider
         defaultMapTypes[MySqlDbType.Binary] = typeof(byte[]);
         defaultMapTypes[MySqlDbType.VarBinary] = typeof(byte[]);
         defaultMapTypes[MySqlDbType.Guid] = typeof(Guid);
+        defaultMapTypes[MySqlDbType.Enum] = typeof(string);
 
         defaultDbTypes[typeof(bool)] = MySqlDbType.Bool;
         defaultDbTypes[typeof(sbyte)] = MySqlDbType.Byte;

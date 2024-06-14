@@ -28,9 +28,6 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     #region CreateCommand
     public IDbCommand CreateCommand()
     {
-        if (this.Connection == null)
-            this.Connection = this.OrmProvider.CreateConnection(this.ConnectionString);
-
         var command = this.Connection.CreateCommand();
         command.CommandType = CommandType.Text;
         command.CommandTimeout = this.CommandTimeout;
@@ -39,9 +36,6 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     }
     public DbCommand CreateDbCommand()
     {
-        if (this.Connection == null)
-            this.Connection = this.OrmProvider.CreateConnection(this.ConnectionString);
-
         var cmd = this.Connection.CreateCommand();
         cmd.CommandType = CommandType.Text;
         cmd.Transaction = this.Transaction;
@@ -929,431 +923,8 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     }
     #endregion
 
-    #region UpdateBulk
-    public int UpdateBulk(IUpdateVisitor visitor, IDbCommand command)
-    {
-        int result = 0;
-        bool isOpened = false;
-        (var updateObjs, var bulkCount, var origName, var firstCommandInitializer,
-            var headSqlSetter, var commandSqlSetter) = visitor.BuildSetBulk(command);
-        firstCommandInitializer?.Invoke(command.Parameters);
-
-        int index = 0;
-        var builder = new StringBuilder();
-
-        if (visitor.ShardingTables != null && visitor.ShardingTables.Count > 0)
-        {
-            //需要访问数据库捞取所有分表，并设置到对应的TableSegment上
-            if (visitor.ShardingTables.Exists(f => f.ShardingType > ShardingTableType.MultiTable))
-            {
-                var fetchSql = visitor.BuildShardingTablesSql(this.Connection.Database);
-                command.CommandText = fetchSql;
-                command.Parameters.Clear();
-                this.Open();
-                var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
-                var shardingTables = new List<string>();
-                while (reader.Read())
-                {
-                    shardingTables.Add(reader.To<string>(this.OrmProvider));
-                }
-                reader.Dispose();
-                command.CommandText = null;
-                command.Parameters.Clear();
-                visitor.SetShardingTables(shardingTables);
-                isOpened = true;
-            }
-
-            var sqlBuilder = new StringBuilder();
-            if (visitor.IsMultiple)
-            {
-                foreach (var updateObj in updateObjs)
-                {
-                    this.AddShardingTablesBulkSql(visitor, command, builder, sqlBuilder, headSqlSetter,
-                        commandSqlSetter, updateObj, $"_m{visitor.CommandIndex}{index}");
-                    sqlBuilder.Clear();
-                    if (index >= bulkCount)
-                    {
-                        command.CommandText = sqlBuilder.ToString();
-                        if (!isOpened)
-                        {
-                            this.Open();
-                            isOpened = true;
-                        }
-                        result += command.ExecuteNonQuery();
-                        command.Parameters.Clear();
-                        firstCommandInitializer?.Invoke(command.Parameters);
-                        sqlBuilder.Clear();
-                        index = 0;
-                        continue;
-                    }
-                    index++;
-                }
-                if (index > 0)
-                {
-                    command.CommandText = sqlBuilder.ToString();
-                    if (!isOpened) this.Open();
-                    result += command.ExecuteNonQuery();
-                }
-            }
-            else
-            {
-                foreach (var updateObj in updateObjs)
-                {
-                    this.AddShardingTablesBulkSql(visitor, command, builder, sqlBuilder, headSqlSetter,
-                        commandSqlSetter, updateObj, $"{index}");
-                    sqlBuilder.Clear();
-                    if (index >= bulkCount)
-                    {
-                        command.CommandText = sqlBuilder.ToString();
-                        if (!isOpened)
-                        {
-                            this.Open();
-                            isOpened = true;
-                        }
-                        result += command.ExecuteNonQuery();
-                        command.Parameters.Clear();
-                        firstCommandInitializer?.Invoke(command.Parameters);
-                        sqlBuilder.Clear();
-                        index = 0;
-                        continue;
-                    }
-                    index++;
-                }
-                if (index > 0)
-                {
-                    command.CommandText = sqlBuilder.ToString();
-                    if (!isOpened) this.Open();
-                    result += command.ExecuteNonQuery();
-                }
-            }
-        }
-        else
-        {
-            if (visitor.IsMultiple)
-            {
-                foreach (var updateObj in updateObjs)
-                {
-                    if (index > 0) builder.Append(';');
-                    headSqlSetter.Invoke(builder, origName);
-                    commandSqlSetter.Invoke(command.Parameters, builder, updateObj, $"_m{visitor.CommandIndex}{index}");
-                    if (index >= bulkCount)
-                    {
-                        command.CommandText = builder.ToString();
-                        if (!isOpened)
-                        {
-                            this.Open();
-                            isOpened = true;
-                        }
-                        result += command.ExecuteNonQuery();
-                        command.Parameters.Clear();
-                        firstCommandInitializer?.Invoke(command.Parameters);
-                        builder.Clear();
-                        index = 0;
-                        continue;
-                    }
-                    index++;
-                }
-                if (index > 0)
-                {
-                    command.CommandText = builder.ToString();
-                    if (!isOpened) this.Open();
-                    result += command.ExecuteNonQuery();
-                }
-            }
-            else
-            {
-                foreach (var updateObj in updateObjs)
-                {
-                    if (index > 0) builder.Append(';');
-                    headSqlSetter.Invoke(builder, origName);
-                    commandSqlSetter.Invoke(command.Parameters, builder, updateObj, $"{index}");
-                    if (index >= bulkCount)
-                    {
-                        command.CommandText = builder.ToString();
-                        if (!isOpened)
-                        {
-                            this.Open();
-                            isOpened = true;
-                        }
-                        result += command.ExecuteNonQuery();
-                        command.Parameters.Clear();
-                        firstCommandInitializer?.Invoke(command.Parameters);
-                        builder.Clear();
-                        index = 0;
-                        continue;
-                    }
-                    index++;
-                }
-                if (index > 0)
-                {
-                    command.CommandText = builder.ToString();
-                    if (!isOpened) this.Open();
-                    result += command.ExecuteNonQuery();
-                }
-            }
-        }
-        builder.Clear();
-        builder = null;
-        return result;
-    }
-    public async Task<int> UpdateBulkAsync(IUpdateVisitor visitor, DbCommand command, CancellationToken cancellationToken = default)
-    {
-        int result = 0;
-        bool isOpened = false;
-        (var updateObjs, var bulkCount, var origName, var firstCommandInitializer,
-            var headSqlSetter, var commandSqlSetter) = visitor.BuildSetBulk(command);
-        firstCommandInitializer?.Invoke(command.Parameters);
-
-        int index = 0;
-        var builder = new StringBuilder();
-
-        if (visitor.ShardingTables != null && visitor.ShardingTables.Count > 0)
-        {
-            //需要访问数据库捞取所有分表，并设置到对应的TableSegment上
-            if (visitor.ShardingTables.Exists(f => f.ShardingType > ShardingTableType.MultiTable))
-            {
-                var fetchSql = visitor.BuildShardingTablesSql(this.Connection.Database);
-                command.CommandText = fetchSql;
-                command.Parameters.Clear();
-                await this.OpenAsync(cancellationToken);
-                var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
-                var shardingTables = new List<string>();
-                while (reader.Read())
-                {
-                    shardingTables.Add(reader.To<string>(this.OrmProvider));
-                }
-                await reader.DisposeAsync();
-                command.CommandText = null;
-                command.Parameters.Clear();
-                visitor.SetShardingTables(shardingTables);
-                isOpened = true;
-            }
-
-            var sqlBuilder = new StringBuilder();
-            var tableCount = visitor.ShardingTables[0].TableNames.Count;
-            if (visitor.IsMultiple)
-            {
-                foreach (var updateObj in updateObjs)
-                {
-                    this.AddShardingTablesBulkSql(visitor, command, builder, sqlBuilder, headSqlSetter,
-                        commandSqlSetter, updateObj, $"_m{visitor.CommandIndex}{index}");
-                    sqlBuilder.Clear();
-                    if (index * tableCount >= bulkCount)
-                    {
-                        command.CommandText = sqlBuilder.ToString();
-                        if (!isOpened)
-                        {
-                            await this.OpenAsync(cancellationToken);
-                            isOpened = true;
-                        }
-                        result += await command.ExecuteNonQueryAsync(cancellationToken);
-                        command.Parameters.Clear();
-                        firstCommandInitializer?.Invoke(command.Parameters);
-                        sqlBuilder.Clear();
-                        index = 0;
-                        continue;
-                    }
-                    index++;
-                }
-                if (index > 0)
-                {
-                    command.CommandText = sqlBuilder.ToString();
-                    if (!isOpened) await this.OpenAsync(cancellationToken);
-                    result += await command.ExecuteNonQueryAsync(cancellationToken);
-                }
-            }
-            else
-            {
-                foreach (var updateObj in updateObjs)
-                {
-                    this.AddShardingTablesBulkSql(visitor, command, builder, sqlBuilder, headSqlSetter,
-                        commandSqlSetter, updateObj, $"{index}");
-                    sqlBuilder.Clear();
-                    if (index * tableCount >= bulkCount)
-                    {
-                        command.CommandText = sqlBuilder.ToString();
-                        if (!isOpened)
-                        {
-                            await this.OpenAsync(cancellationToken);
-                            isOpened = true;
-                        }
-                        result += await command.ExecuteNonQueryAsync(cancellationToken);
-                        command.Parameters.Clear();
-                        firstCommandInitializer?.Invoke(command.Parameters);
-                        sqlBuilder.Clear();
-                        index = 0;
-                        continue;
-                    }
-                    index++;
-                }
-                if (index > 0)
-                {
-                    command.CommandText = sqlBuilder.ToString();
-                    if (!isOpened) await this.OpenAsync(cancellationToken);
-                    result += await command.ExecuteNonQueryAsync(cancellationToken);
-                }
-            }
-        }
-        else
-        {
-            if (visitor.IsMultiple)
-            {
-                foreach (var updateObj in updateObjs)
-                {
-                    if (index > 0) builder.Append(';');
-                    headSqlSetter.Invoke(builder, origName);
-                    commandSqlSetter.Invoke(command.Parameters, builder, updateObj, $"_m{visitor.CommandIndex}{index}");
-                    if (index >= bulkCount)
-                    {
-                        command.CommandText = builder.ToString();
-                        if (!isOpened)
-                        {
-                            await this.OpenAsync(cancellationToken);
-                            isOpened = true;
-                        }
-                        result += await command.ExecuteNonQueryAsync(cancellationToken);
-                        command.Parameters.Clear();
-                        firstCommandInitializer?.Invoke(command.Parameters);
-                        builder.Clear();
-                        index = 0;
-                        continue;
-                    }
-                    index++;
-                }
-                if (index > 0)
-                {
-                    command.CommandText = builder.ToString();
-                    if (!isOpened) await this.OpenAsync(cancellationToken);
-                    result += await command.ExecuteNonQueryAsync(cancellationToken);
-                }
-            }
-            else
-            {
-                foreach (var updateObj in updateObjs)
-                {
-                    if (index > 0) builder.Append(';');
-                    headSqlSetter.Invoke(builder, origName);
-                    commandSqlSetter.Invoke(command.Parameters, builder, updateObj, $"{index}");
-                    if (index >= bulkCount)
-                    {
-                        command.CommandText = builder.ToString();
-                        if (!isOpened)
-                        {
-                            await this.OpenAsync(cancellationToken);
-                            isOpened = true;
-                        }
-                        result += await command.ExecuteNonQueryAsync(cancellationToken);
-                        command.Parameters.Clear();
-                        firstCommandInitializer?.Invoke(command.Parameters);
-                        builder.Clear();
-                        index = 0;
-                        continue;
-                    }
-                    index++;
-                }
-                if (index > 0)
-                {
-                    command.CommandText = builder.ToString();
-                    if (!isOpened) await this.OpenAsync(cancellationToken);
-                    result += await command.ExecuteNonQueryAsync(cancellationToken);
-                }
-            }
-        }
-        builder.Clear();
-        builder = null;
-        return result;
-    }
-    public string BuildUpdateBulkSql(IUpdateVisitor visitor, IDbCommand command)
-    {
-        (var updateObjs, var bulkCount, var origName, var firstCommandInitializer,
-           var headSqlSetter, var commandSqlSetter) = visitor.BuildSetBulk(command);
-        firstCommandInitializer?.Invoke(command.Parameters);
-
-        int index = 0;
-        var builder = new StringBuilder();
-        if (visitor.ShardingTables != null && visitor.ShardingTables.Count > 0)
-        {
-            //需要访问数据库捞取所有分表，并设置到对应的TableSegment上
-            if (visitor.ShardingTables.Exists(f => f.ShardingType > ShardingTableType.MultiTable))
-            {
-                var fetchSql = visitor.BuildShardingTablesSql(this.Connection.Database);
-                command.CommandText = fetchSql;
-                command.Parameters.Clear();
-                this.Open();
-                var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
-                var shardingTables = new List<string>();
-                while (reader.Read())
-                {
-                    shardingTables.Add(reader.To<string>(this.OrmProvider));
-                }
-                reader.Dispose();
-                command.CommandText = null;
-                command.Parameters.Clear();
-                visitor.SetShardingTables(shardingTables);
-            }
-
-            var sqlBuilder = new StringBuilder();
-            if (visitor.IsMultiple)
-            {
-                foreach (var updateObj in updateObjs)
-                {
-                    this.AddShardingTablesBulkSql(visitor, command, builder, sqlBuilder, headSqlSetter,
-                        commandSqlSetter, updateObj, $"_m{visitor.CommandIndex}{index}");
-                    sqlBuilder.Clear();
-                    if (index >= bulkCount)
-                        break;
-                    index++;
-                }
-            }
-            else
-            {
-                foreach (var updateObj in updateObjs)
-                {
-                    this.AddShardingTablesBulkSql(visitor, command, builder, sqlBuilder, headSqlSetter,
-                        commandSqlSetter, updateObj, $"{index}");
-                    sqlBuilder.Clear();
-                    if (index >= bulkCount)
-                        break;
-                    index++;
-                }
-            }
-        }
-        else
-        {
-            if (visitor.IsMultiple)
-            {
-                foreach (var updateObj in updateObjs)
-                {
-                    if (index > 0) builder.Append(';');
-                    headSqlSetter.Invoke(builder, origName);
-                    commandSqlSetter.Invoke(command.Parameters, builder, updateObj, $"_m{visitor.CommandIndex}{index}");
-                    if (index >= bulkCount)
-                        break;
-                    index++;
-                }
-            }
-            else
-            {
-                foreach (var updateObj in updateObjs)
-                {
-                    if (index > 0) builder.Append(';');
-                    headSqlSetter.Invoke(builder, origName);
-                    commandSqlSetter.Invoke(command.Parameters, builder, updateObj, $"{index}");
-                    if (index >= bulkCount)
-                        break;
-                    index++;
-                }
-            }
-        }
-        var sql = builder.ToString();
-        builder.Clear();
-        builder = null;
-        return sql;
-    }
-    #endregion
-
     #region Execute
-    public int Execute(Action<IDbCommand> commandInitializer)
+    public int Execute(Func<IDbCommand, bool> commandInitializer)
     {
         using var command = this.CreateCommand();
         int result = 0;
@@ -1361,8 +932,8 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         Exception exception = null;
         try
         {
-            commandInitializer.Invoke(command);
-            this.Open();
+            if (!commandInitializer.Invoke(command))
+                this.Open();
             result = command.ExecuteNonQuery();
         }
         catch (Exception ex)
@@ -1378,7 +949,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         if (exception != null) throw exception;
         return result;
     }
-    public async Task<int> ExecuteAsync(Action<IDbCommand> commandInitializer, CancellationToken cancellationToken = default)
+    public async Task<int> ExecuteAsync(Func<IDbCommand, bool> commandInitializer, CancellationToken cancellationToken = default)
     {
         using var command = this.CreateDbCommand();
         int result = 0;
@@ -1386,8 +957,8 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         Exception exception = null;
         try
         {
-            commandInitializer.Invoke(command);
-            await this.OpenAsync(cancellationToken);
+            if (!commandInitializer.Invoke(command))
+                await this.OpenAsync(cancellationToken);
             result = await command.ExecuteNonQueryAsync(cancellationToken);
         }
         catch (Exception ex)
@@ -1403,14 +974,11 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         if (exception != null) throw exception;
         return result;
     }
-    #endregion
+    #endregion   
 
     #region Others
     public void Open()
     {
-        if (this.Connection == null)
-            this.Connection = this.OrmProvider.CreateConnection(this.ConnectionString);
-
         if (this.Connection.State == ConnectionState.Broken)
             this.Connection.Close();
         if (this.Connection.State == ConnectionState.Closed)
@@ -1422,9 +990,6 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     }
     public async Task OpenAsync(CancellationToken cancellationToken = default)
     {
-        if (this.Connection == null)
-            this.Connection = this.OrmProvider.CreateConnection(this.ConnectionString);
-
         if (this.Connection is not DbConnection connection)
             throw new NotSupportedException("当前数据库驱动不支持异步操作");
         if (connection.State == ConnectionState.Broken)
@@ -1505,65 +1070,59 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
 
     public (bool, string) BuildSql(SqlVisitor visitor, string formatSql, string jointMark)
     {
-        bool isOpened = false;
         var sql = formatSql;
+        if (visitor.IsNeedFetchShardingTables)
+            this.FetchShardingTables(visitor);
         if (visitor.ShardingTables != null && visitor.ShardingTables.Count > 0)
-        {
-            if (visitor.ShardingTables.Exists(f => f.ShardingType > ShardingTableType.MultiTable))
-            {
-                var fetchSql = visitor.BuildShardingTablesSql(this.Connection.Database);
-                using var command = this.CreateCommand();
-                command.CommandText = fetchSql;
-                this.Open();
-                var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
-                var shardingTables = new List<string>();
-                while (reader.Read())
-                {
-                    shardingTables.Add(reader.To<string>(this.OrmProvider));
-                }
-                reader.Dispose();
-                command.Dispose();
-                visitor.SetShardingTables(shardingTables);
-                isOpened = true;
-            }
-            if (visitor.ShardingTables.Exists(f => f.TableNames.Count > 1))
-                sql = this.BuildShardingTablesSqlByFormat(visitor, formatSql, jointMark);
-        }
-        return (isOpened, sql);
+            sql = this.BuildShardingTablesSqlByFormat(visitor, formatSql, jointMark);
+        return (visitor.IsNeedFetchShardingTables, sql);
     }
     public async Task<(bool, string)> BuildSqlAsync(SqlVisitor visitor, string formatSql, string jointMark, CancellationToken cancellationToken = default)
     {
-        bool isOpened = false;
         var sql = formatSql;
+        if (visitor.IsNeedFetchShardingTables)
+            await this.FetchShardingTablesAsync(visitor, cancellationToken);
         if (visitor.ShardingTables != null && visitor.ShardingTables.Count > 0)
-        {
-            if (visitor.ShardingTables.Exists(f => f.ShardingType > ShardingTableType.MultiTable))
-            {
-                var fetchSql = visitor.BuildShardingTablesSql(this.Connection.Database);
-                using var command = this.CreateDbCommand();
-                command.CommandText = fetchSql;
-                command.CommandText = fetchSql;
-                command.Parameters.Clear();
-                await this.OpenAsync(cancellationToken);
-                var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
-                var shardingTables = new List<string>();
-                while (await reader.ReadAsync(cancellationToken))
-                {
-                    shardingTables.Add(reader.To<string>(this.OrmProvider));
-                }
-                await reader.DisposeAsync();
-                await command.DisposeAsync();
-                visitor.SetShardingTables(shardingTables);
-                isOpened = true;
-            }
-            if (visitor.ShardingTables.Exists(f => f.TableNames.Count > 1))
-                sql = this.BuildShardingTablesSqlByFormat(visitor, formatSql, jointMark);
-        }
-        return (isOpened, sql);
+            sql = this.BuildShardingTablesSqlByFormat(visitor, formatSql, jointMark);
+        return (visitor.IsNeedFetchShardingTables, sql);
     }
 
+    public void FetchShardingTables(SqlVisitor visitor)
+    {
+        var fetchSql = visitor.BuildShardingTablesSql(this.Connection.Database);
+        using var command = this.CreateCommand();
+        command.CommandText = fetchSql;
+        this.Open();
+        var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
+        var shardingTables = new List<string>();
+        while (reader.Read())
+        {
+            shardingTables.Add(reader.To<string>(this.OrmProvider));
+        }
+        reader.Dispose();
+        command.Dispose();
+        visitor.SetShardingTables(shardingTables);
+    }
+    public async Task FetchShardingTablesAsync(SqlVisitor visitor, CancellationToken cancellationToken = default)
+    {
+        var fetchSql = visitor.BuildShardingTablesSql(this.Connection.Database);
+        using var command = this.CreateDbCommand();
+        command.CommandText = fetchSql;
+        command.CommandText = fetchSql;
+        command.Parameters.Clear();
+        await this.OpenAsync(cancellationToken);
+        var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
+        var shardingTables = new List<string>();
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            shardingTables.Add(reader.To<string>(this.OrmProvider));
+        }
+        await reader.DisposeAsync();
+        await command.DisposeAsync();
+        visitor.SetShardingTables(shardingTables);
+    }
     public Dictionary<string, List<object>> SplitShardingParameters(Type entityType, IEnumerable parameters)
-      => RepositoryHelper.SplitShardingParameters(this.DbKey, this.MapProvider, this.ShardingProvider, entityType, parameters);
+        => RepositoryHelper.SplitShardingParameters(this.DbKey, this.MapProvider, this.ShardingProvider, entityType, parameters);
     public string GetShardingTableName(Type entityType, Type parameterType, object parameter)
         => RepositoryHelper.GetShardingTableName(this.DbKey, this.MapProvider, this.ShardingProvider, entityType, parameterType, parameter);
     public string BuildShardingTablesSqlByFormat(SqlVisitor visitor, string formatSql, string jointMark)
@@ -1614,26 +1173,5 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         builder.Clear();
         builder = null;
         return result;
-    }
-    public void AddShardingTablesBulkSql(IUpdateVisitor visitor, IDbCommand command, StringBuilder builder, StringBuilder sqlBuilder, Action<StringBuilder, string> headSqlSetter,
-        Action<IDataParameterCollection, StringBuilder, object, string> commandSqlSetter, object updateObj, string suffix)
-    {
-        var tableNames = visitor.ShardingTables[0].TableNames;
-        var tableSegment = visitor.ShardingTables[0];
-        var origName = tableSegment.Mapper.TableName;
-
-        var tableName = tableSegment.TableNames[0];
-        headSqlSetter.Invoke(builder, tableName);
-        commandSqlSetter.Invoke(command.Parameters, sqlBuilder, updateObj, suffix);
-        builder.Append(sqlBuilder);
-
-        for (int i = 1; i < tableNames.Count; i++)
-        {
-            builder.Append(';');
-
-            tableName = tableSegment.TableNames[i];
-            headSqlSetter.Invoke(builder, tableName);
-            builder.Append(sqlBuilder);
-        }
     }
 }

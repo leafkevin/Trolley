@@ -38,7 +38,7 @@ public class GroupingQueryBase<TGrouping> : IGroupingQueryBase<TGrouping>
     public IQuery<TGrouping> Select()
     {
         this.visitor.SelectGrouping();
-        return new this.OrmProvider.NewQuery<TGrouping>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewQuery<TGrouping>(this.DbContext, this.Visitor);
     }
     public IQuery<TTarget> Select<TTarget>(string fields = "*")
     {
@@ -46,7 +46,7 @@ public class GroupingQueryBase<TGrouping> : IGroupingQueryBase<TGrouping>
             throw new ArgumentNullException(nameof(fields));
 
         this.visitor.Select(fields, null, true);
-        return new this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     #endregion
 }
@@ -103,7 +103,7 @@ class GroupingQuery<T, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     #endregion
 }
@@ -177,7 +177,7 @@ class GroupingQuery<<#=tables#>, TGrouping> : GroupingQueryBase<TGrouping>, IGro
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         this.visitor.Select(null, fieldsExpr);
-        return new this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     #endregion
 <#      }#>
