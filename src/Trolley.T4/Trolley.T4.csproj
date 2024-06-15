@@ -177,6 +177,10 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>IUpdate.cs</LastGenOutput>
     </Content>
+    <Content Include="Trolley\IUpdateFrom.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>IUpdateFrom.cs</LastGenOutput>
+    </Content>
     <Content Include="Trolley\MultiQuery`.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>MultiQuery`.cs</LastGenOutput>
@@ -212,6 +216,10 @@
     <Content Include="Trolley\PredicateBuilder.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>PredicateBuilder.cs</LastGenOutput>
+    </Content>
+    <Content Include="Trolley\IUpdateJoin.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>IUpdateJoin.cs</LastGenOutput>
     </Content>
     <Content Include="Trolley\Update.tt">
       <Generator>TextTemplatingFileGenerator</Generator>

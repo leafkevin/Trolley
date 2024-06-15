@@ -6,8 +6,6 @@
 <#@ import namespace="Microsoft.VisualStudio.TextTemplating"#>
 <#@ output extension=".cs" #>
 using System;
-using System.Collections.Generic;
-using System.Data;
 using System.Linq.Expressions;
 
 namespace Trolley;
@@ -24,10 +22,9 @@ public interface IMultipleQuery
     /// </summary>
     /// <typeparam name="T">实体类型</typeparam>
     /// <param name="tableAsStart">表别名起始字母，默认从字母'a'开始</param>
-    /// <param name="suffixRawSql">额外的原始SQL, SqlServer会有With用法，如：<code>SELECT * FROM sys_user WITH(NOLOCK)</code>
     /// </param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T> From<T>(char tableAsStart = 'a', string suffixRawSql = null);
+    IMultiQuery<T> From<T>(char tableAsStart = 'a');
 <#
     var count = 10;
     string tables = "T1";
@@ -57,12 +54,10 @@ public interface IMultipleQuery
     /// 从SQL子查询中查询数据，用法：
     /// <code>
     /// repository
-    ///     .From(f =&gt; f.From&lt;Page, Menu&gt;('o')
-    ///         .Where((a, b) =&gt; a.Id == b.PageId)
-    ///         .Select((x, y) =&gt; new { y.Id, y.ParentId, x.Url }))
-    ///     ...
+    ///     .From(f =&gt; f.From&lt;Page, Menu&gt;('o') ...
+    ///         .Select((x, y) =&gt; new { ... }))
     /// SQL:
-    /// ... FROM (SELECT p.`Id`,p.`ParentId`,o.`Url` FROM `sys_page` o,`sys_menu` p WHERE o.`Id`=p.`PageId`) ...
+    /// ... FROM (SELECT ... FROM `sys_page` o,`sys_menu` p WHERE ...) ...
     /// </code>
     /// </summary>
     /// <typeparam name="T">表T实体类型</typeparam>

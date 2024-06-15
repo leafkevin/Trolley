@@ -27,17 +27,14 @@ public class GroupingQueryBase<TGrouping> : IGroupingQueryBase<TGrouping>
     #endregion
 
     #region Select/SelectAnonymous
-    public IQueryAnonymousObject SelectAnonymous(string fields = "*")
+    public IQueryAnonymousObject SelectAnonymous()
     {
-        if (string.IsNullOrEmpty(fields))
-            throw new ArgumentNullException(nameof(fields));
-
-        this.visitor.Select(fields, null, true);
-        return new QueryAnonymousObject(this.visitor);
+        this.Visitor.Select("*");
+        return new QueryAnonymousObject(this.Visitor);
     }
     public IQuery<TGrouping> Select()
     {
-        this.visitor.SelectGrouping();
+        this.Visitor.SelectGrouping();
         return this.OrmProvider.NewQuery<TGrouping>(this.DbContext, this.Visitor);
     }
     public IQuery<TTarget> Select<TTarget>(string fields = "*")
@@ -45,12 +42,12 @@ public class GroupingQueryBase<TGrouping> : IGroupingQueryBase<TGrouping>
         if (string.IsNullOrEmpty(fields))
             throw new ArgumentNullException(nameof(fields));
 
-        this.visitor.Select(fields, null, true);
+        this.Visitor.Select(fields, null);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     #endregion
 }
-class GroupingQuery<T, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T, TGrouping>
+public class GroupingQuery<T, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T, TGrouping>
 {
     #region Constructor
     public GroupingQuery(DbContext dbContext, IQueryVisitor visitor)
@@ -66,7 +63,7 @@ class GroupingQuery<T, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery
             throw new ArgumentNullException(nameof(predicate));
 
         if (condition)
-            this.visitor.Having(predicate);
+            this.Visitor.Having(predicate);
         return this;
     }
     #endregion
@@ -80,7 +77,7 @@ class GroupingQuery<T, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         if (condition)
-            this.visitor.OrderBy("ASC", fieldsExpr);
+            this.Visitor.OrderBy("ASC", fieldsExpr);
         return this;
     }
     public IGroupingQuery<T, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
@@ -91,7 +88,7 @@ class GroupingQuery<T, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         if (condition)
-            this.visitor.OrderBy("DESC", fieldsExpr);
+            this.Visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
     #endregion
@@ -102,7 +99,7 @@ class GroupingQuery<T, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
+        this.Visitor.Select(null, fieldsExpr);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -114,7 +111,7 @@ class GroupingQuery<T, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery
     {
         tables += $", T{i}";
 #>
-class GroupingQuery<<#=tables#>, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<<#=tables#>, TGrouping>
+public class GroupingQuery<<#=tables#>, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<<#=tables#>, TGrouping>
 {
     #region Constructor
     public GroupingQuery(DbContext dbContext, IQueryVisitor visitor)
@@ -131,7 +128,7 @@ class GroupingQuery<<#=tables#>, TGrouping> : GroupingQueryBase<TGrouping>, IGro
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
 
-        this.visitor.Having(predicate);
+        this.Visitor.Having(predicate);
         return this;
     }
     public IGroupingQuery<<#=tables#>, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, bool>> predicate)
@@ -140,7 +137,7 @@ class GroupingQuery<<#=tables#>, TGrouping> : GroupingQueryBase<TGrouping>, IGro
             throw new ArgumentNullException(nameof(predicate));
 
         if (condition)
-            this.visitor.Having(predicate);
+            this.Visitor.Having(predicate);
         return this;
     }
     #endregion
@@ -154,7 +151,7 @@ class GroupingQuery<<#=tables#>, TGrouping> : GroupingQueryBase<TGrouping>, IGro
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         if (condition)
-            this.visitor.OrderBy("ASC", fieldsExpr);
+            this.Visitor.OrderBy("ASC", fieldsExpr);
         return this;
     }
     public IGroupingQuery<<#=tables#>, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr)
@@ -165,7 +162,7 @@ class GroupingQuery<<#=tables#>, TGrouping> : GroupingQueryBase<TGrouping>, IGro
             throw new ArgumentNullException(nameof(fieldsExpr));
 
         if (condition)
-            this.visitor.OrderBy("DESC", fieldsExpr);
+            this.Visitor.OrderBy("DESC", fieldsExpr);
         return this;
     }
     #endregion
@@ -176,7 +173,7 @@ class GroupingQuery<<#=tables#>, TGrouping> : GroupingQueryBase<TGrouping>, IGro
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.visitor.Select(null, fieldsExpr);
+        this.Visitor.Select(null, fieldsExpr);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     #endregion

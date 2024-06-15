@@ -191,7 +191,7 @@ public interface IUpdate<TEntity>
     IContinuedUpdate<TEntity> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment);
     #endregion
 
-    #region WithBulk
+    #region SetBulk
     /// <summary>
     /// 使用集合对象updateObjs部分字段批量更新，根据主键字段更新，updateObjs对象中除主键、OnlyFields、IgnoreFields方法筛选后的剩下所有字段都将参与更新。支持分批次更新，更新条数超过设置的bulkCount值，将在下次更新，直到所有数据更新完毕，bulkCount默认500，
     /// 可以继续使用Set、OnlyFields、IgnoreFields等方法，用法：

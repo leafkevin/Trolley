@@ -406,8 +406,8 @@ public class Updated<TEntity> : IUpdated<TEntity>
 public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEntity>
 {
     #region Constructor
-    public ContinuedUpdate(DbContext dbContext, IUpdateVisitor Visitor)
-        : base(dbContext, Visitor) { }
+    public ContinuedUpdate(DbContext dbContext, IUpdateVisitor visitor)
+        : base(dbContext, visitor) { }
     #endregion
 
     #region Set
@@ -1232,8 +1232,8 @@ public class UpdateJoin<TEntity, T1, T2> : Updated<TEntity>, IUpdateJoin<TEntity
     #endregion
 
     #region Constructor
-    public UpdateJoin(DbContext dbContext, IUpdateVisitor Visitor)
-        : base(dbContext, Visitor) { }
+    public UpdateJoin(DbContext dbContext, IUpdateVisitor visitor)
+        : base(dbContext, visitor) { }
     #endregion
 
     #region Join
@@ -1363,8 +1363,8 @@ public class UpdateJoin<TEntity, T1, T2, T3> : Updated<TEntity>, IUpdateJoin<TEn
     #endregion
 
     #region Constructor
-    public UpdateJoin(DbContext dbContext, IUpdateVisitor Visitor)
-        : base(dbContext, Visitor) { }
+    public UpdateJoin(DbContext dbContext, IUpdateVisitor visitor)
+        : base(dbContext, visitor) { }
     #endregion
 
     #region Join
@@ -1494,8 +1494,8 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4> : Updated<TEntity>, IUpdateJoin
     #endregion
 
     #region Constructor
-    public UpdateJoin(DbContext dbContext, IUpdateVisitor Visitor)
-        : base(dbContext, Visitor) { }
+    public UpdateJoin(DbContext dbContext, IUpdateVisitor visitor)
+        : base(dbContext, visitor) { }
     #endregion
 
     #region Join
@@ -1625,8 +1625,8 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : Updated<TEntity>, IUpdate
     #endregion
 
     #region Constructor
-    public UpdateJoin(DbContext dbContext, IUpdateVisitor Visitor)
-        : base(dbContext, Visitor) { }
+    public UpdateJoin(DbContext dbContext, IUpdateVisitor visitor)
+        : base(dbContext, visitor) { }
     #endregion
 
     #region Set

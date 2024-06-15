@@ -175,7 +175,7 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
     IQuery<T> From<T>(Func<IFromQuery, IQuery<T>> subQuery);
-    #endregion 
+    #endregion
 
     #region QueryFirst/Query
     /// <summary>
@@ -514,23 +514,6 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     #endregion
 
     #region QueryMultiple
-    #region 不支持
-    ///// <summary>
-    ///// 多SQL语句一起执行，并返回多个结果集，根据SQL语句按顺序接收返回结果。
-    ///// </summary>
-    ///// <param name="rawSql">要执行的SQL</param>
-    ///// <param name="parameters">SQL中使用的参数，可以是已有对象、匿名对象或是Dictionary类型对象，可以为null</param>
-    ///// <returns>返回多结果集Reader对象</returns>
-    //IMultiQueryReader QueryMultiple(string rawSql, object parameters = null);
-    ///// <summary>
-    ///// 多SQL语句一起执行，并返回多个结果集，根据SQL语句顺序接收返回结果。
-    ///// </summary>
-    ///// <param name="rawSql">要执行的SQL</param>
-    ///// <param name="parameters">SQL中使用的参数，可以是已有对象、匿名对象或是Dictionary类型对象，可以为null</param>
-    ///// <param name="cancellationToken">取消Token</param>
-    ///// <returns>返回多结果集Reader对象</returns>
-    //Task<IMultiQueryReader> QueryMultipleAsync(string rawSql, object parameters = null, CancellationToken cancellationToken = default);
-    #endregion
     /// <summary>
     /// 使用IMultipleQuery操作生成多个SQL语句一起执行，并返回多个结果集，根据IMultipleQuery操作顺序接收返回结果。
     /// </summary>

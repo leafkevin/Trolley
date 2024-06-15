@@ -35,6 +35,7 @@ public interface IQueryVisitor : IDisposable
     bool IsUseCteTable { get; set; }
     char TableAsStart { get; set; }
     int PageNumber { get; set; }
+    int PageSize { get; set; }
     bool IsNeedFetchShardingTables { get; }
     List<TableSegment> ShardingTables { get; set; }
 

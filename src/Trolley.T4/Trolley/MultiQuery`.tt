@@ -38,7 +38,7 @@ public class MultiQuery<<#=tables#>> : MultiQueryBase, IMultiQuery<<#=tables#>>
             throw new ArgumentNullException(nameof(subQuery));
 
         this.Visitor.From(typeof(TOther), subQuery);
-         return this.OrmProvider.NewMultiQuery<<#=tables#>, TOther>(this.MultipleQuery, this.Visitor);
+        return this.OrmProvider.NewMultiQuery<<#=tables#>, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<<#=tables#>, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
     {
@@ -131,7 +131,7 @@ public class MultiQuery<<#=tables#>> : MultiQueryBase, IMultiQuery<<#=tables#>>
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-       this.Visitor.Join("RIGHT JOIN", typeof(TOther), subQuery, joinOn);
+        this.Visitor.Join("RIGHT JOIN", typeof(TOther), subQuery, joinOn);
         return this.OrmProvider.NewMultiQuery<<#=tables#>, TOther>(this.MultipleQuery, this.Visitor);
     }
     public IMultiQuery<<#=tables#>, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)

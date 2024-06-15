@@ -22,15 +22,7 @@ public interface IFromQuery
     /// <typeparam name="T">实体类型</typeparam>
     /// <param name="tableAsStart">表别名起始字母，默认从'a'开始</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> From<T>(char tableAsStart='a');
-    /// <summary>
-    /// 创建子查询，生成SQL: FROM T
-    /// </summary>
-    /// <typeparam name="T">实体类型</typeparam>
-    /// <param name="tableAsStart">表别名起始字母，默认从'a'开始</param>
-    /// <param name="suffixRawSql">额外的原始SQL, SqlServer会有With用法，如：<cdoe>SELECT * FROM sys_user WITH(NOLOCK)</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T> From<T>(char tableAsStart, string suffixRawSql);
+    IQuery<T> From<T>(char tableAsStart = 'a');
 <#
     var count = 15;
     string tables = "T1";
@@ -53,6 +45,10 @@ public interface IFromQuery
     /// <returns>返回查询对象</returns>
     IQuery<<#=tables#>> From<<#=tables#>>(char tableAsStart = 'a');
 <#  }#>
+    #endregion
+
+    #region From SubQuery
+    IQuery<T> From<T>(IQuery<T> subQuery);
     #endregion
 
     #region ToSql

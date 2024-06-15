@@ -180,7 +180,7 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
     }
     public IQuery<<#=tables#>, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
-         if (subQuery == null)
+        if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
@@ -190,7 +190,7 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
     }
     public IQuery<<#=tables#>, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
-         if (subQuery == null)
+        if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
@@ -200,7 +200,7 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
     }
     public IQuery<<#=tables#>, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
-         if (subQuery == null)
+        if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
@@ -210,8 +210,8 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
     }
 <#      }#>
     #endregion
-	
-	#region Include
+
+    #region Include
     public IIncludableQuery<<#=tables#>, TMember> Include<TMember>(Expression<Func<<#=tables#>, TMember>> memberSelector)
     {
         if (memberSelector == null)
@@ -278,7 +278,7 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
         this.Visitor.GroupBy(groupingExpr);
         return this.OrmProvider.NewGroupQuery<<#=tables#>, TGrouping>(this.DbContext, this.Visitor);
     }
-	#endregion
+    #endregion
 
     #region OrderBy
     public IQuery<<#=tables#>> OrderBy<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr)
@@ -338,14 +338,14 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
 
     #region Count
     public int Count<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr)
-	{
+    {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
         return this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
     }
     public async Task<int> CountAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default)
-	{
+    {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 

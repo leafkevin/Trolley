@@ -1078,7 +1078,7 @@ public interface IQuery<<#=tables#>> : IQueryBase
 <#
         if(i < count)
         {
-#>    
+#>
     /// <summary>
     /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
     /// <code>

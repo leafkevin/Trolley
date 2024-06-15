@@ -48,22 +48,28 @@ public class FromCommand : IFromCommand
     #region Execute
     public virtual int Execute()
     {
+        if (this.Visitor.IsNeedFetchShardingTables)
+            this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
         var sql = this.Visitor.BuildCommandSql(this.EntityType, out var dbParameters);
         var result = this.DbContext.Execute(f =>
         {
             f.CommandText = sql;
             dbParameters.CopyTo(f.Parameters);
+            return this.Visitor.IsNeedFetchShardingTables;
         });
         this.Dispose();
         return result;
     }
     public virtual async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
+        if (this.Visitor.IsNeedFetchShardingTables)
+            await this.DbContext.FetchShardingTablesAsync(this.Visitor as SqlVisitor, cancellationToken);
         var sql = this.Visitor.BuildCommandSql(this.EntityType, out var dbParameters);
         var result = await this.DbContext.ExecuteAsync(f =>
         {
             f.CommandText = sql;
             dbParameters.CopyTo(f.Parameters);
+            return this.Visitor.IsNeedFetchShardingTables;
         }, cancellationToken);
         this.Dispose();
         return result;

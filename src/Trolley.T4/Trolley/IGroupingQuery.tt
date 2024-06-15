@@ -28,11 +28,10 @@ public interface IGroupingAggregate<TGrouping> : IAggregateSelect
 public interface IGroupingQueryBase<TGrouping>
 {
     /// <summary>
-    /// 使用原始字段返回匿名查询结果，主要用在不关注结果类型的地方，比如：Sql.Exists语句，用于判断数据是否存在，用法：SelectAnonymous("*") 或是 SelectAnonymous("1")，
+    /// 使用原始字段*返回匿名查询结果，主要用在不关注结果类型的地方，如：Sql.Exists语句，用于判断数据是否存在
     /// </summary>
-    /// <param name="fields">原始字段字符串，默认值*</param>
     /// <returns>返回匿名查询对象</returns>
-    IQueryAnonymousObject SelectAnonymous(string fields = "*");
+    IQueryAnonymousObject SelectAnonymous();
     /// <summary>
     /// 使用分组后对象直接返回
     /// </summary>
@@ -156,7 +155,7 @@ public interface IGroupingQuery<<#=tables#>, TGrouping> : IGroupingQueryBase<TGr
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     IGroupingQuery<<#=tables#>, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr);
-	/// <summary>
+    /// <summary>
     /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
@@ -173,7 +172,7 @@ public interface IGroupingQuery<<#=tables#>, TGrouping> : IGroupingQueryBase<TGr
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     IGroupingQuery<<#=tables#>, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr);
-	/// <summary>
+    /// <summary>
     /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>

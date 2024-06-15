@@ -26,7 +26,7 @@ public interface IMultiGroupingQueryBase<TGrouping>
     /// 使用分组后对象直接返回
     /// </summary>
     /// <returns>返回分组后对象</returns>
-    IMultiQuery<TGrouping> Select();    
+    IMultiQuery<TGrouping> Select();
     /// <summary>
     /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
     /// </summary>
@@ -145,7 +145,7 @@ public interface IMultiGroupingQuery<<#=tables#>, TGrouping> : IMultiGroupingQue
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     IMultiGroupingQuery<<#=tables#>, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr);
-	/// <summary>
+    /// <summary>
     /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>
@@ -162,7 +162,7 @@ public interface IMultiGroupingQuery<<#=tables#>, TGrouping> : IMultiGroupingQue
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     IMultiGroupingQuery<<#=tables#>, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr);
-	/// <summary>
+    /// <summary>
     /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
     /// </summary>

@@ -60,7 +60,7 @@ class MultiGroupingQuery<T, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMul
 
     #region Having
     public IMultiGroupingQuery<T, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate)
-    	=> this.Having(true, predicate);
+        => this.Having(true, predicate);
     public IMultiGroupingQuery<T, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate)
     {
         if (predicate == null)

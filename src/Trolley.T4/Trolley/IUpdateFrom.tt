@@ -1,0 +1,233 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="Microsoft.VisualStudio.TextTemplating"#>
+<#@ output extension=".cs" #>
+using System;
+using System.Linq.Expressions;
+
+namespace Trolley;
+
+<#
+    var count = 6;
+    var tables = "TEntity";
+    var joinTables = "T1";
+    var tableAlias = "a";
+    string currentTable = null;
+    for (int i = 1; i < count; i++)
+    {
+        tables += $", T{i}";
+        tableAlias += $", {(char)(97 + i)}";
+        if( i > 1 ) joinTables += $",T{i}";
+#>
+/// <summary>
+/// 使用表<#=joinTables#>部分字段数据，更新当前表TEntity数据，仅限Sql Server数据库使用
+/// Update ..From语句，在Where语句中一定要包含Update表与From表之间的关联条件
+/// </summary>
+/// <typeparam name="TEntity">要更新数据表TEntity实体类型</typeparam>
+<#
+        for(int j = 1; j <= i; j++)
+        {
+            currentTable = $"T{j}";
+#>
+/// <typeparam name="<#=currentTable#>">更新值来源表<#=currentTable#>实体类型</typeparam>
+<#      }#>
+public interface IUpdateFrom<<#=tables#>> : IUpdated<TEntity>
+{
+    #region Set
+    /// <summary>
+    /// 使用更新对象updateObj部分字段更新，updateObj对象中所有字段都将参与更新，用法：
+    /// <code>.Set(new { Id = 1, Name = "kevin", SourceType = DBNull.Value }) SQL: SET `Name`=@Name,SourceType=@SourceType</code>
+    /// </summary>
+    /// <typeparam name="TUpdateObj">更新对象类型</typeparam>
+    /// <param name="updateObj">部分字段更新对象参数，包含想要更新的必需栏位值，updateObj对象内的栏位都将参与更新，可以是字典或是匿名对象或是现有命名对象</param>
+    /// <returns>返回更新对象</returns>
+    IUpdateFrom<<#=tables#>> Set<TUpdateObj>(TUpdateObj updateObj);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用更新对象updateObj部分字段更新，updateObj对象中所有字段都将参与更新，为false不做更新，用法：
+    /// <code>.Set(true, new { Id = 1, Name = "kevin", SourceType = DBNull.Value }) SQL: SET `Name`=@Name,SourceType=@SourceType</code>
+    /// </summary>
+    /// <typeparam name="TUpdateObj">更新对象类型</typeparam>
+    /// <param name="condition">判断条件</param>
+    /// <param name="updateObj">部分字段更新对象参数，包含想要更新的必需栏位值，updateObj对象内的栏位都将参与更新，可以是字典或是匿名对象或是现有命名对象</param>
+    /// <returns>返回更新对象</returns>
+    IUpdateFrom<<#=tables#>> Set<TUpdateObj>(bool condition, TUpdateObj updateObj);
+    /// <summary>
+    /// 使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个字段，用法：
+    /// <code>
+    /// var parameter = new OrderInfo { ... };
+    ///     .Set((a, b ...) => new
+    ///     {
+    ///         parameter.TotalAmount, //直接赋值，使用同名变量
+    ///         Products = this.GetProducts(), //直接赋值，使用本地函数
+    ///         BuyerId = DBNull.Value, //直接赋值 NULL
+    ///         Disputes = new Dispute { ... }, //直接赋值，实体对象由TypeHandler处理
+    ///         BuyerSource = b.BuyerSource //使用其他表栏位赋值
+    ///     }) ...
+    /// private int[] GetProducts() => new int[] { 1, 2, 3 };
+    /// SQL: SET `TotalAmount`=@TotalAmount,`Products`=@Products,`BuyerId`=NULL,`Disputes`=@Disputes,`BuyerSource`=b.BuyerSource ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TFields">一个或是多个字段</typeparam>
+    /// <param name="fieldsAssignment">更新字段表达式，一个或是多个字段成员访问表达式，同名字段可省略赋值字段，如：parameter.TotalAmount</param>
+    /// <returns>返回更新对象</returns>
+    IUpdateFrom<<#=tables#>> Set<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsAssignment);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
+    /// <code>
+    /// var parameter = new OrderInfo { ... };
+    ///     .Set(true, (a, b ...) => new
+    ///     {
+    ///         parameter.TotalAmount, //直接赋值，使用同名变量
+    ///         Products = this.GetProducts(), //直接赋值，使用本地函数
+    ///         BuyerId = DBNull.Value, //直接赋值 NULL
+    ///         Disputes = new Dispute { ... }, //直接赋值，实体对象由TypeHandler处理
+    ///         BuyerSource = b.BuyerSource //使用其他表栏位赋值
+    /// }) ...
+    /// private int[] GetProducts() => new int[] { 1, 2, 3 };
+    /// SQL: SET `TotalAmount`=@TotalAmount,`Products`=@Products,`BuyerId`=NULL,`Disputes`=@Disputes,`BuyerSource`=b.BuyerSource ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TFields">一个或是多个字段</typeparam>
+    /// <param name="condition">更新条件</param>
+    /// <param name="fieldsAssignment">更新字段表达式，一个或是多个字段成员访问表达式，同名字段省略赋值字段，如：parameter.TotalAmount</param>
+    /// <returns>返回更新对象</returns>
+    IUpdateFrom<<#=tables#>> Set<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsAssignment);
+    /// <summary>
+    /// 使用表达式fieldSelector筛选单个字段，使用固定值fieldValue进行单字段更新，用法：
+    /// <code>.Set(x =&gt; x.TotalAmount, 200.56)</code>
+    /// </summary>
+    /// <typeparam name="TField">更新字段类型</typeparam>
+    /// <param name="fieldSelector">筛选单个字段表达式，只能筛选一个字段</param>
+    /// <param name="fieldValue">字段值，固定值</param>
+    /// <returns>返回更新对象</returns>
+    IUpdateFrom<<#=tables#>> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个字段，使用固定值fieldValue进行单字段更新，否则不生成更新语句，用法：
+    /// <code>.Set(true, x =&gt; x.TotalAmount, 200.56)</code>
+    /// </summary>
+    /// <typeparam name="TField">更新字段类型</typeparam>
+    /// <param name="condition">判断条件</param>
+    /// <param name="fieldSelector">筛选单个字段表达式，只能筛选一个字段</param>
+    /// <param name="fieldValue">字段值，固定值</param>
+    /// <returns>返回更新对象</returns>
+    IUpdateFrom<<#=tables#>> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
+    #endregion
+
+    #region SetFrom
+    /// <summary>
+    /// 使用子查询fieldsAssignment表达式捞取值部分栏位更新，表达式fieldsAssignment捞取的字段可以是一个或是多个，用法：
+    /// <code>
+    /// var orderInfo = new { ... };
+    /// .SetFrom((a, b ...) =&gt; new
+    /// {
+    ///     orderInfo.Disputes, //直接赋值，使用同名变量，实体对象由TypeHandler处理
+    ///     TotalAmount = a.From&lt;OrderDetail&gt;('x')
+    ///         .Where(f =&gt; f.OrderId == y.Id)
+    ///         .Select(t =&gt; Sql.Sum(t.Amount)) //子查询
+    ///     OrderNo = "ON-001", //直接赋值
+    ///     BuyerId = DBNull.Value, //直接赋值 NULL
+    ///     tmpObj.Disputes, //直接赋值，使用同名变量
+    ///     Products = this.GetProducts(), //直接赋值，使用本地函数
+    ///     BuyerSource = b.BuyerSource //使用其他表栏位赋值
+    /// })
+    /// SQL: SET a.`Disputes`=@Disputes,a.`TotalAmount`=(SELECT SUM(x.`Amount`) FROM `sys_order_detail` x WHERE x.`OrderId`=a.`Id`),a.`OrderNo`='ON-001',a.`BuyerId`=NULL,a.`Disputes`=@Disputes,a.`Products`=@Products,a.`BuyerSource`=b.BuyerSource ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
+    /// <param name="fieldsAssignment">子查询表达式，可以一个或多个字段赋值</param>
+    /// <returns>返回更新对象</returns>
+    IUpdateFrom<<#=tables#>> SetFrom<TFields>(Expression<Func<IFromQuery, <#=tables#>, TFields>> fieldsAssignment);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
+    /// <code>
+    /// var orderInfo = new { ... };
+    /// .SetFrom(true, (a, b ...) =&gt; new
+    /// {
+    ///     orderInfo.Disputes, //直接赋值，使用同名变量，实体对象由TypeHandler处理
+    ///     TotalAmount = a.From&lt;OrderDetail&gt;('x')
+    ///         .Where(f =&gt; f.OrderId == y.Id)
+    ///         .Select(t =&gt; Sql.Sum(t.Amount)) //子查询
+    ///     OrderNo = "ON-001", //直接赋值
+    ///     BuyerId = DBNull.Value, //直接赋值 NULL
+    ///     tmpObj.Disputes, //直接赋值，使用同名变量
+    ///     Products = this.GetProducts(), //直接赋值，使用本地函数
+    ///     BuyerSource = b.BuyerSource //使用其他表栏位赋值
+    /// })
+    /// SQL: SET a.`Disputes`=@Disputes,a.`TotalAmount`=(SELECT SUM(x.`Amount`) FROM `sys_order_detail` x WHERE x.`OrderId`=a.`Id`),a.`OrderNo`='ON-001',a.`BuyerId`=NULL,a.`Disputes`=@Disputes,a.`Products`=@Products,a.`BuyerSource`=b.BuyerSource ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
+    /// <param name="condition">判断条件</param>
+    /// <param name="fieldsAssignment">子查询表达式，可以一个或多个字段赋值</param>
+    /// <returns>返回更新对象</returns>
+    IUpdateFrom<<#=tables#>> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, <#=tables#>, TFields>> fieldsAssignment);
+    /// <summary>
+    /// 使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，表达式fieldSelector只能筛选一个栏位，用法：
+    /// <code>
+    /// .SetFrom(f =&gt; f.TotalAmount, (x, y) =&gt; x
+    ///     .From&lt;OrderDetail&gt;('c')
+    ///     .Where(f =&gt; f.OrderId == y.Id)
+    ///     .Select(t =&gt; Sql.Sum(t.Amount))) ...
+    /// SQL: SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TField">子查询返回的单个字段类型</typeparam>
+    /// <param name="fieldSelector">单个字段筛选表达式</param>
+    /// <param name="valueSelector">获取单个字段值的子查询表达式</param>
+    /// <returns>返回更新对象</returns>
+    IUpdateFrom<<#=tables#>> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，如果为false，则不生成更新语句，表达式fieldSelector只能筛选一个栏位，用法：
+    /// <code>
+    /// .SetFrom(true, f =&gt; f.TotalAmount, (x, y) =&gt; x
+    ///     .From&lt;OrderDetail&gt;('c')
+    ///     .Where(f =&gt; f.OrderId == y.Id)
+    ///     .Select(t =&gt; Sql.Sum(t.Amount))) ...
+    /// SQL: SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="condition">判断条件</param>
+    /// <param name="fieldSelector">字段筛选表达式，只能筛选一个字段</param>
+    /// <param name="valueSelector">获取单个字段值的子查询表达式</param>
+    /// <returns>返回更新对象</returns>
+    IUpdateFrom<<#=tables#>> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
+    #endregion
+
+    #region Where/And
+    /// <summary>
+    /// 使用predicate表达式生成Where条件，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回更新对象</returns>
+    IUpdateFrom<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
+    /// <returns>返回更新对象</returns>
+    IUpdateFrom<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null);
+    /// <summary>
+    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回更新对象</returns>
+    IUpdateFrom<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回更新对象</returns>
+    IUpdateFrom<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate = null, Expression<Func<<#=tables#>, bool>> elsePredicate = null);
+    #endregion
+}
+<#  }#>

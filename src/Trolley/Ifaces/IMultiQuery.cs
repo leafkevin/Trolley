@@ -923,7 +923,6 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// <param name="fieldsExpr">字段选择表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, TTarget>> fieldsExpr);
-
     /// <summary>
     /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
     /// <code>
@@ -1348,7 +1347,6 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// <param name="fieldsExpr">字段选择表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, TTarget>> fieldsExpr);
-
     /// <summary>
     /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
     /// <code>
@@ -1774,7 +1772,6 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// <param name="fieldsExpr">字段选择表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, TTarget>> fieldsExpr);
-
     /// <summary>
     /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
     /// <code>
@@ -2201,7 +2198,6 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// <param name="fieldsExpr">字段选择表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, TTarget>> fieldsExpr);
-
     /// <summary>
     /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
     /// <code>
@@ -2629,7 +2625,6 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// <param name="fieldsExpr">字段选择表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr);
-
     /// <summary>
     /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
     /// <code>
@@ -3058,7 +3053,6 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
     /// <param name="fieldsExpr">字段选择表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TTarget>> fieldsExpr);
-
     /// <summary>
     /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
     /// <code>
@@ -3488,7 +3482,6 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     /// <param name="fieldsExpr">字段选择表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TTarget>> fieldsExpr);
-
     /// <summary>
     /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
     /// <code>
@@ -3919,7 +3912,6 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
     /// <param name="fieldsExpr">字段选择表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TTarget>> fieldsExpr);
-
     /// <summary>
     /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
     /// <code>
@@ -4351,7 +4343,6 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
     /// <param name="fieldsExpr">字段选择表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TTarget>> fieldsExpr);
-
     /// <summary>
     /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
     /// <code>
@@ -4784,7 +4775,6 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
     /// <param name="fieldsExpr">字段选择表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TTarget>> fieldsExpr);
-
     /// <summary>
     /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
     /// <code>
@@ -5218,7 +5208,6 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     /// <param name="fieldsExpr">字段选择表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TTarget>> fieldsExpr);
-
     /// <summary>
     /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
     /// <code>
@@ -5653,7 +5642,6 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <param name="fieldsExpr">字段选择表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TTarget>> fieldsExpr);
-
     /// <summary>
     /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
     /// <code>
@@ -6089,7 +6077,6 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <param name="fieldsExpr">字段选择表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TTarget>> fieldsExpr);
-
     /// <summary>
     /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
     /// <code>
@@ -6526,7 +6513,6 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <param name="fieldsExpr">字段选择表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> fieldsExpr);
-
     /// <summary>
     /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
     /// <code>

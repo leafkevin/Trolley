@@ -5,32 +5,37 @@
 <#@ import namespace="System.Collections.Generic" #>
 <#@ import namespace="Microsoft.VisualStudio.TextTemplating"#>
 <#@ output extension=".cs" #>
-using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 
 namespace Trolley;
 
 public class FromQuery : IFromQuery
 {
     #region Fields
-    protected string dbKey;
-    protected TheaConnection connection;
-    protected IDbTransaction transaction;
+    protected internal DbContext dbContext;
+    protected internal IQueryVisitor visitor;
     protected IOrmProvider ormProvider;
-    protected IEntityMapProvider mapProvider;
-    protected IQueryVisitor visitor;
     #endregion
 
     #region Constructor
-    public FromQuery(TheaConnection connection, IDbTransaction transaction, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor, Type insertType = null)
+    public FromQuery(DbContext dbContext, IQueryVisitor visitor)
     {
-        this.connection = connection;
-        this.transaction = transaction;
-        this.ormProvider = ormProvider;
-        this.mapProvider = mapProvider;
+        this.dbContext = dbContext;
         this.visitor = visitor;
-        this.dbKey = connection?.DbKey;
+        this.ormProvider = dbContext.OrmProvider;
+    }
+    public FromQuery(IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor, bool isParameterized)
+    {
+        this.ormProvider = ormProvider;
+        this.dbContext = new DbContext
+        {
+            OrmProvider = ormProvider,
+            MapProvider = mapProvider,
+            IsParameterized = isParameterized
+        };
+        this.visitor = visitor;
     }
     #endregion
 
@@ -38,7 +43,7 @@ public class FromQuery : IFromQuery
     public IQuery<T> From<T>(char tableAsStart = 'a')
     {
         this.visitor.From(tableAsStart, typeof(T));
-        return this.ormProvider.NewQuery<T>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        return this.ormProvider.NewQuery<T>(this.dbContext, this.visitor);
     }
 <#
     var count = 16;
@@ -52,15 +57,23 @@ public class FromQuery : IFromQuery
     public IQuery<<#=tables#>> From<<#=tables#>>(char tableAsStart = 'a')
     {
         this.visitor.From(tableAsStart, <#=typeOfTables#>);
-        return this.ormProvider.NewQuery<<#=tables#>>(this.connection, this.transaction, this.ormProvider, this.mapProvider, this.visitor);
+        return this.ormProvider.NewQuery<<#=tables#>>(this.dbContext, this.visitor);
     }
 <#  }#>
+    #endregion
+
+    #region From SubQuery
+    public virtual IQuery<T> From<T>(IQuery<T> subQuery)
+    {
+        this.visitor.From(typeof(T), subQuery);
+        return this.ormProvider.NewQuery<T>(this.dbContext, this.visitor);
+    }
     #endregion
 
     #region ToSql
     public string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        dbParameters = this.visitor.DbParameters;
+        dbParameters = this.visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         return this.visitor.BuildSql(out _);
     }
     #endregion

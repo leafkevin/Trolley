@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -20,6 +21,7 @@ public class Update<TEntity> : IUpdate<TEntity>
     #region Properties
     public DbContext DbContext { get; protected set; }
     public IUpdateVisitor Visitor { get; protected set; }
+    public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
     #endregion
 
     #region Constructor
@@ -154,10 +156,6 @@ public class Update<TEntity> : IUpdate<TEntity>
 }
 public class Updated<TEntity> : IUpdated<TEntity>
 {
-    #region Fields
-    protected bool hasWhere;
-    #endregion
-
     #region Properties
     public DbContext DbContext { get; protected set; }
     public IUpdateVisitor Visitor { get; protected set; }
@@ -180,18 +178,83 @@ public class Updated<TEntity> : IUpdated<TEntity>
         using var command = this.DbContext.CreateCommand();
         try
         {
+            bool isOpened = false;
+            if (this.Visitor.IsNeedFetchShardingTables)
+            {
+                this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
+                isOpened = true;
+            }
             switch (this.Visitor.ActionMode)
             {
                 case ActionMode.Bulk:
-                    result = this.DbContext.UpdateBulk(this.Visitor, command);
+                    var builder = new StringBuilder();
+                    (var updateObjs, var bulkCount, var tableName, var firstParametersSetter,
+                        var firstSqlParametersSetter, var headSqlSetter, var sqlSetter) = this.Visitor.BuildWithBulk(command);
+                    Func<int, string> suffixGetter = index => this.Visitor.IsMultiple ? $"_m{this.Visitor.CommandIndex}{index}" : $"{index}";
+
+                    Action<object, int> sqlExecuter = null;
+                    if (this.Visitor.ShardingTables != null && this.Visitor.ShardingTables.Count > 0)
+                    {
+                        sqlExecuter = (updateObj, index) =>
+                        {
+                            if (index > 0) builder.Append(';');
+                            var tableNames = this.Visitor.ShardingTables[0].TableNames;
+                            headSqlSetter.Invoke(builder, tableNames[0]);
+                            firstSqlParametersSetter.Invoke(command.Parameters, builder, this.Visitor.OrmProvider, updateObj, suffixGetter.Invoke(index));
+
+                            for (int i = 1; i < tableNames.Count; i++)
+                            {
+                                builder.Append(';');
+                                headSqlSetter.Invoke(builder, tableNames[i]);
+                                sqlSetter.Invoke(builder, this.Visitor.OrmProvider, updateObj, suffixGetter.Invoke(index));
+                            }
+                        };
+                    }
+                    else
+                    {
+                        sqlExecuter = (updateObj, index) =>
+                        {
+                            if (index > 0) builder.Append(';');
+                            headSqlSetter.Invoke(builder, tableName);
+                            firstSqlParametersSetter.Invoke(command.Parameters, builder, this.Visitor.OrmProvider, updateObj, suffixGetter.Invoke(index));
+                        };
+                    }
+
+                    int index = 0;
+                    firstParametersSetter?.Invoke(command.Parameters);
+                    foreach (var updateObj in updateObjs)
+                    {
+                        sqlExecuter.Invoke(updateObj, index);
+                        if (index >= bulkCount)
+                        {
+                            command.CommandText = builder.ToString();
+                            if (!isOpened)
+                            {
+                                this.DbContext.Open();
+                                isOpened = true;
+                            }
+                            result += command.ExecuteNonQuery();
+                            command.Parameters.Clear();
+                            firstParametersSetter?.Invoke(command.Parameters);
+                            builder.Clear();
+                            index = 0;
+                            continue;
+                        }
+                        index++;
+                    }
+                    if (index > 0)
+                    {
+                        command.CommandText = builder.ToString();
+                        if (!isOpened) this.DbContext.Open();
+                        result += command.ExecuteNonQuery();
+                    }
+                    builder.Clear();
+                    builder = null;
                     break;
                 default:
-                    if (!hasWhere)
+                    if (!this.Visitor.HasWhere)
                         throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
-
-                    var sql = this.Visitor.BuildCommand(command);
-                    (var isOpened, sql) = this.DbContext.BuildSql(this.Visitor as SqlVisitor, sql, ";");
-                    command.CommandText = sql;
+                    command.CommandText = this.Visitor.BuildCommand(this.DbContext, command);
                     if (!isOpened) this.DbContext.Open();
                     result = command.ExecuteNonQuery();
                     break;
@@ -218,18 +281,83 @@ public class Updated<TEntity> : IUpdated<TEntity>
         using var command = this.DbContext.CreateDbCommand();
         try
         {
+            bool isOpened = false;
+            if (this.Visitor.IsNeedFetchShardingTables)
+            {
+                await this.DbContext.FetchShardingTablesAsync(this.Visitor as SqlVisitor, cancellationToken);
+                isOpened = true;
+            }
             switch (this.Visitor.ActionMode)
             {
                 case ActionMode.Bulk:
-                    result = await this.DbContext.UpdateBulkAsync(this.Visitor, command, cancellationToken);
+                    var builder = new StringBuilder();
+                    (var updateObjs, var bulkCount, var tableName, var firstParametersSetter,
+                        var firstSqlParametersSetter, var headSqlSetter, var sqlSetter) = this.Visitor.BuildWithBulk(command);
+                    Func<int, string> suffixGetter = index => this.Visitor.IsMultiple ? $"_m{this.Visitor.CommandIndex}{index}" : $"{index}";
+
+                    Action<object, int> sqlExecuter = null;
+                    if (this.Visitor.ShardingTables != null && this.Visitor.ShardingTables.Count > 0)
+                    {
+                        sqlExecuter = (updateObj, index) =>
+                        {
+                            if (index > 0) builder.Append(';');
+                            var tableNames = this.Visitor.ShardingTables[0].TableNames;
+                            headSqlSetter.Invoke(builder, tableNames[0]);
+                            firstSqlParametersSetter.Invoke(command.Parameters, builder, this.Visitor.OrmProvider, updateObj, suffixGetter.Invoke(index));
+
+                            for (int i = 1; i < tableNames.Count; i++)
+                            {
+                                builder.Append(';');
+                                headSqlSetter.Invoke(builder, tableNames[i]);
+                                sqlSetter.Invoke(builder, this.Visitor.OrmProvider, updateObj, suffixGetter.Invoke(index));
+                            }
+                        };
+                    }
+                    else
+                    {
+                        sqlExecuter = (updateObj, index) =>
+                        {
+                            if (index > 0) builder.Append(';');
+                            headSqlSetter.Invoke(builder, tableName);
+                            firstSqlParametersSetter.Invoke(command.Parameters, builder, this.Visitor.OrmProvider, updateObj, suffixGetter.Invoke(index));
+                        };
+                    }
+
+                    int index = 0;
+                    firstParametersSetter?.Invoke(command.Parameters);
+                    foreach (var updateObj in updateObjs)
+                    {
+                        sqlExecuter.Invoke(updateObj, index);
+                        if (index >= bulkCount)
+                        {
+                            command.CommandText = builder.ToString();
+                            if (!isOpened)
+                            {
+                                await this.DbContext.OpenAsync(cancellationToken);
+                                isOpened = true;
+                            }
+                            result += await command.ExecuteNonQueryAsync(cancellationToken);
+                            command.Parameters.Clear();
+                            firstParametersSetter?.Invoke(command.Parameters);
+                            builder.Clear();
+                            index = 0;
+                            continue;
+                        }
+                        index++;
+                    }
+                    if (index > 0)
+                    {
+                        command.CommandText = builder.ToString();
+                        if (!isOpened) await this.DbContext.OpenAsync(cancellationToken);
+                        result += await command.ExecuteNonQueryAsync(cancellationToken);
+                    }
+                    builder.Clear();
+                    builder = null;
                     break;
                 default:
-                    if (!hasWhere)
+                    if (!this.Visitor.HasWhere)
                         throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
-
-                    var sql = this.Visitor.BuildCommand(command);
-                    (var isOpened, sql) = await this.DbContext.BuildSqlAsync(this.Visitor as SqlVisitor, sql, ";", cancellationToken);
-                    command.CommandText = sql;
+                    command.CommandText = this.Visitor.BuildCommand(this.DbContext, command);
                     if (!isOpened) await this.DbContext.OpenAsync(cancellationToken);
                     result = await command.ExecuteNonQueryAsync(cancellationToken);
                     break;
@@ -257,18 +385,10 @@ public class Updated<TEntity> : IUpdated<TEntity>
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        string sql = null;
         using var command = this.DbContext.CreateCommand();
-        switch (this.Visitor.ActionMode)
-        {
-            case ActionMode.Bulk:
-                sql = this.DbContext.BuildUpdateBulkSql(this.Visitor, command);
-                break;
-            case ActionMode.Single:
-                sql = this.Visitor.BuildCommand(command);
-                (_, sql) = this.DbContext.BuildSql(this.Visitor as SqlVisitor, sql, ";");
-                break;
-        }
+        if (this.Visitor.IsNeedFetchShardingTables)
+            this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
+        var sql = this.Visitor.BuildCommand(this.DbContext, command);
         dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
         return sql;
@@ -293,8 +413,8 @@ public class Updated<TEntity> : IUpdated<TEntity>
 public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEntity>
 {
     #region Constructor
-    public ContinuedUpdate(DbContext dbContext, IUpdateVisitor Visitor)
-        : base(dbContext, Visitor) { }
+    public ContinuedUpdate(DbContext dbContext, IUpdateVisitor visitor)
+        : base(dbContext, visitor) { }
     #endregion
 
     #region Set
@@ -413,7 +533,6 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
         this.Visitor.WhereWith(whereObj);
-        this.hasWhere = true;
         return this;
     }
     public virtual IContinuedUpdate<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
@@ -426,7 +545,6 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
         if (condition)
             this.Visitor.Where(ifPredicate);
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
-        this.hasWhere = true;
         return this;
     }
     public virtual IContinuedUpdate<TEntity> And(Expression<Func<TEntity, bool>> predicate)
@@ -469,7 +587,7 @@ public class UpdateFrom<<#=tables#>> : Updated<TEntity>, IUpdateFrom<<#=tables#>
 
         if (condition) this.Visitor.SetWith(updateObj);
         return this;
-    }    
+    }
     public virtual IUpdateFrom<<#=tables#>> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
         => this.Set(true, fieldSelector, fieldValue);
     public virtual IUpdateFrom<<#=tables#>> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
@@ -528,7 +646,7 @@ public class UpdateFrom<<#=tables#>> : Updated<TEntity>, IUpdateFrom<<#=tables#>
         if (condition)
             this.Visitor.SetFrom(fieldsAssignment);
         return this;
-    }    
+    }
     #endregion
 
     #region Where/And
@@ -542,7 +660,6 @@ public class UpdateFrom<<#=tables#>> : Updated<TEntity>, IUpdateFrom<<#=tables#>
         if (condition)
             this.Visitor.Where(ifPredicate);
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
-        this.hasWhere = true;
         return this;
     }
     public virtual IUpdateFrom<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> andPredicate)
@@ -570,9 +687,13 @@ public class UpdateFrom<<#=tables#>> : Updated<TEntity>, IUpdateFrom<<#=tables#>
 #>
 public class UpdateJoin<<#=tables#>> : Updated<TEntity>, IUpdateJoin<<#=tables#>>
 {
+    #region Properties
+    public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
+    #endregion
+
     #region Constructor
-    public UpdateJoin(DbContext dbContext, IUpdateVisitor Visitor)
-        : base(dbContext, Visitor) { }
+    public UpdateJoin(DbContext dbContext, IUpdateVisitor visitor)
+        : base(dbContext, visitor) { }
     #endregion
 
 <#
