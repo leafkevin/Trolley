@@ -141,15 +141,15 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
 
                     var aliasName = this.Tables[0].AliasName;
                     if (this.IsNeedTableAlias)
-                        builder.Append($"{aliasName} ");
+                        builder.Append($" {aliasName}");
 
-                    if (this.IsJoin && this.Tables.Count > 1)
+                    if (this.IsJoin)
                     {
                         for (var i = 1; i < this.Tables.Count; i++)
                         {
                             var tableSegment = this.Tables[i];
-                            var tableName = this.GetTableName(this.Tables[i]);
-                            builder.Append($"{tableSegment.JoinType} {tableName} {tableSegment.AliasName}");
+                            var tableName = this.GetTableName(tableSegment);
+                            builder.Append($" {tableSegment.JoinType} {tableName} {tableSegment.AliasName}");
                             builder.Append($" ON {tableSegment.OnExpr} ");
                         }
                     }
@@ -166,16 +166,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                             index++;
                         }
                     }
-                    if (this.IsFrom && this.Tables.Count > 1)
-                    {
-                        builder.Append(" FROM ");
-                        for (var i = 1; i < this.Tables.Count; i++)
-                        {
-                            var tableSegment = this.Tables[i];
-                            var tableName = this.GetTableName(this.Tables[i]);
-                            builder.Append($"{tableName} {tableSegment.AliasName}");
-                        }
-                    }
                     if (!string.IsNullOrEmpty(this.WhereSql))
                     {
                         builder.Append(" WHERE ");
@@ -184,24 +174,11 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     sql = builder.ToString();
                     builder.Clear();
 
-                    bool isMultiManySharding = false;
-                    if (this.IsJoin || this.IsFrom)
-                    {
-                        for (int i = 1; i < this.Tables.Count; i++)
-                        {
-                            if (this.Tables[i].IsSharding)
-                            {
-                                isMultiManySharding = true;
-                                break;
-                            }
-                        }
-                    }
-                    if (isMultiManySharding)
+                    if (this.IsJoin)
                     {
                         builder.Append($"UPDATE {this.GetTableName(this.Tables[0])} {sql}");
                         var formatSql = builder.ToString();
-                        if (this.ShardingTables != null && this.ShardingTables.Count > 0)
-                            sql = dbContext.BuildShardingTablesSqlByFormat(this, formatSql, ";");
+                        sql = dbContext.BuildShardingTablesSqlByFormat(this, formatSql, ";");
                     }
                     else
                     {

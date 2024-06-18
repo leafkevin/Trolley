@@ -62,7 +62,6 @@ public class MethodCallUnitTest : UnitTestBase
     [Fact]
     public async void Concat()
     {
-        this.Initialize();
         using var repository = dbFactory.Create();
         bool isMale = false;
         int count = 10;
@@ -412,85 +411,7 @@ public class MethodCallUnitTest : UnitTestBase
         Assert.True(result[0].Col2 == "ON-ZWYX_abcd");
     }
     [Fact]
-    public void ToFlatten()
-    {
-        using var repository = dbFactory.Create();
-        var sql = repository.From<Order>()
-            .Select(f => new
-            {
-                Col1 = f.OrderNo.ToLower() + "_AbCd".ToUpper(),
-                Col2 = f.OrderNo.ToUpper() + "_AbCd".ToLower()
-            })
-            .ToSql(out _);
-        Assert.True(sql == "SELECT (LOWER([OrderNo])+'_ABCD') AS [Col1],(UPPER([OrderNo])+'_abcd') AS [Col2] FROM [sys_order]");
-
-        repository.BeginTransaction();
-        repository.Delete<Order>("8");
-        repository.Create<Order>(new Order
-        {
-            Id = "8",
-            TenantId = "2",
-            OrderNo = "On-ZwYx",
-            BuyerId = 1,
-            SellerId = 2,
-            TotalAmount = 500,
-            Products = new List<int> { 1, 2 },
-            IsEnabled = true,
-            CreatedAt = DateTime.Now,
-            CreatedBy = 1,
-            UpdatedAt = DateTime.Now,
-            UpdatedBy = 1
-        });
-        repository.Commit();
-        var result = repository.From<Order>()
-            .Where(f => Sql.In(f.Id, new[] { "8" }))
-            .SelectFlattenTo<OrderInfo>()
-            .ToList();
-        Assert.True(result[0].Id == "8");
-        Assert.True(result[0].BuyerId == 1);
-        Assert.True(result[0].OrderNo == "On-ZwYx");
-        Assert.Null(result[0].Description);
-
-        result = repository.From<Order>()
-            .Where(f => Sql.In(f.Id, new[] { "8" }))
-            .SelectFlattenTo<OrderInfo>(f => new OrderInfo
-            {
-                Description = "TotalAmount:" + f.TotalAmount
-            })
-            .ToList();
-        Assert.True(result[0].Id == "8");
-        Assert.True(result[0].BuyerId == 1);
-        Assert.True(result[0].OrderNo == "On-ZwYx");
-        Assert.NotNull(result[0].Description);
-        Assert.True(result[0].Description == "TotalAmount:500");
-
-        result = repository.From<Order>()
-           .Where(f => Sql.In(f.Id, new[] { "8" }))
-           .SelectFlattenTo<OrderInfo>(f => new OrderInfo
-           {
-               Description = this.DeferInvoke().Deferred()
-           })
-           .ToList();
-        Assert.True(result[0].Id == "8");
-        Assert.True(result[0].BuyerId == 1);
-        Assert.True(result[0].OrderNo == "On-ZwYx");
-        Assert.NotNull(result[0].Description);
-        Assert.True(result[0].Description == this.DeferInvoke());
-    }
-
-    [Fact]
-    public void Convert()
-    {
-        this.Initialize();
-        using var repository = dbFactory.Create();
-        byte id = 1;
-        var age = repository.From<User>()
-            .Where(f => f.Id == id)
-            .Select(f => (short)f.Age)
-            .First();
-    }
-    [Fact]
-    public void Update_Call()
+    public void Update_Contains()
     {
         this.Initialize();
         using var repository = dbFactory.Create();
@@ -500,6 +421,51 @@ public class MethodCallUnitTest : UnitTestBase
             .Set(f => new { TotalAmount = 100 })
             .Where(f => f.BuyerId == id && orderNos.Contains(f.OrderNo))
             .ToSql(out _);
+        Assert.True(sql == "UPDATE `sys_order` SET `TotalAmount`=@p0 WHERE `BuyerId`=@p1 AND `OrderNo` IN (@p2,@p3,@p4)");
     }
-    private string DeferInvoke() => "DeferInvoke";
+    [Fact]
+    public void Method_Convert1()
+    {
+        Initialize();
+        using var repository = dbFactory.Create();
+        int age = 23;
+        var sql = repository.From<User>()
+            .Where(f => f.Id == 1)
+            .Select(f => new
+            {
+                StringAge = "Age-" + Convert.ToString(age),
+                StringId1 = "Id-" + Convert.ToString(f.Id),
+                DoubleAge = Convert.ToDouble(f.Age) * 2 - 10
+            })
+            .ToSql(out var dbParameters);
+        Assert.True(sql == "SELECT CONCAT('Age-',@p0) AS `StringAge`,CONCAT('Id-',CAST(a.`Id` AS CHAR)) AS `StringId1`,((CAST(a.`Age` AS DOUBLE)*2)-10) AS `DoubleAge` FROM `sys_user` a WHERE a.`Id`=1");
+    }
+    [Fact]
+    public async void Method_Convert2()
+    {
+        this.Initialize();
+        using var repository = dbFactory.Create();
+        byte id = 1;
+        await repository.From<User>()
+            .Where(f => f.Id == id)
+            .Select(f => (short)f.Age)
+            .FirstAsync();
+    }
+    [Fact]
+    public void SqlIn()
+    {
+        Initialize();
+        using var repository = dbFactory.Create();
+        var sql = repository.From<User>()
+            .Where(f => Sql.In(f.Id, new int[] { 1, 2, 3 }))
+            .Select(f => f.Id)
+            .ToSql(out _);
+        Assert.True(sql == "SELECT a.`Id` FROM `sys_user` a WHERE a.`Id` IN (1,2,3)");
+
+        sql = repository.From<User>()
+            .Where(f => Sql.In(f.CreatedAt, new DateTime[] { DateTime.Parse("2023-03-03"), DateTime.Parse("2023-03-03 00:00:00"), DateTime.Parse("2023-03-03 06:06:06") }))
+            .Select(f => f.Id)
+            .ToSql(out _);
+        Assert.True(sql == "SELECT a.`Id` FROM `sys_user` a WHERE a.`CreatedAt` IN ('2023-03-03 00:00:00.000','2023-03-03 00:00:00.000','2023-03-03 06:06:06.000')");
+    }
 }

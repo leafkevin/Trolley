@@ -298,6 +298,7 @@ public class UnitTest1 : UnitTestBase
             .ToSql(out _);
         repository.Commit();
         Assert.True(sql == "INSERT INTO `sys_user` (`Id`,`TenantId`,`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`,`SomeTimes`,`GuidField`) VALUES(@Id,@TenantId,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy,@SomeTimes,@GuidField)");
+
         repository.BeginTransaction();
         count = repository.Delete<User>().Where(f => f.Id == 1).Execute();
         count = await repository.Create<User>()
@@ -319,8 +320,55 @@ public class UnitTest1 : UnitTestBase
         repository.Commit();
         Assert.Equal(1, count);
     }
+	[Fact]
+    public async void Insert_WithBy_AnonymousObject_Condition()
+    {
+        this.Initialize();
+        Guid? guidField = Guid.NewGuid();
+        using var repository = dbFactory.Create();
+        repository.BeginTransaction();
+        var user = repository.Get<User>(1);
+        var count = repository.Delete<User>().Where(f => f.Id == 1).Execute();
+        var sql = repository.Create<User>()
+            .WithBy(new
+            {
+                Id = 1,
+                Name = "leafkevin",
+                Age = 25,
+                CompanyId = 1,
+                Gender = Gender.Male,
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            })
+            .WithBy(false, new { user.SomeTimes })
+            .WithBy(guidField.HasValue, new { GuidField = guidField })
+            .ToSql(out _);
+        repository.Commit();
+        Assert.True(sql == "INSERT INTO [sys_user] ([Id],[Name],[Age],[CompanyId],[Gender],[IsEnabled],[CreatedAt],[CreatedBy],[UpdatedAt],[UpdatedBy],[GuidField]) VALUES(@Id,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy,@GuidField)");
+        repository.BeginTransaction();
+        count = repository.Delete<User>().Where(f => f.Id == 1).Execute();
+        count = await repository.Create<User>()
+            .WithBy(new
+            {
+                Id = 1,
+                Name = "leafkevin",
+                Age = 25,
+                CompanyId = 1,
+                Gender = Gender.Male,
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            }).ExecuteAsync();
+        repository.Commit();
+        Assert.Equal(1, count);
+    }
     [Fact]
-    public async void Insert_WithBy_AutoIncrement()
+    public async void Insert_WithBy_Dictionary_AutoIncrement()
     {
         using var repository = dbFactory.Create();
         await repository.Delete<Company>().Where(f => f.Id == 1).ExecuteAsync();

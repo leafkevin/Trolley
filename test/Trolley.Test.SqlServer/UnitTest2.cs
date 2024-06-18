@@ -75,7 +75,8 @@ public class UnitTest2 : UnitTestBase
         Assert.NotNull(result);
         Assert.NotEmpty(result.Data);
         Assert.True(result.TotalCount == count);
-        Assert.True(result.Data.Count == 1);
+        Assert.True(result.Data.Count == result.Count);
+        Assert.True(result.Count == 1);
     }
     [Fact]
     public async void QueryDictionary()
@@ -87,7 +88,7 @@ public class UnitTest2 : UnitTestBase
     }
     class OrderBuyerInfo
     {
-        public int OrderId { get; set; }
+        public string OrderId { get; set; }
         public string OrderNo { get; set; }
         public int BuyerId { get; set; }
         public string BuyerName { get; set; }

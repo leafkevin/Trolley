@@ -413,7 +413,7 @@ partial class SqlServerProvider
                             }
                             return targetSegment.Change(builder.ToString(), false, false, false, true);
                         }
-                        //非常量、变量的，只能小于一天
+                        //非常量、变量的，只能小于一天,数据库的Time类型映射成TimeSpan
                         var rightArgument = $"DATEDIFF_BIG(MILLISECOND,'00:00:00',{rightSegment})";
                         return targetSegment.Merge(rightSegment, $"DATEADD(MILLISECOND,{rightArgument},{targetArgument})", false, false, false, true);
                     });

@@ -772,41 +772,57 @@ public class RepositoryHelper
         return commandInitializer;
     }
 
-    public static (string, Action<IDataParameterCollection, StringBuilder, string, object>, Action<IDataParameterCollection, StringBuilder, object>)
-        BuildCreateSqlParameters(IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, Type insertObjType, List<string> onlyFieldNames, List<string> ignoreFieldNames, bool isReturnIdentity)
+    public static (string, Action<StringBuilder, string, object>, object) BuildCreateSqlParameters(IOrmProvider ormProvider, IEntityMapProvider mapProvider, 
+        Type entityType, Type insertObjType, List<string> onlyFieldNames, List<string> ignoreFieldNames, bool hasSuffix, bool isReturnIdentity)
     {
         var entityMapper = mapProvider.GetEntityMap(entityType);
         var tableName = entityMapper.TableName;
         var fieldsSqlPartSetter = BuildCreateFieldsSqlPart(ormProvider, mapProvider, entityType, insertObjType, onlyFieldNames, ignoreFieldNames);
-        var valuesSqlPartSetter = BuildCreateValuesSqlParametes(ormProvider, mapProvider, entityType, insertObjType, onlyFieldNames, ignoreFieldNames, false);
+        var valuesSqlPartSetter = BuildCreateValuesSqlParametes(ormProvider, mapProvider, entityType, insertObjType, onlyFieldNames, ignoreFieldNames, hasSuffix);
 
-        Action<IDataParameterCollection, StringBuilder, string, object> headSqlSetter = null;
-        Action<IDataParameterCollection, StringBuilder, object> valuesSqlSetter = null;
-        headSqlSetter = (dbParameters, builder, tableName, insertObj) =>
+        Action<StringBuilder, string, object> headSqlSetter = null;
+        object valuesSqlSetter = null;
+        headSqlSetter = (builder, tableName, insertObj) =>
         {
             builder.Append($"INSERT INTO {ormProvider.GetFieldName(tableName)} (");
             fieldsSqlPartSetter.Invoke(builder, insertObj);
             builder.Append(") VALUES ");
         };
-        var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object>;
-        if (isReturnIdentity)
+        if (hasSuffix)
         {
-            valuesSqlSetter = (dbParameters, builder, insertObj) =>
+            var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
+            Action<IDataParameterCollection, StringBuilder, object, string> typedValuesSqlSetter = (dbParameters, builder, insertObj, suffix) =>
             {
                 builder.Append('(');
-                typedValuesSqlPartSetter.Invoke(dbParameters, builder, ormProvider, insertObj);
+                typedValuesSqlPartSetter.Invoke(dbParameters, builder, ormProvider, insertObj, suffix);
                 builder.Append(')');
-                builder.Append(ormProvider.GetIdentitySql(entityType));
             };
+            valuesSqlSetter = typedValuesSqlSetter;
         }
         else
         {
-            valuesSqlSetter = (dbParameters, builder, insertObj) =>
+            var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object>;
+            if (isReturnIdentity)
             {
-                builder.Append('(');
-                typedValuesSqlPartSetter.Invoke(dbParameters, builder, ormProvider, insertObj);
-                builder.Append(')');
-            };
+                Action<IDataParameterCollection, StringBuilder, object> typedValuesSqlSetter = (dbParameters, builder, insertObj) =>
+                {
+                    builder.Append('(');
+                    typedValuesSqlPartSetter.Invoke(dbParameters, builder, ormProvider, insertObj);
+                    builder.Append(')');
+                    builder.Append(ormProvider.GetIdentitySql(entityType));
+                };
+                valuesSqlSetter = typedValuesSqlSetter;
+            }
+            else
+            {
+                Action<IDataParameterCollection, StringBuilder, object> typedValuesSqlSetter = (dbParameters, builder, insertObj) =>
+                {
+                    builder.Append('(');
+                    typedValuesSqlPartSetter.Invoke(dbParameters, builder, ormProvider, insertObj);
+                    builder.Append(')');
+                };
+                valuesSqlSetter = typedValuesSqlSetter;
+            }
         }
         return (tableName, headSqlSetter, valuesSqlSetter);
     }

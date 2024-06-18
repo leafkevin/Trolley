@@ -17,9 +17,9 @@ CREATE TABLE [dbo].[sys_brand](
 )
 );
 GO
-INSERT INTO [dbo].[sys_brand] ([Id], [BrandNo], [Name], [CompanyId], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES (1, N'BN-001', N'²¨Ë¾µÇ', 1, '1', '2023-09-04 09:34:02.757', 1, '2023-09-04 09:34:02.757', 1);
-INSERT INTO [dbo].[sys_brand] ([Id], [BrandNo], [Name], [CompanyId], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES (2, N'BN-002', N'Ñ©ÖÐ·É', 2, '1', '2023-09-04 09:34:02.757', 1, '2023-09-04 09:34:02.757', 1);
-INSERT INTO [dbo].[sys_brand] ([Id], [BrandNo], [Name], [CompanyId], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES (3, N'BN-003', N'ÓÅÒÂ¿â', 1, '1', '2023-09-04 09:34:02.757', 1, '2023-09-04 09:34:02.757', 1);
+INSERT INTO [dbo].[sys_brand] ([Id], [BrandNo], [Name], [CompanyId], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES (1, 'BN-001', '波司登', 1, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
+INSERT INTO [dbo].[sys_brand] ([Id], [BrandNo], [Name], [CompanyId], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES (2, 'BN-002', '雪中飞', 2, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
+INSERT INTO [dbo].[sys_brand] ([Id], [BrandNo], [Name], [CompanyId], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES (3, 'BN-003', '优衣库', 1, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
 CREATE TABLE [dbo].[sys_company](
 	[Id] [int] NOT NULL,
 	[Name] [nvarchar](50) NULL,
@@ -35,8 +35,10 @@ CREATE TABLE [dbo].[sys_company](
 )
 );
 GO
-INSERT INTO [dbo].[sys_company] ([Id], [Name], [Nature], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES (1, N'微软', N'Internet', '1', '2023-09-04 09:34:02.750', 1, '2023-09-04 09:34:02.750', 1);
-INSERT INTO [dbo].[sys_company] ([Id], [Name], [Nature], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES (2, N'谷歌', N'Internet', '1', '2023-09-04 09:34:02.750', 1, '2023-09-04 09:34:02.750', 1);
+
+INSERT INTO [dbo].[sys_company] ([Id], [Name], [Nature], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES (1, '微软', 'Internet', 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
+INSERT INTO [dbo].[sys_company] ([Id], [Name], [Nature], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES (2, '谷歌', 'Internet', 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
+
 CREATE TABLE [dbo].[sys_menu](
 	[Id] [int] NOT NULL,
 	[Name] [nvarchar](50) NULL,
@@ -78,7 +80,7 @@ GO
 CREATE TABLE [dbo].[sys_order_detail](
 	[Id] [nvarchar](50) NOT NULL,
 	[TenantId] [nvarchar](50) NOT NULL,
-	[OrderId] [int] NULL,
+	[OrderId] [nvarchar](50) NULL,
 	[ProductId] [int] NULL,
 	[Price] [float] NULL,
 	[Quantity] [int] NULL,
@@ -129,8 +131,9 @@ CREATE TABLE [dbo].[sys_product](
 GO
 CREATE TABLE [dbo].[sys_user](
 	[Id] [int] NOT NULL,
+	[TenantId] [nvarchar](50) NOT NULL,
 	[Name] [nvarchar](50) NULL,
-	[Gender] [tinyint] NULL,
+	[Gender] [nvarchar](50) NULL,
 	[Age] [int] NULL,
 	[CompanyId] [int] NULL,
 	[GuidField] [uniqueidentifier] NULL,
@@ -147,6 +150,52 @@ CREATE TABLE [dbo].[sys_user](
 )
 );
 GO
+
+CREATE TABLE [sys_user_104]  (
+  [Id] [int] NOT NULL,
+	[TenantId] [nvarchar](50) NOT NULL,
+	[Name] [nvarchar](50) NULL,
+	[Gender] [nvarchar](50) NULL,
+	[Age] [int] NULL,
+	[CompanyId] [int] NULL,
+	[GuidField] [uniqueidentifier] NULL,
+	[SomeTimes] [time](7) NULL,
+	[SourceType] [nvarchar](50) NULL,
+	[IsEnabled] [bit] NULL,
+	[CreatedAt] [datetime] NULL,
+	[CreatedBy] [int] NULL,
+	[UpdatedAt] [datetime] NULL,
+	[UpdatedBy] [int] NULL,
+ CONSTRAINT [pk_sys_user_104] PRIMARY KEY CLUSTERED 
+(
+	[Id] ASC
+)
+);
+GO
+
+CREATE TABLE [sys_user_105]  (
+  [Id] [int] NOT NULL,
+	[TenantId] [nvarchar](50) NOT NULL,
+	[Name] [nvarchar](50) NULL,
+	[Gender] [nvarchar](50) NULL,
+	[Age] [int] NULL,
+	[CompanyId] [int] NULL,
+	[GuidField] [uniqueidentifier] NULL,
+	[SomeTimes] [time](7) NULL,
+	[SourceType] [nvarchar](50) NULL,
+	[IsEnabled] [bit] NULL,
+	[CreatedAt] [datetime] NULL,
+	[CreatedBy] [int] NULL,
+	[UpdatedAt] [datetime] NULL,
+	[UpdatedBy] [int] NULL,
+ CONSTRAINT [pk_sys_user_105] PRIMARY KEY CLUSTERED 
+(
+	[Id] ASC
+)
+);
+GO
+
+
 CREATE TABLE [dbo].[sys_function](
 	[MenuId] [int] NOT NULL,
 	[PageId] [int] NOT NULL,

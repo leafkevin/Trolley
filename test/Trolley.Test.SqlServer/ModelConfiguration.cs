@@ -11,7 +11,7 @@ class ModelConfiguration : IModelConfiguration
             f.ToTable("sys_user").Key(t => t.Id);
             f.Member(t => t.Id).Field(nameof(User.Id)).NativeDbType(SqlDbType.Int);
             f.Member(t => t.Name).Field(nameof(User.Name)).NativeDbType(SqlDbType.NVarChar);
-            f.Member(t => t.Gender).Field(nameof(User.Gender)).NativeDbType(SqlDbType.TinyInt);
+            f.Member(t => t.Gender).Field(nameof(User.Gender)).NativeDbType(SqlDbType.VarChar);
             f.Member(t => t.Age).Field(nameof(User.Age)).NativeDbType(SqlDbType.Int);
             f.Member(t => t.CompanyId).Field(nameof(User.CompanyId)).NativeDbType(SqlDbType.Int);
             f.Member(t => t.GuidField).Field(nameof(User.GuidField)).NativeDbType(SqlDbType.UniqueIdentifier);

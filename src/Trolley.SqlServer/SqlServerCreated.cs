@@ -1,4 +1,4 @@
-﻿using MySqlConnector;
+﻿using Microsoft.Data.SqlClient;
 using System;
 using System.Collections;
 using System.Data;
@@ -7,19 +7,19 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Trolley.MySqlConnector;
+namespace Trolley.SqlServer;
 
-public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
+public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEntity>
 {
     #region Properties
-    public MySqlCreateVisitor DialectVisitor { get; protected set; }
+    public SqlServerCreateVisitor DialectVisitor { get; protected set; }
     #endregion
 
     #region Constructor
-    public MySqlCreated(DbContext dbContext, ICreateVisitor visitor)
+    public SqlServerCreated(DbContext dbContext, ICreateVisitor visitor)
         : base(dbContext, visitor)
     {
-        this.DialectVisitor = this.Visitor as MySqlCreateVisitor;
+        this.DialectVisitor = this.Visitor as SqlServerCreateVisitor;
     }
     #endregion
 
@@ -58,15 +58,15 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                     break;
                 case ActionMode.Bulk:
                     command = this.DbContext.CreateCommand();
-                    var sqlBuilder = new StringBuilder();
+                    var builder = new StringBuilder();
                     (isNeedSplit, var tableName, insertObjs, var bulkCount, var firstInsertObj,
                         var headSqlSetter, var commandInitializer) = this.Visitor.BuildWithBulk(command);
 
                     Action<string, object> clearCommand = (tableName, insertObj) =>
                     {
-                        sqlBuilder.Clear();
+                        builder.Clear();
                         command.Parameters.Clear();
-                        headSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName, insertObj);
+                        headSqlSetter.Invoke(command.Parameters, builder, tableName, insertObj);
                     };
                     Func<string, IEnumerable, int> executor = (tableName, insertObjs) =>
                     {
@@ -74,11 +74,11 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                         int count = 0, index = 0;
                         foreach (var insertObj in insertObjs)
                         {
-                            if (index > 0) sqlBuilder.Append(',');
-                            commandInitializer.Invoke(command.Parameters, sqlBuilder, insertObj, index.ToString());
+                            if (index > 0) builder.Append(',');
+                            commandInitializer.Invoke(command.Parameters, builder, insertObj, index.ToString());
                             if (index >= bulkCount)
                             {
-                                command.CommandText = sqlBuilder.ToString();
+                                command.CommandText = builder.ToString();
                                 if (isFirst)
                                 {
                                     this.DbContext.Open();
@@ -93,7 +93,7 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                         }
                         if (index > 0)
                         {
-                            command.CommandText = sqlBuilder.ToString();
+                            command.CommandText = builder.ToString();
                             if (isFirst) this.DbContext.Open();
                             count += command.ExecuteNonQuery();
                         }
@@ -105,17 +105,17 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                         var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
                         foreach (var tabledInsertObj in tabledInsertObjs)
                         {
-                            headSqlSetter.Invoke(command.Parameters, sqlBuilder, tabledInsertObj.Key, tabledInsertObj);
+                            headSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key, tabledInsertObj);
                             result += executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
                         }
                     }
                     else
                     {
-                        headSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName, firstInsertObj);
+                        headSqlSetter.Invoke(command.Parameters, builder, tableName, firstInsertObj);
                         result = executor.Invoke(tableName, insertObjs);
                     }
-                    sqlBuilder.Clear();
-                    sqlBuilder = null;
+                    builder.Clear();
+                    builder = null;
                     break;
                 default:
                     //默认单条
@@ -267,17 +267,17 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
             this.DbContext.Open();
             isOpened = true;
         }
-        var connection = this.DbContext.Connection as MySqlConnection;
-        var transaction = this.DbContext.Transaction as MySqlTransaction;
-        var bulkCopy = new MySqlBulkCopy(connection, transaction);
+        var connection = this.DbContext.Connection as SqlConnection;
+        var transaction = this.DbContext.Transaction as SqlTransaction;
+        var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, transaction);
         if (timeoutSeconds.HasValue) bulkCopy.BulkCopyTimeout = timeoutSeconds.Value;
         bulkCopy.DestinationTableName = dataTable.TableName;
         for (int i = 0; i < dataTable.Columns.Count; i++)
         {
-            bulkCopy.ColumnMappings.Add(new MySqlBulkCopyColumnMapping(i, dataTable.Columns[i].ColumnName));
+            bulkCopy.ColumnMappings.Add(new SqlBulkCopyColumnMapping(i, dataTable.Columns[i].ColumnName));
         }
-        var bulkCopyResult = bulkCopy.WriteToServer(dataTable);
-        return bulkCopyResult.RowsInserted;
+        bulkCopy.WriteToServer(dataTable);
+        return dataTable.Rows.Count;
     }
     private async Task<int> ExecuteBulkCopyAsync(bool isOpened, Type entityType, IEnumerable insertObjs, int? timeoutSeconds, CancellationToken cancellationToken = default, string tableName = null)
     {
@@ -287,17 +287,18 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
 
         if (!isOpened)
             await this.DbContext.OpenAsync(cancellationToken);
-        var connection = this.DbContext.Connection as MySqlConnection;
-        var transaction = this.DbContext.Transaction as MySqlTransaction;
-        var bulkCopy = new MySqlBulkCopy(connection, transaction);
+        var connection = this.DbContext.Connection as SqlConnection;
+        var transaction = this.DbContext.Transaction as SqlTransaction;
+        var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, transaction);
         if (timeoutSeconds.HasValue) bulkCopy.BulkCopyTimeout = timeoutSeconds.Value;
         bulkCopy.DestinationTableName = dataTable.TableName;
         for (int i = 0; i < dataTable.Columns.Count; i++)
         {
-            bulkCopy.ColumnMappings.Add(new MySqlBulkCopyColumnMapping(i, dataTable.Columns[i].ColumnName));
+            bulkCopy.ColumnMappings.Add(new SqlBulkCopyColumnMapping(i, dataTable.Columns[i].ColumnName));
         }
-        var bulkCopyResult = await bulkCopy.WriteToServerAsync(dataTable);
-        return bulkCopyResult.RowsInserted;
+        await bulkCopy.WriteToServerAsync(dataTable);
+        return dataTable.Rows.Count;
     }
     #endregion
 }
+

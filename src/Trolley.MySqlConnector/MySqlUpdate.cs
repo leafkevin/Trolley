@@ -46,7 +46,6 @@ public class MySqlUpdate<TEntity> : Update<TEntity>, IMySqlUpdate<TEntity>
     }
     #endregion
 
-
     #region Set
     public override IMySqlContinuedUpdate<TEntity> Set<TFields>(TFields setObj)
         => base.Set(setObj) as IMySqlContinuedUpdate<TEntity>;

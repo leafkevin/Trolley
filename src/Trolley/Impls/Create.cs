@@ -162,7 +162,6 @@ public class Created<TEntity> : ICreated<TEntity>
                     break;
                 default:
                     {
-                        //默认单条
                         using var command = this.DbContext.CreateCommand();
                         command.CommandText = this.Visitor.BuildCommand(command, false);
                         this.DbContext.Open();
@@ -198,8 +197,8 @@ public class Created<TEntity> : ICreated<TEntity>
                     break;
                 default:
                     {
-                        //默认单条
                         using var command = this.DbContext.CreateDbCommand();
+                        //默认单条
                         command.CommandText = this.Visitor.BuildCommand(command, false);
                         await this.DbContext.OpenAsync(cancellationToken);
                         result = await command.ExecuteNonQueryAsync(cancellationToken);
@@ -222,12 +221,14 @@ public class Created<TEntity> : ICreated<TEntity>
     #endregion
 
     #region ExecuteIdentity
-    public virtual int ExecuteIdentity() => this.DbContext.CreateIdentity<int>(this.Visitor);
+    public virtual int ExecuteIdentity()
+        => this.DbContext.CreateResult<int>((command, dbContext) => this.Visitor.BuildCommand(command, true));
     public virtual async Task<int> ExecuteIdentityAsync(CancellationToken cancellationToken = default)
-        => await this.DbContext.CreateIdentityAsync<int>(this.Visitor, cancellationToken);
-    public virtual long ExecuteIdentityLong() => this.DbContext.CreateIdentity<long>(this.Visitor);
+        => await this.DbContext.CreateResultAsync<int>((command, dbContext) => this.Visitor.BuildCommand(command, true), cancellationToken);
+    public virtual long ExecuteIdentityLong()
+        => this.DbContext.CreateResult<long>((command, dbContext) => this.Visitor.BuildCommand(command, true));
     public virtual async Task<long> ExecuteIdentityLongAsync(CancellationToken cancellationToken = default)
-        => await this.DbContext.CreateIdentityAsync<long>(this.Visitor, cancellationToken);
+        => await this.DbContext.CreateResultAsync<long>((command, dbContext) => this.Visitor.BuildCommand(command, true), cancellationToken);
     #endregion
 
     #region ToMultipleCommand

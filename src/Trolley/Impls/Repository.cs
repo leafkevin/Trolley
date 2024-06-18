@@ -338,75 +338,7 @@ public class Repository : IRepository
         {
             var entityType = typeof(TEntity);
             bool isBulk = insertObjs is IEnumerable && insertObjs is not string && insertObjs is not IDictionary<string, object>;
-            if (isBulk)
-            {
-                var sqlBuilder = new StringBuilder();
-                var entities = insertObjs as IEnumerable;
-                object firstInsertObj = null;
-                Type insertObjType = null;
-                foreach (var entity in entities)
-                {
-                    firstInsertObj = entity;
-                    break;
-                }
-                insertObjType = firstInsertObj.GetType();
-
-                (var tableName, var headSqlSetter, var valuesSqlSetter) = RepositoryHelper.BuildCreateBulkSqlParameters(
-                    this.ormProvider, this.mapProvider, entityType, insertObjType, null, null);
-
-                Func<string, IEnumerable, int> executor = (tableName, insertObjs) =>
-                {
-                    var isFirst = true;
-                    int count = 0, index = 0;
-                    foreach (var insertObj in insertObjs)
-                    {
-                        if (index > 0) sqlBuilder.Append(',');
-                        valuesSqlSetter.Invoke(command.Parameters, sqlBuilder, insertObj, index.ToString());
-                        if (index >= bulkCount)
-                        {
-                            command.CommandText = sqlBuilder.ToString();
-                            if (isFirst)
-                            {
-                                this.DbContext.Open();
-                                isFirst = false;
-                            }
-                            count += command.ExecuteNonQuery();
-                            sqlBuilder.Clear();
-                            command.Parameters.Clear();
-                            headSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName, insertObj);
-                            index = 0;
-                            continue;
-                        }
-                        index++;
-                    }
-                    if (index > 0)
-                    {
-                        command.CommandText = sqlBuilder.ToString();
-                        if (isFirst) this.DbContext.Open();
-                        count += command.ExecuteNonQuery();
-                    }
-                    return count;
-                };
-
-                if (this.shardingProvider.TryGetShardingTable(entityType, out _))
-                {
-                    var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, entities);
-                    foreach (var tabledInsertObj in tabledInsertObjs)
-                    {
-                        headSqlSetter.Invoke(command.Parameters, sqlBuilder, tabledInsertObj.Key, tabledInsertObj);
-                        result += executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
-                        sqlBuilder.Clear();
-                        command.Parameters.Clear();
-                    }
-                }
-                else
-                {
-                    headSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName, firstInsertObj);
-                    result = executor.Invoke(tableName, entities);
-                }
-                sqlBuilder.Clear();
-                sqlBuilder = null;
-            }
+            if (isBulk) result = this.DbContext.CreateBulk(command, entityType, insertObjs as IEnumerable, bulkCount);
             else result = this.DbContext.Create(command, entityType, insertObjs);
         }
         catch (Exception ex)
@@ -435,74 +367,7 @@ public class Repository : IRepository
         {
             var entityType = typeof(TEntity);
             bool isBulk = insertObjs is IEnumerable && insertObjs is not string && insertObjs is not IDictionary<string, object>;
-            if (isBulk)
-            {
-                var sqlBuilder = new StringBuilder();
-                var entities = insertObjs as IEnumerable;
-                object firstInsertObj = null;
-                Type insertObjType = null;
-                foreach (var entity in entities)
-                {
-                    firstInsertObj = entity;
-                    break;
-                }
-                insertObjType = firstInsertObj.GetType();
-
-                (var tableName, var headSqlSetter, var valuesSqlSetter) = RepositoryHelper.BuildCreateBulkSqlParameters(
-                    this.ormProvider, this.mapProvider, entityType, insertObjType, null, null);
-
-                Func<string, IEnumerable, Task<int>> executor = async (tableName, insertObjs) =>
-                {
-                    var isFirst = true;
-                    int count = 0, index = 0;
-                    foreach (var insertObj in insertObjs)
-                    {
-                        if (index > 0) sqlBuilder.Append(',');
-                        valuesSqlSetter.Invoke(command.Parameters, sqlBuilder, insertObj, index.ToString());
-                        if (index >= bulkCount)
-                        {
-                            command.CommandText = sqlBuilder.ToString();
-                            if (isFirst)
-                            {
-                                await this.DbContext.OpenAsync(cancellationToken);
-                                isFirst = false;
-                            }
-                            count += await command.ExecuteNonQueryAsync(cancellationToken);
-                            sqlBuilder.Clear();
-                            command.Parameters.Clear();
-                            headSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName, insertObj);
-                            index = 0;
-                            continue;
-                        }
-                        index++;
-                    }
-                    if (index > 0)
-                    {
-                        command.CommandText = sqlBuilder.ToString();
-                        if (isFirst) await this.DbContext.OpenAsync(cancellationToken);
-                        count += await command.ExecuteNonQueryAsync(cancellationToken);
-                    }
-                    return count;
-                };
-                if (this.shardingProvider.TryGetShardingTable(entityType, out _))
-                {
-                    var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, entities);
-                    foreach (var tabledInsertObj in tabledInsertObjs)
-                    {
-                        headSqlSetter.Invoke(command.Parameters, sqlBuilder, tabledInsertObj.Key, tabledInsertObj);
-                        result += await executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
-                        sqlBuilder.Clear();
-                        command.Parameters.Clear();
-                    }
-                }
-                else
-                {
-                    headSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName, firstInsertObj);
-                    result = await executor.Invoke(tableName, entities);
-                }
-                sqlBuilder.Clear();
-                sqlBuilder = null;
-            }
+            if (isBulk) result = await this.DbContext.CreateBulkAsync(command, entityType, insertObjs as IEnumerable, bulkCount, cancellationToken);
             else result = await this.DbContext.CreateAsync(command, entityType, insertObjs, cancellationToken);
         }
         catch (Exception ex)
@@ -524,7 +389,8 @@ public class Repository : IRepository
             throw new ArgumentNullException(nameof(insertObj));
         bool isBulk = insertObj is IEnumerable && insertObj is not string && insertObj is not IDictionary<string, object>;
         if (isBulk) throw new NotSupportedException("CreateIdentity方法只支持单条数据插入，不支持批量插入返回Identity");
-        return this.DbContext.CreateIdentity<int>(typeof(TEntity), insertObj);
+
+        return this.DbContext.CreateResult<int>((command, dbContext) => dbContext.BuildCreateCommand(command, typeof(TEntity), insertObj, true));
     }
     public virtual async Task<int> CreateIdentityAsync<TEntity>(object insertObj, CancellationToken cancellationToken = default)
     {
@@ -532,7 +398,7 @@ public class Repository : IRepository
             throw new ArgumentNullException(nameof(insertObj));
         bool isBulk = insertObj is IEnumerable && insertObj is not string && insertObj is not IDictionary<string, object>;
         if (isBulk) throw new NotSupportedException("CreateIdentity方法只支持单条数据插入，不支持批量插入返回Identity");
-        return await this.DbContext.CreateIdentityAsync<int>(typeof(TEntity), insertObj, cancellationToken);
+        return await this.DbContext.CreateResultAsync<int>((command, dbContext) => dbContext.BuildCreateCommand(command, typeof(TEntity), insertObj, true), cancellationToken);
     }
     public virtual long CreateIdentityLong<TEntity>(object insertObj)
     {
@@ -540,7 +406,7 @@ public class Repository : IRepository
             throw new ArgumentNullException(nameof(insertObj));
         bool isBulk = insertObj is IEnumerable && insertObj is not string && insertObj is not IDictionary<string, object>;
         if (isBulk) throw new NotSupportedException("CreateIdentity方法只支持单条数据插入，不支持批量插入返回Identity");
-        return this.DbContext.CreateIdentity<long>(typeof(TEntity), insertObj);
+        return this.DbContext.CreateResult<long>((command, dbContext) => dbContext.BuildCreateCommand(command, typeof(TEntity), insertObj, true));
     }
     public virtual async Task<long> CreateIdentityLongAsync<TEntity>(object insertObj, CancellationToken cancellationToken = default)
     {
@@ -549,7 +415,7 @@ public class Repository : IRepository
         bool isBulk = insertObj is IEnumerable && insertObj is not string && insertObj is not IDictionary<string, object>;
         if (isBulk) throw new NotSupportedException("CreateIdentity方法只支持单条数据插入，不支持批量插入返回Identity");
 
-        return await this.DbContext.CreateIdentityAsync<long>(typeof(TEntity), insertObj, cancellationToken);
+        return await this.DbContext.CreateResultAsync<long>((command, dbContext) => dbContext.BuildCreateCommand(command, typeof(TEntity), insertObj, true), cancellationToken);
     }
     #endregion
 

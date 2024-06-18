@@ -126,6 +126,18 @@ public interface ICreate<TEntity>
     /// <typeparam name="T6">表T6实体类型</typeparam>
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>();
+    /// <summary>
+    /// 使用子查询subQuery作为创建子查询对象，子查询subQuery也可以是CTE表，用法：
+    /// <code>
+    /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
+    /// repository.Create&lt;Function&gt;(subQuery).Select( ... )
+    /// SQL: INSERT INTO `sys_menu` SELECT ... FROM ( ... )
+    /// </code>
+    /// </summary>
+    /// <typeparam name="T">子查询返回的实体类型</typeparam>
+    /// <param name="subQuery">子查询</param>
+    /// <returns>返回查询对象</returns>
+    //IQuery<T> From<T>(IQuery<T> subQuery);
     #endregion
 }
 /// <summary>
