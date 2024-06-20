@@ -203,7 +203,12 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
             };
             this.DbParameters = command.Parameters;
         }
-        else (_, headSqlSetter, valuesSqlSetter) = RepositoryHelper.BuildCreateBulkSqlParameters(this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames);
+        else
+        {
+            (_, var typedHeadSqlSetter, var sqlSetter) = RepositoryHelper.BuildCreateSqlParameters(this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames, true, false);
+            headSqlSetter = (dbParameters, builder, tableName, insertObj) => typedHeadSqlSetter.Invoke(builder, tableName, insertObj);
+            valuesSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, object, string>;
+        }
         return (isNeedSplit, tableName, insertObjs, bulkCount, firstInsertObj, headSqlSetter, valuesSqlSetter);
     }
 

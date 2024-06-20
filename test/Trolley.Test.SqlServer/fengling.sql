@@ -77,6 +77,52 @@ CREATE TABLE [dbo].[sys_order](
 )
 );
 GO
+
+CREATE TABLE [dbo].[sys_order_104_202405](
+	[Id] [nvarchar](50) NOT NULL,
+	[TenantId] [nvarchar](50) NOT NULL,
+	[OrderNo] [nvarchar](50) NULL,	
+	[ProductCount] [int] NULL,
+	[TotalAmount] [float] NULL,
+	[BuyerId] [int] NULL,
+	[BuyerSource] [nvarchar](50) NULL,
+	[SellerId] [int] NULL,
+	[Products] [ntext] NULL,
+	[Disputes] [ntext] NULL,
+	[IsEnabled] [bit] NULL,
+	[CreatedAt] [datetime] NULL,
+	[CreatedBy] [int] NULL,
+	[UpdatedAt] [datetime] NULL,
+	[UpdatedBy] [int] NULL,
+ CONSTRAINT [pk_sys_order_104_202405] PRIMARY KEY CLUSTERED 
+(
+	[Id] ASC
+)
+);
+GO
+
+CREATE TABLE [dbo].[sys_order_105_202405](
+	[Id] [nvarchar](50) NOT NULL,
+	[TenantId] [nvarchar](50) NOT NULL,
+	[OrderNo] [nvarchar](50) NULL,	
+	[ProductCount] [int] NULL,
+	[TotalAmount] [float] NULL,
+	[BuyerId] [int] NULL,
+	[BuyerSource] [nvarchar](50) NULL,
+	[SellerId] [int] NULL,
+	[Products] [ntext] NULL,
+	[Disputes] [ntext] NULL,
+	[IsEnabled] [bit] NULL,
+	[CreatedAt] [datetime] NULL,
+	[CreatedBy] [int] NULL,
+	[UpdatedAt] [datetime] NULL,
+	[UpdatedBy] [int] NULL,
+ CONSTRAINT [pk_sys_order_105_202405] PRIMARY KEY CLUSTERED 
+(
+	[Id] ASC
+)
+);
+GO
 CREATE TABLE [dbo].[sys_order_detail](
 	[Id] [nvarchar](50) NOT NULL,
 	[TenantId] [nvarchar](50) NOT NULL,
@@ -96,6 +142,46 @@ CREATE TABLE [dbo].[sys_order_detail](
 )
 );
 GO
+
+CREATE TABLE [dbo].[sys_order_detail_104_202405](
+	[Id] [nvarchar](50) NOT NULL,
+	[TenantId] [nvarchar](50) NOT NULL,
+	[OrderId] [nvarchar](50) NULL,
+	[ProductId] [int] NULL,
+	[Price] [float] NULL,
+	[Quantity] [int] NULL,
+	[Amount] [float] NULL,
+	[IsEnabled] [bit] NULL,
+	[CreatedAt] [datetime] NULL,
+	[CreatedBy] [int] NULL,
+	[UpdatedAt] [datetime] NULL,
+	[UpdatedBy] [int] NULL,
+ CONSTRAINT [pk_sys_order_detail_104_202405] PRIMARY KEY CLUSTERED 
+(
+	[Id] ASC
+)
+);
+GO
+CREATE TABLE [dbo].[sys_order_detail_105_202405](
+	[Id] [nvarchar](50) NOT NULL,
+	[TenantId] [nvarchar](50) NOT NULL,
+	[OrderId] [nvarchar](50) NULL,
+	[ProductId] [int] NULL,
+	[Price] [float] NULL,
+	[Quantity] [int] NULL,
+	[Amount] [float] NULL,
+	[IsEnabled] [bit] NULL,
+	[CreatedAt] [datetime] NULL,
+	[CreatedBy] [int] NULL,
+	[UpdatedAt] [datetime] NULL,
+	[UpdatedBy] [int] NULL,
+ CONSTRAINT [pk_sys_order_detail_105_202405] PRIMARY KEY CLUSTERED 
+(
+	[Id] ASC
+)
+);
+GO
+
 CREATE TABLE [dbo].[sys_page](
 	[Id] [int] NOT NULL,
 	[Url] [nvarchar](200) NULL,

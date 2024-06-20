@@ -115,6 +115,50 @@ INSERT INTO `sys_order` (`Id`, `TenantId`, `OrderNo`, `ProductCount`, `TotalAmou
 INSERT INTO `sys_order` (`Id`, `TenantId`, `OrderNo`, `ProductCount`, `TotalAmount`, `BuyerId`, `BuyerSource`, `SellerId`, `Products`, `Disputes`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('3', '3', 'ON-003', 1, 199, 1, 'Taobao', 2, '[2]', NULL, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
 
 -- ----------------------------
+-- Table structure for sys_order
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_order_104_202405`;
+CREATE TABLE `sys_order_104_202405`  (
+  `Id` varchar(50) NOT NULL,
+  `TenantId` varchar(50) NOT NULL,
+  `OrderNo` varchar(50) NULL DEFAULT NULL,
+  `ProductCount` int NULL DEFAULT NULL,
+  `TotalAmount` double NULL DEFAULT NULL,
+  `BuyerId` int NULL DEFAULT NULL,
+  `BuyerSource` varchar(50) NULL DEFAULT NULL,
+  `SellerId` int NULL DEFAULT NULL,
+  `Products` JSON NULL,
+  `Disputes` JSON NULL,
+  `IsEnabled` tinyint(1) NULL DEFAULT NULL,
+  `CreatedAt` datetime NULL DEFAULT NULL,
+  `CreatedBy` int NULL DEFAULT NULL,
+  `UpdatedAt` datetime NULL DEFAULT NULL,
+  `UpdatedBy` int NULL DEFAULT NULL,
+  PRIMARY KEY (`Id`) USING BTREE
+);
+-- ----------------------------
+-- Table structure for sys_order
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_order_105_202405`;
+CREATE TABLE `sys_order_105_202405`  (
+  `Id` varchar(50) NOT NULL,
+  `TenantId` varchar(50) NOT NULL,
+  `OrderNo` varchar(50) NULL DEFAULT NULL,
+  `ProductCount` int NULL DEFAULT NULL,
+  `TotalAmount` double NULL DEFAULT NULL,
+  `BuyerId` int NULL DEFAULT NULL,
+  `BuyerSource` varchar(50) NULL DEFAULT NULL,
+  `SellerId` int NULL DEFAULT NULL,
+  `Products` JSON NULL,
+  `Disputes` JSON NULL,
+  `IsEnabled` tinyint(1) NULL DEFAULT NULL,
+  `CreatedAt` datetime NULL DEFAULT NULL,
+  `CreatedBy` int NULL DEFAULT NULL,
+  `UpdatedAt` datetime NULL DEFAULT NULL,
+  `UpdatedBy` int NULL DEFAULT NULL,
+  PRIMARY KEY (`Id`) USING BTREE
+);
+-- ----------------------------
 -- Table structure for sys_order_detail
 -- ----------------------------
 DROP TABLE IF EXISTS `sys_order_detail`;
@@ -143,6 +187,40 @@ INSERT INTO `sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price
 INSERT INTO `sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('4', '1', '2', 1, 299.00, 1, 299.00, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
 INSERT INTO `sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('5', '2', '2', 3, 69.00, 1, 69.00, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
 INSERT INTO `sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('6', '3', '3', 2, 199.00, 1, 199.00, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
+
+DROP TABLE IF EXISTS `sys_order_detail_104_202405`;
+CREATE TABLE `sys_order_detail_104_202405`  (
+  `Id` varchar(50) NOT NULL,
+  `TenantId` varchar(50) NOT NULL,
+  `OrderId` varchar(50) NULL DEFAULT NULL,
+  `ProductId` int NULL DEFAULT NULL,
+  `Price` double(10, 2) NULL DEFAULT NULL,
+  `Quantity` int NULL DEFAULT NULL,
+  `Amount` double(10, 2) NULL DEFAULT NULL,
+  `IsEnabled` tinyint(1) NULL DEFAULT NULL,
+  `CreatedAt` datetime NULL DEFAULT NULL,
+  `CreatedBy` int NULL DEFAULT NULL,
+  `UpdatedAt` datetime NULL DEFAULT NULL,
+  `UpdatedBy` int NULL DEFAULT NULL,
+  PRIMARY KEY (`Id`) USING BTREE
+);
+
+DROP TABLE IF EXISTS `sys_order_detail_105_202405`;
+CREATE TABLE `sys_order_detail_105_202405`  (
+  `Id` varchar(50) NOT NULL,
+  `TenantId` varchar(50) NOT NULL,
+  `OrderId` varchar(50) NULL DEFAULT NULL,
+  `ProductId` int NULL DEFAULT NULL,
+  `Price` double(10, 2) NULL DEFAULT NULL,
+  `Quantity` int NULL DEFAULT NULL,
+  `Amount` double(10, 2) NULL DEFAULT NULL,
+  `IsEnabled` tinyint(1) NULL DEFAULT NULL,
+  `CreatedAt` datetime NULL DEFAULT NULL,
+  `CreatedBy` int NULL DEFAULT NULL,
+  `UpdatedAt` datetime NULL DEFAULT NULL,
+  `UpdatedBy` int NULL DEFAULT NULL,
+  PRIMARY KEY (`Id`) USING BTREE
+);
 
 -- ----------------------------
 -- Table structure for sys_page

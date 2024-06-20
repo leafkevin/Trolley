@@ -10,12 +10,6 @@ namespace Trolley.Test.SqlServer;
 
 public class UnitTest4 : UnitTestBase
 {
-    enum Sex { Male, Female }
-    struct Studuent
-    {
-        public int Id { get; set; }
-        public string Name { get; set; }
-    }
     public UnitTest4()
     {
         var services = new ServiceCollection();
@@ -85,6 +79,7 @@ public class UnitTest4 : UnitTestBase
         var count = repository.Create<User>(new User
         {
             Id = 1,
+            TenantId = "1",
             Name = "leafkevin",
             Age = 25,
             CompanyId = 1,
@@ -117,6 +112,7 @@ public class UnitTest4 : UnitTestBase
             new User
             {
                 Id = 1,
+                TenantId = "1",
                 Name = "leafkevin",
                 Age = 25,
                 CompanyId = 1,
@@ -130,6 +126,7 @@ public class UnitTest4 : UnitTestBase
             new User
             {
                 Id = 2,
+                TenantId = "2",
                 Name = "cindy",
                 Age = 21,
                 CompanyId = 2,
@@ -156,7 +153,7 @@ public class UnitTest4 : UnitTestBase
         var sql1 = repository.Delete<Function>()
             .Where(new[] { new { MenuId = 1, PageId = 1 }, new { MenuId = 2, PageId = 2 } })
             .ToSql(out parameters);
-        Assert.True(sql1 == "DELETE FROM [sys_function] WHERE [MenuId]=@MenuId0 AND [PageId]=@PageId0;DELETE FROM [sys_function] WHERE [MenuId]=@MenuId1 AND [PageId]=@PageId1");
+        Assert.True(sql1 == "DELETE FROM [sys_function] WHERE [MenuId]=@MenuId0 AND [PageId]=@PageId0 OR [MenuId]=@MenuId1 AND [PageId]=@PageId1");
         Assert.True(parameters.Count == 4);
         Assert.True((int)parameters[0].Value == 1);
         Assert.True((int)parameters[1].Value == 1);
@@ -174,6 +171,7 @@ public class UnitTest4 : UnitTestBase
             new User
             {
                 Id = 1,
+                TenantId = "1",
                 Name = "leafkevin",
                 Age = 25,
                 CompanyId = 1,
@@ -187,6 +185,7 @@ public class UnitTest4 : UnitTestBase
             new User
             {
                 Id = 2,
+                TenantId = "2",
                 Name = "cindy",
                 Age = 21,
                 CompanyId = 2,
@@ -230,6 +229,7 @@ public class UnitTest4 : UnitTestBase
             new User
             {
                 Id = 1,
+                TenantId = "1",
                 Name = "leafkevin",
                 Age = 25,
                 CompanyId = 1,
@@ -243,6 +243,7 @@ public class UnitTest4 : UnitTestBase
             new User
             {
                 Id = 2,
+                TenantId = "2",
                 Name = "cindy",
                 Age = 21,
                 CompanyId = 2,
@@ -284,7 +285,7 @@ public class UnitTest4 : UnitTestBase
         var sql1 = repository.Delete<User>()
             .Where(f => f.Gender == Gender.Male)
             .ToSql(out _);
-        Assert.True(sql1 == "DELETE FROM [sys_user] WHERE [Gender]=2");
+        Assert.True(sql1 == "DELETE FROM [sys_user] WHERE [Gender]='Male'");
 
         var gender = Gender.Male;
         var sql2 = repository.Delete<User>()
@@ -292,8 +293,8 @@ public class UnitTest4 : UnitTestBase
             .ToSql(out var parameters1);
         Assert.True(sql2 == "DELETE FROM [sys_user] WHERE [Gender]=@p0");
         Assert.True(parameters1[0].ParameterName == "@p0");
-        Assert.True(parameters1[0].Value.GetType() == typeof(byte));
-        Assert.True((byte)parameters1[0].Value == (byte)gender);
+        Assert.True(parameters1[0].Value.GetType() == typeof(string));
+        Assert.True((string)parameters1[0].Value == gender.ToString());
 
         var sql3 = repository.Delete<Company>()
              .Where(f => f.Nature == CompanyNature.Internet)

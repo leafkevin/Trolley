@@ -54,7 +54,7 @@ class SqlServerProvider : DbHelper
 		CASE WHEN a.length = -1 THEN 'MAX' WHEN c.name IN ('nchar', 'nvarchar') THEN CAST(a.length / 2 as varchar) ELSE CAST(a.length as varchar) END + ')'
 		WHEN c.name in ('numeric', 'decimal') THEN '(' + CAST(a.xprec as varchar) + ',' + CAST(a.xscale as varchar) + ')' ELSE '' END,
 		    CASE WHEN c.name in ('text', 'ntext', 'image') THEN -1 WHEN c.name IN ('nchar','nvarchar') THEN a.length/2 ELSE a.length END,
-		    a.xprec,a.xscale,d.value,f.text,kc.keyno,COLUMNPROPERTY(a.id,a.name,'IsIdentity'),a.isnullable,a.colid
+		    a.xprec,a.xscale,d.value,f.text,ISNULL(kc.keyno,0),COLUMNPROPERTY(a.id,a.name,'IsIdentity'),a.isnullable,a.colid
 		    FROM SYS.syscolumns a 
         INNER JOIN SYS.sysobjects b ON a.id=b.id
         INNER JOIN SYS.systypes c ON a.xusertype = c.xusertype 
@@ -83,7 +83,7 @@ class SqlServerProvider : DbHelper
                 Precision = this.ToValue<int>(reader[5]),
                 Description = this.ToValue<string>(reader[6]),
                 DefaultValue = this.ToValue<string>(reader[7]),
-                IsPrimaryKey = this.ToValue<int>(reader[8]) == 1,
+                IsPrimaryKey = this.ToValue<int>(reader[8]) > 0,
                 IsIdentity = this.ToValue<int>(reader[9]) == 1,
                 IsNullable = this.ToValue<int>(reader[10]) == 1,
                 Position = this.ToValue<int>(reader[11])

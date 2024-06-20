@@ -1,14 +1,12 @@
-﻿using System;
+﻿namespace Trolley.Test;
 
-namespace Trolley.Test;
-
-enum Sex { Male, Female }
-struct Studuent
+public enum Sex { Male, Female }
+public struct Studuent
 {
     public int Id { get; set; }
     public string Name { get; set; }
 }
-class Teacher
+public  class Teacher
 {
     public int Id { get; set; }
     public string Name { get; set; }

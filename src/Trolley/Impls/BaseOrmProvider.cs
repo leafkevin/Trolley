@@ -216,7 +216,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
             {
                 if (fieldType == typeof(string))
                     handlerType = isNullable ? typeof(NullableGuidAsStringTypeHandler) : typeof(GuidAsStringTypeHandler);
-                else handlerType = isNullable ? typeof(GuidTypeHandler) : typeof(NullableGuidTypeHandler);
+                else handlerType = isNullable ? typeof(NullableGuidTypeHandler) : typeof(GuidTypeHandler);
             }
             else if (underlyingType == typeof(DateTimeOffset))
             {

@@ -148,7 +148,7 @@ class ModelConfiguration : IModelConfiguration
         });
         builder.Entity<Function>(f =>
         {
-            f.ToTable("sys_function").Key(t => t.MenuId);
+            f.ToTable("sys_function").Key(t => new { t.MenuId, t.PageId });
             f.Member(t => t.MenuId).Field(nameof(Function.MenuId)).DbColumnType("int").NativeDbType(SqlDbType.Int).Position(1).Required();
             f.Member(t => t.PageId).Field(nameof(Function.PageId)).DbColumnType("int").NativeDbType(SqlDbType.Int).Position(2).Required();
             f.Member(t => t.FunctionName).Field(nameof(Function.FunctionName)).DbColumnType("nvarchar(50)").NativeDbType(SqlDbType.NVarChar).Position(3).Length(50);

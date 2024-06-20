@@ -25,7 +25,7 @@
     var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
     var dbProvider = new MySqlProvider(connectionString);
     var databaseName = "fengling";
-    var tableName = "sys_user";
+    var tableName = "sys_function";
     var removePrefix = "sys_";
     var separator = '_';
     var className = dbProvider.ToClassName(tableName, removePrefix, separator);
@@ -63,6 +63,7 @@ class ModelConfiguration : IModelConfiguration
         #> t.<#=keyColumnInfos[0].ColumnName#><#  
     }#>);
 <#
+    var strDataTypes = new string[]{ "char", "nchar", "varchar", "nvarchar"};
     foreach(ColumnInfo columnInfo in columnList)
     {
         var propertyName = columnInfo.ColumnName;
@@ -73,7 +74,7 @@ class ModelConfiguration : IModelConfiguration
         var length = classMemberInfo.Length;
 #>
             f.Member(t => t.<#=propertyName#>).Field(nameof(<#=className#>.<#=propertyName#>)).DbColumnType("<#=columnType#>").NativeDbType(<#=nativeDbType#>).Position(<#=position#>)<#
-        if(classMemberInfo.MemberType == "string" && "varchar,char".Contains(columnInfo.DataType))
+        if(classMemberInfo.MemberType == "string" && strDataTypes.Contains(columnInfo.DataType) && length > 0)
         {
             #>.Length(<#=length#>)<#
         }

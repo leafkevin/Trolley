@@ -1,10 +1,9 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using System.Collections.Generic;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Trolley.MySqlConnector;
 using Xunit;
-using System.Linq;
-using System.Xml.Linq;
 
 namespace Trolley.Test.MySqlConnector;
 
