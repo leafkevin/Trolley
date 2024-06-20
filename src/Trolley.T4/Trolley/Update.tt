@@ -569,122 +569,6 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
     for (int i = 1; i < count; i++)
     {
         tables += $", T{i}";
-#>
-public class UpdateFrom<<#=tables#>> : Updated<TEntity>, IUpdateFrom<<#=tables#>>
-{
-    #region Constructor
-    public UpdateFrom(DbContext dbContext, IUpdateVisitor visitor)
-        : base(dbContext, visitor) { }
-    #endregion
-
-    #region Set
-    public virtual IUpdateFrom<<#=tables#>> Set<TUpdateObj>(TUpdateObj updateObj)
-        => this.Set(true, updateObj);
-    public virtual IUpdateFrom<<#=tables#>> Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
-    {
-        if (updateObj == null)
-            throw new ArgumentNullException(nameof(updateObj));
-        if (!typeof(TUpdateObj).IsEntityType(out _))
-            throw new NotSupportedException("Set方法参数updateObj支持实体类对象，不支持基础类型，可以是匿名对象或是命名对象或是字典");
-
-        if (condition) this.Visitor.SetWith(updateObj);
-        return this;
-    }
-    public virtual IUpdateFrom<<#=tables#>> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
-        => this.Set(true, fieldSelector, fieldValue);
-    public virtual IUpdateFrom<<#=tables#>> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
-    {
-        if (fieldSelector == null)
-            throw new ArgumentNullException(nameof(fieldSelector));
-        if (fieldValue == null)
-            throw new ArgumentNullException(nameof(fieldValue));
-        if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
-
-        if (condition)
-            this.Visitor.SetField(fieldSelector, fieldValue);
-        return this;
-    }
-    public virtual IUpdateFrom<<#=tables#>> Set<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsAssignment)
-        => this.Set(true, fieldsAssignment);
-    public virtual IUpdateFrom<<#=tables#>> Set<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsAssignment)
-    {
-        if (fieldsAssignment == null)
-            throw new ArgumentNullException(nameof(fieldsAssignment));
-        if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
-
-        if (condition)
-            this.Visitor.Set(fieldsAssignment);
-        return this;
-    }
-    #endregion
-
-    #region SetFrom
-    public virtual IUpdateFrom<<#=tables#>> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
-        => this.SetFrom(true, fieldSelector, valueSelector);
-    public virtual IUpdateFrom<<#=tables#>> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
-    {
-        if (fieldSelector == null)
-            throw new ArgumentNullException(nameof(fieldSelector));
-        if (valueSelector == null)
-            throw new ArgumentNullException(nameof(valueSelector));
-        if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
-
-        if (condition)
-            this.Visitor.SetFrom(fieldSelector, valueSelector);
-        return this;
-    }
-    public virtual IUpdateFrom<<#=tables#>> SetFrom<TFields>(Expression<Func<IFromQuery, <#=tables#>, TFields>> fieldsAssignment)
-        => this.SetFrom(true, fieldsAssignment);
-    public virtual IUpdateFrom<<#=tables#>> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, <#=tables#>, TFields>> fieldsAssignment)
-    {
-        if (fieldsAssignment == null)
-            throw new ArgumentNullException(nameof(fieldsAssignment));
-        if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
-
-        if (condition)
-            this.Visitor.SetFrom(fieldsAssignment);
-        return this;
-    }
-    #endregion
-
-    #region Where/And
-    public virtual IUpdateFrom<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> wherePredicate)
-        => this.Where(true, wherePredicate);
-    public virtual IUpdateFrom<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
-    {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
-        if (condition)
-            this.Visitor.Where(ifPredicate);
-        else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
-        return this;
-    }
-    public virtual IUpdateFrom<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> andPredicate)
-        => this.And(true, andPredicate);
-    public virtual IUpdateFrom<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
-    {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
-        if (condition)
-            this.Visitor.And(ifPredicate);
-        else if (elsePredicate != null) this.Visitor.And(elsePredicate);
-        return this;
-    }
-    #endregion
-}
-<#  
-    }
-    count = 6;
-    tables = "TEntity";
-    for (int i = 1; i < count; i++)
-    {
-        tables += $", T{i}";
         var nextTable = $"T{i+1}";
 #>
 public class UpdateJoin<<#=tables#>> : Updated<TEntity>, IUpdateJoin<<#=tables#>>
@@ -781,9 +665,9 @@ public class UpdateJoin<<#=tables#>> : Updated<TEntity>, IUpdateJoin<<#=tables#>
             this.Visitor.SetFrom(fieldSelector, valueSelector);
         return this;
     }
-    public virtual IUpdateJoin<<#=tables#>> SetFrom<TFields>(Expression<Func<IFromQuery, <#=tables#>, TFields>> fieldsAssignment)
+    public virtual IUpdateJoin<<#=tables#>> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
         => this.SetFrom(true, fieldsAssignment);
-    public virtual IUpdateJoin<<#=tables#>> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, <#=tables#>, TFields>> fieldsAssignment)
+    public virtual IUpdateJoin<<#=tables#>> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
     {
         if (fieldsAssignment == null)
             throw new ArgumentNullException(nameof(fieldsAssignment));

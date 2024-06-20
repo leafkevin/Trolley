@@ -135,7 +135,7 @@ CREATE TABLE [dbo].[sys_user](
 	[Name] [nvarchar](50) NULL,
 	[Gender] [nvarchar](50) NULL,
 	[Age] [int] NULL,
-	[CompanyId] [int] NULL,
+	[CompanyId] [int] NULL, 
 	[GuidField] [uniqueidentifier] NULL,
 	[SomeTimes] [time](7) NULL,
 	[SourceType] [nvarchar](50) NULL,
@@ -200,7 +200,7 @@ CREATE TABLE [dbo].[sys_function](
 	[MenuId] [int] NOT NULL,
 	[PageId] [int] NOT NULL,
 	[FunctionName] [nvarchar](50) NULL,
-	Description [nvarchar](500) NULL,
+	[Description] [nvarchar](500) NULL,
 	[IsEnabled] [bit] NULL,
 	[CreatedAt] [datetime] NULL,
 	[CreatedBy] [int] NULL,
@@ -210,6 +210,23 @@ CREATE TABLE [dbo].[sys_function](
 (
 	[MenuId] ASC,
 	[PageId] ASC
+)
+);
+GO
+
+CREATE TABLE [dbo].[sys_update_entity](
+	[Id] [int] NOT NULL,
+	[BooleanField] [bit] NULL,
+	[EnumField] [nvarchar](50) NULL,
+	[GuidField] [uniqueidentifier] NULL,
+	[DateTimeField] [datetime] NULL,
+	[DateOnlyField] [date] NULL,
+	[DateTimeOffsetField] [datetimeoffset] NULL,
+	[TimeSpanField] [time] NULL,
+	[TimeOnlyField] [time] NULL,
+ CONSTRAINT [pk_sys_update_entity] PRIMARY KEY CLUSTERED 
+(
+	[Id] ASC
 )
 );
 GO

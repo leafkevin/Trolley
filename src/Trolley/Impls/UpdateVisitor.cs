@@ -584,7 +584,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     }
     public virtual void VisitSetFromField(object deferredSegmentValue)
     {
-        this.IsNeedTableAlias = true;
         var entityMapper = this.Tables[0].Mapper;
         (var fieldSelector, var valueSelector) = ((Expression, Expression))deferredSegmentValue;
         var lambdaExpr = fieldSelector as LambdaExpression;

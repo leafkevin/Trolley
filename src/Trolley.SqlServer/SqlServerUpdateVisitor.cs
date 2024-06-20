@@ -11,6 +11,24 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
     public SqlServerUpdateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
         : base(dbKey, ormProvider, mapProvider, shardingProvider, isParameterized, tableAsStart, parameterPrefix) { }
 
+    public override void Initialize(Type entityType, bool isMultiple = false, bool isFirst = true)
+    {
+        if (!isMultiple)
+        {
+            this.Tables = new();
+            this.TableAliases = new();
+            var mapper = this.MapProvider.GetEntityMap(entityType);
+            this.Tables.Add(new TableSegment
+            {
+                TableType = TableType.Entity,
+                EntityType = entityType,
+                //默认别名就是表名，在SetFrom时使用的别名就是表名
+                AliasName = this.OrmProvider.GetTableName(mapper.TableName),
+                Mapper = mapper
+            });
+        }
+        if (!isFirst) this.Clear();
+    }
     public override string BuildCommand(DbContext dbContext, IDbCommand command)
     {
         string sql = null;
@@ -76,7 +94,6 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
                                 this.VisitSet(deferredSegment.Value as Expression);
                                 break;
                             case "SetFrom":
-                                this.IsNeedTableAlias = true;
                                 this.VisitSet(deferredSegment.Value as Expression);
                                 break;
                             case "SetField":
@@ -86,7 +103,6 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
                                 this.VisitSetWith(deferredSegment.Value);
                                 break;
                             case "SetFromField":
-                                this.IsNeedTableAlias = true;
                                 this.VisitSetFromField(deferredSegment.Value);
                                 break;
                             case "Where":
@@ -153,8 +169,11 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
                     sql = builder.ToString();
                     builder.Clear();
 
-                    if (this.IsJoin && this.ShardingTables != null && this.ShardingTables.Count > 0)
-                        sql = dbContext.BuildShardingTablesSqlByFormat(this, sql, ";");
+                    if (this.IsJoin)
+                    {
+                        if (this.ShardingTables != null && this.ShardingTables.Count > 0)
+                            sql = dbContext.BuildShardingTablesSqlByFormat(this, sql, ";");
+                    }
                     else
                     {
                         if (this.ShardingTables != null && this.ShardingTables.Count > 0)
@@ -211,6 +230,27 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
             else builder.Append($"name LIKE '{this.ShardingTables[0].Mapper.TableName}%'");
         }
         return builder.ToString();
+    }
+    public override void SetFrom(Expression fieldsAssignment)
+    {
+        this.deferredSegments.Add(new CommandSegment
+        {
+            Type = "SetFrom",
+            Value = fieldsAssignment
+        });
+    }
+    public override void SetFrom(Expression fieldSelector, Expression valueSelector)
+    {
+        this.deferredSegments.Add(new CommandSegment
+        {
+            Type = "SetFromField",
+            Value = (fieldSelector, valueSelector)
+        });
+    }
+    public override void Join(string joinType, Type entityType, Expression joinOn)
+    {
+        this.Tables[0].AliasName = "a";
+        base.Join(joinType, entityType, joinOn);
     }
     public void WithBulkCopy(IEnumerable updateObjs, int? timeoutSeconds)
     {

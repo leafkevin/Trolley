@@ -36,6 +36,8 @@ public class NullableTimeOnlyTypeHandler : ITypeHandler
     {
         if (value is TimeOnly)
             return value;
+        if (value is TimeSpan tsValue)
+            return TimeOnly.FromTimeSpan(tsValue);
         return DBNull.Value;
     }
     public virtual string GetQuotedValue(IOrmProvider ormProvider, Type underlyingType, object value)

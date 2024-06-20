@@ -46,7 +46,7 @@ public class <#=className#>
 {
 <#foreach(ColumnInfo columnInfo in columnList){
 var propertyName = columnInfo.ColumnName;
-var propertyType = dbProvider.MapMemberType(columnInfo);
+var memberInfo = dbProvider.MapMember(columnInfo);
 if(!String.IsNullOrEmpty(columnInfo.Description))
 {#>
     /// <summary>
@@ -55,7 +55,7 @@ if(!String.IsNullOrEmpty(columnInfo.Description))
 <#}#>
 <#if(columnInfo.IsPrimaryKey){#>
 <#}#>
-    public <#=propertyType#> <#=propertyName#> { get; set; }
+    public <#=memberInfo.MemberType#> <#=propertyName#> { get; set; }
 <#}#>
 }
 <#

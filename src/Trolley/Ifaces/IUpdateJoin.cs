@@ -112,11 +112,11 @@ public interface IUpdateJoin<TEntity, T1> : IUpdated<TEntity>
     /// 使用子查询fieldsAssignment表达式捞取值部分栏位更新，表达式fieldsAssignment捞取的字段可以是一个或是多个，用法：
     /// <code>
     /// var orderInfo = new { ... };
-    /// .SetFrom((a, b ...) =&gt; new
+    /// .SetFrom((a, b) =&gt; new
     /// {
     ///     orderInfo.Disputes, //直接赋值，使用同名变量，实体对象由TypeHandler处理
     ///     TotalAmount = a.From&lt;OrderDetail&gt;('x')
-    ///         .Where(f =&gt; f.OrderId == y.Id)
+    ///         .Where(f =&gt; f.OrderId == b.Id)
     ///         .Select(t =&gt; Sql.Sum(t.Amount)) //子查询
     ///     OrderNo = "ON-001", //直接赋值
     ///     BuyerId = DBNull.Value, //直接赋值 NULL
@@ -130,16 +130,16 @@ public interface IUpdateJoin<TEntity, T1> : IUpdated<TEntity>
     /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
     /// <param name="fieldsAssignment">子查询表达式，可以一个或多个字段赋值</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, T1, TFields>> fieldsAssignment);
+    IUpdateJoin<TEntity, T1> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
     /// <code>
     /// var orderInfo = new { ... };
-    /// .SetFrom(true, (a, b ...) =&gt; new
+    /// .SetFrom(true, (a, b) =&gt; new
     /// {
     ///     orderInfo.Disputes, //直接赋值，使用同名变量，实体对象由TypeHandler处理
     ///     TotalAmount = a.From&lt;OrderDetail&gt;('x')
-    ///         .Where(f =&gt; f.OrderId == y.Id)
+    ///         .Where(f =&gt; f.OrderId == b.Id)
     ///         .Select(t =&gt; Sql.Sum(t.Amount)) //子查询
     ///     OrderNo = "ON-001", //直接赋值
     ///     BuyerId = DBNull.Value, //直接赋值 NULL
@@ -154,7 +154,7 @@ public interface IUpdateJoin<TEntity, T1> : IUpdated<TEntity>
     /// <param name="condition">判断条件</param>
     /// <param name="fieldsAssignment">子查询表达式，可以一个或多个字段赋值</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, TFields>> fieldsAssignment);
+    IUpdateJoin<TEntity, T1> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment);
     /// <summary>
     /// 使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，表达式fieldSelector只能筛选一个栏位，用法：
     /// <code>
@@ -331,11 +331,11 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdated<TEntity>
     /// 使用子查询fieldsAssignment表达式捞取值部分栏位更新，表达式fieldsAssignment捞取的字段可以是一个或是多个，用法：
     /// <code>
     /// var orderInfo = new { ... };
-    /// .SetFrom((a, b ...) =&gt; new
+    /// .SetFrom((a, b) =&gt; new
     /// {
     ///     orderInfo.Disputes, //直接赋值，使用同名变量，实体对象由TypeHandler处理
     ///     TotalAmount = a.From&lt;OrderDetail&gt;('x')
-    ///         .Where(f =&gt; f.OrderId == y.Id)
+    ///         .Where(f =&gt; f.OrderId == b.Id)
     ///         .Select(t =&gt; Sql.Sum(t.Amount)) //子查询
     ///     OrderNo = "ON-001", //直接赋值
     ///     BuyerId = DBNull.Value, //直接赋值 NULL
@@ -349,16 +349,16 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdated<TEntity>
     /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
     /// <param name="fieldsAssignment">子查询表达式，可以一个或多个字段赋值</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, T1, T2, TFields>> fieldsAssignment);
+    IUpdateJoin<TEntity, T1, T2> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
     /// <code>
     /// var orderInfo = new { ... };
-    /// .SetFrom(true, (a, b ...) =&gt; new
+    /// .SetFrom(true, (a, b) =&gt; new
     /// {
     ///     orderInfo.Disputes, //直接赋值，使用同名变量，实体对象由TypeHandler处理
     ///     TotalAmount = a.From&lt;OrderDetail&gt;('x')
-    ///         .Where(f =&gt; f.OrderId == y.Id)
+    ///         .Where(f =&gt; f.OrderId == b.Id)
     ///         .Select(t =&gt; Sql.Sum(t.Amount)) //子查询
     ///     OrderNo = "ON-001", //直接赋值
     ///     BuyerId = DBNull.Value, //直接赋值 NULL
@@ -373,7 +373,7 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdated<TEntity>
     /// <param name="condition">判断条件</param>
     /// <param name="fieldsAssignment">子查询表达式，可以一个或多个字段赋值</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, T2, TFields>> fieldsAssignment);
+    IUpdateJoin<TEntity, T1, T2> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment);
     /// <summary>
     /// 使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，表达式fieldSelector只能筛选一个栏位，用法：
     /// <code>
@@ -551,11 +551,11 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdated<TEntity>
     /// 使用子查询fieldsAssignment表达式捞取值部分栏位更新，表达式fieldsAssignment捞取的字段可以是一个或是多个，用法：
     /// <code>
     /// var orderInfo = new { ... };
-    /// .SetFrom((a, b ...) =&gt; new
+    /// .SetFrom((a, b) =&gt; new
     /// {
     ///     orderInfo.Disputes, //直接赋值，使用同名变量，实体对象由TypeHandler处理
     ///     TotalAmount = a.From&lt;OrderDetail&gt;('x')
-    ///         .Where(f =&gt; f.OrderId == y.Id)
+    ///         .Where(f =&gt; f.OrderId == b.Id)
     ///         .Select(t =&gt; Sql.Sum(t.Amount)) //子查询
     ///     OrderNo = "ON-001", //直接赋值
     ///     BuyerId = DBNull.Value, //直接赋值 NULL
@@ -569,16 +569,16 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdated<TEntity>
     /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
     /// <param name="fieldsAssignment">子查询表达式，可以一个或多个字段赋值</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, T1, T2, T3, TFields>> fieldsAssignment);
+    IUpdateJoin<TEntity, T1, T2, T3> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
     /// <code>
     /// var orderInfo = new { ... };
-    /// .SetFrom(true, (a, b ...) =&gt; new
+    /// .SetFrom(true, (a, b) =&gt; new
     /// {
     ///     orderInfo.Disputes, //直接赋值，使用同名变量，实体对象由TypeHandler处理
     ///     TotalAmount = a.From&lt;OrderDetail&gt;('x')
-    ///         .Where(f =&gt; f.OrderId == y.Id)
+    ///         .Where(f =&gt; f.OrderId == b.Id)
     ///         .Select(t =&gt; Sql.Sum(t.Amount)) //子查询
     ///     OrderNo = "ON-001", //直接赋值
     ///     BuyerId = DBNull.Value, //直接赋值 NULL
@@ -593,7 +593,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdated<TEntity>
     /// <param name="condition">判断条件</param>
     /// <param name="fieldsAssignment">子查询表达式，可以一个或多个字段赋值</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, T2, T3, TFields>> fieldsAssignment);
+    IUpdateJoin<TEntity, T1, T2, T3> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment);
     /// <summary>
     /// 使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，表达式fieldSelector只能筛选一个栏位，用法：
     /// <code>
@@ -772,11 +772,11 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdated<TEntity>
     /// 使用子查询fieldsAssignment表达式捞取值部分栏位更新，表达式fieldsAssignment捞取的字段可以是一个或是多个，用法：
     /// <code>
     /// var orderInfo = new { ... };
-    /// .SetFrom((a, b ...) =&gt; new
+    /// .SetFrom((a, b) =&gt; new
     /// {
     ///     orderInfo.Disputes, //直接赋值，使用同名变量，实体对象由TypeHandler处理
     ///     TotalAmount = a.From&lt;OrderDetail&gt;('x')
-    ///         .Where(f =&gt; f.OrderId == y.Id)
+    ///         .Where(f =&gt; f.OrderId == b.Id)
     ///         .Select(t =&gt; Sql.Sum(t.Amount)) //子查询
     ///     OrderNo = "ON-001", //直接赋值
     ///     BuyerId = DBNull.Value, //直接赋值 NULL
@@ -790,16 +790,16 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdated<TEntity>
     /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
     /// <param name="fieldsAssignment">子查询表达式，可以一个或多个字段赋值</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, T1, T2, T3, T4, TFields>> fieldsAssignment);
+    IUpdateJoin<TEntity, T1, T2, T3, T4> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
     /// <code>
     /// var orderInfo = new { ... };
-    /// .SetFrom(true, (a, b ...) =&gt; new
+    /// .SetFrom(true, (a, b) =&gt; new
     /// {
     ///     orderInfo.Disputes, //直接赋值，使用同名变量，实体对象由TypeHandler处理
     ///     TotalAmount = a.From&lt;OrderDetail&gt;('x')
-    ///         .Where(f =&gt; f.OrderId == y.Id)
+    ///         .Where(f =&gt; f.OrderId == b.Id)
     ///         .Select(t =&gt; Sql.Sum(t.Amount)) //子查询
     ///     OrderNo = "ON-001", //直接赋值
     ///     BuyerId = DBNull.Value, //直接赋值 NULL
@@ -814,7 +814,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdated<TEntity>
     /// <param name="condition">判断条件</param>
     /// <param name="fieldsAssignment">子查询表达式，可以一个或多个字段赋值</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, T2, T3, T4, TFields>> fieldsAssignment);
+    IUpdateJoin<TEntity, T1, T2, T3, T4> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment);
     /// <summary>
     /// 使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，表达式fieldSelector只能筛选一个栏位，用法：
     /// <code>
@@ -977,11 +977,11 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdated<TEntity>
     /// 使用子查询fieldsAssignment表达式捞取值部分栏位更新，表达式fieldsAssignment捞取的字段可以是一个或是多个，用法：
     /// <code>
     /// var orderInfo = new { ... };
-    /// .SetFrom((a, b ...) =&gt; new
+    /// .SetFrom((a, b) =&gt; new
     /// {
     ///     orderInfo.Disputes, //直接赋值，使用同名变量，实体对象由TypeHandler处理
     ///     TotalAmount = a.From&lt;OrderDetail&gt;('x')
-    ///         .Where(f =&gt; f.OrderId == y.Id)
+    ///         .Where(f =&gt; f.OrderId == b.Id)
     ///         .Select(t =&gt; Sql.Sum(t.Amount)) //子查询
     ///     OrderNo = "ON-001", //直接赋值
     ///     BuyerId = DBNull.Value, //直接赋值 NULL
@@ -995,16 +995,16 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdated<TEntity>
     /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
     /// <param name="fieldsAssignment">子查询表达式，可以一个或多个字段赋值</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, T1, T2, T3, T4, T5, TFields>> fieldsAssignment);
+    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment);
     /// <summary>
     /// 判断condition布尔值，如果为true，使用带有子查询的表达式fieldsExpr更新部分栏位TFields，表达式fieldsExpr的字段可以是一个或是多个，如果为false，则不生成更新语句，用法：
     /// <code>
     /// var orderInfo = new { ... };
-    /// .SetFrom(true, (a, b ...) =&gt; new
+    /// .SetFrom(true, (a, b) =&gt; new
     /// {
     ///     orderInfo.Disputes, //直接赋值，使用同名变量，实体对象由TypeHandler处理
     ///     TotalAmount = a.From&lt;OrderDetail&gt;('x')
-    ///         .Where(f =&gt; f.OrderId == y.Id)
+    ///         .Where(f =&gt; f.OrderId == b.Id)
     ///         .Select(t =&gt; Sql.Sum(t.Amount)) //子查询
     ///     OrderNo = "ON-001", //直接赋值
     ///     BuyerId = DBNull.Value, //直接赋值 NULL
@@ -1019,7 +1019,7 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdated<TEntity>
     /// <param name="condition">判断条件</param>
     /// <param name="fieldsAssignment">子查询表达式，可以一个或多个字段赋值</param>
     /// <returns>返回更新对象</returns>
-    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, T1, T2, T3, T4, T5, TFields>> fieldsAssignment);
+    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment);
     /// <summary>
     /// 使用表达式fieldSelector筛选单个栏位，子查询表达式valueSelector捞取更新值，部分栏位更新，表达式fieldSelector只能筛选一个栏位，用法：
     /// <code>

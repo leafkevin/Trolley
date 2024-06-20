@@ -159,5 +159,18 @@ class ModelConfiguration : IModelConfiguration
             f.Member(t => t.UpdatedAt).Field(nameof(Function.UpdatedAt)).DbColumnType("datetime").NativeDbType(SqlDbType.DateTime).Position(8);
             f.Member(t => t.UpdatedBy).Field(nameof(Function.UpdatedBy)).DbColumnType("int").NativeDbType(SqlDbType.Int).Position(9);
         });
+        builder.Entity<UpdateEntity>(f =>
+        {
+            f.ToTable("sys_update_entity").Key(t => t.Id);
+            f.Member(t => t.Id).Field(nameof(UpdateEntity.Id)).DbColumnType("int").NativeDbType(SqlDbType.Int).Position(1).Required();
+            f.Member(t => t.BooleanField).Field(nameof(UpdateEntity.BooleanField)).DbColumnType("bit").NativeDbType(SqlDbType.Bit).Position(2);
+            f.Member(t => t.EnumField).Field(nameof(UpdateEntity.EnumField)).DbColumnType("nvarchar(50)").NativeDbType(SqlDbType.NVarChar).Position(3).Length(50);
+            f.Member(t => t.GuidField).Field(nameof(UpdateEntity.GuidField)).DbColumnType("uniqueidentifier").NativeDbType(SqlDbType.UniqueIdentifier).Position(4);
+            f.Member(t => t.DateTimeField).Field(nameof(UpdateEntity.DateTimeField)).DbColumnType("datetime").NativeDbType(SqlDbType.DateTime).Position(5);
+            f.Member(t => t.DateOnlyField).Field(nameof(UpdateEntity.DateOnlyField)).DbColumnType("date").NativeDbType(SqlDbType.Date).Position(6);
+            f.Member(t => t.DateTimeOffsetField).Field(nameof(UpdateEntity.DateTimeOffsetField)).DbColumnType("datetimeoffset").NativeDbType(SqlDbType.DateTimeOffset).Position(7);
+            f.Member(t => t.TimeSpanField).Field(nameof(UpdateEntity.TimeSpanField)).DbColumnType("time").NativeDbType(SqlDbType.Time).Position(8);
+            f.Member(t => t.TimeOnlyField).Field(nameof(UpdateEntity.TimeOnlyField)).DbColumnType("time").NativeDbType(SqlDbType.Time).Position(9);
+        });
     }
 }

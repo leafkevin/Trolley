@@ -257,11 +257,11 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
                         var fromMapper = this.Visitor.Tables[0].Mapper;
                         var memberMappers = this.Visitor.GetRefMemberMappers(updateObjType, fromMapper);
                         var ormProvider = this.Visitor.OrmProvider;
-                        var tableName = ormProvider.GetTableName($"{fromMapper.TableName}_{Guid.NewGuid():N}");
+                        var tableName = $"#{fromMapper.TableName}_{Guid.NewGuid():N}";
 
                         //添加临时表
                         var builder = new StringBuilder();
-                        builder.AppendLine($"CREATE TEMPORARY TABLE {tableName}(");
+                        builder.AppendLine($"CREATE TABLE {tableName}(");
                         var pkColumns = new List<string>();
                         foreach (var memberMapper in memberMappers)
                         {

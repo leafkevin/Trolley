@@ -82,9 +82,11 @@
   <ItemGroup>
     <Content Include="SqlServer\Entities.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Entities.cs</LastGenOutput>
     </Content>
     <Content Include="SqlServer\Entity.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Entity.cs</LastGenOutput>
     </Content>
     <Content Include="SqlServer\ModelConfiguration.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
@@ -92,6 +94,7 @@
     </Content>
     <Content Include="MySql\Entities.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Entities.cs</LastGenOutput>
     </Content>
     <Content Include="MySql\Entity.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
@@ -176,10 +179,6 @@
     <Content Include="Trolley\IUpdate.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>IUpdate.cs</LastGenOutput>
-    </Content>
-    <Content Include="Trolley\IUpdateFrom.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>IUpdateFrom.cs</LastGenOutput>
     </Content>
     <Content Include="Trolley\MultiQuery`.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
