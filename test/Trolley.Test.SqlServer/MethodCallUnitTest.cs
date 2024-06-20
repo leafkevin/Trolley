@@ -31,7 +31,7 @@ public class MethodCallUnitTest : UnitTestBase
             .Where(f => new int[] { 1, 2 }.Contains(f.Id))
             .Select(f => f.Id)
             .ToSql(out _);
-        Assert.True(sql == "SELECT [Id] FROM [sys_user] WHERE [Id] IN (1,2)");
+        Assert.True(sql == "SELECT a.[Id] FROM [sys_user] a WHERE a.[Id] IN (1,2)");
         var result = repository.From<User>()
             .Where(f => new int[] { 1, 2 }.Contains(f.Id))
             .ToList();
@@ -42,7 +42,7 @@ public class MethodCallUnitTest : UnitTestBase
             .Where(f => f.Name.Contains("kevin"))
             .Select(f => f.Id)
             .ToSql(out _);
-        Assert.True(sql == "SELECT [Id] FROM [sys_user] WHERE [Name] LIKE '%kevin%'");
+        Assert.True(sql == "SELECT a.[Id] FROM [sys_user] a WHERE a.[Name] LIKE '%kevin%'");
         result = await repository.From<User>()
             .Where(f => f.Name.Contains("kevin"))
             .ToListAsync();
@@ -52,7 +52,7 @@ public class MethodCallUnitTest : UnitTestBase
             .Where(f => new List<string> { "kevin", "cindy" }.Contains(f.Name))
             .Select(f => f.Id)
             .ToSql(out _);
-        Assert.True(sql == "SELECT [Id] FROM [sys_user] WHERE [Name] IN ('kevin','cindy')");
+        Assert.True(sql == "SELECT a.[Id] FROM [sys_user] a WHERE a.[Name] IN ('kevin','cindy')");
         result = await repository.From<User>()
             .Where(f => new List<string> { "kevin", "cindy" }.Contains(f.Name))
             .ToListAsync();
@@ -69,7 +69,7 @@ public class MethodCallUnitTest : UnitTestBase
             .Where(f => f.Id == 1)
             .Select(f => string.Concat(f.Name + "_1_" + isMale, f.Age + 5, isMale) + "_2_" + f.Age + "_3_" + isMale + "_4_" + count)
             .ToSql(out var dbParameters);
-        Assert.True(sql == "SELECT ([Name]+'_1_'+@p0+CAST([Age]+5 AS NVARCHAR(MAX))+@p1+'_2_'+CAST([Age] AS NVARCHAR(MAX))+'_3_'+@p2+'_4_'+@p3) FROM [sys_user] WHERE [Id]=1");
+        Assert.True(sql == "SELECT a.[Name]+'_1_'+@p0+CAST(a.[Age]+5 AS NVARCHAR(MAX))+@p1+'_2_'+CAST(a.[Age] AS NVARCHAR(MAX))+'_3_'+@p2+'_4_'+@p3 FROM [sys_user] a WHERE a.[Id]=1");
         Assert.True((string)dbParameters[0].Value == isMale.ToString());
         Assert.True(dbParameters[0].Value.GetType() == typeof(string));
         Assert.True((string)dbParameters[1].Value == isMale.ToString());
@@ -96,7 +96,7 @@ public class MethodCallUnitTest : UnitTestBase
             .Where(f => f.Name.Contains("cindy"))
             .Select(f => $"{f.Name + "222"}_111_{f.Age + isMale.ToString()}_{isMale}_{count}")
             .ToSql(out var dbParameters);
-        Assert.True(sql == "SELECT ([Name]+'222_111_'+CAST([Age] AS NVARCHAR(MAX))+@p0+'_'+@p1+'_'+@p2) FROM [sys_user] WHERE [Name] LIKE '%cindy%'");
+        Assert.True(sql == "SELECT a.[Name]+'222_111_'+CAST(a.[Age] AS NVARCHAR(MAX))+@p0+'_'+@p1+'_'+@p2 FROM [sys_user] a WHERE a.[Name] LIKE '%cindy%'");
         Assert.True((string)dbParameters[0].Value == isMale.ToString());
         Assert.True(dbParameters[0].Value.GetType() == typeof(string));
         Assert.True((string)dbParameters[1].Value == isMale.ToString());
@@ -123,7 +123,7 @@ public class MethodCallUnitTest : UnitTestBase
                 UpdatedAtCompare = DateTime.Compare(f.UpdatedAt, f.UpdatedAt.Subtract(TimeSpan.FromMinutes(2005)))
             })
             .ToSql(out _);
-        Assert.True(sql1 == "SELECT (CASE WHEN [Name]='leafkevin' THEN 0 WHEN [Name]>'leafkevin' THEN 1 ELSE -1 END) AS [NameCompare],(CASE WHEN [CreatedAt]=CAST(FORMAT(GETDATE(),'yyyy-MM-dd HH:mm:ss') AS DATETIME) THEN 0 WHEN [CreatedAt]>CAST(FORMAT(GETDATE(),'yyyy-MM-dd HH:mm:ss') AS DATETIME) THEN 1 ELSE -1 END) AS [CreatedAtCompare],(CASE WHEN [CreatedAt]=GETDATE() THEN 0 WHEN [CreatedAt]>GETDATE() THEN 1 ELSE -1 END) AS [CreatedAtCompare1],(CASE WHEN [UpdatedAt]=DATEADD(MILLISECOND,-33900000,DATEADD(DAY,-1,[UpdatedAt])) THEN 0 WHEN [UpdatedAt]>DATEADD(MILLISECOND,-33900000,DATEADD(DAY,-1,[UpdatedAt])) THEN 1 ELSE -1 END) AS [UpdatedAtCompare] FROM [sys_user] WHERE [Id]=1");
+        Assert.True(sql1 == "SELECT (CASE WHEN a.[Name]='leafkevin' THEN 0 WHEN a.[Name]>'leafkevin' THEN 1 ELSE -1 END) AS [NameCompare],(CASE WHEN a.[CreatedAt]=CAST(FORMAT(GETDATE(),'yyyy-MM-dd HH:mm:ss') AS DATETIME) THEN 0 WHEN a.[CreatedAt]>CAST(FORMAT(GETDATE(),'yyyy-MM-dd HH:mm:ss') AS DATETIME) THEN 1 ELSE -1 END) AS [CreatedAtCompare],(CASE WHEN a.[CreatedAt]=GETDATE() THEN 0 WHEN a.[CreatedAt]>GETDATE() THEN 1 ELSE -1 END) AS [CreatedAtCompare1],(CASE WHEN a.[UpdatedAt]=DATEADD(MILLISECOND,-33900000,DATEADD(DAY,-1,a.[UpdatedAt])) THEN 0 WHEN a.[UpdatedAt]>DATEADD(MILLISECOND,-33900000,DATEADD(DAY,-1,a.[UpdatedAt])) THEN 1 ELSE -1 END) AS [UpdatedAtCompare] FROM [sys_user] a WHERE a.[Id]=1");
 
         var result1 = repository.From<User>()
             .Where(f => f.Id == 1)
@@ -151,7 +151,7 @@ public class MethodCallUnitTest : UnitTestBase
                 UpdatedAtCompare = DateTime.Compare(f.UpdatedAt, f.UpdatedAt.Subtract(TimeSpan.FromMinutes(15)))
             })
             .ToSql(out _);
-        Assert.True(sql2 == "SELECT (CASE WHEN [Name]='leafkevin' THEN 0 WHEN [Name]>'leafkevin' THEN 1 ELSE -1 END) AS [NameCompare],(CASE WHEN [CreatedAt]=CAST(FORMAT(GETDATE(),'yyyy-MM-dd HH:mm:ss') AS DATETIME) THEN 0 WHEN [CreatedAt]>CAST(FORMAT(GETDATE(),'yyyy-MM-dd HH:mm:ss') AS DATETIME) THEN 1 ELSE -1 END) AS [CreatedAtCompare],(CASE WHEN [CreatedAt]=GETDATE() THEN 0 WHEN [CreatedAt]>GETDATE() THEN 1 ELSE -1 END) AS [CreatedAtCompare1],(CASE WHEN [UpdatedAt]=DATEADD(MILLISECOND,-900000,[UpdatedAt]) THEN 0 WHEN [UpdatedAt]>DATEADD(MILLISECOND,-900000,[UpdatedAt]) THEN 1 ELSE -1 END) AS [UpdatedAtCompare] FROM [sys_user] WHERE [Id]=1");
+        Assert.True(sql2 == "SELECT (CASE WHEN a.[Name]='leafkevin' THEN 0 WHEN a.[Name]>'leafkevin' THEN 1 ELSE -1 END) AS [NameCompare],(CASE WHEN a.[CreatedAt]=CAST(FORMAT(GETDATE(),'yyyy-MM-dd HH:mm:ss') AS DATETIME) THEN 0 WHEN a.[CreatedAt]>CAST(FORMAT(GETDATE(),'yyyy-MM-dd HH:mm:ss') AS DATETIME) THEN 1 ELSE -1 END) AS [CreatedAtCompare],(CASE WHEN a.[CreatedAt]=GETDATE() THEN 0 WHEN a.[CreatedAt]>GETDATE() THEN 1 ELSE -1 END) AS [CreatedAtCompare1],(CASE WHEN a.[UpdatedAt]=DATEADD(MILLISECOND,-900000,a.[UpdatedAt]) THEN 0 WHEN a.[UpdatedAt]>DATEADD(MILLISECOND,-900000,a.[UpdatedAt]) THEN 1 ELSE -1 END) AS [UpdatedAtCompare] FROM [sys_user] a WHERE a.[Id]=1");
 
         var result2 = repository.From<User>()
             .Where(f => f.Id == 1)
@@ -176,13 +176,13 @@ public class MethodCallUnitTest : UnitTestBase
         var sql = repository.From<Order>()
             .Select(f => new
             {
-                IntCompare = f.Id.CompareTo(1),
+                IntCompare = f.Id.CompareTo("1"),
                 StringCompare = f.OrderNo.CompareTo("OrderNo-001"),
                 DateTimeCompare = f.CreatedAt.CompareTo(DateTime.Parse("2022-12-20")),
                 BooleanCompare = f.IsEnabled.CompareTo(false)
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT (CASE WHEN [Id]=1 THEN 0 WHEN [Id]>1 THEN 1 ELSE -1 END) AS [IntCompare],(CASE WHEN [OrderNo]='OrderNo-001' THEN 0 WHEN [OrderNo]>'OrderNo-001' THEN 1 ELSE -1 END) AS [StringCompare],(CASE WHEN [CreatedAt]='2022-12-20 00:00:00.000' THEN 0 WHEN [CreatedAt]>'2022-12-20 00:00:00.000' THEN 1 ELSE -1 END) AS [DateTimeCompare],(CASE WHEN [IsEnabled]=0 THEN 0 WHEN [IsEnabled]>0 THEN 1 ELSE -1 END) AS [BooleanCompare] FROM [sys_order]");
+        Assert.True(sql == "SELECT (CASE WHEN a.[Id]='1' THEN 0 WHEN a.[Id]>'1' THEN 1 ELSE -1 END) AS [IntCompare],(CASE WHEN a.[OrderNo]='OrderNo-001' THEN 0 WHEN a.[OrderNo]>'OrderNo-001' THEN 1 ELSE -1 END) AS [StringCompare],(CASE WHEN a.[CreatedAt]='2022-12-20 00:00:00.000' THEN 0 WHEN a.[CreatedAt]>'2022-12-20 00:00:00.000' THEN 1 ELSE -1 END) AS [DateTimeCompare],(CASE WHEN a.[IsEnabled]=0 THEN 0 WHEN a.[IsEnabled]>0 THEN 1 ELSE -1 END) AS [BooleanCompare] FROM [sys_order] a");
 
         var result = repository.From<Order>()
             .Where(f => f.Id == "1")
@@ -193,14 +193,14 @@ public class MethodCallUnitTest : UnitTestBase
                 f.OrderNo,
                 f.CreatedAt,
                 f.IsEnabled,
-                IntCompare = f.Id.CompareTo(1),
+                IntCompare = f.Id.CompareTo("1"),
                 StringCompare = f.OrderNo.CompareTo("OrderNo-001"),
                 DateTimeCompare = f.CreatedAt.CompareTo(DateTime.Parse("2022-12-20")),
                 BooleanCompare = f.IsEnabled.CompareTo(false)
             })
             .First();
         Assert.NotNull(result);
-        Assert.True(result.IntCompare == result.Id.CompareTo(1));
+        Assert.True(result.IntCompare == result.Id.CompareTo("1"));
         Assert.True(result.StringCompare == result.OrderNo.CompareTo("OrderNo-001"));
         Assert.True(result.DateTimeCompare == result.CreatedAt.CompareTo(DateTime.Parse("2022-12-20")));
         Assert.True(result.BooleanCompare == result.IsEnabled.CompareTo(false));
@@ -217,7 +217,7 @@ public class MethodCallUnitTest : UnitTestBase
                 TrimEnd = "Begin_" + f.OrderNo.TrimEnd() + "  123   ".TrimEnd() + "_End"
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT ('Begin_'+TRIM([OrderNo])+'123_End') AS [Trim],('Begin_'+LTRIM([OrderNo])+'123   _End') AS [TrimStart],('Begin_'+RTRIM([OrderNo])+'  123_End') AS [TrimEnd] FROM [sys_order]");
+        Assert.True(sql == "SELECT ('Begin_'+TRIM(a.[OrderNo])+'123_End') AS [Trim],('Begin_'+LTRIM(a.[OrderNo])+'123   _End') AS [TrimStart],('Begin_'+RTRIM(a.[OrderNo])+'  123_End') AS [TrimEnd] FROM [sys_order] a");
 
         var strValue1 = "Begin_";
         var strValue2 = "  123   ";
@@ -230,7 +230,7 @@ public class MethodCallUnitTest : UnitTestBase
                 TrimEnd = "Begin_" + f.OrderNo.TrimEnd() + strValue2.TrimEnd() + "_End"
             })
             .ToSql(out var dbParameters);
-        Assert.True(sql1 == "SELECT (@p0+TRIM([OrderNo])+@p1+@p2) AS [Trim],('Begin_'+LTRIM([OrderNo])+@p3+'_End') AS [TrimStart],('Begin_'+RTRIM([OrderNo])+@p4+'_End') AS [TrimEnd] FROM [sys_order]");
+        Assert.True(sql1 == "SELECT (@p0+TRIM(a.[OrderNo])+@p1+@p2) AS [Trim],('Begin_'+LTRIM(a.[OrderNo])+@p3+'_End') AS [TrimStart],('Begin_'+RTRIM(a.[OrderNo])+@p4+'_End') AS [TrimEnd] FROM [sys_order] a");
         Assert.True((string)dbParameters[0].Value == strValue1);
         Assert.True(dbParameters[0].Value.GetType() == typeof(string));
         Assert.True((string)dbParameters[1].Value == strValue2.Trim());
@@ -320,7 +320,7 @@ public class MethodCallUnitTest : UnitTestBase
                 Col2 = f.OrderNo.ToUpper() + "_AbCd".ToLower()
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT (LOWER([OrderNo])+'_ABCD') AS [Col1],(UPPER([OrderNo])+'_abcd') AS [Col2] FROM [sys_order]");
+        Assert.True(sql == "SELECT (LOWER(a.[OrderNo])+'_ABCD') AS [Col1],(UPPER(a.[OrderNo])+'_abcd') AS [Col2] FROM [sys_order] a");
 
         repository.BeginTransaction();
         repository.Delete<Order>("1");
@@ -365,7 +365,7 @@ public class MethodCallUnitTest : UnitTestBase
                 Col2 = f.OrderNo.ToUpper() + "_AbCd".ToLower()
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT (LOWER([OrderNo])+'_ABCD') AS [Col1],(UPPER([OrderNo])+'_abcd') AS [Col2] FROM [sys_order]");
+        Assert.True(sql == "SELECT (LOWER(a.[OrderNo])+'_ABCD') AS [Col1],(UPPER(a.[OrderNo])+'_abcd') AS [Col2] FROM [sys_order] a");
 
         var strValue = "_AbCd";
         var sql1 = repository.From<Order>()
@@ -375,7 +375,7 @@ public class MethodCallUnitTest : UnitTestBase
                Col2 = f.OrderNo.ToUpper() + strValue.ToLower()
            })
            .ToSql(out var dbParameters);
-        Assert.True(sql1 == "SELECT (LOWER([OrderNo])+@p0) AS [Col1],(UPPER([OrderNo])+@p1) AS [Col2] FROM [sys_order]");
+        Assert.True(sql1 == "SELECT (LOWER(a.[OrderNo])+@p0) AS [Col1],(UPPER(a.[OrderNo])+@p1) AS [Col2] FROM [sys_order] a");
         Assert.True((string)dbParameters[0].Value == strValue.ToUpper());
         Assert.True(dbParameters[0].Value.GetType() == typeof(string));
         Assert.True((string)dbParameters[1].Value == strValue.ToLower());
@@ -421,7 +421,7 @@ public class MethodCallUnitTest : UnitTestBase
             .Set(f => new { TotalAmount = 100 })
             .Where(f => f.BuyerId == id && orderNos.Contains(f.OrderNo))
             .ToSql(out _);
-        Assert.True(sql == "UPDATE `sys_order` SET `TotalAmount`=@p0 WHERE `BuyerId`=@p1 AND `OrderNo` IN (@p2,@p3,@p4)");
+        Assert.True(sql == "UPDATE [sys_order] SET [TotalAmount]=@p0 WHERE [BuyerId]=@p1 AND [OrderNo] IN (@p2,@p3,@p4)");
     }
     [Fact]
     public void Method_Convert1()
@@ -438,7 +438,7 @@ public class MethodCallUnitTest : UnitTestBase
                 DoubleAge = Convert.ToDouble(f.Age) * 2 - 10
             })
             .ToSql(out var dbParameters);
-        Assert.True(sql == "SELECT CONCAT('Age-',@p0) AS `StringAge`,CONCAT('Id-',CAST(a.`Id` AS CHAR)) AS `StringId1`,((CAST(a.`Age` AS DOUBLE)*2)-10) AS `DoubleAge` FROM `sys_user` a WHERE a.`Id`=1");
+        Assert.True(sql == "SELECT ('Age-'+@p0) AS [StringAge],('Id-'+CAST(a.[Id] AS NVARCHAR(MAX))) AS [StringId1],((CAST(a.[Age] AS FLOAT)*2)-10) AS [DoubleAge] FROM [sys_user] a WHERE a.[Id]=1");
     }
     [Fact]
     public async void Method_Convert2()
@@ -460,12 +460,12 @@ public class MethodCallUnitTest : UnitTestBase
             .Where(f => Sql.In(f.Id, new int[] { 1, 2, 3 }))
             .Select(f => f.Id)
             .ToSql(out _);
-        Assert.True(sql == "SELECT a.`Id` FROM `sys_user` a WHERE a.`Id` IN (1,2,3)");
+        Assert.True(sql == "SELECT a.[Id] FROM [sys_user] a WHERE a.[Id] IN (1,2,3)");
 
         sql = repository.From<User>()
             .Where(f => Sql.In(f.CreatedAt, new DateTime[] { DateTime.Parse("2023-03-03"), DateTime.Parse("2023-03-03 00:00:00"), DateTime.Parse("2023-03-03 06:06:06") }))
             .Select(f => f.Id)
             .ToSql(out _);
-        Assert.True(sql == "SELECT a.`Id` FROM `sys_user` a WHERE a.`CreatedAt` IN ('2023-03-03 00:00:00.000','2023-03-03 00:00:00.000','2023-03-03 06:06:06.000')");
+        Assert.True(sql == "SELECT a.[Id] FROM [sys_user] a WHERE a.[CreatedAt] IN ('2023-03-03 00:00:00.000','2023-03-03 00:00:00.000','2023-03-03 06:06:06.000')");
     }
 }

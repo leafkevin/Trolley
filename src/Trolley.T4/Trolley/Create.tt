@@ -160,6 +160,7 @@ public class Created<TEntity> : ICreated<TEntity>
                         command.CommandText = this.Visitor.BuildCommand(command, false);
                         this.DbContext.Open();
                         result = command.ExecuteNonQuery();
+                        command.Parameters.Clear();
                         command.Dispose();
                     }
                     break;

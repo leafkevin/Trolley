@@ -233,11 +233,12 @@ public class SqlVisitor : ISqlVisitor
     public virtual string BuildShardingTablesSql(string tableSchema) => null;
     public void SetShardingTables(List<string> shardingTables)
     {
+        List<string> tableNames = null;
         if (this.ShardingTables.Count > 1)
         {
             this.ShardingTables.Sort((x, y) => x.ShardingType.CompareTo(y.ShardingType));
             var needQueryTables = this.ShardingTables.FindAll(f => f.ShardingType > ShardingTableType.MultiTable);
-            List<string> tableNames = null;
+
             foreach (var tableSegment in needQueryTables)
             {
                 var entityType = tableSegment.EntityType;
@@ -289,13 +290,20 @@ public class SqlVisitor : ISqlVisitor
             if (!this.ShardingProvider.TryGetShardingTable(entityType, out var shardingTable))
                 throw new Exception($"实体{entityType.FullName}表有配置分表信息");
 
-            tableSegment.TableNames = shardingTables.FindAll(f =>
+            tableNames = shardingTables.FindAll(f =>
             {
                 var result = Regex.IsMatch(f, shardingTable.ValidateRegex);
                 if (tableSegment.ShardingType == ShardingTableType.MasterFilter)
                     result = result && tableSegment.ShardingFilter.Invoke(f);
                 return result;
             });
+            if (tableNames.Count > 1)
+                tableSegment.TableNames = tableNames;
+            else
+            {
+                tableSegment.Body = tableNames[0];
+                this.ShardingTables.Remove(tableSegment);
+            }
         }
     }
 
@@ -809,42 +817,6 @@ public class SqlVisitor : ISqlVisitor
             }
         }
     }
-    protected string BuildSelectSql(List<ReaderField> readerFields)
-    {
-        var builder = new StringBuilder();
-        foreach (var readerField in readerFields)
-        {
-            if (builder.Length > 0)
-                builder.Append(',');
-            switch (readerField.FieldType)
-            {
-                case ReaderFieldType.Entity:
-                    builder.Append(this.BuildSelectSql(readerField.ReaderFields));
-                    break;
-                case ReaderFieldType.DeferredFields:
-                    if (readerField.ReaderFields == null)
-                        continue;
-                    builder.Append(readerField.Body);
-                    //生成SQL的时候，才加上AS别名
-                    if (readerField.IsNeedAlias)
-                    {
-                        builder.Append($" AS {this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}");
-                        readerField.IsNeedAlias = false;
-                    }
-                    break;
-                default:
-                    builder.Append(readerField.Body);
-                    //生成SQL的时候，才加上AS别名
-                    if (readerField.IsNeedAlias)
-                    {
-                        builder.Append($" AS {this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}");
-                        readerField.IsNeedAlias = false;
-                    }
-                    break;
-            }
-        }
-        return builder.ToString();
-    }
     public virtual SqlSegment VisitNew(SqlSegment sqlSegment)
     {
         throw new NotImplementedException();
@@ -1104,10 +1076,7 @@ public class SqlVisitor : ISqlVisitor
             case "LongCount":
                 if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
                 {
-                    if (methodCallExpr.Arguments[0].NodeType != ExpressionType.MemberAccess)
-                        throw new NotSupportedException("不支持的表达式，只支持MemberAccess类型表达式");
-
-                    sqlSegment = this.VisitMemberAccess(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                    sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                     sqlSegment.Change($"COUNT({sqlSegment})", false, false, false, true);
                 }
                 else sqlSegment.Change("COUNT(1)", false, false, false, true);
@@ -1116,46 +1085,35 @@ public class SqlVisitor : ISqlVisitor
             case "LongCountDistinct":
                 if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
                 {
-                    if (methodCallExpr.Arguments[0].NodeType != ExpressionType.MemberAccess)
-                        throw new NotSupportedException("不支持的表达式，只支持MemberAccess类型表达式");
-
-                    sqlSegment = this.VisitMemberAccess(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                    sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                     sqlSegment.Change($"COUNT(DISTINCT {sqlSegment})", false, false, false, true);
                 }
                 break;
             case "Sum":
                 if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
                 {
-                    if (methodCallExpr.Arguments[0].NodeType != ExpressionType.MemberAccess)
-                        throw new NotSupportedException("不支持的表达式，只支持MemberAccess类型表达式");
-                    sqlSegment = this.VisitMemberAccess(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                    sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                     sqlSegment.Change($"SUM({sqlSegment})", false, false, false, true);
                 }
                 break;
             case "Avg":
                 if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
                 {
-                    if (methodCallExpr.Arguments[0].NodeType != ExpressionType.MemberAccess)
-                        throw new NotSupportedException("不支持的表达式，只支持MemberAccess类型表达式");
-                    sqlSegment = this.VisitMemberAccess(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                    sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                     sqlSegment.Change($"AVG({sqlSegment})", false, false, false, true);
                 }
                 break;
             case "Max":
                 if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
                 {
-                    if (methodCallExpr.Arguments[0].NodeType != ExpressionType.MemberAccess)
-                        throw new NotSupportedException("不支持的表达式，只支持MemberAccess类型表达式");
-                    sqlSegment = this.VisitMemberAccess(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                    sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                     sqlSegment.Change($"MAX({sqlSegment})", false, false, false, true);
                 }
                 break;
             case "Min":
                 if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
                 {
-                    if (methodCallExpr.Arguments[0].NodeType != ExpressionType.MemberAccess)
-                        throw new NotSupportedException("不支持的表达式，只支持MemberAccess类型表达式");
-                    sqlSegment = this.VisitMemberAccess(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                    sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                     sqlSegment.Change($"MIN({sqlSegment})", false, false, false, true);
                 }
                 break;
@@ -1819,18 +1777,6 @@ public class SqlVisitor : ISqlVisitor
         }
         return false;
     }
-    public object ChangeTypedValue(Type expectType, object value, Type targetType = null)
-    {
-        var result = value;
-        if (expectType.IsEnum)
-        {
-            if (value.GetType() != expectType)
-                result = Enum.ToObject(expectType, value);
-            if (targetType != null && targetType == typeof(string))
-                result = result.ToString();
-        }
-        return result;
-    }
     public LambdaExpression EnsureLambda(Expression expr)
     {
         if (expr.NodeType == ExpressionType.Lambda)
@@ -1955,6 +1901,7 @@ public class SqlVisitor : ISqlVisitor
         this.GroupFields = null;
         this.IncludeTables = null;
 
+        //设置null，不能清空，以免给返回的参数丢失
         this.DbParameters = null;
         this.NextDbParameters = null;
         this.OrmProvider = null;

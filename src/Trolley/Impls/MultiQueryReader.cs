@@ -222,6 +222,7 @@ class MultiQueryReader : IMultiQueryReader
         }
         if (dbCommand != null)
         {
+            command.Parameters.Clear();
             await dbCommand.DisposeAsync();
             this.command = null;
         }

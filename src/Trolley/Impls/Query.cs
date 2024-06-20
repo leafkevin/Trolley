@@ -650,10 +650,12 @@ public class Query<T> : QueryBase, IQuery<T>
     #region ToSql
     public override string ToSql(out List<IDbDataParameter> dbParameters)
     {
+        if (this.Visitor.IsNeedFetchShardingTables)
+            this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
         Expression<Func<T, T>> defaultExpr = f => f;
         this.Visitor.SelectDefault(defaultExpr);
         var sql = this.Visitor.BuildSql(out _);
-        (_, sql) = this.DbContext.BuildSql(this.Visitor as SqlVisitor, sql, " UNION ALL ");
+        (_, sql) = this.DbContext.BuildSql(this.Visitor, sql, " UNION ALL ");
         dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         this.Visitor.Dispose();
         return sql;

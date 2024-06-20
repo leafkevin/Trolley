@@ -33,16 +33,16 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     protected string OrderBySql { get; set; }
     protected bool IsDistinct { get; set; }
     protected bool IsSelectMember { get; set; }
-    protected bool IsFromCommand { get; set; }
+    public bool IsFromCommand { get; set; }
     protected bool IsUnion { get; set; }
+    /// <summary>
+    /// 第二个Union子句
+    /// </summary>
+    public bool IsSecondUnion { get; set; } = false;
 
     protected TableSegment LastIncludeSegment { get; set; }
 
     public bool IsRecursive { get; set; }
-    /// <summary>
-    /// 在Select场景时，字段是否需要AS别名
-    /// </summary>
-    public bool IsUseFieldAlias { get; set; } = true;
     public bool IsUseCteTable { get; set; } = true;
     public ICteQuery SelfRefQueryObj { get; set; }
     public int PageNumber { get; set; }
@@ -96,30 +96,19 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var headSql = builder.ToString();
         builder.Clear();
 
-        //各种单值查询，如：SELECT COUNT(*)/MAX(*)..等，都有SELECT操作     
-        //如：From(f=>...).InnerJoin/UnionAll(f=>...)
-
-        //生成sql时，include表的字段，一定要紧跟着主表字段后面，方便赋值主表实体的属性中，所以在插入时候就排好序
-        //方案：在buildSql时确定，ReaderFields要重新排好序，include字段放到对应主表字段后面，表别名顺序不变
-        if (this.ReaderFields == null)
-            throw new Exception("缺少Select语句");
-        builder.Append(this.BuildSelectSql(this.ReaderFields));
-
-        string selectSql = null;
-        if (this.IsDistinct)
-            selectSql = "DISTINCT " + builder.ToString();
-        else selectSql = builder.ToString();
-
-        builder.Clear();
+        //先判断表是否有多分表isManySharding
         string tableSql = null;
         bool isManySharding = false;
         if (this.Tables.Count > 0)
         {
             //每个表都要有单独的GUID值，否则有类似的表前缀名，也会被替换导致表名替换错误
-            foreach (var tableSegment in this.Tables)
+            int startIndex = 0;
+            if (this.IsFromCommand) startIndex = 1;
+            for (int i = startIndex; i < this.Tables.Count; i++)
             {
+                var tableSegment = this.Tables[i];
                 string tableName = this.GetTableName(tableSegment);
-                if (builder.Length > 0)
+                if (i > startIndex)
                 {
                     if (!string.IsNullOrEmpty(tableSegment.JoinType))
                     {
@@ -129,15 +118,35 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     else builder.Append(',');
                 }
                 builder.Append(tableName);
-                //子查询要设置表别名               
+                //子查询要设置表别名
                 builder.Append(" " + tableSegment.AliasName);
                 if (!string.IsNullOrEmpty(tableSegment.SuffixRawSql))
                     builder.Append(" " + tableSegment.SuffixRawSql);
                 if (!string.IsNullOrEmpty(tableSegment.OnExpr))
                     builder.Append($" ON {tableSegment.OnExpr}");
+                if (tableSegment.TableNames != null && tableSegment.TableNames.Count > 1)
+                    isManySharding = true;
             }
             tableSql = builder.ToString();
         }
+        builder.Clear();
+
+        //再判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不对
+        bool isNeedWrap = (this.IsUnion || this.IsSecondUnion || isManySharding) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue);
+
+        //各种单值查询，如：SELECT COUNT(*)/MAX(*)..等，都有SELECT操作     
+        //如：From(f=>...).InnerJoin/UnionAll(f=>...)
+
+        //生成sql时，include表的字段，一定要紧跟着主表字段后面，方便赋值主表实体的属性中，所以在插入时候就排好序
+        //方案：在buildSql时确定，ReaderFields要重新排好序，include字段放到对应主表字段后面，表别名顺序不变
+        if (this.ReaderFields == null)
+            throw new Exception("缺少Select语句");
+        builder.Append(this.BuildSelectSql(this.ReaderFields, isNeedWrap));
+
+        string selectSql = null;
+        if (this.IsDistinct)
+            selectSql = "DISTINCT " + builder.ToString();
+        else selectSql = builder.ToString();
 
         builder.Clear();
         if (!string.IsNullOrEmpty(this.WhereSql))
@@ -178,7 +187,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
 
         //UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不对
-        if ((this.IsUnion || isManySharding) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue))
+        if (isNeedWrap)
         {
             builder.Insert(0, "SELECT * FROM (");
             builder.Append($") a");
@@ -191,8 +200,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual string BuildCommandSql(Type targetType, out IDataParameterCollection dbParameters)
     {
         var builder = new StringBuilder();
-        var entityMapper = this.MapProvider.GetEntityMap(targetType);
-        builder.Append($"INSERT INTO {this.OrmProvider.GetTableName(entityMapper.TableName)} (");
+        var entityMapper = this.Tables[0].Mapper;
+        builder.Append($"INSERT INTO {this.GetTableName(this.Tables[0])} (");
         int index = 0;
         foreach (var readerField in this.ReaderFields)
         {
@@ -238,26 +247,19 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         var headSql = builder.ToString();
         builder.Clear();
-        //生成sql时，include表的字段，一定要紧跟着主表字段后面，方便赋值主表实体的属性中，所以在插入时候就排好序
-        //方案：在buildSql时确定，ReaderFields要重新排好序，include字段放到对应主表字段后面，表别名顺序不变
-        if (this.ReaderFields == null)
-            throw new Exception("缺少Select语句");
-        builder.Append(this.BuildSelectSql(this.ReaderFields));
 
-        string selectSql = null;
-        if (this.IsDistinct)
-            selectSql = "DISTINCT " + builder.ToString();
-        else selectSql = builder.ToString();
-
-        builder.Clear();
+        //先判断表是否有多分表isManySharding
         string tableSql = null;
-        bool hasSharding = false;
+        bool isManySharding = false;
         if (this.Tables.Count > 0)
         {
-            foreach (var tableSegment in this.Tables)
+            int startIndex = 0;
+            if (this.IsFromCommand) startIndex = 1;
+            for (int i = startIndex; i < this.Tables.Count; i++)
             {
+                var tableSegment = this.Tables[i];
                 string tableName = this.GetTableName(tableSegment);
-                if (builder.Length > 0)
+                if (i > startIndex)
                 {
                     if (!string.IsNullOrEmpty(tableSegment.JoinType))
                     {
@@ -266,7 +268,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     }
                     else builder.Append(',');
                 }
-                if (tableSegment.IsSharding) hasSharding = true;
                 builder.Append(tableName);
                 //子查询要设置表别名               
                 builder.Append(" " + tableSegment.AliasName);
@@ -274,9 +275,26 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     builder.Append(" " + tableSegment.SuffixRawSql);
                 if (!string.IsNullOrEmpty(tableSegment.OnExpr))
                     builder.Append($" ON {tableSegment.OnExpr}");
+                if (tableSegment.TableNames != null && tableSegment.TableNames.Count > 1)
+                    isManySharding = true;
             }
             tableSql = builder.ToString();
         }
+        builder.Clear();
+
+        //再判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不对
+        bool isNeedWrap = (this.IsUnion || this.IsSecondUnion || isManySharding) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue);
+
+        //生成sql时，include表的字段，一定要紧跟着主表字段后面，方便赋值主表实体的属性中，所以在插入时候就排好序
+        //方案：在buildSql时确定，ReaderFields要重新排好序，include字段放到对应主表字段后面，表别名顺序不变
+        if (this.ReaderFields == null)
+            throw new Exception("缺少Select语句");
+        builder.Append(this.BuildSelectSql(this.ReaderFields, isNeedWrap));
+
+        string selectSql = null;
+        if (this.IsDistinct)
+            selectSql = "DISTINCT " + builder.ToString();
+        else selectSql = builder.ToString();
 
         builder.Clear();
         if (!string.IsNullOrEmpty(this.WhereSql))
@@ -314,7 +332,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
 
         //UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不对
-        if ((this.IsUnion || hasSharding) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue))
+        if (isNeedWrap)
         {
             builder.Insert(0, "SELECT * FROM (");
             builder.Append($") a");
@@ -410,7 +428,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.IsUnion = true;
         var rawSql = this.BuildSql(out var readerFields);
         //解析第二个UNION子句，不需要AS别名，如果有CTE表，也不生成CTE表SQL，只是引用CTE表名
-        subQuery.Visitor.IsUseFieldAlias = false;
+        subQuery.Visitor.IsSecondUnion = true;
         subQuery.Visitor.IsUseCteTable = false;
 
         if (subQuery is ICteQuery cteQuery)
@@ -439,11 +457,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var rawSql = this.BuildSql(out var readerFields);
         this.Clear();
         //解析第二个UNION子句，不需要AS别名，如果有CTE表，也不生成CTE表SQL，只是引用CTE表名
-        this.IsUseFieldAlias = false;
+        this.IsSecondUnion = true;
         this.IsUseCteTable = false;
         this.IsFromQuery = true;
 
-        //单独解析Union第二个子句，先设置IsUnion = false，以免解析错误
+        //把第二个Union子句当作独立的SQL解析，先设置IsUnion = false，以免影响UNION的正常解析
         this.IsUnion = false;
         var fromQuery = new FromQuery(dbContext, this);
         var subQuery = subQueryGetter.DynamicInvoke(fromQuery);
@@ -464,6 +482,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.Clear();
         var tableSegment = this.AddTable(targetType, null, TableType.FromQuery, $"({rawSql})", readerFields);
         this.InitFromQueryReaderFields(tableSegment, readerFields);
+        //使用第一个Union的ReaderFields，第二个Union有可能是*
+        this.ReaderFields = readerFields;
         this.UnionSql = rawSql;
         this.IsUnion = false;
     }
@@ -483,7 +503,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         selfQueryObj.IsRecursive = true;
         this.SelfRefQueryObj = selfQueryObj;
 
-        //单独解析Union第二个子句，先设置IsUnion = false，以免解析错误
+        //把第二个Union子句当作独立的SQL解析，先设置IsUnion = false，以免影响UNION的正常解析
         this.IsUnion = false;
         var fromQuery = new FromQuery(dbContext, this);
         var subQuery = subQueryGetter.DynamicInvoke(fromQuery, selfQueryObj) as IQuery;
@@ -1034,10 +1054,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
                     var fieldName = sqlSegment.Value.ToString();
                     builder.Append(fieldName);
-                    //此时，字段不能加别名，后面有可能还会有OrderBy操作，到最外层Select的时候用到Grouping时，再加别名
                     bool isNeedAlias = false;
-                    if (this.IsUseFieldAlias && (sqlSegment.IsConstant || sqlSegment.HasParameter || sqlSegment.IsExpression
-                        || sqlSegment.IsMethodCall || sqlSegment.FromMember == null || sqlSegment.FromMember.Name != memberInfo.Name))
+                    if (sqlSegment.IsConstant || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall
+                         || sqlSegment.FromMember == null || sqlSegment.FromMember.Name != memberInfo.Name)
                         isNeedAlias = true;
                     this.GroupFields.Add(new ReaderField
                     {
@@ -1181,10 +1200,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             return;
         this.Select(null, defaultExpr);
     }
-    public virtual void Select(string sqlFormat, Expression selectExpr = null, bool isFromCommand = false)
+    public virtual void Select(string sqlFormat, Expression selectExpr = null)
     {
         this.IsSelect = true;
-        this.IsFromCommand = isFromCommand;
         if (selectExpr != null)
         {
             var toTargetExpr = selectExpr as LambdaExpression;
@@ -1244,7 +1262,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 this.ReaderFields.Add(new ReaderField { Body = sqlFormat });
             }
         }
-        this.IsFromCommand = false;
         this.IsSelect = false;
     }
     public virtual void SelectFlattenTo(Type targetType, Expression specialMemberSelector = null)
@@ -1426,6 +1443,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             {
                 //此时是Grouping对象字段的引用，最外面可能会更改成员名称，要复制一份，防止更改Grouping对象中的字段
                 var readerField = this.GroupFields.Find(f => f.TargetMember.Name == memberInfo.Name);
+                //要返回原始FromMember，后续方便判断是否使用AS别名
                 sqlSegment.FromMember = readerField.FromMember;
                 sqlSegment.SegmentType = readerField.TargetType;
                 if (readerField.TargetType.IsEnumType(out var underlyingType))
@@ -1764,8 +1782,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     if (sqlSegment.IsExpression)
                         fieldName = $"({fieldName})";
                     bool isNeedAlias = false;
-                    if (this.IsUseFieldAlias && (sqlSegment.IsConstant || sqlSegment.HasParameter || sqlSegment.IsExpression
-                        || sqlSegment.IsMethodCall || sqlSegment.FromMember == null || sqlSegment.FromMember.Name != memberInfo.Name))
+                    if (sqlSegment.IsConstant || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall
+                        || sqlSegment.FromMember == null || sqlSegment.FromMember.Name != memberInfo.Name)
                         isNeedAlias = true;
 
                     //只有常量、方法调用、表达式计算，没有设置NativeDbType和TypeHandler，需要根据memberInfo类型获取
@@ -1803,8 +1821,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             //FromCommand的select语句可以不加别名
             //Union的第二个子句，在构建新子查询表的时候，已经单独处理过了，此处无需处理
             bool isNeedAlias = false;
-            if (this.IsUseFieldAlias && memberInfo != null && (sqlSegment.IsConstant || sqlSegment.HasParameter || sqlSegment.IsExpression
-                || sqlSegment.IsMethodCall || sqlSegment.FromMember == null || sqlSegment.FromMember.Name != memberInfo.Name))
+            if (sqlSegment.IsConstant || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall
+                || sqlSegment.FromMember == null || (memberInfo == null || sqlSegment.FromMember.Name != memberInfo.Name))
                 isNeedAlias = true;
             return new ReaderField
             {
@@ -1937,6 +1955,48 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         return tableSegment;
     }
+    public string BuildSelectSql(List<ReaderField> readerFields, bool isNeedWrap = false)
+    {
+        var builder = new StringBuilder();
+        foreach (var readerField in readerFields)
+        {
+            if (builder.Length > 0)
+                builder.Append(',');
+            switch (readerField.FieldType)
+            {
+                case ReaderFieldType.Entity:
+                    builder.Append(this.BuildSelectSql(readerField.ReaderFields, isNeedWrap));
+                    break;
+                case ReaderFieldType.DeferredFields:
+                    if (readerField.ReaderFields == null)
+                        continue;
+                    builder.Append(readerField.Body);
+                    //生成SQL的时候，才加上AS别名
+                    if (this.IsNeedAlias(readerField, isNeedWrap))
+                    {
+                        builder.Append($" AS {this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}");
+                        readerField.IsNeedAlias = false;
+                    }
+                    break;
+                default:
+                    builder.Append(readerField.Body);
+                    //生成SQL的时候，才加上AS别名
+                    if (this.IsNeedAlias(readerField, isNeedWrap))
+                    {
+                        builder.Append($" AS {this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}");
+                        readerField.IsNeedAlias = false;
+                    }
+                    break;
+            }
+        }
+        return builder.ToString();
+    }
+    public bool IsNeedAlias(ReaderField readerField, bool isNeedWrap)
+    {
+        if (isNeedWrap) return readerField.IsNeedAlias;
+        if (this.IsFromCommand || this.IsSecondUnion) return false;
+        return readerField.IsNeedAlias;
+    }
     public virtual void ClearUnionSql()
     {
         if (this.UnionSql == null) return;
@@ -1964,7 +2024,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.IncludeTables?.Clear();
         this.LastIncludeSegment = null;
         this.GroupFields?.Clear();
-        this.IsUseFieldAlias = true;
+        this.IsSecondUnion = false;
         this.IsUseCteTable = true;
         this.IsNeedTableAlias = true;
     }
@@ -1999,7 +2059,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 readerField.TableSegment = tableSegment;
                 readerField.FromMember = readerField.TargetMember;
                 //重新设置body内容，表别名变更，字段名也可能变更
-                readerField.Body = tableSegment.AliasName + "." + this.OrmProvider.GetFieldName(readerField.TargetMember.Name);
+                if (readerField.TargetMember != null)
+                    readerField.Body = tableSegment.AliasName + "." + this.OrmProvider.GetFieldName(readerField.TargetMember.Name);
             }
         }
     }

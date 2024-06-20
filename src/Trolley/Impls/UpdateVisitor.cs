@@ -102,8 +102,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             case ActionMode.Single:
                 {
                     this.UpdateFields = new();
-                    var entityType = this.Tables[0].EntityType;
-                    //非Bulk场景
                     this.DbParameters ??= command.Parameters;
                     foreach (var deferredSegment in this.deferredSegments)
                     {
@@ -137,11 +135,10 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                                 break;
                         }
                     }
-                    Action<string> headSqlSetter = tableName => builder.Append($"UPDATE {this.OrmProvider.GetTableName(tableName)} ");
 
                     var aliasName = this.Tables[0].AliasName;
                     if (this.IsNeedTableAlias)
-                        builder.Append($" {aliasName}");
+                        builder.Append($"{aliasName} ");
 
                     if (this.IsJoin)
                     {
@@ -149,7 +146,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                         {
                             var tableSegment = this.Tables[i];
                             var tableName = this.GetTableName(tableSegment);
-                            builder.Append($" {tableSegment.JoinType} {tableName} {tableSegment.AliasName}");
+                            builder.Append($"{tableSegment.JoinType} {tableName} {tableSegment.AliasName}");
                             builder.Append($" ON {tableSegment.OnExpr} ");
                         }
                     }
@@ -177,11 +174,13 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     if (this.IsJoin)
                     {
                         builder.Append($"UPDATE {this.GetTableName(this.Tables[0])} {sql}");
-                        var formatSql = builder.ToString();
-                        sql = dbContext.BuildShardingTablesSqlByFormat(this, formatSql, ";");
+                        sql = builder.ToString();
+                        if (this.ShardingTables != null && this.ShardingTables.Count > 0)
+                            sql = dbContext.BuildShardingTablesSqlByFormat(this, sql, ";");
                     }
                     else
                     {
+                        Action<string> headSqlSetter = tableName => builder.Append($"UPDATE {this.OrmProvider.GetTableName(tableName)} ");
                         if (this.ShardingTables != null && this.ShardingTables.Count > 0)
                         {
                             var tableNames = this.ShardingTables[0].TableNames;

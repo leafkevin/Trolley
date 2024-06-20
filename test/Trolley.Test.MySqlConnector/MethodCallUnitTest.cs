@@ -192,6 +192,7 @@ public class MethodCallUnitTest : UnitTestBase
             .Select(f => new
             {
                 f.Id,
+                f.TenantId,
                 f.OrderNo,
                 f.CreatedAt,
                 f.IsEnabled,

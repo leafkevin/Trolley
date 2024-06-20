@@ -23,15 +23,14 @@
 <#@ output encoding="utf-8" #>
 <#
     var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
-	var dbProvider = new MySqlProvider(connectionString);
-
+    var dbProvider = new MySqlProvider(connectionString);
     var databaseName = "fengling";
-	var tableName = "sys_function";
+    var tableName = "sys_user";
     var removePrefix = "sys_";
     var separator = '_';
     var className = dbProvider.ToClassName(tableName, removePrefix, separator);
-	var tableInfo = dbProvider.GetTableInfo(databaseName, tableName);
-	var columnList = dbProvider.GetColumnList(databaseName, tableInfo.TableName);
+    var tableInfo = dbProvider.GetTableInfo(databaseName, tableName);
+    var columnList = dbProvider.GetColumnList(databaseName, tableInfo.TableName);
 #>
 using Thea.Domain.Models;
 using Thea.Orm;

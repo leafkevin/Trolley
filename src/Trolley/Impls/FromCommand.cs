@@ -33,7 +33,7 @@ public class FromCommand : IFromCommand
         if (string.IsNullOrEmpty(fields))
             throw new ArgumentNullException(nameof(fields));
 
-        this.Visitor.Select(fields);
+        this.Visitor.Select(fields, null);
         return this.OrmProvider.NewFromCommand<TTarget>(this.EntityType, this.DbContext, this.Visitor);
     }
     #endregion
@@ -333,7 +333,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.Visitor.Select(null, fieldsExpr, true);
+        this.Visitor.Select(null, fieldsExpr);
         return this.OrmProvider.NewFromCommand<TTarget>(this.EntityType, this.DbContext, this.Visitor);
     }
     public virtual IFromCommand<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr)
@@ -341,7 +341,7 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
 
-        this.Visitor.Select(null, fieldsExpr, true);
+        this.Visitor.Select(null, fieldsExpr);
         return this.OrmProvider.NewFromCommand<TTarget>(this.EntityType, this.DbContext, this.Visitor);
     }
     #endregion   

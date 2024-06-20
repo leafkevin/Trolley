@@ -75,6 +75,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         finally
         {
             reader?.Dispose();
+            command.Parameters.Clear();
             command.Dispose();
             if (isNeedClose) this.Close();
         }
@@ -112,6 +113,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             if (reader != null)
                 await reader.DisposeAsync();
+            command.Parameters.Clear();
             await command.DisposeAsync();
             if (isNeedClose) await this.CloseAsync();
         }
@@ -127,10 +129,12 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         Exception exception = null;
         try
         {
+            if (visitor.IsNeedFetchShardingTables)
+                this.FetchShardingTables(visitor as SqlVisitor);
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
             visitor.SelectDefault(defaultExpr);
             var sql = visitor.BuildSql(out var readerFields);
-            (var isOpened, sql) = this.BuildSql(visitor as SqlVisitor, sql, " UNOIN ALL ");
+            (var isOpened, sql) = this.BuildSql(visitor, sql, " UNOIN ALL ");
             command.CommandText = sql;
             visitor.DbParameters.CopyTo(command.Parameters);
 
@@ -162,6 +166,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         finally
         {
             reader?.Close();
+            command.Parameters.Clear();
             command.Dispose();
             if (isNeedClose) this.Close();
             visitor.Dispose();
@@ -178,10 +183,12 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         Exception exception = null;
         try
         {
+            if (visitor.IsNeedFetchShardingTables)
+                await this.FetchShardingTablesAsync(visitor as SqlVisitor, cancellationToken);
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
             visitor.SelectDefault(defaultExpr);
             var sql = visitor.BuildSql(out var readerFields);
-            (var isOpened, sql) = await this.BuildSqlAsync(visitor as SqlVisitor, sql, " UNION ALL ", cancellationToken);
+            (var isOpened, sql) = this.BuildSql(visitor, sql, " UNION ALL ");
             command.CommandText = sql;
             visitor.DbParameters.CopyTo(command.Parameters);
 
@@ -214,6 +221,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             if (reader != null)
                 await reader.DisposeAsync();
+            command.Parameters.Clear();
             await command.DisposeAsync();
             if (isNeedClose) await this.CloseAsync();
             visitor.Dispose();
@@ -263,6 +271,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         finally
         {
             reader?.Dispose();
+            command.Parameters.Clear();
             command.Dispose();
             if (isNeedClose) this.Close();
         }
@@ -307,6 +316,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             if (reader != null)
                 await reader.DisposeAsync();
+            command.Parameters.Clear();
             await command.DisposeAsync();
             if (isNeedClose) await this.CloseAsync();
         }
@@ -322,10 +332,12 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         Exception exception = null;
         try
         {
+            if (visitor.IsNeedFetchShardingTables)
+                this.FetchShardingTables(visitor as SqlVisitor);
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
             visitor.SelectDefault(defaultExpr);
             var sql = visitor.BuildSql(out var readerFields);
-            (var isOpened, sql) = this.BuildSql(visitor as SqlVisitor, sql, " UNION ALL ");
+            (var isOpened, sql) = this.BuildSql(visitor, sql, " UNION ALL ");
             command.CommandText = sql;
             visitor.DbParameters.CopyTo(command.Parameters);
 
@@ -366,6 +378,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         finally
         {
             reader?.Dispose();
+            command.Parameters.Clear();
             command.Dispose();
             if (isNeedClose) this.Close();
             visitor.Dispose();
@@ -382,10 +395,13 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         Exception exception = null;
         try
         {
+            if (visitor.IsNeedFetchShardingTables)
+                await this.FetchShardingTablesAsync(visitor as SqlVisitor, cancellationToken);
+
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
             visitor.SelectDefault(defaultExpr);
             var sql = visitor.BuildSql(out var readerFields);
-            (var isOpened, sql) = await this.BuildSqlAsync(visitor as SqlVisitor, sql, " UNION ALL ", cancellationToken);
+            (var isOpened, sql) = this.BuildSql(visitor, sql, " UNION ALL ");
             command.CommandText = sql;
             visitor.DbParameters.CopyTo(command.Parameters);
 
@@ -427,6 +443,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             if (reader != null)
                 await reader.DisposeAsync();
+            command.Parameters.Clear();
             await command.DisposeAsync();
             if (isNeedClose) await this.CloseAsync();
             visitor.Dispose();
@@ -493,6 +510,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         finally
         {
             reader?.Dispose();
+            command.Parameters.Clear();
             command.Dispose();
             if (isNeedClose) this.Close();
             visitor.Dispose();
@@ -517,7 +535,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             await this.OpenAsync(cancellationToken);
             var behavior = CommandBehavior.SequentialAccess;
             reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
-            if (await reader.ReadAsync()) result.TotalCount = reader.To<int>(this.OrmProvider);
+            if (await reader.ReadAsync(cancellationToken)) result.TotalCount = reader.To<int>(this.OrmProvider);
             result.PageNumber = visitor.PageNumber;
             result.PageSize = visitor.PageSize;
 
@@ -557,6 +575,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             if (reader != null)
                 await reader.DisposeAsync();
+            command.Parameters.Clear();
             await command.DisposeAsync();
             if (isNeedClose) await this.CloseAsync();
             visitor.Dispose();
@@ -598,6 +617,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         finally
         {
             reader?.Dispose();
+            command.Parameters.Clear();
             command.Dispose();
             if (isNeedClose) this.Close();
         }
@@ -637,6 +657,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             if (reader != null)
                 await reader.DisposeAsync();
+            command.Parameters.Clear();
             await command.DisposeAsync();
             if (isNeedClose) await this.CloseAsync();
         }
@@ -681,6 +702,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         finally
         {
             reader?.Dispose();
+            command.Parameters.Clear();
             command.Dispose();
             if (isNeedClose) this.Close();
         }
@@ -712,6 +734,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             if (reader != null)
                 await reader.DisposeAsync();
+            command.Parameters.Clear();
             await command.DisposeAsync();
             if (isNeedClose) await this.CloseAsync();
         }
@@ -744,6 +767,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         finally
         {
             reader?.Dispose();
+            command.Parameters.Clear();
             command.Dispose();
             if (isNeedClose) this.Close();
         }
@@ -777,6 +801,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             if (reader != null)
                 await reader.DisposeAsync();
+            command.Parameters.Clear();
             await command.DisposeAsync();
             if (isNeedClose) await this.CloseAsync();
         }
@@ -798,7 +823,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         insertObjType = firstInsertObj.GetType();
 
         (var tableName, var headSqlSetter, var valuesSqlSetter) = RepositoryHelper.BuildCreateSqlParameters(
-            this.OrmProvider, this.MapProvider, entityType, insertObjType, null, null, false, false);
+            this.OrmProvider, this.MapProvider, entityType, insertObjType, null, null, true, false);
         var typedValuesSqlSetter = valuesSqlSetter as Action<IDataParameterCollection, StringBuilder, object, string>;
         Func<string, IEnumerable, int> executor = (tableName, insertObjs) =>
         {
@@ -869,7 +894,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         insertObjType = firstInsertObj.GetType();
 
         (var tableName, var headSqlSetter, var valuesSqlSetter) = RepositoryHelper.BuildCreateSqlParameters(
-            this.OrmProvider, this.MapProvider, entityType, insertObjType, null, null, false, false);
+            this.OrmProvider, this.MapProvider, entityType, insertObjType, null, null, true, false);
         var typedValuesSqlSetter = valuesSqlSetter as Action<IDataParameterCollection, StringBuilder, object, string>;
         Func<string, IEnumerable, Task<int>> executor = async (tableName, insertObjs) =>
         {
@@ -1089,6 +1114,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         }
         finally
         {
+            command.Parameters.Clear();
             command.Dispose();
             if (isNeedClose) this.Close();
         }
@@ -1114,6 +1140,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         }
         finally
         {
+            command.Parameters.Clear();
             await command.DisposeAsync();
             if (isNeedClose) await this.CloseAsync();
         }
@@ -1214,25 +1241,13 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     }
     #endregion
 
-    public (bool, string) BuildSql(SqlVisitor visitor, string formatSql, string jointMark)
+    public (bool, string) BuildSql(IQueryVisitor visitor, string formatSql, string jointMark)
     {
         var sql = formatSql;
-        if (visitor.IsNeedFetchShardingTables)
-            this.FetchShardingTables(visitor);
         if (visitor.ShardingTables != null && visitor.ShardingTables.Count > 0)
-            sql = this.BuildShardingTablesSqlByFormat(visitor, formatSql, jointMark);
+            sql = this.BuildShardingTablesSqlByFormat(visitor as SqlVisitor, formatSql, jointMark);
         return (visitor.IsNeedFetchShardingTables, sql);
     }
-    public async Task<(bool, string)> BuildSqlAsync(SqlVisitor visitor, string formatSql, string jointMark, CancellationToken cancellationToken = default)
-    {
-        var sql = formatSql;
-        if (visitor.IsNeedFetchShardingTables)
-            await this.FetchShardingTablesAsync(visitor, cancellationToken);
-        if (visitor.ShardingTables != null && visitor.ShardingTables.Count > 0)
-            sql = this.BuildShardingTablesSqlByFormat(visitor, formatSql, jointMark);
-        return (visitor.IsNeedFetchShardingTables, sql);
-    }
-
     public void FetchShardingTables(SqlVisitor visitor)
     {
         var fetchSql = visitor.BuildShardingTablesSql(this.Connection.Database);
@@ -1246,6 +1261,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             shardingTables.Add(reader.To<string>(this.OrmProvider));
         }
         reader.Dispose();
+        command.Parameters.Clear();
         command.Dispose();
         visitor.SetShardingTables(shardingTables);
     }
@@ -1264,6 +1280,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             shardingTables.Add(reader.To<string>(this.OrmProvider));
         }
         await reader.DisposeAsync();
+        command.Parameters.Clear();
         await command.DisposeAsync();
         visitor.SetShardingTables(shardingTables);
     }

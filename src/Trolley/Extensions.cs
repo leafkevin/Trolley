@@ -309,6 +309,7 @@ public static class Extensions
     {
         if (dbParameters == null || dbParameters.Count == 0)
             return;
+        if (dbParameters.Equals(other)) return;
         foreach (var dbParameter in dbParameters)
         {
             other.Add(dbParameter);

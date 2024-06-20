@@ -250,7 +250,10 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
         finally
         {
             if (command != null)
+            {
+                command.Parameters.Clear();
                 await command.DisposeAsync();
+            }
             if (isNeedClose) await this.CloseAsync();
         }
         if (exception != null) throw exception;

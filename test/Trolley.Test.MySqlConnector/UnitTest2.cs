@@ -806,6 +806,19 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
            })
            .ToSql(out _);
         Assert.True(sql == "SELECT a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) AS `Date`,COUNT(b.`Id`) AS `OrderCount`,SUM(b.`TotalAmount`) AS `TotalAmount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) ORDER BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE)");
+        var result = repository.From<User>()
+          .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
+          .GroupBy((a, b) => new { a.Id, a.Name, b.CreatedAt.Date })
+          .OrderBy((x, a, b) => x.Grouping)
+          .Select((x, a, b) => new
+          {
+              x.Grouping,
+              OrderCount = x.Count(b.Id),
+              TotalAmount = x.Sum(b.TotalAmount)
+          })
+          .ToList();
+        Assert.NotNull(result);
+        Assert.True(result.Count > 0);
     }
     [Fact]
     public async void FromQuery_Groupby_OrderBy_Fields()
@@ -1020,6 +1033,17 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
             .Where(f => Sql.Exists<Company>(t => t.Name.Contains("Microsoft") && f.CompanyId == t.Id))
             .ToSql(out _);
         Assert.True(sql == "SELECT a.`Id`,a.`TenantId`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`SourceType`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_user` a WHERE EXISTS(SELECT * FROM `sys_company` t WHERE t.`Name` LIKE '%Microsoft%' AND a.`CompanyId`=t.`Id`)");
+
+        sql = repository.From<User>()
+            .Where(f => Sql.Exists(t =>
+                t.From<OrderDetail>('b')
+                 .GroupBy(a => a.OrderId)
+                 .Having((x, a) => Sql.CountDistinct(a.ProductId) > 0)
+                 .SelectAnonymous()))
+            .GroupBy(f => new { f.Gender, f.CompanyId })
+            .Select((t, a) => new { t.Grouping, UserTotal = t.CountDistinct(a.Id) })
+            .ToSql(out _);
+        Assert.True(sql == "SELECT a.`Gender`,a.`CompanyId`,COUNT(DISTINCT a.`Id`) AS `UserTotal` FROM `sys_user` a WHERE EXISTS(SELECT * FROM `sys_order_detail` b GROUP BY b.`OrderId` HAVING COUNT(DISTINCT b.`ProductId`)>0) GROUP BY a.`Gender`,a.`CompanyId`");
     }
     [Fact]
     public void FromQuery_Exists()
@@ -1588,6 +1612,7 @@ SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a INNER JOIN
             .ToSql(out var dbParameters);
         Assert.True(sql == @"SELECT * FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id`=@p0 ORDER BY a.`Id` LIMIT 1) a UNION ALL
 SELECT * FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id`<>@p1 LIMIT 1) a");
+
         Assert.True(dbParameters.Count == 2);
         Assert.True((string)dbParameters[0].Value == id1);
         Assert.True((string)dbParameters[1].Value == id2);
@@ -1618,6 +1643,62 @@ SELECT * FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_orde
         {
             Assert.True(item.Id == id1 || item.Id != id2);
         }
+    }
+    [Fact]
+    public void FromQuery_Union_SubQuery_Limit()
+    {
+        this.Initialize();
+        using var repository = this.dbFactory.Create();
+        var sql = repository.From(f => f.From<Order>()
+                .Where(x => x.Id != "3")
+                .OrderBy(f => f.Id)
+                .Select(x => new
+                {
+                    x.Id,
+                    x.OrderNo,
+                    x.SellerId,
+                    x.BuyerId
+                })
+               .Take(1))
+            .Select()
+            .UnionAll(f => f.From<Order>()
+                .Where(x => x.Id == "3")
+                .Select(x => new
+                {
+                    x.Id,
+                    x.OrderNo,
+                    x.SellerId,
+                    x.BuyerId
+                })
+                .Take(1))
+            .ToSql(out _);
+        Assert.True(sql == @"SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id`<>'3' ORDER BY a.`Id` LIMIT 1) a UNION ALL
+SELECT * FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id`='3' LIMIT 1) a");
+        var result = repository.From(f => f.From<Order>()
+                .Where(x => x.Id != "3")
+                .OrderBy(f => f.Id)
+                .Select(x => new
+                {
+                    x.Id,
+                    x.OrderNo,
+                    x.SellerId,
+                    x.BuyerId
+                })
+               .Take(1))
+            .Select()
+            .UnionAll(f => f.From<Order>()
+                .Where(x => x.Id == "3")
+                .Select(x => new
+                {
+                    x.Id,
+                    x.OrderNo,
+                    x.SellerId,
+                    x.BuyerId
+                })
+                .Take(1))
+            .ToList();
+        Assert.NotNull(result);
+        Assert.True(result.Count > 0);
     }
     [Fact]
     public async void FromQuery_Union_SubQuery_OrderBy()
@@ -1706,7 +1787,27 @@ SELECT * FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_orde
                 .Take(1))
             .ToSql(out _);
         Assert.True(sql == @"SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM (SELECT a.`Id`,a.`Name`,a.`ParentId`,a.`PageId` FROM `sys_menu` a) a INNER JOIN `sys_page` b ON a.`Id`=b.`Id` UNION ALL
-SELECT * FROM (SELECT a.`BuyerId`,a.`OrderNo`,a.`SellerId`,CAST(a.`BuyerId` AS CHAR) FROM `sys_order` a WHERE a.`Id`='2' ORDER BY a.`Id` DESC LIMIT 1) a");
+SELECT * FROM (SELECT a.`BuyerId` AS `Id`,a.`OrderNo` AS `Name`,a.`SellerId` AS `ParentId`,CAST(a.`BuyerId` AS CHAR) AS `Url` FROM `sys_order` a WHERE a.`Id`='2' ORDER BY a.`Id` DESC LIMIT 1) a");
+
+        var result = repository
+            .From(f => f.From<Menu>()
+                .Select(x => new { x.Id, x.Name, x.ParentId, x.PageId }))
+            .InnerJoin<Page>((a, b) => a.Id == b.Id)
+            .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
+            .UnionAll(f => f.From<Order>()
+                .Where(x => x.Id == "2")
+                .OrderByDescending(f => f.Id)
+                .Select(x => new
+                {
+                    Id = x.BuyerId,
+                    Name = x.OrderNo,
+                    ParentId = x.SellerId,
+                    Url = x.BuyerId.ToString()
+                })
+                .Take(1))
+            .ToList();
+        Assert.NotNull(result);
+        Assert.True(result.Count > 0);
     }
     [Fact]
     public async void Query_WithCte_SelfRef()

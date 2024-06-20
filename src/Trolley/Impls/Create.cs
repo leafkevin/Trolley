@@ -84,50 +84,66 @@ public class Create<TEntity> : ICreate<TEntity>
     public virtual IFromCommand<T> From<T>()
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
-        queryVisitor.From('b', typeof(T));
+        queryVisitor.AddTable(this.Visitor.Tables[0]);
+        queryVisitor.From('a', typeof(T));
+        queryVisitor.IsFromCommand = true;
         return this.OrmProvider.NewFromCommand<T>(typeof(TEntity), this.DbContext, queryVisitor);
     }
     public virtual IFromCommand<T1, T2> From<T1, T2>()
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
-        queryVisitor.From('b', typeof(T1), typeof(T2));
+        queryVisitor.AddTable(this.Visitor.Tables[0]);
+        queryVisitor.From('a', typeof(T1), typeof(T2));
+        queryVisitor.IsFromCommand = true;
         return this.OrmProvider.NewFromCommand<T1, T2>(typeof(TEntity), this.DbContext, queryVisitor);
     }
     public virtual IFromCommand<T1, T2, T3> From<T1, T2, T3>()
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
-        queryVisitor.From('b', typeof(T1), typeof(T2), typeof(T3));
+        queryVisitor.AddTable(this.Visitor.Tables[0]);
+        queryVisitor.From('a', typeof(T1), typeof(T2), typeof(T3));
+        queryVisitor.IsFromCommand = true;
         return this.OrmProvider.NewFromCommand<T1, T2, T3>(typeof(TEntity), this.DbContext, queryVisitor);
     }
     public virtual IFromCommand<T1, T2, T3, T4> From<T1, T2, T3, T4>()
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
-        queryVisitor.From('b', typeof(T1), typeof(T2), typeof(T3), typeof(T4));
+        queryVisitor.AddTable(this.Visitor.Tables[0]);
+        queryVisitor.From('a', typeof(T1), typeof(T2), typeof(T3), typeof(T4));
+        queryVisitor.IsFromCommand = true;
         return this.OrmProvider.NewFromCommand<T1, T2, T3, T4>(typeof(TEntity), this.DbContext, queryVisitor);
     }
     public virtual IFromCommand<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>()
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
-        queryVisitor.From('b', typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
+        queryVisitor.AddTable(this.Visitor.Tables[0]);
+        queryVisitor.From('a', typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
+        queryVisitor.IsFromCommand = true;
         return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5>(typeof(TEntity), this.DbContext, queryVisitor);
     }
     public virtual IFromCommand<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>()
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
-        queryVisitor.From('b', typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
+        queryVisitor.AddTable(this.Visitor.Tables[0]);
+        queryVisitor.From('a', typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
+        queryVisitor.IsFromCommand = true;
         return this.OrmProvider.NewFromCommand<T1, T2, T3, T4, T5, T6>(typeof(TEntity), this.DbContext, queryVisitor);
     }
 
     public virtual IFromCommand<TTarget> From<TTarget>(IQuery<TTarget> subQuery)
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
+        queryVisitor.AddTable(this.Visitor.Tables[0]);
         queryVisitor.From(typeof(TTarget), subQuery);
+        queryVisitor.IsFromCommand = true;
         return this.OrmProvider.NewFromCommand<TTarget>(typeof(TEntity), this.DbContext, queryVisitor);
     }
     public virtual IFromCommand<TTarget> From<TTarget>(Func<IFromQuery, IQuery<TTarget>> cteSubQuery)
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
+        queryVisitor.AddTable(this.Visitor.Tables[0]);
         queryVisitor.From(typeof(TTarget), this.DbContext, cteSubQuery);
+        queryVisitor.IsFromCommand = true;
         return this.OrmProvider.NewFromCommand<TTarget>(typeof(TEntity), this.DbContext, queryVisitor);
     }
     #endregion
@@ -166,6 +182,7 @@ public class Created<TEntity> : ICreated<TEntity>
                         command.CommandText = this.Visitor.BuildCommand(command, false);
                         this.DbContext.Open();
                         result = command.ExecuteNonQuery();
+                        command.Parameters.Clear();
                         command.Dispose();
                     }
                     break;
@@ -222,13 +239,17 @@ public class Created<TEntity> : ICreated<TEntity>
 
     #region ExecuteIdentity
     public virtual int ExecuteIdentity()
-        => this.DbContext.CreateResult<int>((command, dbContext) => this.Visitor.BuildCommand(command, true));
+        => this.DbContext.CreateResult<int>((command, dbContext)
+            => command.CommandText = this.Visitor.BuildCommand(command, true));
     public virtual async Task<int> ExecuteIdentityAsync(CancellationToken cancellationToken = default)
-        => await this.DbContext.CreateResultAsync<int>((command, dbContext) => this.Visitor.BuildCommand(command, true), cancellationToken);
+        => await this.DbContext.CreateResultAsync<int>((command, dbContext)
+            => command.CommandText = this.Visitor.BuildCommand(command, true), cancellationToken);
     public virtual long ExecuteIdentityLong()
-        => this.DbContext.CreateResult<long>((command, dbContext) => this.Visitor.BuildCommand(command, true));
+        => this.DbContext.CreateResult<long>((command, dbContext)
+            => command.CommandText = this.Visitor.BuildCommand(command, true));
     public virtual async Task<long> ExecuteIdentityLongAsync(CancellationToken cancellationToken = default)
-        => await this.DbContext.CreateResultAsync<long>((command, dbContext) => this.Visitor.BuildCommand(command, true), cancellationToken);
+        => await this.DbContext.CreateResultAsync<long>((command, dbContext)
+            => command.CommandText = this.Visitor.BuildCommand(command, true), cancellationToken);
     #endregion
 
     #region ToMultipleCommand

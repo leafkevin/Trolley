@@ -348,6 +348,7 @@ public class Repository : IRepository
         }
         finally
         {
+            command.Parameters.Clear();
             command.Dispose();
             if (isNeedClose) this.Dispose();
         }
@@ -377,6 +378,7 @@ public class Repository : IRepository
         }
         finally
         {
+            command.Parameters.Clear();
             await command.DisposeAsync();
             if (isNeedClose) await this.DisposeAsync();
         }
@@ -498,6 +500,7 @@ public class Repository : IRepository
         }
         finally
         {
+            command.Parameters.Clear();
             command.Dispose();
             if (isNeedClose) this.Dispose();
         }
@@ -581,6 +584,7 @@ public class Repository : IRepository
         }
         finally
         {
+            command.Parameters.Clear();
             await command.DisposeAsync();
             if (isNeedClose) await this.DisposeAsync();
         }
@@ -617,6 +621,7 @@ public class Repository : IRepository
         }
         finally
         {
+            command.Parameters.Clear();
             command.Dispose();
             if (isNeedClose) this.Dispose();
         }
@@ -649,6 +654,7 @@ public class Repository : IRepository
         }
         finally
         {
+            command.Parameters.Clear();
             await command.DisposeAsync();
             if (isNeedClose) await this.DisposeAsync();
         }
@@ -802,6 +808,7 @@ public class Repository : IRepository
             if (isNeedClose)
             {
                 reader?.Dispose();
+                command.Parameters.Clear();
                 command.Dispose();
                 this.Dispose();
             }
@@ -839,6 +846,7 @@ public class Repository : IRepository
             {
                 if (reader != null)
                     await reader.DisposeAsync();
+                command.Parameters.Clear();
                 await command.DisposeAsync();
                 await this.DisposeAsync();
             }
@@ -909,6 +917,7 @@ public class Repository : IRepository
         }
         finally
         {
+            command.Parameters.Clear();
             command.Dispose();
             if (isNeedClose) this.Dispose();
         }
@@ -975,6 +984,7 @@ public class Repository : IRepository
         }
         finally
         {
+            command.Parameters.Clear();
             await command.DisposeAsync();
             if (isNeedClose) await this.DisposeAsync();
         }

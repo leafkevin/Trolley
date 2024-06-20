@@ -31,13 +31,14 @@ public interface IQueryVisitor : IDisposable
     /// IncludeMany表，第二次执行时的参数列表，通常是Filter中使用的参数
     /// </summary>
     IDataParameterCollection NextDbParameters { get; set; }
-    bool IsUseFieldAlias { get; set; }
+    bool IsSecondUnion { get; set; }
     bool IsUseCteTable { get; set; }
     char TableAsStart { get; set; }
     int PageNumber { get; set; }
     int PageSize { get; set; }
     bool IsNeedFetchShardingTables { get; }
     List<TableSegment> ShardingTables { get; set; }
+    bool IsFromCommand { get; set; }
 
     string BuildSql(out List<ReaderField> readerFields);
     string BuildCommandSql(Type targetType, out IDataParameterCollection dbParameters);
@@ -83,7 +84,7 @@ public interface IQueryVisitor : IDisposable
 
     void SelectGrouping();
     void SelectDefault(Expression defaultExpr);
-    void Select(string sqlFormat, Expression selectExpr = null, bool isFromCommand = false);
+    void Select(string sqlFormat, Expression selectExpr = null);
     void SelectFlattenTo(Type targetType, Expression specialMemberSelector = null);
 
     void Distinct();

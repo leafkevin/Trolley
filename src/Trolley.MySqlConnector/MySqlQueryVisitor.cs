@@ -13,11 +13,11 @@ public class MySqlQueryVisitor : QueryVisitor
     public override string BuildCommandSql(Type targetType, out IDataParameterCollection dbParameters)
     {
         var builder = new StringBuilder();
-        var entityMapper = this.MapProvider.GetEntityMap(targetType);
+        var entityMapper = this.Tables[0].Mapper;
         if (this.IsUseIgnoreInto)
             builder.Append("INSERT IGNORE INTO");
         else builder.Append("INSERT INTO");
-        builder.Append($" {this.OrmProvider.GetTableName(entityMapper.TableName)} (");
+        builder.Append($" {this.GetTableName(this.Tables[0])} (");
         int index = 0;
         foreach (var readerField in this.ReaderFields)
         {
@@ -52,38 +52,30 @@ public class MySqlQueryVisitor : QueryVisitor
             }
         }
         dbParameters = this.DbParameters;
+        string sql = null;
         if (!string.IsNullOrEmpty(this.UnionSql))
         {
             builder.Append(this.UnionSql);
-            var sql = builder.ToString();
+            sql = builder.ToString();
             builder.Clear();
+            builder = null;
             return sql;
         }
         var headSql = builder.ToString();
         builder.Clear();
-        //生成sql时，include表的字段，一定要紧跟着主表字段后面，方便赋值主表实体的属性中，所以在插入时候就排好序
-        //方案：在buildSql时确定，ReaderFields要重新排好序，include字段放到对应主表字段后面，表别名顺序不变
-        if (this.ReaderFields == null)
-            throw new Exception("缺少Select语句");
-        builder.Append(this.BuildSelectSql(this.ReaderFields));
 
-        string selectSql = null;
-        if (this.IsDistinct)
-            selectSql = "DISTINCT " + builder.ToString();
-        else selectSql = builder.ToString();
-
-        builder.Clear();
+        //先判断表是否有多分表isManySharding
         string tableSql = null;
+        bool isManySharding = false;
         if (this.Tables.Count > 0)
         {
-            foreach (var tableSegment in this.Tables)
+            int startIndex = 0;
+            if (this.IsFromCommand) startIndex = 1;
+            for (int i = startIndex; i < this.Tables.Count; i++)
             {
-                string tableName = string.Empty;
-                tableName = tableSegment.Body;
-                if (string.IsNullOrEmpty(tableName))
-                    tableName = this.OrmProvider.GetTableName(tableSegment.Mapper.TableName);
-
-                if (builder.Length > 0)
+                var tableSegment = this.Tables[i];
+                string tableName = this.GetTableName(tableSegment);
+                if (i > startIndex)
                 {
                     if (!string.IsNullOrEmpty(tableSegment.JoinType))
                     {
@@ -99,9 +91,31 @@ public class MySqlQueryVisitor : QueryVisitor
                     builder.Append(" " + tableSegment.SuffixRawSql);
                 if (!string.IsNullOrEmpty(tableSegment.OnExpr))
                     builder.Append($" ON {tableSegment.OnExpr}");
+                if (tableSegment.TableNames != null && tableSegment.TableNames.Count > 1)
+                    isManySharding = true;
             }
             tableSql = builder.ToString();
         }
+        builder.Clear();
+
+        //再判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不对
+        bool isNeedWrap = (this.IsUnion || this.IsSecondUnion || isManySharding) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue);
+
+        //各种单值查询，如：SELECT COUNT(*)/MAX(*)..等，都有SELECT操作     
+        //如：From(f=>...).InnerJoin/UnionAll(f=>...)
+        //生成sql时，include表的字段，一定要紧跟着主表字段后面，方便赋值主表实体的属性中，所以在插入时候就排好序
+        //方案：在buildSql时确定，ReaderFields要重新排好序，include字段放到对应主表字段后面，表别名顺序不变
+        if (this.ReaderFields == null)
+            throw new Exception("缺少Select语句");
+        builder.Append(this.BuildSelectSql(this.ReaderFields, isNeedWrap));
+
+        string selectSql = null;
+        if (this.IsDistinct)
+            selectSql = "DISTINCT " + builder.ToString();
+        else selectSql = builder.ToString();
+
+        builder.Clear();
+
 
         builder.Clear();
         if (!string.IsNullOrEmpty(this.WhereSql))
@@ -139,12 +153,15 @@ public class MySqlQueryVisitor : QueryVisitor
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
 
         //UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不对
-        if (this.IsUnion && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue))
+        if (isNeedWrap)
         {
             builder.Insert(0, "SELECT * FROM (");
             builder.Append($") a");
         }
-        return builder.ToString();
+        sql = builder.ToString();
+        builder.Clear();
+        builder = null;
+        return sql;
     }
     public override string BuildShardingTablesSql(string tableSchema)
     {

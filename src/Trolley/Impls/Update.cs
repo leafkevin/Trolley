@@ -260,6 +260,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
         }
         finally
         {
+            command.Parameters.Clear();
             command.Dispose();
             if (isNeedClose) this.Close();
         }
@@ -363,6 +364,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
         }
         finally
         {
+            command.Parameters.Clear();
             await command.DisposeAsync();
             if (isNeedClose) await this.CloseAsync();
         }

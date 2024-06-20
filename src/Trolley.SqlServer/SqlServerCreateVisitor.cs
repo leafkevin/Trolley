@@ -83,6 +83,36 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
         valuesBuilder = null;
         return sql;
     }
+    public override string BuildShardingTablesSql(string tableSchema)
+    {
+        var count = this.ShardingTables.FindAll(f => f.ShardingType > ShardingTableType.MultiTable).Count;
+        var builder = new StringBuilder($"SELECT name FROM sys.sysobjects WHERE xtype='U' AND ");
+        if (count > 1)
+        {
+            builder.Append('(');
+            int index = 0;
+            foreach (var tableSegment in this.ShardingTables)
+            {
+                if (tableSegment.ShardingType > ShardingTableType.MultiTable)
+                {
+                    if (index > 0) builder.Append(" OR ");
+                    builder.Append($"name LIKE '{tableSegment.Mapper.TableName}%'");
+                    index++;
+                }
+            }
+            builder.Append(')');
+        }
+        else
+        {
+            if (this.ShardingTables.Count > 1)
+            {
+                var tableSegment = this.ShardingTables.Find(f => f.ShardingType > ShardingTableType.MultiTable);
+                builder.Append($"name LIKE '{tableSegment.Mapper.TableName}%'");
+            }
+            else builder.Append($"name LIKE '{this.ShardingTables[0].Mapper.TableName}%'");
+        }
+        return builder.ToString();
+    }
     public override (bool, string, IEnumerable, int, object, Action<IDataParameterCollection, StringBuilder, string, object>,
         Action<IDataParameterCollection, StringBuilder, object, string>) BuildWithBulk(IDbCommand command)
     {

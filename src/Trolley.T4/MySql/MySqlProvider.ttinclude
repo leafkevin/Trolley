@@ -51,20 +51,20 @@ class MySqlProvider : DbHelper
     public List<ColumnInfo> GetColumnList(string database, string tableName)
     {
         var sql = @"SELECT a.COLUMN_NAME,
-				           a.DATA_TYPE,
-					       a.COLUMN_TYPE,
-				           a.CHARACTER_MAXIMUM_LENGTH,
-				           a.NUMERIC_SCALE,
-				           a.NUMERIC_PRECISION,
-				           a.COLUMN_COMMENT,
-				           a.COLUMN_DEFAULT,
-				           a.COLUMN_KEY,
-				           a.EXTRA,
-				           a.IS_NULLABLE,
-                           a.ORDINAL_POSITION
-				       FROM INFORMATION_SCHEMA.COLUMNS a
-				       WHERE a.TABLE_SCHEMA='{0}' AND a.TABLE_NAME='{1}'
-                       ORDER BY a.ORDINAL_POSITION";
+		a.DATA_TYPE,
+		a.COLUMN_TYPE,
+		a.CHARACTER_MAXIMUM_LENGTH,
+		a.NUMERIC_SCALE,
+		a.NUMERIC_PRECISION,
+		a.COLUMN_COMMENT,
+		a.COLUMN_DEFAULT,
+		a.COLUMN_KEY,
+		a.EXTRA,
+		a.IS_NULLABLE,
+        	a.ORDINAL_POSITION
+    	FROM INFORMATION_SCHEMA.COLUMNS a
+    	WHERE a.TABLE_SCHEMA='{0}' AND a.TABLE_NAME='{1}'
+        ORDER BY a.ORDINAL_POSITION";
 
         sql = String.Format(sql, database, tableName);
         var result = new List<ColumnInfo>();
@@ -79,7 +79,7 @@ class MySqlProvider : DbHelper
                 ColumnName = this.ToValue<string>(reader[0]),
                 DataType = this.ToValue<string>(reader[1]),
                 ColumnType = this.ToValue<string>(reader[2]),
-                Length = this.ToValue<ulong>(reader[3]),
+                Length = (int)this.ToValue<ulong>(reader[3]),
                 Scale = this.ToValue<int>(reader[4]),
                 Precision = this.ToValue<int>(reader[5]),
                 Description = this.ToValue<string>(reader[6]),
@@ -96,7 +96,7 @@ class MySqlProvider : DbHelper
     }
     public ClassMemberInfo MapMember(ColumnInfo columnInfo)
     {
-        var result = new ClassMemberInfo { DbColumnType = columnInfo.ColumnType };
+        var result = new ClassMemberInfo { DbColumnType = columnInfo.ColumnType, Length = columnInfo.Length };
         bool isUnsigned = columnInfo.ColumnType.Contains("unsigned");
         switch (columnInfo.DataType)
         {

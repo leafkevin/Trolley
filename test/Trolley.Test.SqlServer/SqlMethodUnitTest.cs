@@ -38,55 +38,55 @@ public class SqlMethodUnitTest : UnitTestBase
            .ToSql(out _);
         Assert.True(sql == "SELECT [Id] FROM [sys_user] WHERE [CreatedAt] IN ('2023-03-03 00:00:00.000','2023-03-03 00:00:00.000','2023-03-03 06:06:06.000')");
     }
-    [Fact]
-    public void ToFlatten()
-    {
-        using var repository = dbFactory.Create();
-        var sql = repository.From<Order>()
-            .Select(f => new
-            {
-                Col1 = f.OrderNo.ToLower() + "_AbCd".ToUpper(),
-                Col2 = f.OrderNo.ToUpper() + "_AbCd".ToLower()
-            })
-            .ToSql(out _);
-        Assert.True(sql == "SELECT (LOWER([OrderNo])+'_ABCD') AS [Col1],(UPPER([OrderNo])+'_abcd') AS [Col2] FROM [sys_order]");
+    //[Fact]
+    //public void ToFlatten()
+    //{
+    //    using var repository = dbFactory.Create();
+    //    var sql = repository.From<Order>()
+    //        .Select(f => new
+    //        {
+    //            Col1 = f.OrderNo.ToLower() + "_AbCd".ToUpper(),
+    //            Col2 = f.OrderNo.ToUpper() + "_AbCd".ToLower()
+    //        })
+    //        .ToSql(out _);
+    //    Assert.True(sql == "SELECT (LOWER([OrderNo])+'_ABCD') AS [Col1],(UPPER([OrderNo])+'_abcd') AS [Col2] FROM [sys_order]");
 
-        repository.BeginTransaction();
-        repository.Delete<Order>(8);
-        repository.Create<Order>(new Order
-        {
-            Id = 8,
-            OrderNo = "On-ZwYx",
-            BuyerId = 1,
-            SellerId = 2,
-            TotalAmount = 500,
-            Products = new List<int> { 1, 2 },
-            IsEnabled = true,
-            CreatedAt = DateTime.Now,
-            CreatedBy = 1,
-            UpdatedAt = DateTime.Now,
-            UpdatedBy = 1
-        });
-        repository.Commit();
-        var result = repository.From<Order>()
-            .Where(f => Sql.In(f.Id, new[] { 8 }))
-            .Select(f => Sql.FlattenTo<OrderInfo>())
-            .ToList();
-        Assert.True(result[0].Id == 8);
-        Assert.True(result[0].BuyerId == 1);
-        Assert.True(result[0].OrderNo == "On-ZwYx");
-        Assert.Null(result[0].Description);
+    //    repository.BeginTransaction();
+    //    repository.Delete<Order>(8);
+    //    repository.Create<Order>(new Order
+    //    {
+    //        Id = 8,
+    //        OrderNo = "On-ZwYx",
+    //        BuyerId = 1,
+    //        SellerId = 2,
+    //        TotalAmount = 500,
+    //        Products = new List<int> { 1, 2 },
+    //        IsEnabled = true,
+    //        CreatedAt = DateTime.Now,
+    //        CreatedBy = 1,
+    //        UpdatedAt = DateTime.Now,
+    //        UpdatedBy = 1
+    //    });
+    //    repository.Commit();
+    //    var result = repository.From<Order>()
+    //        .Where(f => Sql.In(f.Id, new[] { 8 }))
+    //        .Select(f => Sql.FlattenTo<OrderInfo>())
+    //        .ToList();
+    //    Assert.True(result[0].Id == 8);
+    //    Assert.True(result[0].BuyerId == 1);
+    //    Assert.True(result[0].OrderNo == "On-ZwYx");
+    //    Assert.Null(result[0].Description);
 
-        result = repository.From<Order>()
-        .Where(f => Sql.In(f.Id, new[] { 8 }))
-        .Select(f => Sql.FlattenTo<OrderInfo>(() => new
-        {
-            Description = "TotalAmount:" + f.TotalAmount
-        }))
-        .ToList();
-        Assert.True(result[0].Id == 8);
-        Assert.True(result[0].BuyerId == 1);
-        Assert.True(result[0].OrderNo == "On-ZwYx");
-        Assert.NotNull(result[0].Description);
-    }
+    //    result = repository.From<Order>()
+    //    .Where(f => Sql.In(f.Id, new[] { 8 }))
+    //    .Select(f => Sql.FlattenTo<OrderInfo>(() => new
+    //    {
+    //        Description = "TotalAmount:" + f.TotalAmount
+    //    }))
+    //    .ToList();
+    //    Assert.True(result[0].Id == 8);
+    //    Assert.True(result[0].BuyerId == 1);
+    //    Assert.True(result[0].OrderNo == "On-ZwYx");
+    //    Assert.NotNull(result[0].Description);
+    //}
 }

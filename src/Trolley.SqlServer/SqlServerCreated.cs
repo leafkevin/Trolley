@@ -250,7 +250,10 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
         finally
         {
             if (command != null)
+            {
+                command.Parameters.Clear();
                 await command.DisposeAsync();
+            }
             if (isNeedClose) await this.CloseAsync();
         }
         if (exception != null) throw exception;

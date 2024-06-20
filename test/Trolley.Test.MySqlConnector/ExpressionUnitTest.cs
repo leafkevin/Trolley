@@ -36,10 +36,10 @@ public class ExpressionUnitTest : UnitTestBase
         Assert.True(dbParameters[0].Value.ToString() == firstName);
 
         sql = repository.From<User>()
-            .Where(f => (f.Name ?? f.Id.ToString()) == "kevin")
+            .Where(f => (f.Name ?? f.Id.ToString()) == "leafkevin")
             .Select(f => f.Id)
             .ToSql(out dbParameters);
-        Assert.True(sql == "SELECT a.`Id` FROM `sys_user` a WHERE COALESCE(a.`Name`,CAST(a.`Id` AS CHAR))='kevin'");
+        Assert.True(sql == "SELECT a.`Id` FROM `sys_user` a WHERE COALESCE(a.`Name`,CAST(a.`Id` AS CHAR))='leafkevin'");
     }
     [Fact]
     public void Conditional()
@@ -73,6 +73,7 @@ public class ExpressionUnitTest : UnitTestBase
             })
             .ToSql(out var dbParameters);
         Assert.True(sql == "SELECT (CASE WHEN a.`IsEnabled`=1 THEN @p4 ELSE 'Disabled' END) AS `IsEnabled`,(CASE WHEN a.`GuidField` IS NOT NULL THEN @p5 ELSE 'NoValue' END) AS `GuidField`,(CASE WHEN a.`Age`>35 THEN 1 ELSE 0 END) AS `IsOld`,(CASE WHEN a.`Name` LIKE '%kevin%' THEN 'Yes' ELSE 'No' END) AS `IsNeedParameter` FROM `sys_user` a WHERE (CASE WHEN a.`IsEnabled`=1 THEN @p0 ELSE 'Disabled' END)=@p1 AND (CASE WHEN a.`GuidField` IS NOT NULL THEN @p2 ELSE 'NoValue' END)=@p3");
+		Assert.True(dbParameters.Count == 6);
         Assert.True(dbParameters[0].Value.ToString() == enabled);
         Assert.True(dbParameters[1].Value.ToString() == enabled);
         Assert.True(dbParameters[2].Value.ToString() == hasValue);
@@ -137,6 +138,7 @@ public class ExpressionUnitTest : UnitTestBase
             })
             .ToSql(out var dbParameters);
         Assert.True(sql == "SELECT @p2 AS `False`,@p3 AS `Unknown`,CONCAT(@p4,' and ',@p5) AS `MyLove` FROM `sys_user` a WHERE a.`Name` LIKE CONCAT('%',@p0,'%') OR CAST(a.`IsEnabled` AS CHAR)=@p1");
+		Assert.True(dbParameters.Count == 6);
         Assert.True((string)dbParameters[0].Value == dict["1"]);
         Assert.True((string)dbParameters[1].Value == strCollection[0]);
         Assert.True((string)dbParameters[2].Value == strArray[2]);

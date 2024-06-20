@@ -90,8 +90,10 @@ public class SqlServerContinuedCreate<TEntity, TResult> : SqlServerContinuedCrea
 
     #region Execute
     public new TResult Execute()
-        => this.DbContext.CreateResult<TResult>((command, dbContext) => this.Visitor.BuildCommand(command, true));
+        => this.DbContext.CreateResult<TResult>((command, dbContext) 
+            => command.CommandText = this.Visitor.BuildCommand(command, true));
     public new async Task<TResult> ExecuteAsync(CancellationToken cancellationToken)
-        => await this.DbContext.CreateResultAsync<TResult>((command, dbContext) => this.Visitor.BuildCommand(command, true), cancellationToken);
+        => await this.DbContext.CreateResultAsync<TResult>((command, dbContext) 
+            => command.CommandText = this.Visitor.BuildCommand(command, true), cancellationToken);
     #endregion
 }

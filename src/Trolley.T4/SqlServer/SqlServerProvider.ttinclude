@@ -26,52 +26,10 @@ class SqlServerProvider : DbHelper
         reader.Close();
         connection.Close();
         return result;
-    }
-    public List<ColumnInfo> GetColumnList(string tableName)
-    {
-        var sql = @"SELECT A.name,LOWER(C.name),								
-					       (CASE WHEN C.name IN ('NVARCHAR','NCHAR','NTEXT') THEN C.length/2 ELSE C.length END),
-					       A.xprec,A.xscale,D.value,F.text,kc.keyno,A.isnullable,
-						   COLUMNPROPERTY(A.id,A.name,'IsIdentity')
-					FROM SYS.syscolumns A 
-              INNER JOIN SYS.sysobjects B ON A.id=B.id
-              INNER JOIN SYS.systypes C ON A.xusertype = C.xusertype 
-               LEFT JOIN SYS.extended_properties D ON D.major_id = A.ID AND D.minor_id = A.colid AND D.name = 'MS_Description'
-               LEFT JOIN sysobjects ko ON ko.xtype = 'PK' and ko.parent_obj=OBJECT_ID('{0}')
-               LEFT JOIN sysindexes ki ON ki.name=ko.name AND B.id=ki.id
-               LEFT JOIN sysindexkeys  kc On kc.indid=ki.indid and A.colid=kc.colid and kc.id=OBJECT_ID('{0}')
-               LEFT JOIN SYS.syscomments F ON A.cdefault=F.id
-                   WHERE B.xtype='U' AND B.name='{0}' ORDER BY A.COLID";
-
-        sql = string.Format(sql, tableName);
-        var result = new List<ColumnInfo>();
-        using var connection = new SqlConnection(this.connectionString);
-        using var command = new SqlCommand(sql, connection);
-        connection.Open();
-        var reader = command.ExecuteReader(CommandBehavior.SequentialAccess | CommandBehavior.CloseConnection);
-        while (reader.Read())
-        {
-            result.Add(new ColumnInfo
-            {
-                ColumnName = this.ToValue<string>(reader[0]),
-                DataType = this.ToValue<string>(reader[1]),
-                Length = this.ToValue<ulong>(reader[2]),
-                Scale = this.ToValue<int>(reader[3]),
-                Precision = this.ToValue<int>(reader[4]),
-                Description = this.ToValue<string>(reader[5]),
-                DefaultValue = this.ToValue<string>(reader[6]),
-                IsPrimaryKey = this.ToValue<int>(reader[7]) == 1,
-                IsNullable = this.ToValue<int>(reader[8]) == 1,
-                IsIdentity = this.ToValue<int>(reader[9]) == 1
-            });
-        }
-        reader.Close();
-        connection.Close();
-        return result;
-    }
+    }    
     public TableInfo GetTableInfo(string tableName)
     {
-        var sql = "SELECT A.NAME,B.VALUE FROM SYS.SYSOBJECTS A LEFT JOIN SYS.EXTENDED_PROPERTIES B ON A.ID=B.MAJOR_ID AND B.MINOR_ID=0 AND B.NAME='MS_Description' WHERE A.xtype='U' AND A.NAME='{0}'";
+        var sql = "SELECT a.NAME,b.VALUE FROM SYS.SYSOBJECTS a LEFT JOIN SYS.EXTENDED_PROPERTIES b ON A.ID=b.MAJOR_ID AND b.MINOR_ID=0 AND b.NAME='MS_Description' WHERE a.xtype='U' AND a.NAME='{0}'";
         sql = string.Format(sql, tableName);
         TableInfo result = null;
         using var connection = new SqlConnection(this.connectionString);
@@ -90,40 +48,174 @@ class SqlServerProvider : DbHelper
         connection.Close();
         return result;
     }
-    public string MapMemberType(ColumnInfo columnInfo)
+    public List<ColumnInfo> GetColumnList(string tableName)
     {
+        var sql = @"SELECT a.name,LOWER(c.name),c.name + CASE WHEN c.name IN ('char', 'varchar', 'nchar', 'nvarchar', 'binary', 'varbinary') THEN '(' + 
+		CASE WHEN a.length = -1 THEN 'MAX' WHEN c.name IN ('nchar', 'nvarchar') THEN CAST(a.length / 2 as varchar) ELSE CAST(a.length as varchar) END + ')'
+		WHEN c.name in ('numeric', 'decimal') THEN '(' + CAST(a.xprec as varchar) + ',' + CAST(a.xscale as varchar) + ')' ELSE '' END,
+		    CASE WHEN c.name in ('text', 'ntext', 'image') THEN -1 WHEN c.name IN ('nchar','nvarchar') THEN a.length/2 ELSE a.length END,
+		    a.xprec,a.xscale,d.value,f.text,kc.keyno,COLUMNPROPERTY(a.id,a.name,'IsIdentity'),a.isnullable,a.colid
+		    FROM SYS.syscolumns a 
+        INNER JOIN SYS.sysobjects b ON a.id=b.id
+        INNER JOIN SYS.systypes c ON a.xusertype = c.xusertype 
+        LEFT JOIN SYS.extended_properties d ON d.major_id=a.ID AND d.minor_id = a.colid AND d.name='MS_Description'
+        LEFT JOIN sysobjects ko ON ko.xtype = 'PK' AND ko.parent_obj=OBJECT_ID('{0}')
+        LEFT JOIN sysindexes ki ON ki.name=ko.name AND b.id=ki.id
+        LEFT JOIN sysindexkeys  kc On kc.indid=ki.indid AND a.colid=kc.colid AND kc.id=OBJECT_ID('{0}')
+        LEFT JOIN SYS.syscomments f ON a.cdefault=f.id
+        WHERE b.xtype='U' AND b.name='{0}' ORDER BY a.colid";
+
+        sql = string.Format(sql, tableName);
+        var result = new List<ColumnInfo>();
+        using var connection = new SqlConnection(this.connectionString);
+        using var command = new SqlCommand(sql, connection);
+        connection.Open();
+        var reader = command.ExecuteReader(CommandBehavior.SequentialAccess | CommandBehavior.CloseConnection);
+        while (reader.Read())
+        {
+            result.Add(new ColumnInfo
+            {
+                ColumnName = this.ToValue<string>(reader[0]),
+                DataType = this.ToValue<string>(reader[1]),
+                ColumnType = this.ToValue<string>(reader[2]),
+                Length = this.ToValue<int>(reader[3]),
+                Scale = this.ToValue<int>(reader[4]),
+                Precision = this.ToValue<int>(reader[5]),
+                Description = this.ToValue<string>(reader[6]),
+                DefaultValue = this.ToValue<string>(reader[7]),
+                IsPrimaryKey = this.ToValue<int>(reader[8]) == 1,
+                IsIdentity = this.ToValue<int>(reader[9]) == 1,
+                IsNullable = this.ToValue<int>(reader[10]) == 1,
+                Position = this.ToValue<int>(reader[11])
+            });
+        }
+        reader.Close();
+        connection.Close();
+        return result;
+    }
+    public ClassMemberInfo MapMember(ColumnInfo columnInfo)
+    {
+    	var result = new ClassMemberInfo { DbColumnType = columnInfo.ColumnType, Length = columnInfo.Length };
         switch (columnInfo.DataType)
         {
-            case "bit": return "bool";
+            case "bit":
+                result.NativeDbType = "SqlDbType.Bit";
+                result.MemberType = "bool";
+                break;
             case "char":
+                result.NativeDbType = "SqlDbType.Char";
+                result.MemberType = "string";
+                break;
             case "varchar":
+                result.NativeDbType = "SqlDbType.VarChar";
+                result.MemberType = "string";
+                break;
             case "text":
-            case "ntext":return "string";
-            case "bigint": return "long";
-            case "int": return "int";
-            case "smallint": return "short";            
-            case "tinyint": return "byte";            
+                result.NativeDbType = "SqlDbType.Text";
+                result.MemberType = "string";
+                break;
+            case "nchar":
+                result.NativeDbType = "SqlDbType.NChar";
+                result.MemberType = "string";
+                break;
+            case "nvarchar":
+                result.NativeDbType = "SqlDbType.NVarChar";
+                result.MemberType = "string";
+                break;
+            case "ntext":
+                result.NativeDbType = "SqlDbType.NText";
+                result.MemberType = "string";
+                break;
+            case "tinyint":
+                result.NativeDbType = "SqlDbType.TinyInt";
+                result.MemberType = "byte";
+                break;
+             case "smallint":
+                result.NativeDbType = "SqlDbType.SmallInt";
+                result.MemberType = "short";
+                break;
+            case "int":
+                result.NativeDbType = "SqlDbType.Int";
+                result.MemberType = "int";
+                break;
+            case "bigint":
+                result.NativeDbType = "SqlDbType.NText";
+                result.MemberType = "long";
+                break;
             case "smalldatetime":
+                result.NativeDbType = "SqlDbType.SmallDateTime";
+                result.MemberType = "DateTime";
+                break;
             case "datetime":
+                result.NativeDbType = "SqlDbType.DateTime";
+                result.MemberType = "DateTime";
+                break;
             case "datetime2":
-            case "date": return "DateTime";
-            case "time": return "TimeSpan";
-            case "datetimeoffset": return "DateTimeOffset";
-            case "float": return "double";
-            case "real": return "float";
-            case "numeric":
+                result.NativeDbType = "SqlDbType.DateTime2";
+                result.MemberType = "DateTime";
+                break;
+            case "date":
+                result.NativeDbType = "SqlDbType.Date";
+                result.MemberType = "DateOnly";
+                break;
+            case "time":
+                result.NativeDbType = "SqlDbType.Time";
+                result.MemberType = "TimeSpan";
+                break;
+            case "datetimeoffset":
+                result.NativeDbType = "SqlDbType.DateTimeOffset";
+                result.MemberType = "DateTimeOffset";
+                break;
+            case "real":
+                result.NativeDbType = "SqlDbType.Real";
+                result.MemberType = "float";
+                break;
+            case "float":
+                result.NativeDbType = "SqlDbType.Float";
+                result.MemberType = "double";
+                break;            
+            case "numeric":            
+                result.NativeDbType = "SqlDbType.Decimal";
+                result.MemberType = "decimal";
+                break;
             case "smallmoney":
+                result.NativeDbType = "SqlDbType.SmallMoney";
+                result.MemberType = "decimal";
+                break;
             case "decimal":
-            case "money": return "decimal";
+                result.NativeDbType = "SqlDbType.Decimal";
+                result.MemberType = "decimal";
+                break;
+            case "money":
+                result.NativeDbType = "SqlDbType.Money";
+                result.MemberType = "decimal";
+                break;
             case "image":
+                result.NativeDbType = "SqlDbType.Image";
+                result.MemberType = "byte[]";
+                break;
             case "binary":
+                result.NativeDbType = "SqlDbType.Binary";
+                result.MemberType = "byte[]";
+                break;
             case "varbinary":
-            case "timestamp": return "byte[]";
-            case "uniqueidentifier": return "Guid";
-            case "geography": return "Microsoft.SqlServer.Types.SqlGeography";
-            case "geometry": return "Microsoft.SqlServer.Types.SqlGeometry";
+                result.NativeDbType = "SqlDbType.VarBinary";
+                result.MemberType = "byte[]";
+                break;
+            case "timestamp":
+                result.NativeDbType = "SqlDbType.Money";
+                result.MemberType = "byte[]";
+                break;
+            case "uniqueidentifier":
+                result.NativeDbType = "SqlDbType.UniqueIdentifier";
+                result.MemberType = "Guid";
+                break;
+            default:
+                result.NativeDbType = "SqlDbType.Variant";
+                result.MemberType = "object";
+                break;
         }
-        return "string";
+        return result;
     }
     public string MapNativeDbType(ColumnInfo columnInfo)
     {

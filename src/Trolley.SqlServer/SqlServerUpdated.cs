@@ -125,6 +125,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
 
                         command.CommandText = $"DROP TABLE {tableName}";
                         command.ExecuteNonQuery();
+                        command.Parameters.Clear();
                         command.Dispose();
                         command = null;
                     }
@@ -215,6 +216,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
                         command.CommandText = this.Visitor.BuildCommand(this.DbContext, command);
                         if (!isOpened) this.DbContext.Open();
                         result = command.ExecuteNonQuery();
+                        command.Parameters.Clear();
                         command.Dispose();
                     }
                     break;
@@ -333,6 +335,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
 
                         command.CommandText = $"DROP TABLE {tableName}";
                         await command.ExecuteNonQueryAsync(cancellationToken);
+                        command.Parameters.Clear();
                         command.Dispose();
                         command = null;
                     }
@@ -423,6 +426,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
                         command.CommandText = this.Visitor.BuildCommand(this.DbContext, command);
                         if (!isOpened) this.DbContext.Open();
                         result = command.ExecuteNonQuery();
+                        command.Parameters.Clear();
                         command.Dispose();
                     }
                     break;

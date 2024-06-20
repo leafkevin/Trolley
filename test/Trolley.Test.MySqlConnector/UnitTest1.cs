@@ -320,36 +320,35 @@ public class UnitTest1 : UnitTestBase
         repository.Commit();
         Assert.Equal(1, count);
     }
-	[Fact]
+    [Fact]
     public async void Insert_WithBy_AnonymousObject_Condition()
     {
         this.Initialize();
         Guid? guidField = Guid.NewGuid();
         using var repository = dbFactory.Create();
-        repository.BeginTransaction();
         var user = repository.Get<User>(1);
-        var count = repository.Delete<User>().Where(f => f.Id == 1).Execute();
         var sql = repository.Create<User>()
-            .WithBy(new
-            {
-                Id = 1,
-                Name = "leafkevin",
-                Age = 25,
-                CompanyId = 1,
-                Gender = Gender.Male,
-                IsEnabled = true,
-                CreatedAt = DateTime.Now,
-                CreatedBy = 1,
-                UpdatedAt = DateTime.Now,
-                UpdatedBy = 1
-            })
-            .WithBy(false, new { user.SomeTimes })
-            .WithBy(guidField.HasValue, new { GuidField = guidField })
-            .ToSql(out _);
+           .WithBy(new
+           {
+               Id = 1,
+               Name = "leafkevin",
+               Age = 25,
+               CompanyId = 1,
+               Gender = Gender.Male,
+               IsEnabled = true,
+               CreatedAt = DateTime.Now,
+               CreatedBy = 1,
+               UpdatedAt = DateTime.Now,
+               UpdatedBy = 1
+           })
+           .WithBy(false, new { user.SomeTimes })
+           .WithBy(guidField.HasValue, new { GuidField = guidField })
+           .ToSql(out _);
         repository.Commit();
-        Assert.True(sql == "INSERT INTO [sys_user] ([Id],[Name],[Age],[CompanyId],[Gender],[IsEnabled],[CreatedAt],[CreatedBy],[UpdatedAt],[UpdatedBy],[GuidField]) VALUES(@Id,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy,@GuidField)");
+        Assert.True(sql == "INSERT INTO `sys_user` (`Id`,`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`,`GuidField`) VALUES(@Id,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy,@GuidField)");
+
         repository.BeginTransaction();
-        count = repository.Delete<User>().Where(f => f.Id == 1).Execute();
+        var count = repository.Delete<User>().Where(f => f.Id == 1).Execute();
         count = await repository.Create<User>()
             .WithBy(new
             {
@@ -677,7 +676,7 @@ public class UnitTest1 : UnitTestBase
                 UpdatedAt = DateTime.Now
             })
             .ToSql(out _);
-        Assert.True(sql == "INSERT IGNORE INTO `sys_product` (`Id`,`ProductNo`,`Name`,`Price`,`BrandId`,`CategoryId`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT @p1 AS `Id`,CONCAT('PN_',@p2) AS `ProductNo`,@p3 AS `Name`,25.85 AS `Price`,b.`Id` AS `BrandId`,@p4 AS `CategoryId`,b.`CompanyId`,1 AS `IsEnabled`,1 AS `CreatedBy`,NOW() AS `CreatedAt`,1 AS `UpdatedBy`,NOW() AS `UpdatedAt` FROM `sys_brand` b WHERE b.`Id`=@p0");
+        Assert.True(sql == "INSERT IGNORE INTO `sys_product` (`Id`,`ProductNo`,`Name`,`Price`,`BrandId`,`CategoryId`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT @p1,CONCAT('PN_',@p2),@p3,25.85,b.`Id`,@p4,b.`CompanyId`,1,1,NOW(),1,NOW() FROM `sys_brand` b WHERE b.`Id`=@p0");
 
         var count = repository.Create<Product>()
             .IgnoreInto()
@@ -753,7 +752,7 @@ public class UnitTest1 : UnitTestBase
                 UpdatedAt = x.UpdatedAt
             })
             .ToSql(out var parameters);
-        Assert.True(sql == "INSERT IGNORE INTO `sys_order_detail` (`Id`,`TenantId`,`OrderId`,`ProductId`,`Price`,`Quantity`,`Amount`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT '7' AS `Id`,'1' AS `TenantId`,b.`Id` AS `OrderId`,c.`Id` AS `ProductId`,c.`Price`,3 AS `Quantity`,(c.`Price`*3) AS `Amount`,b.`IsEnabled`,b.`CreatedBy`,b.`CreatedAt`,b.`UpdatedBy`,b.`UpdatedAt` FROM `sys_order` b,`sys_product` c WHERE b.`Id`='3' AND c.`Id`=1");
+        Assert.True(sql == "INSERT IGNORE INTO `sys_order_detail` (`Id`,`TenantId`,`OrderId`,`ProductId`,`Price`,`Quantity`,`Amount`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT '7','1',b.`Id`,c.`Id`,c.`Price`,3,(c.`Price`*3),b.`IsEnabled`,b.`CreatedBy`,b.`CreatedAt`,b.`UpdatedBy`,b.`UpdatedAt` FROM `sys_order` b,`sys_product` c WHERE b.`Id`='3' AND c.`Id`=1");
         await repository.BeginTransactionAsync();
         repository.Delete<OrderDetail>("7");
         var result = await repository.Create<OrderDetail>()
@@ -779,6 +778,7 @@ public class UnitTest1 : UnitTestBase
         var orderDetail = repository.Get<OrderDetail>("7");
         var product = repository.Get<Product>(1);
         await repository.CommitAsync();
+        Assert.True(result > 0);
         Assert.NotNull(orderDetail);
         Assert.True(orderDetail.OrderId == "3");
         Assert.True(orderDetail.ProductId == 1);

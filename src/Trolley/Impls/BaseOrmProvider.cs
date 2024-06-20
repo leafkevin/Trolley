@@ -292,9 +292,9 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                         break;
                 }
             }
-            if (typeHandlers.TryGetValue(handlerType, out var typeHandler))
-                return typeHandler;
-            return null;
+            if (!typeHandlers.TryGetValue(handlerType, out var typeHandler))
+                typeHandlers.TryAdd(handlerType, typeHandler = Activator.CreateInstance(handlerType) as ITypeHandler);
+            return typeHandler;
         });
     }
     public abstract bool TryGetDefaultTypeHandler(Type targetType, out ITypeHandler typeHandler);

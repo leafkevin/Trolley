@@ -214,6 +214,7 @@ public class DateTimeUnitTest : UnitTestBase
                 f.CreatedAt,
                 f.UpdatedAt,
                 f.SomeTimes,
+                DateSub = DateTime.Parse("2022-01-01 05:06:07") - DateTime.Parse("2022-01-01"),
                 AddOp = f.CreatedAt + TimeSpan.FromHours(5),
                 SubOp = f.CreatedAt - TimeSpan.FromHours(10),
                 AddOp1 = f.SomeTimes.Value.Add(TimeSpan.FromMinutes(25)),
@@ -224,6 +225,7 @@ public class DateTimeUnitTest : UnitTestBase
                 DivOp2 = TimeSpan.FromHours(30) / TimeSpan.FromHours(3)
             })
             .FirstAsync();
+        Assert.True(result.DateSub == DateTime.Parse("2022-01-01 05:06:07") - DateTime.Parse("2022-01-01"));
         Assert.True(result.AddOp == result.CreatedAt + TimeSpan.FromHours(5));
         Assert.True(result.SubOp == result.CreatedAt - TimeSpan.FromHours(10));
         Assert.True(result.AddOp1 == result.SomeTimes.Value.Add(TimeSpan.FromMinutes(25)));

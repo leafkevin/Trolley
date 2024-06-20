@@ -126,6 +126,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
 
                         command.CommandText = $"DROP TABLE {tableName}";
                         command.ExecuteNonQuery();
+                        command.Parameters.Clear();
                         command.Dispose();
                         command = null;
                     }
@@ -216,6 +217,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                         command.CommandText = this.Visitor.BuildCommand(this.DbContext, command);
                         if (!isOpened) this.DbContext.Open();
                         result = command.ExecuteNonQuery();
+                        command.Parameters.Clear();
                         command.Dispose();
                     }
                     break;
@@ -335,6 +337,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
 
                         command.CommandText = $"DROP TABLE {tableName}";
                         await command.ExecuteNonQueryAsync(cancellationToken);
+                        command.Parameters.Clear();
                         command.Dispose();
                         command = null;
                     }
@@ -425,6 +428,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                         command.CommandText = this.Visitor.BuildCommand(this.DbContext, command);
                         if (!isOpened) this.DbContext.Open();
                         result = command.ExecuteNonQuery();
+                        command.Parameters.Clear();
                         command.Dispose();
                     }
                     break;
