@@ -9,7 +9,11 @@ partial class SqlServerProvider
         => new SqlServerQueryVisitor(dbKey, this, mapProvider, shardingProvider, isParameterized, tableAsStart, parameterPrefix, dbParameters);
     public override ICreate<TEntity> NewCreate<TEntity>(DbContext dbContext) => new SqlServerCreate<TEntity>(dbContext);
     public override IContinuedCreate<TEntity> NewContinuedCreate<TEntity>(DbContext dbContext, ICreateVisitor visitor)
-        => new SqlServerContinuedCreate<TEntity>(dbContext, visitor);
+    {
+        if (visitor.ActionMode == ActionMode.Bulk)
+            return new SqlServerBulkContinuedCreate<TEntity>(dbContext, visitor);
+        else return new SqlServerContinuedCreate<TEntity>(dbContext, visitor);
+    }
     public override ICreated<TEntity> NewCreated<TEntity>(DbContext dbContext, ICreateVisitor visitor)
         => new SqlServerCreated<TEntity>(dbContext, visitor);
     public override ICreateVisitor NewCreateVisitor(string dbKey, IEntityMapProvider mapProvider, IShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")

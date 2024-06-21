@@ -179,7 +179,7 @@ public class Created<TEntity> : ICreated<TEntity>
                 default:
                     {
                         using var command = this.DbContext.CreateCommand();
-                        command.CommandText = this.Visitor.BuildCommand(command, false);
+                        command.CommandText = this.Visitor.BuildCommand(command, false, out _);
                         this.DbContext.Open();
                         result = command.ExecuteNonQuery();
                         command.Parameters.Clear();
@@ -216,7 +216,7 @@ public class Created<TEntity> : ICreated<TEntity>
                     {
                         using var command = this.DbContext.CreateDbCommand();
                         //默认单条
-                        command.CommandText = this.Visitor.BuildCommand(command, false);
+                        command.CommandText = this.Visitor.BuildCommand(command, false, out _);
                         await this.DbContext.OpenAsync(cancellationToken);
                         result = await command.ExecuteNonQueryAsync(cancellationToken);
                     }
@@ -238,18 +238,28 @@ public class Created<TEntity> : ICreated<TEntity>
     #endregion
 
     #region ExecuteIdentity
-    public virtual int ExecuteIdentity()
-        => this.DbContext.CreateResult<int>((command, dbContext)
-            => command.CommandText = this.Visitor.BuildCommand(command, true));
+    public virtual int ExecuteIdentity() => this.DbContext.CreateResult<int>((command, dbContext) =>
+    {
+        command.CommandText = this.Visitor.BuildCommand(command, true, out var readerFields);
+        return readerFields;
+    });
     public virtual async Task<int> ExecuteIdentityAsync(CancellationToken cancellationToken = default)
-        => await this.DbContext.CreateResultAsync<int>((command, dbContext)
-            => command.CommandText = this.Visitor.BuildCommand(command, true), cancellationToken);
-    public virtual long ExecuteIdentityLong()
-        => this.DbContext.CreateResult<long>((command, dbContext)
-            => command.CommandText = this.Visitor.BuildCommand(command, true));
+        => await this.DbContext.CreateResultAsync<int>((command, dbContext) =>
+    {
+        command.CommandText = this.Visitor.BuildCommand(command, true, out var readerFields);
+        return readerFields;
+    }, cancellationToken);
+    public virtual long ExecuteIdentityLong() => this.DbContext.CreateResult<long>((command, dbContext) =>
+    {
+        command.CommandText = this.Visitor.BuildCommand(command, true, out var readerFields);
+        return readerFields;
+    });
     public virtual async Task<long> ExecuteIdentityLongAsync(CancellationToken cancellationToken = default)
-        => await this.DbContext.CreateResultAsync<long>((command, dbContext)
-            => command.CommandText = this.Visitor.BuildCommand(command, true), cancellationToken);
+        => await this.DbContext.CreateResultAsync<long>((command, dbContext) =>
+    {
+        command.CommandText = this.Visitor.BuildCommand(command, true, out var readerFields);
+        return readerFields;
+    }, cancellationToken);
     #endregion
 
     #region ToMultipleCommand
@@ -266,7 +276,7 @@ public class Created<TEntity> : ICreated<TEntity>
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
         using var command = this.DbContext.CreateCommand();
-        var sql = this.Visitor.BuildCommand(command, false);
+        var sql = this.Visitor.BuildCommand(command, false, out _);
         dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         return sql;
     }

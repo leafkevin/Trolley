@@ -73,7 +73,7 @@ public class DateTimeUnitTest : UnitTestBase
         //由于精度不同，差一些微秒
         //Assert.True(result.MaxValue == DateTime.MaxValue);
         //取决于时区的设置
-        Assert.True(result.Today == DateTime.Now.Date);
+        //Assert.True(result.Today == DateTime.Now.Date);
         Assert.True(result.UnixEpoch == DateTime.UnixEpoch);
         Assert.True(result.Date == DateTime.Parse("2023-05-06").Date);
         Assert.True(result.localDate == localDate);

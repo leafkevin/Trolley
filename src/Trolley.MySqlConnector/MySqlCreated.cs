@@ -60,7 +60,7 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                     command = this.DbContext.CreateCommand();
                     var sqlBuilder = new StringBuilder();
                     (isNeedSplit, var tableName, insertObjs, var bulkCount, var firstInsertObj,
-                        var headSqlSetter, var commandInitializer) = this.Visitor.BuildWithBulk(command);
+                        var headSqlSetter, var commandInitializer, _) = this.Visitor.BuildWithBulk(command);
 
                     Action<string, object> clearCommand = (tableName, insertObj) =>
                     {
@@ -120,7 +120,7 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                 default:
                     //默认单条
                     command = this.DbContext.CreateCommand();
-                    command.CommandText = this.Visitor.BuildCommand(command, false);
+                    command.CommandText = this.Visitor.BuildCommand(command, false, out _);
                     this.DbContext.Open();
                     result = command.ExecuteNonQuery();
                     break;
@@ -176,7 +176,7 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                     command = this.DbContext.CreateDbCommand();
                     var sqlBuilder = new StringBuilder();
                     (isNeedSplit, var tableName, insertObjs, var bulkCount, var firstInsertObj,
-                        var headSqlSetter, var commandInitializer) = this.Visitor.BuildWithBulk(command);
+                        var headSqlSetter, var commandInitializer, _) = this.Visitor.BuildWithBulk(command);
 
                     Action<string, object> clearCommand = (tableName, insertObj) =>
                     {
@@ -236,7 +236,7 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                 default:
                     //默认单条
                     command = this.DbContext.CreateDbCommand();
-                    command.CommandText = this.Visitor.BuildCommand(command, false);
+                    command.CommandText = this.Visitor.BuildCommand(command, false, out _);
                     await this.DbContext.OpenAsync(cancellationToken);
                     result = await command.ExecuteNonQueryAsync(cancellationToken);
                     break;

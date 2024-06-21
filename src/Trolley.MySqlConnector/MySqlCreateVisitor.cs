@@ -18,12 +18,12 @@ public class MySqlCreateVisitor : CreateVisitor
     public MySqlCreateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
         : base(dbKey, ormProvider, mapProvider, shardingProvider, isParameterized, tableAsStart, parameterPrefix) { }
 
-    public override string BuildCommand(IDbCommand command, bool isReturnIdentity)
+    public override string BuildCommand(IDbCommand command, bool isReturnIdentity, out List<ReaderField> readerFields)
     {
         string sql = null;
         this.IsReturnIdentity = isReturnIdentity;
         if (this.ActionMode == ActionMode.Bulk)
-            sql = this.BuildWithBulkSql(command);
+            sql = this.BuildWithBulkSql(command, out readerFields);
         else
         {
             this.DbParameters ??= command.Parameters;
@@ -47,12 +47,13 @@ public class MySqlCreateVisitor : CreateVisitor
                         break;
                 }
             }
-            sql = this.BuildSql();
+            sql = this.BuildSql(out readerFields);
         }
         return sql;
     }
-    public override string BuildSql()
+    public override string BuildSql(out List<ReaderField> readerFields)
     {
+        readerFields = null;
         var entityType = this.Tables[0].EntityType;
         var entityMapper = this.Tables[0].Mapper;
         var tableName = entityMapper.TableName;
@@ -65,7 +66,7 @@ public class MySqlCreateVisitor : CreateVisitor
         tableName = this.OrmProvider.GetTableName(tableName);
 
         var fieldsBuilder = new StringBuilder($"{this.BuildHeadSql()} {tableName} (");
-        var valuesBuilder = new StringBuilder(" VALUES(");
+        var valuesBuilder = new StringBuilder(" VALUES (");
         for (int i = 0; i < this.InsertFields.Count; i++)
         {
             var insertField = this.InsertFields[i];

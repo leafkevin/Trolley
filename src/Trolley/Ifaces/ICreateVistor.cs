@@ -15,14 +15,14 @@ public interface ICreateVisitor : IDisposable
     IEntityMapProvider MapProvider { get; }
     IShardingProvider ShardingProvider { get; }
     ActionMode ActionMode { get; set; }
-    List<TableSegment> Tables { get; } 
+    List<TableSegment> Tables { get; }
 
-    string BuildCommand(IDbCommand command, bool isReturnIdentity);
+    string BuildCommand(IDbCommand command, bool isReturnIdentity, out List<ReaderField> readerFields);
     MultipleCommand CreateMultipleCommand();
     IQueryVisitor CreateQueryVisitor();
     void BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex);
     void Initialize(Type entityType, bool isMultiple = false, bool isFirst = true);
-    string BuildSql();
+    string BuildSql(out List<ReaderField> readerFields);
 
     void UseTable(Type entityType, params string[] tableNames);
     void UseTable(Type entityType, Func<string, bool> tableNamePredicate);
@@ -35,7 +35,7 @@ public interface ICreateVisitor : IDisposable
     void WithByField(Expression fieldSelector, object fieldValue);
     void WithBulk(IEnumerable insertObjs, int bulkCount);
     (bool, string, IEnumerable, int, object, Action<IDataParameterCollection, StringBuilder, string, object>,
-        Action<IDataParameterCollection, StringBuilder, object, string>) BuildWithBulk(IDbCommand command);
+        Action<IDataParameterCollection, StringBuilder, object, string>, List<ReaderField>) BuildWithBulk(IDbCommand command);
     void IgnoreFields(string[] fieldNames);
     void IgnoreFields(Expression fieldsSelector);
     void OnlyFields(string[] fieldNames);

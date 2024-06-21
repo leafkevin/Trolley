@@ -20,6 +20,7 @@ public struct MultipleCommand
     public List<IQuery> RefQueries { get; set; }
     public bool IsNeedTableAlias { get; set; }
     public bool IsJoin { get; set; }
+    public List<ReaderField> ReaderFields { get; set; }
 }
 public struct CommandSegment
 {

@@ -786,7 +786,7 @@ public class RepositoryHelper
         {
             builder.Append($"INSERT INTO {ormProvider.GetFieldName(tableName)} (");
             fieldsSqlPartSetter.Invoke(builder, insertObj);
-            builder.Append(") VALUES ");
+            builder.Append(')');
         };
         if (hasSuffix)
         {

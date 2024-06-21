@@ -17,7 +17,6 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     public List<FieldsSegment> InsertFields { get; set; } = new();
     public ActionMode ActionMode { get; set; }
     public bool IsReturnIdentity { get; set; }
-    public bool IsUseCte { get; set; }
 
     public CreateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
     {
@@ -44,12 +43,13 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         }
         if (!isFirst) this.Clear();
     }
-    public virtual string BuildCommand(IDbCommand command, bool isReturnIdentity)
+    public virtual string BuildCommand(IDbCommand command, bool isReturnIdentity, out List<ReaderField> readerFields)
     {
         string sql = null;
+        readerFields = null;
         this.IsReturnIdentity = isReturnIdentity;
         if (this.ActionMode == ActionMode.Bulk)
-            sql = this.BuildWithBulkSql(command);
+            sql = this.BuildWithBulkSql(command, out readerFields);
         else
         {
             this.DbParameters ??= command.Parameters;
@@ -65,7 +65,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                         break;
                 }
             }
-            sql = this.BuildSql();
+            sql = this.BuildSql(out readerFields);
         }
         return sql;
     }
@@ -96,10 +96,12 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         if (sqlBuilder.Length > 0) sqlBuilder.Append(';');
         if (this.deferredSegments.Count > 0 && this.deferredSegments[0].Type == "WithBulk")
             this.ActionMode = ActionMode.Bulk;
-        sqlBuilder.Append(this.BuildCommand(command, false));
+        sqlBuilder.Append(this.BuildCommand(command, false, out var readerFields));
+        this.ReaderFields = readerFields;
     }
-    public virtual string BuildSql()
+    public virtual string BuildSql(out List<ReaderField> readerFields)
     {
+        readerFields = null;
         var entityType = this.Tables[0].EntityType;
         var entityMapper = this.Tables[0].Mapper;
         var tableName = entityMapper.TableName;
@@ -113,7 +115,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         var fieldsBuilder = new StringBuilder($"INSERT INTO {tableName} (");
 
         var valuesBuilder = new StringBuilder();
-        valuesBuilder.Append(" VALUES(");
+        valuesBuilder.Append(" VALUES (");
         for (int i = 0; i < this.InsertFields.Count; i++)
         {
             var insertField = this.InsertFields[i];
@@ -183,22 +185,22 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     }
     public virtual void OnlyFields(Expression fieldsSelector)
         => this.OnlyFieldNames = this.VisitFields(fieldsSelector);
-    public virtual string BuildWithBulkSql(IDbCommand command)
+    public virtual string BuildWithBulkSql(IDbCommand command, out List<ReaderField> readerFields)
     {
         //多命令查询或是ToSql才会走到此分支
         //多语句执行，一次性不分批次
-        var sqlBuilder = new StringBuilder();
+        var builder = new StringBuilder();
         (var isNeedSplit, var tableName, var insertObjs, _, var firstInsertObj,
-            var headSqlSetter, var valuesSqlSetter) = this.BuildWithBulk(command);
+            var headSqlSetter, var valuesSqlSetter, readerFields) = this.BuildWithBulk(command);
 
         Action<string, IEnumerable> executor = (tableName, insertObjs) =>
         {
-            headSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName, firstInsertObj);
+            headSqlSetter.Invoke(command.Parameters, builder, tableName, firstInsertObj);
             int index = 0;
             foreach (var insertObj in insertObjs)
             {
-                if (index > 0) sqlBuilder.Append(',');
-                valuesSqlSetter.Invoke(command.Parameters, sqlBuilder, insertObj, index.ToString());
+                if (index > 0) builder.Append(',');
+                valuesSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
                 index++;
             }
         };
@@ -209,21 +211,19 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             int index = 0;
             foreach (var tabledInsertObj in tabledInsertObjs)
             {
-                //TODO:待测试
-                if (index > 0)
-                    sqlBuilder.Append(';');
+                if (index > 0) builder.Append(';');
                 executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
                 index++;
             }
         }
         else executor.Invoke(tableName, insertObjs);
-        var sql = sqlBuilder.ToString();
-        sqlBuilder.Clear();
-        sqlBuilder = null;
+        var sql = builder.ToString();
+        builder.Clear();
+        builder = null;
         return sql;
     }
     public virtual (bool, string, IEnumerable, int, object, Action<IDataParameterCollection, StringBuilder, string, object>,
-        Action<IDataParameterCollection, StringBuilder, object, string>) BuildWithBulk(IDbCommand command)
+        Action<IDataParameterCollection, StringBuilder, object, string>, List<ReaderField>) BuildWithBulk(IDbCommand command)
     {
         bool isNeedSplit = false;
         object firstInsertObj = null;
@@ -281,7 +281,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                     builder.Append(insertField.Fields);
                 }
                 fieldsSqlPartSetter.Invoke(builder, insertObj);
-                builder.Append(") VALUES ");
+                builder.Append(" VALUES ");
                 if (fixedDbParameters.Count > 0)
                     fixedDbParameters.ForEach(f => dbParameters.Add(f));
             };
@@ -304,10 +304,14 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         else
         {
             (_, var typedHeadSqlSetter, var sqlSetter) = RepositoryHelper.BuildCreateSqlParameters(this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames, true, false);
-            headSqlSetter = (dbParameters, builder, tableName, insertObj) => typedHeadSqlSetter.Invoke(builder, tableName, insertObj);
+            headSqlSetter = (dbParameters, builder, tableName, insertObj) =>
+            {
+                typedHeadSqlSetter.Invoke(builder, tableName, insertObj);
+                builder.Append(" VALUES ");
+            };
             valuesSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, object, string>;
         }
-        return (isNeedSplit, tableName, insertObjs, bulkCount, firstInsertObj, headSqlSetter, valuesSqlSetter);
+        return (isNeedSplit, tableName, insertObjs, bulkCount, firstInsertObj, headSqlSetter, valuesSqlSetter, null);
     }
     public virtual void VisitWithBy(object insertObj)
     {

@@ -392,7 +392,11 @@ public class Repository : IRepository
         bool isBulk = insertObj is IEnumerable && insertObj is not string && insertObj is not IDictionary<string, object>;
         if (isBulk) throw new NotSupportedException("CreateIdentity方法只支持单条数据插入，不支持批量插入返回Identity");
 
-        return this.DbContext.CreateResult<int>((command, dbContext) => dbContext.BuildCreateCommand(command, typeof(TEntity), insertObj, true));
+        return this.DbContext.CreateResult<int>((command, dbContext) =>
+        {
+            dbContext.BuildCreateCommand(command, typeof(TEntity), insertObj, true);
+            return null;
+        });
     }
     public virtual async Task<int> CreateIdentityAsync<TEntity>(object insertObj, CancellationToken cancellationToken = default)
     {
@@ -400,7 +404,11 @@ public class Repository : IRepository
             throw new ArgumentNullException(nameof(insertObj));
         bool isBulk = insertObj is IEnumerable && insertObj is not string && insertObj is not IDictionary<string, object>;
         if (isBulk) throw new NotSupportedException("CreateIdentity方法只支持单条数据插入，不支持批量插入返回Identity");
-        return await this.DbContext.CreateResultAsync<int>((command, dbContext) => dbContext.BuildCreateCommand(command, typeof(TEntity), insertObj, true), cancellationToken);
+        return await this.DbContext.CreateResultAsync<int>((command, dbContext) =>
+        {
+            dbContext.BuildCreateCommand(command, typeof(TEntity), insertObj, true);
+            return null;
+        }, cancellationToken);
     }
     public virtual long CreateIdentityLong<TEntity>(object insertObj)
     {
@@ -408,7 +416,11 @@ public class Repository : IRepository
             throw new ArgumentNullException(nameof(insertObj));
         bool isBulk = insertObj is IEnumerable && insertObj is not string && insertObj is not IDictionary<string, object>;
         if (isBulk) throw new NotSupportedException("CreateIdentity方法只支持单条数据插入，不支持批量插入返回Identity");
-        return this.DbContext.CreateResult<long>((command, dbContext) => dbContext.BuildCreateCommand(command, typeof(TEntity), insertObj, true));
+        return this.DbContext.CreateResult<long>((command, dbContext) =>
+        {
+            dbContext.BuildCreateCommand(command, typeof(TEntity), insertObj, true);
+            return null;
+        });
     }
     public virtual async Task<long> CreateIdentityLongAsync<TEntity>(object insertObj, CancellationToken cancellationToken = default)
     {
@@ -417,7 +429,11 @@ public class Repository : IRepository
         bool isBulk = insertObj is IEnumerable && insertObj is not string && insertObj is not IDictionary<string, object>;
         if (isBulk) throw new NotSupportedException("CreateIdentity方法只支持单条数据插入，不支持批量插入返回Identity");
 
-        return await this.DbContext.CreateResultAsync<long>((command, dbContext) => dbContext.BuildCreateCommand(command, typeof(TEntity), insertObj, true), cancellationToken);
+        return await this.DbContext.CreateResultAsync<long>((command, dbContext) =>
+        {
+            dbContext.BuildCreateCommand(command, typeof(TEntity), insertObj, true);
+            return null;
+        }, cancellationToken);
     }
     #endregion
 

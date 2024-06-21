@@ -36,8 +36,8 @@ public class SqlServerCreate<TEntity> : Create<TEntity>, ISqlServerCreate<TEntit
     #endregion
 
     #region WithBulk
-    public override ISqlServerContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount)
-        => base.WithBulk(insertObjs, bulkCount) as ISqlServerContinuedCreate<TEntity>;
+    public override ISqlServerBulkContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount)
+        => base.WithBulk(insertObjs, bulkCount) as ISqlServerBulkContinuedCreate<TEntity>;
     #endregion
 
     #region WithBulkCopy

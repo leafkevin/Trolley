@@ -20,7 +20,7 @@ public interface ISqlServerCreate<TEntity> : ICreate<TEntity>
     /// <returns>返回插入对象</returns>
     new ISqlServerCreate<TEntity> UseTableBy(object field1Value, object field2Value = null);
     #endregion
-   
+
     #region WithBy
     /// <summary>
     /// 使用插入对象部分字段插入，单个对象插入，命名或匿名对象都可以
@@ -53,7 +53,7 @@ public interface ISqlServerCreate<TEntity> : ICreate<TEntity>
     /// <param name="insertObjs">插入的对象集合</param>
     /// <param name="bulkCount">单次插入最多的条数，根据插入对象大小找到最佳的设置阈值，默认值500</param>
     /// <returns>返回插入对象</returns>
-    new ISqlServerContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount = 500);
+    new ISqlServerBulkContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount = 500);
     #endregion
 
     #region WithBulkCopy

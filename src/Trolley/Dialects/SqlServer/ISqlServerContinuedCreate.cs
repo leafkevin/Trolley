@@ -88,7 +88,7 @@ public interface ISqlServerContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     #endregion
 
     #region Output
-    ISqlServerContinuedCreate<TEntity, TResult> Output<TResult>(string[] fieldNames);
+    ISqlServerContinuedCreate<TEntity, TResult> Output<TResult>(params string[] fieldNames);
     ISqlServerContinuedCreate<TEntity, TResult> Output<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector);
     #endregion
 }
@@ -174,7 +174,7 @@ public interface ISqlServerBulkContinuedCreate<TEntity> : IContinuedCreate<TEnti
     #endregion
 
     #region Output
-    ISqlServerBulkContinuedCreate<TEntity, TResult> Output<TResult>(string[] fieldNames);
+    ISqlServerBulkContinuedCreate<TEntity, TResult> Output<TResult>(params string[] fieldNames);
     ISqlServerBulkContinuedCreate<TEntity, TResult> Output<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector);
     #endregion
 }
@@ -208,30 +208,5 @@ public interface ISqlServerBulkContinuedCreate<TEntity, TResult> : ISqlServerBul
     /// <param name="cancellationToken">取消token</param>
     /// <returns>返回插入行数</returns>
     new Task<List<TResult>> ExecuteAsync(CancellationToken cancellationToken = default);
-    #endregion
-
-    #region ExecuteIdentity
-    /// <summary>
-    /// 执行插入操作，并返回自增长主键值
-    /// </summary>
-    /// <returns>返回自增长主键值</returns>
-    new List<int> ExecuteIdentity();
-    /// <summary>
-    /// 执行插入操作，并返回自增长主键值
-    /// </summary>
-    /// <param name="cancellationToken">取消token</param>
-    /// <returns>返回自增长主键值</returns>
-    new Task<List<int>> ExecuteIdentityAsync(CancellationToken cancellationToken = default);
-    /// <summary>
-    /// 执行插入操作，并返回自增长主键值
-    /// </summary>
-    /// <returns>返回自增长主键值</returns>
-    new List<long> ExecuteIdentityLong();
-    /// <summary>
-    /// 执行插入操作，并返回自增长主键值
-    /// </summary>
-    /// <param name="cancellationToken">取消token</param>
-    /// <returns>返回自增长主键值</returns>
-    new Task<List<long>> ExecuteIdentityLongAsync(CancellationToken cancellationToken = default);
-    #endregion
+    #endregion   
 }

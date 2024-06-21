@@ -14,12 +14,12 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
     public SqlServerCreateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
         : base(dbKey, ormProvider, mapProvider, shardingProvider, isParameterized, tableAsStart, parameterPrefix) { }
 
-    public override string BuildCommand(IDbCommand command, bool isReturnIdentity)
+    public override string BuildCommand(IDbCommand command, bool isReturnIdentity, out List<ReaderField> readerFields)
     {
         string sql = null;
         this.IsReturnIdentity = isReturnIdentity;
         if (this.ActionMode == ActionMode.Bulk)
-            sql = this.BuildWithBulkSql(command);
+            sql = this.BuildWithBulkSql(command, out readerFields);
         else
         {
             this.DbParameters ??= command.Parameters;
@@ -35,11 +35,11 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
                         break;
                 }
             }
-            sql = this.BuildSql();
+            sql = this.BuildSql(out readerFields);
         }
         return sql;
     }
-    public override string BuildSql()
+    public override string BuildSql(out List<ReaderField> readerFields)
     {
         var entityType = this.Tables[0].EntityType;
         var entityMapper = this.Tables[0].Mapper;
@@ -52,35 +52,38 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
         }
         tableName = this.OrmProvider.GetTableName(tableName);
 
-        var fieldsBuilder = new StringBuilder($"INSERT INTO {tableName} (");
-        var valuesBuilder = new StringBuilder(" VALUES(");
+        var builder = new StringBuilder($"INSERT INTO {tableName} (");
         for (int i = 0; i < this.InsertFields.Count; i++)
         {
             var insertField = this.InsertFields[i];
-            if (i > 0)
-            {
-                fieldsBuilder.Append(',');
-                valuesBuilder.Append(',');
-            }
-            fieldsBuilder.Append(insertField.Fields);
-            valuesBuilder.Append(insertField.Values);
+            if (i > 0) builder.Append(',');
+            builder.Append(insertField.Fields);
         }
-        fieldsBuilder.Append(')');
-        valuesBuilder.Append(')');
-
+        builder.Append(')');
+        string outputSql = null;
+        readerFields = null;
+        if (this.OutputFieldNames != null && this.OutputFieldNames.Count > 0)
+        {
+            (outputSql, readerFields) = this.BuildOutputSqlReaderFields();
+            builder.Append(outputSql);
+        }
+        builder.Append(" VALUES (");
+        for (int i = 0; i < this.InsertFields.Count; i++)
+        {
+            var insertField = this.InsertFields[i];
+            if (i > 0) builder.Append(',');
+            builder.Append(insertField.Values);
+        }
+        builder.Append(')');
         if (this.IsReturnIdentity)
         {
             if (!entityMapper.IsAutoIncrement)
                 throw new NotSupportedException($"实体{entityMapper.EntityType.FullName}表未配置自增长字段，无法返回Identity值");
-            valuesBuilder.Append(this.OrmProvider.GetIdentitySql(entityMapper.EntityType));
+            builder.Append(this.OrmProvider.GetIdentitySql(entityMapper.EntityType));
         }
-
-        fieldsBuilder.Append(valuesBuilder);
-        valuesBuilder.Clear();
-        var sql = fieldsBuilder.ToString();
-        fieldsBuilder.Clear();
-        fieldsBuilder = null;
-        valuesBuilder = null;
+        var sql = builder.ToString();
+        builder.Clear();
+        builder = null;
         return sql;
     }
     public override string BuildShardingTablesSql(string tableSchema)
@@ -114,7 +117,7 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
         return builder.ToString();
     }
     public override (bool, string, IEnumerable, int, object, Action<IDataParameterCollection, StringBuilder, string, object>,
-        Action<IDataParameterCollection, StringBuilder, object, string>) BuildWithBulk(IDbCommand command)
+        Action<IDataParameterCollection, StringBuilder, object, string>, List<ReaderField>) BuildWithBulk(IDbCommand command)
     {
         bool isNeedSplit = false;
         object firstInsertObj = null;
@@ -143,6 +146,11 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
         var fieldsSqlPartSetter = RepositoryHelper.BuildCreateFieldsSqlPart(this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames);
         var valuesSqlPartSetter = RepositoryHelper.BuildCreateValuesSqlParametes(this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames, true);
 
+        string outputSql = null;
+        List<ReaderField> readerFields = null;
+        if (this.OutputFieldNames != null && this.OutputFieldNames.Count > 0)
+            (outputSql, readerFields) = this.BuildOutputSqlReaderFields();
+
         if (this.deferredSegments.Count > 1)
         {
             this.DbParameters = new TheaDbParameterCollection();
@@ -162,6 +170,7 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
             }
 
             var fixedDbParameters = this.DbParameters.Cast<IDbDataParameter>().ToList();
+
             headSqlSetter = (dbParameters, builder, tableName, insertObj) =>
             {
                 builder.Append($"INSERT INTO {this.OrmProvider.GetFieldName(tableName)} (");
@@ -173,16 +182,8 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
                 }
                 fieldsSqlPartSetter.Invoke(builder, insertObj);
                 builder.Append(')');
-                if (this.OutputFieldNames != null)
-                {
-                    builder.Append(" OUTPUT ");
-                    for (int i = 0; i < this.OutputFieldNames.Count; i++)
-                    {
-                        var fieldName = this.OutputFieldNames[i];
-                        if (i > 0) builder.Append(',');
-                        builder.Append($"INSERTED.{this.OrmProvider.GetFieldName(fieldName)}");
-                    }
-                }
+                if (outputSql != null)
+                    builder.Append(outputSql);
                 builder.Append(" VALUES ");
                 if (fixedDbParameters.Count > 0)
                     fixedDbParameters.ForEach(f => dbParameters.Add(f));
@@ -206,10 +207,16 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
         else
         {
             (_, var typedHeadSqlSetter, var sqlSetter) = RepositoryHelper.BuildCreateSqlParameters(this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames, true, false);
-            headSqlSetter = (dbParameters, builder, tableName, insertObj) => typedHeadSqlSetter.Invoke(builder, tableName, insertObj);
+            headSqlSetter = (dbParameters, builder, tableName, insertObj) =>
+            {
+                typedHeadSqlSetter.Invoke(builder, tableName, insertObj);
+                if (outputSql != null)
+                    builder.Append(outputSql);
+                builder.Append(" VALUES ");
+            };
             valuesSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, object, string>;
         }
-        return (isNeedSplit, tableName, insertObjs, bulkCount, firstInsertObj, headSqlSetter, valuesSqlSetter);
+        return (isNeedSplit, tableName, insertObjs, bulkCount, firstInsertObj, headSqlSetter, valuesSqlSetter, readerFields);
     }
 
     public void Output(params string[] fieldNames)
@@ -229,4 +236,51 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
         });
     }
     public (IEnumerable, int?) BuildWithBulkCopy() => ((IEnumerable, int?))this.deferredSegments[0].Value;
+
+    private (string, List<ReaderField>) BuildOutputSqlReaderFields()
+    {
+        var readerFields = new List<ReaderField>();
+        var entityMapper = this.Tables[0].Mapper;
+        var builder = new StringBuilder();
+        Action<MemberMap> addReaderField = memberMapper =>
+        {
+            readerFields.Add(new ReaderField
+            {
+                FieldType = ReaderFieldType.Field,
+                FromMember = memberMapper.Member,
+                TargetMember = memberMapper.Member,
+                TargetType = memberMapper.MemberType,
+                NativeDbType = memberMapper.NativeDbType,
+                TypeHandler = memberMapper.TypeHandler,
+                Body = memberMapper.FieldName
+            });
+        };
+        builder.Append(" OUTPUT ");
+        for (int i = 0; i < this.OutputFieldNames.Count; i++)
+        {
+            var fieldName = this.OutputFieldNames[i];
+            if (i > 0) builder.Append(',');
+            builder.Append($"INSERTED.{fieldName}");
+
+            if (fieldName == "*")
+            {
+                foreach (var memberMapper in entityMapper.MemberMaps)
+                {
+                    if (memberMapper.IsIgnore || memberMapper.IsNavigation
+                        || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
+                        continue;
+                    addReaderField.Invoke(memberMapper);
+                }
+            }
+            else
+            {
+                var memberMapper = entityMapper.GetMemberMapByFieldName(fieldName);
+                addReaderField.Invoke(memberMapper);
+            }
+        }
+        var sql = builder.ToString();
+        builder.Clear();
+        builder = null;
+        return (sql, readerFields);
+    }
 }

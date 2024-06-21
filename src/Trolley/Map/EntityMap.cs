@@ -10,6 +10,7 @@ public class EntityMap
 {
     private bool isBuild = false;
     private readonly ConcurrentDictionary<string, MemberMap> memberMaps = new();
+    private readonly ConcurrentDictionary<string, MemberMap> fieldMaps = new();
     private readonly ConcurrentDictionary<string, Func<string, object, string>> shardingStrategies = new();
     private List<MemberMap> memberMappers = new();
 
@@ -54,6 +55,20 @@ public class EntityMap
             return true;
         mapper = null;
         return false;
+    }
+    public bool TryGetMemberMapByFieldName(string fieldName, out MemberMap mapper)
+    {
+        if (this.fieldMaps.TryGetValue(fieldName, out mapper))
+            return true;
+        mapper = null;
+        return false;
+    }
+    public MemberMap GetMemberMapByFieldName(string fieldName)
+    {
+        //导航属性，一定存在映射，有就直接返回了
+        if (this.fieldMaps.TryGetValue(fieldName, out var mapper))
+            return mapper;
+        return mapper;
     }
     public MemberMap GetMemberMap(string memberName)
     {
@@ -117,6 +132,7 @@ public class EntityMap
                     memberMapper.TypeHandler = ormProvider.GetTypeHandler(memberMapper.MemberType, dbFieldType, memberMapper.IsRequired);
                 }
             }
+            this.fieldMaps.TryAdd(memberMapper.FieldName, memberMapper);
         }
         if (this.memberMaps.Count > 0)
         {

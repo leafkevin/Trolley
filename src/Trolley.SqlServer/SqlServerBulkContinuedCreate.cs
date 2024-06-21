@@ -70,7 +70,7 @@ public class SqlServerBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, I
     #endregion
 
     #region Output
-    public ISqlServerBulkContinuedCreate<TEntity, TResult> Output<TResult>(string[] fieldNames)
+    public ISqlServerBulkContinuedCreate<TEntity, TResult> Output<TResult>(params  string[] fieldNames)
     {
         this.DialectVisitor.Output(fieldNames);
         return new SqlServerBulkContinuedCreate<TEntity, TResult>(this.DbContext, this.Visitor);
@@ -96,13 +96,35 @@ public class SqlServerBulkContinuedCreate<TEntity, TResult> : SqlServerBulkConti
     #endregion
 
     #region ExecuteIdentity
-    public new List<int> ExecuteIdentity()
-        => this.DbContext.CreateResult<int>(this.Visitor);
-    public new async Task<List<int>> ExecuteIdentityAsync(CancellationToken cancellationToken = default)
-        => await this.DbContext.CreateResultAsync<int>(this.Visitor, cancellationToken);
-    public new List<long> ExecuteIdentityLong()
-        => this.DbContext.CreateResult<long>(this.Visitor);
-    public new async Task<List<long>> ExecuteIdentityLongAsync(CancellationToken cancellationToken = default)
-        => await this.DbContext.CreateResultAsync<long>(this.Visitor, cancellationToken);
+    /// <summary>
+    /// 不支持的方法调用，调用Outpt方法后此方法无效，请使用Execute方法
+    /// </summary>
+    /// <returns>返回自增长主键值</returns>
+    [Obsolete("不支持的方法调用，调用Outpt方法后此方法无效，请使用Execute方法")]
+    public override int ExecuteIdentity()
+        => throw new NotSupportedException("不支持的方法调用，调用Outpt方法后此方法无效，请使用Execute方法");
+    /// <summary>
+    /// 不支持的方法调用，调用Outpt方法后此方法无效，请使用ExecuteAsync方法
+    /// </summary>
+    /// <param name="cancellationToken">取消token</param>
+    /// <returns>返回自增长主键值</returns>
+    [Obsolete("不支持的方法调用，调用Outpt方法后此方法无效，请使用ExecuteAsync方法")]
+    public override Task<int> ExecuteIdentityAsync(CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("不支持的方法调用，调用Outpt方法后此方法无效，请使用ExecuteAsync方法");
+    /// <summary>
+    /// 不支持的方法调用，调用Outpt方法后此方法无效，请使用Execute方法
+    /// </summary>
+    /// <returns>返回自增长主键值</returns>
+    [Obsolete("不支持的方法调用，调用Outpt方法后此方法无效，请使用Execute方法")]
+    public override long ExecuteIdentityLong()
+        => throw new NotSupportedException("不支持的方法调用，调用Outpt方法后此方法无效，请使用Execute方法");
+    /// <summary>
+    /// 不支持的方法调用，调用Outpt方法后此方法无效，请使用ExecuteAsync方法
+    /// </summary>
+    /// <param name="cancellationToken">取消token</param>
+    /// <returns>返回自增长主键值</returns>
+    [Obsolete("不支持的方法调用，调用Outpt方法后此方法无效，请使用ExecuteAsync方法")]
+    public override Task<long> ExecuteIdentityLongAsync(CancellationToken cancellationToken = default)
+        => throw new NotSupportedException("不支持的方法调用，调用Outpt方法后此方法无效，请使用ExecuteAsync方法");
     #endregion
 }
