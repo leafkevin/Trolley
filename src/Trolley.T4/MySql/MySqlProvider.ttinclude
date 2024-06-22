@@ -6,10 +6,11 @@ class MySqlProvider : DbHelper
     private readonly string connectionString;
     public MySqlProvider(string connectionString)
         => this.connectionString = connectionString;
-    public List<TableInfo> GetTableList(string database, string tableNamefilter)
+    public List<TableInfo> GetTableList(string database, string tableNameFilter)
     {
-        var sql = @"SELECT TABLE_NAME,TABLE_COMMENT FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='{0}' AND TABLE_NAME LIKE '%{1}%'";
-        sql = string.Format(sql, database, tableNamefilter);
+        var sql = @"SELECT TABLE_NAME,TABLE_COMMENT FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='{0}'";
+        if(!string.IsNullOrEmpty(tableNameFilter))
+            sql += $"  AND TABLE_NAME LIKE '%{tableNameFilter}%'";
         var result = new List<TableInfo>();
         using var connection = new MySqlConnection(this.connectionString);
         using var command = new MySqlCommand(sql, connection);

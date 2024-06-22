@@ -92,6 +92,10 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>ModelConfiguration.cs</LastGenOutput>
     </Content>
+    <Content Include="SqlServer\ModelConfigurations.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>ModelConfigurations.cs</LastGenOutput>
+    </Content>
     <Content Include="MySql\Entities.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>Entities.cs</LastGenOutput>
@@ -103,6 +107,10 @@
     <Content Include="MySql\ModelConfiguration.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>ModelConfiguration.cs</LastGenOutput>
+    </Content>
+    <Content Include="MySql\ModelConfigurations.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>ModelConfigurations.cs</LastGenOutput>
     </Content>
     <Content Include="Npgsql\Entities.tt">
       <Generator>TextTemplatingFileGenerator</Generator>

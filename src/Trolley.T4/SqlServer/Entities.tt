@@ -29,7 +29,7 @@
     var tableFilter = "sys_";
     var removePrefix = "sys_";
     var separator = '_';
-	var tableList = dbProvider.GetTableList(tableFilter);    
+    var tableList = dbProvider.GetTableList(tableFilter);    
     foreach(var tableInfo in tableList)
     {
         var className = dbProvider.ToClassName(tableInfo.TableName, removePrefix, separator);

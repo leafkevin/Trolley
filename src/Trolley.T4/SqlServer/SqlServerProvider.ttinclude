@@ -6,10 +6,11 @@ class SqlServerProvider : DbHelper
     private readonly string connectionString;
     public SqlServerProvider(string connectionString)
         => this.connectionString = connectionString;
-    public List<TableInfo> GetTableList(string tableNamefilter)
+    public List<TableInfo> GetTableList(string tableNameFilter)
     {
-        var sql = "SELECT A.NAME,B.VALUE FROM SYS.SYSOBJECTS A LEFT JOIN SYS.EXTENDED_PROPERTIES B ON A.ID=B.MAJOR_ID AND B.MINOR_ID=0 AND B.NAME='MS_Description' WHERE A.xtype='U' AND A.NAME LIKE '%{0}%'";
-        sql = string.Format(sql, tableNamefilter);
+        var sql = "SELECT A.NAME,B.VALUE FROM SYS.SYSOBJECTS A LEFT JOIN SYS.EXTENDED_PROPERTIES B ON A.ID=B.MAJOR_ID AND B.MINOR_ID=0 AND B.NAME='MS_Description' WHERE A.xtype='U'";
+        if(!string.IsNullOrEmpty(tableNameFilter))
+            sql += $" AND A.NAME LIKE '%{tableNameFilter}%'";
         var result = new List<TableInfo>();
         using var connection = new SqlConnection(this.connectionString);
         using var command = new SqlCommand(sql, connection);

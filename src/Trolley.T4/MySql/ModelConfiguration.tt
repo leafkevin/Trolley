@@ -91,6 +91,5 @@ class ModelConfiguration : IModelConfiguration
         });
     }
 }
-<#@ include file="$(ProjectDir)\Manager.ttinclude" once="true"#>
 <#@ include file="$(ProjectDir)\DbEntitries.ttinclude" once="true"#>
 <#@ include file="MySqlProvider.ttinclude" once="true"#>
