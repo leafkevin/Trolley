@@ -51,11 +51,11 @@ class DbHelper
         }
         return (T)Convert.ChangeType(result, underlyingType);
     }
-    public string ToClassName(string tableName, string removePrefix = null, char separator = '_')
+    public string ToClassName(string tableName, string[] removePrefixs = null, char separator = '_')
     {
         var className = tableName;
-        if (!string.IsNullOrEmpty(removePrefix))
-            className = className.Replace(removePrefix, string.Empty);
+        if (removePrefixs != null && removePrefixs.Length > 0)
+            Array.ForEach(removePrefixs, f => className = className.Replace(f, string.Empty));
         return this.ToBigCamel(className, separator);
     }
     public string ToBigCamel(string value, char separator = '_')

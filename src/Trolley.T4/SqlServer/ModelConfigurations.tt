@@ -35,14 +35,14 @@ class ModelConfiguration : IModelConfiguration
     var dbProvider = new SqlServerProvider(connectionString);  
 
     var tableFilter = "sys_";
-    var removePrefix = "sys_";
+    var removePrefixs = new []{"sys_"};
     var separator = '_';
 
     var tableList = dbProvider.GetTableList(tableFilter);
     foreach(var tableInfo in tableList)
     {
         var tableName = tableInfo.TableName;
-        var className = dbProvider.ToClassName(tableName, removePrefix, separator);
+        var className = dbProvider.ToClassName(tableName, removePrefixs, separator);
 	    var columnList = dbProvider.GetColumnList(tableName);
 #>
         builder.Entity<<#=className#>>(f =>

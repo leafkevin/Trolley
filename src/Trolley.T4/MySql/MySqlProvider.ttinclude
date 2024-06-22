@@ -8,9 +8,9 @@ class MySqlProvider : DbHelper
         => this.connectionString = connectionString;
     public List<TableInfo> GetTableList(string database, string tableNameFilter)
     {
-        var sql = @"SELECT TABLE_NAME,TABLE_COMMENT FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='{0}'";
+        var sql = $"SELECT TABLE_NAME,TABLE_COMMENT FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='{database}'";
         if(!string.IsNullOrEmpty(tableNameFilter))
-            sql += $"  AND TABLE_NAME LIKE '%{tableNameFilter}%'";
+            sql += $" AND TABLE_NAME LIKE '%{tableNameFilter}%'";
         var result = new List<TableInfo>();
         using var connection = new MySqlConnection(this.connectionString);
         using var command = new MySqlCommand(sql, connection);
