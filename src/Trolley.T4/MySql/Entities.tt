@@ -35,8 +35,8 @@
     {
         var tableName = tableInfo.TableName;
         var className = dbProvider.ToClassName(tableName, removePrefixes, separator);
-	    var columnList = dbProvider.GetColumnList(databaseName, tableName);
-	    manager.StartNewFile(className + ".cs");
+	var columnList = dbProvider.GetColumnList(databaseName, tableName);
+    	manager.StartNewFile(className + ".cs");
 #>
 using System;
 

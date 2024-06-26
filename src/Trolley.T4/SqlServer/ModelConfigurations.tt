@@ -43,7 +43,7 @@ class ModelConfiguration : IModelConfiguration
     {
         var tableName = tableInfo.TableName;
         var className = dbProvider.ToClassName(tableName, removePrefixes, separator);
-	    var columnList = dbProvider.GetColumnList(tableName);
+	var columnList = dbProvider.GetColumnList(tableName);
 #>
         builder.Entity<<#=className#>>(f =>
         {
