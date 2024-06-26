@@ -234,11 +234,12 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
     }
     public IMultiQuery<T> Where(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.Where(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
@@ -252,11 +253,12 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
     }
     public IMultiQuery<T> And(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.And(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }

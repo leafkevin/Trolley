@@ -270,11 +270,12 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
     }
     public virtual IFromCommand<T> Where(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.Where(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
@@ -288,11 +289,12 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
     }
     public virtual IFromCommand<T> And(bool condition, Expression<Func<T, bool>> ifPredicate = null, Expression<Func<T, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.And(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
@@ -314,22 +316,24 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
          => this.OrderBy(true, fieldsExpr);
     public virtual IFromCommand<T> OrderBy<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("ASC", fieldsExpr);
+        }
         return this;
     }
     public virtual IFromCommand<T> OrderByDescending<TFields>(Expression<Func<T, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
     public virtual IFromCommand<T> OrderByDescending<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("DESC", fieldsExpr);
+        }
         return this;
     }
     #endregion
@@ -550,11 +554,12 @@ public class FromCommand<<#=tables#>> : FromCommand, IFromCommand<<#=tables#>>
     }
     public virtual IFromCommand<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.Where(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
@@ -568,11 +573,12 @@ public class FromCommand<<#=tables#>> : FromCommand, IFromCommand<<#=tables#>>
     }
     public virtual IFromCommand<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate = null, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.And(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
@@ -594,22 +600,24 @@ public class FromCommand<<#=tables#>> : FromCommand, IFromCommand<<#=tables#>>
          => this.OrderBy(true, fieldsExpr);
     public virtual IFromCommand<<#=tables#>> OrderBy<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("ASC", fieldsExpr);
+        }
         return this;
     }
     public virtual IFromCommand<<#=tables#>> OrderByDescending<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
     public virtual IFromCommand<<#=tables#>> OrderByDescending<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("DESC", fieldsExpr);
+        }
         return this;
     }
     #endregion

@@ -213,11 +213,12 @@ public class Query<T1, T2> : QueryBase, IQuery<T1, T2>
     }
     public IQuery<T1, T2> Where(bool condition, Expression<Func<T1, T2, bool>> ifPredicate, Expression<Func<T1, T2, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.Where(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
@@ -231,11 +232,12 @@ public class Query<T1, T2> : QueryBase, IQuery<T1, T2>
     }
     public IQuery<T1, T2> And(bool condition, Expression<Func<T1, T2, bool>> ifPredicate, Expression<Func<T1, T2, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.And(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
@@ -258,11 +260,12 @@ public class Query<T1, T2> : QueryBase, IQuery<T1, T2>
 
     public IQuery<T1, T2> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("ASC", fieldsExpr);
+        }
         return this;
     }
     public IQuery<T1, T2> OrderByDescending<TFields>(Expression<Func<T1, T2, TFields>> fieldsExpr)
@@ -270,11 +273,12 @@ public class Query<T1, T2> : QueryBase, IQuery<T1, T2>
 
     public IQuery<T1, T2> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("DESC", fieldsExpr);
+        }
         return this;
     }
     #endregion
@@ -634,11 +638,12 @@ public class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
     }
     public IQuery<T1, T2, T3> Where(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate, Expression<Func<T1, T2, T3, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.Where(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
@@ -652,11 +657,12 @@ public class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
     }
     public IQuery<T1, T2, T3> And(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate, Expression<Func<T1, T2, T3, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.And(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
@@ -679,11 +685,12 @@ public class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
 
     public IQuery<T1, T2, T3> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("ASC", fieldsExpr);
+        }
         return this;
     }
     public IQuery<T1, T2, T3> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, TFields>> fieldsExpr)
@@ -691,11 +698,12 @@ public class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
 
     public IQuery<T1, T2, T3> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("DESC", fieldsExpr);
+        }
         return this;
     }
     #endregion
@@ -1055,11 +1063,12 @@ public class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
     }
     public IQuery<T1, T2, T3, T4> Where(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.Where(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
@@ -1073,11 +1082,12 @@ public class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
     }
     public IQuery<T1, T2, T3, T4> And(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.And(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
@@ -1100,11 +1110,12 @@ public class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
 
     public IQuery<T1, T2, T3, T4> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("ASC", fieldsExpr);
+        }
         return this;
     }
     public IQuery<T1, T2, T3, T4> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr)
@@ -1112,11 +1123,12 @@ public class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
 
     public IQuery<T1, T2, T3, T4> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("DESC", fieldsExpr);
+        }
         return this;
     }
     #endregion
@@ -1476,11 +1488,12 @@ public class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
     }
     public IQuery<T1, T2, T3, T4, T5> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.Where(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
@@ -1494,11 +1507,12 @@ public class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
     }
     public IQuery<T1, T2, T3, T4, T5> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.And(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
@@ -1521,11 +1535,12 @@ public class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
 
     public IQuery<T1, T2, T3, T4, T5> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("ASC", fieldsExpr);
+        }
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr)
@@ -1533,11 +1548,12 @@ public class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
 
     public IQuery<T1, T2, T3, T4, T5> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("DESC", fieldsExpr);
+        }
         return this;
     }
     #endregion
@@ -1897,11 +1913,12 @@ public class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T
     }
     public IQuery<T1, T2, T3, T4, T5, T6> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.Where(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
@@ -1915,11 +1932,12 @@ public class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T
     }
     public IQuery<T1, T2, T3, T4, T5, T6> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.And(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
@@ -1942,11 +1960,12 @@ public class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T
 
     public IQuery<T1, T2, T3, T4, T5, T6> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("ASC", fieldsExpr);
+        }
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
@@ -1954,11 +1973,12 @@ public class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T
 
     public IQuery<T1, T2, T3, T4, T5, T6> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("DESC", fieldsExpr);
+        }
         return this;
     }
     #endregion
@@ -2318,11 +2338,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.Where(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
@@ -2336,11 +2357,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.And(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
@@ -2363,11 +2385,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T
 
     public IQuery<T1, T2, T3, T4, T5, T6, T7> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("ASC", fieldsExpr);
+        }
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr)
@@ -2375,11 +2398,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T
 
     public IQuery<T1, T2, T3, T4, T5, T6, T7> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("DESC", fieldsExpr);
+        }
         return this;
     }
     #endregion
@@ -2739,11 +2763,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.Where(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
@@ -2757,11 +2782,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.And(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
@@ -2784,11 +2810,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T
 
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("ASC", fieldsExpr);
+        }
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr)
@@ -2796,11 +2823,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T
 
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("DESC", fieldsExpr);
+        }
         return this;
     }
     #endregion
@@ -3160,11 +3188,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.Where(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
@@ -3178,11 +3207,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.And(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
@@ -3205,11 +3235,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T
 
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("ASC", fieldsExpr);
+        }
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr)
@@ -3217,11 +3248,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T
 
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("DESC", fieldsExpr);
+        }
         return this;
     }
     #endregion
@@ -3581,11 +3613,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.Where(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
@@ -3599,11 +3632,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.And(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
@@ -3626,11 +3660,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<
 
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("ASC", fieldsExpr);
+        }
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr)
@@ -3638,11 +3673,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<
 
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("DESC", fieldsExpr);
+        }
         return this;
     }
     #endregion
@@ -4002,11 +4038,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQ
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.Where(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
@@ -4020,11 +4057,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQ
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.And(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
@@ -4047,11 +4085,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQ
 
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("ASC", fieldsExpr);
+        }
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr)
@@ -4059,11 +4098,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQ
 
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("DESC", fieldsExpr);
+        }
         return this;
     }
     #endregion
@@ -4423,11 +4463,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBas
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.Where(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
@@ -4441,11 +4482,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBas
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.And(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
@@ -4468,11 +4510,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBas
 
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("ASC", fieldsExpr);
+        }
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr)
@@ -4480,11 +4523,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBas
 
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("DESC", fieldsExpr);
+        }
         return this;
     }
     #endregion
@@ -4844,11 +4888,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Que
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.Where(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
@@ -4862,11 +4907,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Que
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.And(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
@@ -4889,11 +4935,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Que
 
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("ASC", fieldsExpr);
+        }
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr)
@@ -4901,11 +4948,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Que
 
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("DESC", fieldsExpr);
+        }
         return this;
     }
     #endregion
@@ -5265,11 +5313,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> 
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.Where(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
@@ -5283,11 +5332,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> 
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.And(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
@@ -5310,11 +5360,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> 
 
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("ASC", fieldsExpr);
+        }
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr)
@@ -5322,11 +5373,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> 
 
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("DESC", fieldsExpr);
+        }
         return this;
     }
     #endregion
@@ -5686,11 +5738,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.Where(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
@@ -5704,11 +5757,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.And(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
@@ -5731,11 +5785,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
 
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("ASC", fieldsExpr);
+        }
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr)
@@ -5743,11 +5798,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
 
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("DESC", fieldsExpr);
+        }
         return this;
     }
     #endregion
@@ -6004,11 +6060,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.Where(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
@@ -6022,11 +6079,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.And(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
@@ -6049,11 +6107,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
 
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("ASC", fieldsExpr);
+        }
         return this;
     }
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TFields>> fieldsExpr)
@@ -6061,11 +6120,12 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
 
     public IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("DESC", fieldsExpr);
+        }
         return this;
     }
     #endregion

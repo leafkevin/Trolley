@@ -197,11 +197,12 @@ public class MultiQuery<<#=tables#>> : MultiQueryBase, IMultiQuery<<#=tables#>>
     }
     public IMultiQuery<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.Where(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
@@ -215,11 +216,12 @@ public class MultiQuery<<#=tables#>> : MultiQueryBase, IMultiQuery<<#=tables#>>
     }
     public IMultiQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.And(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
@@ -242,11 +244,12 @@ public class MultiQuery<<#=tables#>> : MultiQueryBase, IMultiQuery<<#=tables#>>
 
     public IMultiQuery<<#=tables#>> OrderBy<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("ASC", fieldsExpr);
+        }
         return this;
     }
     public IMultiQuery<<#=tables#>> OrderByDescending<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr)
@@ -254,11 +257,12 @@ public class MultiQuery<<#=tables#>> : MultiQueryBase, IMultiQuery<<#=tables#>>
 
     public IMultiQuery<<#=tables#>> OrderByDescending<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("DESC", fieldsExpr);
+        }
         return this;
     }
     #endregion

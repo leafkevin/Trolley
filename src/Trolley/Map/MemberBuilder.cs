@@ -61,6 +61,11 @@ public class MemberBuilder<TMember>
         this.mapper.Position = position;
         return this;
     }
+    public virtual MemberBuilder<TMember> IsRowVersion()
+    {
+        this.mapper.IsRowVersion = true;
+        return this;
+    }
     public virtual MemberBuilder<TMember> TypeHandler(ITypeHandler typeHandler)
     {
         if (typeHandler == null)

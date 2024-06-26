@@ -71,10 +71,12 @@ public class Delete<TEntity> : IDelete<TEntity>
         => this.Where(true, predicate);
     public virtual IContinuedDelete<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
-        if (condition) this.Visitor.Where(ifPredicate);
+        if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
+            this.Visitor.Where(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this.OrmProvider.NewContinuedDelete<TEntity>(this.DbContext, this.Visitor);
     }
@@ -149,10 +151,12 @@ public class ContinuedDelete<TEntity> : Deleted<TEntity>, IContinuedDelete<TEnti
         => this.And(true, predicate);
     public virtual IContinuedDelete<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
-        if (condition) this.Visitor.And(ifPredicate);
+        if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
+            this.Visitor.And(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }

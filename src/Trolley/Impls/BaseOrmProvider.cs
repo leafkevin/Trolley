@@ -246,6 +246,12 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                     handlerType = isNullable ? typeof(NullableTimeOnlyAsStringTypeHandler) : typeof(TimeOnlyAsStringTypeHandler);
                 else handlerType = isNullable ? typeof(NullableTimeOnlyTypeHandler) : typeof(TimeOnlyTypeHandler);
             }
+            else if (underlyingType == typeof(byte[]))
+            {
+                if (fieldType == typeof(long))
+                    handlerType = typeof(ByteArrayAsLongTypeHandler);
+                else handlerType = typeof(ByteArrayTypeHandler);
+            }
             else
             {
                 switch (Type.GetTypeCode(underlyingType))

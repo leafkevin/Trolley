@@ -49,11 +49,12 @@ public class GroupingCommand<T, TGrouping> : GroupingCommandBase<TGrouping>, IGr
         => this.Having(true, predicate);
     public IGroupingCommand<T, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate)
     {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
         if (condition)
+        {
+            if (predicate == null)
+                throw new ArgumentNullException(nameof(predicate));
             this.Visitor.Having(predicate);
+        }
         return this;
     }
     #endregion
@@ -63,22 +64,24 @@ public class GroupingCommand<T, TGrouping> : GroupingCommandBase<TGrouping>, IGr
         => this.OrderBy(true, fieldsExpr);
     public IGroupingCommand<T, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("ASC", fieldsExpr);
+        }
         return this;
     }
     public IGroupingCommand<T, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
     public IGroupingCommand<T, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("DESC", fieldsExpr);
+        }
         return this;
     }
     #endregion
@@ -103,20 +106,15 @@ public class GroupingCommand<T1, T2, TGrouping> : GroupingCommandBase<TGrouping>
 
     #region Having
     public IGroupingCommand<T1, T2, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        this.Visitor.Having(predicate);
-        return this;
-    }
+        => this.Having(true, predicate);
     public IGroupingCommand<T1, T2, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, bool>> predicate)
     {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
         if (condition)
+        {
+            if (predicate == null)
+                throw new ArgumentNullException(nameof(predicate));
             this.Visitor.Having(predicate);
+        }
         return this;
     }
     #endregion
@@ -126,22 +124,24 @@ public class GroupingCommand<T1, T2, TGrouping> : GroupingCommandBase<TGrouping>
         => this.OrderBy(true, fieldsExpr);
     public IGroupingCommand<T1, T2, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("ASC", fieldsExpr);
+        }
         return this;
     }
     public IGroupingCommand<T1, T2, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
     public IGroupingCommand<T1, T2, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("DESC", fieldsExpr);
+        }
         return this;
     }
     #endregion
@@ -166,20 +166,15 @@ public class GroupingCommand<T1, T2, T3, TGrouping> : GroupingCommandBase<TGroup
 
     #region Having
     public IGroupingCommand<T1, T2, T3, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        this.Visitor.Having(predicate);
-        return this;
-    }
+        => this.Having(true, predicate);
     public IGroupingCommand<T1, T2, T3, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, bool>> predicate)
     {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
         if (condition)
+        {
+            if (predicate == null)
+                throw new ArgumentNullException(nameof(predicate));
             this.Visitor.Having(predicate);
+        }
         return this;
     }
     #endregion
@@ -189,22 +184,24 @@ public class GroupingCommand<T1, T2, T3, TGrouping> : GroupingCommandBase<TGroup
         => this.OrderBy(true, fieldsExpr);
     public IGroupingCommand<T1, T2, T3, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("ASC", fieldsExpr);
+        }
         return this;
     }
     public IGroupingCommand<T1, T2, T3, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
     public IGroupingCommand<T1, T2, T3, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("DESC", fieldsExpr);
+        }
         return this;
     }
     #endregion
@@ -229,20 +226,15 @@ public class GroupingCommand<T1, T2, T3, T4, TGrouping> : GroupingCommandBase<TG
 
     #region Having
     public IGroupingCommand<T1, T2, T3, T4, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        this.Visitor.Having(predicate);
-        return this;
-    }
+        => this.Having(true, predicate);
     public IGroupingCommand<T1, T2, T3, T4, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, bool>> predicate)
     {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
         if (condition)
+        {
+            if (predicate == null)
+                throw new ArgumentNullException(nameof(predicate));
             this.Visitor.Having(predicate);
+        }
         return this;
     }
     #endregion
@@ -252,22 +244,24 @@ public class GroupingCommand<T1, T2, T3, T4, TGrouping> : GroupingCommandBase<TG
         => this.OrderBy(true, fieldsExpr);
     public IGroupingCommand<T1, T2, T3, T4, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("ASC", fieldsExpr);
+        }
         return this;
     }
     public IGroupingCommand<T1, T2, T3, T4, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
     public IGroupingCommand<T1, T2, T3, T4, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("DESC", fieldsExpr);
+        }
         return this;
     }
     #endregion
@@ -292,20 +286,15 @@ public class GroupingCommand<T1, T2, T3, T4, T5, TGrouping> : GroupingCommandBas
 
     #region Having
     public IGroupingCommand<T1, T2, T3, T4, T5, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        this.Visitor.Having(predicate);
-        return this;
-    }
+        => this.Having(true, predicate);
     public IGroupingCommand<T1, T2, T3, T4, T5, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, bool>> predicate)
     {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
         if (condition)
+        {
+            if (predicate == null)
+                throw new ArgumentNullException(nameof(predicate));
             this.Visitor.Having(predicate);
+        }
         return this;
     }
     #endregion
@@ -315,22 +304,24 @@ public class GroupingCommand<T1, T2, T3, T4, T5, TGrouping> : GroupingCommandBas
         => this.OrderBy(true, fieldsExpr);
     public IGroupingCommand<T1, T2, T3, T4, T5, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("ASC", fieldsExpr);
+        }
         return this;
     }
     public IGroupingCommand<T1, T2, T3, T4, T5, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
     public IGroupingCommand<T1, T2, T3, T4, T5, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("DESC", fieldsExpr);
+        }
         return this;
     }
     #endregion
@@ -355,20 +346,15 @@ public class GroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> : GroupingComman
 
     #region Having
     public IGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        this.Visitor.Having(predicate);
-        return this;
-    }
+        => this.Having(true, predicate);
     public IGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, bool>> predicate)
     {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
         if (condition)
+        {
+            if (predicate == null)
+                throw new ArgumentNullException(nameof(predicate));
             this.Visitor.Having(predicate);
+        }
         return this;
     }
     #endregion
@@ -378,22 +364,24 @@ public class GroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> : GroupingComman
         => this.OrderBy(true, fieldsExpr);
     public IGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("ASC", fieldsExpr);
+        }
         return this;
     }
     public IGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
     public IGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("DESC", fieldsExpr);
+        }
         return this;
     }
     #endregion

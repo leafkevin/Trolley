@@ -37,7 +37,7 @@ public partial class SqlServerProvider : BaseOrmProvider
         defaultMapTypes[SqlDbType.NText] = typeof(string);
         defaultMapTypes[SqlDbType.SmallDateTime] = typeof(DateTime);
         defaultMapTypes[SqlDbType.DateTime] = typeof(DateTime);
-        defaultMapTypes[SqlDbType.Timestamp] = typeof(DateTime);
+        defaultMapTypes[SqlDbType.Timestamp] = typeof(byte[]);
         defaultMapTypes[SqlDbType.DateTime2] = typeof(DateTime);
         defaultMapTypes[SqlDbType.DateTimeOffset] = typeof(DateTimeOffset);
         defaultMapTypes[SqlDbType.Date] = typeof(DateOnly);

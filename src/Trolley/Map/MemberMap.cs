@@ -22,6 +22,7 @@ public class MemberMap
     public int Length { get; set; }
     public bool IsIgnore { get; set; }
     public bool IsRequired { get; set; }
+    public bool IsRowVersion { get; set; }
 
     public bool IsNavigation { get; set; }
     /// <summary>

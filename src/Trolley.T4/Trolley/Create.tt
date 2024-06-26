@@ -91,7 +91,9 @@ public class Create<TEntity> : ICreate<TEntity>
     public virtual IFromCommand<T> From<T>()
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
-        queryVisitor.From('b', typeof(T));
+        queryVisitor.AddTable(this.Visitor.Tables[0]);
+        queryVisitor.From('a', typeof(T));
+        queryVisitor.IsFromCommand = true;
         return this.OrmProvider.NewFromCommand<T>(typeof(TEntity), this.DbContext, queryVisitor);
     }
 <#
@@ -106,7 +108,9 @@ public class Create<TEntity> : ICreate<TEntity>
     public virtual IFromCommand<<#=tables#>> From<<#=tables#>>()
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
-        queryVisitor.From('b', <#=typeOfTables#>);
+        queryVisitor.AddTable(this.Visitor.Tables[0]);
+        queryVisitor.From('a', <#=typeOfTables#>);
+        queryVisitor.IsFromCommand = true;
         return this.OrmProvider.NewFromCommand<<#=tables#>>(typeof(TEntity), this.DbContext, queryVisitor);
     }
 <#  }#>
@@ -114,13 +118,17 @@ public class Create<TEntity> : ICreate<TEntity>
     public virtual IFromCommand<TTarget> From<TTarget>(IQuery<TTarget> subQuery)
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
+        queryVisitor.AddTable(this.Visitor.Tables[0]);
         queryVisitor.From(typeof(TTarget), subQuery);
+        queryVisitor.IsFromCommand = true;
         return this.OrmProvider.NewFromCommand<TTarget>(typeof(TEntity), this.DbContext, queryVisitor);
     }
     public virtual IFromCommand<TTarget> From<TTarget>(Func<IFromQuery, IQuery<TTarget>> cteSubQuery)
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
+        queryVisitor.AddTable(this.Visitor.Tables[0]);
         queryVisitor.From(typeof(TTarget), this.DbContext, cteSubQuery);
+        queryVisitor.IsFromCommand = true;
         return this.OrmProvider.NewFromCommand<TTarget>(typeof(TEntity), this.DbContext, queryVisitor);
     }
     #endregion
@@ -157,7 +165,7 @@ public class Created<TEntity> : ICreated<TEntity>
                     {
                         //默认单条
                         using var command = this.DbContext.CreateCommand();
-                        command.CommandText = this.Visitor.BuildCommand(command, false);
+                        command.CommandText = this.Visitor.BuildCommand(command, false, out _);
                         this.DbContext.Open();
                         result = command.ExecuteNonQuery();
                         command.Parameters.Clear();
@@ -194,7 +202,7 @@ public class Created<TEntity> : ICreated<TEntity>
                     {
                         //默认单条
                         using var command = this.DbContext.CreateDbCommand();
-                        command.CommandText = this.Visitor.BuildCommand(command, false);
+                        command.CommandText = this.Visitor.BuildCommand(command, false, out _);
                         await this.DbContext.OpenAsync(cancellationToken);
                         result = await command.ExecuteNonQueryAsync(cancellationToken);
                     }
@@ -216,12 +224,28 @@ public class Created<TEntity> : ICreated<TEntity>
     #endregion
 
     #region ExecuteIdentity
-    public virtual int ExecuteIdentity() => this.DbContext.CreateIdentity<int>(this.Visitor);
+    public virtual int ExecuteIdentity() => this.DbContext.CreateResult<int>((command, dbContext) =>
+    {
+        command.CommandText = this.Visitor.BuildCommand(command, true, out var readerFields);
+        return readerFields;
+    });
     public virtual async Task<int> ExecuteIdentityAsync(CancellationToken cancellationToken = default)
-        => await this.DbContext.CreateIdentityAsync<int>(this.Visitor, cancellationToken);
-    public virtual long ExecuteIdentityLong() => this.DbContext.CreateIdentity<long>(this.Visitor);
+        => await this.DbContext.CreateResultAsync<int>((command, dbContext) =>
+    {
+        command.CommandText = this.Visitor.BuildCommand(command, true, out var readerFields);
+        return readerFields;
+    }, cancellationToken);
+    public virtual long ExecuteIdentityLong() => this.DbContext.CreateResult<long>((command, dbContext) =>
+    {
+        command.CommandText = this.Visitor.BuildCommand(command, true, out var readerFields);
+        return readerFields;
+    });
     public virtual async Task<long> ExecuteIdentityLongAsync(CancellationToken cancellationToken = default)
-        => await this.DbContext.CreateIdentityAsync<long>(this.Visitor, cancellationToken);
+        => await this.DbContext.CreateResultAsync<long>((command, dbContext) =>
+    {
+        command.CommandText = this.Visitor.BuildCommand(command, true, out var readerFields);
+        return readerFields;
+    }, cancellationToken);
     #endregion
 
     #region ToMultipleCommand
@@ -238,7 +262,7 @@ public class Created<TEntity> : ICreated<TEntity>
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
         using var command = this.DbContext.CreateCommand();
-        var sql = this.Visitor.BuildCommand(command, false);
+        var sql = this.Visitor.BuildCommand(command, false, out _);
         dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         return sql;
     }
@@ -270,25 +294,30 @@ public class ContinuedCreate<TEntity> : Created<TEntity>, IContinuedCreate<TEnti
     public virtual IContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj)
         => this.WithBy(true, insertObj);
     public virtual IContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj)
-    {
-        if (insertObj == null)
-            throw new ArgumentNullException(nameof(insertObj));
-        if (insertObj is IEnumerable && insertObj is not string && insertObj is not IDictionary<string, object>)
-            throw new NotSupportedException("只能插入单个实体，批量插入请使用WithBulkBy方法");
-        if (!typeof(TInsertObject).IsEntityType(out _))
-            throw new NotSupportedException("方法WithBy<TInsertObject>(TInsertObject insertObj)只支持类对象参数，不支持基础类型参数");
+    {        
+        if (condition)
+        {
+            if (insertObj == null)
+                throw new ArgumentNullException(nameof(insertObj));
+            if (insertObj is IEnumerable && insertObj is not string && insertObj is not IDictionary<string, object>)
+                throw new NotSupportedException("只能插入单个实体，批量插入请使用WithBulkBy方法");
+            if (!typeof(TInsertObject).IsEntityType(out _))
+                throw new NotSupportedException("方法WithBy<TInsertObject>(TInsertObject insertObj)只支持类对象参数，不支持基础类型参数");
 
-        if (condition) this.Visitor.WithBy(insertObj);
+            this.Visitor.WithBy(insertObj);
+        }
         return this;
     }
     public virtual IContinuedCreate<TEntity> WithBy<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
         => this.WithBy(true, fieldSelector, fieldValue);
     public virtual IContinuedCreate<TEntity> WithBy<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
     {
-        if (fieldSelector == null)
-            throw new ArgumentNullException(nameof(fieldSelector));
-
-        if (condition) this.Visitor.WithByField(fieldSelector, fieldValue);
+        if (condition)
+        {
+            if (fieldSelector == null)
+                throw new ArgumentNullException(nameof(fieldSelector));
+            this.Visitor.WithByField(fieldSelector, fieldValue);
+        }
         return this;
     }
     #endregion

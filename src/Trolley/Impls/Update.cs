@@ -64,38 +64,47 @@ public class Update<TEntity> : IUpdate<TEntity>
         => this.Set(true, setObj);
     public virtual IContinuedUpdate<TEntity> Set<TFields>(bool condition, TFields setObj)
     {
-        if (setObj == null)
-            throw new ArgumentNullException(nameof(setObj));
-        if (!typeof(TFields).IsEntityType(out _))
-            throw new NotSupportedException("Set方法参数setObj支持实体类对象，不支持基础类型，可以是匿名对、命名对象或是字典");
+        if (condition)
+        {
+            if (setObj == null)
+                throw new ArgumentNullException(nameof(setObj));
+            if (!typeof(TFields).IsEntityType(out _))
+                throw new NotSupportedException("Set方法参数setObj支持实体类对象，不支持基础类型，可以是匿名对、命名对象或是字典");
 
-        if (condition) this.Visitor.SetWith(setObj);
+            this.Visitor.SetWith(setObj);
+        }
         return this.OrmProvider.NewContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
     }
     public virtual IContinuedUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
         => this.Set(true, fieldSelector, fieldValue);
     public virtual IContinuedUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
     {
-        if (fieldSelector == null)
-            throw new ArgumentNullException(nameof(fieldSelector));
-        if (fieldValue == null)
-            throw new ArgumentNullException(nameof(fieldValue));
-        if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
+        if (condition)
+        {
+            if (fieldSelector == null)
+                throw new ArgumentNullException(nameof(fieldSelector));
+            if (fieldValue == null)
+                throw new ArgumentNullException(nameof(fieldValue));
+            if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
+                throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
 
-        if (condition) this.Visitor.SetField(fieldSelector, fieldValue);
+            this.Visitor.SetField(fieldSelector, fieldValue);
+        }
         return this.OrmProvider.NewContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
     }
     public virtual IContinuedUpdate<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsAssignment)
         => this.Set(true, fieldsAssignment);
     public virtual IContinuedUpdate<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment)
     {
-        if (fieldsAssignment == null)
-            throw new ArgumentNullException(nameof(fieldsAssignment));
-        if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
+        if (condition)
+        {
+            if (fieldsAssignment == null)
+                throw new ArgumentNullException(nameof(fieldsAssignment));
+            if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
+                throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
 
-        if (condition) this.Visitor.Set(fieldsAssignment);
+            this.Visitor.Set(fieldsAssignment);
+        }
         return this.OrmProvider.NewContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -105,26 +114,32 @@ public class Update<TEntity> : IUpdate<TEntity>
         => this.SetFrom(true, fieldSelector, valueSelector);
     public virtual IContinuedUpdate<TEntity> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
     {
-        if (fieldSelector == null)
-            throw new ArgumentNullException(nameof(fieldSelector));
-        if (valueSelector == null)
-            throw new ArgumentNullException(nameof(valueSelector));
-        if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
+        if (condition)
+        {
+            if (fieldSelector == null)
+                throw new ArgumentNullException(nameof(fieldSelector));
+            if (valueSelector == null)
+                throw new ArgumentNullException(nameof(valueSelector));
+            if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
+                throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
 
-        if (condition) this.Visitor.SetFrom(fieldSelector, valueSelector);
+            this.Visitor.SetFrom(fieldSelector, valueSelector);
+        }
         return this.OrmProvider.NewContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
     }
     public virtual IContinuedUpdate<TEntity> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
         => this.SetFrom(true, fieldsAssignment);
     public virtual IContinuedUpdate<TEntity> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
     {
-        if (fieldsAssignment == null)
-            throw new ArgumentNullException(nameof(fieldsAssignment));
-        if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
+        if (condition)
+        {
+            if (fieldsAssignment == null)
+                throw new ArgumentNullException(nameof(fieldsAssignment));
+            if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
+                throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
 
-        if (condition) this.Visitor.SetFrom(fieldsAssignment);
+            this.Visitor.SetFrom(fieldsAssignment);
+        }
         return this.OrmProvider.NewContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -417,36 +432,44 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
        => this.Set(true, updateObj);
     public virtual IContinuedUpdate<TEntity> Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
     {
-        if (updateObj == null)
-            throw new ArgumentNullException(nameof(updateObj));
-
-        if (condition) this.Visitor.SetWith(updateObj);
+        if (condition)
+        {
+            if (updateObj == null)
+                throw new ArgumentNullException(nameof(updateObj));
+            this.Visitor.SetWith(updateObj);
+        }
         return this;
     }
     public virtual IContinuedUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
         => this.Set(true, fieldSelector, fieldValue);
     public virtual IContinuedUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
     {
-        if (fieldSelector == null)
-            throw new ArgumentNullException(nameof(fieldSelector));
-        if (fieldValue == null)
-            throw new ArgumentNullException(nameof(fieldValue));
-        if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
+        if (condition)
+        {
+            if (fieldSelector == null)
+                throw new ArgumentNullException(nameof(fieldSelector));
+            if (fieldValue == null)
+                throw new ArgumentNullException(nameof(fieldValue));
+            if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
+                throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
 
-        if (condition) this.Visitor.SetField(fieldSelector, fieldValue);
+            this.Visitor.SetField(fieldSelector, fieldValue);
+        }
         return this;
     }
     public virtual IContinuedUpdate<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsAssignment)
        => this.Set(true, fieldsAssignment);
     public virtual IContinuedUpdate<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment)
     {
-        if (fieldsAssignment == null)
-            throw new ArgumentNullException(nameof(fieldsAssignment));
-        if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
+        if (condition)
+        {
+            if (fieldsAssignment == null)
+                throw new ArgumentNullException(nameof(fieldsAssignment));
+            if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
+                throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
 
-        if (condition) this.Visitor.Set(fieldsAssignment);
+            this.Visitor.Set(fieldsAssignment);
+        }
         return this;
     }
     #endregion
@@ -456,26 +479,32 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
         => this.SetFrom(true, fieldSelector, valueSelector);
     public virtual IContinuedUpdate<TEntity> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
     {
-        if (fieldSelector == null)
-            throw new ArgumentNullException(nameof(fieldSelector));
-        if (valueSelector == null)
-            throw new ArgumentNullException(nameof(valueSelector));
-        if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
+        if (condition)
+        {
+            if (fieldSelector == null)
+                throw new ArgumentNullException(nameof(fieldSelector));
+            if (valueSelector == null)
+                throw new ArgumentNullException(nameof(valueSelector));
+            if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
+                throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
 
-        if (condition) this.Visitor.SetFrom(fieldSelector, valueSelector);
+            this.Visitor.SetFrom(fieldSelector, valueSelector);
+        }
         return this;
     }
     public virtual IContinuedUpdate<TEntity> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
         => this.SetFrom(true, fieldsAssignment);
     public virtual IContinuedUpdate<TEntity> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
     {
-        if (fieldsAssignment == null)
-            throw new ArgumentNullException(nameof(fieldsAssignment));
-        if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
+        if (condition)
+        {
+            if (fieldsAssignment == null)
+                throw new ArgumentNullException(nameof(fieldsAssignment));
+            if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
+                throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
 
-        if (condition) this.Visitor.SetFrom(fieldsAssignment);
+            this.Visitor.SetFrom(fieldsAssignment);
+        }
         return this;
     }
     #endregion
@@ -534,11 +563,12 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
         => this.Where(true, predicate);
     public virtual IContinuedUpdate<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.Where(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
@@ -546,11 +576,12 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
         => this.And(true, predicate);
     public virtual IContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.And(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
@@ -591,40 +622,47 @@ public class UpdateJoin<TEntity, T1> : Updated<TEntity>, IUpdateJoin<TEntity, T1
         => this.Set(true, updateObj);
     public virtual IUpdateJoin<TEntity, T1> Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
     {
-        if (updateObj == null)
-            throw new ArgumentNullException(nameof(updateObj));
-        if (!typeof(TUpdateObj).IsEntityType(out _))
-            throw new NotSupportedException("Set方法参数updateObj支持实体类对象，不支持基础类型，可以是匿名对象或是命名对象或是字典");
+        if (condition)
+        {
+            if (updateObj == null)
+                throw new ArgumentNullException(nameof(updateObj));
+            if (!typeof(TUpdateObj).IsEntityType(out _))
+                throw new NotSupportedException("Set方法参数updateObj支持实体类对象，不支持基础类型，可以是匿名对象或是命名对象或是字典");
 
-        if (condition) this.Visitor.SetWith(updateObj);
+            this.Visitor.SetWith(updateObj);
+        }
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
         => this.Set(true, fieldSelector, fieldValue);
     public virtual IUpdateJoin<TEntity, T1> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
     {
-        if (fieldSelector == null)
-            throw new ArgumentNullException(nameof(fieldSelector));
-        if (fieldValue == null)
-            throw new ArgumentNullException(nameof(fieldValue));
-        if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
-
         if (condition)
+        {
+            if (fieldSelector == null)
+                throw new ArgumentNullException(nameof(fieldSelector));
+            if (fieldValue == null)
+                throw new ArgumentNullException(nameof(fieldValue));
+            if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
+                throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
+
             this.Visitor.SetField(fieldSelector, fieldValue);
+        }
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1> Set<TFields>(Expression<Func<TEntity, T1, TFields>> fieldsAssignment)
         => this.Set(true, fieldsAssignment);
     public virtual IUpdateJoin<TEntity, T1> Set<TFields>(bool condition, Expression<Func<TEntity, T1, TFields>> fieldsAssignment)
     {
-        if (fieldsAssignment == null)
-            throw new ArgumentNullException(nameof(fieldsAssignment));
-        if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
-
         if (condition)
+        {
+            if (fieldsAssignment == null)
+                throw new ArgumentNullException(nameof(fieldsAssignment));
+            if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
+                throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
+
             this.Visitor.Set(fieldsAssignment);
+        }
         return this;
     }
     #endregion
@@ -634,28 +672,32 @@ public class UpdateJoin<TEntity, T1> : Updated<TEntity>, IUpdateJoin<TEntity, T1
         => this.SetFrom(true, fieldSelector, valueSelector);
     public virtual IUpdateJoin<TEntity, T1> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
     {
-        if (fieldSelector == null)
-            throw new ArgumentNullException(nameof(fieldSelector));
-        if (valueSelector == null)
-            throw new ArgumentNullException(nameof(valueSelector));
-        if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
-
         if (condition)
+        {
+            if (fieldSelector == null)
+                throw new ArgumentNullException(nameof(fieldSelector));
+            if (valueSelector == null)
+                throw new ArgumentNullException(nameof(valueSelector));
+            if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
+                throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
+
             this.Visitor.SetFrom(fieldSelector, valueSelector);
+        }
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
         => this.SetFrom(true, fieldsAssignment);
     public virtual IUpdateJoin<TEntity, T1> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
     {
-        if (fieldsAssignment == null)
-            throw new ArgumentNullException(nameof(fieldsAssignment));
-        if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
-
         if (condition)
+        {
+            if (fieldsAssignment == null)
+                throw new ArgumentNullException(nameof(fieldsAssignment));
+            if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
+                throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
+
             this.Visitor.SetFrom(fieldsAssignment);
+        }
         return this;
     }
     #endregion
@@ -665,11 +707,12 @@ public class UpdateJoin<TEntity, T1> : Updated<TEntity>, IUpdateJoin<TEntity, T1
         => this.Where(true, wherePredicate);
     public virtual IUpdateJoin<TEntity, T1> Where(bool condition, Expression<Func<TEntity, T1, bool>> ifPredicate, Expression<Func<TEntity, T1, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.Where(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
@@ -677,11 +720,12 @@ public class UpdateJoin<TEntity, T1> : Updated<TEntity>, IUpdateJoin<TEntity, T1
         => this.And(true, andPredicate);
     public virtual IUpdateJoin<TEntity, T1> And(bool condition, Expression<Func<TEntity, T1, bool>> ifPredicate, Expression<Func<TEntity, T1, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.And(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
@@ -722,40 +766,47 @@ public class UpdateJoin<TEntity, T1, T2> : Updated<TEntity>, IUpdateJoin<TEntity
         => this.Set(true, updateObj);
     public virtual IUpdateJoin<TEntity, T1, T2> Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
     {
-        if (updateObj == null)
-            throw new ArgumentNullException(nameof(updateObj));
-        if (!typeof(TUpdateObj).IsEntityType(out _))
-            throw new NotSupportedException("Set方法参数updateObj支持实体类对象，不支持基础类型，可以是匿名对象或是命名对象或是字典");
+        if (condition)
+        {
+            if (updateObj == null)
+                throw new ArgumentNullException(nameof(updateObj));
+            if (!typeof(TUpdateObj).IsEntityType(out _))
+                throw new NotSupportedException("Set方法参数updateObj支持实体类对象，不支持基础类型，可以是匿名对象或是命名对象或是字典");
 
-        if (condition) this.Visitor.SetWith(updateObj);
+            this.Visitor.SetWith(updateObj);
+        }
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
         => this.Set(true, fieldSelector, fieldValue);
     public virtual IUpdateJoin<TEntity, T1, T2> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
     {
-        if (fieldSelector == null)
-            throw new ArgumentNullException(nameof(fieldSelector));
-        if (fieldValue == null)
-            throw new ArgumentNullException(nameof(fieldValue));
-        if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
-
         if (condition)
+        {
+            if (fieldSelector == null)
+                throw new ArgumentNullException(nameof(fieldSelector));
+            if (fieldValue == null)
+                throw new ArgumentNullException(nameof(fieldValue));
+            if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
+                throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
+
             this.Visitor.SetField(fieldSelector, fieldValue);
+        }
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2> Set<TFields>(Expression<Func<TEntity, T1, T2, TFields>> fieldsAssignment)
         => this.Set(true, fieldsAssignment);
     public virtual IUpdateJoin<TEntity, T1, T2> Set<TFields>(bool condition, Expression<Func<TEntity, T1, T2, TFields>> fieldsAssignment)
     {
-        if (fieldsAssignment == null)
-            throw new ArgumentNullException(nameof(fieldsAssignment));
-        if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
-
         if (condition)
+        {
+            if (fieldsAssignment == null)
+                throw new ArgumentNullException(nameof(fieldsAssignment));
+            if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
+                throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
+
             this.Visitor.Set(fieldsAssignment);
+        }
         return this;
     }
     #endregion
@@ -765,28 +816,32 @@ public class UpdateJoin<TEntity, T1, T2> : Updated<TEntity>, IUpdateJoin<TEntity
         => this.SetFrom(true, fieldSelector, valueSelector);
     public virtual IUpdateJoin<TEntity, T1, T2> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
     {
-        if (fieldSelector == null)
-            throw new ArgumentNullException(nameof(fieldSelector));
-        if (valueSelector == null)
-            throw new ArgumentNullException(nameof(valueSelector));
-        if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
-
         if (condition)
+        {
+            if (fieldSelector == null)
+                throw new ArgumentNullException(nameof(fieldSelector));
+            if (valueSelector == null)
+                throw new ArgumentNullException(nameof(valueSelector));
+            if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
+                throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
+
             this.Visitor.SetFrom(fieldSelector, valueSelector);
+        }
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
         => this.SetFrom(true, fieldsAssignment);
     public virtual IUpdateJoin<TEntity, T1, T2> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
     {
-        if (fieldsAssignment == null)
-            throw new ArgumentNullException(nameof(fieldsAssignment));
-        if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
-
         if (condition)
+        {
+            if (fieldsAssignment == null)
+                throw new ArgumentNullException(nameof(fieldsAssignment));
+            if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
+                throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
+
             this.Visitor.SetFrom(fieldsAssignment);
+        }
         return this;
     }
     #endregion
@@ -796,11 +851,12 @@ public class UpdateJoin<TEntity, T1, T2> : Updated<TEntity>, IUpdateJoin<TEntity
         => this.Where(true, wherePredicate);
     public virtual IUpdateJoin<TEntity, T1, T2> Where(bool condition, Expression<Func<TEntity, T1, T2, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.Where(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
@@ -808,11 +864,12 @@ public class UpdateJoin<TEntity, T1, T2> : Updated<TEntity>, IUpdateJoin<TEntity
         => this.And(true, andPredicate);
     public virtual IUpdateJoin<TEntity, T1, T2> And(bool condition, Expression<Func<TEntity, T1, T2, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.And(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
@@ -853,40 +910,47 @@ public class UpdateJoin<TEntity, T1, T2, T3> : Updated<TEntity>, IUpdateJoin<TEn
         => this.Set(true, updateObj);
     public virtual IUpdateJoin<TEntity, T1, T2, T3> Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
     {
-        if (updateObj == null)
-            throw new ArgumentNullException(nameof(updateObj));
-        if (!typeof(TUpdateObj).IsEntityType(out _))
-            throw new NotSupportedException("Set方法参数updateObj支持实体类对象，不支持基础类型，可以是匿名对象或是命名对象或是字典");
+        if (condition)
+        {
+            if (updateObj == null)
+                throw new ArgumentNullException(nameof(updateObj));
+            if (!typeof(TUpdateObj).IsEntityType(out _))
+                throw new NotSupportedException("Set方法参数updateObj支持实体类对象，不支持基础类型，可以是匿名对象或是命名对象或是字典");
 
-        if (condition) this.Visitor.SetWith(updateObj);
+            this.Visitor.SetWith(updateObj);
+        }
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
         => this.Set(true, fieldSelector, fieldValue);
     public virtual IUpdateJoin<TEntity, T1, T2, T3> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
     {
-        if (fieldSelector == null)
-            throw new ArgumentNullException(nameof(fieldSelector));
-        if (fieldValue == null)
-            throw new ArgumentNullException(nameof(fieldValue));
-        if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
-
         if (condition)
+        {
+            if (fieldSelector == null)
+                throw new ArgumentNullException(nameof(fieldSelector));
+            if (fieldValue == null)
+                throw new ArgumentNullException(nameof(fieldValue));
+            if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
+                throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
+
             this.Visitor.SetField(fieldSelector, fieldValue);
+        }
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, TFields>> fieldsAssignment)
         => this.Set(true, fieldsAssignment);
     public virtual IUpdateJoin<TEntity, T1, T2, T3> Set<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, TFields>> fieldsAssignment)
     {
-        if (fieldsAssignment == null)
-            throw new ArgumentNullException(nameof(fieldsAssignment));
-        if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
-
         if (condition)
+        {
+            if (fieldsAssignment == null)
+                throw new ArgumentNullException(nameof(fieldsAssignment));
+            if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
+                throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
+
             this.Visitor.Set(fieldsAssignment);
+        }
         return this;
     }
     #endregion
@@ -896,28 +960,32 @@ public class UpdateJoin<TEntity, T1, T2, T3> : Updated<TEntity>, IUpdateJoin<TEn
         => this.SetFrom(true, fieldSelector, valueSelector);
     public virtual IUpdateJoin<TEntity, T1, T2, T3> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
     {
-        if (fieldSelector == null)
-            throw new ArgumentNullException(nameof(fieldSelector));
-        if (valueSelector == null)
-            throw new ArgumentNullException(nameof(valueSelector));
-        if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
-
         if (condition)
+        {
+            if (fieldSelector == null)
+                throw new ArgumentNullException(nameof(fieldSelector));
+            if (valueSelector == null)
+                throw new ArgumentNullException(nameof(valueSelector));
+            if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
+                throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
+
             this.Visitor.SetFrom(fieldSelector, valueSelector);
+        }
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
         => this.SetFrom(true, fieldsAssignment);
     public virtual IUpdateJoin<TEntity, T1, T2, T3> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
     {
-        if (fieldsAssignment == null)
-            throw new ArgumentNullException(nameof(fieldsAssignment));
-        if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
-
         if (condition)
+        {
+            if (fieldsAssignment == null)
+                throw new ArgumentNullException(nameof(fieldsAssignment));
+            if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
+                throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
+
             this.Visitor.SetFrom(fieldsAssignment);
+        }
         return this;
     }
     #endregion
@@ -927,11 +995,12 @@ public class UpdateJoin<TEntity, T1, T2, T3> : Updated<TEntity>, IUpdateJoin<TEn
         => this.Where(true, wherePredicate);
     public virtual IUpdateJoin<TEntity, T1, T2, T3> Where(bool condition, Expression<Func<TEntity, T1, T2, T3, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, T3, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.Where(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
@@ -939,11 +1008,12 @@ public class UpdateJoin<TEntity, T1, T2, T3> : Updated<TEntity>, IUpdateJoin<TEn
         => this.And(true, andPredicate);
     public virtual IUpdateJoin<TEntity, T1, T2, T3> And(bool condition, Expression<Func<TEntity, T1, T2, T3, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, T3, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.And(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
@@ -984,40 +1054,47 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4> : Updated<TEntity>, IUpdateJoin
         => this.Set(true, updateObj);
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
     {
-        if (updateObj == null)
-            throw new ArgumentNullException(nameof(updateObj));
-        if (!typeof(TUpdateObj).IsEntityType(out _))
-            throw new NotSupportedException("Set方法参数updateObj支持实体类对象，不支持基础类型，可以是匿名对象或是命名对象或是字典");
+        if (condition)
+        {
+            if (updateObj == null)
+                throw new ArgumentNullException(nameof(updateObj));
+            if (!typeof(TUpdateObj).IsEntityType(out _))
+                throw new NotSupportedException("Set方法参数updateObj支持实体类对象，不支持基础类型，可以是匿名对象或是命名对象或是字典");
 
-        if (condition) this.Visitor.SetWith(updateObj);
+            this.Visitor.SetWith(updateObj);
+        }
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
         => this.Set(true, fieldSelector, fieldValue);
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
     {
-        if (fieldSelector == null)
-            throw new ArgumentNullException(nameof(fieldSelector));
-        if (fieldValue == null)
-            throw new ArgumentNullException(nameof(fieldValue));
-        if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
-
         if (condition)
+        {
+            if (fieldSelector == null)
+                throw new ArgumentNullException(nameof(fieldSelector));
+            if (fieldValue == null)
+                throw new ArgumentNullException(nameof(fieldValue));
+            if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
+                throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
+
             this.Visitor.SetField(fieldSelector, fieldValue);
+        }
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, T4, TFields>> fieldsAssignment)
         => this.Set(true, fieldsAssignment);
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> Set<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, TFields>> fieldsAssignment)
     {
-        if (fieldsAssignment == null)
-            throw new ArgumentNullException(nameof(fieldsAssignment));
-        if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
-
         if (condition)
+        {
+            if (fieldsAssignment == null)
+                throw new ArgumentNullException(nameof(fieldsAssignment));
+            if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
+                throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
+
             this.Visitor.Set(fieldsAssignment);
+        }
         return this;
     }
     #endregion
@@ -1027,28 +1104,32 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4> : Updated<TEntity>, IUpdateJoin
         => this.SetFrom(true, fieldSelector, valueSelector);
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
     {
-        if (fieldSelector == null)
-            throw new ArgumentNullException(nameof(fieldSelector));
-        if (valueSelector == null)
-            throw new ArgumentNullException(nameof(valueSelector));
-        if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
-
         if (condition)
+        {
+            if (fieldSelector == null)
+                throw new ArgumentNullException(nameof(fieldSelector));
+            if (valueSelector == null)
+                throw new ArgumentNullException(nameof(valueSelector));
+            if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
+                throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
+
             this.Visitor.SetFrom(fieldSelector, valueSelector);
+        }
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
         => this.SetFrom(true, fieldsAssignment);
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
     {
-        if (fieldsAssignment == null)
-            throw new ArgumentNullException(nameof(fieldsAssignment));
-        if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
-
         if (condition)
+        {
+            if (fieldsAssignment == null)
+                throw new ArgumentNullException(nameof(fieldsAssignment));
+            if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
+                throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
+
             this.Visitor.SetFrom(fieldsAssignment);
+        }
         return this;
     }
     #endregion
@@ -1058,11 +1139,12 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4> : Updated<TEntity>, IUpdateJoin
         => this.Where(true, wherePredicate);
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> Where(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, T3, T4, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.Where(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
@@ -1070,11 +1152,12 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4> : Updated<TEntity>, IUpdateJoin
         => this.And(true, andPredicate);
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> And(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, T3, T4, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.And(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
@@ -1096,40 +1179,47 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : Updated<TEntity>, IUpdate
         => this.Set(true, updateObj);
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
     {
-        if (updateObj == null)
-            throw new ArgumentNullException(nameof(updateObj));
-        if (!typeof(TUpdateObj).IsEntityType(out _))
-            throw new NotSupportedException("Set方法参数updateObj支持实体类对象，不支持基础类型，可以是匿名对象或是命名对象或是字典");
+        if (condition)
+        {
+            if (updateObj == null)
+                throw new ArgumentNullException(nameof(updateObj));
+            if (!typeof(TUpdateObj).IsEntityType(out _))
+                throw new NotSupportedException("Set方法参数updateObj支持实体类对象，不支持基础类型，可以是匿名对象或是命名对象或是字典");
 
-        if (condition) this.Visitor.SetWith(updateObj);
+            this.Visitor.SetWith(updateObj);
+        }
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
         => this.Set(true, fieldSelector, fieldValue);
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
     {
-        if (fieldSelector == null)
-            throw new ArgumentNullException(nameof(fieldSelector));
-        if (fieldValue == null)
-            throw new ArgumentNullException(nameof(fieldValue));
-        if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
-
         if (condition)
+        {
+            if (fieldSelector == null)
+                throw new ArgumentNullException(nameof(fieldSelector));
+            if (fieldValue == null)
+                throw new ArgumentNullException(nameof(fieldValue));
+            if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
+                throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
+
             this.Visitor.SetField(fieldSelector, fieldValue);
+        }
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TFields>(Expression<Func<TEntity, T1, T2, T3, T4, T5, TFields>> fieldsAssignment)
         => this.Set(true, fieldsAssignment);
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Set<TFields>(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, TFields>> fieldsAssignment)
     {
-        if (fieldsAssignment == null)
-            throw new ArgumentNullException(nameof(fieldsAssignment));
-        if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
-
         if (condition)
+        {
+            if (fieldsAssignment == null)
+                throw new ArgumentNullException(nameof(fieldsAssignment));
+            if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
+                throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
+
             this.Visitor.Set(fieldsAssignment);
+        }
         return this;
     }
     #endregion
@@ -1139,28 +1229,32 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : Updated<TEntity>, IUpdate
         => this.SetFrom(true, fieldSelector, valueSelector);
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
     {
-        if (fieldSelector == null)
-            throw new ArgumentNullException(nameof(fieldSelector));
-        if (valueSelector == null)
-            throw new ArgumentNullException(nameof(valueSelector));
-        if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
-
         if (condition)
+        {
+            if (fieldSelector == null)
+                throw new ArgumentNullException(nameof(fieldSelector));
+            if (valueSelector == null)
+                throw new ArgumentNullException(nameof(valueSelector));
+            if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
+                throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
+
             this.Visitor.SetFrom(fieldSelector, valueSelector);
+        }
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
         => this.SetFrom(true, fieldsAssignment);
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
     {
-        if (fieldsAssignment == null)
-            throw new ArgumentNullException(nameof(fieldsAssignment));
-        if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
-            throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
-
         if (condition)
+        {
+            if (fieldsAssignment == null)
+                throw new ArgumentNullException(nameof(fieldsAssignment));
+            if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
+                throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
+
             this.Visitor.SetFrom(fieldsAssignment);
+        }
         return this;
     }
     #endregion
@@ -1170,11 +1264,12 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : Updated<TEntity>, IUpdate
         => this.Where(true, wherePredicate);
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Where(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.Where(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
@@ -1182,11 +1277,12 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : Updated<TEntity>, IUpdate
         => this.And(true, andPredicate);
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> And(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.And(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }

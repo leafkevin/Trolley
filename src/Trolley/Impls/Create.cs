@@ -178,6 +178,7 @@ public class Created<TEntity> : ICreated<TEntity>
                     break;
                 default:
                     {
+                        //默认单条
                         using var command = this.DbContext.CreateCommand();
                         command.CommandText = this.Visitor.BuildCommand(command, false, out _);
                         this.DbContext.Open();
@@ -214,8 +215,8 @@ public class Created<TEntity> : ICreated<TEntity>
                     break;
                 default:
                     {
-                        using var command = this.DbContext.CreateDbCommand();
                         //默认单条
+                        using var command = this.DbContext.CreateDbCommand();
                         command.CommandText = this.Visitor.BuildCommand(command, false, out _);
                         await this.DbContext.OpenAsync(cancellationToken);
                         result = await command.ExecuteNonQueryAsync(cancellationToken);
@@ -309,24 +310,29 @@ public class ContinuedCreate<TEntity> : Created<TEntity>, IContinuedCreate<TEnti
         => this.WithBy(true, insertObj);
     public virtual IContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj)
     {
-        if (insertObj == null)
-            throw new ArgumentNullException(nameof(insertObj));
-        if (insertObj is IEnumerable && insertObj is not string && insertObj is not IDictionary<string, object>)
-            throw new NotSupportedException("只能插入单个实体，批量插入请使用WithBulkBy方法");
-        if (!typeof(TInsertObject).IsEntityType(out _))
-            throw new NotSupportedException("方法WithBy<TInsertObject>(TInsertObject insertObj)只支持类对象参数，不支持基础类型参数");
+        if (condition)
+        {
+            if (insertObj == null)
+                throw new ArgumentNullException(nameof(insertObj));
+            if (insertObj is IEnumerable && insertObj is not string && insertObj is not IDictionary<string, object>)
+                throw new NotSupportedException("只能插入单个实体，批量插入请使用WithBulkBy方法");
+            if (!typeof(TInsertObject).IsEntityType(out _))
+                throw new NotSupportedException("方法WithBy<TInsertObject>(TInsertObject insertObj)只支持类对象参数，不支持基础类型参数");
 
-        if (condition) this.Visitor.WithBy(insertObj);
+            this.Visitor.WithBy(insertObj);
+        }
         return this;
     }
     public virtual IContinuedCreate<TEntity> WithBy<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
         => this.WithBy(true, fieldSelector, fieldValue);
     public virtual IContinuedCreate<TEntity> WithBy<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
     {
-        if (fieldSelector == null)
-            throw new ArgumentNullException(nameof(fieldSelector));
-
-        if (condition) this.Visitor.WithByField(fieldSelector, fieldValue);
+        if (condition)
+        {
+            if (fieldSelector == null)
+                throw new ArgumentNullException(nameof(fieldSelector));
+            this.Visitor.WithByField(fieldSelector, fieldValue);
+        }
         return this;
     }
     #endregion
