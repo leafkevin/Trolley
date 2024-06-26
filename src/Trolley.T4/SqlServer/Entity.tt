@@ -27,9 +27,9 @@
     var manager = Manager.Create(Host, GenerationEnvironment);
 
     var tableName = "sys_update_entity";
-    var removePrefix = "sys_";
+    var removePrefixes = new []{"sys_"};
     var separator = '_';
-    var className = dbProvider.ToClassName(tableName, removePrefix, separator);
+    var className = dbProvider.ToClassName(tableName, removePrefixes, separator);
     var tableInfo = dbProvider.GetTableInfo(tableName);
     var columnList = dbProvider.GetColumnList(tableName);
     manager.StartNewFile(className + ".cs");

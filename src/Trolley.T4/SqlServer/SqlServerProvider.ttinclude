@@ -6,11 +6,16 @@ class SqlServerProvider : DbHelper
     private readonly string connectionString;
     public SqlServerProvider(string connectionString)
         => this.connectionString = connectionString;
-    public List<TableInfo> GetTableList(string tableNameFilter)
+    public List<TableInfo> GetTableList(string[] tableNames)
     {
-        var sql = "SELECT A.NAME,B.VALUE FROM SYS.SYSOBJECTS A LEFT JOIN SYS.EXTENDED_PROPERTIES B ON A.ID=B.MAJOR_ID AND B.MINOR_ID=0 AND B.NAME='MS_Description' WHERE A.xtype='U'";
-        if(!string.IsNullOrEmpty(tableNameFilter))
-            sql += $" AND A.NAME LIKE '%{tableNameFilter}%'";
+        var builder = new StringBuilder("SELECT A.NAME,B.VALUE FROM SYS.SYSOBJECTS A LEFT JOIN SYS.EXTENDED_PROPERTIES B ON A.ID=B.MAJOR_ID AND B.MINOR_ID=0 AND B.NAME='MS_Description' WHERE A.xtype='U' AND A.NAME IN (");
+        for(int i = 0;i < tableNames.Length;i++)
+        {
+            if(i > 0)builder.Append(',');
+            builder.Append($"'{tableNames[i]}'");
+        }
+        builder.Append(')');
+        var sql = builder.ToString();
         var result = new List<TableInfo>();
         using var connection = new SqlConnection(this.connectionString);
         using var command = new SqlCommand(sql, connection);
@@ -204,7 +209,7 @@ class SqlServerProvider : DbHelper
                 result.MemberType = "byte[]";
                 break;
             case "timestamp":
-                result.NativeDbType = "SqlDbType.Money";
+                result.NativeDbType = "SqlDbType.Timestamp";
                 result.MemberType = "byte[]";
                 break;
             case "uniqueidentifier":

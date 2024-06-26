@@ -31,19 +31,19 @@ class ModelConfiguration : IModelConfiguration
     public void OnModelCreating(ModelBuilder builder)
     {
 <#
-    var connectionString = "Server=localhost;Database=salon;Uid=root;password=123456;charset=utf8mb4;";
+    var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
     var dbProvider = new MySqlProvider(connectionString);
 
-    var databaseName = "salon";
-    var tableFilter = "";
-    var removePrefixs = new []{"sys_","mos_"};
+    var databaseName = "fengling";
+    var tableNames = new[]{"sys_user","sys_company","sys_order","sys_order_detail"};
+    var removePrefixes = new []{"sys_","mos_"};
     var separator = '_';
 
-    var tableList = dbProvider.GetTableList(databaseName, tableFilter);
+    var tableList = dbProvider.GetTableList(databaseName, tableNames);
     foreach(var tableInfo in tableList)
     {
         var tableName = tableInfo.TableName;
-        var className = dbProvider.ToClassName(tableName, removePrefixs, separator);
+        var className = dbProvider.ToClassName(tableName, removePrefixes, separator);
         var columnList = dbProvider.GetColumnList(databaseName, tableName); 
 #>
         builder.Entity<<#=className#>>(f =>

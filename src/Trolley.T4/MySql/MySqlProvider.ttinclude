@@ -6,11 +6,16 @@ class MySqlProvider : DbHelper
     private readonly string connectionString;
     public MySqlProvider(string connectionString)
         => this.connectionString = connectionString;
-    public List<TableInfo> GetTableList(string database, string tableNameFilter)
+    public List<TableInfo> GetTableList(string database, string[] tableNames)
     {
-        var sql = $"SELECT TABLE_NAME,TABLE_COMMENT FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='{database}'";
-        if(!string.IsNullOrEmpty(tableNameFilter))
-            sql += $" AND TABLE_NAME LIKE '%{tableNameFilter}%'";
+        var builder = new StringBuilder($"SELECT TABLE_NAME,TABLE_COMMENT FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='{database}' AND TABLE_NAME IN (");
+        for(int i = 0;i < tableNames.Length;i++)
+        {
+            if(i > 0)builder.Append(',');
+            builder.Append($"'{tableNames[i]}'");
+        }
+        builder.Append(')');
+        var sql = builder.ToString();
         var result = new List<TableInfo>();
         using var connection = new MySqlConnection(this.connectionString);
         using var command = new MySqlCommand(sql, connection);

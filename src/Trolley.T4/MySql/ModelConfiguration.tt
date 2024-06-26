@@ -26,9 +26,9 @@
     var dbProvider = new MySqlProvider(connectionString);
     var databaseName = "fengling";
     var tableName = "sys_function";
-    var removePrefix = "sys_";
+    var removePrefixes = new[]{"sys_"};
     var separator = '_';
-    var className = dbProvider.ToClassName(tableName, removePrefix, separator);
+    var className = dbProvider.ToClassName(tableName, removePrefixes, separator);
     var tableInfo = dbProvider.GetTableInfo(databaseName, tableName);
     var columnList = dbProvider.GetColumnList(databaseName, tableInfo.TableName);
 #>

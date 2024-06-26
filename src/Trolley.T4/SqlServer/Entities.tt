@@ -26,14 +26,15 @@
 	var dbProvider = new SqlServerProvider(connectionString);
     var manager = Manager.Create(Host, GenerationEnvironment);
 
-    var tableFilter = "sys_";
-    var removePrefix = "sys_";
+    var tableNames = new[]{"sys_user","sys_company","sys_order","sys_order_detail"};
+    var removePrefixes = new[]{"sys_"};
     var separator = '_';
-    var tableList = dbProvider.GetTableList(tableFilter);    
+    var tableList = dbProvider.GetTableList(tableNames);    
     foreach(var tableInfo in tableList)
     {
-        var className = dbProvider.ToClassName(tableInfo.TableName, removePrefix, separator);
-	    var columnList = dbProvider.GetColumnList(tableInfo.TableName);
+        var tableName = tableInfo.TableName;
+        var className = dbProvider.ToClassName(tableName, removePrefixes, separator);
+	    var columnList = dbProvider.GetColumnList(tableName);
 	    manager.StartNewFile(className + ".cs");
 #>
 using System;

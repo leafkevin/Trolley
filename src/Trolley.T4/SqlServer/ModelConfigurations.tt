@@ -34,15 +34,15 @@ class ModelConfiguration : IModelConfiguration
     var connectionString = "Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true";
     var dbProvider = new SqlServerProvider(connectionString);  
 
-    var tableFilter = "sys_";
-    var removePrefixs = new []{"sys_"};
+    var tableNames = new[]{"sys_user","sys_company","sys_order","sys_order_detail"};
+    var removePrefixes = new[]{"sys_"};
     var separator = '_';
 
-    var tableList = dbProvider.GetTableList(tableFilter);
+    var tableList = dbProvider.GetTableList(tableNames);
     foreach(var tableInfo in tableList)
     {
         var tableName = tableInfo.TableName;
-        var className = dbProvider.ToClassName(tableName, removePrefixs, separator);
+        var className = dbProvider.ToClassName(tableName, removePrefixes, separator);
 	    var columnList = dbProvider.GetColumnList(tableName);
 #>
         builder.Entity<<#=className#>>(f =>
