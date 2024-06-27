@@ -208,8 +208,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             //Union后，如果没有select语句时，通常实体类型或是select分组对象
             var memberName = readerField.TargetMember.Name;
             if (!entityMapper.TryGetMemberMap(memberName, out var memberMapper)
-                || memberMapper.IsIgnore || memberMapper.IsNavigation
-                || memberMapper.IsAutoIncrement || memberMapper.IsRowVersion
+                || memberMapper.IsIgnore || memberMapper.IsIgnoreInsert
+                || memberMapper.IsNavigation || memberMapper.IsAutoIncrement || memberMapper.IsRowVersion
                 || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
                 continue;
             if (index > 0) builder.Append(',');
