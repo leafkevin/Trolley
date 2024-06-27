@@ -89,6 +89,10 @@ class ModelConfiguration : IModelConfiguration
             if(!columnInfo.IsNullable)
             {
                 #>.Required()<#
+            }
+            if(columnType == "timestamp")
+            {
+                #>.RowVersion()<#
             }#>;
 <#      }#>
         });

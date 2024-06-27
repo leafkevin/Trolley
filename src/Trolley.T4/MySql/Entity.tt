@@ -28,9 +28,9 @@
 
     var databaseName = "fengling";
     var tableName = "sys_user";
-    var removePrefixs = new []{"sys_"};
+    var removePrefixes = new []{"sys_"};
     var separator = '_';
-    var className = dbProvider.ToClassName(tableName, removePrefixs, separator);
+    var className = dbProvider.ToClassName(tableName, removePrefixes, separator);
     var tableInfo = dbProvider.GetTableInfo(databaseName, tableName);
     var columnList = dbProvider.GetColumnList(databaseName, tableInfo.TableName);
     manager.StartNewFile(className + ".cs");
