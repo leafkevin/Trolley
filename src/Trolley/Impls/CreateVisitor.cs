@@ -349,6 +349,11 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         var memberExpr = lambdaExpr.Body as MemberExpression;
         var entityMapper = this.Tables[0].Mapper;
         var memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
+        if (memberMapper.IsIgnore || memberMapper.IsIgnoreInsert)
+            throw new NotSupportedException($"当前字段{memberMapper.FieldName}被忽略插入，IsIgnore：{memberMapper.IsIgnore}，IsIgnoreInsert：{memberMapper.IsIgnoreInsert}");
+        if (memberMapper.IsRowVersion)
+            throw new NotSupportedException($"当前字段{memberMapper.FieldName}不允许插入，IsRowVersion：{memberMapper.IsRowVersion}");
+
         var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
         if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
         var dbFieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, memberMapper.UnderlyingType, fieldValue);
@@ -373,8 +378,10 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 for (int i = 0; i < newExpr.Arguments.Count; i++)
                 {
                     var memberInfo = newExpr.Members[i];
-                    if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper))
+                    if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper)
+                        || memberMapper.IsIgnore || memberMapper.IsIgnoreUpdate || memberMapper.IsRowVersion)
                         continue;
+
                     if (newExpr.Arguments[i] is not MemberExpression memberExpr)
                         throw new NotSupportedException($"不支持的表达式访问，只支持MemberAccess访问，Path:{newExpr.Arguments[i]}");
                     fieldNames.Add(memberMapper.FieldName);
@@ -385,8 +392,10 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 for (int i = 0; i < memberInitExpr.Bindings.Count; i++)
                 {
                     var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
-                    if (!entityMapper.TryGetMemberMap(memberAssignment.Member.Name, out var memberMapper))
+                    if (!entityMapper.TryGetMemberMap(memberAssignment.Member.Name, out var memberMapper)
+                        || memberMapper.IsIgnore || memberMapper.IsIgnoreUpdate || memberMapper.IsRowVersion)
                         continue;
+
                     if (memberAssignment.Expression is not MemberExpression memberExpr)
                         throw new NotSupportedException($"不支持的表达式访问，只支持MemberAccess访问，Path:{memberAssignment.Expression}");
                     fieldNames.Add(memberMapper.FieldName);

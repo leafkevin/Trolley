@@ -61,9 +61,9 @@ public class MemberBuilder<TMember>
         this.mapper.Position = position;
         return this;
     }
-    public virtual MemberBuilder<TMember> IsRowVersion()
+    public virtual MemberBuilder<TMember> RowVersion(bool isRowVersion = true)
     {
-        this.mapper.IsRowVersion = true;
+        this.mapper.IsRowVersion = isRowVersion;
         return this;
     }
     public virtual MemberBuilder<TMember> TypeHandler(ITypeHandler typeHandler)
@@ -79,9 +79,15 @@ public class MemberBuilder<TMember>
         this.mapper.TypeHandlerType = typeof(TTypeHandler);
         return this;
     }
-    public virtual MemberBuilder<TMember> Ignore()
+    public virtual MemberBuilder<TMember> Ignore(bool isIgnore = true)
     {
         this.mapper.IsIgnore = true;
+        return this;
+    }
+    public virtual MemberBuilder<TMember> Ignore(bool isIgnoreInsert, bool isIgnoreUpdate)
+    {
+        this.mapper.IsIgnoreInsert = isIgnoreInsert;
+        this.mapper.IsIgnoreUpdate = isIgnoreUpdate;
         return this;
     }
 }

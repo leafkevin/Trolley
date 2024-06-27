@@ -1855,7 +1855,8 @@ public class SqlVisitor : ISqlVisitor
         foreach (var memberInfo in memberInfos)
         {
             if (!refEntityMapper.TryGetMemberMap(memberInfo.Name, out var refMemberMapper)
-                || refMemberMapper.IsIgnore || refMemberMapper.IsNavigation || refMemberMapper.IsAutoIncrement
+                || refMemberMapper.IsIgnore || refMemberMapper.IsNavigation
+                || refMemberMapper.IsAutoIncrement || refMemberMapper.IsRowVersion
                 || (refMemberMapper.MemberType.IsEntityType(out _) && refMemberMapper.TypeHandler == null))
                 continue;
             memberMappers.Add((memberInfo, refMemberMapper));

@@ -21,6 +21,8 @@ public class MemberMap
     public int Position { get; set; }
     public int Length { get; set; }
     public bool IsIgnore { get; set; }
+    public bool IsIgnoreInsert { get; set; }
+    public bool IsIgnoreUpdate { get; set; }
     public bool IsRequired { get; set; }
     public bool IsRowVersion { get; set; }
 

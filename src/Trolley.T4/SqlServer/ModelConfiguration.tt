@@ -24,7 +24,7 @@
 <#
     var connectionString = "Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true";
     var dbProvider = new SqlServerProvider(connectionString);
-    var tableName = "sys_company";
+    var tableName = "sys_user";
     var removePrefixes = new []{"sys_"};
     var separator = '_';    
     var className = dbProvider.ToClassName(tableName, removePrefixes, separator);
@@ -84,6 +84,10 @@ class ModelConfiguration : IModelConfiguration
         if(!columnInfo.IsNullable)
         {
             #>.Required()<#
+        }
+        if(columnType == "timestamp")
+        {
+            #>.RowVersion()<#
         }#>;
 <#  
     }#>

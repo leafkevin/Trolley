@@ -365,7 +365,7 @@ public class RepositoryHelper
         }
         return commandInitializer;
     }
-    public static object BuildSqlParametersPart(IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, Type parametersType, bool isFunc, bool isOnlySql, bool isUseKey, bool isWithKey, bool isOnlyParameters, bool hasSuffix, bool isIgnoreKeys, List<string> onlyFieldNames, List<string> ignoreFieldNames, string jointMark, string headSql)
+    public static object BuildSqlParametersPart(IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, Type parametersType, bool isUpdate, bool isFunc, bool isOnlySql, bool isUseKey, bool isWithKey, bool isOnlyParameters, bool hasSuffix, bool isIgnoreKeys, List<string> onlyFieldNames, List<string> ignoreFieldNames, string jointMark, string headSql)
     {
         object commandInitializer = null;
         var dbParametersExpr = Expression.Parameter(typeof(IDataParameterCollection), "dbParameters");
@@ -477,6 +477,13 @@ public class RepositoryHelper
                 Expression isContinueExpr = Expression.IsFalse(Expression.Call(entityMapperExpr, methodInfo, itemKeyExpr, memberMapperExpr));
                 isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsIgnore)));
                 isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsNavigation)));
+
+                //|| memberMapper.IsRowVersion || memberMapper.IsIgnoreUpdate
+                if (isUpdate)
+                {
+                    isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsIgnoreUpdate)));
+                    isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsRowVersion)));
+                }
 
                 //|| ignoreFields.Constains(itemKey) || !onlyFields.Constains(itemKey)
                 if (ignoreFieldNames != null)
@@ -591,6 +598,7 @@ public class RepositoryHelper
             {
                 if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper)
                     || memberMapper.IsIgnore || memberMapper.IsNavigation
+                    || (isUpdate && (memberMapper.IsIgnoreUpdate || memberMapper.IsRowVersion))
                     || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
                     continue;
 
@@ -692,7 +700,7 @@ public class RepositoryHelper
             string tableName = ormProvider.GetTableName(entityMapper.TableName);
             var fieldsSql = BuildFieldsSqlPart(ormProvider, entityMapper, entityType, true);
             var headSql = $"SELECT {fieldsSql} FROM {tableName} WHERE ";
-            return BuildSqlParametersPart(ormProvider, mapProvider, entityType, whereObjType, true, false, true, false, false, isMultiple, false, null, null, " AND ", headSql);
+            return BuildSqlParametersPart(ormProvider, mapProvider, entityType, whereObjType, false, true, false, true, false, false, isMultiple, false, null, null, " AND ", headSql);
         });
     }
     public static object BuildQueryWhereObjSqlParameters(IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, object whereObj, bool isMultiple)
@@ -706,7 +714,7 @@ public class RepositoryHelper
             string tableName = ormProvider.GetTableName(entityMapper.TableName);
             var fieldsSql = BuildFieldsSqlPart(ormProvider, entityMapper, entityType, true);
             var headSql = $"SELECT {fieldsSql} FROM {tableName} WHERE ";
-            return BuildSqlParametersPart(ormProvider, mapProvider, entityType, whereObjType, true, false, false, false, false, isMultiple, false, null, null, " AND ", headSql);
+            return BuildSqlParametersPart(ormProvider, mapProvider, entityType, whereObjType, false, true, false, false, false, false, isMultiple, false, null, null, " AND ", headSql);
         });
     }
     public static object BuildExistsSqlParameters(IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, object whereObj, bool isMultiple)
@@ -842,7 +850,8 @@ public class RepositoryHelper
                     foreach (var item in dict)
                     {
                         if (!entityMapper.TryGetMemberMap(item.Key, out var memberMapper)
-                            || memberMapper.IsIgnore || memberMapper.IsNavigation || memberMapper.IsAutoIncrement
+                            || memberMapper.IsIgnore || memberMapper.IsIgnoreInsert
+                            || memberMapper.IsNavigation || memberMapper.IsAutoIncrement || memberMapper.IsRowVersion
                             || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
                             continue;
 
@@ -870,7 +879,8 @@ public class RepositoryHelper
                 foreach (var memberInfo in memberInfos)
                 {
                     if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper)
-                        || memberMapper.IsIgnore || memberMapper.IsNavigation
+                        || memberMapper.IsIgnore || memberMapper.IsIgnoreInsert
+                        || memberMapper.IsNavigation || memberMapper.IsAutoIncrement || memberMapper.IsRowVersion
                         || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
                         continue;
 
@@ -948,11 +958,16 @@ public class RepositoryHelper
                 loopBodies.Add(Expression.Assign(fieldValueExpr, Expression.Property(currentExpr, nameof(KeyValuePair<string, object>.Value))));
 
                 //var isContinue = !entityMapper.TryGetMemberMap(itemKey, out var memberMapper)
-                //|| memberMapper.IsIgnore || memberMapper.IsNavigation
+                //|| memberMapper.IsIgnore || memberMapper.IsIgnoreInsert || memberMapper.IsNavigation
                 methodInfo = typeof(EntityMap).GetMethod(nameof(EntityMap.TryGetMemberMap));
                 Expression isContinueExpr = Expression.IsFalse(Expression.Call(entityMapperExpr, methodInfo, itemKeyExpr, memberMapperExpr));
                 isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsIgnore)));
+                isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsIgnoreInsert)));
                 isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsNavigation)));
+
+                //|| memberMapper.IsAutoIncrement || memberMapper.IsRowVersion
+                isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsAutoIncrement)));
+                isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsRowVersion)));
 
                 //|| ignoreFields.Constains(itemKey) || !onlyFields.Constains(itemKey)
                 if (ignoreFieldNames != null)
@@ -1030,7 +1045,8 @@ public class RepositoryHelper
                 foreach (var memberInfo in memberInfos)
                 {
                     if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper)
-                        || memberMapper.IsIgnore || memberMapper.IsNavigation
+                        || memberMapper.IsIgnore || memberMapper.IsIgnoreInsert
+                        || memberMapper.IsNavigation || memberMapper.IsAutoIncrement || memberMapper.IsRowVersion
                         || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
                         continue;
 
@@ -1072,10 +1088,10 @@ public class RepositoryHelper
         return cache.GetOrAdd(cacheKey, f =>
         {
             var entityMapper = mapProvider.GetEntityMap(entityType);
-            var setSqlParametersSetter = RepositoryHelper.BuildSqlParametersPart(ormProvider, mapProvider, entityType, updateObjType, false, false, false, false, false, hasSuffix, true, onlyFieldNames, ignoreFieldNames, ",", null);
-            var whereSqlParametersSetter = RepositoryHelper.BuildSqlParametersPart(ormProvider, mapProvider, entityType, updateObjType, false, false, true, true, false, hasSuffix, false, null, null, " AND ", null);
-            var setSqlSetter = RepositoryHelper.BuildSqlParametersPart(ormProvider, mapProvider, entityType, updateObjType, false, true, false, false, false, hasSuffix, true, onlyFieldNames, ignoreFieldNames, ",", null);
-            var whereSqlSetter = RepositoryHelper.BuildSqlParametersPart(ormProvider, mapProvider, entityType, updateObjType, false, true, true, true, false, hasSuffix, false, null, null, " AND ", null);
+            var setSqlParametersSetter = BuildSqlParametersPart(ormProvider, mapProvider, entityType, updateObjType, true, false, false, false, false, false, hasSuffix, true, onlyFieldNames, ignoreFieldNames, ",", null);
+            var whereSqlParametersSetter = BuildSqlParametersPart(ormProvider, mapProvider, entityType, updateObjType, false, false, false, true, true, false, hasSuffix, false, null, null, " AND ", null);
+            var setSqlSetter = BuildSqlParametersPart(ormProvider, mapProvider, entityType, updateObjType, true, false, true, false, false, false, hasSuffix, true, onlyFieldNames, ignoreFieldNames, ",", null);
+            var whereSqlSetter = BuildSqlParametersPart(ormProvider, mapProvider, entityType, updateObjType, false, false, true, true, true, false, hasSuffix, false, null, null, " AND ", null);
             object firstSqlParametersSetter = null, sqlSetter = null;
 
             string tableName = entityMapper.TableName;
@@ -1187,10 +1203,31 @@ public class RepositoryHelper
                 loopBodies.Add(Expression.IfThen(ifFalseExpr, Expression.Break(breakLabel)));
 
                 //var itemKey = enumerator.Current.Key;
-                //var fieldValue = enumerator.Current.Value;          
+                //var fieldValue = enumerator.Current.Value;
                 var currentExpr = Expression.Property(enumeratorExpr, nameof(IEnumerator.Current));
                 loopBodies.Add(Expression.Assign(itemKeyExpr, Expression.Property(currentExpr, nameof(KeyValuePair<string, object>.Key))));
                 loopBodies.Add(Expression.Assign(fieldValueExpr, Expression.Property(currentExpr, nameof(KeyValuePair<string, object>.Value))));
+
+                //var isContinue = !entityMapper.TryGetMemberMap(itemKey, out var memberMapper)
+                //|| memberMapper.IsIgnore || memberMapper.IsIgnoreUpdate
+                methodInfo = typeof(EntityMap).GetMethod(nameof(EntityMap.TryGetMemberMap));
+                Expression isContinueExpr = Expression.IsFalse(Expression.Call(entityMapperExpr, methodInfo, itemKeyExpr, memberMapperExpr));
+                isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsIgnore)));
+                isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsIgnoreUpdate)));
+
+                //|| memberMapper.IsNavigation || memberMapper.IsRowVersion
+                isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsNavigation)));
+                isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsRowVersion)));
+
+                //|| (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
+                methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.IsEntityType));
+                var memberTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.MemberType));
+                var isEntityTypeExpr = Expression.Call(methodInfo, memberTypeExpr, outTypeExpr);
+                var isNullExpr = Expression.Equal(Expression.Property(memberMapperExpr, nameof(MemberMap.TypeHandler)), Expression.Constant(null));
+                isContinueExpr = Expression.OrElse(isContinueExpr, Expression.AndAlso(isEntityTypeExpr, isNullExpr));
+
+                //if (isContinue) continue;
+                loopBodies.Add(Expression.IfThen(isContinueExpr, Expression.Continue(continueLabel)));
 
                 Expression fieldNameExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.FieldName));
                 var getFieldNameMethodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.GetFieldName));
@@ -1256,7 +1293,8 @@ public class RepositoryHelper
                 foreach (var memberInfo in memberInfos)
                 {
                     if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper)
-                        || memberMapper.IsIgnore || memberMapper.IsNavigation
+                        || memberMapper.IsIgnore || memberMapper.IsIgnoreUpdate
+                        || memberMapper.IsNavigation || memberMapper.IsRowVersion
                         || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
                         continue;
                     if (memberMapper.IsKey) continue;
@@ -1311,7 +1349,7 @@ public class RepositoryHelper
             }
             else sqlSetter = (builder, tableName) => builder.Append($"DELETE FROM {ormProvider.GetTableName(tableName)} WHERE ");
             var isOnlyParameters = isBulk && !isMultiKeys;
-            whereSqlParametersSetter = BuildSqlParametersPart(ormProvider, mapProvider, entityType, whereObjType, false, false, true, false, isOnlyParameters, hasSuffix, false, null, null, " AND ", null);
+            whereSqlParametersSetter = BuildSqlParametersPart(ormProvider, mapProvider, entityType, whereObjType, false, false, false, true, false, isOnlyParameters, hasSuffix, false, null, null, " AND ", null);
             return (isMultiKeys, entityMapper.TableName, whereSqlParametersSetter, sqlSetter);
         });
     }

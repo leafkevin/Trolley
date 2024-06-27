@@ -502,6 +502,11 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var memberExpr = lambdaExpr.Body as MemberExpression;
         var entityMapper = this.Tables[0].Mapper;
         var memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
+        if (memberMapper.IsIgnore || memberMapper.IsIgnoreUpdate || memberMapper.IsRowVersion)
+            throw new NotSupportedException($"当前字段{memberMapper.FieldName}被忽略更新，IsIgnore：{memberMapper.IsIgnore}，IsIgnoreUpdate：{memberMapper.IsIgnoreUpdate}");
+        if (memberMapper.IsRowVersion)
+            throw new NotSupportedException($"当前字段{memberMapper.FieldName}不允许更新，IsRowVersion：{memberMapper.IsRowVersion}");
+
         this.AddMemberElement(memberMapper, fieldValue, false);
     }
     public virtual void VisitSetWith(object updateObj)
@@ -533,7 +538,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 for (int i = 0; i < newExpr.Arguments.Count; i++)
                 {
                     var memberInfo = newExpr.Members[i];
-                    if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper))
+                    if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper)
+                        || memberMapper.IsIgnore || memberMapper.IsIgnoreUpdate || memberMapper.IsRowVersion)
                         continue;
 
                     var argumentExpr = newExpr.Arguments[i];
@@ -559,7 +565,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 for (int i = 0; i < memberInitExpr.Bindings.Count; i++)
                 {
                     var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
-                    if (!entityMapper.TryGetMemberMap(memberAssignment.Member.Name, out var memberMapper))
+                    if (!entityMapper.TryGetMemberMap(memberAssignment.Member.Name, out var memberMapper)
+                        || memberMapper.IsIgnore || memberMapper.IsIgnoreUpdate || memberMapper.IsRowVersion)
                         continue;
 
                     var argumentExpr = memberAssignment.Expression;
@@ -590,6 +597,11 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var memberExpr = lambdaExpr.Body as MemberExpression;
         var memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
 
+        if (memberMapper.IsIgnore || memberMapper.IsIgnoreUpdate || memberMapper.IsRowVersion)
+            throw new NotSupportedException($"当前字段{memberMapper.FieldName}被忽略更新，IsIgnore：{memberMapper.IsIgnore}，IsIgnoreUpdate：{memberMapper.IsIgnoreUpdate}");
+        if (memberMapper.IsRowVersion)
+            throw new NotSupportedException($"当前字段{memberMapper.FieldName}不允许更新，IsRowVersion：{memberMapper.IsRowVersion}");
+
         this.InitTableAlias(valueSelector as LambdaExpression);
         var sql = this.VisitFromQuery(valueSelector as LambdaExpression);
         this.UpdateFields.Add(this.OrmProvider.GetFieldName(memberMapper.FieldName) + $"=({sql})");
@@ -598,7 +610,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     {
         var entityType = this.Tables[0].EntityType;
         var whereObjType = whereObj.GetType();
-        var whereSqlParametersSetter = RepositoryHelper.BuildSqlParametersPart(this.OrmProvider, this.MapProvider, entityType, whereObjType, false, false, true, true, false, this.IsMultiple, false, null, null, " AND ", null);
+        var whereSqlParametersSetter = RepositoryHelper.BuildSqlParametersPart(this.OrmProvider, this.MapProvider, entityType, whereObjType, false, false, false, true, true, false, this.IsMultiple, false, null, null, " AND ", null);
         var builder = new StringBuilder();
         if (!string.IsNullOrEmpty(this.WhereSql))
             builder.Append($"{this.WhereSql} AND ");
