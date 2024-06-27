@@ -1923,38 +1923,36 @@ public class SqlVisitor : ISqlVisitor
     {
         Func<Expression, bool> isConditionExpr = f => f.NodeType == ExpressionType.AndAlso || f.NodeType == ExpressionType.OrElse;
 
-        int deep = 0;
+        int deep = 0, lastDeep = 0;
+        var lastOperationTypes = new Stack<string>();
         string lastOperationType = string.Empty;
         var operators = new Stack<ConditionOperator>();
         var leftExprs = new Stack<Expression>();
         var completedStackExprs = new Stack<ConditionExpression>();
-
         var nextExpr = conditionExpr as BinaryExpression;
+        lastOperationType = nextExpr.NodeType == ExpressionType.AndAlso ? " AND " : " OR ";
+
         while (nextExpr != null)
         {
             var operationType = nextExpr.NodeType == ExpressionType.AndAlso ? " AND " : " OR ";
-            if (!string.IsNullOrEmpty(lastOperationType) && lastOperationType != operationType)
-                deep++;
 
             if (isConditionExpr(nextExpr.Right))
             {
                 leftExprs.Push(nextExpr.Left);
-                nextExpr = nextExpr.Right as BinaryExpression;
-                lastOperationType = operationType;
-                if (deep > 0)
+                operators.Push(new ConditionOperator
                 {
-                    operators.Push(new ConditionOperator
-                    {
-                        OperatorType = operationType,
-                        Deep = deep
-                    });
-                }
+                    OperatorType = operationType,
+                    Deep = deep,
+                });
+                lastDeep = deep;
+                lastOperationType = operationType;
+                nextExpr = nextExpr.Right as BinaryExpression;
                 continue;
             }
-            //先压进右括号
-            var lastDeep = 0;
-            if (operators.TryPop(out var conditionOperator))
-                lastDeep = conditionOperator.Deep;
+            if (lastOperationType != operationType)
+                deep++;
+
+            //先压进右括号         
             for (int i = deep; i > lastDeep; i--)
             {
                 completedStackExprs.Push(new ConditionExpression
@@ -1979,28 +1977,22 @@ public class SqlVisitor : ISqlVisitor
             {
                 nextExpr = nextExpr.Left as BinaryExpression;
                 lastOperationType = operationType;
-                if (deep > 0)
-                {
-                    operators.Push(new ConditionOperator
-                    {
-                        OperatorType = operationType,
-                        Deep = deep
-                    });
-                }
+                lastDeep = deep;
                 continue;
             }
+
             //再压进左侧表达式
             completedStackExprs.Push(new ConditionExpression
             {
                 ExpressionType = ConditionType.Expression,
                 Body = nextExpr.Left
             });
-            if (operators.TryPop(out conditionOperator))
+            //右侧解析完毕，需要重新获取操作符
+            if (operators.TryPeek(out var conditionOperator))
             {
                 lastDeep = conditionOperator.Deep;
                 lastOperationType = conditionOperator.OperatorType;
             }
-            else lastDeep = 0;
             //再压进左括号
             for (int i = deep; i > lastDeep; i--)
             {
@@ -2013,34 +2005,32 @@ public class SqlVisitor : ISqlVisitor
             //再压进操作符
             if (leftExprs.Count > 0)
             {
-                for (int i = deep; i > lastDeep; i--)
-                {
-                    completedStackExprs.Push(new ConditionExpression
-                    {
-                        ExpressionType = ConditionType.OperatorType,
-                        Body = lastOperationType
-                    });
-                }
-            }
-            if (leftExprs.TryPop(out var deferredExpr))
-            {
-                if (operators.TryPop(out conditionOperator))
-                    deep = conditionOperator.Deep;
-                else deep = 0;
-
-                if (isConditionExpr(deferredExpr))
-                {
-                    nextExpr = deferredExpr as BinaryExpression;
-                    continue;
-                }
                 completedStackExprs.Push(new ConditionExpression
                 {
-                    ExpressionType = ConditionType.Expression,
-                    Body = deferredExpr
+                    ExpressionType = ConditionType.OperatorType,
+                    Body = lastOperationType
                 });
+                if (leftExprs.TryPop(out var deferredExpr))
+                {
+                    deep = lastDeep;
+                    if (isConditionExpr(deferredExpr))
+                    {
+                        nextExpr = deferredExpr as BinaryExpression;
+                        continue;
+                    }
+                    completedStackExprs.Push(new ConditionExpression
+                    {
+                        ExpressionType = ConditionType.Expression,
+                        Body = deferredExpr
+                    });
+                    break;
+                }
+            }
+            else
+            {
+                operators.TryPop(out _);
                 break;
             }
-            else break;
         }
         var completedExprs = new List<ConditionExpression>();
         while (completedStackExprs.TryPop(out var completedExpr))

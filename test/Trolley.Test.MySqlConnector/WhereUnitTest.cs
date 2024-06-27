@@ -74,7 +74,6 @@ public class WhereUnitTest : UnitTestBase
     [Fact]
     public async void WhereCoalesceConditional()
     {
-        this.Initialize();
         using var repository = dbFactory.Create();
         var sql1 = repository.From<Company>()
             .Where(f => (f.Nature ?? CompanyNature.Internet) == CompanyNature.Internet)
@@ -139,7 +138,6 @@ public class WhereUnitTest : UnitTestBase
     [Fact]
     public void WhereAndOr()
     {
-        this.Initialize();
         using var repository = dbFactory.Create();
         var sql = repository.From<Order, User>()
             .Where((a, b) => a.BuyerId == b.Id)
@@ -149,11 +147,23 @@ public class WhereUnitTest : UnitTestBase
             .Select((a, b) => "*")
             .ToSql(out _);
         Assert.True(sql == "SELECT * FROM `sys_order` a,`sys_user` b WHERE a.`BuyerId`=b.`Id` AND (a.`SellerId` IS NULL OR a.`ProductCount` IS NULL) AND a.`Products` IS NOT NULL AND (a.`Products` IS NULL OR a.`Disputes` IS NULL)");
+
+        var filterExpr = PredicateBuilder.Create<Order, User>()
+            .And((x, y) => x.BuyerId <= 10 && x.ProductCount > 5 && y.SourceType == UserSourceType.Douyin)
+            .Or((x, y) => x.BuyerId > 10 && x.ProductCount <= 5 && y.SourceType == UserSourceType.Website)
+            .Build();
+        sql = repository.From<Order, User>()
+            .Where((a, b) => a.BuyerId == b.Id)
+            .And(true, (a, b) => a.SellerId.IsNull() || !a.ProductCount.HasValue)
+            .And(true, filterExpr)
+            .And(true, (a, b) => a.Products == null || a.Disputes == null)
+            .Select((a, b) => "*")
+        .ToSql(out _);
+        Assert.True(sql == "SELECT * FROM `sys_order` a,`sys_user` b WHERE a.`BuyerId`=b.`Id` AND (a.`SellerId` IS NULL OR a.`ProductCount` IS NULL) AND ((a.`BuyerId`<=10 AND a.`ProductCount`>5 AND b.`SourceType`='Douyin') OR (a.`BuyerId`>10 AND a.`ProductCount`<=5 AND b.`SourceType`='Website')) AND (a.`Products` IS NULL OR a.`Disputes` IS NULL)");
     }
     [Fact]
     public void Where()
     {
-        this.Initialize();
         using var repository = dbFactory.Create();
         var sql1 = repository.From<Order>()
             .Where(f => Sql.Exists<User>(t => t.Id == f.BuyerId && t.IsEnabled) && (f.BuyerId.IsNull() || f.BuyerId == 2)
