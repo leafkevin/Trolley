@@ -325,7 +325,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         };
         this.Tables.Add(joinTable);
         this.InitTableAlias(lambdaExpr);
-        joinTable.OnExpr = this.VisitConditionExpr(lambdaExpr.Body);
+        joinTable.OnExpr = this.VisitConditionExpr(lambdaExpr.Body, out _);
     }
     public virtual void SetWith(object updateObj)
     {
@@ -630,14 +630,17 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     }
     protected virtual void VisitWhere(Expression whereExpr)
     {
+        if (!string.IsNullOrEmpty(this.WhereSql))
+        {
+            this.VisitAnd(whereExpr);
+            return;
+        }
         this.IsWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
         this.InitTableAlias(lambdaExpr);
-        this.LastWhereNodeType = OperationType.None;
-        var whereSql = this.VisitConditionExpr(lambdaExpr.Body);
-        if (!string.IsNullOrEmpty(this.WhereSql))
-            this.WhereSql += " AND ";
-        this.WhereSql += whereSql;
+        this.LastWhereOperationType = OperationType.None;
+        this.WhereSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
+        this.LastWhereOperationType = operationType;
         this.IsWhere = false;
     }
     protected virtual void VisitAnd(Expression whereExpr)
@@ -645,17 +648,12 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         this.IsWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
         this.InitTableAlias(lambdaExpr);
-        if (this.LastWhereNodeType == OperationType.Or)
-        {
+        if (this.LastWhereOperationType == OperationType.Or)
             this.WhereSql = $"({this.WhereSql})";
-            this.LastWhereNodeType = OperationType.And;
-        }
-        var conditionSql = this.VisitConditionExpr(lambdaExpr.Body);
-        if (this.LastWhereNodeType == OperationType.Or)
-        {
+        var conditionSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
+        if (operationType == OperationType.Or)
             conditionSql = $"({conditionSql})";
-            this.LastWhereNodeType = OperationType.And;
-        }
+        this.LastWhereOperationType = OperationType.And;
         if (!string.IsNullOrEmpty(this.WhereSql))
             this.WhereSql += " AND " + conditionSql;
         else this.WhereSql = conditionSql;

@@ -46,7 +46,7 @@ public interface ISqlVisitor : IDisposable
     string GetQuotedValue(object elementValue, SqlSegment arraySegment, SqlSegment elementSegmente);
     SqlSegment VisitSqlMethodCall(SqlSegment sqlSegment);
     bool IsStringConcatOperator(SqlSegment sqlSegment, out SqlSegment result);
-    string VisitConditionExpr(Expression conditionExpr);
+    string VisitConditionExpr(Expression conditionExpr,out OperationType operationType);
     List<Expression> ConvertFormatToConcatList(Expression[] argsExprs);
     List<Expression> SplitConcatList(Expression[] argsExprs);
     string VisitFromQuery(LambdaExpression lambdaExpr);

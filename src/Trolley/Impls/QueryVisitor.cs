@@ -568,7 +568,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             throw new NotSupportedException("Join操作，只支持两个表进行关联，但可以多次Join操作");
 
         var joinTableSegment = joinTableSegmentGetter(lambdaExpr);
-        joinTableSegment.OnExpr = this.VisitConditionExpr(lambdaExpr.Body);
+        joinTableSegment.OnExpr = this.VisitConditionExpr(lambdaExpr.Body, out _);
         this.IsWhere = false;
     }
     public virtual void Include(Expression memberSelector, bool isIncludeMany = false, Expression filter = null)
@@ -1006,8 +1006,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var lambdaExpr = whereExpr as LambdaExpression;
         this.ClearUnionSql();
         this.InitTableAlias(lambdaExpr);
-        this.LastWhereNodeType = OperationType.None;
-        this.WhereSql = this.VisitConditionExpr(lambdaExpr.Body);
+        this.LastWhereOperationType = OperationType.None;
+        this.WhereSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
+        this.LastWhereOperationType = operationType;
         this.IsWhere = false;
     }
     public virtual void And(Expression whereExpr)
@@ -1016,17 +1017,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var lambdaExpr = whereExpr as LambdaExpression;
         this.ClearUnionSql();
         this.InitTableAlias(lambdaExpr);
-        if (this.LastWhereNodeType == OperationType.Or)
-        {
+        if (this.LastWhereOperationType == OperationType.Or)
             this.WhereSql = $"({this.WhereSql})";
-            this.LastWhereNodeType = OperationType.And;
-        }
-        var conditionSql = this.VisitConditionExpr(lambdaExpr.Body);
-        if (this.LastWhereNodeType == OperationType.Or)
-        {
+        var conditionSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
+        if (operationType == OperationType.Or)
             conditionSql = $"({conditionSql})";
-            this.LastWhereNodeType = OperationType.And;
-        }
+        this.LastWhereOperationType = OperationType.And;
         if (!string.IsNullOrEmpty(this.WhereSql))
             this.WhereSql += " AND " + conditionSql;
         else this.WhereSql = conditionSql;
@@ -1191,7 +1187,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.IsWhere = true;
         var lambdaExpr = havingExpr as LambdaExpression;
         this.InitTableAlias(lambdaExpr);
-        this.HavingSql = this.VisitConditionExpr(lambdaExpr.Body);
+        this.HavingSql = this.VisitConditionExpr(lambdaExpr.Body, out _);
         this.IsWhere = false;
     }
 

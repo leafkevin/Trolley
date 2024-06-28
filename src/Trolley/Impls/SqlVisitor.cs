@@ -45,7 +45,7 @@ public class SqlVisitor : ISqlVisitor
     public List<ReaderField> ReaderFields { get; set; }
     public bool IsFromQuery { get; set; }
     public string WhereSql { get; set; }
-    public OperationType LastWhereNodeType { get; set; } = OperationType.None;
+    public OperationType LastWhereOperationType { get; set; } = OperationType.None;
     public char TableAsStart { get; set; }
     public List<ReaderField> GroupFields { get; set; }
     public List<TableSegment> IncludeTables { get; set; }
@@ -1074,7 +1074,7 @@ public class SqlVisitor : ISqlVisitor
                             }
                         }
                         builder.Append(" WHERE ");
-                        builder.Append(this.VisitConditionExpr(lambdaExpr.Body));
+                        builder.Append(this.VisitConditionExpr(lambdaExpr.Body, out _));
 
                         //恢复现场
                         if (removeTables.Count > 0)
@@ -1163,14 +1163,14 @@ public class SqlVisitor : ISqlVisitor
         result = null;
         return false;
     }
-    public virtual string VisitConditionExpr(Expression conditionExpr)
+    public virtual string VisitConditionExpr(Expression conditionExpr, out OperationType operationType)
     {
+        operationType = OperationType.And;
         if (conditionExpr.NodeType == ExpressionType.AndAlso || conditionExpr.NodeType == ExpressionType.OrElse)
         {
             var completedExprs = this.VisitLogicBinaryExpr(conditionExpr);
             if (conditionExpr.NodeType == ExpressionType.OrElse)
-                this.LastWhereNodeType = OperationType.Or;
-            else this.LastWhereNodeType = OperationType.And;
+                operationType = OperationType.Or;
 
             var builder = new StringBuilder();
             foreach (var completedExpr in completedExprs)
@@ -2005,53 +2005,61 @@ public class SqlVisitor : ISqlVisitor
         int deep = 0, lastDeep = 0;
         var lastOperationTypes = new Stack<string>();
         string lastOperationType = string.Empty;
-        var operators = new Stack<ConditionOperator>();
-        var leftExprs = new Stack<Expression>();
-        var completedStackExprs = new Stack<ConditionExpression>();
+        var leftExprs = new Stack<ConditionExpression>();
+        var completedExprs = new Stack<ConditionExpression>();
         var nextExpr = conditionExpr as BinaryExpression;
         lastOperationType = nextExpr.NodeType == ExpressionType.AndAlso ? " AND " : " OR ";
 
         while (nextExpr != null)
         {
             var operationType = nextExpr.NodeType == ExpressionType.AndAlso ? " AND " : " OR ";
-
-            if (isConditionExpr(nextExpr.Right))
-            {
-                leftExprs.Push(nextExpr.Left);
-                operators.Push(new ConditionOperator
-                {
-                    OperatorType = operationType,
-                    Deep = deep,
-                });
-                lastDeep = deep;
-                lastOperationType = operationType;
-                nextExpr = nextExpr.Right as BinaryExpression;
-                continue;
-            }
             if (lastOperationType != operationType)
                 deep++;
 
+            //先从最右边解析，从右边第一个简单的条件开始
+            //如果是复合条件，就把左半部分+当前操作符号压进leftExprs中，等待右边解析完后，再做解析
+            //先计算有几个操作符变化，变化一次就deep就++
+            if (isConditionExpr(nextExpr.Right))
+            {
+                //右边是复合条件，先把左侧表达式、操作符、deep都压进去，等待解析
+                leftExprs.Push(new ConditionExpression
+                {
+                    ExpressionType = ConditionType.Expression,
+                    Body = nextExpr.Left
+                });
+                leftExprs.Push(new ConditionExpression
+                {
+                    ExpressionType = ConditionType.OperatorType,
+                    Body = (operationType, deep)
+                });
+                lastOperationType = operationType;
+                lastDeep = deep;
+                nextExpr = nextExpr.Right as BinaryExpression;
+                continue;
+            }
+            //从左右边的符合条件
             //先压进右括号         
             for (int i = deep; i > lastDeep; i--)
             {
-                completedStackExprs.Push(new ConditionExpression
+                completedExprs.Push(new ConditionExpression
                 {
                     ExpressionType = ConditionType.OperatorType,
                     Body = ")"
                 });
             }
             //再压进右侧表达式
-            completedStackExprs.Push(new ConditionExpression
+            completedExprs.Push(new ConditionExpression
             {
                 ExpressionType = ConditionType.Expression,
                 Body = nextExpr.Right
             });
             //再压进当前操作符
-            completedStackExprs.Push(new ConditionExpression
+            completedExprs.Push(new ConditionExpression
             {
                 ExpressionType = ConditionType.OperatorType,
                 Body = operationType
             });
+            //计算左边表达式，如果是复杂条件，再重新解析左边的表达式
             if (isConditionExpr(nextExpr.Left))
             {
                 nextExpr = nextExpr.Left as BinaryExpression;
@@ -2060,63 +2068,77 @@ public class SqlVisitor : ISqlVisitor
                 continue;
             }
 
-            //再压进左侧表达式
-            completedStackExprs.Push(new ConditionExpression
+            //预取下一个操作符和deep，用于判断要收尾几个左括号
+            //如果取不到数据，说明到最后了，解析本轮就结束了
+            int nextDeep = 0;
+            if (leftExprs.TryPeek(out var deferredOperator))
+                (_, nextDeep) = ((string, int))deferredOperator.Body;
+
+            //左边也是简单表达式条件，先把左侧表达式压进去
+            completedExprs.Push(new ConditionExpression
             {
                 ExpressionType = ConditionType.Expression,
                 Body = nextExpr.Left
             });
-            //右侧解析完毕，需要重新获取操作符
-            if (operators.TryPeek(out var conditionOperator))
-            {
-                lastDeep = conditionOperator.Deep;
-                lastOperationType = conditionOperator.OperatorType;
-            }
+
             //再压进左括号
-            for (int i = deep; i > lastDeep; i--)
+            for (int i = deep; i > nextDeep; i--)
             {
-                completedStackExprs.Push(new ConditionExpression
+                completedExprs.Push(new ConditionExpression
                 {
                     ExpressionType = ConditionType.OperatorType,
                     Body = "("
                 });
             }
-            //再压进操作符
+            //当前表达式都解析完了，开始下一个新的表达式解析
+
+
+            //如果有待处理的条件表达式解析，开始解析
             if (leftExprs.Count > 0)
             {
-                completedStackExprs.Push(new ConditionExpression
+                //先更新lastOperationType，lastDeep
+                lastOperationType = operationType;
+                lastDeep = deep;              
+
+                //重新获取操作符，更新为当前操作符，deep
+                if (leftExprs.TryPop(out deferredOperator))
+                    (operationType, deep) = ((string, int))deferredOperator.Body;
+
+                //先把当前的操作符压进去
+                completedExprs.Push(new ConditionExpression
                 {
                     ExpressionType = ConditionType.OperatorType,
-                    Body = lastOperationType
+                    Body = operationType
                 });
                 if (leftExprs.TryPop(out var deferredExpr))
                 {
-                    deep = lastDeep;
-                    if (isConditionExpr(deferredExpr))
+                    //更新操作符、deep
+                    lastOperationType = operationType;
+                    lastDeep = deep;
+                    var typedDeferredExpr = deferredExpr.Body as Expression;
+
+                    //继续解析当前表达式
+                    if (isConditionExpr(typedDeferredExpr))
                     {
-                        nextExpr = deferredExpr as BinaryExpression;
+                        nextExpr = typedDeferredExpr as BinaryExpression;
                         continue;
                     }
-                    completedStackExprs.Push(new ConditionExpression
+                    completedExprs.Push(new ConditionExpression
                     {
                         ExpressionType = ConditionType.Expression,
-                        Body = deferredExpr
+                        Body = typedDeferredExpr
                     });
                     break;
                 }
             }
-            else
-            {
-                operators.TryPop(out _);
-                break;
-            }
+            else break;
         }
-        var completedExprs = new List<ConditionExpression>();
-        while (completedStackExprs.TryPop(out var completedExpr))
+        var conditionExprs = new List<ConditionExpression>();
+        while (completedExprs.TryPop(out var completedExpr))
         {
-            completedExprs.Add(completedExpr);
+            conditionExprs.Add(completedExpr);
         }
-        return completedExprs;
+        return conditionExprs;
     }
     private SqlSegment CreateConditionSegment(Expression conditionExpr)
     {
