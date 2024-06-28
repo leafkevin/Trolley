@@ -497,16 +497,16 @@ public class MethodCallUnitTest : UnitTestBase
            .Where(f => f.Id == 1)
            .Select(f => new
            {
-               NewField = $"{f.Age}-{f.Gender.ToDescription()}"
+               NewField = $"{f.Age.IsNull(20)}-{f.Gender.ToDescription()}"
            })
            .ToSql(out _);
-        Assert.True(sql == "SELECT a.[Age],a.[Gender] FROM [sys_user] a WHERE a.[Id]=1");
+        Assert.True(sql == "SELECT a.`Age`,a.`Gender` FROM `sys_user` a WHERE a.`Id`=1");
 
         result = await repository.From<User>()
            .Where(f => f.Id == 1)
            .Select(f => new
            {
-               NewField = $"{f.Age}-{f.Gender.ToDescription()}",
+               NewField = $"{f.Age.IsNull(20)}-{f.Gender.ToDescription()}",
                f.Age,
                f.Gender
            })
