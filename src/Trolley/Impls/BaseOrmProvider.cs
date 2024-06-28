@@ -411,10 +411,10 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                         var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                         {
-                            targetSegment.ExpectType = methodInfo.ReturnType;
+                            targetSegment.SegmentType = methodInfo.ReturnType;
                             return targetSegment.Change(targetSegment.ToString());
                         }
-                        targetSegment.ExpectType = methodInfo.ReturnType;
+                        targetSegment.SegmentType = methodInfo.ReturnType;
                         return targetSegment.Change(this.CastTo(typeof(string), targetSegment.Value), false, false, false, true);
                     });
                     return true;
@@ -438,31 +438,8 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                         //args.ToString(new CultureInfo("en-US"))
                         //(args)=>{args.ToString(new CultureInfo("en-US"))}
                         if (visitor.IsSelect && (args0Segment.IsConstant || args0Segment.IsVariable))
-                        {
-                            var argsExpr = Expression.Parameter(target.Type, "args");
-                            var newCallExpr = Expression.Call(argsExpr, methodInfo, args);
-                            var deferredDelegate = Expression.Lambda(newCallExpr, argsExpr);
-                            var fieldName = targetSegment.Value.ToString();
-                            return targetSegment.Change(new ReaderField
-                            {
-                                FieldType = ReaderFieldType.DeferredFields,
-                                Body = fieldName,
-                                DeferredDelegate = deferredDelegate,
-                                ReaderFields = new List<ReaderField>
-                                {
-                                    new ReaderField
-                                    {
-                                        FieldType = ReaderFieldType.Field,
-                                        FromMember = targetSegment.FromMember,
-                                        TargetMember = targetSegment.FromMember,
-                                        TargetType = methodInfo.ReturnType,
-                                        NativeDbType = targetSegment.NativeDbType,
-                                        TypeHandler = targetSegment.TypeHandler,
-                                        Body = fieldName
-                                    }
-                                }
-                            });
-                        }
+                            return visitor.BuildDeferredSqlSegment(methodCallExpr, targetSegment);
+
                         throw new NotSupportedException("不支持的方法调用，方法.ToString(string format)只支持常量或是变量的解析");
                     });
                     return true;
@@ -483,31 +460,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                         //args.ToString("C", new CultureInfo("en-US"))
                         //(args)=>{args.ToString("C", new CultureInfo("en-US"))}
                         if (visitor.IsSelect && (args0Segment.IsConstant || args0Segment.IsVariable) && (args1Segment.IsConstant || args1Segment.IsVariable))
-                        {
-                            var argsExpr = Expression.Parameter(target.Type, "args");
-                            var newCallExpr = Expression.Call(argsExpr, methodInfo, args);
-                            var deferredDelegate = Expression.Lambda(newCallExpr, argsExpr);
-                            var fieldName = targetSegment.Value.ToString();
-                            return targetSegment.Change(new ReaderField
-                            {
-                                FieldType = ReaderFieldType.DeferredFields,
-                                Body = fieldName,
-                                DeferredDelegate = deferredDelegate,
-                                ReaderFields = new List<ReaderField>
-                                {
-                                    new ReaderField
-                                    {
-                                        FieldType = ReaderFieldType.Field,
-                                        FromMember = targetSegment.FromMember,
-                                        TargetMember = targetSegment.FromMember,
-                                        TargetType = methodInfo.ReturnType,
-                                        NativeDbType = targetSegment.NativeDbType,
-                                        TypeHandler = targetSegment.TypeHandler,
-                                        Body = fieldName
-                                    }
-                                }
-                            });
-                        }
+                            return visitor.BuildDeferredSqlSegment(methodCallExpr, targetSegment);
                         throw new NotSupportedException("不支持的方法调用，方法.ToString(string format, IFormatProvider provider)只支持常量或是变量的解析");
                     });
                     return true;

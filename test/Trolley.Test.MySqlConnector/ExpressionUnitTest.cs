@@ -73,7 +73,7 @@ public class ExpressionUnitTest : UnitTestBase
             })
             .ToSql(out var dbParameters);
         Assert.True(sql == "SELECT (CASE WHEN a.`IsEnabled`=1 THEN @p4 ELSE 'Disabled' END) AS `IsEnabled`,(CASE WHEN a.`GuidField` IS NOT NULL THEN @p5 ELSE 'NoValue' END) AS `GuidField`,(CASE WHEN a.`Age`>35 THEN 1 ELSE 0 END) AS `IsOld`,(CASE WHEN a.`Name` LIKE '%kevin%' THEN 'Yes' ELSE 'No' END) AS `IsNeedParameter` FROM `sys_user` a WHERE (CASE WHEN a.`IsEnabled`=1 THEN @p0 ELSE 'Disabled' END)=@p1 AND (CASE WHEN a.`GuidField` IS NOT NULL THEN @p2 ELSE 'NoValue' END)=@p3");
-		Assert.True(dbParameters.Count == 6);
+        Assert.True(dbParameters.Count == 6);
         Assert.True(dbParameters[0].Value.ToString() == enabled);
         Assert.True(dbParameters[1].Value.ToString() == enabled);
         Assert.True(dbParameters[2].Value.ToString() == hasValue);
@@ -92,7 +92,7 @@ public class ExpressionUnitTest : UnitTestBase
         Assert.True(sql1 == "SELECT a.`Id`,a.`Name`,a.`Nature`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_company` a WHERE COALESCE(a.`Nature`,'Internet')='Internet'");
         var result1 = await repository.QueryAsync<Company>(f => (f.Nature ?? CompanyNature.Internet) == CompanyNature.Internet);
         Assert.True(result1.Count >= 2);
-        Assert.True(result1[0].Nature == CompanyNature.Internet);
+        Assert.True((result1[0].Nature ?? CompanyNature.Internet) == CompanyNature.Internet);
 
         var localNature = CompanyNature.Internet;
         var sql2 = repository.From<Company>()
@@ -103,7 +103,7 @@ public class ExpressionUnitTest : UnitTestBase
         Assert.True(dbParameters[0].Value.GetType() == typeof(string));
         var result2 = await repository.QueryAsync<Company>(f => (f.Nature ?? CompanyNature.Internet) == localNature);
         Assert.True(result2.Count >= 2);
-        Assert.True(result2[0].Nature == localNature);
+        Assert.True((result2[0].Nature ?? CompanyNature.Internet) == localNature);
 
         var sql3 = repository.From<Company>()
         .Where(f => (f.IsEnabled ? f.Nature : CompanyNature.Internet) == localNature)
@@ -138,7 +138,7 @@ public class ExpressionUnitTest : UnitTestBase
             })
             .ToSql(out var dbParameters);
         Assert.True(sql == "SELECT @p2 AS `False`,@p3 AS `Unknown`,CONCAT(@p4,' and ',@p5) AS `MyLove` FROM `sys_user` a WHERE a.`Name` LIKE CONCAT('%',@p0,'%') OR CAST(a.`IsEnabled` AS CHAR)=@p1");
-		Assert.True(dbParameters.Count == 6);
+        Assert.True(dbParameters.Count == 6);
         Assert.True((string)dbParameters[0].Value == dict["1"]);
         Assert.True((string)dbParameters[1].Value == strCollection[0]);
         Assert.True((string)dbParameters[2].Value == strArray[2]);

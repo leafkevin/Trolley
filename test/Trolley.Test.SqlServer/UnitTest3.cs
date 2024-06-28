@@ -431,6 +431,24 @@ public class UnitTest3 : UnitTestBase
             Assert.True(result2.Id == "1");
             Assert.True(result2.ProductCount == 11);
         }
+        //TODO:
+        //var updateObj = new Dictionary<string, object>();
+        //updateObj.Add("ProductCount", 20);
+        //updateObj.Add("TotalAmount", 800);
+        //repository.BeginTransaction();
+        //result = repository.Update<Order>()
+        //    .Set(updateObj)
+        //    .Where(new { Id = "1" })
+        //    .Execute();
+        //var result3 = repository.Get<Order>(new { Id = "1" });
+        //repository.Commit();
+        //if (result > 0)
+        //{
+        //    Assert.NotNull(result3);
+        //    Assert.True(result3.Id == "1");
+        //    Assert.True(result3.ProductCount == 20);
+        //    Assert.True(result3.TotalAmount != 800);
+        //}
     }
     [Fact]
     public async void Update_MultiParameters()

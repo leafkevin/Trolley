@@ -194,15 +194,6 @@ public class SqlSegment
         this.Expression = nextExpr;
         return this;
     }
-    public Type GetExpectType(Expression orgExpr)
-    {
-        if (this.ExpectType != null) return this.ExpectType;
-        if (this.IsExpression || this.IsMethodCall)
-            return orgExpr.Type.ToUnderlyingType();
-        if (this.HasField)//子查询时，MemberMapper为null
-            return (this.MemberMapper?.MemberType ?? this.FromMember.GetMemberType()).ToUnderlyingType();
-        return this.Value.GetType().ToUnderlyingType();
-    }
     public bool HasDeferrdNot() => this.DeferredExprs.IsDeferredNot();
     public void Push(DeferredExpr deferredExpr)
     {

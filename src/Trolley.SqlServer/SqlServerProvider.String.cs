@@ -71,12 +71,33 @@ partial class SqlServerProvider
                             var concatExprs = visitor.SplitConcatList(args);
                             SqlSegment resultSegment = null;
 
+                            bool isDeferredFields = false;
+                            var sqlSegments = new List<SqlSegment>();
                             for (var i = 0; i < concatExprs.Count; i++)
                             {
                                 //可能是一个sqlSegment，也可能是多个List<sqlSegment>
-                                var sqlSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = concatExprs[i] });
-                                if (i == 0) resultSegment = sqlSegment;
+                                var sqlSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = concatExprs[i], ExpectType = typeof(string) });
+                                sqlSegments.Add(sqlSegment);
+                                if (sqlSegment.IsDeferredFields)
+                                {
+                                    isDeferredFields = true;
+                                    resultSegment = sqlSegment;
+                                    break;
+                                }
+                            }
+                            if (isDeferredFields)
+                            {
+                                if (!visitor.IsSelect)
+                                    throw new NotSupportedException($"不支持的方法调用：{methodCallExpr}");
 
+                                return visitor.BuildDeferredSqlSegment(methodCallExpr, resultSegment);
+                            }
+
+                            resultSegment = sqlSegments[0];
+                            for (var i = 0; i < concatExprs.Count; i++)
+                            {
+                                //可能是一个sqlSegment，也可能是多个List<sqlSegment>
+                                var sqlSegment = sqlSegments[i];
                                 if (sqlSegment.IsConstant)
                                 {
                                     constBuilder.Append(sqlSegment.ToString());
@@ -92,7 +113,7 @@ partial class SqlServerProvider
                                 if (builder.Length > 0)
                                     builder.Append('+');
 
-                                if (sqlSegment.GetExpectType(concatExprs[i]) != typeof(string))
+                                if (sqlSegment.SegmentType != typeof(string))
                                 {
                                     if (sqlSegment.HasField || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
                                         sqlSegment.Value = this.CastTo(typeof(string), sqlSegment.Value);
@@ -131,12 +152,33 @@ partial class SqlServerProvider
                             SqlSegment resultSegment = null;
 
                             //123_{0}_345_{1}{2}_etr_{3}_fdr, 111,@p1,@p2,e4re
+                            bool isDeferredFields = false;
+                            var sqlSegments = new List<SqlSegment>();
                             for (var i = 0; i < concatExprs.Count; i++)
                             {
                                 //可能是一个sqlSegment，也可能是多个List<sqlSegment>
-                                var sqlSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = concatExprs[i] });
-                                if (i == 0) resultSegment = sqlSegment;
+                                var sqlSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = concatExprs[i], ExpectType = typeof(string) });
+                                sqlSegments.Add(sqlSegment);
+                                if (sqlSegment.IsDeferredFields)
+                                {
+                                    isDeferredFields = true;
+                                    resultSegment = sqlSegment;
+                                    break;
+                                }
+                            }
+                            if (isDeferredFields)
+                            {
+                                if (!visitor.IsSelect)
+                                    throw new NotSupportedException($"不支持的方法调用：{methodCallExpr}");
 
+                                return visitor.BuildDeferredSqlSegment(methodCallExpr, resultSegment);
+                            }
+
+                            resultSegment = sqlSegments[0];
+                            for (var i = 0; i < concatExprs.Count; i++)
+                            {
+                                //可能是一个sqlSegment，也可能是多个List<sqlSegment>
+                                var sqlSegment = sqlSegments[i];
                                 if (sqlSegment.IsConstant)
                                 {
                                     constBuilder.Append(sqlSegment.ToString());
@@ -152,7 +194,7 @@ partial class SqlServerProvider
                                 if (builder.Length > 0)
                                     builder.Append('+');
 
-                                if (sqlSegment.GetExpectType(concatExprs[i]) != typeof(string))
+                                if (sqlSegment.SegmentType != typeof(string))
                                 {
                                     if (sqlSegment.HasField || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
                                         sqlSegment.Value = this.CastTo(typeof(string), sqlSegment.Value);
@@ -259,7 +301,7 @@ partial class SqlServerProvider
                                     }
                                     builder.Append('+');
 
-                                    if (elementSegment.GetExpectType(elementSegment.Expression) != typeof(string))
+                                    if (elementSegment.SegmentType != typeof(string))
                                     {
                                         if (elementSegment.HasField || elementSegment.IsExpression || elementSegment.IsMethodCall)
                                             elementSegment.Value = this.CastTo(typeof(string), elementSegment.Value);
@@ -330,7 +372,7 @@ partial class SqlServerProvider
                                     }
                                     builder.Append('+');
 
-                                    if (elementSegment.GetExpectType(elementSegment.Expression) != typeof(string))
+                                    if (elementSegment.SegmentType != typeof(string))
                                     {
                                         if (elementSegment.HasField || elementSegment.IsExpression || elementSegment.IsMethodCall)
                                             elementSegment.Value = this.CastTo(typeof(string), elementSegment.Value);

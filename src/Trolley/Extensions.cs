@@ -261,11 +261,16 @@ public static class Extensions
     {
         var entityType = typeof(TEntity);
         var ormProviderType = ormProvider.GetType();
-        var cacheKey = GetTypeReaderKey(entityType, ormProviderType, reader, readerFields);
+        var cacheKey = GetTypeReaderKey(entityType, ormProviderType, reader, readerFields, out var deferredFuncs);
         if (!queryReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
         {
             deserializer = CreateReaderDeserializer(ormProvider, reader, entityType, readerFields);
             queryReaderDeserializerCache.TryAdd(cacheKey, deserializer);
+        }
+        if (deferredFuncs != null && deferredFuncs.Count > 0)
+        {
+            deferredFuncs.Insert(0, reader);
+            return (TEntity)deserializer.DynamicInvoke(deferredFuncs.ToArray());
         }
         return ((Func<IDataReader, TEntity>)deserializer).Invoke(reader);
     }
@@ -355,6 +360,7 @@ public static class Extensions
         var blockParameters = new List<ParameterExpression>();
         var blockBodies = new List<Expression>();
         var readerExpr = Expression.Parameter(typeof(IDataReader), "reader");
+        var parameterExprs = new List<ParameterExpression> { readerExpr };
         var ormProviderExpr = Expression.Constant(ormProvider);
 
         int index = 0, readerIndex = 0;
@@ -394,10 +400,15 @@ public static class Extensions
                     }
 
                     Expression executeExpr = null;
-                    List<Expression> argsExprs = null;
+
+                    var deferredDelegateType = readerField.DeferredDelegateType;
+                    var deferredFuncExpr = Expression.Parameter(typeof(object), $"deferredFunc{parameterExprs.Count}");
+                    var typedDeferredFuncExpr = Expression.Convert(deferredFuncExpr, deferredDelegateType);
+                    parameterExprs.Add(deferredFuncExpr);
+                    //把延迟方法调用委托当作参数传进来，这样缓存才有效，相同key，不同的延迟方法
                     if (endIndex > index)
                     {
-                        argsExprs = new List<Expression>();
+                        var argsExprs = new List<Expression>();
                         while (index < endIndex)
                         {
                             var fieldType = reader.GetFieldType(index);
@@ -409,9 +420,10 @@ public static class Extensions
                             childIndex++;
                             index++;
                         }
-                        executeExpr = Expression.Invoke(readerField.DeferredDelegate, argsExprs.ToArray());
+                        executeExpr = Expression.Invoke(typedDeferredFuncExpr, argsExprs);
                     }
-                    else executeExpr = Expression.Invoke(readerField.DeferredDelegate);
+                    else executeExpr = Expression.Invoke(typedDeferredFuncExpr);
+
                     if (current.IsDefault)
                         current.Bindings.Add(Expression.Bind(readerField.TargetMember, executeExpr));
                     else current.Arguments.Add(executeExpr);
@@ -490,7 +502,7 @@ public static class Extensions
 
         blockBodies.Add(Expression.Return(resultLabelExpr, returnExpr));
         blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(entityType)));
-        return Expression.Lambda(Expression.Block(blockParameters, blockBodies), readerExpr).Compile();
+        return Expression.Lambda(Expression.Block(blockParameters, blockBodies), parameterExprs).Compile();
     }
     private static Expression GetReaderValue(IOrmProvider ormProvider, Expression ormProviderExpr, ParameterExpression readerExpr, Expression indexExpr, Type targetType, Type fieldType, ITypeHandler typeHandler, List<ParameterExpression> blockParameters, List<Expression> blockBodies)
     {
@@ -555,8 +567,9 @@ public static class Extensions
         }
         return hashCode.ToHashCode();
     }
-    private static int GetTypeReaderKey(Type entityType, Type ormProviderType, IDataReader reader, List<ReaderField> readerFields)
+    private static int GetTypeReaderKey(Type entityType, Type ormProviderType, IDataReader reader, List<ReaderField> readerFields, out List<object> deferredFuncs)
     {
+        deferredFuncs = null;
         var hashCode = new HashCode();
         hashCode.Add(ormProviderType);
         hashCode.Add(entityType);
@@ -568,21 +581,15 @@ public static class Extensions
         hashCode.Add(readerFields.Count);
         foreach (var readerField in readerFields)
         {
-            if (readerField.FieldType == ReaderFieldType.Field)
-                hashCode.Add(readerField.TargetMember.Name);
-            else
+            if (readerField.FieldType == ReaderFieldType.DeferredFields)
             {
-                //其他实体类型
-                if (readerField.ReaderFields != null && readerField.ReaderFields.Count > 0)
-                {
-                    foreach (var childReaderField in readerField.ReaderFields)
-                    {
-                        hashCode.Add(childReaderField.TargetMember.Name);
-                    }
-                }
-                //延迟函数调用字段，DeferredFields
-                else hashCode.Add(readerField.TargetMember.Name);
+                deferredFuncs ??= new();
+                deferredFuncs.Add(readerField.DeferredDelegate);
             }
+            hashCode.Add(readerField.FieldType);
+            if (readerField.FieldType == ReaderFieldType.Entity && readerField.IsTargetType)
+                hashCode.Add("TargetEntity");
+            else hashCode.Add(readerField.TargetMember.Name);
         }
         return hashCode.ToHashCode();
     }

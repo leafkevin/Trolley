@@ -38,16 +38,16 @@ partial class MySqlProvider
                         {
                             args0Segment.Value = methodInfo.Invoke(null, new object[] { args0Segment.Value });
                             //类型改变了
-                            args0Segment.ExpectType = methodInfo.ReturnType;
+                            args0Segment.SegmentType = methodInfo.ReturnType;
                             return args0Segment;
                         }
-                        if (args0Segment.GetExpectType(args[0]) != methodInfo.ReturnType)
+                        if (args0Segment.SegmentType != methodInfo.ReturnType)
                         {
                             args0Segment.Value = this.CastTo(methodCallExpr.Type, args0Segment.Value);
+                            args0Segment.ExpectType = null;
                             args0Segment.IsMethodCall = true;
                         }
-                        //类型改变了
-                        args0Segment.ExpectType = methodInfo.ReturnType;
+                        args0Segment.SegmentType = methodInfo.ReturnType;
                         return args0Segment;
                     });
                     result = true;

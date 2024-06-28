@@ -56,7 +56,8 @@ public class ReaderField
     /// <summary>
     /// 延迟调用的委托
     /// </summary>
-    public Expression DeferredDelegate { get; set; }
+    public Delegate DeferredDelegate { get; set; }
+    public Type DeferredDelegateType { get; set; }
     /// <summary>
     /// 是否是最外层目标类型，通常用判断第一个字段是否是参数访问，并且只有一个字段，可以有include操作
     /// </summary>

@@ -53,4 +53,5 @@ public interface ISqlVisitor : IDisposable
     bool ChangeSameType(SqlSegment leftSegment, SqlSegment rightSegment, bool isForce = false);
     DataTable ToDataTable(Type entityType, IEnumerable entities, EntityMap fromMapper, string tableName = null);
     List<(MemberInfo MemberInfo, MemberMap RefMemberMapper)> GetRefMemberMappers(Type entityType, EntityMap refEntityMapper);
+    SqlSegment BuildDeferredSqlSegment(MethodCallExpression methodCallExpr, SqlSegment sqlSegment);
 }

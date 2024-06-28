@@ -319,6 +319,7 @@ public class SqlVisitor : ISqlVisitor
     public virtual SqlSegment Visit(SqlSegment sqlSegment)
     {
         SqlSegment result = null;
+        sqlSegment.SegmentType = sqlSegment.Expression.Type;
         if (sqlSegment.Expression == null)
             throw new ArgumentNullException("sqlSegment.Expression");
 
@@ -431,7 +432,29 @@ public class SqlVisitor : ISqlVisitor
                     }
                     return this.Evaluate(sqlSegment);
                 }
-                return this.Visit(sqlSegment.Next(unaryExpr.Operand));
+                if (unaryExpr.Operand.Type.IsEnum && (unaryExpr.Type == typeof(string)
+                    || sqlSegment.ExpectType == typeof(string) && unaryExpr.Type == typeof(object)))
+                {
+                    var enmuType = unaryExpr.Operand.Type;
+                    var methodInfo = typeof(Enum).GetMethod(nameof(Enum.GetName), new Type[] { typeof(Type), typeof(object) });
+                    var callExpr = Expression.Call(methodInfo, Expression.Constant(enmuType), Expression.Convert(unaryExpr.Operand, typeof(object)));
+                    //TODO:有延迟方法调用，无需继续解析，返回给最外层调用端，直接封装成延迟方法
+                    sqlSegment.IsDeferredFields = true;
+                    sqlSegment.ExpectType = null;
+                    return sqlSegment;
+                    //return this.Visit(sqlSegment.Next(callExpr));
+                }
+                sqlSegment = this.Visit(sqlSegment.Next(unaryExpr.Operand));
+                if (sqlSegment.ExpectType != null && sqlSegment.ExpectType != sqlSegment.SegmentType)
+                {
+                    if (sqlSegment.HasField || sqlSegment.IsExpression || sqlSegment.IsMethodCall || sqlSegment.HasParameter)
+                    {
+                        sqlSegment.Value = this.OrmProvider.CastTo(sqlSegment.ExpectType, sqlSegment.Value);
+                        sqlSegment.SegmentType = sqlSegment.ExpectType;
+                        sqlSegment.ExpectType = null;
+                    }
+                }
+                return sqlSegment;
         }
         return this.Visit(sqlSegment.Next(unaryExpr.Operand));
     }
@@ -471,7 +494,9 @@ public class SqlVisitor : ISqlVisitor
                     return operatorSegment;
 
                 var leftSegment = this.Visit(sqlSegment.Next(binaryExpr.Left));
+                if (leftSegment.IsDeferredFields) return sqlSegment;
                 var rightSegment = this.Visit(new SqlSegment { Expression = binaryExpr.Right });
+                if (rightSegment.IsDeferredFields) return sqlSegment;
 
                 //计算数组访问，a??b
                 if (leftSegment.IsConstant && rightSegment.IsConstant)
@@ -615,9 +640,9 @@ public class SqlVisitor : ISqlVisitor
                         fieldName = readerField.Body;
                     }
                     sqlSegment.FromMember = readerField.TargetMember;
-                    sqlSegment.SegmentType = readerField.TargetType;
                     if (readerField.TargetType.IsEnumType(out var underlyingType))
                         sqlSegment.ExpectType = underlyingType;
+                    sqlSegment.SegmentType = underlyingType;
                     sqlSegment.NativeDbType = readerField.NativeDbType;
                     sqlSegment.TypeHandler = readerField.TypeHandler;
                     sqlSegment.Value = fieldName;
@@ -630,9 +655,9 @@ public class SqlVisitor : ISqlVisitor
                     if (memberMapper.MemberType.IsEntityType(out _) && !memberMapper.IsNavigation && memberMapper.TypeHandler == null)
                         throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberExpr.Member.Name}不是值类型，未配置为导航属性也没有配置TypeHandler");
                     sqlSegment.FromMember = memberMapper.Member;
-                    sqlSegment.SegmentType = memberMapper.MemberType;
                     if (memberMapper.UnderlyingType.IsEnum)
                         sqlSegment.ExpectType = memberMapper.UnderlyingType;
+                    sqlSegment.SegmentType = memberMapper.UnderlyingType;
                     sqlSegment.NativeDbType = memberMapper.NativeDbType;
                     sqlSegment.TypeHandler = memberMapper.TypeHandler;
                     //查询时，IsNeedAlias始终为true，新增、更新、删除时，引用联表操作时，才会为true
@@ -701,18 +726,18 @@ public class SqlVisitor : ISqlVisitor
             //2.Select子句中Include导航成员访问，主表数据已经查询了，此处成员访问只是多一个引用赋值动作，做成了延迟委托调用
             string fields = null;
             List<ReaderField> readerFields = null;
-            Expression deferredDelegate = null;
+            LambdaExpression deferredFuncExpr = null;
             if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count > 0)
             {
                 readerFields = new List<ReaderField>();
                 var builder = new StringBuilder();
                 var visitor = new ReplaceParameterVisitor();
-                deferredDelegate = visitor.Visit(methodCallExpr);
+                var bodyExpr = visitor.Visit(methodCallExpr);
                 //f.Balance.ToString("C")
                 //args0.ToString("C")
                 //(args0)=>{args0.ToString("C")}
-                if (methodCallExpr.Object.IsParameter(out _))
-                    deferredDelegate = Expression.Lambda(deferredDelegate, visitor.NewParameters);
+                if (visitor.NewParameters.Count > 0)
+                    deferredFuncExpr = Expression.Lambda(bodyExpr, visitor.NewParameters);
                 foreach (var argsExpr in visitor.OrgMembers)
                 {
                     var argumentSegment = this.VisitAndDeferred(new SqlSegment { Expression = argsExpr });
@@ -722,13 +747,9 @@ public class SqlVisitor : ISqlVisitor
                         var fieldName = argumentSegment.Value.ToString();
                         readerFields.Add(new ReaderField
                         {
-                            FieldType = ReaderFieldType.Field,
-                            FromMember = argumentSegment.FromMember,
-                            TargetMember = argumentSegment.FromMember,
-                            TargetType = methodCallExpr.Type,
-                            NativeDbType = argumentSegment.NativeDbType,
-                            TypeHandler = argumentSegment.TypeHandler,
-                            Body = fieldName
+                            TargetType = argsExpr.Type,
+                            TargetMember = argsExpr.Member,
+                            TypeHandler = argumentSegment.TypeHandler
                         });
                         if (builder.Length > 0)
                             builder.Append(',');
@@ -738,19 +759,23 @@ public class SqlVisitor : ISqlVisitor
                 if (readerFields.Count > 0)
                     fields = builder.ToString();
             }
-            else deferredDelegate = Expression.Lambda(methodCallExpr);
+            else deferredFuncExpr = Expression.Lambda(methodCallExpr);
+
 
             if (sqlSegment.IsDeferredFields || !string.IsNullOrEmpty(fields))
             {
                 if (readerFields == null)
                     fields = "NULL";
+                var deferredDelegate = deferredFuncExpr.Compile();
+                sqlSegment.IsDeferredFields = true;
                 return sqlSegment.Change(new ReaderField
                 {
                     FieldType = ReaderFieldType.DeferredFields,
                     Body = fields,
+                    DeferredDelegateType = deferredFuncExpr.Type,
                     DeferredDelegate = deferredDelegate,
                     ReaderFields = readerFields
-                });
+                }, false, false, false, true);
             }
         }
         sqlSegment = this.Evaluate(sqlSegment);
@@ -1886,6 +1911,60 @@ public class SqlVisitor : ISqlVisitor
         if (tableSegment.TableType != TableType.FromQuery)
             tableName = this.OrmProvider.GetTableName(tableName);
         return tableName;
+    }
+    public SqlSegment BuildDeferredSqlSegment(MethodCallExpression methodCallExpr, SqlSegment sqlSegment)
+    {
+        string fields = null;
+        List<ReaderField> readerFields = null;
+        LambdaExpression deferredFuncExpr = null;
+        if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count > 0)
+        {
+            readerFields = new List<ReaderField>();
+            var builder = new StringBuilder();
+            var visitor = new ReplaceParameterVisitor();
+            var bodyExpr = visitor.Visit(methodCallExpr);
+
+            //f.Balance.ToString("C")
+            //args0.ToString("C")
+            //(args0)=>{args0.ToString("C")}          
+            if (visitor.NewParameters.Count > 0)
+                deferredFuncExpr = Expression.Lambda(bodyExpr, visitor.NewParameters.ToArray());
+
+            foreach (var argsExpr in visitor.OrgMembers)
+            {
+                var argumentSegment = this.VisitAndDeferred(new SqlSegment { Expression = argsExpr });
+                if (argumentSegment.HasField)
+                {
+                    sqlSegment.HasField = true;
+                    var fieldName = argumentSegment.Value.ToString();
+                    readerFields.Add(new ReaderField
+                    {
+                        TargetType = argsExpr.Type,
+                        TargetMember = argsExpr.Member,
+                        TypeHandler = argumentSegment.TypeHandler
+                    });
+                    if (builder.Length > 0)
+                        builder.Append(',');
+                    builder.Append(fieldName);
+                }
+            }
+            if (readerFields.Count > 0)
+                fields = builder.ToString();
+        }
+        else deferredFuncExpr = Expression.Lambda(methodCallExpr);
+
+        if (readerFields == null)
+            fields = "NULL";
+        var deferredDelegate = deferredFuncExpr.Compile();
+        sqlSegment.IsDeferredFields = true;
+        return sqlSegment.Change(new ReaderField
+        {
+            FieldType = ReaderFieldType.DeferredFields,
+            Body = fields,
+            DeferredDelegateType = deferredFuncExpr.Type,
+            DeferredDelegate = deferredDelegate,
+            ReaderFields = readerFields
+        }, false, false, false, true);
     }
     public virtual void Dispose()
     {

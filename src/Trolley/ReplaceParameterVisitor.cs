@@ -12,8 +12,9 @@ class ReplaceParameterVisitor : ExpressionVisitor
     {
         if (node.Expression.NodeType == ExpressionType.Parameter)
         {
-            var parameterName = $"args{this.NewParameters.Count}";
-            ParameterExpression parameterExpr = null;
+            var parameterExpr = node.Expression as ParameterExpression;
+            var parameterName = $"{parameterExpr.Name}${node.Member.Name}";
+
             if (this.NewParameters != null)
             {
                 parameterExpr = NewParameters.Find(f => f.Name == parameterName);

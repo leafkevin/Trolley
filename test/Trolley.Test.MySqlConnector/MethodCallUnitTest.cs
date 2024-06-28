@@ -471,4 +471,50 @@ public class MethodCallUnitTest : UnitTestBase
             .ToSql(out _);
         Assert.True(sql == "SELECT a.`Id` FROM `sys_user` a WHERE a.`CreatedAt` IN ('2023-03-03 00:00:00.000','2023-03-03 00:00:00.000','2023-03-03 06:06:06.000')");
     }
+    [Fact]
+    public async void ComplexDeferredCall()
+    {
+        using var repository = dbFactory.Create();
+        var sql = repository.From<User>()
+            .Where(f => f.Id == 1)
+            .Select(f => new
+            {
+                NewField = $"{f.Age.IsNull(20)}-{f.Gender}"
+            })
+            .ToSql(out _);
+        Assert.True(sql == "SELECT a.`Age`,a.`Gender` FROM `sys_user` a WHERE a.`Id`=1");
+
+        var result = await repository.From<User>()
+            .Where(f => f.Id == 1)
+            .Select(f => new
+            {
+                NewField = $"{f.Age}-{f.Gender}",
+                f.Age,
+                f.Gender
+            })
+            .FirstAsync();
+        var age = result.Age == 0 ? 20 : result.Age;
+        Assert.True(result.NewField == $"{age}-{result.Gender}");
+
+        sql = repository.From<User>()
+           .Where(f => f.Id == 1)
+           .Select(f => new
+           {
+               NewField = $"{f.Age}-{f.Gender.ToDescription()}"
+           })
+           .ToSql(out _);
+        Assert.True(sql == "SELECT a.`Age`,a.`Gender` FROM `sys_user` a WHERE a.`Id`=1");
+
+        result = await repository.From<User>()
+           .Where(f => f.Id == 1)
+           .Select(f => new
+           {
+               NewField = $"{f.Age}-{f.Gender.ToDescription()}",
+               f.Age,
+               f.Gender
+           })
+           .FirstAsync();
+        age = result.Age == 0 ? 20 : result.Age;
+        Assert.True(result.NewField == $"{age}-{result.Gender.ToDescription()}");
+    }
 }

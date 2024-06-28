@@ -28,7 +28,7 @@ public static class Sql
     public static bool IsNull<TField>(this TField field)
         => throw new NotImplementedException();
     /// <summary>
-    /// 当栏位field为null值时，取nullVaueExpr的值，可以是常量、变量、或是字段表达式等，只做 SQL解析，不实现
+    /// 当栏位field为null值时，取nullVaueExpr的值，可以是常量、变量、或是字段表达式等
     /// <code>x.Max(f.Balance.IsNull(0)),a.Balance.IsNull(b.EndBalance)</code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -37,7 +37,11 @@ public static class Sql
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
     public static TField IsNull<TField>(this TField field, TField nullVaueExpr)
-       => throw new NotImplementedException();
+    {
+        if (field.Equals(default(TField)))
+            return nullVaueExpr;
+        return field;
+    }
     /// <summary>
     /// 更改参数名称，在子查询或是CTE子句中使用参数会有与主查询SQL中参数名相同，可以使用此方法更改参数名，避免参数名重复
     /// </summary>
