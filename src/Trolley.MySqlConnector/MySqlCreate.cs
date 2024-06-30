@@ -44,8 +44,8 @@ public class MySqlCreate<TEntity> : Create<TEntity>, IMySqlCreate<TEntity>
     #endregion
 
     #region WithBulk
-    public override IMySqlContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount)
-        => base.WithBulk(insertObjs, bulkCount) as IMySqlContinuedCreate<TEntity>;
+    public override IMySqlBulkContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount)
+        => base.WithBulk(insertObjs, bulkCount) as IMySqlBulkContinuedCreate<TEntity>;
     #endregion
 
     #region WithBulkCopy

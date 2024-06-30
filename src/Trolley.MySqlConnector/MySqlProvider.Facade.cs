@@ -9,7 +9,11 @@ partial class MySqlProvider
         => new MySqlQueryVisitor(dbKey, this, mapProvider, shardingProvider, isParameterized, tableAsStart, parameterPrefix, dbParameters);
     public override ICreate<TEntity> NewCreate<TEntity>(DbContext dbContext) => new MySqlCreate<TEntity>(dbContext);
     public override IContinuedCreate<TEntity> NewContinuedCreate<TEntity>(DbContext dbContext, ICreateVisitor visitor)
-        => new MySqlContinuedCreate<TEntity>(dbContext, visitor);
+    {
+        if (visitor.ActionMode == ActionMode.Bulk)
+            return new MySqlBulkContinuedCreate<TEntity>(dbContext, visitor);
+        else return new MySqlContinuedCreate<TEntity>(dbContext, visitor);
+    }
     public override ICreated<TEntity> NewCreated<TEntity>(DbContext dbContext, ICreateVisitor visitor)
         => new MySqlCreated<TEntity>(dbContext, visitor);
     public override ICreateVisitor NewCreateVisitor(string dbKey, IEntityMapProvider mapProvider, IShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")

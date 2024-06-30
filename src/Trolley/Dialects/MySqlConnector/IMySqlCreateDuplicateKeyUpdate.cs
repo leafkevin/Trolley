@@ -24,7 +24,7 @@ public interface IMySqlCreateDuplicateKeyUpdate<TEntity>
     /// </code>
     /// </summary>
     /// <returns>返回更新对象</returns>
-    IMySqlCreateDuplicateKeyUpdate<TEntity> Alias();
+    IMySqlCreateDuplicateKeyUpdate<TEntity> UseAlias();
     #endregion
 
     #region Set

@@ -1035,15 +1035,16 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
         Assert.True(sql == "SELECT a.`Id`,a.`TenantId`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`SourceType`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_user` a WHERE EXISTS(SELECT * FROM `sys_company` t WHERE t.`Name` LIKE '%Microsoft%' AND a.`CompanyId`=t.`Id`)");
 
         sql = repository.From<User>()
-            .Where(f => Sql.Exists(t =>
-                t.From<OrderDetail>('b')
-                 .GroupBy(a => a.OrderId)
-                 .Having((x, a) => Sql.CountDistinct(a.ProductId) > 0)
-                 .SelectAnonymous()))
+            .Where(f => Sql.Exists(t => t
+                .From<Order, OrderDetail>('b')
+                .Where((x, y) => x.Id == y.OrderId && f.Id == x.BuyerId)
+                .GroupBy((a, b) => a.Id)
+                .Having((x, a, b) => Sql.CountDistinct(b.ProductId) > 1)
+                .SelectAnonymous()))
             .GroupBy(f => new { f.Gender, f.CompanyId })
             .Select((t, a) => new { t.Grouping, UserTotal = t.CountDistinct(a.Id) })
             .ToSql(out _);
-        Assert.True(sql == "SELECT a.`Gender`,a.`CompanyId`,COUNT(DISTINCT a.`Id`) AS `UserTotal` FROM `sys_user` a WHERE EXISTS(SELECT * FROM `sys_order_detail` b GROUP BY b.`OrderId` HAVING COUNT(DISTINCT b.`ProductId`)>0) GROUP BY a.`Gender`,a.`CompanyId`");
+        Assert.True(sql == "SELECT a.`Gender`,a.`CompanyId`,COUNT(DISTINCT a.`Id`) AS `UserTotal` FROM `sys_user` a WHERE EXISTS(SELECT * FROM `sys_order` b,`sys_order_detail` c WHERE b.`Id`=c.`OrderId` AND a.`Id`=b.`BuyerId` GROUP BY b.`Id` HAVING COUNT(DISTINCT c.`ProductId`)>1) GROUP BY a.`Gender`,a.`CompanyId`");
     }
     [Fact]
     public void FromQuery_Exists()
@@ -1871,21 +1872,21 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `MenuList` a INNER JOIN `sys_pa
             .AsCteTable("myCteTable2");
 
         var sql = repository
-            .From(myCteTable2)
-            .InnerJoin(myCteTable1, (a, b) => a.Id == b.Id)
-            .Select((a, b) => new { a.Id, b.Name, a.ParentId, a.Url })
+            .From(myCteTable1)
+            .InnerJoin(myCteTable2, (a, b) => a.Id == b.Id)
+            .Select((a, b) => new { b.Id, a.Name, b.ParentId, b.Url })
             .ToSql(out _);
-        Assert.True(sql == @"WITH RECURSIVE `myCteTable2`(`Id`,`ParentId`,`Url`) AS 
-(
-SELECT b.`Id`,b.`ParentId`,a.`Url` FROM `sys_page` a,`sys_menu` b WHERE a.`Id`=b.`PageId` UNION ALL
-SELECT a.`Id`,a.`ParentId`,b.`Url` FROM `sys_menu` a INNER JOIN `sys_page` b ON a.`PageId`=b.`Id`
-),
-`myCteTable1`(`Id`,`Name`,`ParentId`) AS 
+        Assert.True(sql == @"WITH RECURSIVE `myCteTable1`(`Id`,`Name`,`ParentId`) AS 
 (
 SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a WHERE a.`Id`=@p0 UNION ALL
 SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a INNER JOIN `myCteTable1` b ON a.`ParentId`=b.`Id`
+),
+`myCteTable2`(`Id`,`ParentId`,`Url`) AS 
+(
+SELECT b.`Id`,b.`ParentId`,a.`Url` FROM `sys_page` a,`sys_menu` b WHERE a.`Id`=b.`PageId` UNION ALL
+SELECT a.`Id`,a.`ParentId`,b.`Url` FROM `sys_menu` a INNER JOIN `sys_page` b ON a.`PageId`=b.`Id`
 )
-SELECT a.`Id`,b.`Name`,a.`ParentId`,a.`Url` FROM `myCteTable2` a INNER JOIN `myCteTable1` b ON a.`Id`=b.`Id`");
+SELECT b.`Id`,a.`Name`,b.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myCteTable2` b ON a.`Id`=b.`Id`");
 
         var menuList = repository
             .From<Menu>()
@@ -2037,7 +2038,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
                 .AsCteTable("myCteTable2"))
             .InnerJoin((a, b) => a.Id == b.Id)
             .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
-           .ToListAsync();
+            .ToListAsync();
         Assert.NotNull(result1);
         Assert.True(result1.Count > 0);
 

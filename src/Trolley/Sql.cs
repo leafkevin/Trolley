@@ -97,17 +97,6 @@ public static class Sql
     /// <summary>
     /// 使用子查询构建Exists查询条件
     /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="subQuery">带有Where条件的子查询</param>
-    /// <returns></returns>
-    /// <exception cref="NotImplementedException"></exception>
-    public static bool Exists<T>(IQuery<T> subQuery)
-    {
-        throw new NotImplementedException();
-    }
-    /// <summary>
-    /// 使用子查询构建Exists查询条件
-    /// </summary>
     /// <param name="subQuery"></param>
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
@@ -116,14 +105,14 @@ public static class Sql
         throw new NotImplementedException();
     }
     /// <summary>
-    /// 使用CTE表构建Exists查询条件
+    /// 使用子查询构建Exists查询条件，也支持CTE表
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="subQuery"></param>
     /// <param name="predicate"></param>
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
-    public static bool Exists<T>(ICteQuery<T> subQuery, Expression<Func<T, bool>> predicate)
+    public static bool Exists<T>(IQuery<T> subQuery, Expression<Func<T, bool>> predicate)
     {
         throw new NotImplementedException();
     }

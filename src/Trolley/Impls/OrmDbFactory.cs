@@ -96,7 +96,13 @@ public sealed class OrmDbFactory : IOrmDbFactory
 
     public IRepository CreateRepository(string dbKey = null)
     {
+        //如果有指定dbKey，就是使用指定的dbKey创建IRepository对象
+        //如果没有指定dbKey，再判断是否有指定分库规则，有指定就调用分库规则获取dbKey
+        //如果也没有指定分库规则，就使用配置的默认dbKey
         var localDbKey = dbKey ?? this.shardingProvider.UseDefaultDatabase(this.defaultDatabase?.DbKey);
+        if (string.IsNullOrEmpty(localDbKey))
+            throw new ArgumentNullException(nameof(dbKey), "请配置dbKey，既没有设置分库规则来获取dbKey，也没有设置默认的dbKey");
+
         var database = this.GetDatabase(localDbKey);
         var ormProviderType = database.OrmProviderType;
         if (!this.TryGetOrmProvider(ormProviderType, out var ormProvider))
