@@ -160,7 +160,6 @@ public partial class MySqlProvider : BaseOrmProvider
         defaultTypeHandlers[typeof(TimeOnly?)] = typeHandlers[typeof(NullableTimeOnlyTypeHandler)];
         defaultTypeHandlers[typeof(Guid)] = typeHandlers[typeof(GuidTypeHandler)];
         defaultTypeHandlers[typeof(Guid?)] = typeHandlers[typeof(NullableGuidTypeHandler)];
-        defaultTypeHandlers[typeof(object)] = typeHandlers[typeof(JsonTypeHandler)];
     }
     public override IDbConnection CreateConnection(string connectionString)
         => new MySqlConnection(connectionString);
