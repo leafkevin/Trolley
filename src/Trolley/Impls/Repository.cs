@@ -25,7 +25,6 @@ public class Repository : IRepository
     #endregion
 
     #region Constructor
-    public Repository() { }
     public Repository(DbContext dbContext) => this.DbContext = dbContext;
     #endregion
 

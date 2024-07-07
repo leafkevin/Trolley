@@ -6,7 +6,7 @@
 	</PropertyGroup>
 	<ItemGroup>
 	  <Compile Remove="MySqlDatabaseGenerator.cs" />
-	  <Compile Remove="NpgSqlDatabaseGenerator.cs" />
+	  <Compile Remove="PostgreSqlDatabaseGenerator.cs" />
 	  <Compile Remove="SqlServerDatabaseGenerator.cs" />
 	</ItemGroup>
 	<ItemGroup>

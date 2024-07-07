@@ -27,17 +27,17 @@ public class GroupingQueryBase<TGrouping> : IGroupingQueryBase<TGrouping>
     #endregion
 
     #region Select/SelectAnonymous
-    public IQueryAnonymousObject SelectAnonymous()
+    public virtual IQueryAnonymousObject SelectAnonymous()
     {
         this.Visitor.Select("*");
         return new QueryAnonymousObject(this.Visitor);
     }
-    public IQuery<TGrouping> Select()
+    public virtual IQuery<TGrouping> Select()
     {
         this.Visitor.SelectGrouping();
         return this.OrmProvider.NewQuery<TGrouping>(this.DbContext, this.Visitor);
     }
-    public IQuery<TTarget> Select<TTarget>(string fields = "*")
+    public virtual IQuery<TTarget> Select<TTarget>(string fields = "*")
     {
         if (string.IsNullOrEmpty(fields))
             throw new ArgumentNullException(nameof(fields));
@@ -55,9 +55,9 @@ public class GroupingQuery<T, TGrouping> : GroupingQueryBase<TGrouping>, IGroupi
     #endregion
 
     #region Having
-    public IGroupingQuery<T, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate)
+    public virtual IGroupingQuery<T, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate)
         => this.Having(true, predicate);
-    public IGroupingQuery<T, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate)
+    public virtual IGroupingQuery<T, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate)
     {
         if (condition)
         {
@@ -70,9 +70,9 @@ public class GroupingQuery<T, TGrouping> : GroupingQueryBase<TGrouping>, IGroupi
     #endregion
 
     #region OrderBy/OrderByDescending
-    public IGroupingQuery<T, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
+    public virtual IGroupingQuery<T, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
         => this.OrderBy(true, fieldsExpr);
-    public IGroupingQuery<T, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
+    public virtual IGroupingQuery<T, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
     {
         if (condition)
         {
@@ -82,9 +82,9 @@ public class GroupingQuery<T, TGrouping> : GroupingQueryBase<TGrouping>, IGroupi
         }
         return this;
     }
-    public IGroupingQuery<T, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
+    public virtual IGroupingQuery<T, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-    public IGroupingQuery<T, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
+    public virtual IGroupingQuery<T, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
     {
         if (condition)
         {
@@ -97,7 +97,7 @@ public class GroupingQuery<T, TGrouping> : GroupingQueryBase<TGrouping>, IGroupi
     #endregion
 
     #region Select
-    public IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T, TTarget>> fieldsExpr)
+    public virtual IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
@@ -126,15 +126,9 @@ public class GroupingQuery<<#=tables#>, TGrouping> : GroupingQueryBase<TGrouping
 #>
 
     #region Having
-    public IGroupingQuery<<#=tables#>, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        this.Visitor.Having(predicate);
-        return this;
-    }
-    public IGroupingQuery<<#=tables#>, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, bool>> predicate)
+    public virtual IGroupingQuery<<#=tables#>, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, bool>> predicate)
+        => this.Having(true, predicate);
+    public virtual IGroupingQuery<<#=tables#>, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, bool>> predicate)
     {
         if (condition)
         {
@@ -147,9 +141,9 @@ public class GroupingQuery<<#=tables#>, TGrouping> : GroupingQueryBase<TGrouping
     #endregion
 
     #region OrderBy/OrderByDescending
-    public IGroupingQuery<<#=tables#>, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr)
+    public virtual IGroupingQuery<<#=tables#>, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr)
         => this.OrderBy(true, fieldsExpr);
-    public IGroupingQuery<<#=tables#>, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr)
+    public virtual IGroupingQuery<<#=tables#>, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr)
     {
         if (condition)
         {
@@ -159,9 +153,9 @@ public class GroupingQuery<<#=tables#>, TGrouping> : GroupingQueryBase<TGrouping
         }
         return this;
     }
-    public IGroupingQuery<<#=tables#>, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr)
+    public virtual IGroupingQuery<<#=tables#>, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-    public IGroupingQuery<<#=tables#>, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr)
+    public virtual IGroupingQuery<<#=tables#>, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr)
     {
         if (condition)
         {
@@ -174,7 +168,7 @@ public class GroupingQuery<<#=tables#>, TGrouping> : GroupingQueryBase<TGrouping
     #endregion
 
     #region Select
-    public IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TTarget>> fieldsExpr)
+    public virtual IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));

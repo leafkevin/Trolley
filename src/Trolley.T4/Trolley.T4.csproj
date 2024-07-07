@@ -62,6 +62,7 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <None Include="PostgreSql\PostgreSqlProvider.ttinclude" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
@@ -75,12 +76,15 @@
     <None Include="Manager.ttinclude" />
     <None Include="SqlServer\SqlServerProvider.ttinclude" />
     <None Include="MySql\MySqlProvider.ttinclude" />
-    <None Include="Npgsql\NpgSqlProvider.ttinclude" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="PostgreSql\ModelConfigurations.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>ModelConfigurations.cs</LastGenOutput>
+    </Content>
     <Content Include="SqlServer\Entities.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>Entities.cs</LastGenOutput>
@@ -113,13 +117,15 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>ModelConfigurations.cs</LastGenOutput>
     </Content>
-    <Content Include="Npgsql\Entities.tt">
+    <Content Include="PostgreSql\Entities.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Entities.cs</LastGenOutput>
     </Content>
-    <Content Include="Npgsql\Entity.tt">
+    <Content Include="PostgreSql\Entity.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Entity.cs</LastGenOutput>
     </Content>
-    <Content Include="Npgsql\ModelConfiguration.tt">
+    <Content Include="PostgreSql\ModelConfiguration.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>ModelConfiguration.cs</LastGenOutput>
     </Content>
@@ -145,6 +151,18 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>FromQuery.cs</LastGenOutput>
     </Content>
+    <Content Include="Trolley\PostgreSqlDistinctOnQuery.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>PostgreSqlDistinctOnQuery.cs</LastGenOutput>
+    </Content>
+    <Content Include="Trolley\PostgreSqlIncludableQuery.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>PostgreSqlIncludableQuery.cs</LastGenOutput>
+    </Content>
+    <Content Include="Trolley\PostgreSqlGroupingQuery.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>PostgreSqlGroupingQuery.cs</LastGenOutput>
+    </Content>
     <Content Include="Trolley\GroupingQuery.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>GroupingQuery.cs</LastGenOutput>
@@ -161,9 +179,21 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>IFromQuery.cs</LastGenOutput>
     </Content>
+    <Content Include="Trolley\IPostgreSqlDistinctOnQuery.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>IPostgreSqlDistinctOnQuery.cs</LastGenOutput>
+    </Content>
+    <Content Include="Trolley\IPostgreSqlGroupingQuery.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>IPostgreSqlGroupingQuery.cs</LastGenOutput>
+    </Content>
     <Content Include="Trolley\IGroupingQuery.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>IGroupingQuery.cs</LastGenOutput>
+    </Content>
+    <Content Include="Trolley\IPostgreSqlIncludableQuery.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>IPostgreSqlIncludableQuery.cs</LastGenOutput>
     </Content>
     <Content Include="Trolley\IIncludableQuery.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
@@ -181,6 +211,14 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>IncludableQuery.cs</LastGenOutput>
     </Content>
+    <Content Include="Trolley\PostgreSqlRepository.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>PostgreSqlRepository.cs</LastGenOutput>
+    </Content>
+    <Content Include="Trolley\IPostgreSqlQuery.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>IPostgreSqlQuery.cs</LastGenOutput>
+    </Content>
     <Content Include="Trolley\IQuery.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>IQuery.cs</LastGenOutput>
@@ -196,6 +234,10 @@
     <Content Include="Trolley\MultiQuery`.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>MultiQuery`.cs</LastGenOutput>
+    </Content>
+    <Content Include="Trolley\PostgreSqlQuery.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>PostgreSqlQuery.cs</LastGenOutput>
     </Content>
     <Content Include="Trolley\Query`.tt">
       <Generator>TextTemplatingFileGenerator</Generator>

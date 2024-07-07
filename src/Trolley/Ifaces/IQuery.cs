@@ -556,7 +556,7 @@ public interface IQuery<T> : IQueryBase
     #region OrderBy
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
-    /// OrderBy(f =&gt; new { f.Id, f.Id }) 或是 OrderBy(x =&gt; x.CreatedAt.Date)
+    /// OrderBy(f =&gt; new { f.Id, f.OtherId }) 或是 OrderBy(x =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
@@ -564,7 +564,7 @@ public interface IQuery<T> : IQueryBase
     IQuery<T> OrderBy<TFields>(Expression<Func<T, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
-    /// OrderBy(true, f =&gt; new { f.Id, f.Id }) 或是 OrderBy(true, x =&gt; x.CreatedAt.Date)
+    /// OrderBy(true, f =&gt; new { f.Id, f.OtherId }) 或是 OrderBy(true, x =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
@@ -573,7 +573,7 @@ public interface IQuery<T> : IQueryBase
     IQuery<T> OrderBy<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr);
     /// <summary>
     /// DSC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
-    /// OrderByDescending(f =&gt; new { f.Id, f.Id }) 或是 OrderByDescending(x =&gt; x.CreatedAt.Date)
+    /// OrderByDescending(f =&gt; new { f.Id, f.OtherId }) 或是 OrderByDescending(x =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
@@ -581,7 +581,7 @@ public interface IQuery<T> : IQueryBase
     IQuery<T> OrderByDescending<TFields>(Expression<Func<T, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
-    /// OrderByDescending(true, f =&gt; new { f.Id, f.Id }) 或是 OrderByDescending(true, x =&gt; x.CreatedAt.Date)
+    /// OrderByDescending(true, f =&gt; new { f.Id, f.OtherId }) 或是 OrderByDescending(true, x =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>

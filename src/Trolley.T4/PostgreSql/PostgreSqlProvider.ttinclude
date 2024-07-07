@@ -1,0 +1,316 @@
+﻿<#@ assembly name="$(ProjectDir)\Plugins\Npgsql.dll" #>
+<#@ import namespace="Npgsql" #>
+<#+
+class PostgreSqlProvider : DbHelper
+{
+    private readonly string connectionString;
+    public PostgreSqlProvider(string connectionString)
+        => this.connectionString = connectionString;
+    public List<TableInfo> GetTableList(string tableSchema, string[] tableNames)
+    {
+        var builder = new StringBuilder($"SELECT a.relname,b.description FROM pg_class a LEFT JOIN pg_description b ON b.objsubid=0 AND a.oid=b.objoid WHERE a.relnamespace=(SELECT oid FROM pg_namespace WHERE nspname='{tableSchema}') AND a.relkind='r' AND a.relname IN (");
+        for(int i = 0;i < tableNames.Length;i++)
+        {
+            if(i > 0)builder.Append(',');
+            builder.Append($"'{tableNames[i]}'");
+        }
+        builder.Append(')');
+        var sql = builder.ToString();
+        var result = new List<TableInfo>();
+        using var connection = new NpgsqlConnection(this.connectionString);
+        using var command = new NpgsqlCommand(sql, connection);
+        connection.Open();
+        var reader = command.ExecuteReader(CommandBehavior.SequentialAccess | CommandBehavior.CloseConnection);
+        while (reader.Read())
+        {
+            result.Add(new TableInfo
+            {
+                TableName = this.ToValue<string>(reader[0]),
+                Description = this.ToValue<string>(reader[1])
+            });
+        }
+        reader.Close();
+        connection.Close();
+        return result;
+    }
+    public TableInfo GetTableInfo(string tableSchema, string tableName)
+    {
+        var sql = @"SELECT a.relname,b.description FROM pg_class a LEFT JOIN pg_description b ON b.objsubid=0 AND a.oid=b.objoid WHERE a.relnamespace=(SELECT oid FROM pg_namespace WHERE nspname='{0}') AND a.relkind='r' AND a.relname='{1}'";
+        sql = string.Format(sql, tableSchema, tableName);
+        TableInfo result = null;
+        using var connection = new NpgsqlConnection(this.connectionString);
+        using var command = new NpgsqlCommand(sql, connection);
+        connection.Open();
+        var reader = command.ExecuteReader(CommandBehavior.SequentialAccess | CommandBehavior.CloseConnection);
+        if (reader.Read())
+        {
+            result = new TableInfo
+            {
+                TableName = this.ToValue<string>(reader[0]),
+                Description = this.ToValue<string>(reader[1])
+            };
+        }
+        reader.Close();
+        connection.Close();
+        return result;
+    }
+    public List<ColumnInfo> GetColumnList(string tableSchema, string tableName)
+    {
+        var sql = $@"select c.attname,c.attndims,d.typname,case when c.atttypmod > 0 and c.atttypmod < 32767 then c.atttypmod-4 else c.attlen end,
+ e.description,pg_get_expr(g.adbin,g.adrelid),f.conname is not null,h.refobjid is not null,c.attnotnull,c.attnum from pg_class a
+ inner join pg_namespace b on a.relnamespace = b.oid inner join pg_attribute c on a.oid = c.attrelid and c.attnum>0
+ inner join pg_type d on c.atttypid = d.oid	left join pg_description e on e.objoid = c.attrelid and e.objsubid = c.attnum
+ left join pg_constraint f on a.oid=f.conrelid and f.contype='p' and f.conkey @> array[c.attnum]
+ left join pg_attrdef g on a.oid=g.adrelid and c.attnum=g.adnum
+ left join (select dp.refobjid,dp.refobjsubid from pg_depend dp,pg_class cs where dp.objid=cs.oid and cs.relkind='S') h on a.oid=h.refobjid and c.attnum=h.refobjsubid
+ where a.relkind='r' and b.nspname='{tableSchema}' and a.relname='{tableName}' order by c.attnum asc";
+
+        var result = new List<ColumnInfo>();
+        using var connection = new NpgsqlConnection(this.connectionString);
+        using var command = new NpgsqlCommand(sql, connection);
+        connection.Open();
+        var reader = command.ExecuteReader(CommandBehavior.SequentialAccess | CommandBehavior.CloseConnection);
+        while (reader.Read())
+        {
+            var columnName = this.ToValue<string>(reader[0]);
+            var arrayDimens = this.ToValue<int>(reader[1]);
+            var dataType = this.ToValue<string>(reader[2]);            
+            var length = this.ToValue<int>(reader[3]);
+            var scale = (length >> 16) & 0xFFFF;
+            var precision = length & 0xFFFF;
+            var lengthTypes = new []{"bool", "name", "bit", "varbit", "char", "bpchar", "varchar", "bytea", "text", "uuid"};
+            if(length > 0 && !lengthTypes.Contains(dataType))
+                length *= 8;
+            var needLengthTypes = new []{"char", "bpchar", "varchar", "bytea", "bit", "varbit"};
+            if(dataType == "bpchar")
+                dataType = "char";
+            var columnType = dataType;           
+            if(needLengthTypes.Contains(dataType))
+                columnType += $"({length})";
+            if(arrayDimens > 0)
+            {
+                var builder = new StringBuilder(dataType.Substring(1));
+                for(int i = 0;i < arrayDimens; i++)
+                    builder.Append("[]");
+                columnType = builder.ToString();
+            }
+            result.Add(new ColumnInfo
+            {
+                ColumnName = columnName,
+                DataType = dataType,
+                ColumnType = columnType,
+                Length = length,
+                Scale = scale,
+                Precision = precision,
+                ArrayDimens = arrayDimens,
+                Description = this.ToValue<string>(reader[4]),
+                DefaultValue = this.ToValue<string>(reader[5]),
+                IsPrimaryKey = this.ToValue<bool>(reader[6]),
+                IsIdentity = this.ToValue<bool>(reader[7]),
+                IsNullable = this.ToValue<bool>(reader[8]),
+                Position = this.ToValue<int>(reader[9])
+            });
+        }
+        reader.Close();
+        connection.Close();
+        return result;
+    }
+    public ClassMemberInfo MapMember(ColumnInfo columnInfo)
+    {
+    	var result = new ClassMemberInfo { DbColumnType = columnInfo.ColumnType, Length = columnInfo.Length };
+	    var dataType = columnInfo.DataType;
+        if(columnInfo.ArrayDimens > 0)
+            dataType = dataType.Substring(1);
+        switch (dataType)
+        {
+            case "bool":
+	            result.NativeDbType = "NpgsqlDbType.Boolean";
+                result.MemberType = "bool";
+	            break;
+
+            case "int2":
+	            result.NativeDbType = "NpgsqlDbType.Smallint";
+                result.MemberType = "short";
+	            break;
+            case "int4":
+                result.NativeDbType = "NpgsqlDbType.Integer";
+                result.MemberType = "int";
+	            break;
+            case "int8": 
+                result.NativeDbType = "NpgsqlDbType.Bigint";
+                result.MemberType = "long";
+	            break;
+            case "float4": 
+                result.NativeDbType = "NpgsqlDbType.Real";
+                result.MemberType = "float";
+	            break;
+            case "float8": 
+                result.NativeDbType = "NpgsqlDbType.Double";
+                result.MemberType = "double";
+	            break;
+
+            case "numeric":
+                result.NativeDbType = "NpgsqlDbType.Numeric";
+                result.MemberType = "decimal";
+	            break;
+            case "money":
+                result.NativeDbType = "NpgsqlDbType.Money";
+                result.MemberType = "decimal";
+	            break;
+
+            case "char":
+            case "bpchar":
+                result.NativeDbType = "NpgsqlDbType.Char";
+                result.MemberType = "string";
+	            break;
+            case "varchar":
+                result.NativeDbType = "NpgsqlDbType.Varchar";
+                result.MemberType = "string";
+	            break;
+            case "text":
+                result.NativeDbType = "NpgsqlDbType.Text";
+                result.MemberType = "string";
+	            break;
+
+            case "date":
+                result.NativeDbType = "NpgsqlDbType.Date";
+                result.MemberType = "DateOnly";
+	            break;
+            case "timestamp":
+                result.NativeDbType = "NpgsqlDbType.Timestamp";
+                result.MemberType = "DateTime";
+	            break;
+            case "timestamptz":
+                result.NativeDbType = "NpgsqlDbType.TimestampTz";
+                result.MemberType = "DateTimeOffset";
+	            break;
+
+            case "time":
+                result.NativeDbType = "NpgsqlDbType.Time";
+                result.MemberType = "TimeOnly";
+	            break;
+            case "timetz":
+                result.NativeDbType = "NpgsqlDbType.TimeTz";
+                result.MemberType = "TimeOnly";
+	            break;
+            case "interval":
+                result.NativeDbType = "NpgsqlDbType.Interval";
+                result.MemberType = "TimeSpan";
+	            break;
+
+            case "bit":
+                result.NativeDbType = "NpgsqlDbType.Bit";
+                result.MemberType = "byte[]";
+	            break;
+            case "bytea":
+                result.NativeDbType = "NpgsqlDbType.Bytea";
+                result.MemberType = "byte[]";
+	            break;
+            case "varbit":
+                result.NativeDbType = "NpgsqlDbType.Varbit";
+                result.MemberType = "byte[]";
+	            break;
+
+            case "point":
+                result.NativeDbType = "NpgsqlDbType.Point";
+                result.MemberType = "PostgreSqlPoint";
+	            break;
+            case "line":
+                result.NativeDbType = "NpgsqlDbType.Line";
+                result.MemberType = "PostgreSqlLine";
+	            break;
+            case "lseg":
+                result.NativeDbType = "NpgsqlDbType.LSeg";
+                result.MemberType = "PostgreSqlLSeg";
+	            break;
+            case "box":
+                result.NativeDbType = "NpgsqlDbType.Box";
+                result.MemberType = "PostgreSqlBox";
+	            break;
+            case "path":
+                result.NativeDbType = "NpgsqlDbType.Path";
+                result.MemberType = "PostgreSqlPath";
+	            break;
+            case "polygon":
+                result.NativeDbType = "NpgsqlDbType.Polygon";
+                result.MemberType = "PostgreSqlPolygon";
+	            break;
+            case "circle": 
+                result.NativeDbType = "NpgsqlDbType.Circle";
+                result.MemberType = "Circle";
+	            break;
+
+            case "cidr":
+                result.NativeDbType = "NpgsqlDbType.Cidr";
+                result.MemberType = "(IPAddress, int)";
+	            break;
+            case "inet":
+                result.NativeDbType = "NpgsqlDbType.Inet";
+                result.MemberType = "IPAddress";
+	            break;
+            case "macaddr":
+                result.NativeDbType = "NpgsqlDbType.MacAddr";
+                result.MemberType = "PhysicalAddress";
+	            break;
+
+            case "json":
+                result.NativeDbType = "NpgsqlDbType.Json";
+                result.MemberType = "object";
+	            break;
+            case "jsonb":
+                result.NativeDbType = "NpgsqlDbType.Jsonb";
+                result.MemberType = "object";
+	            break;
+
+            case "uuid":
+                result.NativeDbType = "NpgsqlDbType.Uuid";
+                result.MemberType = "Guid";
+	            break;
+
+            case "int4range":
+                result.NativeDbType = "NpgsqlDbType.IntegerRange";
+                result.MemberType = "int[]";
+	            break;
+            case "int8range":
+                result.NativeDbType = "NpgsqlDbType.BigIntRange";
+                result.MemberType = "long[]";
+	            break;
+            case "numrange":
+                result.NativeDbType = "NpgsqlDbType.NumericRange";
+                result.MemberType = "decimal[]";
+	            break;
+            case "tsrange":
+                result.NativeDbType = "NpgsqlDbType.TimestampRange";
+                result.MemberType = "DateTime[]";
+	            break;
+            case "tstzrange":
+                result.NativeDbType = "NpgsqlDbType.TimestampTzRange";
+                result.MemberType = "DateTimeOffset[]";
+	            break;
+            case "daterange":
+                result.NativeDbType = "NpgsqlDbType.DateRange";
+                result.MemberType = "DateOnly[]";
+	            break;
+
+            case "hstore": 
+                result.NativeDbType = "NpgsqlDbType.Hstore";
+                result.MemberType = "Dictionary<string, string>";
+	            break;
+
+            case "geometry":
+                result.NativeDbType = "NpgsqlDbType.Geometry";
+                result.MemberType = "object";
+	            break;
+        }
+        if(columnInfo.ArrayDimens > 0)
+        {
+            var builder = new StringBuilder();
+            for(int i = 0;i < columnInfo.ArrayDimens; i++)
+                builder.Append("[]");
+            result.NativeDbType += " | NpgsqlDbType.Range";
+            result.MemberType += builder.ToString();
+        }
+        return result;
+    }
+}
+#>

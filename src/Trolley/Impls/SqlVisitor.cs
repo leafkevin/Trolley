@@ -1034,21 +1034,24 @@ public class SqlVisitor : ISqlVisitor
                             lambdaExpr = this.EnsureLambda(methodCallExpr.Arguments[1]);
                             var cteQuery = this.Evaluate(methodCallExpr.Arguments[0]) as ICteQuery;
                             methodCallExpr.Arguments[1].GetParameterNames(out var parameterNames);
-                            var aliasName = parameterNames[0];
-                            var tableSegment = new TableSegment
+                            foreach (var parameterName in parameterNames)
                             {
-                                TableType = TableType.CteSelfRef,
-                                EntityType = genericArguments[0],
-                                AliasName = aliasName,
-                                ReaderFields = cteQuery.ReaderFields,
-                                Body = cteQuery.Body
-                            };
-                            this.TableAliases.Add(aliasName, tableSegment);
+                                if (this.TableAliases.ContainsKey(parameterName))
+                                    continue;
+                                var tableSegment = new TableSegment
+                                {
+                                    TableType = TableType.CteSelfRef,
+                                    EntityType = genericArguments[0],
+                                    AliasName = parameterName,
+                                    ReaderFields = cteQuery.ReaderFields,
+                                    Body = cteQuery.Body
+                                };
+                                this.TableAliases.TryAdd(parameterName, tableSegment);
+                                removeTables.Add(tableSegment);
+                                builder.Append(this.OrmProvider.GetTableName(cteQuery.TableName));
+                                builder.Append($" {parameterName}");
+                            }
                             cteQuery.CopyTo(this);
-
-                            removeTables.Add(tableSegment);
-                            builder.Append(this.OrmProvider.GetTableName(cteQuery.TableName));
-                            builder.Append($" {aliasName}");
                         }
                         else
                         {
@@ -1056,8 +1059,11 @@ public class SqlVisitor : ISqlVisitor
                             lambdaExpr = this.EnsureLambda(methodCallExpr.Arguments[0]);
                             foreach (var tableType in genericArguments)
                             {
-                                var tableMapper = this.MapProvider.GetEntityMap(tableType);
                                 var aliasName = lambdaExpr.Parameters[index].Name;
+                                if (this.TableAliases.ContainsKey(aliasName))
+                                    continue;
+
+                                var tableMapper = this.MapProvider.GetEntityMap(tableType);                             
                                 var tableSegment = new TableSegment
                                 {
                                     EntityType = tableType,
@@ -1065,7 +1071,7 @@ public class SqlVisitor : ISqlVisitor
                                     Mapper = tableMapper
                                 };
                                 this.Tables.Add(tableSegment);
-                                this.TableAliases.Add(aliasName, tableSegment);
+                                this.TableAliases.TryAdd(aliasName, tableSegment);
                                 removeTables.Add(tableSegment);
                                 if (index > 0) builder.Append(',');
                                 builder.Append(this.OrmProvider.GetTableName(tableMapper.TableName));
@@ -2098,7 +2104,7 @@ public class SqlVisitor : ISqlVisitor
             {
                 //先更新lastOperationType，lastDeep
                 lastOperationType = operationType;
-                lastDeep = deep;              
+                lastDeep = deep;
 
                 //重新获取操作符，更新为当前操作符，deep
                 if (leftExprs.TryPop(out deferredOperator))

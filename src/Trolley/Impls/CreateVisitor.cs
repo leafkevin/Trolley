@@ -113,9 +113,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         }
         tableName = this.OrmProvider.GetTableName(tableName);
         var fieldsBuilder = new StringBuilder($"INSERT INTO {tableName} (");
-
-        var valuesBuilder = new StringBuilder();
-        valuesBuilder.Append(" VALUES (");
+        var valuesBuilder = new StringBuilder(" VALUES (");
         for (int i = 0; i < this.InsertFields.Count; i++)
         {
             var insertField = this.InsertFields[i];

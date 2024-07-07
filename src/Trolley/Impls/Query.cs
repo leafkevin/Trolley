@@ -678,90 +678,59 @@ public class CteQuery<T> : Query<T>, ICteQuery<T>
     #endregion
 
     #region 不支持的方法
-    [Obsolete("不支持的方法调用，CTE查询中不支持Include操作")]
     public override IIncludableQuery<T, TMember> Include<TMember>(Expression<Func<T, TMember>> memberSelector)
         => throw new NotSupportedException("不支持的方法调用，CTE查询中不支持IncludeMany操作");
-    [Obsolete("不支持的方法调用，CTE查询中不支持IncludeMany操作")]
     public override IIncludableQuery<T, TElment> IncludeMany<TElment>(Expression<Func<T, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
         => throw new NotSupportedException("不支持的方法调用，CTE查询中不支持IncludeMany操作");
-    [Obsolete("不支持的方法调用，CTE查询中不支持返回结果操作")]
     public override int Count() => throw new NotSupportedException("不支持的方法调用，CTE查询中不支持返回结果操作");
-    [Obsolete("不支持的方法调用，CTE查询中不支持返回结果操作")]
     public override Task<int> CountAsync(CancellationToken cancellationToken = default)
         => throw new NotSupportedException("不支持的方法调用，CTE查询中不支持返回结果操作");
-    [Obsolete("不支持的方法调用，CTE查询中不支持返回结果操作")]
     public override int Count<TField>(Expression<Func<T, TField>> fieldExpr)
         => throw new NotSupportedException("不支持的方法调用，CTE查询中不支持返回结果操作");
-    [Obsolete("不支持的方法调用，CTE查询中不支持返回结果操作")]
     public override Task<int> CountAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
         => throw new NotSupportedException("不支持的方法调用，CTE查询中不支持返回结果操作");
-    [Obsolete("不支持的方法调用，CTE查询中不支持返回结果操作")]
     public override int CountDistinct<TField>(Expression<Func<T, TField>> fieldExpr)
         => throw new NotSupportedException("不支持的方法调用，CTE查询中不支持返回结果操作");
-    [Obsolete("不支持的方法调用，CTE查询中不支持返回结果操作")]
     public override Task<int> CountDistinctAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
         => throw new NotSupportedException("不支持的方法调用，CTE查询中不支持返回结果操作");
-    [Obsolete("不支持的方法调用，CTE查询中不支持返回结果操作")]
     public override long LongCount() => throw new NotSupportedException("不支持的方法调用");
-    [Obsolete("不支持的方法调用，CTE查询中不支持返回结果操作")]
     public override Task<long> LongCountAsync(CancellationToken cancellationToken = default)
         => throw new NotSupportedException("不支持的方法调用");
-    [Obsolete("不支持的方法调用，CTE查询中不支持返回结果操作")]
     public override long LongCount<TField>(Expression<Func<T, TField>> fieldExpr)
         => throw new NotSupportedException("不支持的方法调用");
-    [Obsolete("不支持的方法调用，CTE查询中不支持返回结果操作")]
     public override Task<long> LongCountAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
         => throw new NotSupportedException("不支持的方法调用");
-    [Obsolete("不支持的方法调用，CTE查询中不支持返回结果操作")]
     public override long LongCountDistinct<TField>(Expression<Func<T, TField>> fieldExpr)
         => throw new NotSupportedException("不支持的方法调用");
-    [Obsolete("不支持的方法调用，CTE查询中不支持返回结果操作")]
     public override Task<long> LongCountDistinctAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default) => throw new NotSupportedException("不支持的方法调用");
-    [Obsolete("不支持的方法调用，CTE查询中不支持返回结果操作")]
     public override TField Sum<TField>(Expression<Func<T, TField>> fieldExpr)
         => throw new NotSupportedException("不支持的方法调用，CTE查询中不支持返回结果操作");
-    [Obsolete("不支持的方法调用，CTE查询中不支持返回结果操作")]
     public override Task<TField> SumAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
         => throw new NotSupportedException("不支持的方法调用，CTE查询中不支持返回结果操作");
-    [Obsolete("不支持的方法调用，CTE查询中不支持返回结果操作")]
     public override TField Avg<TField>(Expression<Func<T, TField>> fieldExpr)
         => throw new NotSupportedException("不支持的方法调用，CTE查询中不支持返回结果操作");
-    [Obsolete("不支持的方法调用，CTE查询中不支持返回结果操作")]
     public override Task<TField> AvgAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
         => throw new NotSupportedException("不支持的方法调用，CTE查询中不支持返回结果操作");
-    [Obsolete("不支持的方法调用，CTE查询中不支持返回结果操作")]
     public override TField Max<TField>(Expression<Func<T, TField>> fieldExpr)
         => throw new NotSupportedException("不支持的方法调用，CTE查询中不支持返回结果操作");
-    [Obsolete("不支持的方法调用，CTE查询中不支持返回结果操作")]
     public override Task<TField> MaxAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
         => throw new NotSupportedException("不支持的方法调用，CTE查询中不支持返回结果操作");
-    [Obsolete("不支持的方法调用，CTE查询中不支持返回结果操作")]
     public override TField Min<TField>(Expression<Func<T, TField>> fieldExpr)
         => throw new NotSupportedException("不支持的方法调用，CTE查询中不支持返回结果操作");
-    [Obsolete("不支持的方法调用，CTE查询中不支持返回结果操作")]
     public override Task<TField> MinAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
         => throw new NotSupportedException("不支持的方法调用，CTE查询中不支持返回结果操作");
-
-    [Obsolete("不支持的方法调用，CTE查询中不支持返回结果操作")]
     public override T First() => throw new NotSupportedException("不支持的方法调用");
-    [Obsolete("不支持的方法调用，CTE查询中不支持返回结果操作")]
-    public override Task<T> FirstAsync(CancellationToken cancellationToken = default) 
+    public override Task<T> FirstAsync(CancellationToken cancellationToken = default)
         => throw new NotSupportedException("不支持的方法调用");
-    [Obsolete("不支持的方法调用，CTE查询中不支持返回结果操作")]
     public override List<T> ToList() => throw new NotSupportedException("不支持的方法调用");
-    [Obsolete("不支持的方法调用，CTE查询中不支持返回结果操作")]
-    public override Task<List<T>> ToListAsync(CancellationToken cancellationToken = default) 
+    public override Task<List<T>> ToListAsync(CancellationToken cancellationToken = default)
         => throw new NotSupportedException("不支持的方法调用，CTE查询中不支持返回结果操作");
-    [Obsolete("不支持的方法调用，CTE查询中不支持返回结果操作")]
     public override IPagedList<T> ToPageList() => throw new NotSupportedException("不支持的方法调用");
-    [Obsolete("不支持的方法调用，CTE查询中不支持返回结果操作")]
-    public override Task<IPagedList<T>> ToPageListAsync(CancellationToken cancellationToken = default) 
+    public override Task<IPagedList<T>> ToPageListAsync(CancellationToken cancellationToken = default)
         => throw new NotSupportedException("不支持的方法调用，CTE查询中不支持返回结果操作");
-    [Obsolete("不支持的方法调用，CTE查询中不支持返回结果操作")]
-    public override Dictionary<TKey, TValue> ToDictionary<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector) 
+    public override Dictionary<TKey, TValue> ToDictionary<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector)
         => throw new NotSupportedException("不支持的方法调用，CTE查询中不支持返回结果操作");
-    [Obsolete("不支持的方法调用，CTE查询中不支持返回结果操作")]
-    public override Task<Dictionary<TKey, TValue>> ToDictionaryAsync<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector, CancellationToken cancellationToken = default) 
+    public override Task<Dictionary<TKey, TValue>> ToDictionaryAsync<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector, CancellationToken cancellationToken = default)
         => throw new NotSupportedException("不支持的方法调用，CTE查询中不支持返回结果操作");
     #endregion
 }

@@ -260,32 +260,5 @@ class MySqlProvider : DbHelper
         }
         return result;
     }
-    public string MapDefaultDbType(Type memberType)
-    {
-        switch (Type.GetTypeCode(memberType))
-        {
-            case TypeCode.Boolean: return "tinyint(1)";
-            case TypeCode.SByte: return "tinyint";
-            case TypeCode.Byte: return "unsigned tinyint";
-            case TypeCode.Int16: return "smallint";
-            case TypeCode.UInt16: return "unsigned smallint";
-            case TypeCode.Int32: return "int";
-            case TypeCode.UInt32: return "unsigned int";
-            case TypeCode.Int64: return "bigint";
-            case TypeCode.UInt64: return "unsigned bigint";
-            case TypeCode.Single: return "float";
-            case TypeCode.Double: return "double";
-            case TypeCode.Decimal: return "decimal";
-            case TypeCode.DateTime: return "datetime";
-
-            case TypeCode.Char: return "char(1)";
-            case TypeCode.String: return "varchar(100)";
-        }
-        if (memberType == typeof(Guid))
-            return "char(36)";
-        if (memberType == typeof(byte[]))
-            return "varbinary(1000)";
-        return "varchar(100)";
-    }
 }
 #>

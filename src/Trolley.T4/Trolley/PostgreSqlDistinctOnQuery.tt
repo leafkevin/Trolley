@@ -1,0 +1,163 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="Microsoft.VisualStudio.TextTemplating"#>
+<#@ output extension=".cs" #>
+using System;
+using System.Linq.Expressions;
+
+namespace Trolley.PostgreSql;
+
+public class PostgreSqlDistinctOnQueryBase<TDistinctOn>: IPostgreSqlDistinctOnQueryBase<TDistinctOn>
+{
+    #region Properties
+    public DbContext DbContext { get; protected set; }
+    public IQueryVisitor Visitor { get; protected set; }
+    public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
+    #endregion
+
+    #region Constructor
+    public PostgreSqlDistinctOnQueryBase(DbContext dbContext, IQueryVisitor visitor)
+    {
+        this.DbContext = dbContext;
+        this.Visitor = visitor;
+    }
+    #endregion
+
+    #region Select/SelectAnonymous
+    public virtual IQueryAnonymousObject SelectAnonymous()
+    {
+        this.Visitor.Select("*");
+        return new QueryAnonymousObject(this.Visitor);
+    }
+    public virtual IPostgreSqlQuery<TDistinctOn> Select()
+    {
+        var dialectVisitor = this.Visitor as PostgreSqlQueryVisitor;
+        dialectVisitor.SelectDistinctOn();
+        return this.OrmProvider.NewQuery<TDistinctOn>(this.DbContext, this.Visitor) as IPostgreSqlQuery<TDistinctOn>;
+    }
+    public virtual IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*")
+    {
+        if (string.IsNullOrEmpty(fields))
+            throw new ArgumentNullException(nameof(fields));
+
+        this.Visitor.Select(fields, null);
+        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor) as IPostgreSqlQuery<TTarget>;
+    }
+    #endregion
+}
+public class PostgreSqlDistinctOnQuery<T, TDistinctOn> : PostgreSqlDistinctOnQueryBase<TDistinctOn>, IPostgreSqlDistinctOnQuery<T, TDistinctOn>
+{
+    #region Constructor
+    public PostgreSqlDistinctOnQuery(DbContext dbContext, IQueryVisitor visitor)
+        : base(dbContext, visitor) { }
+    #endregion
+
+    #region OrderBy/OrderByDescending
+    public virtual IPostgreSqlDistinctOnQuery<T, TDistinctOn> OrderBy<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, T, TFields>> fieldsExpr)
+        => this.OrderBy(true, fieldsExpr);
+    public virtual IPostgreSqlDistinctOnQuery<T, TDistinctOn> OrderBy<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, T, TFields>> fieldsExpr)
+    {
+        if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
+            this.Visitor.OrderBy("ASC", fieldsExpr);
+        }
+        return this;
+    }
+    public virtual IPostgreSqlDistinctOnQuery<T, TDistinctOn> OrderByDescending<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, T, TFields>> fieldsExpr)
+        => this.OrderByDescending(true, fieldsExpr);
+    public virtual IPostgreSqlDistinctOnQuery<T, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, T, TFields>> fieldsExpr)
+    {
+        if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
+            this.Visitor.OrderBy("DESC", fieldsExpr);
+        }
+        return this;
+    }
+    #endregion
+
+    #region Select
+    public virtual IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, T, TTarget>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
+        this.Visitor.Select(null, fieldsExpr);
+        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor) as IPostgreSqlQuery<TTarget>;
+    }
+    public virtual IPostgreSqlQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, T, TTarget>> specialMemberSelector = null)
+    {
+        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor) as IPostgreSqlQuery<TTarget>;
+    }
+    #endregion
+}
+<#
+    var count = 16;
+    var tables = "T1";
+    for (int i = 2; i <= count; i++)
+    {
+        tables += $", T{i}";
+#>
+public class PostgreSqlDistinctOnQuery<<#=tables#>, TDistinctOn> : PostgreSqlDistinctOnQueryBase<TDistinctOn>, IPostgreSqlDistinctOnQuery<<#=tables#>, TDistinctOn>
+{
+    #region Constructor
+    public PostgreSqlDistinctOnQuery(DbContext dbContext, IQueryVisitor visitor)
+        : base(dbContext, visitor) { }
+    #endregion
+<#
+        if( i < count)
+        {
+#>
+
+    #region OrderBy/OrderByDescending
+    public virtual IPostgreSqlDistinctOnQuery<<#=tables#>, TDistinctOn> OrderBy<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, <#=tables#>, TFields>> fieldsExpr)
+        => this.OrderBy(true, fieldsExpr);
+    public virtual IPostgreSqlDistinctOnQuery<<#=tables#>, TDistinctOn> OrderBy<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, <#=tables#>, TFields>> fieldsExpr)
+    {
+        if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
+            this.Visitor.OrderBy("ASC", fieldsExpr);
+        }
+        return this;
+    }
+    public virtual IPostgreSqlDistinctOnQuery<<#=tables#>, TDistinctOn> OrderByDescending<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, <#=tables#>, TFields>> fieldsExpr)
+        => this.OrderByDescending(true, fieldsExpr);
+    public virtual IPostgreSqlDistinctOnQuery<<#=tables#>, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, <#=tables#>, TFields>> fieldsExpr)
+    {
+        if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
+            this.Visitor.OrderBy("DESC", fieldsExpr);
+        }
+        return this;
+    }
+    #endregion
+
+    #region Select
+    public virtual IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, <#=tables#>, TTarget>> fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+
+        this.Visitor.Select(null, fieldsExpr);
+        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor) as IPostgreSqlQuery<TTarget>;
+    }
+    public virtual IPostgreSqlQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, <#=tables#>, TTarget>> specialMemberSelector = null)
+    {
+        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor) as IPostgreSqlQuery<TTarget>;
+    }
+    #endregion
+<#      }#>
+}
+<#  }#>

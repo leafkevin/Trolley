@@ -141,7 +141,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //方案：在buildSql时确定，ReaderFields要重新排好序，include字段放到对应主表字段后面，表别名顺序不变
         if (this.ReaderFields == null)
             throw new Exception("缺少Select语句");
-        builder.Append(this.BuildSelectSql(this.ReaderFields, isNeedWrap));
+        this.AddSelectFieldsSql(builder, this.ReaderFields, isNeedWrap);
 
         string selectSql = null;
         if (this.IsDistinct)
@@ -291,7 +291,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //方案：在buildSql时确定，ReaderFields要重新排好序，include字段放到对应主表字段后面，表别名顺序不变
         if (this.ReaderFields == null)
             throw new Exception("缺少Select语句");
-        builder.Append(this.BuildSelectSql(this.ReaderFields, isNeedWrap));
+        this.AddSelectFieldsSql(builder, this.ReaderFields, isNeedWrap);
 
         string selectSql = null;
         if (this.IsDistinct)
@@ -1534,6 +1534,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                             this.deferredRefIncludeValuesSetters ??= new();
                             this.deferredRefIncludeValuesSetters.Add(deferredSetter);
 
+                            //只有select场景才会Include对象
                             sqlSegment.Value = new ReaderField
                             {
                                 //需要在构建实体的时候做处理
@@ -1952,9 +1953,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         return tableSegment;
     }
-    public string BuildSelectSql(List<ReaderField> readerFields, bool isNeedWrap = false)
+    public void AddSelectFieldsSql(StringBuilder builder, List<ReaderField> readerFields, bool isNeedWrap = false)
     {
-        var builder = new StringBuilder();
         foreach (var readerField in readerFields)
         {
             if (builder.Length > 0)
@@ -1962,7 +1962,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             switch (readerField.FieldType)
             {
                 case ReaderFieldType.Entity:
-                    builder.Append(this.BuildSelectSql(readerField.ReaderFields, isNeedWrap));
+                    this.AddSelectFieldsSql(builder, readerField.ReaderFields, isNeedWrap);
                     break;
                 case ReaderFieldType.DeferredFields:
                     if (readerField.ReaderFields == null)
@@ -1986,7 +1986,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     break;
             }
         }
-        return builder.ToString();
     }
     public bool IsNeedAlias(ReaderField readerField, bool isNeedWrap)
     {

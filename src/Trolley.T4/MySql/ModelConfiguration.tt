@@ -30,12 +30,12 @@
     var separator = '_';
     var className = dbProvider.ToClassName(tableName, removePrefixes, separator);
     var tableInfo = dbProvider.GetTableInfo(databaseName, tableName);
-    var columnList = dbProvider.GetColumnList(databaseName, tableInfo.TableName);
+    var columnList = dbProvider.GetColumnList(databaseName, tableName);
 #>
 using Thea.Domain.Models;
 using Thea.Orm;
 
-namespace Thea;
+namespace Thea.Domain;
 
 class ModelConfiguration : IModelConfiguration
 {

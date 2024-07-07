@@ -56,7 +56,7 @@ public interface IGroupingCommand<T, TGrouping> : IGroupingCommandBase<TGrouping
     IGroupingCommand<T, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
-    /// OrderBy(true, f =&gt; new { f.Id, f.Id }) 或是 OrderBy(true, x =&gt; x.CreatedAt.Date)
+    /// OrderBy(true, f =&gt; new { f.Id, f.OtherId }) 或是 OrderBy(true, x =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
@@ -73,7 +73,7 @@ public interface IGroupingCommand<T, TGrouping> : IGroupingCommandBase<TGrouping
     IGroupingCommand<T, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
-    /// OrderByDescending(true, f =&gt; new { f.Id, f.Id }) 或是 OrderByDescending(true, x =&gt; x.CreatedAt.Date)
+    /// OrderByDescending(true, f =&gt; new { f.Id, f.OtherId }) 或是 OrderByDescending(true, x =&gt; x.CreatedAt.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="condition">排序表达式生效条件，为true生效</param>

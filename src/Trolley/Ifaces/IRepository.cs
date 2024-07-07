@@ -9,7 +9,7 @@ namespace Trolley;
 /// <summary>
 /// 仓储对象
 /// </summary>
-public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
+public interface IRepository : IDisposable, IAsyncDisposable
 {
     #region Properties
     DbContext DbContext { get; set; }
@@ -532,6 +532,15 @@ public interface IRepository : IUnitOfWork, IDisposable, IAsyncDisposable
     #region MultipleExecute
     int MultipleExecute(List<MultipleCommand> commands);
     Task<int> MultipleExecuteAsync(List<MultipleCommand> commands, CancellationToken cancellationToken = default);
+    #endregion
+
+    #region Transaction
+    void BeginTransaction();
+    Task BeginTransactionAsync(CancellationToken cancellationToken = default);
+    void Commit();
+    Task CommitAsync(CancellationToken cancellationToken = default);
+    void Rollback();
+    Task RollbackAsync(CancellationToken cancellationToken = default);
     #endregion
 
     #region Others

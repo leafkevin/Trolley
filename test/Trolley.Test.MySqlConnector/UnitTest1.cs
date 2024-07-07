@@ -379,7 +379,7 @@ public class UnitTest1 : UnitTestBase
         //    UpdatedAt = DateTime.Now,
         //    UpdatedBy = 1
         //});
-        await repository.Delete<Company>().Where(f => f.Id == 1).ExecuteAsync();        
+        await repository.Delete<Company>().Where(f => f.Id == 1).ExecuteAsync();
         var id = repository.Create<Company>()
             .WithBy(new Dictionary<string, object>()
             {
@@ -1104,7 +1104,7 @@ public class UnitTest1 : UnitTestBase
                  UpdatedAt = DateTime.Now,
                  UpdatedBy = 1
              })
-             .OnDuplicateKeyUpdate(x => x.UseAlias()
+             .OnDuplicateKeyUpdate(x => x
                 .Set(f => new { TotalAmount = x.Values(f.TotalAmount) })
                 .Set(f => f.Products, f => x.Values(f.Products)))
             .ToSql(out _);

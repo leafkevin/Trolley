@@ -30,7 +30,6 @@
 ```csharp
 var dbFactory = new OrmDbFactoryBuilder()
 	.Register<MySqlProvider>("fengling", "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4, true)
-	.AddTypeHandler<JsonTypeHandler>()
 	.Configure<MySqlProvider, MySqlModelConfiguration>();
 return builder.Build();
 ```
@@ -42,7 +41,6 @@ var connectionString2 = "User id=postgres;Password=123456;Host=localhost;Port=54
 var builder = new OrmDbFactoryBuilder()
 	.Register<MySqlProvider>("fengling", connectionString1，true)
 	.Register<NpgSqlProvider>("fengling_tanent001", connectionString2, false)
-	.AddTypeHandler<JsonTypeHandler>()
 	.Configure<MySqlProvider, MySqlModelConfiguration>()
 	.Configure<MySqlProvider, NpgSqlModelConfiguration>();
 var dbFactory = builder.Build();
@@ -275,7 +273,7 @@ var result = repository.Get<Product>(new { Id = 1 });
 ```
 
 
-### `From`查询，支持各种复杂查询，支持分表操作
+### `From`查询，支持各种复杂场景，支持分表操作
 
 
 简单表达式查询
@@ -463,17 +461,21 @@ var sql = repository.From<User>()
 //SELECT a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) AS Date,COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) HAVING SUM(b.`TotalAmount`)>300 AND EXISTS(SELECT * FROM `sys_order_detail` f WHERE b.`Id`=f.`OrderId` AND COUNT(DISTINCT f.`ProductId`)>2) ORDER BY a.`Id`,b.`Id`
 ```
 
-使用`In`、`Exists`
+使用`In`、`Exists` 
 `In`、`Exists`操作是通过静态`Sql`类来完成的，书写起来比较简单，`In`、`Exists`子句不支持分表。
 `Exists`也可以使用`From`后，再调用`Exists`方法来完成，这种方式支持分表。
 
 `Sql.In` 有以下方法重载：
+```
+csharp
 bool In&lt;TElement&gt;(TElement value, params TElement[] list);
 bool In&lt;TElement&gt;(TElement value, IEnumerable&lt;TElement&gt; list);
 bool In&lt;TElement&gt;(TElement value, IQuery&lt;TElement&gt; subQuery);
 bool In&lt;TElement&gt;(TElement value, Func&lt;IFromQuery, IQuery&lt;TElement&gt;&gt; subQuery);
+```
 
 `Sql.Exists` 有以下方法重载：
+```csharp
 bool Exists(Func&lt;IFromQuery, IQueryAnonymousObject&gt; subQuery);
 bool Exists(IQuery&lt;T&gt; subQuery, Expression&lt;Func&lt;T, bool&gt;&gt; predicate) //支持使用CTE子查询
 bool Exists&lt;T&gt;(Expression&lt;Func&lt;T, bool&gt;&gt; filter);
@@ -482,6 +484,7 @@ bool Exists&lt;T1, T2, T3&gt;(Expression&lt;Func&lt;T1, T2, T3, bool&gt;&gt; fil
 bool Exists&lt;T1, T2, T3, T4&gt;(Expression&lt;Func&lt;T1, T2, T3, T4, bool&gt;&gt; filter);
 bool Exists&lt;T1, T2, T3, T4, T5&gt;(Expression&lt;Func&lt;T1, T2, T3, T4, T5, bool&gt;&gt; filter);
 bool Exists&lt;T1, T2, T3, T4, T5, T6&gt;(Expression&lt;Func&lt;T1, T2, T3, T4, T5, T6, bool&gt;&gt; filter);
+```
 
 ```csharp
 //In and Exists
@@ -568,11 +571,11 @@ var sql = repository.From<User>()
 //SELECT a.`Id` AS UserId,b.`Id` AS OrderId,COUNT(b.`Id`) AS OrderCount,SUM(b.`TotalAmount`) AS TotalAmount FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId`ORDER BY a.`Id`,b.`Id`
 ```
 
-子查询，From和WithTable
-From，主要在最开始时使用
-WithTable，适合From之后的任意地方使用
+子查询，使用`From`和`WithTable`方法
+`From`，主要在最开始时使用
+`WithTable`，在使用`From`之后的任意地方
 两者生成的SQL完全一样的
-From之后的子查询，完全可以由Join完成，Join本身就支持子查询
+> 注意：`From`之后的子查询，完全可以由`Join`完成，`Join`本身就支持子查询
 ```csharp
 var sql = repository
     .From(f => f.From<Order>()
@@ -589,29 +592,34 @@ var sql = repository
     })
     .ToSql(out _);
 //SELECT a.`OrderId`,a.`BuyerId`,b.`Id`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,a.`ProductCount` FROM (SELECT a.`Id` AS `OrderId`,a.`BuyerId`,COUNT(DISTINCT b.`ProductId`) AS `ProductCount` FROM `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` GROUP BY a.`Id`,a.`BuyerId`) a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>1
+```
 
-//可以多个表直接查询
-var sql = repository
+可以多个表直接查询，最多支持10个表
+`From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(char tableAsStart = 'a')`
+```csharp
+var result = await repository
     .From(f => f.From<Page, Menu>('o')
         .Where((a, b) => a.Id == b.PageId)
         .Select((x, y) => new { y.Id, y.ParentId, x.Url }))
     .InnerJoin<Menu>((a, b) => a.Id == b.Id)
     .Where((a, b) => a.Id == b.Id)
     .Select((a, b) => new { a.Id, b.Name, a.ParentId, a.Url })
-    .ToSql(out _);
+    .ToListAsync();
 //SELECT a.`Id`,b.`Name`,a.`ParentId`,a.`Url` FROM (SELECT p.`Id`,p.`ParentId`,o.`Url` FROM `sys_page` o,`sys_menu` p WHERE o.`Id`=p.`PageId`) a INNER JOIN `sys_menu` b ON a.`Id`=b.`Id` WHERE a.`Id`=b.`Id`");
+```
 
-//WidthTable子查询
-var sql = repository.From<Menu>()
+`WidthTable`子查询，同样也支持多个表直接关联
+```csharp
+var result = repository.From<Menu>()
     .WithTable(f => f.From<Page, Menu>('c')
         .Where((a, b) => a.Id == b.PageId)
         .Select((x, y) => new { y.Id, y.ParentId, x.Url }))
     .Where((a, b) => a.Id == b.Id)
     .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
-    .ToSql(out _);
+    .First();
 //SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `sys_menu` a,(SELECT d.`Id`,d.`ParentId`,c.`Url` FROM `sys_page` c,`sys_menu` d WHERE c.`Id`=d.`PageId`) b WHERE a.`Id`=b.`Id`
 
-var sql = repository
+var result = repository
     .From<Order, User>()
     .WithTable(f => f.From<Order, OrderDetail, User>()
         .Where((a, b, c) => a.Id == b.OrderId && a.BuyerId == c.Id && c.Age > 20)
@@ -620,7 +628,7 @@ var sql = repository
         .Select((x, a, b, c) => new { x.Grouping.OrderId, TotalAmount = x.Sum(b.Amount) }))
     .Where((a, b, c) => a.BuyerId == b.Id && a.Id == c.OrderId)
     .Select((a, b, c) => new { Order = a, Buyer = b, OrderId = a.Id, a.BuyerId, c.TotalAmount })
-    .ToSql(out _);
+    .First();
 //SELECT a.`Id`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,b.`Id`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,a.`Id` AS `OrderId`,a.`BuyerId`,c.`TotalAmount` FROM `sys_order` a,`sys_user` b,(SELECT a.`Id` AS `OrderId`,SUM(b.`Amount`) AS `TotalAmount` FROM `sys_order` a,`sys_order_detail` b,`sys_user` c WHERE a.`Id`=b.`OrderId` AND a.`BuyerId`=c.`Id` AND c.`Age`>20 GROUP BY a.`Id`,a.`BuyerId` HAVING SUM(b.`Amount`)>500) c WHERE a.`BuyerId`=b.`Id` AND a.`Id`=c.`OrderId`
 ```
 > 注意：
@@ -633,13 +641,15 @@ var sql = repository
 `Join`表连接,`Trolley`支持三种`Join`表连接，`InnerJoin`、`LeftJoin`、`RightJoin`
 有两种方式`Join`关联表：
 1.一张表一张表的`Join`关联起来
-2.一次`From`多张表，一次只能关联两个表，但可以多次Join关联
-直接关联实体表，也可以关联子查询表，相当于先`WithTable`后再`Join`
+2.一次`From`多张表，再挨个关联
+直接关联实体表，也可以关联子查询表，相当于先`WithTable`后再`Join`，每次关联只能关联两张表，但可以多次关联
+
+`Join`关联实体表
 
 ```csharp
 //INNER JOIN
 //一张表一张表关联
-var sql = repository.From<User>()
+var result = repository.From<User>()
     .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
     .Where((a, b) => b.ProductCount > 1)
     .Select((x, y) => new
@@ -647,20 +657,21 @@ var sql = repository.From<User>()
         User = x,
         Order = y
     })
-    .ToSql(out _);
+    .ToList();
 //SELECT a.`Id`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,b.`Id`,b.`OrderNo`,b.`ProductCount`,b.`TotalAmount`,b.`BuyerId`,b.`SellerId`,b.`Products`,b.`Disputes`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` WHERE b.`ProductCount`>1
 
-//直接From多张表，分别连接，每次只能关联两张表
-var sql = repository.From<User, Order, OrderDetail>()
+//直接From多张表，再挨个关联
+var result = repository.From<User, Order, OrderDetail>()
     .InnerJoin((a, b, c) => a.Id == b.BuyerId)
     .LeftJoin((a, b, c) => b.Id == c.OrderId)
     .Select((a, b, c) => new { OrderId = b.Id, b.OrderNo, b.Disputes, b.BuyerId, Buyer = a, TotalAmount = Sql.Sum(c.Amount) })
-    .ToSql(out _);
+    .ToList();
 //SELECT b.`Id` AS `OrderId`,b.`OrderNo`,b.`Disputes`,b.`BuyerId`,a.`Id`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,SUM(c.`Amount`) AS `TotalAmount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` LEFT JOIN `sys_order_detail` c ON b.`Id`=c.`OrderId`
+```
 
-
-//Join子查询
-var sql = repository
+`Join`关联子查询
+```csharp
+var result = repository
     .From(f => f.From<Order, OrderDetail>('a')
         .Where((a, b) => a.Id == b.OrderId)
         .GroupBy((a, b) => new { a.BuyerId, OrderId = a.Id })
@@ -668,18 +679,18 @@ var sql = repository
         .Select((x, a, b) => new { x.Grouping, ProductTotal = Sql.CountDistinct(b.ProductId), BuyerId1 = x.Grouping.BuyerId }))
     .InnerJoin<User>((x, y) => x.Grouping.BuyerId == y.Id)
     .Select((x, y) => new { x.Grouping, x.Grouping.BuyerId, x.ProductTotal, BuyerName = y.Name, BuyerId2 = x.BuyerId1 })
-    .ToSql(out _);
+    .ToList();
 //SELECT a.`BuyerId`,a.`OrderId`,a.`BuyerId`,a.`ProductTotal`,b.`Name` AS `BuyerName`,a.`BuyerId1` AS `BuyerId2` FROM (SELECT a.`BuyerId`,a.`Id` AS `OrderId`,COUNT(DISTINCT b.`ProductId`) AS `ProductTotal`,a.`BuyerId` AS `BuyerId1` FROM `sys_order` a,`sys_order_detail` b WHERE a.`Id`=b.`OrderId` GROUP BY a.`BuyerId`,a.`Id` HAVING COUNT(DISTINCT b.`ProductId`)>0) a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id`
 
 //LeftJoin查询，三个Join写法一样，只是方法名字不同
-var sql = repository.From<Product>()
+var result = repository.From<Product>()
     .LeftJoin<Brand>((a, b) => a.BrandId = b.Id)
     .Where((a, b) => a.ProductNo.Contains("PN-00"))
-    .ToSql(out _);
+    .ToList;
 //SELECT a.`Id`,a.`ProductNo`,a.`Name`,a.`BrandId`,a.`CategoryId`,a.`Price`,a.`CompanyId`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,b.`Id`,b.`BrandNo`,b.`Name` FROM `sys_product` a LEFT JOIN `sys_brand` b ON a.`BrandId`=b.`Id` WHERE a.`ProductNo` LIKE '%PN-00%'
 ```
 > 注意：
-> 使用Join<T>(f=>f.From...)的子查询，相当于WithTable+Join两个操作
+> 使用Join<T>(f=>f.From...)的子查询，相当于`WithTable`+`Join`两个操作
 
 
 单表聚合操作
@@ -707,7 +718,7 @@ var value2 = repository.From<Order>().Select(f => Sql.Avg(f.TotalAmount)).First(
 var value3 = repository.QueryFirst<double>("SELECT AVG(TotalAmount) FROM sys_order");
 ```
 
-Union和UnionAll查询
+`Union`和`UnionAll`查询
 
 ```csharp
 var sql = repository.From<Order>()
@@ -732,8 +743,10 @@ var sql = repository.From<Order>()
 //生成的SQL:
 SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id`=1 UNION ALL
 SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id`>1");
+```
 
-//带有OrderBy和Take的Union，会变成一个子查询用SELECT * FROM ()包装一下，在里面完成OrderBy和Take操作
+带有`OrderBy`和`Take`的`Union`，会变成一个子查询用`SELECT * FROM ()`包装一下，在里面完成`OrderBy`和`Take`操作
+```csharp
 var sql = repository
     .From<Order>()
         .Where(x => x.Id < 3)
@@ -756,21 +769,22 @@ var sql = repository
             x.BuyerId
         }).Take(1))
     .ToSql(out _);
-//生成的SQL:
+//SQL:
 SELECT * FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id`<3 ORDER BY a.`Id` LIMIT 1) a UNION ALL
 SELECT * FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id`>2 LIMIT 1) a"
 ```
 > 注意：
-> 带有OrderBy和Take的Union，会生成一个子查询，在里面完成OrderBy和Take操作
+> 带有`OrderBy`和`Take`的`Union`，会生成一个子查询，在里面完成`OrderBy`和`Take`操作
 
 
 `CTE`支持
-CTE其实也是一个子查询，使用AsCteTable(string tableName)方法把一个子查询包装成一个CTE表
+`CTE`其实也是一个子查询，使用`AsCteTable(string tableName)`方法把一个子查询包装成一个`CTE`表
 可以在查询中直接使用，也可以单独声明使用，两者效果是一样的
-在CTE的子查询中，使用UnionAllRecursive方法，可以自身引用实现递归查询
+在`CTE`的子查询中，使用`UnionAllRecursive`方法，可以自身引用实现递归查询
 
+
+直接在查询中使用
 ```csharp
-//直接在查询中使用
 int menuId = 2;
 int pageId = 1;
 var sql = repository
@@ -781,17 +795,18 @@ var sql = repository
 	.InnerJoin<Page>((a, b) => a.Id == b.Id)
 	.Where((x, y) => y.Id >= pageId)
 	.Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
-	.ToSql(out var dbParameters);
+	.ToList();
 
-生成的SQL:
+SQL:
 WITH `MenuList`(`Id`,`Name`,`ParentId`,`PageId`) AS 
 (
 SELECT a.`Id`,a.`Name`,a.`ParentId`,a.`PageId` FROM `sys_menu` a WHERE a.`Id`>=@p0
 )
 SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `MenuList` a INNER JOIN `sys_page` b ON a.`Id`=b.`Id` WHERE b.`Id`>=@p1
+```
 
-
-//也可以单独声明CTE表，在后续的查询中使用
+也可以单独声明`CTE`表，在后续的多个查询中都可以引用
+```csharp
 var myCteTable1 = repository
     .From<Menu>()
         .Where(x => x.Id == rootId)
@@ -811,13 +826,13 @@ var myCteTable2 = repository
         .Select((x, y) => new { x.Id, x.ParentId, y.Url }))
     .AsCteTable("myCteTable2");
 
-var sql = repository
+var result = repository
     .From(myCteTable1)
     .InnerJoin(myCteTable2, (a, b) => a.Id == b.Id)
     .Select((a, b) => new { a.Id, b.Name, a.ParentId, a.Url })
-    .ToSql(out _);
+    .ToList();
 	
-生成的SQL:
+//SQL:
 WITH RECURSIVE `myCteTable1`(`Id`,`Name`,`ParentId`) AS 
 (
 SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a WHERE a.`Id`=@p0 UNION ALL
@@ -829,10 +844,12 @@ SELECT b.`Id`,b.`ParentId`,a.`Url` FROM `sys_page` a,`sys_menu` b WHERE a.`Id`=b
 SELECT a.`Id`,a.`ParentId`,b.`Url` FROM `sys_menu` a INNER JOIN `sys_page` b ON a.`PageId`=b.`Id`
 )
 SELECT b.`Id`,a.`Name`,b.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myCteTable2` b ON a.`Id`=b.`Id`
+```
 
-多个CTE子句，单独声明更清晰一点
-单独声明CTE表，可以在多个查询中引用，通常会发生参数名重复情况，可以使用ToParameter方法，改变参数名，如下：
+多个`CTE`子句，单独声明更清晰一点
+单独声明`CTE`表，可以在多个查询中引用，通常会发生参数名重复情况，可以使用`ToParameter`方法，改变参数名，如下：
 
+```csharp
 int rootId = 1;
 var menuList = repository
     .From<Menu>()
@@ -842,10 +859,11 @@ var menuList = repository
         .InnerJoin(y, (a, b) => a.ParentId == b.Id)
         .Select((a, b) => new { a.Id, a.Name, a.ParentId }))
     .AsCteTable("MenuList");
+```
+`rootId`变量生成的参数名为：`@RootId`,这样可以避免后面查询中的参数重名
 
-rootId变量生成的参数名为：@RootId,这样可以避免后面查询中的参数重名
-
-多个CTE表也可以直接声明使用
+多个`CTE`表也可以直接声明使用
+```csharp
 var result = await repository
     .From(f => f.From<Menu>()
             .Where(x => x.Id == menuId)
@@ -867,7 +885,7 @@ var result = await repository
     .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
 	.ToListAsync();
 
-生成的SQL:
+//SQL:
 WITH RECURSIVE `myCteTable1`(`Id`,`Name`,`ParentId`) AS 
 (
 SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a WHERE a.`Id`=@p0 UNION ALL
@@ -879,11 +897,9 @@ SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `sys_menu` b ON a.`Id`=b.`Pag
 SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `sys_menu` b ON a.`Id`=b.`PageId` WHERE a.`Id`>@p2
 )
 SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myCteTable2` b ON a.`Id`=b.`Id`
-
-一般CTE常用来处理树形结构递归操作，比如：根据当前角色获取菜单列表
-从叶子找菜单根，或是从菜单根查找所有叶子，都是递归CTE的常用场景
 ```
-
+> 注意： 一般CTE常用来处理树形结构递归操作，比如：根据当前角色获取菜单列表
+> 从叶子找菜单根，或是从菜单根查找所有叶子，都是递归CTE的常用场景
 
 特殊用法：
 
@@ -914,41 +930,90 @@ var sql = repository.From<Order>()
 
 `ITypeHandler`类型处理器
 对特殊类型进行处理，不是默认映射，就需要`TypeHandler`类型处理器类处理，完成模型与数据库之间的数据转换
-通常是Class类型或是特殊类型，比如：`TimeOnly`,`DateOnly`...等
-比如：模型的`SomeTime`属性是`TimeOnly`类型，数据库字段是`bitint`类型,并不是默认映射，就需要重写一个类型处理器，完成模型与数据库之间的数据转换。
-
-
-在要注册`Trolley`的时候，进行注册`ITypeHandler`类型处理器，在模型映射的需要指定这个`ITypeHandler`类型处理器
-`Trolley`提供了`JsonTypeHandler`类来支持`Json`处理。
+`Trolley`内置多个类型处理器，这些类型处理器在启动时会自动注册，映射时可以直接使用，`Trolley`也会根据字段类型进行默认匹配，选择适合的类型处理器
+只有`JsonTypeHandler`,`ToStringTypeHandler`类型处理器或是`object`类型的实体成员，才需要手动指定，其他的类型处理器或是明确的实体成员类型(如：基础类型)，`Trolley`都会根据字段类型进行默认匹配
 
 ```csharp
-var services = new ServiceCollection();
-services.AddSingleton(f =>
-{
-    var builder = new OrmDbFactoryBuilder()
-    .Register("fengling", true, f =>
-    {
-        var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;";
-        f.Add<MySqlProvider>(connectionString, true);
-    })
-    .AddTypeHandler<JsonTypeHandler>()
-    .Configure<MySqlProvider, MySqlModelConfiguration>();
-    return builder.Build();
-});
-var serviceProvider = services.BuildServiceProvider();
-this.dbFactory = serviceProvider.GetService<IOrmDbFactory>();
+BooleanTypeHandler
+NullableBooleanTypeHandler
+BooleanAsIntTypeHandler
+NullableBooleanAsIntTypeHandler
 
-//略 ... ...
+ByteArrayTypeHandler
+ByteArrayAsLongTypeHandler
+
+CharTypeHandler
+NullableCharTypeHandler
+
+DateOnlyTypeHandler
+NullableDateOnlyTypeHandler
+DateOnlyAsStringTypeHandler
+NullableDateOnlyAsStringTypeHandler
+
+DateTimeOffsetTypeHandler
+NullableDateTimeOffsetTypeHandler
+DateTimeOffsetAsStringTypeHandler
+NullableDateTimeOffsetAsStringTypeHandler
+
+DateTimeTypeHandler
+NullableDateTimeTypeHandler
+DateTimeAsStringTypeHandler
+NullableDateTimeAsStringTypeHandler
+
+EnumTypeHandler
+NullableEnumTypeHandler
+ConvertEnumTypeHandler
+NullableConvertEnumTypeHandler
+EnumAsStringTypeHandler
+NullableEnumAsStringTypeHandler
+
+GuidTypeHandler
+GuidAsStringTypeHandler
+NullableGuidTypeHandler
+NullableGuidAsStringTypeHandler
+
+JsonTypeHandler
+
+NumberTypeHandler
+NullableNumberTypeHandler
+ConvertNumberTypeHandler
+NullableConvertNumberTypeHandler
+
+StringTypeHandler
+NullableStringTypeHandler
+
+TimeOnlyTypeHandler
+NullableTimeOnlyTypeHandler
+TimeOnlyAsStringTypeHandler
+NullableTimeOnlyAsStringTypeHandler
+TimeOnlyAsLongTypeHandler
+NullableTimeOnlyAsLongTypeHandler
+
+TimeSpanTypeHandler
+NullableTimeSpanTypeHandler
+TimeSpanAsStringTypeHandler
+NullableTimeSpanAsStringTypeHandler
+TimeSpanAsLongTypeHandler
+NullableTimeSpanAsLongTypeHandler
+
+ToStringTypeHandler
+```
+
+`JsonTypeHandler`类型处理器支持`Json`
+在类型映射时，配置字段为`json`类型，并指定`JsonTypeHandler`类型处理器
+在查询中，直接实体成员操作，到数据库中就是`json`类型，`JsonTypeHandler`类型处理器会自动把实体成员序列化为`json`，从数据库中读取时，也会自动反序列化操作
+
+```csharp
 builder.Entity<Order>(f =>
 {
-    //略 ... ...
-    //特殊类型JSON
+    //...
+    //手动指定JsonTypeHandler
     f.Member(t => t.Products).Field(nameof(Order.Products)).DbColumnType("longtext").NativeDbType(MySqlDbType.JSON).Position(9).TypeHandler<JsonTypeHandler>();
     f.Member(t => t.Disputes).Field(nameof(Order.Disputes)).DbColumnType("longtext").NativeDbType(MySqlDbType.JSON).Position(10).TypeHandler<JsonTypeHandler>();
-    //略 ... ...
+    //...
 });
 
-//Order模型的属性Products和Disputes，数据库中都是Json类型，Products类型是List<int>,Disputes类型是Dispute类
+//Order模型的属性Products和Disputes，数据库中都是Json类型，Products类型是List<int>，Disputes类型是Dispute类，自动反序列化
 var result = repository.Get<Order>(1);
 Assert.NotNull(result);
 Assert.NotNull(result.Products);
@@ -957,8 +1022,8 @@ Assert.NotNull(result.Disputes);
 
 
 `Select`操作，可以使用`SelectFlattenTo`方法，直接完成到目标类型的直接转换，减少很多代码量，通常是`DTO`。
-`SelectFlattenTo`方法，会先按照方法参数中指定的字段进行设置，其他字段会根据当前所有`Select`出来的字段，根据相同的名称进行设置目标属性，如果有相同的字段，取第一个表的字段。
-`SelectFlattenTo`方法，会从数据库直接和DTO类型映射，不会生成模型。
+`SelectFlattenTo`方法，会先按照方法参数中指定的字段进行设置，其他字段会根据当前所有`Select`出来的字段，根据相同的名称进行设置目标属性，如果存在多个相同的字段，取第一个表的字段。
+`SelectFlattenTo`方法，会从数据库直接和DTO类型映射。
 
 ```cshar
 var result = repository.From<Order>()
@@ -1001,8 +1066,9 @@ public class ActivityQueryResponse
     public string ActivityTypeName { get; set; }
     public string StatusName { get; set; }
 }
+
 private static ConcurrentDictionary<Type, Dictionary<object, string>> enumDescriptions = new();
-//扩展方法ToDescription，获取枚举的描述并缓存
+//本地的扩展方法ToDescription，获取枚举的描述并缓存
 public static string ToDescription<TEnum>(this TEnum enumObj) where TEnum : struct, Enum
 {
     var enumType = typeof(TEnum);
@@ -1038,13 +1104,17 @@ var result = await repository.From<Activity>()
     .And(!string.IsNullOrEmpty(request.Title), f => f.Title == request.Title)
     .SelectFlattenTo<ActivityQueryResponse>(f => new
     {
+		//调用本地扩展方法
         ActivityTypeName = f.ActivityType.ToDescription(),
+		//调用本地扩展方法
         StatusName = f.Status.ToDescription()
     }))
     .Page(request.PageIndex, request.PageSize)
     .ToPageListAsync();
-//属性ActivityTypeName和StatusName做了特殊处理，其他的属性根据名称相同匹配原则，自动设置到ActivityQueryResponse中
+```
+属性`ActivityTypeName`和`StatusName`做了特殊处理，其他的属性根据名称相同匹配原则，自动设置到`ActivityQueryResponse`中
 
+```csharp
 var result = await repository.From<Activity>()
     .Where(f => f.IsEnabled && f.TenantId == passport.TenantId)
     .And(!string.IsNullOrEmpty(request.Title), f => f.Title == request.Title)
@@ -1058,7 +1128,7 @@ var result = await repository.From<Activity>()
 //获取枚举名称，也会延迟调用获取名称方法Enum.GetName
 ```
 
-有些方法的调用，解析到数据库中去执行会发生错误，可以使用Deferred方法强制延迟执行，在数据库执行之后，再执行
+有些方法的调用，解析到数据库中去执行会发生错误，甚至都无法解析，可以使用`Deferred`方法强制延迟执行，在数据库执行之后再执行
 
 ```csharp
 var result = repository.From<Order>()
@@ -1071,7 +1141,7 @@ var result = repository.From<Order>()
 private string DeferInvoke() => "DeferInvoke";
 ```
 
-指定参数名称，ToParameter方法，如下：
+指定参数名称，`ToParameter`方法，如下：
 
 ```csharp
 int rootId = 1;
@@ -1096,10 +1166,12 @@ var result = repository.Query<(int OrderId, string OrderNo, double TotalAmount)>
 
 `IsNull`扩展方法
 有两个方法
+```csharp
 bool IsNull<TField>(this TField field)
 TField IsNull<TField>(this TField field, TField nullVaueExpr)
+```
 
-有时候数据库字段是可为空的，实体字段却是不是可为空类型，需要判断是否为空，可以使用本方法
+有时候数据库字段是可为空的，实体字段却不是可为空类型的，需要判断是否为空，可以使用本方法
 ```csharp
 var result = repository.From<Order>()
    .Where(f => f.BuyerId.IsNull())

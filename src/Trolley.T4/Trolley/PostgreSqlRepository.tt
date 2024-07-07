@@ -1,0 +1,49 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="Microsoft.VisualStudio.TextTemplating"#>
+<#@ output extension=".cs" #>
+using System;
+
+namespace Trolley.PostgreSql;
+
+public class PostgreSqlRepository : Repository, IPostgreSqlRepository
+{
+    #region Constructor
+    public PostgreSqlRepository(DbContext dbContext) : base(dbContext) { }
+    #endregion
+
+    #region From
+    public override IPostgreSqlQuery<T> From<T>(char tableAsStart = 'a')
+        => base.From<T>(tableAsStart) as IPostgreSqlQuery<T>;
+<#
+    var count = 10;
+    var tables = "T1";
+    for (int i = 2; i <= count; i++)
+    {
+        tables += $", T{i}";
+#>
+    public override IPostgreSqlQuery<<#=tables#>> From<<#=tables#>>(char tableAsStart = 'a')
+        => base.From<<#=tables#>>(tableAsStart) as IPostgreSqlQuery<<#=tables#>>;
+<#  }#>
+    #endregion
+
+    #region From SubQuery
+    public override IPostgreSqlQuery<T> From<T>(IQuery<T> subQuery)
+        => base.From<T>(subQuery) as IPostgreSqlQuery<T>;
+    public override IPostgreSqlQuery<T> From<T>(Func<IFromQuery, IQuery<T>> subQuery)
+        => base.From<T>(subQuery) as IPostgreSqlQuery<T>;
+    #endregion
+
+    #region Create
+    public override IPostgreSqlCreate<TEntity> Create<TEntity>() 
+        => this.ormProvider.NewCreate<TEntity>(this.DbContext) as IPostgreSqlCreate<TEntity>;
+    #endregion
+
+    #region Update
+    public override IPostgreSqlUpdate<TEntity> Update<TEntity>() 
+        => this.ormProvider.NewUpdate<TEntity>(this.DbContext) as IPostgreSqlUpdate<TEntity>;
+    #endregion
+}
