@@ -1063,7 +1063,7 @@ public class SqlVisitor : ISqlVisitor
                                 if (this.TableAliases.ContainsKey(aliasName))
                                     continue;
 
-                                var tableMapper = this.MapProvider.GetEntityMap(tableType);                             
+                                var tableMapper = this.MapProvider.GetEntityMap(tableType);
                                 var tableSegment = new TableSegment
                                 {
                                     EntityType = tableType,
@@ -1826,7 +1826,7 @@ public class SqlVisitor : ISqlVisitor
     public bool IsGroupingMember(MemberExpression memberExpr)
     {
         if (memberExpr == null) return false;
-        return memberExpr.Member.Name == "Grouping" && typeof(IAggregateSelect).IsAssignableFrom(memberExpr.Member.DeclaringType);
+        return memberExpr.Member.Name == "Grouping" && memberExpr.Member.DeclaringType.FullName.StartsWith("Trolley.IGroupingObject");
     }
     public List<ICteQuery> FlattenRefCteTables(List<IQuery> cteQueries)
     {
