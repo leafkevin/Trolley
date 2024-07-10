@@ -31,11 +31,11 @@ class ModelConfiguration : IModelConfiguration
     public void OnModelCreating(ModelBuilder builder)
     {
 <#
-    var connectionString = "Host=172.16.30.190;Username=postgres;Password=123456;Database=yhhis;Maximum Pool Size=20";
+    var connectionString = "Host=localhost;Username=postgres;Password=123456;Database=fengling;Maximum Pool Size=20";
     var dbProvider = new PostgreSqlProvider(connectionString);
     
     var tableSchema = "public";
-    var tableNames = new[]{"sys_data"};
+    var tableNames = new[]{"sys_user","sys_company","sys_order_detail","sys_order_detail","sys_product","sys_brand","sys_menu","sys_page","sys_function",""};
     var removePrefixes = new[]{"sys_"};
     var separator = '_';
 

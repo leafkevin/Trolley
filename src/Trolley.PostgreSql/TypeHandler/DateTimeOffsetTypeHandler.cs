@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Trolley;
+namespace Trolley.PostgreSql;
 
 public class PostgreSqlDateTimeOffsetTypeHandler : DateTimeOffsetTypeHandler, ITypeHandler
 {

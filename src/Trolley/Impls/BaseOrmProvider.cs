@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 
@@ -17,108 +18,23 @@ public abstract partial class BaseOrmProvider : IOrmProvider
 
     static BaseOrmProvider()
     {
-        typeHandlers[typeof(BooleanAsIntTypeHandler)] = new BooleanAsIntTypeHandler();
-        typeHandlers[typeof(NullableBooleanAsIntTypeHandler)] = new NullableBooleanAsIntTypeHandler();
-
-        typeHandlers[typeof(NumberTypeHandler)] = new NumberTypeHandler();
-        typeHandlers[typeof(NullableNumberTypeHandler)] = new NullableNumberTypeHandler();
-
-        typeHandlers.TryAdd(typeof(ConvertNumberTypeHandler<byte>), new ConvertNumberTypeHandler<byte>());
-        typeHandlers.TryAdd(typeof(ConvertNumberTypeHandler<sbyte>), new ConvertNumberTypeHandler<sbyte>());
-        typeHandlers.TryAdd(typeof(ConvertNumberTypeHandler<short>), new ConvertNumberTypeHandler<short>());
-        typeHandlers.TryAdd(typeof(ConvertNumberTypeHandler<ushort>), new ConvertNumberTypeHandler<ushort>());
-        typeHandlers.TryAdd(typeof(ConvertNumberTypeHandler<int>), new ConvertNumberTypeHandler<int>());
-        typeHandlers.TryAdd(typeof(ConvertNumberTypeHandler<uint>), new ConvertNumberTypeHandler<uint>());
-        typeHandlers.TryAdd(typeof(ConvertNumberTypeHandler<long>), new ConvertNumberTypeHandler<long>());
-        typeHandlers.TryAdd(typeof(ConvertNumberTypeHandler<ulong>), new ConvertNumberTypeHandler<ulong>());
-
-        typeHandlers.TryAdd(typeof(NullableConvertNumberTypeHandler<byte>), new NullableConvertNumberTypeHandler<byte>());
-        typeHandlers.TryAdd(typeof(NullableConvertNumberTypeHandler<sbyte>), new NullableConvertNumberTypeHandler<sbyte>());
-        typeHandlers.TryAdd(typeof(NullableConvertNumberTypeHandler<short>), new NullableConvertNumberTypeHandler<short>());
-        typeHandlers.TryAdd(typeof(NullableConvertNumberTypeHandler<ushort>), new NullableConvertNumberTypeHandler<ushort>());
-        typeHandlers.TryAdd(typeof(NullableConvertNumberTypeHandler<int>), new NullableConvertNumberTypeHandler<int>());
-        typeHandlers.TryAdd(typeof(NullableConvertNumberTypeHandler<uint>), new NullableConvertNumberTypeHandler<uint>());
-        typeHandlers.TryAdd(typeof(NullableConvertNumberTypeHandler<long>), new NullableConvertNumberTypeHandler<long>());
-        typeHandlers.TryAdd(typeof(NullableConvertNumberTypeHandler<ulong>), new NullableConvertNumberTypeHandler<ulong>());
-
-        typeHandlers.TryAdd(typeof(EnumTypeHandler<byte>), new EnumTypeHandler<byte>());
-        typeHandlers.TryAdd(typeof(EnumTypeHandler<sbyte>), new EnumTypeHandler<sbyte>());
-        typeHandlers.TryAdd(typeof(EnumTypeHandler<short>), new EnumTypeHandler<short>());
-        typeHandlers.TryAdd(typeof(EnumTypeHandler<ushort>), new EnumTypeHandler<ushort>());
-        typeHandlers.TryAdd(typeof(EnumTypeHandler<int>), new EnumTypeHandler<int>());
-        typeHandlers.TryAdd(typeof(EnumTypeHandler<uint>), new EnumTypeHandler<uint>());
-        typeHandlers.TryAdd(typeof(EnumTypeHandler<long>), new EnumTypeHandler<long>());
-        typeHandlers.TryAdd(typeof(EnumTypeHandler<ulong>), new EnumTypeHandler<ulong>());
-
-        typeHandlers.TryAdd(typeof(NullableEnumTypeHandler<byte>), new NullableEnumTypeHandler<byte>());
-        typeHandlers.TryAdd(typeof(NullableEnumTypeHandler<sbyte>), new NullableEnumTypeHandler<sbyte>());
-        typeHandlers.TryAdd(typeof(NullableEnumTypeHandler<short>), new NullableEnumTypeHandler<short>());
-        typeHandlers.TryAdd(typeof(NullableEnumTypeHandler<ushort>), new NullableEnumTypeHandler<ushort>());
-        typeHandlers.TryAdd(typeof(NullableEnumTypeHandler<int>), new NullableEnumTypeHandler<int>());
-        typeHandlers.TryAdd(typeof(NullableEnumTypeHandler<uint>), new NullableEnumTypeHandler<uint>());
-        typeHandlers.TryAdd(typeof(NullableEnumTypeHandler<long>), new NullableEnumTypeHandler<long>());
-        typeHandlers.TryAdd(typeof(NullableEnumTypeHandler<ulong>), new NullableEnumTypeHandler<ulong>());
-
-        typeHandlers.TryAdd(typeof(ConvertEnumTypeHandler<byte>), new ConvertEnumTypeHandler<byte>());
-        typeHandlers.TryAdd(typeof(ConvertEnumTypeHandler<sbyte>), new ConvertEnumTypeHandler<sbyte>());
-        typeHandlers.TryAdd(typeof(ConvertEnumTypeHandler<short>), new ConvertEnumTypeHandler<short>());
-        typeHandlers.TryAdd(typeof(ConvertEnumTypeHandler<ushort>), new ConvertEnumTypeHandler<ushort>());
-        typeHandlers.TryAdd(typeof(ConvertEnumTypeHandler<int>), new ConvertEnumTypeHandler<int>());
-        typeHandlers.TryAdd(typeof(ConvertEnumTypeHandler<uint>), new ConvertEnumTypeHandler<uint>());
-        typeHandlers.TryAdd(typeof(ConvertEnumTypeHandler<long>), new ConvertEnumTypeHandler<long>());
-        typeHandlers.TryAdd(typeof(ConvertEnumTypeHandler<ulong>), new ConvertEnumTypeHandler<ulong>());
-
-        typeHandlers.TryAdd(typeof(NullableConvertEnumTypeHandler<byte>), new NullableConvertEnumTypeHandler<byte>());
-        typeHandlers.TryAdd(typeof(NullableConvertEnumTypeHandler<sbyte>), new NullableConvertEnumTypeHandler<sbyte>());
-        typeHandlers.TryAdd(typeof(NullableConvertEnumTypeHandler<short>), new NullableConvertEnumTypeHandler<short>());
-        typeHandlers.TryAdd(typeof(NullableConvertEnumTypeHandler<ushort>), new NullableConvertEnumTypeHandler<ushort>());
-        typeHandlers.TryAdd(typeof(NullableConvertEnumTypeHandler<int>), new NullableConvertEnumTypeHandler<int>());
-        typeHandlers.TryAdd(typeof(NullableConvertEnumTypeHandler<uint>), new NullableConvertEnumTypeHandler<uint>());
-        typeHandlers.TryAdd(typeof(NullableConvertEnumTypeHandler<long>), new NullableConvertEnumTypeHandler<long>());
-        typeHandlers.TryAdd(typeof(NullableConvertEnumTypeHandler<ulong>), new NullableConvertEnumTypeHandler<ulong>());
-
-        typeHandlers[typeof(EnumAsStringTypeHandler)] = new EnumAsStringTypeHandler();
-        typeHandlers[typeof(NullableEnumAsStringTypeHandler)] = new NullableEnumAsStringTypeHandler();
-
-        typeHandlers[typeof(CharTypeHandler)] = new CharTypeHandler();
-        typeHandlers[typeof(NullableCharTypeHandler)] = new NullableCharTypeHandler();
-        typeHandlers[typeof(StringTypeHandler)] = new StringTypeHandler();
-        typeHandlers[typeof(NullableStringTypeHandler)] = new NullableStringTypeHandler();
-
-        typeHandlers[typeof(DateTimeOffsetTypeHandler)] = new DateTimeOffsetTypeHandler();
-        typeHandlers[typeof(NullableDateTimeOffsetTypeHandler)] = new NullableDateTimeOffsetTypeHandler();
-
-        typeHandlers[typeof(DateTimeTypeHandler)] = new DateTimeTypeHandler();
-        typeHandlers[typeof(NullableDateTimeTypeHandler)] = new NullableDateTimeTypeHandler();
-        typeHandlers[typeof(DateTimeAsStringTypeHandler)] = new DateTimeAsStringTypeHandler();
-        typeHandlers[typeof(NullableDateTimeAsStringTypeHandler)] = new NullableDateTimeAsStringTypeHandler();
-
-        typeHandlers[typeof(DateOnlyTypeHandler)] = new DateOnlyTypeHandler();
-        typeHandlers[typeof(NullableDateOnlyTypeHandler)] = new NullableDateOnlyTypeHandler();
-        typeHandlers[typeof(DateOnlyAsStringTypeHandler)] = new DateOnlyAsStringTypeHandler();
-        typeHandlers[typeof(NullableDateOnlyAsStringTypeHandler)] = new NullableDateOnlyAsStringTypeHandler();
-
-        typeHandlers[typeof(TimeSpanTypeHandler)] = new TimeSpanTypeHandler();
-        typeHandlers[typeof(NullableTimeSpanTypeHandler)] = new NullableTimeSpanTypeHandler();
-        typeHandlers[typeof(TimeSpanAsStringTypeHandler)] = new TimeSpanAsStringTypeHandler();
-        typeHandlers[typeof(NullableTimeSpanAsStringTypeHandler)] = new NullableTimeSpanAsStringTypeHandler();
-        typeHandlers[typeof(TimeSpanAsLongTypeHandler)] = new TimeSpanAsLongTypeHandler();
-        typeHandlers[typeof(NullableTimeSpanAsLongTypeHandler)] = new NullableTimeSpanAsLongTypeHandler();
-
-        typeHandlers[typeof(TimeOnlyTypeHandler)] = new TimeOnlyTypeHandler();
-        typeHandlers[typeof(NullableTimeOnlyTypeHandler)] = new NullableTimeOnlyTypeHandler();
-        typeHandlers[typeof(TimeOnlyAsStringTypeHandler)] = new TimeOnlyAsStringTypeHandler();
-        typeHandlers[typeof(NullableTimeOnlyAsStringTypeHandler)] = new NullableTimeOnlyAsStringTypeHandler();
-        typeHandlers[typeof(TimeOnlyAsLongTypeHandler)] = new TimeOnlyAsLongTypeHandler();
-        typeHandlers[typeof(NullableTimeOnlyAsLongTypeHandler)] = new NullableTimeOnlyAsLongTypeHandler();
-
-        typeHandlers[typeof(GuidTypeHandler)] = new GuidTypeHandler();
-        typeHandlers[typeof(NullableGuidTypeHandler)] = new NullableGuidTypeHandler();
-        typeHandlers[typeof(GuidAsStringTypeHandler)] = new GuidAsStringTypeHandler();
-        typeHandlers[typeof(NullableGuidAsStringTypeHandler)] = new NullableGuidAsStringTypeHandler();
-
-        typeHandlers[typeof(JsonTypeHandler)] = new JsonTypeHandler();
-        typeHandlers[typeof(ToStringTypeHandler)] = new ToStringTypeHandler();
+        var typeHandlerTypes = typeof(BaseOrmProvider).Assembly.GetExportedTypes()
+            .Where(f => typeof(ITypeHandler).IsAssignableFrom(f))
+            .ToList();
+        var numberTypes = new Type[] { typeof(byte), typeof(sbyte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong) };
+        foreach (var typeHandlerType in typeHandlerTypes)
+        {
+            if (!typeHandlerType.IsClass) continue;
+            if (typeHandlerType.IsGenericType)
+            {
+                foreach (var numberType in numberTypes)
+                {
+                    var myTypeHandlerType = typeHandlerType.MakeGenericType(numberType);
+                    typeHandlers.TryAdd(myTypeHandlerType, Activator.CreateInstance(myTypeHandlerType) as ITypeHandler);
+                }
+            }
+            else typeHandlers.TryAdd(typeHandlerType, Activator.CreateInstance(typeHandlerType) as ITypeHandler);
+        }
     }
     public virtual OrmProviderType OrmProviderType => OrmProviderType.Basic;
     public virtual string ParameterPrefix => "@";
@@ -195,56 +111,55 @@ public abstract partial class BaseOrmProvider : IOrmProvider
         return typeHandlerMap.GetOrAdd(hashKey, f =>
         {
             Type handlerType = null;
-            Type underlyingType = null;
-            var isNullable = targetType.IsNullableType(out underlyingType);
+            targetType.IsNullableType(out var underlyingType);
             if (underlyingType.IsEnumType(out _))
             {
                 if (fieldType == typeof(string))
-                    handlerType = isNullable ? typeof(NullableEnumAsStringTypeHandler) : typeof(EnumAsStringTypeHandler);
+                    handlerType = isRequired ? typeof(EnumAsStringTypeHandler) : typeof(NullableEnumAsStringTypeHandler);
                 else if (Enum.GetUnderlyingType(underlyingType) != fieldType)
                 {
-                    handlerType = isNullable ? typeof(NullableConvertEnumTypeHandler<>) : typeof(ConvertEnumTypeHandler<>);
+                    handlerType = isRequired ? typeof(ConvertEnumTypeHandler<>) : typeof(NullableConvertEnumTypeHandler<>);
                     handlerType = handlerType.MakeGenericType(fieldType);
                 }
                 else
                 {
-                    handlerType = isNullable ? typeof(NullableEnumTypeHandler<>) : typeof(EnumTypeHandler<>);
+                    handlerType = isRequired ? typeof(EnumTypeHandler<>) : typeof(NullableEnumTypeHandler<>);
                     handlerType = handlerType.MakeGenericType(fieldType);
                 }
             }
             else if (underlyingType == typeof(Guid))
             {
                 if (fieldType == typeof(string))
-                    handlerType = isNullable ? typeof(NullableGuidAsStringTypeHandler) : typeof(GuidAsStringTypeHandler);
-                else handlerType = isNullable ? typeof(NullableGuidTypeHandler) : typeof(GuidTypeHandler);
+                    handlerType = isRequired ? typeof(GuidAsStringTypeHandler) : typeof(NullableGuidAsStringTypeHandler);
+                else handlerType = isRequired ? typeof(GuidTypeHandler) : typeof(NullableGuidTypeHandler);
             }
             else if (underlyingType == typeof(DateTimeOffset))
             {
                 if (fieldType == typeof(string))
-                    handlerType = isNullable ? typeof(NullableDateTimeOffsetAsStringTypeHandler) : typeof(DateTimeOffsetAsStringTypeHandler);
-                else handlerType = isNullable ? typeof(NullableDateTimeOffsetTypeHandler) : typeof(DateTimeOffsetTypeHandler);
+                    handlerType = isRequired ? typeof(DateTimeOffsetAsStringTypeHandler) : typeof(NullableDateTimeOffsetAsStringTypeHandler);
+                else handlerType = isRequired ? typeof(DateTimeOffsetTypeHandler) : typeof(NullableDateTimeOffsetTypeHandler);
             }
             else if (underlyingType == typeof(DateOnly))
             {
                 if (fieldType == typeof(string))
-                    handlerType = isNullable ? typeof(NullableDateOnlyAsStringTypeHandler) : typeof(DateOnlyAsStringTypeHandler);
-                else handlerType = isNullable ? typeof(NullableDateOnlyTypeHandler) : typeof(DateOnlyTypeHandler);
+                    handlerType = isRequired ? typeof(DateOnlyAsStringTypeHandler) : typeof(NullableDateOnlyAsStringTypeHandler);
+                else handlerType = isRequired ? typeof(DateOnlyTypeHandler) : typeof(NullableDateOnlyTypeHandler);
             }
             else if (underlyingType == typeof(TimeSpan))
             {
                 if (fieldType == typeof(long))
-                    handlerType = isNullable ? typeof(NullableTimeSpanAsLongTypeHandler) : typeof(TimeSpanAsLongTypeHandler);
+                    handlerType = isRequired ? typeof(TimeSpanAsLongTypeHandler) : typeof(NullableTimeSpanAsLongTypeHandler);
                 else if (fieldType == typeof(string))
-                    handlerType = isNullable ? typeof(NullableTimeSpanAsStringTypeHandler) : typeof(TimeSpanAsStringTypeHandler);
-                else handlerType = isNullable ? typeof(NullableTimeSpanTypeHandler) : typeof(TimeSpanTypeHandler);
+                    handlerType = isRequired ? typeof(TimeSpanAsStringTypeHandler) : typeof(NullableTimeSpanAsStringTypeHandler);
+                else handlerType = isRequired ? typeof(TimeSpanTypeHandler) : typeof(NullableTimeSpanTypeHandler);
             }
             else if (underlyingType == typeof(TimeOnly))
             {
                 if (fieldType == typeof(long))
-                    handlerType = isNullable ? typeof(NullableTimeOnlyAsLongTypeHandler) : typeof(TimeOnlyAsLongTypeHandler);
+                    handlerType = isRequired ? typeof(TimeOnlyAsLongTypeHandler) : typeof(NullableTimeOnlyAsLongTypeHandler);
                 else if (fieldType == typeof(string))
-                    handlerType = isNullable ? typeof(NullableTimeOnlyAsStringTypeHandler) : typeof(TimeOnlyAsStringTypeHandler);
-                else handlerType = isNullable ? typeof(NullableTimeOnlyTypeHandler) : typeof(TimeOnlyTypeHandler);
+                    handlerType = isRequired ? typeof(TimeOnlyAsStringTypeHandler) : typeof(NullableTimeOnlyAsStringTypeHandler);
+                else handlerType = isRequired ? typeof(TimeOnlyTypeHandler) : typeof(NullableTimeOnlyTypeHandler);
             }
             else if (underlyingType == typeof(byte[]))
             {
@@ -257,7 +172,9 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                 switch (Type.GetTypeCode(underlyingType))
                 {
                     case TypeCode.Boolean:
-                        handlerType = isNullable ? typeof(NullableBooleanAsIntTypeHandler) : typeof(BooleanAsIntTypeHandler);
+                        if (fieldType == underlyingType)
+                            handlerType = isRequired ? typeof(BooleanTypeHandler) : typeof(NullableBooleanTypeHandler);
+                        else handlerType = isRequired ? typeof(BooleanAsIntTypeHandler) : typeof(NullableBooleanAsIntTypeHandler);
                         break;
                     case TypeCode.Byte:
                     case TypeCode.SByte:
@@ -271,10 +188,10 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                     case TypeCode.Double:
                     case TypeCode.Decimal:
                         if (fieldType == underlyingType)
-                            handlerType = isNullable ? typeof(NullableNumberTypeHandler) : typeof(NumberTypeHandler);
+                            handlerType = isRequired ? typeof(NumberTypeHandler) : typeof(NullableNumberTypeHandler);
                         else
                         {
-                            handlerType = isNullable ? typeof(NullableConvertNumberTypeHandler<>) : typeof(ConvertNumberTypeHandler<>);
+                            handlerType = isRequired ? typeof(ConvertNumberTypeHandler<>) : typeof(NullableConvertNumberTypeHandler<>);
                             handlerType = handlerType.MakeGenericType(fieldType);
                         }
                         break;
@@ -286,16 +203,11 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                         break;
                     case TypeCode.DateTime:
                         if (fieldType == typeof(string))
-                            handlerType = isNullable ? typeof(NullableDateTimeAsStringTypeHandler) : typeof(DateTimeAsStringTypeHandler);
-                        else handlerType = isNullable ? typeof(NullableDateTimeTypeHandler) : typeof(DateTimeTypeHandler);
-                        break;
-                    case TypeCode.Object:
-                        if (fieldType == typeof(string))
-                            handlerType = typeof(JsonTypeHandler);
+                            handlerType = isRequired ? typeof(DateTimeAsStringTypeHandler) : typeof(NullableDateTimeAsStringTypeHandler);
+                        else handlerType = isRequired ? typeof(DateTimeTypeHandler) : typeof(NullableDateTimeTypeHandler);
                         break;
                     default:
-                        handlerType = typeof(ToStringTypeHandler);
-                        break;
+                        throw new Exception($"当前成员类型{targetType.FullName}，字段类型{fieldType}未配置类型处理器");
                 }
             }
             if (!typeHandlers.TryGetValue(handlerType, out var typeHandler))

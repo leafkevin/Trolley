@@ -16,7 +16,7 @@ public class UnitTest4 : UnitTestBase
         services.AddSingleton(f =>
         {
             var builder = new OrmDbFactoryBuilder()
-            .Register<PostgreSqlProvider>("fengling", "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;", true)
+            .Register<PostgreSqlProvider>("fengling", "Host=localhost;Database=fengling;Username=postgres;Password=123456;", true)
             .Configure<PostgreSqlProvider, ModelConfiguration>();
             return builder.Build();
         });

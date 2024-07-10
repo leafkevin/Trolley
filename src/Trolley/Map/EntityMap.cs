@@ -119,9 +119,12 @@ public class EntityMap
                     memberMapper.NativeDbType = ormProvider.GetNativeDbType(memberMapper.MemberType);
             }
             if (!memberMapper.IsNavigation && string.IsNullOrEmpty(memberMapper.DbColumnType))
-                throw new ArgumentNullException("DbColumnType栏位不能为空，必须配置");
+                throw new ArgumentNullException($"实体{this.EntityType.FullName}的成员{memberMapper.MemberName}的映射DbColumnType栏位不能为空，必须配置");
             if (memberMapper.NativeDbType is int nativeDbType)
                 memberMapper.NativeDbType = Enum.ToObject(ormProvider.NativeDbTypeType, nativeDbType);
+
+            if (memberMapper.IsRequired && memberMapper.MemberType.IsNullableType(out _))
+                throw new NotSupportedException($"实体{this.EntityType.FullName}的成员{memberMapper.MemberName}的映射，配置为必须字段，但是成员类型却是可为null对象");
             if (memberMapper.TypeHandler == null && !memberMapper.IsIgnore && !memberMapper.IsNavigation)
             {
                 if (memberMapper.TypeHandlerType != null)
@@ -129,7 +132,9 @@ public class EntityMap
                 else
                 {
                     var dbFieldType = ormProvider.MapDefaultType(memberMapper.NativeDbType);
-                    memberMapper.TypeHandler = ormProvider.GetTypeHandler(memberMapper.MemberType, dbFieldType, memberMapper.IsRequired);
+                    var isNullable = memberMapper.MemberType.IsNullableType(out _);
+                    var isRequired = !isNullable || memberMapper.IsRequired;
+                    memberMapper.TypeHandler = ormProvider.GetTypeHandler(memberMapper.MemberType, dbFieldType, isRequired);
                 }
             }
             this.fieldMaps.TryAdd(memberMapper.FieldName, memberMapper);

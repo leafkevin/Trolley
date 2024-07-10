@@ -3,6 +3,7 @@ using NpgsqlTypes;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Linq.Expressions;
 
 namespace Trolley.PostgreSql;
@@ -128,6 +129,16 @@ public partial class PostgreSqlProvider : BaseOrmProvider
         castTos[typeof(DateTime?)] = "TIMESTAMP";
         castTos[typeof(DateOnly?)] = "DATE";
         castTos[typeof(TimeOnly?)] = "TIME";
+
+        //添加默认的类型处理器
+        var typeHandlerTypes = typeof(PostgreSqlProvider).Assembly.GetExportedTypes()
+            .Where(f => typeof(ITypeHandler).IsAssignableFrom(f))
+            .ToList();
+        foreach (var typeHandlerType in typeHandlerTypes)
+        {
+            if (!typeHandlerType.IsClass) continue;
+            typeHandlers.TryAdd(typeHandlerType, Activator.CreateInstance(typeHandlerType) as ITypeHandler);
+        }
 
         defaultTypeHandlers[typeof(bool)] = typeHandlers[typeof(BooleanTypeHandler)];
         defaultTypeHandlers[typeof(bool?)] = typeHandlers[typeof(NullableBooleanTypeHandler)];

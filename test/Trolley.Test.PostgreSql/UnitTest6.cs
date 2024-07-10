@@ -18,9 +18,9 @@ public class UnitTest6 : UnitTestBase
         services.AddSingleton(f =>
         {
             var builder = new OrmDbFactoryBuilder()
-            .Register<PostgreSqlProvider>("fengling", "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true", true)
-            .Register<PostgreSqlProvider>("fengling_tenant1", "Server=localhost;Database=fengling_tenant1;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true", false)
-            .Register<PostgreSqlProvider>("fengling_tenant2", "Server=localhost;Database=fengling_tenant2;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true", false)
+            .Register<PostgreSqlProvider>("fengling", "Host=localhost;Database=fengling;Username=postgres;Password=123456;", true)
+            .Register<PostgreSqlProvider>("fengling_tenant1", "Host=localhost;Database=fengling_tenant1;Username=postgres;Password=123456;", false)
+            .Register<PostgreSqlProvider>("fengling_tenant2", "Host=localhost;Database=fengling_tenant2;Username=postgres;Password=123456;", false)
             .UseSharding(s =>
             {
                 s.UseDatabase(() =>

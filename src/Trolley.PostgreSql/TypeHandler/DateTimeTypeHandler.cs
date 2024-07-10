@@ -1,12 +1,12 @@
 ﻿using System;
 
-namespace Trolley;
+namespace Trolley.PostgreSql;
 
 public class PostgreSqlDateTimeTypeHandler : DateTimeTypeHandler, ITypeHandler
 {
     public override string GetQuotedValue(IOrmProvider ormProvider, Type underlyingType, object value)
     {
-        if (value is DateTimeOffset dtoValue)
+        if (value is DateTime dtoValue)
             return $"TIMESTAMP {dtoValue.ToString(this.Format)}";
         return $"TIMESTAMP {DateTimeOffset.MinValue.ToString(this.Format)}";
     }
@@ -15,7 +15,7 @@ public class PostgreSqlNullableDateTimeTypeHandler : NullableDateTimeTypeHandler
 {
     public override string GetQuotedValue(IOrmProvider ormProvider, Type underlyingType, object value)
     {
-        if (value is DateTimeOffset dtoValue)
+        if (value is DateTime dtoValue)
             return $"TIMESTAMP {dtoValue.ToString(this.Format)}";
         return "NULL";
     }
