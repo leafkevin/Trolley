@@ -19,12 +19,7 @@ public class PostgreSqlDistinctOnQueryBase<TDistinctOn> : IPostgreSqlDistinctOnQ
     }
     #endregion
 
-    #region Select/SelectAnonymous
-    public virtual IQueryAnonymousObject SelectAnonymous()
-    {
-        this.Visitor.Select("*");
-        return new QueryAnonymousObject(this.Visitor);
-    }
+    #region Select
     public virtual IPostgreSqlQuery<TDistinctOn> Select()
     {
         var dialectVisitor = this.Visitor as PostgreSqlQueryVisitor;

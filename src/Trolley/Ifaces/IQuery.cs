@@ -57,10 +57,6 @@ public interface ICteQuery : IQuery
     #endregion
 }
 /// <summary>
-/// 匿名查询对象
-/// </summary>
-public interface IQueryAnonymousObject : IQuery { }
-/// <summary>
 /// 表T查询对象
 /// </summary>
 public interface IQueryBase : IQuery
@@ -88,14 +84,6 @@ public interface IQueryBase : IQuery
     /// <param name="cancellationToken"></param>
     /// <returns>返回数据条数</returns>
     Task<long> LongCountAsync(CancellationToken cancellationToken = default);
-    #endregion
-
-    #region Select
-    /// <summary>
-    /// 使用原始字段返回匿名查询结果，主要用在不关注结果类型的地方，比如：Sql.Exists语句，用于判断数据是否存在，用法：SelectAnonymous("*") 或是 SelectAnonymous("1")，
-    /// </summary>
-    /// <returns>返回匿名查询对象</returns>
-    IQueryAnonymousObject SelectAnonymous();
     #endregion
 }
 /// <summary>

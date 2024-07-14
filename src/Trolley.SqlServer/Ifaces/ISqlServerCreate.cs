@@ -63,6 +63,6 @@ public interface ISqlServerCreate<TEntity> : ICreate<TEntity>
     /// <param name="insertObjs">插入的对象集合</param>
     /// <param name="timeoutSeconds">超时时间，单位秒</param>
     /// <returns>返回插入对象</returns>
-    ISqlServerCreated<TEntity> WithBulkCopy(IEnumerable<TEntity> insertObjs, int? timeoutSeconds = null);
+    ISqlServerCreated<TEntity> WithBulkCopy(IEnumerable insertObjs, int? timeoutSeconds = null);
     #endregion
 }

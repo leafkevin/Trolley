@@ -139,10 +139,16 @@ public class MySqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IMySqlCon
         var builder = new StringBuilder();
         if (this.Visitor.ActionMode == ActionMode.BulkCopy)
         {
-            var entityType = this.Visitor.Tables[0].EntityType;
+            (var insertObjs, _) = this.DialectVisitor.BuildWithBulkCopy();
+            Type insertObjType = null;
+            foreach (var insertObj in insertObjs)
+            {
+                insertObjType = insertObj.GetType();
+                break;
+            }
             var fromMapper = this.Visitor.Tables[0].Mapper;
             var tableName = this.Visitor.OrmProvider.GetTableName($"{fromMapper.TableName}_{Guid.NewGuid():N}");
-            var memberMappers = this.Visitor.GetRefMemberMappers(entityType, fromMapper);
+            var memberMappers = this.Visitor.GetRefMemberMappers(insertObjType, fromMapper);
             //添加临时表           
             builder.AppendLine($"CREATE TEMPORARY TABLE {tableName}(");
             var pkColumns = new List<string>();
@@ -161,7 +167,7 @@ public class MySqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IMySqlCon
             builder.AppendLine($"PRIMARY KEY({string.Join(',', pkColumns)})");
             builder.AppendLine(");");
             if (this.Visitor.IsNeedFetchShardingTables)
-                builder.Append(this.Visitor.BuildShardingTablesSql(this.DbContext.Connection.Database));
+                builder.Append(this.Visitor.BuildShardingTablesSql(this.DbContext.TableSchema));
 
             Action<StringBuilder, string> sqlExecutor = (builder, tableName) =>
             {
@@ -201,7 +207,7 @@ public class MySqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IMySqlCon
             if (this.Visitor.IsNeedFetchShardingTables)
             {
                 this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
-                builder.Append(this.Visitor.BuildShardingTablesSql(this.DbContext.Connection.Database));
+                builder.Append(this.Visitor.BuildShardingTablesSql(this.DbContext.TableSchema));
                 builder.Append(';');
             }
             using var command = this.DbContext.CreateCommand();

@@ -49,7 +49,7 @@ public class MySqlCreate<TEntity> : Create<TEntity>, IMySqlCreate<TEntity>
     #endregion
 
     #region WithBulkCopy
-    public IMySqlCreated<TEntity> WithBulkCopy(IEnumerable<TEntity> insertObjs, int? timeoutSeconds = null)
+    public IMySqlCreated<TEntity> WithBulkCopy(IEnumerable insertObjs, int? timeoutSeconds = null)
     {
         if (insertObjs == null)
             throw new ArgumentNullException(nameof(insertObjs));

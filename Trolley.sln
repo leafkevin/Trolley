@@ -23,6 +23,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Trolley.Test.SqlServer", "t
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Trolley.PostgresSql", "src\Trolley.PostgreSql\Trolley.PostgresSql.csproj", "{8ADD33B3-35DD-4F8A-AEAA-2BA08DD84B43}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Trolley.Test.PostgreSql", "test\Trolley.Test.PostgreSql\Trolley.Test.PostgreSql.csproj", "{BD6E9BA4-AC83-488A-BB29-67766FEEA82E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -61,6 +63,10 @@ Global
 		{8ADD33B3-35DD-4F8A-AEAA-2BA08DD84B43}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8ADD33B3-35DD-4F8A-AEAA-2BA08DD84B43}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8ADD33B3-35DD-4F8A-AEAA-2BA08DD84B43}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BD6E9BA4-AC83-488A-BB29-67766FEEA82E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BD6E9BA4-AC83-488A-BB29-67766FEEA82E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BD6E9BA4-AC83-488A-BB29-67766FEEA82E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BD6E9BA4-AC83-488A-BB29-67766FEEA82E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -74,6 +80,7 @@ Global
 		{564B9B61-48F9-4A2D-9F95-5BD36F9118F7} = {139B7F3C-ABCC-4617-90D7-9279EFD8FC60}
 		{F9C47456-09F3-4955-A688-FA5C72F94900} = {139B7F3C-ABCC-4617-90D7-9279EFD8FC60}
 		{8ADD33B3-35DD-4F8A-AEAA-2BA08DD84B43} = {B5499ED1-D9F6-4B8F-8B58-AE3CDF2349D3}
+		{BD6E9BA4-AC83-488A-BB29-67766FEEA82E} = {139B7F3C-ABCC-4617-90D7-9279EFD8FC60}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {9B4885C8-EC3C-46CC-9707-F16E2FCE8D2D}

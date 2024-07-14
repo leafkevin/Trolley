@@ -77,6 +77,10 @@ partial class PostgreSqlProvider
                             {
                                 //可能是一个sqlSegment，也可能是多个List<sqlSegment>
                                 var sqlSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = concatExprs[i], ExpectType = typeof(string) });
+                                //获取枚举名称，根据数据库的字段类型来处理
+                                if (sqlSegment.SegmentType.IsEnum && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall)
+                                    visitor.ToEnumString(sqlSegment);
+
                                 sqlSegments.Add(sqlSegment);
                                 if (sqlSegment.IsDeferredFields)
                                 {
@@ -160,6 +164,10 @@ partial class PostgreSqlProvider
                             {
                                 //可能是一个sqlSegment，也可能是多个List<sqlSegment>
                                 var sqlSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = concatExprs[i], ExpectType = typeof(string) });
+                                //获取枚举名称，根据数据库的字段类型来处理
+                                if (sqlSegment.SegmentType.IsEnum && !sqlSegment.IsExpression && !sqlSegment.IsMethodCall)
+                                    visitor.ToEnumString(sqlSegment);
+
                                 sqlSegments.Add(sqlSegment);
                                 if (sqlSegment.IsDeferredFields)
                                 {
@@ -234,7 +242,7 @@ partial class PostgreSqlProvider
                         {
                             var leftSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                             var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
-                            visitor.ChangeSameType(leftSegment, rightSegment);
+
                             var leftArgument = visitor.GetQuotedValue(leftSegment);
                             var rightArgument = visitor.GetQuotedValue(rightSegment);
                             return leftSegment.Merge(rightSegment, $"CASE WHEN {leftArgument}={rightArgument} THEN 0 WHEN {leftArgument}>{rightArgument} THEN 1 ELSE -1 END", false, false, true);
@@ -413,7 +421,7 @@ partial class PostgreSqlProvider
                         {
                             var leftSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                             var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
-                            visitor.ChangeSameType(leftSegment, rightSegment);
+
                             var leftArgument = visitor.GetQuotedValue(leftSegment);
                             var rightArgument = visitor.GetQuotedValue(rightSegment);
 
@@ -464,7 +472,7 @@ partial class PostgreSqlProvider
                     {
                         var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        visitor.ChangeSameType(targetSegment, rightSegment);
+
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
                         return targetSegment.Merge(rightSegment, $"CASE WHEN {targetArgument}={rightArgument} THEN 0 WHEN {targetArgument}>{rightArgument} THEN 1 ELSE -1 END", false, false, true);
@@ -642,7 +650,7 @@ partial class PostgreSqlProvider
                     {
                         var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        visitor.ChangeSameType(targetSegment, rightSegment);
+
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
 
@@ -744,10 +752,7 @@ partial class PostgreSqlProvider
                             {
                                 var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                                 if (targetSegment.IsConstant || targetSegment.IsVariable)
-                                {
-                                    targetSegment.ExpectType = methodInfo.ReturnType;
                                     return targetSegment.Change(targetSegment.Value.ToString());
-                                }
 
                                 return targetSegment.Change(this.CastTo(typeof(string), targetSegment.Value), false, false, false, true);
                             });

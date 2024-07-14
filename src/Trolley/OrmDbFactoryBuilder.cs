@@ -6,9 +6,9 @@ public class OrmDbFactoryBuilder
 {
     private IOrmDbFactory dbFactory = new OrmDbFactory();
 
-    public OrmDbFactoryBuilder Register<TOrmProvider>(string dbKey, string connectionString, bool isDefault) where TOrmProvider : class, IOrmProvider, new()
+    public OrmDbFactoryBuilder Register<TOrmProvider>(string dbKey, string connectionString, bool isDefault, string defaultTableSchema = null) where TOrmProvider : class, IOrmProvider, new()
     {
-        this.dbFactory.Register<TOrmProvider>(dbKey, connectionString, isDefault);
+        this.dbFactory.Register<TOrmProvider>(dbKey, connectionString, isDefault, defaultTableSchema);
         return this;
     }
     public OrmDbFactoryBuilder Configure(Type ormProviderType, IModelConfiguration configuration)

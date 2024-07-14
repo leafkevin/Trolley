@@ -10,7 +10,7 @@ namespace Trolley;
 public class SqlSegment
 {
     public static readonly SqlSegment True = new SqlSegment { isFixValue = true, OperationType = OperationType.None, IsConstant = true, Value = true };
-    public static readonly SqlSegment Null = new SqlSegment { isFixValue = true, OperationType = OperationType.None, IsConstant = true, Value = "NULL" };
+    public static readonly SqlSegment Null = new SqlSegment { isFixValue = true, OperationType = OperationType.None, Value = "NULL" };
     private bool isFixValue = false;
 
     /// <summary>
@@ -57,15 +57,11 @@ public class SqlSegment
     /// </summary>
     public bool IsFieldType { get; set; }
     /// <summary>
-    /// 强制转换后的类型或是去掉Nullable后的枚举类型，此外无值
-    /// 当强制转换时，此字段值为转换后的类型，如果是可空枚举或是枚举类型时，此字段值是去掉Nullable后的枚举类型
+    /// 去掉Nullable后的枚举类型，此外无值
     /// </summary>
     public Type ExpectType { get; set; }
     /// <summary>
-    /// 枚举类型或是有强制转换时，要取sqlSegment.ExpectType值
-    /// 常量、方法调用、计算表达式时，sqlSegment.FromMember没有值
-    /// Expression.Type值，如果有后续表达式访问，Expression会发生变化，Expression.Type值不一定正确
-    /// 需要此栏位记录当时的类型
+    /// 每次Visit时，当前Type，当发生强制转换，或是类型变更时，也随之变化
     /// </summary>
     public Type SegmentType { get; set; }
     public string ParameterName { get; set; }

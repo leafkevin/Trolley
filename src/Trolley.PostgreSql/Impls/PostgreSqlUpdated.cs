@@ -14,6 +14,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
 {
     #region Properties
     public PostgreSqlUpdateVisitor DialectVisitor { get; protected set; }
+    public IOrmProvider OrmProvider => this.Visitor.OrmProvider;
     #endregion
 
     #region Constructor
@@ -48,7 +49,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                         var fromMapper = this.Visitor.Tables[0].Mapper;
                         var memberMappers = this.Visitor.GetRefMemberMappers(updateObjType, fromMapper);
                         var ormProvider = this.Visitor.OrmProvider;
-                        var tableName = ormProvider.GetTableName($"{fromMapper.TableName}_{Guid.NewGuid():N}");
+                        var tableName = this.OrmProvider.GetTableName($"{fromMapper.TableName}_{Guid.NewGuid():N}");
 
                         //添加临时表
                         var builder = new StringBuilder();
@@ -69,7 +70,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                         builder.AppendLine($"PRIMARY KEY({string.Join(',', pkColumns)})");
                         builder.AppendLine(");");
                         if (this.Visitor.IsNeedFetchShardingTables)
-                            builder.Append(this.Visitor.BuildShardingTablesSql(this.DbContext.Connection.Database));
+                            builder.Append(this.Visitor.BuildShardingTablesSql(this.DbContext.TableSchema));
 
                         var command = this.DbContext.CreateCommand();
                         command.CommandText = builder.ToString();
@@ -77,44 +78,34 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                         command.ExecuteNonQuery();
 
                         builder.Clear();
-                        builder.Append($"COPY {ormProvider.GetTableName(tableName)}(");
-                        for (int i = 0; i < fromMapper.MemberMaps.Count; i++)
+                        builder.Append($"COPY {tableName}(");
+                        for (int i = 0; i < memberMappers.Count; i++)
                         {
                             if (i > 0) builder.Append(',');
-                            var memberMapper = fromMapper.MemberMaps[i];
-                            builder.Append(ormProvider.GetFieldName(memberMapper.FieldName));
+                            var refMemberMapper = memberMappers[i].RefMemberMapper;
+                            builder.Append(ormProvider.GetFieldName(refMemberMapper.FieldName));
                         }
                         builder.Append(") FROM STDIN BINARY");
-
-                        var connection = this.DbContext.Connection as NpgsqlConnection;
-                        using var writer = connection.BeginBinaryImport(builder.ToString());
-                        foreach (var updateObj in updateObjs)
-                        {
-                            writer.StartRow();
-                            foreach (var memberMapper in fromMapper.MemberMaps)
-                                writer.Write(updateObj, (NpgsqlDbType)memberMapper.NativeDbType);
-                            result++;
-                        }
-                        writer.Complete();
+                        var bulkCopySql = builder.ToString();
 
                         builder.Clear();
                         Action<string, string> sqlExecutor = (target, source) =>
                         {
-                            builder.Append($"UPDATE {this.DbContext.OrmProvider.GetTableName(target)} a INNER JOIN {source} b ON ");
-                            for (int i = 0; i < pkColumns.Count; i++)
-                            {
-                                if (i > 0) builder.Append(" AND ");
-                                builder.Append($"a.{pkColumns[i]}=b.{pkColumns[i]}");
-                            }
-                            builder.Append(" SET ");
+                            builder.Append($"UPDATE {this.DbContext.OrmProvider.GetTableName(target)} a SET ");
                             int setIndex = 0;
                             for (int i = 0; i < memberMappers.Count; i++)
                             {
                                 var fieldName = this.Visitor.OrmProvider.GetFieldName(memberMappers[i].RefMemberMapper.FieldName);
                                 if (pkColumns.Contains(fieldName)) continue;
                                 if (setIndex > 0) builder.Append(',');
-                                builder.Append($"a.{fieldName}=b.{fieldName}");
+                                builder.Append($"{fieldName}=b.{fieldName}");
                                 setIndex++;
+                            }
+                            builder.Append($" FROM {source} b WHERE ");
+                            for (int i = 0; i < pkColumns.Count; i++)
+                            {
+                                if (i > 0) builder.Append(" AND ");
+                                builder.Append($"a.{pkColumns[i]}=b.{pkColumns[i]}");
                             }
                         };
                         if (this.Visitor.ShardingTables != null && this.Visitor.ShardingTables.Count > 0)
@@ -123,16 +114,32 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                             for (int i = 0; i < tableNames.Count; i++)
                             {
                                 if (i > 0) builder.Append(';');
-                                sqlExecutor.Invoke(tableNames[i], tableName);
+                                sqlExecutor.Invoke(this.Visitor.Tables[0].Body ?? tableNames[i], tableName);
                             }
                         }
-                        else sqlExecutor.Invoke(this.Visitor.Tables[0].Body ?? fromMapper.TableName, tableName);
+                        else sqlExecutor.Invoke(fromMapper.TableName, tableName);
+                        builder.Append($";DROP TABLE {tableName}");
+                        var updateSql = builder.ToString();
 
-                        command.CommandText = builder.ToString();
+                        var connection = this.DbContext.Connection as NpgsqlConnection;
+                        using var writer = connection.BeginBinaryImport(bulkCopySql);
+                        foreach (var updateObj in updateObjs)
+                        {
+                            writer.StartRow();
+                            foreach (var memberMapper in memberMappers)
+                            {
+                                var refMemberMapper = memberMapper.RefMemberMapper;
+                                var fieldValue = memberMapper.ValueGetter.Invoke(updateObj);
+                                writer.Write(fieldValue, (NpgsqlDbType)refMemberMapper.NativeDbType);
+                            }
+                            result++;
+                        }
+                        command.CommandText = updateSql;
                         result = command.ExecuteNonQuery();
-
                         command.CommandText = $"DROP TABLE {tableName}";
                         command.ExecuteNonQuery();
+                        writer.Complete();
+
                         command.Parameters.Clear();
                         command.Dispose();
                         command = null;
@@ -263,9 +270,9 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                         }
                         if (updateObjType == null) throw new Exception("批量更新，updateObjs参数至少要有一条数据");
                         var fromMapper = this.Visitor.Tables[0].Mapper;
-                        var memberMappers = this.Visitor.GetRefMemberMappers(updateObjType, fromMapper);
+                        var memberMappers = this.Visitor.GetRefMemberMappers(updateObjType, fromMapper, true);
                         var ormProvider = this.Visitor.OrmProvider;
-                        var tableName = ormProvider.GetTableName($"{fromMapper.TableName}_{Guid.NewGuid():N}");
+                        var tableName = this.OrmProvider.GetTableName($"{fromMapper.TableName}_{Guid.NewGuid():N}");
 
                         //添加临时表
                         var builder = new StringBuilder();
@@ -286,7 +293,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                         builder.AppendLine($"PRIMARY KEY({string.Join(',', pkColumns)})");
                         builder.AppendLine(");");
                         if (this.Visitor.IsNeedFetchShardingTables)
-                            builder.Append(this.Visitor.BuildShardingTablesSql(this.DbContext.Connection.Database));
+                            builder.Append(this.Visitor.BuildShardingTablesSql(this.DbContext.TableSchema));
 
                         var command = this.DbContext.CreateDbCommand();
                         command.CommandText = builder.ToString();
@@ -294,44 +301,34 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                         await command.ExecuteNonQueryAsync(cancellationToken);
 
                         builder.Clear();
-                        builder.Append($"COPY {ormProvider.GetTableName(tableName)}(");
-                        for (int i = 0; i < fromMapper.MemberMaps.Count; i++)
+                        builder.Append($"COPY {tableName}(");
+                        for (int i = 0; i < memberMappers.Count; i++)
                         {
                             if (i > 0) builder.Append(',');
-                            var memberMapper = fromMapper.MemberMaps[i];
-                            builder.Append(ormProvider.GetFieldName(memberMapper.FieldName));
+                            var refMemberMapper = memberMappers[i].RefMemberMapper;
+                            builder.Append(ormProvider.GetFieldName(refMemberMapper.FieldName));
                         }
                         builder.Append(") FROM STDIN BINARY");
-
-                        var connection = this.DbContext.Connection as NpgsqlConnection;
-                        using var writer = await connection.BeginBinaryImportAsync(builder.ToString(), cancellationToken);
-                        foreach (var updateObj in updateObjs)
-                        {
-                            await writer.StartRowAsync(cancellationToken);
-                            foreach (var memberMapper in fromMapper.MemberMaps)
-                                await writer.WriteAsync(updateObj, (NpgsqlDbType)memberMapper.NativeDbType, cancellationToken);
-                            result++;
-                        }
-                        await writer.CompleteAsync(cancellationToken);
+                        var bulkCopySql = builder.ToString();
 
                         builder.Clear();
                         Action<string, string> sqlExecutor = (target, source) =>
                         {
-                            builder.Append($"UPDATE {this.DbContext.OrmProvider.GetTableName(target)} a INNER JOIN {source} b ON ");
-                            for (int i = 0; i < pkColumns.Count; i++)
-                            {
-                                if (i > 0) builder.Append(" AND ");
-                                builder.Append($"a.{pkColumns[i]}=b.{pkColumns[i]}");
-                            }
-                            builder.Append(" SET ");
+                            builder.Append($"UPDATE {this.DbContext.OrmProvider.GetTableName(target)} a SET ");
                             int setIndex = 0;
                             for (int i = 0; i < memberMappers.Count; i++)
                             {
                                 var fieldName = this.Visitor.OrmProvider.GetFieldName(memberMappers[i].RefMemberMapper.FieldName);
                                 if (pkColumns.Contains(fieldName)) continue;
                                 if (setIndex > 0) builder.Append(',');
-                                builder.Append($"a.{fieldName}=b.{fieldName}");
+                                builder.Append($"{fieldName}=b.{fieldName}");
                                 setIndex++;
+                            }
+                            builder.Append($" FROM {source} b WHERE ");
+                            for (int i = 0; i < pkColumns.Count; i++)
+                            {
+                                if (i > 0) builder.Append(" AND ");
+                                builder.Append($"a.{pkColumns[i]}=b.{pkColumns[i]}");
                             }
                         };
                         if (this.Visitor.ShardingTables != null && this.Visitor.ShardingTables.Count > 0)
@@ -344,12 +341,27 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                             }
                         }
                         else sqlExecutor.Invoke(fromMapper.TableName, tableName);
+                        builder.Append($";DROP TABLE {tableName}");
+                        var updateSql = builder.ToString();
 
-                        command.CommandText = builder.ToString();
+                        var connection = this.DbContext.Connection as NpgsqlConnection;
+                        using (var writer = await connection.BeginBinaryImportAsync(bulkCopySql, cancellationToken))
+                        {
+                            foreach (var updateObj in updateObjs)
+                            {
+                                await writer.StartRowAsync(cancellationToken);
+                                foreach (var memberMapper in memberMappers)
+                                {
+                                    var refMemberMapper = memberMapper.RefMemberMapper;
+                                    var fieldValue = memberMapper.ValueGetter.Invoke(updateObj);
+                                    await writer.WriteAsync(fieldValue, (NpgsqlDbType)refMemberMapper.NativeDbType, cancellationToken);
+                                }
+                                result++;
+                            }
+                            await writer.CompleteAsync(cancellationToken);
+                        }
+                        command.CommandText = updateSql;
                         result = await command.ExecuteNonQueryAsync(cancellationToken);
-
-                        command.CommandText = $"DROP TABLE {tableName}";
-                        await command.ExecuteNonQueryAsync(cancellationToken);
                         command.Parameters.Clear();
                         command.Dispose();
                         command = null;
@@ -501,7 +513,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
             builder.AppendLine(");");
             if (this.Visitor.IsNeedFetchShardingTables)
             {
-                builder.Append(this.Visitor.BuildShardingTablesSql(this.DbContext.Connection.Database));
+                builder.Append(this.Visitor.BuildShardingTablesSql(this.DbContext.TableSchema));
                 builder.Append(';');
             }
 
@@ -542,7 +554,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
             if (this.Visitor.IsNeedFetchShardingTables)
             {
                 this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
-                builder.Append(this.Visitor.BuildShardingTablesSql(this.DbContext.Connection.Database));
+                builder.Append(this.Visitor.BuildShardingTablesSql(this.DbContext.TableSchema));
             }
             using var command = this.DbContext.CreateCommand();
             sql = this.Visitor.BuildCommand(this.DbContext, command);

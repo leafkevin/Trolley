@@ -178,7 +178,7 @@ partial class SqlServerProvider
                     {
                         var leftSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
-                        visitor.ChangeSameType(leftSegment, rightSegment);
+
                         var leftArgument = visitor.GetQuotedValue(leftSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
                         return leftSegment.Merge(rightSegment, $"CASE WHEN ({leftArgument}={rightArgument} THEN 0 WHEN ({leftArgument}>{rightArgument})=1 THEN 1 ELSE -1 END", false, false, true);
@@ -190,7 +190,7 @@ partial class SqlServerProvider
                     {
                         var leftSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
-                        visitor.ChangeSameType(leftSegment, rightSegment);
+
                         var leftArgument = visitor.GetQuotedValue(leftSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
                         return leftSegment.Merge(rightSegment, $"{leftArgument}={rightArgument}", false, false, true);
@@ -294,7 +294,7 @@ partial class SqlServerProvider
                     {
                         var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        visitor.ChangeSameType(targetSegment, rightSegment);
+
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
                         return targetSegment.Merge(rightSegment, $"CASE WHEN {targetArgument}={rightArgument} THEN 0 WHEN {targetArgument}>{rightArgument} THEN 1 ELSE -1 END", false, false, true);
@@ -306,7 +306,7 @@ partial class SqlServerProvider
                     {
                         var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        visitor.ChangeSameType(targetSegment, rightSegment);
+
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
                         return targetSegment.Merge(rightSegment, $"{targetArgument}={rightArgument}", false, false, true);

@@ -377,9 +377,7 @@ partial class MySqlProvider
                             if (formatArgument.Contains("tt"))
                                 formatArgument = formatArgument.NextReplace("tt", "%p");
                             else if (formatArgument.Contains("t"))
-                                formatArgument = formatArgument.NextReplace("t", "SUBSTRING(%p,1,1)");
-
-                            formatArgument = $"'{formatArgument}'";
+                                formatArgument = formatArgument.NextReplace("t", "SUBSTRING(%p,1,1)");              
                         }
                         else formatArgument = visitor.GetQuotedValue(formatSegment);
                         var valueArgument = visitor.GetQuotedValue(valueSegment);
@@ -394,7 +392,6 @@ partial class MySqlProvider
                     {
                         var leftSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
-                        visitor.ChangeSameType(leftSegment, rightSegment);
 
                         var leftArgument = visitor.GetQuotedValue(leftSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
@@ -618,7 +615,6 @@ partial class MySqlProvider
                     {
                         var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        visitor.ChangeSameType(targetSegment, rightSegment);
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
                         return targetSegment.Merge(rightSegment, $"{targetArgument}={rightArgument}", false, false, true);
@@ -630,7 +626,6 @@ partial class MySqlProvider
                     {
                         var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        visitor.ChangeSameType(targetSegment, rightSegment);
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
                         return targetSegment.Merge(rightSegment, $"CASE WHEN {targetArgument}={rightArgument} THEN 0 WHEN {targetArgument}>{rightArgument} THEN 1 ELSE -1 END", false, false, true);
@@ -644,13 +639,9 @@ partial class MySqlProvider
                         {
                             var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                             if (targetSegment.IsConstant || targetSegment.IsVariable)
-                            {
-                                targetSegment.ExpectType = methodInfo.ReturnType;
                                 return targetSegment.Change(targetSegment.ToString());
-                            }
 
                             var targetArgument = visitor.GetQuotedValue(targetSegment);
-                            targetSegment.ExpectType = methodInfo.ReturnType;
                             return targetSegment.Change($"DATE_FORMAT({this.GetQuotedValue(targetSegment)},'%Y-%m-%d %H:%i:%s')", false, false, false, true);
                         });
                         result = true;
@@ -720,13 +711,9 @@ partial class MySqlProvider
 
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
                                 && (formatSegment.IsConstant || formatSegment.IsVariable))
-                            {
-                                targetSegment.ExpectType = methodInfo.ReturnType;
                                 return targetSegment.Merge(formatSegment, ((DateTime)targetSegment.Value).ToString(formatSegment.ToString()));
-                            }
 
                             var targetArgument = visitor.GetQuotedValue(targetSegment);
-                            targetSegment.ExpectType = methodInfo.ReturnType;
                             return targetSegment.Merge(formatSegment, $"DATE_FORMAT({targetArgument},{formatArgument})", false, false, false, true);
                         });
                         result = true;

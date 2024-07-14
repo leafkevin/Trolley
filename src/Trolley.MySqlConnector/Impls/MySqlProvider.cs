@@ -11,7 +11,6 @@ public partial class MySqlProvider : BaseOrmProvider
     private static Dictionary<object, Type> defaultMapTypes = new();
     private static Dictionary<Type, object> defaultDbTypes = new();
     private static Dictionary<Type, string> castTos = new();
-    private static Dictionary<Type, ITypeHandler> defaultTypeHandlers = new();
 
     public override OrmProviderType OrmProviderType => OrmProviderType.MySql;
     public override Type NativeDbTypeType => typeof(MySqlDbType);
@@ -126,40 +125,6 @@ public partial class MySqlProvider : BaseOrmProvider
         castTos[typeof(DateTime?)] = "DATETIME";
         castTos[typeof(DateOnly?)] = "DATE";
         castTos[typeof(TimeOnly?)] = "TIME";
-
-        defaultTypeHandlers[typeof(bool)] = typeHandlers[typeof(BooleanAsIntTypeHandler)];
-        defaultTypeHandlers[typeof(bool?)] = typeHandlers[typeof(NullableBooleanAsIntTypeHandler)];
-        defaultTypeHandlers[typeof(string)] = typeHandlers[typeof(NullableStringTypeHandler)];
-        defaultTypeHandlers[typeof(DateTimeOffset)] = typeHandlers[typeof(DateTimeOffsetTypeHandler)];
-        defaultTypeHandlers[typeof(DateTimeOffset?)] = typeHandlers[typeof(NullableDateTimeOffsetTypeHandler)];
-        defaultTypeHandlers[typeof(byte)] = typeHandlers[typeof(NumberTypeHandler)];
-        defaultTypeHandlers[typeof(byte?)] = typeHandlers[typeof(NullableNumberTypeHandler)];
-        defaultTypeHandlers[typeof(sbyte)] = typeHandlers[typeof(NumberTypeHandler)];
-        defaultTypeHandlers[typeof(sbyte?)] = typeHandlers[typeof(NullableNumberTypeHandler)];
-        defaultTypeHandlers[typeof(short)] = typeHandlers[typeof(NumberTypeHandler)];
-        defaultTypeHandlers[typeof(ushort?)] = typeHandlers[typeof(NullableNumberTypeHandler)];
-        defaultTypeHandlers[typeof(char)] = typeHandlers[typeof(CharTypeHandler)];
-        defaultTypeHandlers[typeof(char?)] = typeHandlers[typeof(NullableCharTypeHandler)];
-        defaultTypeHandlers[typeof(int)] = typeHandlers[typeof(NumberTypeHandler)];
-        defaultTypeHandlers[typeof(uint?)] = typeHandlers[typeof(NullableNumberTypeHandler)];
-        defaultTypeHandlers[typeof(long)] = typeHandlers[typeof(NumberTypeHandler)];
-        defaultTypeHandlers[typeof(ulong?)] = typeHandlers[typeof(NullableNumberTypeHandler)];
-        defaultTypeHandlers[typeof(float)] = typeHandlers[typeof(NumberTypeHandler)];
-        defaultTypeHandlers[typeof(float?)] = typeHandlers[typeof(NullableNumberTypeHandler)];
-        defaultTypeHandlers[typeof(double)] = typeHandlers[typeof(NumberTypeHandler)];
-        defaultTypeHandlers[typeof(double?)] = typeHandlers[typeof(NullableNumberTypeHandler)];
-        defaultTypeHandlers[typeof(decimal)] = typeHandlers[typeof(NumberTypeHandler)];
-        defaultTypeHandlers[typeof(decimal?)] = typeHandlers[typeof(NullableNumberTypeHandler)];
-        defaultTypeHandlers[typeof(DateTime)] = typeHandlers[typeof(DateTimeTypeHandler)];
-        defaultTypeHandlers[typeof(DateTime?)] = typeHandlers[typeof(NullableDateTimeTypeHandler)];
-        defaultTypeHandlers[typeof(DateOnly)] = typeHandlers[typeof(DateOnlyTypeHandler)];
-        defaultTypeHandlers[typeof(DateOnly?)] = typeHandlers[typeof(NullableDateOnlyTypeHandler)];
-        defaultTypeHandlers[typeof(TimeSpan)] = typeHandlers[typeof(TimeSpanTypeHandler)];
-        defaultTypeHandlers[typeof(TimeSpan?)] = typeHandlers[typeof(NullableTimeSpanTypeHandler)];
-        defaultTypeHandlers[typeof(TimeOnly)] = typeHandlers[typeof(TimeOnlyTypeHandler)];
-        defaultTypeHandlers[typeof(TimeOnly?)] = typeHandlers[typeof(NullableTimeOnlyTypeHandler)];
-        defaultTypeHandlers[typeof(Guid)] = typeHandlers[typeof(GuidTypeHandler)];
-        defaultTypeHandlers[typeof(Guid?)] = typeHandlers[typeof(NullableGuidTypeHandler)];
     }
     public override IDbConnection CreateConnection(string connectionString)
         => new MySqlConnection(connectionString);
@@ -187,8 +152,6 @@ public partial class MySqlProvider : BaseOrmProvider
     }
     public override string CastTo(Type type, object value)
         => $"CAST({value} AS {castTos[type]})";
-    public override bool TryGetDefaultTypeHandler(Type targetType, out ITypeHandler typeHandler)
-        => defaultTypeHandlers.TryGetValue(targetType, out typeHandler);
     public override bool TryGetMyMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)
     {
         var methodInfo = methodCallExpr.Method;
@@ -212,7 +175,7 @@ public partial class MySqlProvider : BaseOrmProvider
 
                         //使用别名，一定要先使用，后使用的话，存在表达式计算场景无法解析，如：.Set(f => new { TotalAmount = f.TotalAmount + x.Values(f.TotalAmount) })
                         var fieldName = this.GetFieldName(memberMapper.FieldName);
-                        if (myVisitor.IsSetAlias) fieldName = myVisitor.SetRowAlias + "." + fieldName;
+                        if (myVisitor.IsUseSetAlias) fieldName = myVisitor.SetRowAlias + "." + fieldName;
                         else fieldName = $"VALUES({fieldName})";
                         return new SqlSegment
                         {

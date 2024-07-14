@@ -31,16 +31,8 @@ CREATE TABLE `sys_brand`  (
   `CreatedBy` int NULL DEFAULT NULL,
   `UpdatedAt` datetime NULL DEFAULT NULL,
   `UpdatedBy` int NULL DEFAULT NULL,
-  PRIMARY KEY (`Id`) USING BTREE
+  CONSTRAINT `pk_sys_brand` PRIMARY KEY (`Id`)
 );
-
--- ----------------------------
--- Records of sys_brand
--- ----------------------------
-INSERT INTO `sys_brand` VALUES (1, 'BN-001', '波司登', 1, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
-INSERT INTO `sys_brand` VALUES (2, 'BN-002', '雪中飞', 2, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
-INSERT INTO `sys_brand` VALUES (3, 'BN-003', '优衣库', 1, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
-
 -- ----------------------------
 -- Table structure for sys_company
 -- ----------------------------
@@ -54,15 +46,8 @@ CREATE TABLE `sys_company`  (
   `CreatedBy` int NULL DEFAULT NULL,
   `UpdatedAt` datetime NULL DEFAULT NULL,
   `UpdatedBy` int NULL DEFAULT NULL,
-  PRIMARY KEY (`Id`) USING BTREE
+  CONSTRAINT `pk_sys_company` PRIMARY KEY (`Id`)
 );
-
--- ----------------------------
--- Records of sys_company
--- ----------------------------
-INSERT INTO `sys_company` VALUES (1, '微软', 'Internet', 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
-INSERT INTO `sys_company` VALUES (2, '谷歌', 'Internet', 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
-
 -- ----------------------------
 -- Table structure for sys_menu
 -- ----------------------------
@@ -77,13 +62,8 @@ CREATE TABLE `sys_menu`  (
   `CreatedBy` int NULL DEFAULT NULL,
   `UpdatedAt` datetime NULL DEFAULT NULL,
   `UpdatedBy` int NULL DEFAULT NULL,
-  PRIMARY KEY (`Id`) USING BTREE
+   CONSTRAINT `pk_sys_menu` PRIMARY KEY (`Id`)
 );
-
--- ----------------------------
--- Records of sys_menu
--- ----------------------------
-
 -- ----------------------------
 -- Table structure for sys_order
 -- ----------------------------
@@ -104,18 +84,10 @@ CREATE TABLE `sys_order`  (
   `CreatedBy` int NULL DEFAULT NULL,
   `UpdatedAt` datetime NULL DEFAULT NULL,
   `UpdatedBy` int NULL DEFAULT NULL,
-  PRIMARY KEY (`Id`) USING BTREE
+  CONSTRAINT `pk_sys_order` PRIMARY KEY (`Id`)
 );
-
 -- ----------------------------
--- Records of sys_order
--- ----------------------------
-INSERT INTO `sys_order` (`Id`, `TenantId`, `OrderNo`, `ProductCount`, `TotalAmount`, `BuyerId`, `BuyerSource`, `SellerId`, `Products`, `Disputes`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('1', '1', 'ON-001', 2, 500, 1, 'Douyi', 2, '[1,2]', '{\"Id\":1,\"Users\":\"Buyer1,Seller1\",\"Content\":\"\\u65E0\\u826F\\u5546\\u5BB6\\uFF0C\\u6295\\u8BC9\\uFF0C\\u6295\\u8BC9\",\"Result\":\"\\u540C\\u610F\\u66F4\\u6362\",\"CreatedAt\":\"2023-04-29T00:05:28.9494366+08:00\"}', 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
-INSERT INTO `sys_order` (`Id`, `TenantId`, `OrderNo`, `ProductCount`, `TotalAmount`, `BuyerId`, `BuyerSource`, `SellerId`, `Products`, `Disputes`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('2', '2', 'ON-002', NULL, 350, 2, 'Taobao', 1, '[1,3]', '{\"Id\":2,\"Users\":\"Buyer2,Seller2\",\"Content\":\"\\u65E0\\u826F\\u5546\\u5BB6\",\"Result\":\"\\u540C\\u610F\\u9000\\u6B3E\",\"CreatedAt\":\"2023-04-29T00:05:28.9495535+08:00\"}', 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
-INSERT INTO `sys_order` (`Id`, `TenantId`, `OrderNo`, `ProductCount`, `TotalAmount`, `BuyerId`, `BuyerSource`, `SellerId`, `Products`, `Disputes`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('3', '3', 'ON-003', 1, 199, 1, 'Taobao', 2, '[2]', NULL, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
-
--- ----------------------------
--- Table structure for sys_order
+-- Table structure for sys_order_104_202405
 -- ----------------------------
 DROP TABLE IF EXISTS `sys_order_104_202405`;
 CREATE TABLE `sys_order_104_202405`  (
@@ -134,10 +106,10 @@ CREATE TABLE `sys_order_104_202405`  (
   `CreatedBy` int NULL DEFAULT NULL,
   `UpdatedAt` datetime NULL DEFAULT NULL,
   `UpdatedBy` int NULL DEFAULT NULL,
-  PRIMARY KEY (`Id`) USING BTREE
+  CONSTRAINT `pk_sys_order_104_202405` PRIMARY KEY (`Id`)
 );
 -- ----------------------------
--- Table structure for sys_order
+-- Table structure for sys_order_105_202405
 -- ----------------------------
 DROP TABLE IF EXISTS `sys_order_105_202405`;
 CREATE TABLE `sys_order_105_202405`  (
@@ -156,7 +128,7 @@ CREATE TABLE `sys_order_105_202405`  (
   `CreatedBy` int NULL DEFAULT NULL,
   `UpdatedAt` datetime NULL DEFAULT NULL,
   `UpdatedBy` int NULL DEFAULT NULL,
-  PRIMARY KEY (`Id`) USING BTREE
+  CONSTRAINT `pk_sys_order_105_202405` PRIMARY KEY (`Id`)
 );
 -- ----------------------------
 -- Table structure for sys_order_detail
@@ -175,19 +147,11 @@ CREATE TABLE `sys_order_detail`  (
   `CreatedBy` int NULL DEFAULT NULL,
   `UpdatedAt` datetime NULL DEFAULT NULL,
   `UpdatedBy` int NULL DEFAULT NULL,
-  PRIMARY KEY (`Id`) USING BTREE
+  CONSTRAINT `pk_sys_sys_order_detail` PRIMARY KEY (`Id`)
 );
-
 -- ----------------------------
--- Records of sys_order_detail
+-- Table structure for sys_order_detail_104_202405
 -- ----------------------------
-INSERT INTO `sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('1', '1', '1', 1, 299.00, 1, 299.00, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
-INSERT INTO `sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('2', '2', '1', 2, 159.00, 1, 159.00, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
-INSERT INTO `sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('3', '3', '1', 3, 69.00, 1, 69.00, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
-INSERT INTO `sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('4', '1', '2', 1, 299.00, 1, 299.00, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
-INSERT INTO `sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('5', '2', '2', 3, 69.00, 1, 69.00, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
-INSERT INTO `sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('6', '3', '3', 2, 199.00, 1, 199.00, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
-
 DROP TABLE IF EXISTS `sys_order_detail_104_202405`;
 CREATE TABLE `sys_order_detail_104_202405`  (
   `Id` varchar(50) NOT NULL,
@@ -202,9 +166,11 @@ CREATE TABLE `sys_order_detail_104_202405`  (
   `CreatedBy` int NULL DEFAULT NULL,
   `UpdatedAt` datetime NULL DEFAULT NULL,
   `UpdatedBy` int NULL DEFAULT NULL,
-  PRIMARY KEY (`Id`) USING BTREE
+  CONSTRAINT `pk_sys_sys_order_detail_104_202405` PRIMARY KEY (`Id`)
 );
-
+-- ----------------------------
+-- Table structure for sys_order_detail_105_202405
+-- ----------------------------
 DROP TABLE IF EXISTS `sys_order_detail_105_202405`;
 CREATE TABLE `sys_order_detail_105_202405`  (
   `Id` varchar(50) NOT NULL,
@@ -219,9 +185,8 @@ CREATE TABLE `sys_order_detail_105_202405`  (
   `CreatedBy` int NULL DEFAULT NULL,
   `UpdatedAt` datetime NULL DEFAULT NULL,
   `UpdatedBy` int NULL DEFAULT NULL,
-  PRIMARY KEY (`Id`) USING BTREE
+  CONSTRAINT `pk_sys_order_detail_105_202405` PRIMARY KEY (`Id`)
 );
-
 -- ----------------------------
 -- Table structure for sys_page
 -- ----------------------------
@@ -234,13 +199,8 @@ CREATE TABLE `sys_page`  (
   `CreatedBy` int NULL DEFAULT NULL,
   `UpdatedAt` datetime NULL DEFAULT NULL,
   `UpdatedBy` int NULL DEFAULT NULL,
-  PRIMARY KEY (`Id`) USING BTREE
+  CONSTRAINT `pk_sys_page` PRIMARY KEY (`Id`)
 );
-
--- ----------------------------
--- Records of sys_page
--- ----------------------------
-
 -- ----------------------------
 -- Table structure for sys_product
 -- ----------------------------
@@ -258,16 +218,8 @@ CREATE TABLE `sys_product`  (
   `CreatedBy` int NULL DEFAULT NULL,
   `UpdatedAt` datetime NULL DEFAULT NULL,
   `UpdatedBy` int NULL DEFAULT NULL,
-  PRIMARY KEY (`Id`) USING BTREE
+  CONSTRAINT `pk_sys_product` PRIMARY KEY (`Id`)
 );
-
--- ----------------------------
--- Records of sys_product
--- ----------------------------
-INSERT INTO `sys_product` VALUES (1, 'PN-001', '波司登羽绒服', 1, 1, 550, 1, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
-INSERT INTO `sys_product` VALUES (2, 'PN-002', '雪中飞羽绒裤', 2, 2, 350, 2, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
-INSERT INTO `sys_product` VALUES (3, 'PN-003', '优衣库保暖内衣', 3, 3, 180, 1, 1, '2023-04-29 00:05:28', 1, '2023-04-29 00:05:28', 1);
-
 -- ----------------------------
 -- Table structure for sys_user
 -- ----------------------------
@@ -287,16 +239,11 @@ CREATE TABLE `sys_user`  (
   `CreatedBy` int NULL DEFAULT NULL,
   `UpdatedAt` datetime NULL DEFAULT NULL,
   `UpdatedBy` int NULL DEFAULT NULL,
-  PRIMARY KEY (`Id`) USING BTREE
+  CONSTRAINT `pk_sys_user` PRIMARY KEY (`Id`)
 );
-
 -- ----------------------------
--- Records of sys_user
+-- Table structure for sys_user_104
 -- ----------------------------
-INSERT INTO `sys_user` VALUES (1, '1', 'leafkevin', 2, 25, 1, 'e09d9d46-1783-475b-9d57-2721d163c29f', '01:19:29.000000', 'Douyin', 1, '2023-03-03 00:00:00', 1, '2023-04-29 00:05:28', 1);
-INSERT INTO `sys_user` VALUES (2, '2', 'cindy', 2, 21, 2, '20687f1c-3f27-4741-894e-fa59bcd43dbc', '01:35:30.000000', 'Taobao', 1, '2023-03-03 06:06:06', 1, '2023-04-29 00:05:28', 1);
-
-
 DROP TABLE IF EXISTS `sys_user_104`;
 CREATE TABLE `sys_user_104`  (
   `Id` int NOT NULL,
@@ -313,9 +260,11 @@ CREATE TABLE `sys_user_104`  (
   `CreatedBy` int NULL DEFAULT NULL,
   `UpdatedAt` datetime NULL DEFAULT NULL,
   `UpdatedBy` int NULL DEFAULT NULL,
-  PRIMARY KEY (`Id`) USING BTREE
+  CONSTRAINT `pk_sys_user_104` PRIMARY KEY (`Id`)
 );
-
+-- ----------------------------
+-- Table structure for sys_user_105
+-- ----------------------------
 DROP TABLE IF EXISTS `sys_user_105`;
 CREATE TABLE `sys_user_105`  (
   `Id` int NOT NULL,
@@ -332,11 +281,8 @@ CREATE TABLE `sys_user_105`  (
   `CreatedBy` int NULL DEFAULT NULL,
   `UpdatedAt` datetime NULL DEFAULT NULL,
   `UpdatedBy` int NULL DEFAULT NULL,
-  PRIMARY KEY (`Id`) USING BTREE
+  CONSTRAINT `pk_sys_user_105` PRIMARY KEY (`Id`)
 );
-
-
-
 -- ----------------------------
 -- Table structure for sys_function
 -- ----------------------------
@@ -351,27 +297,21 @@ CREATE TABLE `sys_function`  (
   `CreatedBy` int NULL DEFAULT NULL,
   `UpdatedAt` datetime NULL DEFAULT NULL,
   `UpdatedBy` int NULL DEFAULT NULL,
-  PRIMARY KEY (`MenuId`,`PageId`) USING BTREE
+  CONSTRAINT `pk_sys_function` PRIMARY KEY (`MenuId`,`PageId`)
 );
-
 -- ----------------------------
--- Table structure for sys_entity1
+-- Table structure for sys_update_entity
 -- ----------------------------
-DROP TABLE IF EXISTS `sys_entity1`;
-CREATE TABLE `sys_entity1`  (
+DROP TABLE IF EXISTS `sys_update_entity`;
+CREATE TABLE `sys_update_entity`  (
   `Id` int NOT NULL,
   `BooleanField` tinyint(1) NULL DEFAULT NULL,
   `EnumField` tinyint NULL DEFAULT NULL,
-  `GuidField` varchar(36) NULL DEFAULT NULL,
+  `GuidField` varchar(50) NULL DEFAULT NULL,
   `DateTimeField` datetime NULL DEFAULT NULL,
   `DateOnlyField` date NULL DEFAULT NULL,
   `DateTimeOffsetField` timestamp NULL DEFAULT NULL,
   `TimeSpanField` time NULL DEFAULT NULL,
   `TimeOnlyField` time NULL DEFAULT NULL,
-  PRIMARY KEY (`Id`) USING BTREE
+  CONSTRAINT `pk_sys_update_entity` PRIMARY KEY (`Id`)
 );
-
--- ----------------------------
--- Records of sys_entity1
--- ----------------------------
-INSERT INTO `sys_entity1` VALUES (1, 1, 2, 'cd16c16d-ad12-4702-9205-dcc94de4bcc8', '2024-02-02 11:43:54', '2022-05-06', '2022-01-01 19:04:05', '24:15:00', '03:05:07');

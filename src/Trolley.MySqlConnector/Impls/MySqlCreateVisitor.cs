@@ -13,7 +13,7 @@ public class MySqlCreateVisitor : CreateVisitor
     public bool IsUseIgnoreInto { get; set; }
     public StringBuilder UpdateFields { get; set; }
     public bool IsUpdate { get; set; }
-    public bool IsSetAlias { get; set; }
+    public bool IsUseSetAlias { get; set; }
     public string SetRowAlias { get; set; } = "newRow";
     public List<string> OutputFieldNames { get; set; }
 
@@ -325,9 +325,7 @@ public class MySqlCreateVisitor : CreateVisitor
             switch (callExpr.Method.Name)
             {
                 case "UseAlias":
-                    //if (callExpr.Arguments.Count > 0)
-                    //    this.SetRowAlias = this.Evaluate<string>(callExpr.Arguments[0]);
-                    this.IsSetAlias = true;
+                    this.IsUseSetAlias = true;
                     break;
                 case "Set":
                     //var genericType = genericArguments[0].DeclaringType;
@@ -394,8 +392,8 @@ public class MySqlCreateVisitor : CreateVisitor
                     break;
             }
         }
-        this.UpdateFields.Insert(0, " ON DUPLICATE KEY UPDATE ").ToString();
-        if (this.IsSetAlias && isNeedAlias) this.UpdateFields.Insert(0, $" AS {this.SetRowAlias}");
+        this.UpdateFields.Insert(0, " ON DUPLICATE KEY UPDATE ");
+        if (this.IsUseSetAlias && isNeedAlias) this.UpdateFields.Insert(0, $" AS {this.SetRowAlias}");
         this.IsUpdate = false;
     }
     public override SqlSegment VisitNew(SqlSegment sqlSegment)
@@ -468,7 +466,16 @@ public class MySqlCreateVisitor : CreateVisitor
         {
             var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.DbParameters.Count.ToString();
             if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
-            var dbFieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, memberMapper.UnderlyingType, sqlSegment.Value);
+
+            var dbFieldValue = sqlSegment.Value;
+            if (memberMapper.TypeHandler != null)
+                dbFieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, memberMapper.UnderlyingType, dbFieldValue);
+            else
+            {
+                var targetType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);
+                var valueGetter = this.OrmProvider.GetParameterValueGetter(dbFieldValue.GetType(), targetType, false);
+                dbFieldValue = valueGetter.Invoke(dbFieldValue);
+            }
             this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue));
             this.UpdateFields.Append($"{fieldName}={parameterName}");
         }
@@ -495,8 +502,15 @@ public class MySqlCreateVisitor : CreateVisitor
         //在前面insert的时候，参数有可能已经添加过了，此处需要判断是否需要添加
         if (!this.DbParameters.Contains(parameterName))
         {
-            var dbFieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, memberMapper.UnderlyingType, fieldValue);
-            this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue));
+            if (memberMapper.TypeHandler != null)
+                fieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, memberMapper.UnderlyingType, fieldValue);
+            else
+            {
+                var targetType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);
+                var valueGetter = this.OrmProvider.GetParameterValueGetter(fieldValue.GetType(), targetType, false);
+                fieldValue = valueGetter.Invoke(fieldValue);
+            }
+            this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
         }
         if (this.UpdateFields.Length > 0) this.UpdateFields.Append(',');
         this.UpdateFields.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");

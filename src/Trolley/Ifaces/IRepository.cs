@@ -16,6 +16,10 @@ public interface IRepository : IDisposable, IAsyncDisposable
     #endregion
 
     #region Sharding
+    IRepository UseTableSchema(string tableSchema);
+    #endregion
+
+    #region Sharding
     List<string> GetShardingTableNames(params Type[] entityTypes);
     Task<List<string>> GetShardingTableNamesAsync(params Type[] entityTypes);
     #endregion

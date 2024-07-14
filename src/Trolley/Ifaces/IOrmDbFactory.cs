@@ -13,7 +13,7 @@ public interface IOrmDbFactory
     bool TryGetShardingTable(Type entityType, out ShardingTable shardingTable);
     void AddShardingTable(Type entityType, ShardingTable shardingTable);
 
-    void Register(string dbKey, string connectionString, Type ormProviderType, bool isDefault);
+    void Register(string dbKey, string connectionString, Type ormProviderType, bool isDefault, string defaultTableSchema = null);
     void AddOrmProvider(IOrmProvider ormProvider);
     bool TryGetOrmProvider(Type ormProviderType, out IOrmProvider ormProvider);
     bool TryGetOrmProvider(OrmProviderType ormProviderType, out IOrmProvider ormProvider);

@@ -28,12 +28,20 @@ public class Repository : IRepository
     public Repository(DbContext dbContext) => this.DbContext = dbContext;
     #endregion
 
+    #region Sharding
+    public IRepository UseTableSchema(string tableSchema)
+    {
+        this.DbContext.TableSchema = tableSchema;
+        return this;
+    }
+    #endregion
+
     #region GetShardingTableNames
     public virtual List<string> GetShardingTableNames(params Type[] entityTypes)
     {
         if (entityTypes == null)
             throw new ArgumentNullException(nameof(entityTypes));
-        var tableSchema = this.DbContext.Connection.Database;
+        var tableSchema = this.DbContext.TableSchema;
         var builder = new StringBuilder($"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_SCHEMA='{tableSchema}' AND ");
 
         if (entityTypes.Length > 1)
@@ -61,7 +69,7 @@ public class Repository : IRepository
     {
         if (entityTypes == null)
             throw new ArgumentNullException(nameof(entityTypes));
-        var tableSchema = this.DbContext.Connection.Database;
+        var tableSchema = this.DbContext.TableSchema;
         var builder = new StringBuilder($"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_SCHEMA='{tableSchema}' AND ");
 
         if (entityTypes.Length > 1)

@@ -711,8 +711,15 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var fieldValue = isEntity ? memberMapper.Member.Evaluate(memberValue) : memberValue;
         var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
         if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
-        var dbFieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, memberMapper.UnderlyingType, fieldValue);
-        this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue));
+        if (memberMapper.TypeHandler != null)
+            fieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, memberMapper.UnderlyingType, fieldValue);
+        else
+        {
+            var targetType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);
+            var valueGetter = this.OrmProvider.GetParameterValueGetter(memberValue.GetType(), targetType, false);
+            fieldValue = valueGetter.Invoke(fieldValue);
+        }
+        this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
         this.UpdateFields.Add($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
     }
     public virtual void AddMemberElement(SqlSegment sqlSegment, MemberMap memberMapper)
@@ -727,8 +734,15 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         {
             var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.DbParameters.Count.ToString();
             if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
-            var dbFieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, memberMapper.UnderlyingType, fieldValue);
-            this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue));
+            if (memberMapper.TypeHandler != null)
+                fieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, memberMapper.UnderlyingType, fieldValue);
+            else
+            {
+                var targetType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);
+                var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, false);
+                fieldValue = valueGetter.Invoke(fieldValue);
+            }
+            this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
             fieldValue = parameterName;
         }
         this.UpdateFields.Add($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={fieldValue}");

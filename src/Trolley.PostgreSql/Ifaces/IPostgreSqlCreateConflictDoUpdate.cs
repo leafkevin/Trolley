@@ -10,6 +10,14 @@ public interface IPostgreSqlCreateConflictDoUpdate<TEntity>
     IPostgreSqlNothing DoNothing();
     #endregion
 
+    #region UseKeys
+    IPostgreSqlCreateConflictDoUpdate<TEntity> UseKeys();
+    #endregion
+
+    #region UseConstraint
+    IPostgreSqlCreateConflictDoUpdate<TEntity> UseConstraint(string constraintName);
+    #endregion
+
     #region Excluded
     /// <summary>
     /// 获取赋值的Insert字段

@@ -18,7 +18,7 @@ public sealed class OrmDbFactory : IOrmDbFactory
     public ICollection<IOrmProvider> OrmProviders => this.ormProviders.Values;
     public ICollection<IEntityMapProvider> MapProviders => this.mapProviders.Values;
 
-    public void Register(string dbKey, string connectionString, Type ormProviderType, bool isDefault)
+    public void Register(string dbKey, string connectionString, Type ormProviderType, bool isDefault, string defaultTableSchema = null)
     {
         if (string.IsNullOrEmpty(dbKey)) throw new ArgumentNullException(nameof(dbKey));
         if (string.IsNullOrEmpty(connectionString)) throw new ArgumentNullException(nameof(connectionString));
@@ -30,6 +30,7 @@ public sealed class OrmDbFactory : IOrmDbFactory
             DbKey = dbKey,
             ConnectionString = connectionString,
             IsDefault = isDefault,
+            DefaultTableSchema = defaultTableSchema,
             OrmProviderType = ormProviderType
         })) throw new Exception($"dbKey:{database.DbKey}数据库已经添加");
 
@@ -109,11 +110,13 @@ public sealed class OrmDbFactory : IOrmDbFactory
             throw new Exception($"未注册类型为{ormProviderType.FullName}的OrmProvider");
         if (!this.TryGetMapProvider(ormProviderType, out var mapProvider))
             throw new Exception($"未注册Key为{ormProviderType.FullName}的EntityMapProvider");
+        var connection = ormProvider.CreateConnection(database.ConnectionString);
         var dbContext = new DbContext
         {
             DbKey = localDbKey,
             ConnectionString = database.ConnectionString,
-            Connection = ormProvider.CreateConnection(database.ConnectionString),
+            Connection = connection,
+            TableSchema = database.DefaultTableSchema ?? connection.Database,
             OrmProvider = ormProvider,
             MapProvider = mapProvider,
             ShardingProvider = this.shardingProvider,

@@ -21,7 +21,6 @@ public class ExpressionUnitTest : UnitTestBase
         var serviceProvider = services.BuildServiceProvider();
         dbFactory = serviceProvider.GetService<IOrmDbFactory>();
     }
-
     [Fact]
     public void Coalesce()
     {
@@ -47,16 +46,16 @@ public class ExpressionUnitTest : UnitTestBase
         this.Initialize();
         using var repository = dbFactory.Create();
         var sql = repository.From<User>()
-             .Where(f => (f.IsEnabled ? "Enabled" : "Disabled") == "Enabled"
-                 && (f.GuidField.HasValue ? "HasValue" : "NoValue") == "HasValue")
-             .Select(f => new
-             {
-                 IsEnabled = f.IsEnabled ? "Enabled" : "Disabled",
-                 GuidField = f.GuidField.HasValue ? "HasValue" : "NoValue",
-                 IsOld = f.Age > 35 ? true : false,
-                 IsNeedParameter = f.Name.Contains("kevin") ? "Yes" : "No",
-             })
-             .ToSql(out _);
+            .Where(f => (f.IsEnabled ? "Enabled" : "Disabled") == "Enabled"
+                && (f.GuidField.HasValue ? "HasValue" : "NoValue") == "HasValue")
+            .Select(f => new
+            {
+                IsEnabled = f.IsEnabled ? "Enabled" : "Disabled",
+                GuidField = f.GuidField.HasValue ? "HasValue" : "NoValue",
+                IsOld = f.Age > 35 ? true : false,
+                IsNeedParameter = f.Name.Contains("kevin") ? "Yes" : "No",
+            })
+            .ToSql(out _);
         Assert.True(sql == "SELECT (CASE WHEN a.`IsEnabled`=1 THEN 'Enabled' ELSE 'Disabled' END) AS `IsEnabled`,(CASE WHEN a.`GuidField` IS NOT NULL THEN 'HasValue' ELSE 'NoValue' END) AS `GuidField`,(CASE WHEN a.`Age`>35 THEN 1 ELSE 0 END) AS `IsOld`,(CASE WHEN a.`Name` LIKE '%kevin%' THEN 'Yes' ELSE 'No' END) AS `IsNeedParameter` FROM `sys_user` a WHERE (CASE WHEN a.`IsEnabled`=1 THEN 'Enabled' ELSE 'Disabled' END)='Enabled' AND (CASE WHEN a.`GuidField` IS NOT NULL THEN 'HasValue' ELSE 'NoValue' END)='HasValue'");
 
         var enabled = "Enabled";
@@ -80,6 +79,19 @@ public class ExpressionUnitTest : UnitTestBase
         Assert.True(dbParameters[3].Value.ToString() == hasValue);
         Assert.True(dbParameters[4].Value.ToString() == enabled);
         Assert.True(dbParameters[5].Value.ToString() == hasValue);
+
+        var result = repository.From<User>()
+            .Where(f => (f.IsEnabled ? enabled : "Disabled") == enabled
+                && (f.GuidField.HasValue ? hasValue : "NoValue") == hasValue)
+            .Select(f => new
+            {
+                IsEnabled = f.IsEnabled ? enabled : "Disabled",
+                GuidField = f.GuidField.HasValue ? hasValue : "NoValue",
+                IsOld = f.Age > 35 ? true : false,
+                IsNeedParameter = f.Name.Contains("kevin") ? "Yes" : "No",
+            })
+            .ToList();
+        Assert.NotNull(result);
     }
     [Fact]
     public async void WhereCoalesceConditional()
@@ -145,6 +157,17 @@ public class ExpressionUnitTest : UnitTestBase
         Assert.True((string)dbParameters[3].Value == strCollection[2]);
         Assert.True((string)dbParameters[4].Value == dict["2"]);
         Assert.True((string)dbParameters[5].Value == dict["3"]);
+
+        var result = repository.From<User>()
+            .Where(f => (f.Name.Contains(dict["1"]) || f.IsEnabled.ToString() == strCollection[0]))
+            .Select(f => new
+            {
+                False = strArray[2],
+                Unknown = strCollection[2],
+                MyLove = dict["2"] + " and " + dict["3"]
+            })
+            .ToList();
+        Assert.NotNull(result);
     }
 }
 

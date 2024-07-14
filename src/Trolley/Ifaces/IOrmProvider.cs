@@ -174,9 +174,10 @@ public interface IOrmProvider
     string GetIdentitySql(Type entityType);
     string CastTo(Type type, object value);
     string GetQuotedValue(Type expectType, object value);
-    ITypeHandler CreateTypeHandler(Type typeHandlerType);
-    ITypeHandler GetTypeHandler(Type targetType, Type fieldType, bool isRequired);
     string GetBinaryOperator(ExpressionType nodeType);
+    Func<object, object> GetParameterValueGetter(Type fromType, Type fieldType, bool isNullable);
+    Func<object, object> GetReaderValueGetter(Type targetType, Type fieldType);
+    ITypeHandler GetTypeHandler(Type typeHandlerType);
     bool TryGetMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter);
     bool TryGetMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);
 }

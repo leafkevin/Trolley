@@ -458,10 +458,14 @@ public class UnitTest3 : UnitTestBase
         repository.BeginTransaction();
         var parameters = await repository.From<OrderDetail>()
             .Where(f => new[] { "1", "2", "3", "4", "5", "6" }.Contains(f.Id))
+            .OrderBy(f => f.Id)
             .Select(f => new { f.Id, Price = f.Price + 80, Quantity = f.Quantity + 2, Amount = f.Amount + 100 })
             .ToListAsync();
         var count = repository.Update<OrderDetail>(parameters);
-        var orderDetails = await repository.QueryAsync<OrderDetail>(f => new[] { "1", "2", "3", "4", "5", "6" }.Contains(f.Id));
+        var orderDetails = await repository.From<OrderDetail>()
+            .Where(f => new[] { "1", "2", "3", "4", "5", "6" }.Contains(f.Id))
+            .Select()
+            .ToListAsync();
         repository.Commit();
         Assert.True(count > 0);
         for (int i = 0; i < orderDetails.Count; i++)
@@ -778,7 +782,7 @@ public class UnitTest3 : UnitTestBase
             {
                 TotalAmount = a.From<OrderDetail>('b')
                     .Where(f => f.OrderId == b.Id)
-                     .Select(t => Sql.Sum(t.Amount))
+                    .Select(t => Sql.Sum(t.Amount))
             })
             .Set(x => x.OrderNo, "ON_111")
             .Set(f => new { BuyerId = DBNull.Value })
@@ -795,22 +799,22 @@ public class UnitTest3 : UnitTestBase
             .SetFrom((a, b) => new
             {
                 Nature = a.From<Company>('b')
-                    .Where(f => f.Name.Contains("Internet"))
+                    .Where(f => f.Name.Contains("微软"))
                     .Select(t => t.Nature)
             })
-            .Where(f => f.Nature == CompanyNature.Production)
+            .Where(f => f.Nature == CompanyNature.Internet)
             .ToSql(out _);
-        Assert.True(sql == "UPDATE [sys_company] SET [Nature]=(SELECT b.[Nature] FROM [sys_company] b WHERE b.[Name] LIKE '%Internet%') WHERE [Nature]='Production'");
+        Assert.True(sql == "UPDATE [sys_company] SET [Nature]=(SELECT b.[Nature] FROM [sys_company] b WHERE b.[Name] LIKE '%微软%') WHERE [Nature]='Internet'");
         var result = repository.Update<Company>()
             .SetFrom((a, b) => new
             {
                 Nature = a.From<Company>('b')
-                    .Where(f => f.Name.Contains("Internet"))
+                    .Where(f => f.Name.Contains("微软"))
                     .Select(t => t.Nature)
             })
-            .Where(f => f.Nature == CompanyNature.Production)
+            .Where(f => f.Nature == CompanyNature.Internet)
             .Execute();
-        //Assert.True(result > 0);
+        Assert.True(result > 0);
     }
     [Fact]
     public async void Update_Set_FromQuery_Fields()
@@ -831,11 +835,11 @@ public class UnitTest3 : UnitTestBase
         Assert.True(sql == "UPDATE [sys_order] SET [TotalAmount]=(SELECT SUM(b.[Amount]) FROM [sys_order_detail] b WHERE b.[OrderId]=[sys_order].[Id]),[OrderNo]=@OrderNo,[BuyerId]=NULL WHERE [BuyerId]=1");
 
         var origValues = await repository.From<Order, OrderDetail>()
-         .InnerJoin((x, y) => x.Id == y.OrderId)
-         .Where((a, b) => a.BuyerId == 1)
-         .GroupBy((a, b) => new { a.Id, a.OrderNo, a.BuyerId })
-         .Select((x, a, b) => new { x.Grouping, TotalAmount = x.Sum(b.Amount) })
-         .ToListAsync();
+        .InnerJoin((x, y) => x.Id == y.OrderId)
+        .Where((a, b) => a.BuyerId == 1)
+        .GroupBy((a, b) => new { a.Id, a.OrderNo, a.BuyerId })
+        .Select((x, a, b) => new { x.Grouping, TotalAmount = x.Sum(b.Amount) })
+        .ToListAsync();
 
         await repository.BeginTransactionAsync();
         var result = repository.Update<Order>()
@@ -880,6 +884,17 @@ public class UnitTest3 : UnitTestBase
             .Where((a, b) => a.BuyerId == 1)
             .ToSql(out _);
         Assert.True(sql == "UPDATE a SET a.[TotalAmount]=@TotalAmount,a.[OrderNo]=a.[OrderNo]+'_111',a.[BuyerId]=NULL FROM [sys_order] a INNER JOIN [sys_order_detail] b ON a.[Id]=b.[OrderId] WHERE a.[BuyerId]=1");
+		var result = repository.Update<Order>()
+            .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
+            .Set(x => x.TotalAmount, 200.56)
+            .Set((a, b) => new
+            {
+                OrderNo = a.OrderNo + "_111",
+                BuyerId = DBNull.Value
+            })
+            .Where((a, b) => a.BuyerId == 1)
+            .Execute();
+        Assert.True(result > 0);
     }
     [Fact]
     public async void Update_InnerJoin_Multi()
@@ -953,6 +968,7 @@ public class UnitTest3 : UnitTestBase
 
         var origValues = await repository.From<Order, User>()
             .InnerJoin((x, y) => x.BuyerId == y.Id)
+            .Where((a, b) => a.Id == "1")
             .Select((a, b) => new { a.OrderNo, b.Id })
             .FirstAsync();
         await repository.BeginTransactionAsync();
@@ -989,6 +1005,7 @@ public class UnitTest3 : UnitTestBase
 
         origValues = await repository.From<Order, User>()
             .InnerJoin((x, y) => x.BuyerId == y.Id)
+            .Where((x, y) => x.Id == "2")
             .Select((a, b) => new { a.OrderNo, b.Id })
             .FirstAsync();
         await repository.BeginTransactionAsync();

@@ -398,6 +398,35 @@ public class UnitTestBase
                 UpdatedBy = 1
             }
         });
+
+        repository.Delete<UpdateEntity>(new[] { 1, 2 });
+        repository.Create<UpdateEntity>(new UpdateEntity[]
+        {
+            new UpdateEntity
+            {
+                Id = 1,
+                BooleanField = true,
+                DateOnlyField = DateOnly.FromDateTime(DateTime.Now),
+                DateTimeField = DateTime.Now,
+                DateTimeOffsetField = DateTimeOffset.Now,
+                EnumField = Gender.Male,
+                GuidField = Guid.NewGuid(),
+                TimeOnlyField = TimeOnly.FromDateTime(DateTime.UtcNow),
+                TimeSpanField = TimeSpan.FromMinutes(350)
+            },
+            new UpdateEntity
+            {
+               Id = 2,
+                BooleanField = false ,
+                DateOnlyField = DateOnly.Parse("2024-07-07"),
+                DateTimeField = DateTime.Now,
+                DateTimeOffsetField = DateTimeOffset.Now,
+                EnumField = Gender.Male,
+                GuidField = Guid.NewGuid(),
+                TimeOnlyField = TimeOnly.FromDateTime(DateTime.UtcNow),
+                TimeSpanField = TimeSpan.FromMinutes(350)
+            }
+        });
         repository.Commit();
     }
 }

@@ -116,14 +116,9 @@ public class MySqlQueryVisitor : QueryVisitor
         else selectSql = builder.ToString();
 
         builder.Clear();
-
-
-        builder.Clear();
         if (!string.IsNullOrEmpty(this.WhereSql))
-        {
-            this.WhereSql = $" WHERE {this.WhereSql}";
-            builder.Append(this.WhereSql);
-        }
+            builder.Append($" WHERE {this.WhereSql}");
+
         if (!string.IsNullOrEmpty(this.GroupBySql))
             builder.Append($" GROUP BY {this.GroupBySql}");
         if (!string.IsNullOrEmpty(this.HavingSql))

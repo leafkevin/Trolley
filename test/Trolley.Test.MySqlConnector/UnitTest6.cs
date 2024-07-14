@@ -1229,7 +1229,7 @@ public class UnitTest6 : UnitTestBase
             .Where(f => orderIds.Contains(f.Id))
             .ToSql(out var dbParameters);
         Assert.True(sql == "UPDATE `sys_order_104_202405` SET `TotalAmount`=@TotalAmount WHERE `Id` IN (@p1,@p2,@p3,@p4)");
-        Assert.True((int)dbParameters[0].Value == 400);
+        Assert.True((double)dbParameters[0].Value == 400);
         Assert.True(((MySqlParameter)dbParameters[0]).MySqlDbType == MySqlDbType.Double);
         Assert.True((string)dbParameters[1].Value == orderIds[0]);
         Assert.True((string)dbParameters[2].Value == orderIds[1]);
@@ -1255,7 +1255,7 @@ public class UnitTest6 : UnitTestBase
             .Where(f => orderIds.Contains(f.Id))
             .ToSql(out var dbParameters);
         Assert.True(sql == "UPDATE `sys_order_104_202405` SET `TotalAmount`=@TotalAmount WHERE `Id` IN (@p1,@p2,@p3,@p4);UPDATE `sys_order_105_202405` SET `TotalAmount`=@TotalAmount WHERE `Id` IN (@p1,@p2,@p3,@p4)");
-        Assert.True((int)dbParameters[0].Value == 400);
+        Assert.True((double)dbParameters[0].Value == 400);
         Assert.True(((MySqlParameter)dbParameters[0]).MySqlDbType == MySqlDbType.Double);
         Assert.True((string)dbParameters[1].Value == orderIds[0]);
         Assert.True((string)dbParameters[2].Value == orderIds[1]);
@@ -1294,7 +1294,7 @@ public class UnitTest6 : UnitTestBase
             .Where(f => orderIds.Contains(f.Id))
             .ToSql(out var dbParameters);
         Assert.True(sql == "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_SCHEMA='fengling' AND TABLE_NAME LIKE 'sys_order%';UPDATE `sys_order_104_202405` SET `TotalAmount`=@TotalAmount WHERE `Id` IN (@p1,@p2,@p3,@p4);UPDATE `sys_order_105_202405` SET `TotalAmount`=@TotalAmount WHERE `Id` IN (@p1,@p2,@p3,@p4)");
-        Assert.True((int)dbParameters[0].Value == 400);
+        Assert.True((double)dbParameters[0].Value == 400);
         Assert.True(((MySqlParameter)dbParameters[0]).MySqlDbType == MySqlDbType.Double);
         Assert.True((string)dbParameters[1].Value == orderIds[0]);
         Assert.True((string)dbParameters[2].Value == orderIds[1]);
@@ -1390,6 +1390,7 @@ public class UnitTest6 : UnitTestBase
             .Select(f => new
             {
                 f.Id,
+                f.TenantId,
                 TotalAmount = f.TotalAmount + 50,
                 ProductCount = 3,
                 UpdatedAt = DateTime.Now

@@ -22,10 +22,10 @@
 <#@ import namespace="Microsoft.VisualStudio.TextTemplating"#>
 <#@ output encoding="utf-8" #>
 <#
-    var connectionString = "Host=172.16.30.190;Username=postgres;Password=123456;Database=yhhis;Maximum Pool Size=20";
+    var connectionString = "Host=localhost;Username=postgres;Password=123456;Database=fengling;Maximum Pool Size=20";
     var dbProvider = new PostgreSqlProvider(connectionString);
     var tableSchema = "public";
-    var tableName = "sys_data";
+    var tableName = "sys_update_entity";
     var removePrefixes = new[]{"sys_"};
     var separator = '_';
     var className = dbProvider.ToClassName(tableName, removePrefixes, separator);

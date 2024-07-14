@@ -10,11 +10,6 @@ namespace Trolley.PostgreSql;
 public interface IPostgreSqlQueryBase<TGrouping>
 {
     /// <summary>
-    /// 使用原始字段*返回匿名查询结果，主要用在不关注结果类型的地方，如：Sql.Exists语句，用于判断数据是否存在
-    /// </summary>
-    /// <returns>返回匿名查询对象</returns>
-    IQueryAnonymousObject SelectAnonymous();
-    /// <summary>
     /// 使用分组后对象直接返回
     /// </summary>
     /// <returns>返回分组后对象</returns>

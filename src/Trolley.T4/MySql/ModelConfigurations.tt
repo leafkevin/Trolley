@@ -35,8 +35,8 @@ class ModelConfiguration : IModelConfiguration
     var dbProvider = new MySqlProvider(connectionString);
 
     var databaseName = "fengling";
-    var tableNames = new[]{"sys_user","sys_company","sys_order","sys_order_detail"};
-    var removePrefixes = new []{"sys_","mos_"};
+    var tableNames = new[]{"sys_user","sys_company","sys_order","sys_order_detail","sys_brand","sys_product","sys_menu","sys_page","sys_function","sys_update_entity"};
+    var removePrefixes = new []{"sys_"};
     var separator = '_';
 
     var tableList = dbProvider.GetTableList(databaseName, tableNames);

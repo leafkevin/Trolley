@@ -19,12 +19,7 @@ public class GroupingQueryBase<TGrouping> : IGroupingQueryBase<TGrouping>
     }
     #endregion
 
-    #region Select/SelectAnonymous
-    public virtual IQueryAnonymousObject SelectAnonymous()
-    {
-        this.Visitor.Select("*");
-        return new QueryAnonymousObject(this.Visitor);
-    }
+    #region Select
     public virtual IQuery<TGrouping> Select()
     {
         this.Visitor.SelectGrouping();

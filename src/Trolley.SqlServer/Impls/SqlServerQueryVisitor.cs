@@ -93,11 +93,13 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
         else selectSql = builder.ToString();
 
         builder.Clear();
+        string whereSql = null;
         if (!string.IsNullOrEmpty(this.WhereSql))
         {
-            this.WhereSql = $" WHERE {this.WhereSql}";
-            builder.Append(this.WhereSql);
+            whereSql = $" WHERE {this.WhereSql}";
+            builder.Append(whereSql);
         }
+
         if (!string.IsNullOrEmpty(this.GroupBySql))
             builder.Append($" GROUP BY {this.GroupBySql}");
         if (!string.IsNullOrEmpty(this.HavingSql))
@@ -125,7 +127,7 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
             pageSql = pageSql.Replace(" /**others**/", others);
 
             if (this.skip.HasValue && this.limit.HasValue)
-                builder.Append($"SELECT COUNT(*) FROM {tableSql}{this.WhereSql};");
+                builder.Append($"SELECT COUNT(*) FROM {tableSql}{whereSql};");
             builder.Append($"{pageSql}");
         }
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
@@ -239,10 +241,8 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
 
         builder.Clear();
         if (!string.IsNullOrEmpty(this.WhereSql))
-        {
-            this.WhereSql = $" WHERE {this.WhereSql}";
-            builder.Append(this.WhereSql);
-        }
+            builder.Append($" WHERE {this.WhereSql}");
+
         if (!string.IsNullOrEmpty(this.GroupBySql))
             builder.Append($" GROUP BY {this.GroupBySql}");
         if (!string.IsNullOrEmpty(this.HavingSql))

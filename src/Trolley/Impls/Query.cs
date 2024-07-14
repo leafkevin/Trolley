@@ -8,27 +8,6 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-public class QueryAnonymousObject : IQueryAnonymousObject
-{
-    #region Properties
-    public virtual DbContext DbContext { get; private set; }
-    public virtual IQueryVisitor Visitor { get; protected set; }
-    #endregion
-
-    #region Constructor
-    public QueryAnonymousObject(IQueryVisitor visitor) => this.Visitor = visitor;
-    #endregion
-
-    #region ToSql
-    public virtual string ToSql(out List<IDbDataParameter> dbParameters)
-    {
-        dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
-        var sql = this.Visitor.BuildSql(out _);
-        this.Visitor.Dispose();
-        return sql;
-    }
-    #endregion
-}
 public class QueryBase : IQueryBase
 {
     #region Properties
@@ -42,14 +21,6 @@ public class QueryBase : IQueryBase
     {
         this.DbContext = dbContext;
         this.Visitor = visitor;
-    }
-    #endregion
-
-    #region Select	
-    public virtual IQueryAnonymousObject SelectAnonymous()
-    {
-        this.Visitor.Select("*");
-        return new QueryAnonymousObject(this.Visitor);
     }
     #endregion
 

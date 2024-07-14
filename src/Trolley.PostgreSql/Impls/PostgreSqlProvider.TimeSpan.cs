@@ -43,7 +43,7 @@ partial class PostgreSqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).Ticks);
 
-                        return targetSegment.Change($"EXTRACT(EPOCH FROM {targetSegment})*10000000", false, false, false, true);
+                        return targetSegment.Change($"(EXTRACT(EPOCH FROM {targetSegment})*10000000)::INT8", false, false, true);
                     });
                     result = true;
                     break;
@@ -54,7 +54,7 @@ partial class PostgreSqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).Days);
 
-                        return targetSegment.Change($"EXTRACT(DAY FROM {targetSegment})", false, false, false, true);
+                        return targetSegment.Change($"EXTRACT(DAY FROM {targetSegment})::INT4", false, false, true);
                     });
                     result = true;
                     break;
@@ -65,7 +65,7 @@ partial class PostgreSqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).Hours);
 
-                        return targetSegment.Change($"EXTRACT(HOUR FROM {targetSegment})", false, false, false, true);
+                        return targetSegment.Change($"EXTRACT(HOUR FROM {targetSegment})::INT4", false, false, true);
                     });
                     result = true;
                     break;
@@ -76,7 +76,7 @@ partial class PostgreSqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).Milliseconds);
 
-                        return targetSegment.Change($"EXTRACT(SECOND FROM {targetSegment})*1000", false, false, false, true);
+                        return targetSegment.Change($"(EXTRACT(SECOND FROM {targetSegment})*1000)::INT4", false, false, true);
                     });
                     result = true;
                     break;
@@ -87,7 +87,7 @@ partial class PostgreSqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).Minutes);
 
-                        return targetSegment.Change($"EXTRACT(MINUTE FROM {targetSegment})", false, false, false, true);
+                        return targetSegment.Change($"EXTRACT(MINUTE FROM {targetSegment})::INT4", false, false, true);
                     });
                     result = true;
                     break;
@@ -98,7 +98,7 @@ partial class PostgreSqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).Seconds);
 
-                        return targetSegment.Change($"EXTRACT(SECOND FROM {targetSegment})", false, false, false, true);
+                        return targetSegment.Change($"EXTRACT(SECOND FROM {targetSegment})::INT4", false, false, true);
                     });
                     result = true;
                     break;
@@ -109,7 +109,7 @@ partial class PostgreSqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).TotalDays);
 
-                        return targetSegment.Change($"EXTRACT(EPOCH FROM {targetSegment})/{3600 * 24}", false, false, true);
+                        return targetSegment.Change($"(EXTRACT(EPOCH FROM {targetSegment})/{3600 * 24})::FLOAT8", false, false, true);
                     });
                     result = true;
                     break;
@@ -120,7 +120,7 @@ partial class PostgreSqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).TotalHours);
 
-                        return targetSegment.Change($"EXTRACT(EPOCH FROM {targetSegment})/3600", false, false, true);
+                        return targetSegment.Change($"(EXTRACT(EPOCH FROM {targetSegment})/3600)::FLOAT8", false, false, true);
                     });
                     result = true;
                     break;
@@ -131,7 +131,7 @@ partial class PostgreSqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).TotalMilliseconds);
 
-                        return targetSegment.Change($"EXTRACT(EPOCH FROM {targetSegment})*1000", false, false, true);
+                        return targetSegment.Change($"(EXTRACT(EPOCH FROM {targetSegment})*1000)::FLOAT8", false, false, true);
                     });
                     result = true;
                     break;
@@ -142,7 +142,7 @@ partial class PostgreSqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).TotalMinutes);
 
-                        return targetSegment.Change($"EXTRACT(EPOCH FROM {targetSegment})/60", false, false, true);
+                        return targetSegment.Change($"(EXTRACT(EPOCH FROM {targetSegment})/60)::FLOAT8", false, false, true);
                     });
                     result = true;
                     break;
@@ -153,7 +153,7 @@ partial class PostgreSqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((TimeSpan)targetSegment.Value).TotalSeconds);
 
-                        return targetSegment.Change($"EXTRACT(EPOCH FROM {targetSegment})", false, false, false, true);
+                        return targetSegment.Change($"EXTRACT(EPOCH FROM {targetSegment})::FLOAT8", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -177,7 +177,7 @@ partial class PostgreSqlProvider
                     {
                         var leftSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
-                        visitor.ChangeSameType(leftSegment, rightSegment);
+
                         var leftArgument = visitor.GetQuotedValue(leftSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
                         return leftSegment.Merge(rightSegment, $"CASE WHEN {leftArgument}={rightArgument} THEN 0 WHEN {leftArgument}>{rightArgument} THEN 1 ELSE -1 END", false, false, true);
@@ -189,7 +189,7 @@ partial class PostgreSqlProvider
                     {
                         var leftSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
-                        visitor.ChangeSameType(leftSegment, rightSegment);
+
                         var leftArgument = visitor.GetQuotedValue(leftSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
                         return leftSegment.Merge(rightSegment, $"{leftArgument}={rightArgument}", false, false, true);
@@ -284,7 +284,62 @@ partial class PostgreSqlProvider
                             && (formatSegment.IsConstant || formatSegment.IsVariable))
                             return valueSegment.Merge(formatSegment, TimeSpan.ParseExact(valueSegment.ToString(), formatSegment.ToString(), CultureInfo.InvariantCulture));
 
-                        return valueSegment.Change($"'{valueSegment}'::INTERVAL", false, false, true);
+                        string formatArgument = null;
+                        if (formatSegment.IsConstant || formatSegment.IsVariable)
+                        {
+                            formatArgument = $"'{formatSegment}'";
+
+                            if (formatArgument.Contains("HH"))
+                                formatArgument = formatArgument.NextReplace("HH", "HH24");
+                            else if (formatArgument.Contains("H"))
+                                formatArgument = formatArgument.NextReplace("H", "FMHH24");
+                            else if (formatArgument.Contains("hh"))
+                                formatArgument = formatArgument.NextReplace("hh", "HH12");
+                            else if (formatArgument.Contains("h"))
+                                formatArgument = formatArgument.NextReplace("h", "FMHH12");
+
+                            if (formatArgument.Contains("mm"))
+                                formatArgument = formatArgument.NextReplace("mm", "MI");
+                            else formatArgument = formatArgument.NextReplace("m", "FMMI");
+
+                            if (formatArgument.Contains("ss"))
+                                formatArgument = formatArgument.NextReplace("ss", "SS");
+                            else if (formatArgument.Contains("s"))
+                                formatArgument = formatArgument.NextReplace("s", "FMSS");
+
+                            if (formatArgument.Contains("tt"))
+                                formatArgument = formatArgument.NextReplace("tt", "AM");
+                            else if (formatArgument.Contains("t"))
+                                formatArgument = formatArgument.NextReplace("t", "AM");
+
+                            if (formatArgument.Contains("FFFFFF"))
+                                formatArgument = formatArgument.NextReplace("FFFFFF", "US");
+                            else if (formatArgument.Contains("FFFFF"))
+                                formatArgument = formatArgument.NextReplace("FFFFF", "FMUS");
+                            else if (formatArgument.Contains("FFFF"))
+                                formatArgument = formatArgument.NextReplace("FFFF", "FMUS");
+                            else if (formatArgument.Contains("ffffff"))
+                                formatArgument = formatArgument.NextReplace("ffffff", "US");
+                            else if (formatArgument.Contains("fffff"))
+                                formatArgument = formatArgument.NextReplace("fffff", "FMUS");
+                            else if (formatArgument.Contains("ffff"))
+                                formatArgument = formatArgument.NextReplace("ffff", "FMUS");
+
+                            if (formatArgument.Contains("FFF"))
+                                formatArgument = formatArgument.NextReplace("FFF", "MS");
+                            else if (formatArgument.Contains("FF"))
+                                formatArgument = formatArgument.NextReplace("FF", "FMMS");
+                            else if (formatArgument.Contains("F"))
+                                formatArgument = formatArgument.NextReplace("F", "FMMS");
+                            else if (formatArgument.Contains("fff"))
+                                formatArgument = formatArgument.NextReplace("fff", "MS");
+                            else if (formatArgument.Contains("ff"))
+                                formatArgument = formatArgument.NextReplace("ff", "FMMS");
+                            else if (formatArgument.Contains("f"))
+                                formatArgument = formatArgument.NextReplace("f", "FMMS");
+                        }
+                        else formatArgument = visitor.GetQuotedValue(formatSegment);
+                        return valueSegment.Change($"'{formatArgument}'::INTERVAL", false, false, true);
                     });
                     result = true;
                     break;
@@ -299,7 +354,7 @@ partial class PostgreSqlProvider
                     {
                         var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        visitor.ChangeSameType(targetSegment, rightSegment);
+
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
                         return targetSegment.Merge(rightSegment, $"CASE WHEN {targetArgument}={rightArgument} THEN 0 WHEN {targetArgument}>{rightArgument} THEN 1 ELSE -1 END", false, false, true);
@@ -311,7 +366,7 @@ partial class PostgreSqlProvider
                     {
                         var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        visitor.ChangeSameType(targetSegment, rightSegment);
+
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
                         return targetSegment.Merge(rightSegment, $"{targetArgument}={rightArgument}", false, false, true);

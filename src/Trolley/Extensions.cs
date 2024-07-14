@@ -32,10 +32,10 @@ public static class Extensions
         configuration.OnModelCreating(new ModelBuilder(mapProvider));
         return dbFactory;
     }
-    public static IOrmDbFactory Register<TOrmProvider>(this IOrmDbFactory dbFactory, string dbKey, string connectionString, bool isDefault) where TOrmProvider : class, IOrmProvider, new()
+    public static IOrmDbFactory Register<TOrmProvider>(this IOrmDbFactory dbFactory, string dbKey, string connectionString, bool isDefault, string defaultTableSchema = null) where TOrmProvider : class, IOrmProvider, new()
     {
         var ormProviderType = typeof(TOrmProvider);
-        dbFactory.Register(dbKey, connectionString, ormProviderType, isDefault);
+        dbFactory.Register(dbKey, connectionString, ormProviderType, isDefault, defaultTableSchema);
         return dbFactory;
     }
     public static IOrmDbFactory Configure<TOrmProvider, TModelConfiguration>(this IOrmDbFactory dbFactory)
@@ -208,8 +208,8 @@ public static class Extensions
     {
         var targetType = typeof(TValue);
         var fieldType = reader.GetFieldType(0);
-        var typeHandler = ormProvider.GetTypeHandler(targetType, fieldType, targetType.IsNullableType(out var underlyingType));
-        return (TValue)typeHandler.Parse(ormProvider, underlyingType, reader[0]);
+        var valueGetter = ormProvider.GetReaderValueGetter(targetType, fieldType);
+        return (TValue)valueGetter.Invoke(reader[0]);
     }
     public static TEntity To<TEntity>(this IDataReader reader, DbContext dbContext)
         => reader.To<TEntity>(dbContext.OrmProvider, dbContext.MapProvider);
@@ -257,14 +257,14 @@ public static class Extensions
     /// <param name="ormProvider"></param>
     /// <param name="readerFields"></param>
     /// <returns></returns>
-    public static TEntity To<TEntity>(this IDataReader reader, IOrmProvider ormProvider, List<ReaderField> readerFields)
+    public static TEntity To<TEntity>(this IDataReader reader, IOrmProvider ormProvider, List<ReaderField> readerFields, bool isUseReaderOrder = false)
     {
         var entityType = typeof(TEntity);
         var ormProviderType = ormProvider.GetType();
-        var cacheKey = GetTypeReaderKey(entityType, ormProviderType, reader, readerFields, out var deferredFuncs);
+        var cacheKey = GetTypeReaderKey(entityType, ormProviderType, reader, readerFields, isUseReaderOrder, out var deferredFuncs);
         if (!queryReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
         {
-            deserializer = CreateReaderDeserializer(ormProvider, reader, entityType, readerFields);
+            deserializer = CreateReaderDeserializer(ormProvider, reader, entityType, readerFields, isUseReaderOrder);
             queryReaderDeserializerCache.TryAdd(cacheKey, deserializer);
         }
         if (deferredFuncs != null && deferredFuncs.Count > 0)
@@ -355,7 +355,7 @@ public static class Extensions
         blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(entityType)));
         return Expression.Lambda(Expression.Block(blockParameters, blockBodies), readerExpr).Compile();
     }
-    private static Delegate CreateReaderDeserializer(IOrmProvider ormProvider, IDataReader reader, Type entityType, List<ReaderField> readerFields)
+    private static Delegate CreateReaderDeserializer(IOrmProvider ormProvider, IDataReader reader, Type entityType, List<ReaderField> readerFields, bool isUseReaderOrder = false)
     {
         var blockParameters = new List<ParameterExpression>();
         var blockBodies = new List<Expression>();
@@ -371,7 +371,15 @@ public static class Extensions
         var deferredBuilds = new Stack<EntityBuildInfo>();
         while (readerIndex < readerFields.Count)
         {
-            var readerField = readerFields[readerIndex];
+            ReaderField readerField = null;
+            //PostgreSql，使用RETURNING *返回的字段顺序不固定，需要根据reader的顺序来绑定接收实体
+            //此时的字段都是基础类型
+            if (isUseReaderOrder)
+            {
+                var fieldName = reader.GetName(index);
+                readerField = readerFields.Find(f => f.Body == fieldName);
+            }
+            else readerField = readerFields[readerIndex];
             if (readerField.FieldType == ReaderFieldType.Field)
             {
                 var fieldType = reader.GetFieldType(index);
@@ -509,13 +517,19 @@ public static class Extensions
         var methodInfo = typeof(IDataRecord).GetMethod(nameof(IDataRecord.GetValue), new Type[] { typeof(int) });
         var readerValueExpr = AssignLocalParameter(typeof(object), Expression.Call(readerExpr, methodInfo, indexExpr), blockParameters, blockBodies);
         var isNullable = targetType.IsNullableType(out var underlyingType);
-        if (typeHandler == null)
-            typeHandler = ormProvider.GetTypeHandler(targetType, fieldType, !isNullable);
-
-        methodInfo = typeof(ITypeHandler).GetMethod(nameof(ITypeHandler.Parse), new Type[] { typeof(IOrmProvider), typeof(Type), typeof(object) });
-        var typeHandlerExpr = Expression.Constant(typeHandler);
-        var underlyingTypeExpr = Expression.Constant(underlyingType);
-        var targetValueExpr = Expression.Call(typeHandlerExpr, methodInfo, ormProviderExpr, underlyingTypeExpr, readerValueExpr);
+        Expression targetValueExpr = null;
+        if (typeHandler != null)
+        {
+            methodInfo = typeof(ITypeHandler).GetMethod(nameof(ITypeHandler.Parse), new Type[] { typeof(IOrmProvider), typeof(Type), typeof(object) });
+            var typeHandlerExpr = Expression.Constant(typeHandler);
+            var underlyingTypeExpr = Expression.Constant(underlyingType);
+            targetValueExpr = Expression.Call(typeHandlerExpr, methodInfo, ormProviderExpr, underlyingTypeExpr, readerValueExpr);
+        }
+        else
+        {
+            var valueGetter = ormProvider.GetReaderValueGetter(targetType, fieldType);
+            targetValueExpr = Expression.Invoke(Expression.Constant(valueGetter), readerValueExpr);
+        }
         blockBodies.Add(Expression.Assign(readerValueExpr, targetValueExpr));
         return Expression.Convert(readerValueExpr, targetType);
     }
@@ -567,7 +581,7 @@ public static class Extensions
         }
         return hashCode.ToHashCode();
     }
-    private static int GetTypeReaderKey(Type entityType, Type ormProviderType, IDataReader reader, List<ReaderField> readerFields, out List<object> deferredFuncs)
+    private static int GetTypeReaderKey(Type entityType, Type ormProviderType, IDataReader reader, List<ReaderField> readerFields, bool isUseReaderOrder, out List<object> deferredFuncs)
     {
         deferredFuncs = null;
         var hashCode = new HashCode();
@@ -591,6 +605,7 @@ public static class Extensions
                 hashCode.Add("TargetEntity");
             else hashCode.Add(readerField.TargetMember.Name);
         }
+        hashCode.Add(isUseReaderOrder);
         return hashCode.ToHashCode();
     }
     private static int GetValueTupleReaderKey(Type entityType, Type ormProviderType, IDataReader reader)

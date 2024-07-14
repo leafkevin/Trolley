@@ -27,7 +27,7 @@ public class MultiGroupingQueryBase<TGrouping> : IMultiGroupingQueryBase<TGroupi
     }
     #endregion
 
-    #region Select/SelectAnonymous
+    #region Select
     public IQueryAnonymousObject SelectAnonymous(string fields = "*")
     {
         if (string.IsNullOrEmpty(fields))

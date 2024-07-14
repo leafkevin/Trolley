@@ -12,7 +12,6 @@ public partial class PostgreSqlProvider : BaseOrmProvider
     private static Dictionary<object, Type> defaultMapTypes = new();
     private static Dictionary<Type, object> defaultDbTypes = new();
     private static Dictionary<Type, string> castTos = new();
-    private static Dictionary<Type, ITypeHandler> defaultTypeHandlers = new();
 
     public override OrmProviderType OrmProviderType => OrmProviderType.PostgreSql;
     public override Type NativeDbTypeType => typeof(NpgsqlDbType);
@@ -36,6 +35,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
         defaultMapTypes[NpgsqlDbType.TimestampTz] = typeof(DateTimeOffset);
         defaultMapTypes[NpgsqlDbType.Date] = typeof(DateOnly);
         defaultMapTypes[NpgsqlDbType.Time] = typeof(TimeOnly);
+        defaultMapTypes[NpgsqlDbType.Interval] = typeof(TimeSpan);
         defaultMapTypes[NpgsqlDbType.Bytea] = typeof(byte[]);
         defaultMapTypes[NpgsqlDbType.Varbit] = typeof(byte[]);
         defaultMapTypes[NpgsqlDbType.Uuid] = typeof(Guid);
@@ -58,6 +58,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
         defaultDbTypes[typeof(DateTimeOffset)] = NpgsqlDbType.TimestampTz;
         defaultDbTypes[typeof(DateOnly)] = NpgsqlDbType.Date;
         defaultDbTypes[typeof(TimeOnly)] = NpgsqlDbType.Time;
+        defaultDbTypes[typeof(TimeSpan)] = NpgsqlDbType.Interval;
         defaultDbTypes[typeof(Guid)] = NpgsqlDbType.Uuid;
         defaultDbTypes[typeof(byte[])] = NpgsqlDbType.Bytea;
 
@@ -77,6 +78,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
         defaultDbTypes[typeof(DateTimeOffset?)] = NpgsqlDbType.TimestampTz;
         defaultDbTypes[typeof(DateOnly?)] = NpgsqlDbType.Date;
         defaultDbTypes[typeof(TimeOnly?)] = NpgsqlDbType.Time;
+        defaultDbTypes[typeof(TimeSpan?)] = NpgsqlDbType.Interval;
         defaultDbTypes[typeof(Guid?)] = NpgsqlDbType.Uuid;
         defaultDbTypes[typeof(byte[])] = NpgsqlDbType.Bytea;
 
@@ -128,40 +130,6 @@ public partial class PostgreSqlProvider : BaseOrmProvider
         castTos[typeof(DateTime?)] = "TIMESTAMP";
         castTos[typeof(DateOnly?)] = "DATE";
         castTos[typeof(TimeOnly?)] = "TIME";
-
-        defaultTypeHandlers[typeof(bool)] = typeHandlers[typeof(BooleanTypeHandler)];
-        defaultTypeHandlers[typeof(bool?)] = typeHandlers[typeof(NullableBooleanTypeHandler)];
-        defaultTypeHandlers[typeof(string)] = typeHandlers[typeof(NullableStringTypeHandler)];
-        defaultTypeHandlers[typeof(byte)] = typeHandlers[typeof(NumberTypeHandler)];
-        defaultTypeHandlers[typeof(byte?)] = typeHandlers[typeof(NullableNumberTypeHandler)];
-        defaultTypeHandlers[typeof(sbyte)] = typeHandlers[typeof(NumberTypeHandler)];
-        defaultTypeHandlers[typeof(sbyte?)] = typeHandlers[typeof(NullableNumberTypeHandler)];
-        defaultTypeHandlers[typeof(short)] = typeHandlers[typeof(NumberTypeHandler)];
-        defaultTypeHandlers[typeof(ushort?)] = typeHandlers[typeof(NullableNumberTypeHandler)];
-        defaultTypeHandlers[typeof(char)] = typeHandlers[typeof(CharTypeHandler)];
-        defaultTypeHandlers[typeof(char?)] = typeHandlers[typeof(NullableCharTypeHandler)];
-        defaultTypeHandlers[typeof(int)] = typeHandlers[typeof(NumberTypeHandler)];
-        defaultTypeHandlers[typeof(uint?)] = typeHandlers[typeof(NullableNumberTypeHandler)];
-        defaultTypeHandlers[typeof(long)] = typeHandlers[typeof(NumberTypeHandler)];
-        defaultTypeHandlers[typeof(ulong?)] = typeHandlers[typeof(NullableNumberTypeHandler)];
-        defaultTypeHandlers[typeof(float)] = typeHandlers[typeof(NumberTypeHandler)];
-        defaultTypeHandlers[typeof(float?)] = typeHandlers[typeof(NullableNumberTypeHandler)];
-        defaultTypeHandlers[typeof(double)] = typeHandlers[typeof(NumberTypeHandler)];
-        defaultTypeHandlers[typeof(double?)] = typeHandlers[typeof(NullableNumberTypeHandler)];
-        defaultTypeHandlers[typeof(decimal)] = typeHandlers[typeof(NumberTypeHandler)];
-        defaultTypeHandlers[typeof(decimal?)] = typeHandlers[typeof(NullableNumberTypeHandler)];
-        defaultTypeHandlers[typeof(DateTime)] = typeHandlers[typeof(PostgreSqlDateTimeTypeHandler)];
-        defaultTypeHandlers[typeof(DateTime?)] = typeHandlers[typeof(PostgreSqlNullableDateTimeTypeHandler)];
-        defaultTypeHandlers[typeof(DateTimeOffset)] = typeHandlers[typeof(PostgreSqlDateTimeOffsetTypeHandler)];
-        defaultTypeHandlers[typeof(DateTimeOffset?)] = typeHandlers[typeof(PostgreSqlNullableDateTimeOffsetTypeHandler)];
-        defaultTypeHandlers[typeof(DateOnly)] = typeHandlers[typeof(PostgreSqlDateOnlyTypeHandler)];
-        defaultTypeHandlers[typeof(DateOnly?)] = typeHandlers[typeof(PostgreSqlNullableDateOnlyTypeHandler)];
-        defaultTypeHandlers[typeof(TimeSpan)] = typeHandlers[typeof(PostgreSqlTimeSpanTypeHandler)];
-        defaultTypeHandlers[typeof(TimeSpan?)] = typeHandlers[typeof(PostgreSqlNullableTimeSpanTypeHandler)];
-        defaultTypeHandlers[typeof(TimeOnly)] = typeHandlers[typeof(PostgreSqlTimeOnlyTypeHandler)];
-        defaultTypeHandlers[typeof(TimeOnly?)] = typeHandlers[typeof(PostgreSqlNullableTimeOnlyTypeHandler)];
-        defaultTypeHandlers[typeof(Guid)] = typeHandlers[typeof(GuidTypeHandler)];
-        defaultTypeHandlers[typeof(Guid?)] = typeHandlers[typeof(NullableGuidTypeHandler)];
     }
     public override IDbConnection CreateConnection(string connectionString)
         => new NpgsqlConnection(connectionString);
@@ -188,10 +156,42 @@ public partial class PostgreSqlProvider : BaseOrmProvider
         return typeof(object);
     }
     public override string CastTo(Type type, object value)
-        => $"{value}::{castTos[type]}";
-    public override bool TryGetDefaultTypeHandler(Type targetType, out ITypeHandler typeHandler)
-        => defaultTypeHandlers.TryGetValue(targetType, out typeHandler);
-    private static SqlSegment DoNothingSegment = new SqlSegment { Value = "DO NOTHING" };
+        => $"CAST({value} AS {castTos[type]})";
+    public override string GetQuotedValue(Type expectType, object value)
+    {
+        if (value == null) return "NULL";
+        switch (expectType)
+        {
+            case Type factType when factType == typeof(bool):
+                return Convert.ToBoolean(value) ? "TRUE" : "FALSE";
+            case Type factType when factType == typeof(string):
+                return $"'{Convert.ToString(value).Replace("'", @"\'")}'";
+            case Type factType when factType == typeof(Guid):
+                return $"'{value}'::UUID";
+            case Type factType when factType == typeof(DateTime):
+                return $"TIMESTAMP '{Convert.ToDateTime(value):yyyy\\-MM\\-dd\\ HH\\:mm\\:ss\\.fff}'";
+            case Type factType when factType == typeof(DateTimeOffset):
+                return $"TIMESTAMPTZ '{(DateTimeOffset)value:yyyy\\-MM\\-dd\\ HH\\:mm\\:ss\\.fffZ}'";
+            case Type factType when factType == typeof(DateOnly):
+                return $"DATE '{(DateOnly)value:yyyy\\-MM\\-dd}'";
+            case Type factType when factType == typeof(TimeSpan):
+                {
+                    var factValue = (TimeSpan)value;
+                    if (factValue.TotalDays > 1 || factValue.TotalDays < -1)
+                        return $"INTERVAL '{(int)factValue.TotalDays}D {factValue:hh\\:mm\\:ss\\.ffffff}'";
+                    return $"INTERVAL '{factValue:hh\\:mm\\:ss\\.ffffff}'";
+                }
+            case Type factType when factType == typeof(TimeOnly): return $"TIME '{(TimeOnly)value:hh\\:mm\\:ss\\.ffffff}'";
+            case Type factType when factType == typeof(SqlSegment):
+                {
+                    var sqlSegment = value as SqlSegment;
+                    if (sqlSegment.IsConstant)
+                        return this.GetQuotedValue(sqlSegment.Value);
+                    return sqlSegment.ToString();
+                }
+            default: return value.ToString();
+        }
+    }
     public override bool TryGetMyMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)
     {
         var methodInfo = methodCallExpr.Method;
@@ -200,20 +200,11 @@ public partial class PostgreSqlProvider : BaseOrmProvider
         int cacheKey = 0;
         switch (methodInfo.Name)
         {
-            case "DoNothing":
-                if (genericArgumentTypes.Length == 1 && methodInfo.DeclaringType == typeof(IPostgreSqlCreateConflictDoUpdate<>).MakeGenericType(genericArgumentTypes[0]))
-                {
-                    cacheKey = HashCode.Combine(typeof(IPostgreSqlCreateConflictDoUpdate<>), methodInfo);
-                    //.OnConflict(f => f.DoNothing })
-                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) => DoNothingSegment);
-                    return true;
-                }
-                break;
             case "Excluded":
                 if (genericArgumentTypes.Length == 1 && methodInfo.DeclaringType == typeof(IPostgreSqlCreateConflictDoUpdate<>).MakeGenericType(genericArgumentTypes[0]))
                 {
                     cacheKey = HashCode.Combine(typeof(IPostgreSqlCreateConflictDoUpdate<>), methodInfo.GetGenericMethodDefinition());
-                    //.OnConflict(x => x.Set(f => new { TotalAmount = f.TotalAmount + x.Excluded(f.TotalAmount) }) ... )
+                    //.OnConflict(x => x.UseKeys().Set(f => new { TotalAmount = f.TotalAmount + x.Excluded(f.TotalAmount) }) ... )
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
                         var myVisitor = visitor as PostgreSqlCreateVisitor;

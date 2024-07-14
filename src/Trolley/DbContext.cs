@@ -16,6 +16,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     public string DbKey { get; set; }
     public IDbConnection Connection { get; set; }
     public string ConnectionString { get; set; }
+    public string TableSchema { get; set; }
     public IOrmProvider OrmProvider { get; set; }
     public IEntityMapProvider MapProvider { get; set; }
     public IShardingProvider ShardingProvider { get; set; }
@@ -23,6 +24,11 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     public bool IsParameterized { get; set; }
     public int CommandTimeout { get; set; }
     public bool IsNeedClose => this.Transaction == null;
+    #endregion
+
+    #region CreateConnection
+    public void CreateConnection()
+        => this.Connection = this.OrmProvider.CreateConnection(this.ConnectionString);
     #endregion
 
     #region CreateCommand
@@ -695,7 +701,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             if (reader.Read())
             {
                 if (readerFields != null && readerFields.Count > 0)
-                    result = reader.To<TResult>(this.OrmProvider, readerFields);
+                    result = reader.To<TResult>(this.OrmProvider, readerFields, true);
                 else result = reader.To<TResult>(this.OrmProvider);
             }
         }
@@ -730,7 +736,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             if (await reader.ReadAsync(cancellationToken))
             {
                 if (readerFields != null && readerFields.Count > 0)
-                    result = reader.To<TResult>(this.OrmProvider, readerFields);
+                    result = reader.To<TResult>(this.OrmProvider, readerFields, true);
                 else result = reader.To<TResult>(this.OrmProvider);
             }
         }
@@ -764,7 +770,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
             while (reader.Read())
             {
-                result.Add(reader.To<TResult>(this.OrmProvider, readerFields));
+                result.Add(reader.To<TResult>(this.OrmProvider, readerFields, true));
             }
         }
         catch (Exception ex)
@@ -796,7 +802,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
             while (await reader.ReadAsync(cancellationToken))
             {
-                result.Add(reader.To<TResult>(this.OrmProvider, readerFields));
+                result.Add(reader.To<TResult>(this.OrmProvider, readerFields, true));
             }
         }
         catch (Exception ex)
@@ -1268,7 +1274,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     }
     public void FetchShardingTables(SqlVisitor visitor)
     {
-        var fetchSql = visitor.BuildShardingTablesSql(this.Connection.Database);
+        var fetchSql = visitor.BuildShardingTablesSql(this.TableSchema);
         using var command = this.CreateCommand();
         command.CommandText = fetchSql;
         this.Open();
@@ -1285,9 +1291,8 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     }
     public async Task FetchShardingTablesAsync(SqlVisitor visitor, CancellationToken cancellationToken = default)
     {
-        var fetchSql = visitor.BuildShardingTablesSql(this.Connection.Database);
+        var fetchSql = visitor.BuildShardingTablesSql(this.TableSchema);
         using var command = this.CreateDbCommand();
-        command.CommandText = fetchSql;
         command.CommandText = fetchSql;
         command.Parameters.Clear();
         await this.OpenAsync(cancellationToken);

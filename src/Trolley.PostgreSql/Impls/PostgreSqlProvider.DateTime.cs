@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq.Expressions;
 using System.Text;
-using System.Xml;
 
 namespace Trolley.PostgreSql;
 
@@ -31,15 +30,15 @@ partial class PostgreSqlProvider
                     result = true;
                     break;
                 case "Today":
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) => target.Change("CURDATE()", false, false, false, true));
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) => target.Change("CURRENT_DATE", false, false, false, true));
                     result = true;
                     break;
                 case "Now":
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) => target.Change("NOW()", false, false, false, true));
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) => target.Change("CURRENT_TIMESTAMP", false, false, false, true));
                     result = true;
                     break;
                 case "UtcNow":
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) => target.Change("UTC_TIMESTAMP()", false, false, false, true));
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) => target.Change("CURRENT_TIMESTAMP AT TIME ZONE 'UTC'", false, false, true));
                     result = true;
                     break;
             }
@@ -60,7 +59,8 @@ partial class PostgreSqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((DateTime)targetSegment.Value).Date);
 
-                        return targetSegment.Change($"{this.CastTo(typeof(DateOnly), targetSegment.Value)}", false, false, false, true);
+                        var targetArgument = visitor.GetQuotedValue(targetSegment);
+                        return targetSegment.Change($"{this.CastTo(typeof(DateOnly), targetArgument)}", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -76,7 +76,7 @@ partial class PostgreSqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((DateTime)targetSegment.Value).Day);
 
-                        return targetSegment.Change($"EXTRACT(DAY FROM {targetSegment})", false, false, false, true);
+                        return targetSegment.Change($"EXTRACT(DAY FROM {targetSegment})::INT4", false, false, true);
                     });
                     result = true;
                     break;
@@ -92,7 +92,7 @@ partial class PostgreSqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((DateTime)targetSegment.Value).DayOfWeek);
 
-                        return targetSegment.Change($"EXTRACT(DOW FROM {targetSegment})", false, false, false, true);
+                        return targetSegment.Change($"EXTRACT(DOW FROM {targetSegment})::INT4", false, false, true);
                     });
                     result = true;
                     break;
@@ -108,7 +108,7 @@ partial class PostgreSqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((DateTime)targetSegment.Value).DayOfYear);
 
-                        return targetSegment.Change($"EXTRACT(DOY FROM {targetSegment})", false, false, false, true);
+                        return targetSegment.Change($"EXTRACT(DOY FROM {targetSegment})::INT4", false, false, true);
                     });
                     result = true;
                     break;
@@ -124,7 +124,7 @@ partial class PostgreSqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((DateTime)targetSegment.Value).Hour);
 
-                        return targetSegment.Change($"EXTRACT(HOUR FROM {targetSegment})", false, false, false, true);
+                        return targetSegment.Change($"EXTRACT(HOUR FROM {targetSegment})::INT4", false, false, true);
                     });
                     result = true;
                     break;
@@ -156,7 +156,8 @@ partial class PostgreSqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((DateTime)targetSegment.Value).Millisecond);
 
-                        return targetSegment.Change($"EXTRACT(MILLISECONDS FROM {targetSegment})-FLOOR(EXTRACT(SECOND FROM {targetSegment}))*1000", false, false, true);
+						var targetArgument = visitor.GetQuotedValue(targetSegment);
+                        return targetSegment.Change($"(EXTRACT(MILLISECONDS FROM {targetArgument})-FLOOR(EXTRACT(SECOND FROM {targetArgument}))*1000)::INT8", false, false, true);
                     });
                     result = true;
                     break;
@@ -172,7 +173,8 @@ partial class PostgreSqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((DateTime)targetSegment.Value).Minute);
 
-                        return targetSegment.Change($"EXTRACT(MINUTE FROM {targetSegment})", false, false, false, true);
+                        var targetArgument = visitor.GetQuotedValue(targetSegment);
+                        return targetSegment.Change($"EXTRACT(MINUTE FROM {targetArgument})::INT4", false, false, true);
                     });
                     result = true;
                     break;
@@ -188,7 +190,8 @@ partial class PostgreSqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((DateTime)targetSegment.Value).Month);
 
-                        return targetSegment.Change($"EXTRACT(MONTH FROM {targetSegment})", false, false, false, true);
+                        var targetArgument = visitor.GetQuotedValue(targetSegment);
+                        return targetSegment.Change($"EXTRACT(MONTH FROM {targetArgument})::INT4", false, false, true);
                     });
                     result = true;
                     break;
@@ -204,7 +207,8 @@ partial class PostgreSqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((DateTime)targetSegment.Value).Second);
 
-                        return targetSegment.Change($"FLOOR(EXTRACT(SECOND FROM {targetSegment}))", false, false, false, true);
+                        var targetArgument = visitor.GetQuotedValue(targetSegment);
+                        return targetSegment.Change($"FLOOR(EXTRACT(SECOND FROM {targetArgument}))::INT4", false, false, true);
                     });
                     result = true;
                     break;
@@ -220,7 +224,7 @@ partial class PostgreSqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((DateTime)targetSegment.Value).Ticks);
 
-                        return targetSegment.Change($"EXTRACT(EPOCH FROM {targetSegment})*10000000+621355968000000000", false, false, true);
+                        return targetSegment.Change($"(EXTRACT(EPOCH FROM {targetSegment})*10000000+621355968000000000:::INT8", false, false, true);
                     });
                     result = true;
                     break;
@@ -236,7 +240,7 @@ partial class PostgreSqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((DateTime)targetSegment.Value).TimeOfDay);
 
-                        return targetSegment.Change($"{this.CastTo(typeof(TimeOnly), targetSegment.Value)}", false, false, true);
+                        return targetSegment.Change($"{targetSegment.Value}-{this.CastTo(typeof(DateOnly), targetSegment.Value)}", false, false, true);
                     });
                     result = true;
                     break;
@@ -252,7 +256,7 @@ partial class PostgreSqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((DateTime)targetSegment.Value).Year);
 
-                        return targetSegment.Change($"EXTRACT(YEAR FROM {targetSegment})", false, false, false, true);
+                        return targetSegment.Change($"EXTRACT(YEAR FROM {targetSegment})::INT4", false, false, true);
                     });
                     result = true;
                     break;
@@ -282,7 +286,7 @@ partial class PostgreSqlProvider
 
                         var leftArgument = visitor.GetQuotedValue(leftSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return leftSegment.Merge(rightSegment, $"SELECT EXTRACT(DAYS FROM DATE_TRUNC('MONTH',DATE '{leftArgument}-{rightArgument}-01')+interval '1 month - 1 day')", false, false, false, true);
+                        return leftSegment.Merge(rightSegment, $"EXTRACT(DAYS FROM (MAKE_DATE({leftArgument},{rightArgument},1)+INTERVAL '1 MONTH'-INTERVAL '1 DAY'))", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -293,10 +297,9 @@ partial class PostgreSqlProvider
                         if (valueSegment.IsConstant || valueSegment.IsVariable)
                             return valueSegment.Change(DateTime.IsLeapYear(Convert.ToInt32(valueSegment.Value)));
 
-                        var valueArgument = valueSegment.Value;
-                        if (valueSegment.IsExpression)
-                            valueArgument = $"({valueSegment})";
-                        return valueSegment.Change($"EXTRACT(YEAR FROM {valueArgument})%4=0 AND EXTRACT(YEAR FROM {valueArgument})%100<>0 OR EXTRACT(YEAR FROM {valueArgument})%400=0", false, false, true);
+                        var valueArgument = visitor.GetQuotedValue(valueSegment);
+                        if (valueSegment.IsExpression) valueArgument = $"({valueArgument})";
+                        return valueSegment.Change($"{valueArgument}%4=0 AND {valueArgument}%100<>0 OR {valueArgument}%400=0", false, false, true);
                     });
                     result = true;
                     break;
@@ -343,7 +346,7 @@ partial class PostgreSqlProvider
                                 formatArgument = formatArgument.NextReplace("MMMM", "Month");
                             else if (formatArgument.Contains("MMM"))
                                 formatArgument = formatArgument.NextReplace("MMM", "Mon");
-                            else if (formatArgument.Contains("M"))
+                            else if (formatArgument.Contains("M") && !formatArgument.Contains("MM"))
                                 formatArgument = formatArgument.NextReplace("M", "FMMM");
 
                             if (formatArgument.Contains("dddd"))
@@ -403,8 +406,6 @@ partial class PostgreSqlProvider
                                 formatArgument = formatArgument.NextReplace("ff", "FMMS");
                             else if (formatArgument.Contains("f"))
                                 formatArgument = formatArgument.NextReplace("f", "FMMS");
-
-                            formatArgument = $"'{formatArgument}'";
                         }
                         else formatArgument = visitor.GetQuotedValue(formatSegment);
                         var valueArgument = visitor.GetQuotedValue(valueSegment);
@@ -419,7 +420,6 @@ partial class PostgreSqlProvider
                     {
                         var leftSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
-                        visitor.ChangeSameType(leftSegment, rightSegment);
 
                         var leftArgument = visitor.GetQuotedValue(leftSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
@@ -449,7 +449,7 @@ partial class PostgreSqlProvider
                             builder.Append(targetArgument);
                             var timeSpan = (TimeSpan)rightSegment.Value;
                             builder.Append(timeSpan.Ticks > 0 ? "+" : "-");
-                            builder.Append(" INTERVAL 'P");
+                            builder.Append(" INTERVAL '");
                             if (timeSpan.Ticks < 0)
                                 timeSpan = -timeSpan;
                             if (timeSpan.TotalDays > 1)
@@ -458,17 +458,9 @@ partial class PostgreSqlProvider
                                 builder.Append($"{days}D");
                                 timeSpan = timeSpan.Subtract(TimeSpan.FromDays(days));
                             }
-                            //TODO:秒以下被忽略
                             if (timeSpan.Ticks > 0)
-                            {
-                                builder.Append("T");
-                                if (timeSpan.Hours > 0)
-                                    builder.Append($"{timeSpan.Hours}H");
-                                if (timeSpan.Minutes > 0)
-                                    builder.Append($"{timeSpan.Minutes}M");
-                                if (timeSpan.Seconds > 0)
-                                    builder.Append($"{timeSpan.Seconds}S");
-                            }
+                                builder.Append(timeSpan.ToString("hh\\:mm\\:ss\\.ffffff"));
+                            builder.Append("'");
                             return targetSegment.Change(builder.ToString(), false, false, true);
                         }
                         //非常量、变量的，只能小于一天,数据库的Time类型映射成TimeSpan
@@ -636,7 +628,7 @@ partial class PostgreSqlProvider
                     {
                         var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        visitor.ChangeSameType(targetSegment, rightSegment);
+
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
                         return targetSegment.Merge(rightSegment, $"{targetArgument}={rightArgument}", false, false, true);
@@ -648,7 +640,7 @@ partial class PostgreSqlProvider
                     {
                         var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        visitor.ChangeSameType(targetSegment, rightSegment);
+
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
                         return targetSegment.Merge(rightSegment, $"CASE WHEN {targetArgument}={rightArgument} THEN 0 WHEN {targetArgument}>{rightArgument} THEN 1 ELSE -1 END", false, false, true);
@@ -662,14 +654,10 @@ partial class PostgreSqlProvider
                         {
                             var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                             if (targetSegment.IsConstant || targetSegment.IsVariable)
-                            {
-                                targetSegment.ExpectType = methodInfo.ReturnType;
                                 return targetSegment.Change(targetSegment.ToString());
-                            }
 
                             var targetArgument = visitor.GetQuotedValue(targetSegment);
-                            targetSegment.ExpectType = methodInfo.ReturnType;
-                            return targetSegment.Change($"TO_CHAR({targetArgument},'YYYY-MM-DD HH24:MI:SS')", false, false, false, true);
+                            return targetSegment.Change($"TO_CHAR({targetArgument},'YYYY-MM-DD HH24:MI:SS.MS')", false, false, false, true);
                         });
                         result = true;
                     }
@@ -696,7 +684,7 @@ partial class PostgreSqlProvider
                                     formatArgument = formatArgument.NextReplace("MMMM", "Month");
                                 else if (formatArgument.Contains("MMM"))
                                     formatArgument = formatArgument.NextReplace("MMM", "Mon");
-                                else if (formatArgument.Contains("M"))
+                                else if (formatArgument.Contains("M") && !formatArgument.Contains("MM"))
                                     formatArgument = formatArgument.NextReplace("M", "FMMM");
 
                                 if (formatArgument.Contains("dddd"))
@@ -756,20 +744,14 @@ partial class PostgreSqlProvider
                                     formatArgument = formatArgument.NextReplace("ff", "FMMS");
                                 else if (formatArgument.Contains("f"))
                                     formatArgument = formatArgument.NextReplace("f", "FMMS");
-
-                                formatArgument = $"'{formatArgument}'";
                             }
                             else formatArgument = visitor.GetQuotedValue(formatSegment);
 
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
                                 && (formatSegment.IsConstant || formatSegment.IsVariable))
-                            {
-                                targetSegment.ExpectType = methodInfo.ReturnType;
                                 return targetSegment.Merge(formatSegment, ((DateTime)targetSegment.Value).ToString(formatSegment.ToString()));
-                            }
 
                             var targetArgument = visitor.GetQuotedValue(targetSegment);
-                            targetSegment.ExpectType = methodInfo.ReturnType;
                             return targetSegment.Merge(formatSegment, $"TO_CHAR({targetArgument},{formatArgument})", false, false, false, true);
                         });
                         result = true;

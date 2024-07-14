@@ -68,7 +68,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
                         builder.AppendLine($"PRIMARY KEY({string.Join(',', pkColumns)})");
                         builder.AppendLine(");");
                         if (this.Visitor.IsNeedFetchShardingTables)
-                            builder.Append(this.Visitor.BuildShardingTablesSql(this.DbContext.Connection.Database));
+                            builder.Append(this.Visitor.BuildShardingTablesSql(this.DbContext.TableSchema));
 
                         var command = this.DbContext.CreateCommand();
                         command.CommandText = builder.ToString();
@@ -278,7 +278,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
                         builder.AppendLine($"PRIMARY KEY({string.Join(',', pkColumns)})");
                         builder.AppendLine(");");
                         if (this.Visitor.IsNeedFetchShardingTables)
-                            builder.Append(this.Visitor.BuildShardingTablesSql(this.DbContext.Connection.Database));
+                            builder.Append(this.Visitor.BuildShardingTablesSql(this.DbContext.TableSchema));
 
                         var command = this.DbContext.CreateDbCommand();
                         command.CommandText = builder.ToString();
@@ -486,7 +486,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
             builder.AppendLine(");");
             if (this.Visitor.IsNeedFetchShardingTables)
             {
-                builder.Append(this.Visitor.BuildShardingTablesSql(this.DbContext.Connection.Database));
+                builder.Append(this.Visitor.BuildShardingTablesSql(this.DbContext.TableSchema));
                 builder.Append(';');
             }
 
@@ -527,7 +527,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
             if (this.Visitor.IsNeedFetchShardingTables)
             {
                 this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
-                builder.Append(this.Visitor.BuildShardingTablesSql(this.DbContext.Connection.Database));
+                builder.Append(this.Visitor.BuildShardingTablesSql(this.DbContext.TableSchema));
             }
             using var command = this.DbContext.CreateCommand();
             sql = this.Visitor.BuildCommand(this.DbContext, command);

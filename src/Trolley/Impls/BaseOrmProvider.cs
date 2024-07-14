@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 
@@ -13,112 +14,12 @@ public abstract partial class BaseOrmProvider : IOrmProvider
     protected static readonly ConcurrentDictionary<int, MethodCallSqlFormatter> methodCallSqlFormatterCache = new();
     protected static readonly ConcurrentDictionary<int, Delegate> methodCallCache = new();
     protected static readonly ConcurrentDictionary<Type, ITypeHandler> typeHandlers = new();
-    protected static readonly ConcurrentDictionary<int, ITypeHandler> typeHandlerMap = new();
-
+    protected static readonly ConcurrentDictionary<int, Func<object, object>> parameterValueGetters = new();
+    protected static readonly ConcurrentDictionary<int, Func<object, object>> readerValueGetters = new();
     static BaseOrmProvider()
     {
-        typeHandlers[typeof(BooleanAsIntTypeHandler)] = new BooleanAsIntTypeHandler();
-        typeHandlers[typeof(NullableBooleanAsIntTypeHandler)] = new NullableBooleanAsIntTypeHandler();
-
-        typeHandlers[typeof(NumberTypeHandler)] = new NumberTypeHandler();
-        typeHandlers[typeof(NullableNumberTypeHandler)] = new NullableNumberTypeHandler();
-
-        typeHandlers.TryAdd(typeof(ConvertNumberTypeHandler<byte>), new ConvertNumberTypeHandler<byte>());
-        typeHandlers.TryAdd(typeof(ConvertNumberTypeHandler<sbyte>), new ConvertNumberTypeHandler<sbyte>());
-        typeHandlers.TryAdd(typeof(ConvertNumberTypeHandler<short>), new ConvertNumberTypeHandler<short>());
-        typeHandlers.TryAdd(typeof(ConvertNumberTypeHandler<ushort>), new ConvertNumberTypeHandler<ushort>());
-        typeHandlers.TryAdd(typeof(ConvertNumberTypeHandler<int>), new ConvertNumberTypeHandler<int>());
-        typeHandlers.TryAdd(typeof(ConvertNumberTypeHandler<uint>), new ConvertNumberTypeHandler<uint>());
-        typeHandlers.TryAdd(typeof(ConvertNumberTypeHandler<long>), new ConvertNumberTypeHandler<long>());
-        typeHandlers.TryAdd(typeof(ConvertNumberTypeHandler<ulong>), new ConvertNumberTypeHandler<ulong>());
-
-        typeHandlers.TryAdd(typeof(NullableConvertNumberTypeHandler<byte>), new NullableConvertNumberTypeHandler<byte>());
-        typeHandlers.TryAdd(typeof(NullableConvertNumberTypeHandler<sbyte>), new NullableConvertNumberTypeHandler<sbyte>());
-        typeHandlers.TryAdd(typeof(NullableConvertNumberTypeHandler<short>), new NullableConvertNumberTypeHandler<short>());
-        typeHandlers.TryAdd(typeof(NullableConvertNumberTypeHandler<ushort>), new NullableConvertNumberTypeHandler<ushort>());
-        typeHandlers.TryAdd(typeof(NullableConvertNumberTypeHandler<int>), new NullableConvertNumberTypeHandler<int>());
-        typeHandlers.TryAdd(typeof(NullableConvertNumberTypeHandler<uint>), new NullableConvertNumberTypeHandler<uint>());
-        typeHandlers.TryAdd(typeof(NullableConvertNumberTypeHandler<long>), new NullableConvertNumberTypeHandler<long>());
-        typeHandlers.TryAdd(typeof(NullableConvertNumberTypeHandler<ulong>), new NullableConvertNumberTypeHandler<ulong>());
-
-        typeHandlers.TryAdd(typeof(EnumTypeHandler<byte>), new EnumTypeHandler<byte>());
-        typeHandlers.TryAdd(typeof(EnumTypeHandler<sbyte>), new EnumTypeHandler<sbyte>());
-        typeHandlers.TryAdd(typeof(EnumTypeHandler<short>), new EnumTypeHandler<short>());
-        typeHandlers.TryAdd(typeof(EnumTypeHandler<ushort>), new EnumTypeHandler<ushort>());
-        typeHandlers.TryAdd(typeof(EnumTypeHandler<int>), new EnumTypeHandler<int>());
-        typeHandlers.TryAdd(typeof(EnumTypeHandler<uint>), new EnumTypeHandler<uint>());
-        typeHandlers.TryAdd(typeof(EnumTypeHandler<long>), new EnumTypeHandler<long>());
-        typeHandlers.TryAdd(typeof(EnumTypeHandler<ulong>), new EnumTypeHandler<ulong>());
-
-        typeHandlers.TryAdd(typeof(NullableEnumTypeHandler<byte>), new NullableEnumTypeHandler<byte>());
-        typeHandlers.TryAdd(typeof(NullableEnumTypeHandler<sbyte>), new NullableEnumTypeHandler<sbyte>());
-        typeHandlers.TryAdd(typeof(NullableEnumTypeHandler<short>), new NullableEnumTypeHandler<short>());
-        typeHandlers.TryAdd(typeof(NullableEnumTypeHandler<ushort>), new NullableEnumTypeHandler<ushort>());
-        typeHandlers.TryAdd(typeof(NullableEnumTypeHandler<int>), new NullableEnumTypeHandler<int>());
-        typeHandlers.TryAdd(typeof(NullableEnumTypeHandler<uint>), new NullableEnumTypeHandler<uint>());
-        typeHandlers.TryAdd(typeof(NullableEnumTypeHandler<long>), new NullableEnumTypeHandler<long>());
-        typeHandlers.TryAdd(typeof(NullableEnumTypeHandler<ulong>), new NullableEnumTypeHandler<ulong>());
-
-        typeHandlers.TryAdd(typeof(ConvertEnumTypeHandler<byte>), new ConvertEnumTypeHandler<byte>());
-        typeHandlers.TryAdd(typeof(ConvertEnumTypeHandler<sbyte>), new ConvertEnumTypeHandler<sbyte>());
-        typeHandlers.TryAdd(typeof(ConvertEnumTypeHandler<short>), new ConvertEnumTypeHandler<short>());
-        typeHandlers.TryAdd(typeof(ConvertEnumTypeHandler<ushort>), new ConvertEnumTypeHandler<ushort>());
-        typeHandlers.TryAdd(typeof(ConvertEnumTypeHandler<int>), new ConvertEnumTypeHandler<int>());
-        typeHandlers.TryAdd(typeof(ConvertEnumTypeHandler<uint>), new ConvertEnumTypeHandler<uint>());
-        typeHandlers.TryAdd(typeof(ConvertEnumTypeHandler<long>), new ConvertEnumTypeHandler<long>());
-        typeHandlers.TryAdd(typeof(ConvertEnumTypeHandler<ulong>), new ConvertEnumTypeHandler<ulong>());
-
-        typeHandlers.TryAdd(typeof(NullableConvertEnumTypeHandler<byte>), new NullableConvertEnumTypeHandler<byte>());
-        typeHandlers.TryAdd(typeof(NullableConvertEnumTypeHandler<sbyte>), new NullableConvertEnumTypeHandler<sbyte>());
-        typeHandlers.TryAdd(typeof(NullableConvertEnumTypeHandler<short>), new NullableConvertEnumTypeHandler<short>());
-        typeHandlers.TryAdd(typeof(NullableConvertEnumTypeHandler<ushort>), new NullableConvertEnumTypeHandler<ushort>());
-        typeHandlers.TryAdd(typeof(NullableConvertEnumTypeHandler<int>), new NullableConvertEnumTypeHandler<int>());
-        typeHandlers.TryAdd(typeof(NullableConvertEnumTypeHandler<uint>), new NullableConvertEnumTypeHandler<uint>());
-        typeHandlers.TryAdd(typeof(NullableConvertEnumTypeHandler<long>), new NullableConvertEnumTypeHandler<long>());
-        typeHandlers.TryAdd(typeof(NullableConvertEnumTypeHandler<ulong>), new NullableConvertEnumTypeHandler<ulong>());
-
-        typeHandlers[typeof(EnumAsStringTypeHandler)] = new EnumAsStringTypeHandler();
-        typeHandlers[typeof(NullableEnumAsStringTypeHandler)] = new NullableEnumAsStringTypeHandler();
-
-        typeHandlers[typeof(CharTypeHandler)] = new CharTypeHandler();
-        typeHandlers[typeof(NullableCharTypeHandler)] = new NullableCharTypeHandler();
-        typeHandlers[typeof(StringTypeHandler)] = new StringTypeHandler();
-        typeHandlers[typeof(NullableStringTypeHandler)] = new NullableStringTypeHandler();
-
-        typeHandlers[typeof(DateTimeOffsetTypeHandler)] = new DateTimeOffsetTypeHandler();
-        typeHandlers[typeof(NullableDateTimeOffsetTypeHandler)] = new NullableDateTimeOffsetTypeHandler();
-
-        typeHandlers[typeof(DateTimeTypeHandler)] = new DateTimeTypeHandler();
-        typeHandlers[typeof(NullableDateTimeTypeHandler)] = new NullableDateTimeTypeHandler();
-        typeHandlers[typeof(DateTimeAsStringTypeHandler)] = new DateTimeAsStringTypeHandler();
-        typeHandlers[typeof(NullableDateTimeAsStringTypeHandler)] = new NullableDateTimeAsStringTypeHandler();
-
-        typeHandlers[typeof(DateOnlyTypeHandler)] = new DateOnlyTypeHandler();
-        typeHandlers[typeof(NullableDateOnlyTypeHandler)] = new NullableDateOnlyTypeHandler();
-        typeHandlers[typeof(DateOnlyAsStringTypeHandler)] = new DateOnlyAsStringTypeHandler();
-        typeHandlers[typeof(NullableDateOnlyAsStringTypeHandler)] = new NullableDateOnlyAsStringTypeHandler();
-
-        typeHandlers[typeof(TimeSpanTypeHandler)] = new TimeSpanTypeHandler();
-        typeHandlers[typeof(NullableTimeSpanTypeHandler)] = new NullableTimeSpanTypeHandler();
-        typeHandlers[typeof(TimeSpanAsStringTypeHandler)] = new TimeSpanAsStringTypeHandler();
-        typeHandlers[typeof(NullableTimeSpanAsStringTypeHandler)] = new NullableTimeSpanAsStringTypeHandler();
-        typeHandlers[typeof(TimeSpanAsLongTypeHandler)] = new TimeSpanAsLongTypeHandler();
-        typeHandlers[typeof(NullableTimeSpanAsLongTypeHandler)] = new NullableTimeSpanAsLongTypeHandler();
-
-        typeHandlers[typeof(TimeOnlyTypeHandler)] = new TimeOnlyTypeHandler();
-        typeHandlers[typeof(NullableTimeOnlyTypeHandler)] = new NullableTimeOnlyTypeHandler();
-        typeHandlers[typeof(TimeOnlyAsStringTypeHandler)] = new TimeOnlyAsStringTypeHandler();
-        typeHandlers[typeof(NullableTimeOnlyAsStringTypeHandler)] = new NullableTimeOnlyAsStringTypeHandler();
-        typeHandlers[typeof(TimeOnlyAsLongTypeHandler)] = new TimeOnlyAsLongTypeHandler();
-        typeHandlers[typeof(NullableTimeOnlyAsLongTypeHandler)] = new NullableTimeOnlyAsLongTypeHandler();
-
-        typeHandlers[typeof(GuidTypeHandler)] = new GuidTypeHandler();
-        typeHandlers[typeof(NullableGuidTypeHandler)] = new NullableGuidTypeHandler();
-        typeHandlers[typeof(GuidAsStringTypeHandler)] = new GuidAsStringTypeHandler();
-        typeHandlers[typeof(NullableGuidAsStringTypeHandler)] = new NullableGuidAsStringTypeHandler();
-
-        typeHandlers[typeof(JsonTypeHandler)] = new JsonTypeHandler();
-        typeHandlers[typeof(ToStringTypeHandler)] = new ToStringTypeHandler();
+        typeHandlers.TryAdd(typeof(JsonTypeHandler), Activator.CreateInstance(typeof(JsonTypeHandler)) as ITypeHandler);
+        typeHandlers.TryAdd(typeof(ToStringTypeHandler), Activator.CreateInstance(typeof(ToStringTypeHandler)) as ITypeHandler);
     }
     public virtual OrmProviderType OrmProviderType => OrmProviderType.Basic;
     public virtual string ParameterPrefix => "@";
@@ -146,18 +47,37 @@ public abstract partial class BaseOrmProvider : IOrmProvider
     public virtual string GetQuotedValue(Type expectType, object value)
     {
         if (value == null) return "NULL";
-        expectType ??= value.GetType();
-        if (this.TryGetDefaultTypeHandler(expectType, out var typeHandler))
-            return typeHandler.GetQuotedValue(this, expectType, value);
-        if (value is SqlSegment sqlSegment)
+        switch (expectType)
         {
-            if (sqlSegment == SqlSegment.Null || !sqlSegment.IsConstant)
-                return sqlSegment.ToString();
-            //此处不应出现变量的情况，应该在此之前把变量都已经变成了参数
-            //if (sqlSegment.IsVariable) throw new Exception("此处不应出现变量的情况，先调用ISqlVisitor.Change方法把变量都变成参数后，再调用本方法");
-            return this.GetQuotedValue(sqlSegment.Value);
+            case Type factType when factType == typeof(bool):
+                return Convert.ToBoolean(value) ? "1" : "0";
+            case Type factType when factType == typeof(string):
+                return $"'{Convert.ToString(value).Replace("'", @"\'")}'";
+            case Type factType when factType == typeof(Guid):
+                return $"'{value}'";
+            case Type factType when factType == typeof(DateTime):
+                return $"'{Convert.ToDateTime(value):yyyy\\-MM\\-dd\\ HH\\:mm\\:ss\\.fff}'";
+            case Type factType when factType == typeof(DateTimeOffset):
+                return $"'{(DateTimeOffset)value:yyyy\\-MM\\-dd\\ HH\\:mm\\:ss\\.fffZ}'";
+            case Type factType when factType == typeof(DateOnly):
+                return $"'{(DateOnly)value:yyyy\\-MM\\-dd}'";
+            case Type factType when factType == typeof(TimeSpan):
+                {
+                    var factValue = (TimeSpan)value;
+                    if (factValue.TotalDays > 1 || factValue.TotalDays < -1)
+                        return $"'{(int)factValue.TotalDays}.{factValue:hh\\:mm\\:ss\\.ffffff}'";
+                    return $"'{factValue:hh\\:mm\\:ss\\.ffffff}'";
+                }
+            case Type factType when factType == typeof(TimeOnly): return $"'{(TimeOnly)value:hh\\:mm\\:ss\\.ffffff}'";
+            case Type factType when factType == typeof(SqlSegment):
+                {
+                    var sqlSegment = value as SqlSegment;
+                    if (sqlSegment.IsConstant)
+                        return this.GetQuotedValue(sqlSegment.Value);
+                    return sqlSegment.ToString();
+                }
+            default: return value.ToString();
         }
-        return value.ToString();
     }
     public virtual string GetBinaryOperator(ExpressionType nodeType) =>
         nodeType switch
@@ -183,127 +103,1282 @@ public abstract partial class BaseOrmProvider : IOrmProvider
             ExpressionType.RightShift => ">>",
             _ => nodeType.ToString()
         };
-    public virtual ITypeHandler CreateTypeHandler(Type typeHandlerType)
+    public virtual Func<object, object> GetParameterValueGetter(Type fromType, Type fieldType, bool isNullable)
     {
-        if (typeHandlers.TryGetValue(typeHandlerType, out var typeHandler))
-            return typeHandler;
-        return Activator.CreateInstance(typeHandlerType) as ITypeHandler;
-    }
-    public virtual ITypeHandler GetTypeHandler(Type targetType, Type fieldType, bool isRequired)
-    {
-        var hashKey = HashCode.Combine(targetType, fieldType, isRequired);
-        return typeHandlerMap.GetOrAdd(hashKey, f =>
+        var hashKey = HashCode.Combine(fromType, fieldType, isNullable);
+        return parameterValueGetters.GetOrAdd(hashKey, f =>
         {
-            Type handlerType = null;
-            Type underlyingType = null;
-            var isNullable = targetType.IsNullableType(out underlyingType);
-            if (underlyingType.IsEnumType(out _))
+            var underlyingType = Nullable.GetUnderlyingType(fromType);
+            var isNullableType = underlyingType != null;
+            underlyingType ??= fromType;
+            Func<object, object> typeHandler = null;
+
+            if (fromType == fieldType && fromType.IsValueType || fromType == typeof(DBNull))
+                typeHandler = value => value;
+            else if (underlyingType == fieldType)
             {
-                if (fieldType == typeof(string))
-                    handlerType = isNullable ? typeof(NullableEnumAsStringTypeHandler) : typeof(EnumAsStringTypeHandler);
-                else if (Enum.GetUnderlyingType(underlyingType) != fieldType)
+                if (isNullable || !fromType.IsValueType)
                 {
-                    handlerType = isNullable ? typeof(NullableConvertEnumTypeHandler<>) : typeof(ConvertEnumTypeHandler<>);
-                    handlerType = handlerType.MakeGenericType(fieldType);
+                    typeHandler = value =>
+                    {
+                        if (value == null) return DBNull.Value;
+                        return value;
+                    };
                 }
-                else
-                {
-                    handlerType = isNullable ? typeof(NullableEnumTypeHandler<>) : typeof(EnumTypeHandler<>);
-                    handlerType = handlerType.MakeGenericType(fieldType);
-                }
-            }
-            else if (underlyingType == typeof(Guid))
-            {
-                if (fieldType == typeof(string))
-                    handlerType = isNullable ? typeof(NullableGuidAsStringTypeHandler) : typeof(GuidAsStringTypeHandler);
-                else handlerType = isNullable ? typeof(NullableGuidTypeHandler) : typeof(GuidTypeHandler);
-            }
-            else if (underlyingType == typeof(DateTimeOffset))
-            {
-                if (fieldType == typeof(string))
-                    handlerType = isNullable ? typeof(NullableDateTimeOffsetAsStringTypeHandler) : typeof(DateTimeOffsetAsStringTypeHandler);
-                else handlerType = isNullable ? typeof(NullableDateTimeOffsetTypeHandler) : typeof(DateTimeOffsetTypeHandler);
-            }
-            else if (underlyingType == typeof(DateOnly))
-            {
-                if (fieldType == typeof(string))
-                    handlerType = isNullable ? typeof(NullableDateOnlyAsStringTypeHandler) : typeof(DateOnlyAsStringTypeHandler);
-                else handlerType = isNullable ? typeof(NullableDateOnlyTypeHandler) : typeof(DateOnlyTypeHandler);
-            }
-            else if (underlyingType == typeof(TimeSpan))
-            {
-                if (fieldType == typeof(long))
-                    handlerType = isNullable ? typeof(NullableTimeSpanAsLongTypeHandler) : typeof(TimeSpanAsLongTypeHandler);
-                else if (fieldType == typeof(string))
-                    handlerType = isNullable ? typeof(NullableTimeSpanAsStringTypeHandler) : typeof(TimeSpanAsStringTypeHandler);
-                else handlerType = isNullable ? typeof(NullableTimeSpanTypeHandler) : typeof(TimeSpanTypeHandler);
-            }
-            else if (underlyingType == typeof(TimeOnly))
-            {
-                if (fieldType == typeof(long))
-                    handlerType = isNullable ? typeof(NullableTimeOnlyAsLongTypeHandler) : typeof(TimeOnlyAsLongTypeHandler);
-                else if (fieldType == typeof(string))
-                    handlerType = isNullable ? typeof(NullableTimeOnlyAsStringTypeHandler) : typeof(TimeOnlyAsStringTypeHandler);
-                else handlerType = isNullable ? typeof(NullableTimeOnlyTypeHandler) : typeof(TimeOnlyTypeHandler);
-            }
-            else if (underlyingType == typeof(byte[]))
-            {
-                if (fieldType == typeof(long))
-                    handlerType = typeof(ByteArrayAsLongTypeHandler);
-                else handlerType = typeof(ByteArrayTypeHandler);
+                else typeHandler = value => value;
             }
             else
             {
-                switch (Type.GetTypeCode(underlyingType))
+                //当前参数类型是非空类型，尽管数据库可为null，当作非空类型处理
+                if (underlyingType.IsEnumType(out _))
                 {
-                    case TypeCode.Boolean:
-                        handlerType = isNullable ? typeof(NullableBooleanAsIntTypeHandler) : typeof(BooleanAsIntTypeHandler);
-                        break;
-                    case TypeCode.Byte:
-                    case TypeCode.SByte:
-                    case TypeCode.Int16:
-                    case TypeCode.UInt16:
-                    case TypeCode.Int32:
-                    case TypeCode.UInt32:
-                    case TypeCode.Int64:
-                    case TypeCode.UInt64:
-                    case TypeCode.Single:
-                    case TypeCode.Double:
-                    case TypeCode.Decimal:
-                        if (fieldType == underlyingType)
-                            handlerType = isNullable ? typeof(NullableNumberTypeHandler) : typeof(NumberTypeHandler);
-                        else
+                    var enumUnderlyingType = Enum.GetUnderlyingType(underlyingType);
+                    var supportedTypes = new Type[] { typeof(byte), typeof(sbyte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(float), typeof(double), typeof(decimal) };
+                    if (fieldType == typeof(string))
+                    {
+                        //参数类型可为null，数据库一定可为null
+                        if (isNullableType && isNullable)
                         {
-                            handlerType = isNullable ? typeof(NullableConvertNumberTypeHandler<>) : typeof(ConvertNumberTypeHandler<>);
-                            handlerType = handlerType.MakeGenericType(fieldType);
+                            typeHandler = value =>
+                            {
+                                if (value == null) return DBNull.Value;
+                                return Enum.GetName(underlyingType, value);
+                            };
                         }
-                        break;
-                    case TypeCode.Char:
-                        handlerType = typeof(CharTypeHandler);
-                        break;
-                    case TypeCode.String:
-                        handlerType = isRequired ? typeof(StringTypeHandler) : typeof(NullableStringTypeHandler);
-                        break;
-                    case TypeCode.DateTime:
-                        if (fieldType == typeof(string))
-                            handlerType = isNullable ? typeof(NullableDateTimeAsStringTypeHandler) : typeof(DateTimeAsStringTypeHandler);
-                        else handlerType = isNullable ? typeof(NullableDateTimeTypeHandler) : typeof(DateTimeTypeHandler);
-                        break;
-                    case TypeCode.Object:
-                        if (fieldType == typeof(string))
-                            handlerType = typeof(JsonTypeHandler);
-                        break;
-                    default:
-                        handlerType = typeof(ToStringTypeHandler);
-                        break;
+                        else typeHandler = value => Enum.GetName(underlyingType, value);
+                    }
+                    else if (enumUnderlyingType != fieldType && supportedTypes.Contains(fieldType))
+                    {
+                        if (isNullableType && isNullable)
+                        {
+                            typeHandler = value =>
+                            {
+                                if (value == null) return DBNull.Value;
+                                var numberValue = Convert.ChangeType(value, enumUnderlyingType);
+                                return Convert.ChangeType(numberValue, fieldType);
+                            };
+                        }
+                        else typeHandler = value =>
+                        {
+                            var numberValue = Convert.ChangeType(value, enumUnderlyingType);
+                            return Convert.ChangeType(numberValue, fieldType);
+                        };
+                    }
+                }
+                else
+                {
+                    if (fieldType == typeof(Guid))
+                    {
+                        if (underlyingType == typeof(string))
+                        {
+                            if (isNullableType && isNullable)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value == null) return DBNull.Value;
+                                    return ((Guid)value).ToString();
+                                };
+                            }
+                            else typeHandler = value => ((Guid)value).ToString();
+                        }
+                        else if (underlyingType == typeof(byte[]))
+                        {
+                            if (isNullableType && isNullable)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value == null) return DBNull.Value;
+                                    return new Guid((byte[])value);
+                                };
+                            }
+                            else typeHandler = value => new Guid((byte[])value);
+                        }
+                    }
+                    else if (fieldType == typeof(DateTimeOffset))
+                    {
+                        if (underlyingType == typeof(string))
+                        {
+                            if (isNullableType && isNullable)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value == null) return DBNull.Value;
+                                    return DateTimeOffset.Parse((string)value);
+                                };
+                            }
+                            else typeHandler = value => DateTimeOffset.Parse((string)value);
+                        }
+                        else if (underlyingType == typeof(DateTime))
+                        {
+                            if (isNullableType && isNullable)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value == null) return DBNull.Value;
+                                    return new DateTimeOffset((DateTime)value);
+                                };
+                            }
+                            else typeHandler = value => new DateTimeOffset((DateTime)value);
+                        }
+                    }
+                    else if (fieldType == typeof(DateTime))
+                    {
+                        if (underlyingType == typeof(string))
+                        {
+                            if (isNullableType && isNullable)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value == null) return DBNull.Value;
+                                    return DateTime.Parse((string)value);
+                                };
+                            }
+                            else typeHandler = value => DateTime.Parse((string)value);
+                        }
+                        else if (underlyingType == typeof(DateOnly))
+                        {
+                            if (isNullableType && isNullable)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value == null) return DBNull.Value;
+                                    return ((DateOnly)value).ToDateTime(TimeOnly.MinValue);
+                                };
+                            }
+                            else typeHandler = value => ((DateOnly)value).ToDateTime(TimeOnly.MinValue);
+                        }
+                        else if (underlyingType == typeof(DateTimeOffset))
+                        {
+                            if (isNullableType && isNullable)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value == null) return DBNull.Value;
+                                    return ((DateTimeOffset)value).LocalDateTime;
+                                };
+                            }
+                            else typeHandler = value => ((DateTimeOffset)value).LocalDateTime;
+                        }
+                    }
+                    else if (fieldType == typeof(DateOnly))
+                    {
+                        if (underlyingType == typeof(string))
+                        {
+                            if (isNullableType && isNullable)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value == null) return DBNull.Value;
+                                    return DateOnly.Parse((string)value);
+                                };
+                            }
+                            else typeHandler = value => DateOnly.Parse((string)value);
+                        }
+                        else if (underlyingType == typeof(DateTime))
+                        {
+                            if (isNullableType && isNullable)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value == null) return DBNull.Value;
+                                    return DateOnly.FromDateTime((DateTime)value);
+                                };
+                            }
+                            else typeHandler = value => DateOnly.FromDateTime((DateTime)value);
+                        }
+                        else if (underlyingType == typeof(DateTimeOffset))
+                        {
+                            if (isNullableType && isNullable)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value == null) return DBNull.Value;
+                                    return DateOnly.FromDateTime(((DateTimeOffset)value).LocalDateTime);
+                                };
+                            }
+                            else typeHandler = value => DateOnly.FromDateTime(((DateTimeOffset)value).LocalDateTime);
+                        }
+                    }
+                    else if (fieldType == typeof(TimeSpan))
+                    {
+                        if (underlyingType == typeof(long))
+                        {
+                            if (isNullableType && isNullable)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value == null) return DBNull.Value;
+                                    return TimeSpan.FromTicks((long)value);
+                                };
+                            }
+                            else typeHandler = value => TimeSpan.FromTicks((long)value);
+                        }
+                        else if (underlyingType == typeof(string))
+                        {
+                            if (isNullableType && isNullable)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value == null) return DBNull.Value;
+                                    return TimeSpan.Parse((string)value);
+                                };
+                            }
+                            else typeHandler = value => TimeSpan.Parse((string)value);
+                        }
+                        else if (underlyingType == typeof(TimeOnly))
+                        {
+                            if (isNullableType && isNullable)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value == null) return DBNull.Value;
+                                    return ((TimeOnly)value).ToTimeSpan();
+                                };
+                            }
+                            else typeHandler = value => ((TimeOnly)value).ToTimeSpan();
+                        }
+                        else if (underlyingType == typeof(DateTime))
+                        {
+                            if (isNullableType && isNullable)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value == null) return DBNull.Value;
+                                    return ((DateTime)value).TimeOfDay;
+                                };
+                            }
+                            else typeHandler = value => ((DateTime)value).TimeOfDay;
+                        }
+                        else if (underlyingType == typeof(DateTimeOffset))
+                        {
+                            if (isNullableType && isNullable)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value == null) return DBNull.Value;
+                                    return ((DateTimeOffset)value).LocalDateTime.TimeOfDay;
+                                };
+                            }
+                            else typeHandler = value => ((DateTimeOffset)value).LocalDateTime.TimeOfDay;
+                        }
+                    }
+                    else if (fieldType == typeof(TimeOnly))
+                    {
+                        if (underlyingType == typeof(long))
+                        {
+                            if (isNullableType && isNullable)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value == null) return DBNull.Value;
+                                    return new TimeOnly((long)value);
+                                };
+                            }
+                            else typeHandler = value => new TimeOnly((long)value);
+                        }
+                        else if (underlyingType == typeof(string))
+                        {
+                            if (isNullableType && isNullable)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value == null) return DBNull.Value;
+                                    return TimeOnly.FromTimeSpan(TimeSpan.Parse((string)value));
+                                };
+                            }
+                            else typeHandler = value => TimeOnly.FromTimeSpan(TimeSpan.Parse((string)value));
+                        }
+                        else if (underlyingType == typeof(TimeSpan))
+                        {
+                            if (isNullableType && isNullable)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value == null) return DBNull.Value;
+                                    return TimeOnly.FromTimeSpan((TimeSpan)value);
+                                };
+                            }
+                            else typeHandler = value => TimeOnly.FromTimeSpan((TimeSpan)value);
+                        }
+                        else if (underlyingType == typeof(DateTime))
+                        {
+                            if (isNullableType && isNullable)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value == null) return DBNull.Value;
+                                    return TimeOnly.FromTimeSpan(((DateTime)value).TimeOfDay);
+                                };
+                            }
+                            else typeHandler = value => TimeOnly.FromTimeSpan(((DateTime)value).TimeOfDay);
+                        }
+                        else if (underlyingType == typeof(DateTimeOffset))
+                        {
+                            if (isNullableType && isNullable)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value == null) return DBNull.Value;
+                                    return TimeOnly.FromTimeSpan(((DateTimeOffset)value).LocalDateTime.TimeOfDay);
+                                };
+                            }
+                            else typeHandler = value => TimeOnly.FromTimeSpan(((DateTimeOffset)value).LocalDateTime.TimeOfDay);
+                        }
+                    }
+                    else if (fieldType == typeof(string))
+                    {
+                        if (isNullable)
+                        {
+                            typeHandler = value =>
+                            {
+                                if (value == null) return DBNull.Value;
+                                return Convert.ToString(value);
+                            };
+                        }
+                        else typeHandler = value => Convert.ToString(value);
+                    }
+                    else if (fieldType == typeof(bool))
+                    {
+                        var supportedTypes = new Type[] { typeof(byte), typeof(sbyte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong) };
+                        if (supportedTypes.Contains(underlyingType))
+                        {
+                            if (isNullableType && isNullable)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value == null) return DBNull.Value;
+                                    return Convert.ToInt32(value) != 0;
+                                };
+                            }
+                            else typeHandler = value => Convert.ToInt32(value) != 0;
+                        }
+                    }
+                    else if (fieldType == typeof(byte[]))
+                    {
+                        var supportedTypes = new Type[] { typeof(bool), typeof(char), typeof(byte), typeof(sbyte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(float), typeof(double), typeof(decimal), typeof(Half) };
+                        if (supportedTypes.Contains(underlyingType))
+                        {
+                            switch (underlyingType)
+                            {
+                                case Type factType when factType == typeof(bool):
+                                    if (isNullableType && isNullable)
+                                    {
+                                        typeHandler = value =>
+                                        {
+                                            if (value == null) return DBNull.Value;
+                                            return BitConverter.GetBytes((bool)value);
+                                        };
+                                    }
+                                    else typeHandler = value => BitConverter.GetBytes((bool)value);
+                                    break;
+                                case Type factType when factType == typeof(char):
+                                    if (isNullableType && isNullable)
+                                    {
+                                        typeHandler = value =>
+                                        {
+                                            if (value == null) return DBNull.Value;
+                                            return BitConverter.GetBytes((char)value);
+                                        };
+                                    }
+                                    else typeHandler = value => BitConverter.GetBytes((char)value);
+                                    break;
+                                case Type factType when factType == typeof(byte):
+                                    if (isNullableType && isNullable)
+                                    {
+                                        typeHandler = value =>
+                                        {
+                                            if (value == null) return DBNull.Value;
+                                            return BitConverter.GetBytes((byte)value);
+                                        };
+                                    }
+                                    else typeHandler = value => BitConverter.GetBytes((byte)value);
+                                    break;
+                                case Type factType when factType == typeof(sbyte):
+                                    if (isNullableType && isNullable)
+                                    {
+                                        typeHandler = value =>
+                                        {
+                                            if (value == null) return DBNull.Value;
+                                            return BitConverter.GetBytes((sbyte)value);
+                                        };
+                                    }
+                                    else typeHandler = value => BitConverter.GetBytes((sbyte)value);
+                                    break;
+                                case Type factType when factType == typeof(short):
+                                    if (isNullableType && isNullable)
+                                    {
+                                        typeHandler = value =>
+                                        {
+                                            if (value == null) return DBNull.Value;
+                                            return BitConverter.GetBytes((short)value);
+                                        };
+                                    }
+                                    else typeHandler = value => BitConverter.GetBytes((short)value);
+                                    break;
+                                case Type factType when factType == typeof(ushort):
+                                    if (isNullableType && isNullable)
+                                    {
+                                        typeHandler = value =>
+                                        {
+                                            if (value == null) return DBNull.Value;
+                                            return BitConverter.GetBytes((ushort)value);
+                                        };
+                                    }
+                                    else typeHandler = value => BitConverter.GetBytes((ushort)value);
+                                    break;
+                                case Type factType when factType == typeof(int):
+                                    if (isNullableType && isNullable)
+                                    {
+                                        typeHandler = value =>
+                                        {
+                                            if (value == null) return DBNull.Value;
+                                            return BitConverter.GetBytes((int)value);
+                                        };
+                                    }
+                                    else typeHandler = value => BitConverter.GetBytes((int)value);
+                                    break;
+                                case Type factType when factType == typeof(uint):
+                                    if (isNullableType && isNullable)
+                                    {
+                                        typeHandler = value =>
+                                        {
+                                            if (value == null) return DBNull.Value;
+                                            return BitConverter.GetBytes((uint)value);
+                                        };
+                                    }
+                                    else typeHandler = value => BitConverter.GetBytes((uint)value);
+                                    break;
+                                case Type factType when factType == typeof(long):
+                                    if (isNullableType && isNullable)
+                                    {
+                                        typeHandler = value =>
+                                        {
+                                            if (value == null) return DBNull.Value;
+                                            return BitConverter.GetBytes((long)value);
+                                        };
+                                    }
+                                    else typeHandler = value => BitConverter.GetBytes((long)value);
+                                    break;
+                                case Type factType when factType == typeof(ulong):
+                                    if (isNullableType && isNullable)
+                                    {
+                                        typeHandler = value =>
+                                        {
+                                            if (value == null) return DBNull.Value;
+                                            return BitConverter.GetBytes((ulong)value);
+                                        };
+                                    }
+                                    else typeHandler = value => BitConverter.GetBytes((ulong)value);
+                                    break;
+                                case Type factType when factType == typeof(float):
+                                    if (isNullableType && isNullable)
+                                    {
+                                        typeHandler = value =>
+                                        {
+                                            if (value == null) return DBNull.Value;
+                                            return BitConverter.GetBytes((float)value);
+                                        };
+                                    }
+                                    else typeHandler = value => BitConverter.GetBytes((float)value);
+                                    break;
+                                case Type factType when factType == typeof(double):
+                                    if (isNullableType && isNullable)
+                                    {
+                                        typeHandler = value =>
+                                        {
+                                            if (value == null) return DBNull.Value;
+                                            return BitConverter.GetBytes((double)value);
+                                        };
+                                    }
+                                    else typeHandler = value => BitConverter.GetBytes((double)value);
+                                    break;
+                                case Type factType when factType == typeof(Half):
+                                    if (isNullableType && isNullable)
+                                    {
+                                        typeHandler = value =>
+                                        {
+                                            if (value == null) return DBNull.Value;
+                                            return BitConverter.GetBytes((Half)value);
+                                        };
+                                    }
+                                    else typeHandler = value => BitConverter.GetBytes((Half)value);
+                                    break;
+                            }
+                        }
+                    }
+                    else if (fieldType == typeof(char))
+                    {
+                        var supportedTypes = new Type[] { typeof(byte), typeof(sbyte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong) };
+                        if (underlyingType == typeof(string))
+                        {
+                            if (isNullableType && isNullable)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value == null) return DBNull.Value;
+                                    return ((string)value)[0];
+                                };
+                            }
+                            else typeHandler = value => ((string)value)[0];
+                        }
+                        else if (supportedTypes.Contains(underlyingType))
+                        {
+                            if (isNullableType && isNullable)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value == null) return DBNull.Value;
+                                    return Convert.ToChar(value);
+                                };
+                            }
+                            else typeHandler = value => Convert.ToChar(value);
+                        }
+                    }
+                    else
+                    {
+                        switch (Type.GetTypeCode(fieldType))
+                        {
+                            case TypeCode.Byte:
+                            case TypeCode.SByte:
+                            case TypeCode.Int16:
+                            case TypeCode.UInt16:
+                            case TypeCode.Int32:
+                            case TypeCode.UInt32:
+                            case TypeCode.Int64:
+                            case TypeCode.UInt64:
+                            case TypeCode.Single:
+                            case TypeCode.Double:
+                            case TypeCode.Decimal:
+                                if (isNullableType && isNullable)
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value == null) return DBNull.Value;
+                                        return Convert.ChangeType(value, fieldType);
+                                    };
+                                }
+                                else typeHandler = value => Convert.ChangeType(value, fieldType);
+                                break;
+                        }
+                    }
                 }
             }
-            if (!typeHandlers.TryGetValue(handlerType, out var typeHandler))
-                typeHandlers.TryAdd(handlerType, typeHandler = Activator.CreateInstance(handlerType) as ITypeHandler);
+            if (typeHandler == null) throw new Exception($"不存在类型{fromType.FullName}->{fieldType.FullName}转换TypeHandler");
             return typeHandler;
         });
     }
-    public abstract bool TryGetDefaultTypeHandler(Type targetType, out ITypeHandler typeHandler);
+    public virtual Func<object, object> GetReaderValueGetter(Type targetType, Type fieldType)
+    {
+        var hashKey = HashCode.Combine(targetType, fieldType);
+        return readerValueGetters.GetOrAdd(hashKey, f =>
+        {
+            var underlyingType = Nullable.GetUnderlyingType(targetType);
+            var isNullableType = underlyingType != null;
+            underlyingType ??= targetType;
+            Func<object, object> typeHandler = null;
+            if (targetType == fieldType || underlyingType == fieldType)
+            {
+                var valueExpr = Expression.Parameter(typeof(object), "value");
+                var blockBodies = new List<Expression>();
+                var resultExpr = Expression.Variable(typeof(object), "result");
+                var isDbNullExpr = Expression.TypeIs(valueExpr, typeof(DBNull));
+                var setDefaultExpr = Expression.Assign(resultExpr, Expression.Convert(Expression.Default(targetType), typeof(object)));
+                var setTypedValueExpr = Expression.Assign(resultExpr, valueExpr);
+                blockBodies.Add(Expression.IfThenElse(isDbNullExpr, setDefaultExpr, setTypedValueExpr));
+                var resultLabelExpr = Expression.Label(typeof(object));
+                blockBodies.Add(Expression.Return(resultLabelExpr, resultExpr));
+                blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(typeof(object))));
+                var bodyExpr = Expression.Block(new[] { resultExpr }, blockBodies);
+                typeHandler = Expression.Lambda<Func<object, object>>(bodyExpr, valueExpr).Compile();
+            }
+            else
+            {
+                //当前参数类型是非空类型，尽管数据库可为null，当作非空类型处理
+                if (underlyingType.IsEnumType(out _))
+                {
+                    var enumUnderlyingType = Enum.GetUnderlyingType(underlyingType);
+                    var supportedTypes = new Type[] { typeof(byte), typeof(sbyte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(float), typeof(double), typeof(decimal) };
+                    if (fieldType == typeof(string))
+                    {
+                        //参数类型可为null，数据库一定可为null
+                        if (isNullableType)
+                        {
+                            typeHandler = value =>
+                            {
+                                if (value is DBNull) return null;
+                                return Enum.Parse(underlyingType, (string)value);
+                            };
+                        }
+                        else
+                        {
+                            typeHandler = value =>
+                            {
+                                if (value is DBNull) return Enum.ToObject(underlyingType, 0);
+                                return Enum.Parse(underlyingType, (string)value);
+                            };
+                        }
+                    }
+                    else if (enumUnderlyingType != fieldType && supportedTypes.Contains(fieldType))
+                    {
+                        if (isNullableType)
+                        {
+                            typeHandler = value =>
+                            {
+                                if (value is DBNull) return null;
+                                var numberValue = Convert.ChangeType(value, enumUnderlyingType);
+                                return Enum.ToObject(underlyingType, numberValue);
+                            };
+                        }
+                        else
+                        {
+                            typeHandler = value =>
+                            {
+                                if (value is DBNull) return Enum.ToObject(underlyingType, 0);
+                                var numberValue = Convert.ChangeType(value, enumUnderlyingType);
+                                return Enum.ToObject(underlyingType, numberValue);
+                            };
+                        }
+                    }
+                    else
+                    {
+                        if (isNullableType)
+                        {
+                            typeHandler = value =>
+                            {
+                                if (value is DBNull) return null;
+                                return Enum.ToObject(underlyingType, value);
+                            };
+                        }
+                        else
+                        {
+                            typeHandler = value =>
+                            {
+                                if (value is DBNull) return Enum.ToObject(underlyingType, 0);
+                                return Enum.ToObject(underlyingType, value);
+                            };
+                        }
+                    }
+                }
+                else
+                {
+                    if (underlyingType == typeof(Guid))
+                    {
+                        if (fieldType == typeof(string))
+                        {
+                            if (isNullableType)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return null;
+                                    return new Guid((string)value);
+                                };
+                            }
+                            else
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return Guid.Empty;
+                                    return new Guid((string)value);
+                                };
+                            }
+                        }
+                        else if (fieldType == typeof(byte[]))
+                        {
+                            if (isNullableType)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return null;
+                                    return new Guid((byte[])value);
+                                };
+                            }
+                            else
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return Guid.Empty;
+                                    return new Guid((byte[])value);
+                                };
+                            }
+                        }
+                    }
+                    else if (underlyingType == typeof(DateTimeOffset))
+                    {
+                        if (fieldType == typeof(string))
+                        {
+                            if (isNullableType)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return null;
+                                    return DateTimeOffset.Parse((string)value);
+                                };
+                            }
+                            else
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return DateTimeOffset.MinValue;
+                                    return DateTimeOffset.Parse((string)value);
+                                };
+                            }
+                        }
+                        else if (fieldType == typeof(DateTime))
+                        {
+                            if (isNullableType)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return null;
+                                    return new DateTimeOffset((DateTime)value);
+                                };
+                            }
+                            else
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return DateTimeOffset.MinValue;
+                                    return new DateTimeOffset((DateTime)value);
+                                };
+                            }
+                        }
+                    }
+                    else if (underlyingType == typeof(DateTime))
+                    {
+                        if (fieldType == typeof(string))
+                        {
+                            if (isNullableType)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return null;
+                                    return DateTime.Parse((string)value);
+                                };
+                            }
+                            else
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return DateTime.MinValue;
+                                    return DateTime.Parse((string)value);
+                                };
+                            }
+                        }
+                        else if (fieldType == typeof(DateOnly))
+                        {
+                            if (isNullableType)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return null;
+                                    return ((DateOnly)value).ToDateTime(TimeOnly.MinValue);
+                                };
+                            }
+                            else
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return DateTime.MinValue;
+                                    return ((DateOnly)value).ToDateTime(TimeOnly.MinValue);
+                                };
+                            }
+                        }
+                        else if (fieldType == typeof(DateTimeOffset))
+                        {
+                            if (isNullableType)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return null;
+                                    return ((DateTimeOffset)value).LocalDateTime;
+                                };
+                            }
+                            else
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return DateOnly.MinValue;
+                                    return ((DateTimeOffset)value).LocalDateTime;
+                                };
+                            }
+                        }
+                    }
+                    else if (underlyingType == typeof(DateOnly))
+                    {
+                        if (fieldType == typeof(string))
+                        {
+                            if (isNullableType)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return null;
+                                    return DateOnly.Parse((string)value);
+                                };
+                            }
+                            else
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return DateOnly.MinValue;
+                                    return DateOnly.Parse((string)value);
+                                };
+                            }
+                        }
+                        else if (fieldType == typeof(DateTime))
+                        {
+                            if (isNullableType)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return null;
+                                    return DateOnly.FromDateTime((DateTime)value);
+                                };
+                            }
+                            else
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return DateOnly.MinValue;
+                                    return DateOnly.FromDateTime((DateTime)value);
+                                };
+                            }
+                        }
+                        else if (fieldType == typeof(DateTimeOffset))
+                        {
+                            if (isNullableType)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return null;
+                                    return DateOnly.FromDateTime(((DateTimeOffset)value).LocalDateTime);
+                                };
+                            }
+                            else
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return DateOnly.MinValue;
+                                    return DateOnly.FromDateTime(((DateTimeOffset)value).LocalDateTime);
+                                };
+                            }
+                        }
+                    }
+                    else if (underlyingType == typeof(TimeSpan))
+                    {
+                        if (fieldType == typeof(long))
+                        {
+                            if (isNullableType)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return null;
+                                    return TimeSpan.FromTicks((long)value);
+                                };
+                            }
+                            else
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return TimeSpan.MinValue;
+                                    return DateOnly.FromDateTime(((DateTimeOffset)value).LocalDateTime);
+                                };
+                            }
+                        }
+                        else if (fieldType == typeof(string))
+                        {
+                            if (isNullableType)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return null;
+                                    return TimeSpan.Parse((string)value);
+                                };
+                            }
+                            else
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return TimeSpan.MinValue;
+                                    return TimeSpan.Parse((string)value);
+                                };
+                            }
+                        }
+                        else if (fieldType == typeof(TimeOnly))
+                        {
+                            if (isNullableType)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return null;
+                                    return ((TimeOnly)value).ToTimeSpan();
+                                };
+                            }
+                            else
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return TimeSpan.MinValue;
+                                    return ((TimeOnly)value).ToTimeSpan();
+                                };
+                            }
+                        }
+                        else if (fieldType == typeof(DateTime))
+                        {
+                            if (isNullableType)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return null;
+                                    return ((DateTime)value).TimeOfDay;
+                                };
+                            }
+                            else
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return TimeSpan.MinValue;
+                                    return ((DateTime)value).TimeOfDay;
+                                };
+                            }
+                        }
+                        else if (fieldType == typeof(DateTimeOffset))
+                        {
+                            if (isNullableType)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return null;
+                                    return ((DateTimeOffset)value).LocalDateTime.TimeOfDay;
+                                };
+                            }
+                            else
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return TimeSpan.MinValue;
+                                    return ((DateTimeOffset)value).LocalDateTime.TimeOfDay;
+                                };
+                            }
+                        }
+                    }
+                    else if (underlyingType == typeof(TimeOnly))
+                    {
+                        if (fieldType == typeof(long))
+                        {
+                            if (isNullableType)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return null;
+                                    return new TimeOnly((long)value);
+                                };
+                            }
+                            else
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return TimeOnly.MinValue;
+                                    return new TimeOnly((long)value);
+                                };
+                            }
+                        }
+                        else if (fieldType == typeof(string))
+                        {
+                            if (isNullableType)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return null;
+                                    return TimeOnly.FromTimeSpan(TimeSpan.Parse((string)value));
+                                };
+                            }
+                            else
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return TimeOnly.MinValue;
+                                    return TimeOnly.FromTimeSpan(TimeSpan.Parse((string)value));
+                                };
+                            }
+                        }
+                        else if (fieldType == typeof(TimeSpan))
+                        {
+                            if (isNullableType)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return null;
+                                    return TimeOnly.FromTimeSpan((TimeSpan)value);
+                                };
+                            }
+                            else
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return TimeOnly.MinValue;
+                                    return TimeOnly.FromTimeSpan((TimeSpan)value);
+                                };
+                            }
+                        }
+                        else if (fieldType == typeof(DateTime))
+                        {
+                            if (isNullableType)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return null;
+                                    return TimeOnly.FromTimeSpan(((DateTime)value).TimeOfDay);
+                                };
+                            }
+                            else
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return TimeOnly.MinValue;
+                                    return TimeOnly.FromTimeSpan(((DateTime)value).TimeOfDay);
+                                };
+                            }
+                        }
+                        else if (fieldType == typeof(DateTimeOffset))
+                        {
+                            if (isNullableType)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return null;
+                                    return TimeOnly.FromTimeSpan(((DateTimeOffset)value).LocalDateTime.TimeOfDay);
+                                };
+                            }
+                            else
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return TimeOnly.MinValue;
+                                    return TimeOnly.FromTimeSpan(((DateTimeOffset)value).LocalDateTime.TimeOfDay);
+                                };
+                            }
+                        }
+                    }
+                    else if (underlyingType == typeof(string))
+                    {
+                        typeHandler = value =>
+                        {
+                            if (value is DBNull) return null;
+                            return Convert.ToString(value);
+                        };
+                    }
+                    else if (underlyingType == typeof(bool))
+                    {
+                        var supportedTypes = new Type[] { typeof(byte), typeof(sbyte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong) };
+                        if (supportedTypes.Contains(fieldType))
+                        {
+                            if (isNullableType)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return null;
+                                    return Convert.ToInt32(value) != 0;
+                                };
+                            }
+                            else
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return false;
+                                    return Convert.ToInt32(value) != 0;
+                                };
+                            }
+                        }
+                    }
+                    else if (underlyingType == typeof(byte[]))
+                    {
+                        var supportedTypes = new Type[] { typeof(bool), typeof(char), typeof(byte), typeof(sbyte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(float), typeof(double), typeof(Half) };
+                        if (supportedTypes.Contains(fieldType))
+                        {
+                            switch (fieldType)
+                            {
+                                case Type factType when factType == typeof(bool):
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return BitConverter.GetBytes((bool)value);
+                                    };
+                                    break;
+                                case Type factType when factType == typeof(char):
+                                    typeHandler = value =>
+                                     {
+                                         if (value is DBNull) return null;
+                                         return BitConverter.GetBytes((char)value);
+                                     };
+                                    break;
+                                case Type factType when factType == typeof(byte):
+                                    typeHandler = value =>
+                                      {
+                                          if (value is DBNull) return null;
+                                          return BitConverter.GetBytes((byte)value);
+                                      };
+                                    break;
+                                case Type factType when factType == typeof(sbyte):
+                                    typeHandler = value =>
+                                      {
+                                          if (value is DBNull) return null;
+                                          return BitConverter.GetBytes((sbyte)value);
+                                      };
+                                    break;
+                                case Type factType when factType == typeof(short):
+                                    typeHandler = value =>
+                                     {
+                                         if (value is DBNull) return null;
+                                         return BitConverter.GetBytes((short)value);
+                                     };
+                                    break;
+                                case Type factType when factType == typeof(ushort):
+                                    typeHandler = value =>
+                                     {
+                                         if (value is DBNull) return null;
+                                         return BitConverter.GetBytes((ushort)value);
+                                     };
+                                    break;
+                                case Type factType when factType == typeof(int):
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return BitConverter.GetBytes((int)value);
+                                    };
+                                    break;
+                                case Type factType when factType == typeof(uint):
+                                    typeHandler = value =>
+                                   {
+                                       if (value is DBNull) return null;
+                                       return BitConverter.GetBytes((uint)value);
+                                   };
+                                    break;
+                                case Type factType when factType == typeof(long):
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return BitConverter.GetBytes((long)value);
+                                    };
+                                    break;
+                                case Type factType when factType == typeof(ulong):
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return BitConverter.GetBytes((ulong)value);
+                                    };
+                                    break;
+                                case Type factType when factType == typeof(float):
+                                    typeHandler = value =>
+                                     {
+                                         if (value is DBNull) return null;
+                                         return BitConverter.GetBytes((float)value);
+                                     };
+                                    break;
+                                case Type factType when factType == typeof(double):
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return BitConverter.GetBytes((double)value);
+                                    };
+                                    break;
+                                case Type factType when factType == typeof(Half):
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return BitConverter.GetBytes((Half)value);
+                                    };
+                                    break;
+                            }
+                        }
+                    }
+                    else if (underlyingType == typeof(char))
+                    {
+                        var supportedTypes = new Type[] { typeof(byte), typeof(sbyte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong) };
+                        if (fieldType == typeof(string))
+                        {
+                            if (isNullableType)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return null;
+                                    return ((string)value)[0];
+                                };
+                            }
+                            else
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return default(char);
+                                    return ((string)value)[0];
+                                };
+                            }
+                        }
+                        else if (supportedTypes.Contains(underlyingType))
+                        {
+                            if (isNullableType)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return null;
+                                    return Convert.ToChar(value);
+                                };
+                            }
+                            else
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return default(char);
+                                    return Convert.ToChar(value);
+                                };
+                            }
+                        }
+                    }
+                    else
+                    {
+                        switch (Type.GetTypeCode(underlyingType))
+                        {
+                            case TypeCode.Byte:
+                            case TypeCode.SByte:
+                            case TypeCode.Int16:
+                            case TypeCode.UInt16:
+                            case TypeCode.Int32:
+                            case TypeCode.UInt32:
+                            case TypeCode.Int64:
+                            case TypeCode.UInt64:
+                            case TypeCode.Single:
+                            case TypeCode.Double:
+                            case TypeCode.Decimal:
+                                if (isNullableType)
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return Convert.ChangeType(value, underlyingType);
+                                    };
+                                }
+                                else
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return Convert.ChangeType(value, 0);
+                                        return Convert.ChangeType(value, underlyingType);
+                                    };
+                                }
+                                break;
+                        }
+                    }
+                }
+            }
+            if (typeHandler == null) throw new Exception($"不存在类型{fieldType.FullName}->{targetType.FullName}转换TypeHandler");
+            return typeHandler;
+        });
+    }
+    public virtual ITypeHandler GetTypeHandler(Type typeHandlerType)
+    {
+        if (!typeHandlers.TryGetValue(typeHandlerType, out var typeHandler))
+            typeHandlers.TryAdd(typeHandlerType, typeHandler = Activator.CreateInstance(typeHandlerType) as ITypeHandler);
+        return typeHandler;
+    }
     public virtual bool TryGetMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter)
     {
         var memberInfo = memberExpr.Member;
@@ -365,7 +1440,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                     {
                         var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        visitor.ChangeSameType(targetSegment, rightSegment);
+
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
                         return targetSegment.Merge(targetSegment, rightSegment, $"{targetArgument}={rightArgument}", false, false, true);
@@ -380,7 +1455,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                     {
                         var leftSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
-                        visitor.ChangeSameType(leftSegment, rightSegment);
+
                         var leftArgument = visitor.GetQuotedValue(leftSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
                         return leftSegment.Merge(rightSegment, $"CASE WHEN {leftArgument}={rightArgument} THEN 0 WHEN {leftArgument}>{rightArgument} THEN 1 ELSE -1 END", false, false, true);
@@ -395,7 +1470,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                     {
                         var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        visitor.ChangeSameType(targetSegment, rightSegment);
+
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
                         return targetSegment.Merge(rightSegment, $"CASE WHEN {targetArgument}={rightArgument} THEN 0 WHEN {targetArgument}>{rightArgument} THEN 1 ELSE -1 END", false, false, true);
@@ -410,12 +1485,16 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                     {
                         var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
-                        {
-                            targetSegment.SegmentType = methodInfo.ReturnType;
                             return targetSegment.Change(targetSegment.ToString());
+
+                        if (targetSegment.SegmentType.IsEnum && !targetSegment.IsExpression && !targetSegment.IsMethodCall)
+                            visitor.ToEnumString(targetSegment);
+                        if (targetSegment.SegmentType != methodInfo.ReturnType)
+                        {
+                            targetSegment.Value = this.CastTo(methodInfo.ReturnType, targetSegment.Value);
+                            targetSegment.IsMethodCall = true;
                         }
-                        targetSegment.SegmentType = methodInfo.ReturnType;
-                        return targetSegment.Change(this.CastTo(typeof(string), targetSegment.Value), false, false, false, true);
+                        return targetSegment;
                     });
                     return true;
                 }
@@ -426,10 +1505,8 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                         var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                         var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
-                        {
-                            targetSegment.ExpectType = methodInfo.ReturnType;
                             return targetSegment.Change(methodInfo.Invoke(targetSegment.Value, new object[] { args0Segment.Value }));
-                        }
+
                         //f.Balance.ToString("C")
                         //args0.ToString("C")
                         //(args0)=>{args0.ToString("C")}
@@ -452,10 +1529,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                         var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         var args1Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
-                        {
-                            targetSegment.ExpectType = methodInfo.ReturnType;
                             return targetSegment.Change(methodInfo.Invoke(targetSegment.Value, new object[] { args0Segment.Value, args1Segment.Value }));
-                        }
                         //f.Balance.ToString("C", new CultureInfo("en-US"))
                         //args.ToString("C", new CultureInfo("en-US"))
                         //(args)=>{args.ToString("C", new CultureInfo("en-US"))}
@@ -512,13 +1586,13 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                         Array.ForEach(args, f =>
                         {
                             var sqlSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = f });
-                            arguments.Add(sqlSegment);
+                            arguments.Add(sqlSegment.Value);
                             if (resultSegment == null) resultSegment = sqlSegment;
                             else resultSegment.Merge(sqlSegment);
                         });
                         if (resultSegment.IsConstant || resultSegment.IsVariable)
                             return resultSegment.Change(methodInfo.Invoke(null, arguments.ToArray()));
-                        return resultSegment.Change(this.CastTo(methodInfo.ReturnType, args[0]));
+                        return resultSegment.Change(this.CastTo(methodInfo.ReturnType, args[0]), false, false, false, true);
                     });
                     return true;
                 }
@@ -576,7 +1650,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                         }
                         if (resultSegment.IsConstant || resultSegment.IsVariable)
                             return resultSegment.Change(methodInfo.Invoke(null, arguments.ToArray()));
-                        return resultSegment.Change(this.CastTo(methodInfo.ReturnType, args[0]));
+                        return resultSegment.Change(this.CastTo(methodInfo.ReturnType, args[0]), false, false, false, true);
                     });
                     return true;
                 }

@@ -149,10 +149,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         else selectSql = builder.ToString();
 
         builder.Clear();
+        string whereSql = null;
         if (!string.IsNullOrEmpty(this.WhereSql))
         {
-            this.WhereSql = $" WHERE {this.WhereSql}";
-            builder.Append(this.WhereSql);
+            whereSql = $" WHERE {this.WhereSql}";
+            builder.Append(whereSql);
         }
         if (!string.IsNullOrEmpty(this.GroupBySql))
             builder.Append($" GROUP BY {this.GroupBySql}");
@@ -181,7 +182,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             pageSql = pageSql.Replace(" /**others**/", others);
 
             if (this.skip.HasValue && this.limit.HasValue)
-                builder.Append($"SELECT COUNT(*) FROM {tableSql}{this.WhereSql};");
+                builder.Append($"SELECT COUNT(*) FROM {tableSql}{whereSql};");
             builder.Append($"{pageSql}");
         }
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
@@ -300,10 +301,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         builder.Clear();
         if (!string.IsNullOrEmpty(this.WhereSql))
-        {
-            this.WhereSql = $" WHERE {this.WhereSql}";
-            builder.Append(this.WhereSql);
-        }
+            builder.Append($" WHERE {this.WhereSql}");
+
         if (!string.IsNullOrEmpty(this.GroupBySql))
             builder.Append($" GROUP BY {this.GroupBySql}");
         if (!string.IsNullOrEmpty(this.HavingSql))
@@ -1907,7 +1906,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         TableSegment tableSegment = null;
         this.TableAliases.Clear();
         lambdaExpr.Body.GetParameterNames(out var parameterNames);
-        if ((parameterNames == null || parameterNames.Count <= 0))
+        if (parameterNames == null || parameterNames.Count <= 0)
             return tableSegment;
 
         //为了实现Select之后，有的表达式计算、函数调用或是普通字段，都有可能改变了名字，为了之后select之后还可以OrderBy操作，
@@ -1955,10 +1954,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public void AddSelectFieldsSql(StringBuilder builder, List<ReaderField> readerFields, bool isNeedWrap = false)
     {
+        int index = 0;
         foreach (var readerField in readerFields)
         {
-            if (builder.Length > 0)
-                builder.Append(',');
+            if (index > 0) builder.Append(',');
             switch (readerField.FieldType)
             {
                 case ReaderFieldType.Entity:
@@ -1985,6 +1984,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     }
                     break;
             }
+            index++;
         }
     }
     public bool IsNeedAlias(ReaderField readerField, bool isNeedWrap)

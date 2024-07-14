@@ -41,7 +41,7 @@ public class SqlServerCreate<TEntity> : Create<TEntity>, ISqlServerCreate<TEntit
     #endregion
 
     #region WithBulkCopy
-    public ISqlServerCreated<TEntity> WithBulkCopy(IEnumerable<TEntity> insertObjs, int? timeoutSeconds = null)
+    public ISqlServerCreated<TEntity> WithBulkCopy(IEnumerable insertObjs, int? timeoutSeconds = null)
     {
         if (insertObjs == null)
             throw new ArgumentNullException(nameof(insertObjs));

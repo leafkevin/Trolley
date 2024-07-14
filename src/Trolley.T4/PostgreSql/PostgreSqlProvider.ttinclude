@@ -107,7 +107,7 @@ class PostgreSqlProvider : DbHelper
                 DefaultValue = this.ToValue<string>(reader[5]),
                 IsPrimaryKey = this.ToValue<bool>(reader[6]),
                 IsIdentity = this.ToValue<bool>(reader[7]),
-                IsNullable = this.ToValue<bool>(reader[8]),
+                IsNullable = !this.ToValue<bool>(reader[8]),
                 Position = this.ToValue<int>(reader[9])
             });
         }

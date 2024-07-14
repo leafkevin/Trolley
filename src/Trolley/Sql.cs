@@ -94,13 +94,7 @@ public static class Sql
     {
         throw new NotImplementedException();
     }
-    /// <summary>
-    /// 使用子查询构建Exists查询条件
-    /// </summary>
-    /// <param name="subQuery"></param>
-    /// <returns></returns>
-    /// <exception cref="NotImplementedException"></exception>
-    public static bool Exists(Func<IFromQuery, IQueryAnonymousObject> subQuery)
+    public static bool Exists<TTarget>(Func<IFromQuery, IQuery<TTarget>> subQuery)
     {
         throw new NotImplementedException();
     }

@@ -372,7 +372,6 @@ partial class SqlServerProvider
                     {
                         var leftSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
-                        visitor.ChangeSameType(leftSegment, rightSegment);
 
                         var leftArgument = visitor.GetQuotedValue(leftSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
@@ -598,7 +597,7 @@ partial class SqlServerProvider
                     {
                         var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        visitor.ChangeSameType(targetSegment, rightSegment);
+
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
                         return targetSegment.Merge(rightSegment, $"CASE WHEN {targetArgument}={rightArgument} THEN 1 ELSE 0 END", false, false, true);
@@ -610,7 +609,7 @@ partial class SqlServerProvider
                     {
                         var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        visitor.ChangeSameType(targetSegment, rightSegment);
+
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
                         return targetSegment.Merge(rightSegment, $"CASE WHEN {targetArgument}={rightArgument} THEN 0 WHEN {targetArgument}>{rightArgument} THEN 1 ELSE -1 END", false, false, true);
@@ -624,13 +623,9 @@ partial class SqlServerProvider
                         {
                             var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                             if (targetSegment.IsConstant || targetSegment.IsVariable)
-                            {
-                                targetSegment.ExpectType = methodInfo.ReturnType;
                                 return targetSegment.Change(targetSegment.ToString());
-                            }
 
                             var targetArgument = visitor.GetQuotedValue(targetSegment);
-                            targetSegment.ExpectType = methodInfo.ReturnType;
                             return targetSegment.Change($"CONVERT(VARCHAR,{targetArgument},121)", false, false, false, true);
                         });
                         result = true;
@@ -644,14 +639,10 @@ partial class SqlServerProvider
 
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
                                 && (formatSegment.IsConstant || formatSegment.IsVariable))
-                            {
-                                targetSegment.ExpectType = methodInfo.ReturnType;
                                 return targetSegment.Merge(formatSegment, ((DateTime)targetSegment.Value).ToString(formatSegment.ToString()));
-                            }
 
                             var targetArgument = visitor.GetQuotedValue(targetSegment);
                             var formatArgument = visitor.GetQuotedValue(formatSegment);
-                            targetSegment.ExpectType = methodInfo.ReturnType;
                             if (formatSegment.IsConstant || formatSegment.IsVariable)
                                 return targetSegment.Merge(formatSegment, $"FORMAT({targetArgument},{formatArgument})", false, false, false, true);
 

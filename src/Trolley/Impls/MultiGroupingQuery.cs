@@ -20,15 +20,7 @@ public class MultiGroupingQueryBase<TGrouping> : IMultiGroupingQueryBase<TGroupi
     }
     #endregion
 
-    #region Select/SelectAnonymous
-    public IQueryAnonymousObject SelectAnonymous(string fields = "*")
-    {
-        if (string.IsNullOrEmpty(fields))
-            throw new ArgumentNullException(nameof(fields));
-
-        this.Visitor.Select(fields);
-        return new QueryAnonymousObject(this.Visitor);
-    }
+    #region Select
     public IMultiQuery<TGrouping> Select()
     {
         this.Visitor.SelectGrouping();

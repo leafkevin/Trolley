@@ -210,7 +210,7 @@ partial class MySqlProvider
                     {
                         var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        visitor.ChangeSameType(targetSegment, rightSegment);
+
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
                         return targetSegment.Merge(rightSegment, $"CASE WHEN ({targetArgument}={rightArgument} THEN 0 WHEN ({targetArgument}>{rightArgument})=1 THEN 1 ELSE -1 END", false, false, true);
@@ -222,7 +222,7 @@ partial class MySqlProvider
                     {
                         var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        visitor.ChangeSameType(targetSegment, rightSegment);
+
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
                         return targetSegment.Merge(rightSegment, $"{targetArgument}={rightArgument}", false, false, true);
@@ -234,11 +234,8 @@ partial class MySqlProvider
                     {
                         var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                         if (targetSegment.IsConstant && targetSegment.IsVariable)
-                        {
-                            targetSegment.ExpectType = methodInfo.ReturnType;
                             return targetSegment.Change(((TimeOnly)targetSegment.Value).ToTimeSpan());
-                        }
-                        targetSegment.ExpectType = methodInfo.ReturnType;
+
                         return targetSegment.Change(visitor.GetQuotedValue(targetSegment), false, false, false, true);
                     });
                     result = true;

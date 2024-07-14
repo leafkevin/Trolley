@@ -269,15 +269,23 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
             this.DbContext.Open();
             isOpened = true;
         }
-        var entityMapper = this.Visitor.Tables[0].Mapper;
-        tableName ??= entityMapper.TableName;
-        var builder = new StringBuilder($"COPY {this.OrmProvider.GetTableName(tableName)}(");
-
-        for (int i = 0; i < entityMapper.MemberMaps.Count; i++)
+        Type insertObjType = null;
+        foreach (var insertObj in insertObjs)
         {
-            if (i > 0) builder.Append(',');
-            var memberMapper = entityMapper.MemberMaps[i];
-            builder.Append(this.OrmProvider.GetFieldName(memberMapper.FieldName));
+            insertObjType = insertObj.GetType();
+            break;
+        }
+        var fromMapper = this.Visitor.Tables[0].Mapper;
+        var memberMappers = this.Visitor.GetRefMemberMappers(insertObjType, fromMapper);
+        int index = 0;
+        tableName ??= fromMapper.TableName;
+        var builder = new StringBuilder($"COPY {this.OrmProvider.GetTableName(tableName)}(");
+        foreach (var memberMapper in memberMappers)
+        {
+            if (index > 0) builder.Append(',');
+            var refMemberMapper = memberMapper.RefMemberMapper;
+            builder.Append(this.OrmProvider.GetFieldName(refMemberMapper.FieldName));
+            index++;
         }
         builder.Append(") FROM STDIN BINARY");
         var connection = this.DbContext.Connection as NpgsqlConnection;
@@ -286,8 +294,12 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
         foreach (var insertObj in insertObjs)
         {
             writer.StartRow();
-            foreach (var memberMapper in entityMapper.MemberMaps)
-                writer.Write(insertObj, (NpgsqlDbType)memberMapper.NativeDbType);
+            foreach (var memberMapper in memberMappers)
+            {
+                var refMemberMapper = memberMapper.RefMemberMapper;
+                object fieldValue = memberMapper.ValueGetter.Invoke(insertObj);
+                writer.Write(fieldValue, (NpgsqlDbType)refMemberMapper.NativeDbType);
+            }
             result++;
         }
         writer.Complete();
@@ -302,15 +314,23 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
             await this.DbContext.OpenAsync(cancellationToken);
             isOpened = true;
         }
-        var entityMapper = this.Visitor.Tables[0].Mapper;
-        tableName ??= entityMapper.TableName;
-        var builder = new StringBuilder($"COPY {this.OrmProvider.GetTableName(tableName)}(");
-
-        for (int i = 0; i < entityMapper.MemberMaps.Count; i++)
+        Type insertObjType = null;
+        foreach (var insertObj in insertObjs)
         {
-            if (i > 0) builder.Append(',');
-            var memberMapper = entityMapper.MemberMaps[i];
-            builder.Append(this.OrmProvider.GetFieldName(memberMapper.FieldName));
+            insertObjType = insertObj.GetType();
+            break;
+        }
+        var fromMapper = this.Visitor.Tables[0].Mapper;
+        var memberMappers = this.Visitor.GetRefMemberMappers(insertObjType, fromMapper);
+        int index = 0;
+        tableName ??= fromMapper.TableName;
+        var builder = new StringBuilder($"COPY {this.OrmProvider.GetTableName(tableName)}(");
+        foreach (var memberMapper in memberMappers)
+        {
+            if (index > 0) builder.Append(',');
+            var refMemberMapper = memberMapper.RefMemberMapper;
+            builder.Append(this.OrmProvider.GetFieldName(refMemberMapper.FieldName));
+            index++;
         }
         builder.Append(") FROM STDIN BINARY");
         var connection = this.DbContext.Connection as NpgsqlConnection;
@@ -319,8 +339,12 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
         foreach (var insertObj in insertObjs)
         {
             await writer.StartRowAsync(cancellationToken);
-            foreach (var memberMapper in entityMapper.MemberMaps)
-                await writer.WriteAsync(insertObj, (NpgsqlDbType)memberMapper.NativeDbType, cancellationToken);
+            foreach (var memberMapper in memberMappers)
+            {
+                var refMemberMapper = memberMapper.RefMemberMapper;
+                object fieldValue = memberMapper.ValueGetter.Invoke(insertObj);
+                await writer.WriteAsync(fieldValue, (NpgsqlDbType)refMemberMapper.NativeDbType, cancellationToken);
+            }
             result++;
         }
         await writer.CompleteAsync(cancellationToken);

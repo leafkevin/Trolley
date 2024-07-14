@@ -79,6 +79,19 @@ public class ExpressionUnitTest : UnitTestBase
         Assert.True(dbParameters[3].Value.ToString() == hasValue);
         Assert.True(dbParameters[4].Value.ToString() == enabled);
         Assert.True(dbParameters[5].Value.ToString() == hasValue);
+
+        var result = repository.From<User>()
+            .Where(f => (f.IsEnabled ? enabled : "Disabled") == enabled
+                && (f.GuidField.HasValue ? hasValue : "NoValue") == hasValue)
+            .Select(f => new
+            {
+                IsEnabled = f.IsEnabled ? enabled : "Disabled",
+                GuidField = f.GuidField.HasValue ? hasValue : "NoValue",
+                IsOld = f.Age > 35 ? true : false,
+                IsNeedParameter = f.Name.Contains("kevin") ? "Yes" : "No",
+            })
+            .ToList();
+        Assert.NotNull(result);
     }
     [Fact]
     public async void WhereCoalesceConditional()
@@ -144,6 +157,17 @@ public class ExpressionUnitTest : UnitTestBase
         Assert.True((string)dbParameters[3].Value == strCollection[2]);
         Assert.True((string)dbParameters[4].Value == dict["2"]);
         Assert.True((string)dbParameters[5].Value == dict["3"]);
+
+        var result = repository.From<User>()
+            .Where(f => (f.Name.Contains(dict["1"]) || f.IsEnabled.ToString() == strCollection[0]))
+            .Select(f => new
+            {
+                False = strArray[2],
+                Unknown = strCollection[2],
+                MyLove = dict["2"] + " and " + dict["3"]
+            })
+            .ToList();
+        Assert.NotNull(result);
     }
 }
 

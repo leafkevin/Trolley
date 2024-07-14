@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
-using System.Reflection;
 
 namespace Trolley;
 
@@ -42,16 +41,16 @@ public interface ISqlVisitor : IDisposable
     SqlSegment Evaluate(SqlSegment sqlSegment);
     object Evaluate(Expression expr);
     T Evaluate<T>(Expression expr);
-    string GetQuotedValue(SqlSegment sqlSegment);
+    string GetQuotedValue(SqlSegment sqlSegment, Type expectType = null, object nativeDbType = null, ITypeHandler typeHandler = null);
     string GetQuotedValue(object elementValue, SqlSegment arraySegment, SqlSegment elementSegmente);
     SqlSegment VisitSqlMethodCall(SqlSegment sqlSegment);
     bool IsStringConcatOperator(SqlSegment sqlSegment, out SqlSegment result);
-    string VisitConditionExpr(Expression conditionExpr,out OperationType operationType);
+    string VisitConditionExpr(Expression conditionExpr, out OperationType operationType);
     List<Expression> ConvertFormatToConcatList(Expression[] argsExprs);
     List<Expression> SplitConcatList(Expression[] argsExprs);
     string VisitFromQuery(LambdaExpression lambdaExpr);
-    bool ChangeSameType(SqlSegment leftSegment, SqlSegment rightSegment, bool isForce = false);
     DataTable ToDataTable(Type entityType, IEnumerable entities, EntityMap fromMapper, string tableName = null);
-    List<(MemberInfo MemberInfo, MemberMap RefMemberMapper)> GetRefMemberMappers(Type entityType, EntityMap refEntityMapper);
+    List<(MemberMap RefMemberMapper, Func<object, object> ValueGetter)> GetRefMemberMappers(Type entityType, EntityMap refEntityMapper, bool isUpdate = false);
     SqlSegment BuildDeferredSqlSegment(MethodCallExpression methodCallExpr, SqlSegment sqlSegment);
+    SqlSegment ToEnumString(SqlSegment sqlSegment);
 }

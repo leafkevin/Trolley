@@ -112,58 +112,58 @@ public class UnitTest6 : UnitTestBase
             .ExecuteAsync();
         repository.Create<User>(new[]
         {
-                new User
-                {
-                    Id = 101,
-                    TenantId ="104",
-                    Name = "leafkevin",
-                    Age = 25,
-                    CompanyId = 1,
-                    Gender = Gender.Male,
-                    GuidField = Guid.NewGuid(),
-                    SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
-                    SourceType = UserSourceType.Douyin,
-                    IsEnabled = true,
-                    CreatedAt = DateTime.Parse("2023-03-10 06:07:08"),
-                    CreatedBy = 1,
-                    UpdatedAt = DateTime.Parse("2023-03-15 16:27:38"),
-                    UpdatedBy = 1
-                },
-                new User
-                {
-                    Id = 102,
-                    TenantId ="105",
-                    Name = "cindy",
-                    Age = 21,
-                    CompanyId = 2,
-                    Gender = Gender.Female,
-                    GuidField= Guid.NewGuid(),
-                    SomeTimes= TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
-                    SourceType = UserSourceType.Taobao,
-                    IsEnabled = true,
-                    CreatedAt = DateTime.Parse($"{DateTime.Today.AddDays(-1):yyyy-MM-dd} 06:07:08"),
-                    CreatedBy = 1,
-                    UpdatedAt = DateTime.Now,
-                    UpdatedBy = 1
-                },
-                new User
-                {
-                    Id = 103,
-                    TenantId ="105",
-                    Name = "xiyuan",
-                    Age = 17,
-                    CompanyId = 3,
-                    Gender = Gender.Female,
-                    GuidField= Guid.NewGuid(),
-                    SomeTimes= TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
-                    SourceType = UserSourceType.Taobao,
-                    IsEnabled = true,
-                    CreatedAt = DateTime.Parse($"{DateTime.Today.AddDays(-1):yyyy-MM-dd} 06:07:08"),
-                    CreatedBy = 1,
-                    UpdatedAt = DateTime.Now,
-                    UpdatedBy = 1
-                }
-            });
+            new User
+            {
+                Id = 101,
+                TenantId ="104",
+                Name = "leafkevin",
+                Age = 25,
+                CompanyId = 1,
+                Gender = Gender.Male,
+                GuidField = Guid.NewGuid(),
+                SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
+                SourceType = UserSourceType.Douyin,
+                IsEnabled = true,
+                CreatedAt = DateTime.Parse("2023-03-10 06:07:08"),
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Parse("2023-03-15 16:27:38"),
+                UpdatedBy = 1
+            },
+            new User
+            {
+                Id = 102,
+                TenantId ="105",
+                Name = "cindy",
+                Age = 21,
+                CompanyId = 2,
+                Gender = Gender.Female,
+                GuidField= Guid.NewGuid(),
+                SomeTimes= TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+                SourceType = UserSourceType.Taobao,
+                IsEnabled = true,
+                CreatedAt = DateTime.Parse($"{DateTime.Today.AddDays(-1):yyyy-MM-dd} 06:07:08"),
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            },
+            new User
+            {
+                Id = 103,
+                TenantId ="105",
+                Name = "xiyuan",
+                Age = 17,
+                CompanyId = 3,
+                Gender = Gender.Female,
+                GuidField= Guid.NewGuid(),
+                SomeTimes= TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+                SourceType = UserSourceType.Taobao,
+                IsEnabled = true,
+                CreatedAt = DateTime.Parse($"{DateTime.Today.AddDays(-1):yyyy-MM-dd} 06:07:08"),
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            }
+        });
 
         var createdAt = DateTime.Parse("2024-05-24");
         var orders = new List<Order>();
@@ -404,22 +404,22 @@ public class UnitTest6 : UnitTestBase
         repository.Create<User>()
             .UseTableBy("104")
             .WithBulk(new[]{new
-                {
-                    Id = 101,
-                    TenantId = "104",
-                    Name = "leafkevin",
-                    Age = 25,
-                    CompanyId = 1,
-                    Gender = Gender.Male,
-                    GuidField = Guid.NewGuid(),
-                    SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
-                    SourceType = UserSourceType.Douyin,
-                    IsEnabled = true,
-                    CreatedAt = DateTime.Parse("2023-03-10 06:07:08"),
-                    CreatedBy = 1,
-                    UpdatedAt = DateTime.Parse("2023-03-15 16:27:38"),
-                    UpdatedBy = 1
-                }})
+            {
+                Id = 101,
+                TenantId = "104",
+                Name = "leafkevin",
+                Age = 25,
+                CompanyId = 1,
+                Gender = Gender.Male,
+                GuidField = Guid.NewGuid(),
+                SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
+                SourceType = UserSourceType.Douyin,
+                IsEnabled = true,
+                CreatedAt = DateTime.Parse("2023-03-10 06:07:08"),
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Parse("2023-03-15 16:27:38"),
+                UpdatedBy = 1
+            }})
             .Execute();
         var result = repository.From<User>()
             .UseTableBy("104")
@@ -457,41 +457,41 @@ public class UnitTest6 : UnitTestBase
 
         await repository.CreateAsync<User>(new[]
         {
-                new
-                {
-                    Id = 101,
-                    TenantId ="104",
-                    Name = "leafkevin",
-                    Age = 25,
-                    CompanyId = 1,
-                    Gender = Gender.Male,
-                    GuidField = Guid.NewGuid(),
-                    SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
-                    SourceType = UserSourceType.Douyin,
-                    IsEnabled = true,
-                    CreatedAt = DateTime.Parse("2023-03-10 06:07:08"),
-                    CreatedBy = 1,
-                    UpdatedAt = DateTime.Parse("2023-03-15 16:27:38"),
-                    UpdatedBy = 1
-                },
-                new
-                {
-                    Id = 103,
-                    TenantId ="105",
-                    Name = "xiyuan",
-                    Age = 17,
-                    CompanyId = 3,
-                    Gender = Gender.Female,
-                    GuidField= Guid.NewGuid(),
-                    SomeTimes= TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
-                    SourceType = UserSourceType.Taobao,
-                    IsEnabled = true,
-                    CreatedAt = DateTime.Parse($"{DateTime.Today.AddDays(-1):yyyy-MM-dd} 06:07:08"),
-                    CreatedBy = 1,
-                    UpdatedAt = DateTime.Now,
-                    UpdatedBy = 1
-                }
-            });
+            new
+            {
+                Id = 101,
+                TenantId ="104",
+                Name = "leafkevin",
+                Age = 25,
+                CompanyId = 1,
+                Gender = Gender.Male,
+                GuidField = Guid.NewGuid(),
+                SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
+                SourceType = UserSourceType.Douyin,
+                IsEnabled = true,
+                CreatedAt = DateTime.Parse("2023-03-10 06:07:08"),
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Parse("2023-03-15 16:27:38"),
+                UpdatedBy = 1
+            },
+            new
+            {
+                Id = 103,
+                TenantId ="105",
+                Name = "xiyuan",
+                Age = 17,
+                CompanyId = 3,
+                Gender = Gender.Female,
+                GuidField= Guid.NewGuid(),
+                SomeTimes= TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+                SourceType = UserSourceType.Taobao,
+                IsEnabled = true,
+                CreatedAt = DateTime.Parse($"{DateTime.Today.AddDays(-1):yyyy-MM-dd} 06:07:08"),
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            }
+        });
         var result = await repository.From<User>()
             .UseTableBy("104")
             .Where(f => f.Id == 101)
@@ -524,58 +524,58 @@ public class UnitTest6 : UnitTestBase
             .ExecuteAsync();
         repository.Create<User>(new[]
         {
-                new User
-                {
-                    Id = 101,
-                    TenantId ="104",
-                    Name = "leafkevin",
-                    Age = 25,
-                    CompanyId = 1,
-                    Gender = Gender.Male,
-                    GuidField = Guid.NewGuid(),
-                    SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
-                    SourceType = UserSourceType.Douyin,
-                    IsEnabled = true,
-                    CreatedAt = DateTime.Parse("2023-03-10 06:07:08"),
-                    CreatedBy = 1,
-                    UpdatedAt = DateTime.Parse("2023-03-15 16:27:38"),
-                    UpdatedBy = 1
-                },
-                new User
-                {
-                    Id = 102,
-                    TenantId ="105",
-                    Name = "cindy",
-                    Age = 21,
-                    CompanyId = 2,
-                    Gender = Gender.Female,
-                    GuidField= Guid.NewGuid(),
-                    SomeTimes= TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
-                    SourceType = UserSourceType.Taobao,
-                    IsEnabled = true,
-                    CreatedAt = DateTime.Parse($"{DateTime.Today.AddDays(-1):yyyy-MM-dd} 06:07:08"),
-                    CreatedBy = 1,
-                    UpdatedAt = DateTime.Now,
-                    UpdatedBy = 1
-                },
-                new User
-                {
-                    Id = 103,
-                    TenantId ="105",
-                    Name = "xiyuan",
-                    Age = 17,
-                    CompanyId = 3,
-                    Gender = Gender.Female,
-                    GuidField= Guid.NewGuid(),
-                    SomeTimes= TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
-                    SourceType = UserSourceType.Taobao,
-                    IsEnabled = true,
-                    CreatedAt = DateTime.Parse($"{DateTime.Today.AddDays(-1):yyyy-MM-dd} 06:07:08"),
-                    CreatedBy = 1,
-                    UpdatedAt = DateTime.Now,
-                    UpdatedBy = 1
-                }
-            });
+            new User
+            {
+                Id = 101,
+                TenantId ="104",
+                Name = "leafkevin",
+                Age = 25,
+                CompanyId = 1,
+                Gender = Gender.Male,
+                GuidField = Guid.NewGuid(),
+                SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
+                SourceType = UserSourceType.Douyin,
+                IsEnabled = true,
+                CreatedAt = DateTime.Parse("2023-03-10 06:07:08"),
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Parse("2023-03-15 16:27:38"),
+                UpdatedBy = 1
+            },
+            new User
+            {
+                Id = 102,
+                TenantId ="105",
+                Name = "cindy",
+                Age = 21,
+                CompanyId = 2,
+                Gender = Gender.Female,
+                GuidField= Guid.NewGuid(),
+                SomeTimes= TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+                SourceType = UserSourceType.Taobao,
+                IsEnabled = true,
+                CreatedAt = DateTime.Parse($"{DateTime.Today.AddDays(-1):yyyy-MM-dd} 06:07:08"),
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            },
+            new User
+            {
+                Id = 103,
+                TenantId ="105",
+                Name = "xiyuan",
+                Age = 17,
+                CompanyId = 3,
+                Gender = Gender.Female,
+                GuidField= Guid.NewGuid(),
+                SomeTimes= TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+                SourceType = UserSourceType.Taobao,
+                IsEnabled = true,
+                CreatedAt = DateTime.Parse($"{DateTime.Today.AddDays(-1):yyyy-MM-dd} 06:07:08"),
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            }
+        });
 
         var result = await repository.From<User>()
             .UseTableBy("104")
@@ -668,9 +668,9 @@ public class UnitTest6 : UnitTestBase
            .Where(f => removeIds.Contains(f.OrderId))
            .ToMultipleCommand();
         await repository.MultipleExecuteAsync(new List<MultipleCommand>
-            {
-                deleteOrders, deleteOrderDetails
-            });
+        {
+            deleteOrders, deleteOrderDetails
+        });
         var count1 = await repository.Create<Order>()
             .UseTableBy("104", createdAt)
             .WithBulkCopy(orders)
@@ -1230,7 +1230,7 @@ public class UnitTest6 : UnitTestBase
             .Where(f => orderIds.Contains(f.Id))
             .ToSql(out var dbParameters);
         Assert.True(sql == "UPDATE [sys_order_104_202405] SET [TotalAmount]=@TotalAmount WHERE [Id] IN (@p1,@p2,@p3,@p4)");
-        Assert.True((int)dbParameters[0].Value == 400);
+        Assert.True((double)dbParameters[0].Value == 400);
         Assert.True(((SqlParameter)dbParameters[0]).SqlDbType == SqlDbType.Float);
         Assert.True((string)dbParameters[1].Value == orderIds[0]);
         Assert.True((string)dbParameters[2].Value == orderIds[1]);
@@ -1256,7 +1256,7 @@ public class UnitTest6 : UnitTestBase
             .Where(f => orderIds.Contains(f.Id))
             .ToSql(out var dbParameters);
         Assert.True(sql == "UPDATE [sys_order_104_202405] SET [TotalAmount]=@TotalAmount WHERE [Id] IN (@p1,@p2,@p3,@p4);UPDATE [sys_order_105_202405] SET [TotalAmount]=@TotalAmount WHERE [Id] IN (@p1,@p2,@p3,@p4)");
-        Assert.True((int)dbParameters[0].Value == 400);
+        Assert.True((double)dbParameters[0].Value == 400);
         Assert.True(((SqlParameter)dbParameters[0]).SqlDbType == SqlDbType.Float);
         Assert.True((string)dbParameters[1].Value == orderIds[0]);
         Assert.True((string)dbParameters[2].Value == orderIds[1]);
@@ -1295,7 +1295,7 @@ public class UnitTest6 : UnitTestBase
             .Where(f => orderIds.Contains(f.Id))
             .ToSql(out var dbParameters);
         Assert.True(sql == "SELECT name FROM sys.sysobjects WHERE xtype='U' AND name LIKE 'sys_order%';UPDATE [sys_order_104_202405] SET [TotalAmount]=@TotalAmount WHERE [Id] IN (@p1,@p2,@p3,@p4);UPDATE [sys_order_105_202405] SET [TotalAmount]=@TotalAmount WHERE [Id] IN (@p1,@p2,@p3,@p4)");
-        Assert.True((int)dbParameters[0].Value == 400);
+        Assert.True((double)dbParameters[0].Value == 400);
         Assert.True(((SqlParameter)dbParameters[0]).SqlDbType == SqlDbType.Float);
         Assert.True((string)dbParameters[1].Value == orderIds[0]);
         Assert.True((string)dbParameters[2].Value == orderIds[1]);
@@ -1391,6 +1391,7 @@ public class UnitTest6 : UnitTestBase
             .Select(f => new
             {
                 f.Id,
+                f.TenantId,
                 TotalAmount = f.TotalAmount + 50,
                 ProductCount = 3,
                 UpdatedAt = DateTime.Now
@@ -1427,4 +1428,3 @@ public class UnitTest6 : UnitTestBase
         }
     }
 }
-

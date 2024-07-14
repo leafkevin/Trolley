@@ -104,23 +104,24 @@ public class DateTimeUnitTest : UnitTestBase
             .ToSql(out _);
         Assert.True(sql == "SELECT DATE_ADD(a.`CreatedAt`,INTERVAL 365 DAY) AS `Add`,DATE_ADD(a.`CreatedAt`,INTERVAL 30 DAY) AS `AddDays`,DATE_ADD(a.`CreatedAt`,INTERVAL 300*1000 MICROSECOND) AS `AddMilliseconds`,DATE_SUB(a.`CreatedAt`,INTERVAL 365 DAY) AS `Subtract1`,DATE_SUB(NOW(),INTERVAL 365 DAY) AS `Subtract2`,TIMEDIFF(a.`UpdatedAt`,a.`CreatedAt`) AS `Subtract3`,DAYOFMONTH(LAST_DAY(CONCAT(YEAR(NOW()),'-',MONTH(NOW()),'-01'))) AS `DayInMonth`,(YEAR(NOW())%4=0 AND YEAR(NOW())%100<>0 OR YEAR(NOW())%400=0) AS `IsLeapYear1`,1 AS `IsLeapYear2`,CAST(DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') AS DATETIME) AS `Parse`,'2023-05-07 13:08:45.000' AS `ParseExact` FROM `sys_user` a WHERE a.`UpdatedAt`>SUBTIME(DATE_SUB(NOW(),INTERVAL 365 DAY),'00:25:00.000000')");
 
+        var now = DateTime.Now;
         var result = await repository.From<User>()
             .Where(f => f.Id == 1)
             .Select(f => new
             {
                 f.CreatedAt,
                 f.UpdatedAt,
-                DateTime.Now,
+                Now = now,
                 Add = f.CreatedAt.Add(TimeSpan.FromDays(365)),
                 AddDays = f.CreatedAt.AddDays(30),
                 AddMilliseconds = f.CreatedAt.AddMilliseconds(300),
                 Subtract1 = f.CreatedAt.Subtract(TimeSpan.FromDays(365)),
-                Subtract2 = DateTime.Now - TimeSpan.FromDays(365),
+                Subtract2 = now - TimeSpan.FromDays(365),
                 Subtract3 = f.UpdatedAt.Subtract(f.CreatedAt),
-                DayInMonth = DateTime.DaysInMonth(DateTime.Now.Year, DateTime.Now.Month),
-                IsLeapYear1 = DateTime.IsLeapYear(DateTime.Now.Year),
+                DayInMonth = DateTime.DaysInMonth(now.Year, now.Month),
+                IsLeapYear1 = DateTime.IsLeapYear(now.Year),
                 IsLeapYear2 = DateTime.IsLeapYear(2020),
-                Parse = DateTime.Parse(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")),
+                Parse = DateTime.Parse(now.ToString("yyyy-MM-dd HH:mm:ss")),
                 ParseExact = DateTime.ParseExact("05-07/2023 13-08-45", "MM-dd/yyyy HH-mm-ss", CultureInfo.InvariantCulture)
             })
             .FirstAsync();
@@ -130,10 +131,10 @@ public class DateTimeUnitTest : UnitTestBase
         Assert.True(result.Subtract1 == result.CreatedAt.Subtract(TimeSpan.FromDays(365)));
         Assert.True(result.Subtract2 == result.Now - TimeSpan.FromDays(365));
         Assert.True(result.Subtract3 == result.UpdatedAt - result.CreatedAt);
-        Assert.True(result.DayInMonth == DateTime.DaysInMonth(DateTime.Now.Year, DateTime.Now.Month));
-        Assert.True(result.IsLeapYear1 == DateTime.IsLeapYear(DateTime.Now.Year));
+        Assert.True(result.DayInMonth == DateTime.DaysInMonth(now.Year, now.Month));
+        Assert.True(result.IsLeapYear1 == DateTime.IsLeapYear(now.Year));
         Assert.True(result.IsLeapYear2 == DateTime.IsLeapYear(2020));
-        Assert.True(result.Parse == DateTime.Parse(result.Now.ToString("yyyy-MM-dd HH:mm:ss")));
+        Assert.True(result.Parse == DateTime.Parse(now.ToString("yyyy-MM-dd HH:mm:ss")));
         Assert.True(result.ParseExact == DateTime.ParseExact("05-07/2023 13-08-45", "MM-dd/yyyy HH-mm-ss", CultureInfo.InvariantCulture));
     }
     [Fact]
@@ -156,6 +157,8 @@ public class DateTimeUnitTest : UnitTestBase
             })
             .ToSql(out _);
         Assert.True(sql == "SELECT (CASE WHEN a.`CreatedAt`='2023-03-03 00:00:00.000' THEN 0 WHEN a.`CreatedAt`>'2023-03-03 00:00:00.000' THEN 1 ELSE -1 END) AS `CompareTo`,DATE_SUB(a.`CreatedAt`,INTERVAL 365 DAY) AS `OneYearsAgo1`,TIMEDIFF(NOW(),'2023-03-20 00:00:00.000') AS `OneYearsAgo2`,DAYOFMONTH(LAST_DAY(CONCAT(YEAR(NOW()),'-',MONTH(NOW()),'-01'))) AS `DayInMonth`,(YEAR(NOW())%4=0 AND YEAR(NOW())%100<>0 OR YEAR(NOW())%400=0) AS `IsLeapYear1`,1 AS `IsLeapYear2`,CAST(DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') AS DATETIME) AS `Parse`,'2023-05-07 13:08:45.000' AS `ParseExact` FROM `sys_user` a WHERE (CASE WHEN a.`UpdatedAt`='2023-03-20 00:00:00.000' THEN 0 WHEN a.`UpdatedAt`>'2023-03-20 00:00:00.000' THEN 1 ELSE -1 END)>0");
+		
+		var now = DateTime.Now;
         var result = await repository.From<User>()
             .Where(f => f.Id == 1)
             .Select(f => new
@@ -168,10 +171,10 @@ public class DateTimeUnitTest : UnitTestBase
                 OneYearsAgo1 = f.CreatedAt.Subtract(TimeSpan.FromDays(365)),
                 OneYearsAgo2 = f.CreatedAt - DateTime.Parse("2023-03-20"),
                 Subtract = f.CreatedAt.Subtract(DateTime.Parse("2023-03-01")),
-                DayInMonth = DateTime.DaysInMonth(DateTime.Now.Year, DateTime.Now.Month),
-                IsLeapYear1 = DateTime.IsLeapYear(DateTime.Now.Year),
+                DayInMonth = DateTime.DaysInMonth(now.Year, now.Month),
+                IsLeapYear1 = DateTime.IsLeapYear(now.Year),
                 IsLeapYear2 = DateTime.IsLeapYear(2020),
-                Parse = DateTime.Parse(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")),
+                Parse = DateTime.Parse(now.ToString("yyyy-MM-dd HH:mm:ss")),
                 ParseExact = DateTime.ParseExact("05-07/2023 13-08-45", "MM-dd/yyyy HH-mm-ss", CultureInfo.InvariantCulture)
             })
             .FirstAsync();
@@ -180,10 +183,10 @@ public class DateTimeUnitTest : UnitTestBase
         Assert.True(result.OneYearsAgo1 == result.CreatedAt.Subtract(TimeSpan.FromDays(365)));
         Assert.True(result.OneYearsAgo2 == result.CreatedAt - DateTime.Parse("2023-03-20"));
         Assert.True(result.Subtract == result.CreatedAt.Subtract(DateTime.Parse("2023-03-01")));
-        Assert.True(result.DayInMonth == DateTime.DaysInMonth(DateTime.Now.Year, DateTime.Now.Month));
-        Assert.True(result.IsLeapYear1 == DateTime.IsLeapYear(DateTime.Now.Year));
+        Assert.True(result.DayInMonth == DateTime.DaysInMonth(now.Year, now.Month));
+        Assert.True(result.IsLeapYear1 == DateTime.IsLeapYear(now.Year));
         Assert.True(result.IsLeapYear2 == DateTime.IsLeapYear(2020));
-        Assert.True(result.Parse == DateTime.Parse(result.Now.ToString("yyyy-MM-dd HH:mm:ss")));
+        Assert.True(result.Parse == DateTime.Parse(now.ToString("yyyy-MM-dd HH:mm:ss")));
         Assert.True(result.ParseExact == DateTime.ParseExact("05-07/2023 13-08-45", "MM-dd/yyyy HH-mm-ss", CultureInfo.InvariantCulture));
     }
     [Fact]
