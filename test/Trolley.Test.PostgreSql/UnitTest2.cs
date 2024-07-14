@@ -15,7 +15,7 @@ public class UnitTest2 : UnitTestBase
         services.AddSingleton(f =>
         {
             var builder = new OrmDbFactoryBuilder()
-            .Register<PostgreSqlProvider>("fengling", "Host=localhost;Database=fengling;Username=postgres;Password=123456;SearchPath=public", false, "public")
+            .Register<PostgreSqlProvider>("fengling", "Host=localhost;Database=fengling;Username=postgres;Password=123456;SearchPath=public", true, "public")
             .Configure<PostgreSqlProvider, ModelConfiguration>();
             return builder.Build();
         });
@@ -565,6 +565,7 @@ SELECT a.""MenuId"",a.""ParentId"",a.""Url"" FROM ""menuPageList"" a WHERE a.""P
         var result = await repository.From<Product>()
             .Include(f => f.Brand)
             .Where(f => f.ProductNo.Contains("PN-00"))
+            .OrderBy(f => f.Id)
             .ToListAsync();
 
         if (result.Count > 0)
