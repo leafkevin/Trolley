@@ -79,7 +79,7 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
         {
             if (!entityMapper.IsAutoIncrement)
                 throw new NotSupportedException($"实体{entityMapper.EntityType.FullName}表未配置自增长字段，无法返回Identity值");
-            builder.Append(this.OrmProvider.GetIdentitySql(entityMapper.EntityType));
+            builder.Append(this.OrmProvider.GetIdentitySql(null));
         }
         var sql = builder.ToString();
         builder.Clear();

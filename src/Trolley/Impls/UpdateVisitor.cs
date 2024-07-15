@@ -712,7 +712,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
         if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
         if (memberMapper.TypeHandler != null)
-            fieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, memberMapper.UnderlyingType, fieldValue);
+            fieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, fieldValue);
         else
         {
             var targetType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);
@@ -735,7 +735,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.DbParameters.Count.ToString();
             if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
             if (memberMapper.TypeHandler != null)
-                fieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, memberMapper.UnderlyingType, fieldValue);
+                fieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, fieldValue);
             else
             {
                 var targetType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);

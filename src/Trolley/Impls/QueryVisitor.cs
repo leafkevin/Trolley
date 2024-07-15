@@ -1687,7 +1687,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         sqlSegment.IsConstant = false;
         sqlSegment.IsVariable = true;
-        sqlSegment.SegmentType = memberExpr.Type;
         return sqlSegment;
     }
     public override SqlSegment VisitNew(SqlSegment sqlSegment)

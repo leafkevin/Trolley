@@ -37,7 +37,7 @@ CREATE TABLE "public"."sys_brand" (
 -- ----------------------------
 DROP TABLE IF EXISTS "public"."sys_company";
 CREATE TABLE "public"."sys_company" (
-  "Id" int4 NOT NULL,
+  "Id" SERIAL NOT NULL,
   "Name" varchar(50) NULL DEFAULT NULL,
   "Nature" varchar(50) NULL DEFAULT NULL,
   "IsEnabled" bool NULL DEFAULT NULL,

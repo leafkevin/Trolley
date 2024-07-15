@@ -157,6 +157,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
     }
     public override string CastTo(Type type, object value)
         => $"CAST({value} AS {castTos[type]})";
+    public override string GetIdentitySql(string keyField) => $" RETURNING {keyField}";
     public override string GetQuotedValue(Type expectType, object value)
     {
         if (value == null) return "NULL";

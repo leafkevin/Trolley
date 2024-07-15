@@ -132,7 +132,8 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         {
             if (!entityMapper.IsAutoIncrement)
                 throw new Exception($"实体{entityMapper.EntityType.FullName}表未配置自增长字段，无法返回Identity值");
-            valuesBuilder.Append(this.OrmProvider.GetIdentitySql(this.Tables[0].EntityType));
+            var keyFieldName = this.OrmProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName);
+            valuesBuilder.Append(this.OrmProvider.GetIdentitySql(keyFieldName));
         }
         fieldsBuilder.Append(valuesBuilder);
         valuesBuilder.Clear();
@@ -356,7 +357,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
 
         if (memberMapper.TypeHandler != null)
-            fieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, memberMapper.UnderlyingType, fieldValue);
+            fieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, fieldValue);
         else
         {
             var targetType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);

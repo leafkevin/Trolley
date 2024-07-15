@@ -51,7 +51,7 @@ public class RepositoryHelper
             methodInfo = typeof(ITypeHandler).GetMethod(nameof(ITypeHandler.ToFieldValue));
             if (fieldValueType != typeof(object))
                 fieldValueExpr = Expression.Convert(fieldValueExpr, typeof(object));
-            fieldValueExpr = Expression.Call(typeHandlerExpr, methodInfo, ormProviderExpr, Expression.Constant(memberMapper.UnderlyingType), fieldValueExpr);
+            fieldValueExpr = Expression.Call(typeHandlerExpr, methodInfo, ormProviderExpr, fieldValueExpr);
         }
         else
         {
@@ -269,7 +269,7 @@ public class RepositoryHelper
 
                 //object dbFieldValue=null;
                 //if(memberMapper.TypeHandler!=null)
-                //  dbFieldValue = memberMapper.TypeHandler.ToFieldValue(ormProvider, memberMapper.UnderlyingType, dbFieldValue);
+                //  dbFieldValue = memberMapper.TypeHandler.ToFieldValue(ormProvider, dbFieldValue);
                 //else
                 //{
                 //    var targetType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);
@@ -277,13 +277,12 @@ public class RepositoryHelper
                 //    dbFieldValue = valueGetter.Invoke(dbFieldValue);
                 //}
                 Expression nativeDbTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.NativeDbType));
-                var underlyingTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.UnderlyingType));
                 var typeHandlerExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.TypeHandler));
                 methodInfo = typeof(ITypeHandler).GetMethod(nameof(ITypeHandler.ToFieldValue));
                 Expression myFieldValueExpr = fieldValueExpr;
                 if (fieldValueExpr.Type != typeof(object))
                     myFieldValueExpr = Expression.Convert(fieldValueExpr, typeof(object));
-                var typeHandlerValueExpr = Expression.Call(typeHandlerExpr, methodInfo, ormProviderExpr, underlyingTypeExpr, myFieldValueExpr);
+                var typeHandlerValueExpr = Expression.Call(typeHandlerExpr, methodInfo, ormProviderExpr, myFieldValueExpr);
 
                 nativeDbTypeExpr = Expression.Convert(nativeDbTypeExpr, typeof(object));
 
@@ -593,7 +592,7 @@ public class RepositoryHelper
                 {
                     //object dbFieldValue=null;
                     //if(memberMapper.TypeHandler!=null)
-                    //  dbFieldValue = memberMapper.TypeHandler.ToFieldValue(ormProvider, memberMapper.UnderlyingType, dbFieldValue);
+                    //  dbFieldValue = memberMapper.TypeHandler.ToFieldValue(ormProvider, dbFieldValue);
                     //else
                     //{
                     //    var targetType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);
@@ -601,13 +600,12 @@ public class RepositoryHelper
                     //    dbFieldValue = valueGetter.Invoke(dbFieldValue);
                     //}
                     Expression nativeDbTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.NativeDbType));
-                    var underlyingTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.UnderlyingType));
                     var typeHandlerExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.TypeHandler));
                     methodInfo = typeof(ITypeHandler).GetMethod(nameof(ITypeHandler.ToFieldValue));
                     Expression myFieldValueExpr = fieldValueExpr;
                     if (fieldValueExpr.Type != typeof(object))
                         myFieldValueExpr = Expression.Convert(fieldValueExpr, typeof(object));
-                    var typeHandlerValueExpr = Expression.Call(typeHandlerExpr, methodInfo, ormProviderExpr, underlyingTypeExpr, myFieldValueExpr);
+                    var typeHandlerValueExpr = Expression.Call(typeHandlerExpr, methodInfo, ormProviderExpr, myFieldValueExpr);
 
                     nativeDbTypeExpr = Expression.Convert(nativeDbTypeExpr, typeof(object));
 
@@ -893,7 +891,8 @@ public class RepositoryHelper
                     builder.Append('(');
                     typedValuesSqlPartSetter.Invoke(dbParameters, builder, ormProvider, insertObj);
                     builder.Append(')');
-                    builder.Append(ormProvider.GetIdentitySql(entityType));
+                    var keyFieldName = ormProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName);
+                    builder.Append(ormProvider.GetIdentitySql(keyFieldName));
                 };
                 valuesSqlSetter = typedValuesSqlSetter;
             }
@@ -1088,7 +1087,7 @@ public class RepositoryHelper
 
                 //object dbFieldValue=null;
                 //if(memberMapper.TypeHandler!=null)
-                //  dbFieldValue = memberMapper.TypeHandler.ToFieldValue(ormProvider, memberMapper.UnderlyingType, dbFieldValue);
+                //  dbFieldValue = memberMapper.TypeHandler.ToFieldValue(ormProvider, dbFieldValue);
                 //else
                 //{
                 //    var targetType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);
@@ -1096,13 +1095,12 @@ public class RepositoryHelper
                 //    dbFieldValue = valueGetter.Invoke(dbFieldValue);
                 //}
                 Expression nativeDbTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.NativeDbType));
-                var underlyingTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.UnderlyingType));
                 var typeHandlerExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.TypeHandler));
                 methodInfo = typeof(ITypeHandler).GetMethod(nameof(ITypeHandler.ToFieldValue));
                 Expression myFieldValueExpr = fieldValueExpr;
                 if (fieldValueExpr.Type != typeof(object))
                     myFieldValueExpr = Expression.Convert(fieldValueExpr, typeof(object));
-                var typeHandlerValueExpr = Expression.Call(typeHandlerExpr, methodInfo, ormProviderExpr, underlyingTypeExpr, myFieldValueExpr);
+                var typeHandlerValueExpr = Expression.Call(typeHandlerExpr, methodInfo, ormProviderExpr, myFieldValueExpr);
 
                 nativeDbTypeExpr = Expression.Convert(nativeDbTypeExpr, typeof(object));
 
@@ -1356,7 +1354,7 @@ public class RepositoryHelper
                 //{
                 //  object dbFieldValue=null;
                 //  if(memberMapper.TypeHandler!=null)
-                //      dbFieldValue = memberMapper.TypeHandler.ToFieldValue(ormProvider, memberMapper.UnderlyingType, dbFieldValue);
+                //      dbFieldValue = memberMapper.TypeHandler.ToFieldValue(ormProvider, dbFieldValue);
                 //  else
                 //  {
                 //      var targetType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);
@@ -1369,7 +1367,7 @@ public class RepositoryHelper
 
                 //object dbFieldValue=null;
                 //if(memberMapper.TypeHandler!=null)
-                //  dbFieldValue = memberMapper.TypeHandler.ToFieldValue(ormProvider, memberMapper.UnderlyingType, dbFieldValue);
+                //  dbFieldValue = memberMapper.TypeHandler.ToFieldValue(ormProvider, dbFieldValue);
                 //else
                 //{
                 //    var targetType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);
@@ -1377,13 +1375,12 @@ public class RepositoryHelper
                 //    dbFieldValue = valueGetter.Invoke(dbFieldValue);
                 //}
                 Expression nativeDbTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.NativeDbType));
-                var underlyingTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.UnderlyingType));
                 var typeHandlerExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.TypeHandler));
                 methodInfo = typeof(ITypeHandler).GetMethod(nameof(ITypeHandler.ToFieldValue));
                 Expression myFieldValueExpr = fieldValueExpr;
                 if (fieldValueExpr.Type != typeof(object))
                     myFieldValueExpr = Expression.Convert(fieldValueExpr, typeof(object));
-                var typeHandlerValueExpr = Expression.Call(typeHandlerExpr, methodInfo, ormProviderExpr, underlyingTypeExpr, myFieldValueExpr);
+                var typeHandlerValueExpr = Expression.Call(typeHandlerExpr, methodInfo, ormProviderExpr, myFieldValueExpr);
 
                 nativeDbTypeExpr = Expression.Convert(nativeDbTypeExpr, typeof(object));
 
@@ -1403,8 +1400,6 @@ public class RepositoryHelper
                 var setTypeHandlerValueExpr = Expression.Assign(dbFieldValueExpr, typeHandlerValueExpr);
                 var setValueGetterValueExpr = Expression.Assign(dbFieldValueExpr, valueGetterValueExpr);
                 blockBodies.Add(Expression.IfThenElse(isNotNullExpr, setTypeHandlerValueExpr, setValueGetterValueExpr));
-
-
 
                 //dbParameters.Add(ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue);
                 methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), new Type[] { typeof(string), typeof(object), typeof(object) });

@@ -131,12 +131,6 @@ public partial class SqlServerProvider : BaseOrmProvider
         parameter.Value = value;
         return parameter;
     }
-    //public override IQueryVisitor NewQueryVisitor(IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", IDataParameterCollection dbParameters = null)
-    //    => new SqlServerQueryVisitor(this, mapProvider, isParameterized, tableAsStart, parameterPrefix, dbParameters);
-    //public override ICreateVisitor NewCreateVisitor(IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
-    //    => new SqlServerCreateVisitor(this, mapProvider, isParameterized, tableAsStart, parameterPrefix);
-    //public override IUpdateVisitor NewUpdateVisitor(IEntityMapProvider mapProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
-    //    => new SqlServerUpdateVisitor(this, mapProvider, isParameterized, tableAsStart, parameterPrefix);
     public override string GetTableName(string tableName) => "[" + tableName + "]";
     public override string GetFieldName(string fieldName) => "[" + fieldName + "]";
     public override string GetPagingTemplate(int? skip, int? limit, string orderBy = null)
@@ -170,11 +164,9 @@ public partial class SqlServerProvider : BaseOrmProvider
             return result;
         return typeof(object);
     }
-    public override string GetIdentitySql(Type entityType) => ";SELECT SCOPE_IDENTITY()";
+    public override string GetIdentitySql(string keyField) => ";SELECT SCOPE_IDENTITY()";
     public override string CastTo(Type type, object value)
         => $"CAST({value} AS {castTos[type]})";
-    //public override bool TryGetDefaultTypeHandler(Type targetType, out ITypeHandler typeHandler)
-    //    => defaultTypeHandlers.TryGetValue(targetType, out typeHandler);
     public override bool TryGetMyMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)
     {
         var methodInfo = methodCallExpr.Method;

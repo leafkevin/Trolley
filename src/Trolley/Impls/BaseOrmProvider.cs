@@ -43,7 +43,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
     public abstract object GetNativeDbType(Type type);
     public abstract Type MapDefaultType(object nativeDbType);
     public abstract string CastTo(Type type, object value);
-    public virtual string GetIdentitySql(Type entityType) => ";SELECT @@IDENTITY";
+    public virtual string GetIdentitySql(string keyField) => ";SELECT @@IDENTITY";
     public virtual string GetQuotedValue(Type expectType, object value)
     {
         if (value == null) return "NULL";
@@ -163,6 +163,18 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                             var numberValue = Convert.ChangeType(value, enumUnderlyingType);
                             return Convert.ChangeType(numberValue, fieldType);
                         };
+                    }
+                    else
+                    {
+                        if (isNullableType && isNullable)
+                        {
+                            typeHandler = value =>
+                            {
+                                if (value == null) return DBNull.Value;
+                                return Convert.ChangeType(value, enumUnderlyingType);
+                            };
+                        }
+                        else typeHandler = value => Convert.ChangeType(value, enumUnderlyingType);
                     }
                 }
                 else
@@ -481,28 +493,6 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                         };
                                     }
                                     else typeHandler = value => BitConverter.GetBytes((char)value);
-                                    break;
-                                case Type factType when factType == typeof(byte):
-                                    if (isNullableType && isNullable)
-                                    {
-                                        typeHandler = value =>
-                                        {
-                                            if (value == null) return DBNull.Value;
-                                            return BitConverter.GetBytes((byte)value);
-                                        };
-                                    }
-                                    else typeHandler = value => BitConverter.GetBytes((byte)value);
-                                    break;
-                                case Type factType when factType == typeof(sbyte):
-                                    if (isNullableType && isNullable)
-                                    {
-                                        typeHandler = value =>
-                                        {
-                                            if (value == null) return DBNull.Value;
-                                            return BitConverter.GetBytes((sbyte)value);
-                                        };
-                                    }
-                                    else typeHandler = value => BitConverter.GetBytes((sbyte)value);
                                     break;
                                 case Type factType when factType == typeof(short):
                                     if (isNullableType && isNullable)
@@ -1192,7 +1182,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                     }
                     else if (underlyingType == typeof(byte[]))
                     {
-                        var supportedTypes = new Type[] { typeof(bool), typeof(char), typeof(byte), typeof(sbyte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(float), typeof(double), typeof(Half) };
+                        var supportedTypes = new Type[] { typeof(bool), typeof(char), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(float), typeof(double), typeof(Half) };
                         if (supportedTypes.Contains(fieldType))
                         {
                             switch (fieldType)
@@ -1206,38 +1196,24 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     break;
                                 case Type factType when factType == typeof(char):
                                     typeHandler = value =>
-                                     {
-                                         if (value is DBNull) return null;
-                                         return BitConverter.GetBytes((char)value);
-                                     };
-                                    break;
-                                case Type factType when factType == typeof(byte):
-                                    typeHandler = value =>
-                                      {
-                                          if (value is DBNull) return null;
-                                          return BitConverter.GetBytes((byte)value);
-                                      };
-                                    break;
-                                case Type factType when factType == typeof(sbyte):
-                                    typeHandler = value =>
-                                      {
-                                          if (value is DBNull) return null;
-                                          return BitConverter.GetBytes((sbyte)value);
-                                      };
+                                    {
+                                        if (value is DBNull) return null;
+                                        return BitConverter.GetBytes((char)value);
+                                    };
                                     break;
                                 case Type factType when factType == typeof(short):
                                     typeHandler = value =>
-                                     {
-                                         if (value is DBNull) return null;
-                                         return BitConverter.GetBytes((short)value);
-                                     };
+                                    {
+                                        if (value is DBNull) return null;
+                                        return BitConverter.GetBytes((short)value);
+                                    };
                                     break;
                                 case Type factType when factType == typeof(ushort):
                                     typeHandler = value =>
-                                     {
-                                         if (value is DBNull) return null;
-                                         return BitConverter.GetBytes((ushort)value);
-                                     };
+                                    {
+                                        if (value is DBNull) return null;
+                                        return BitConverter.GetBytes((ushort)value);
+                                    };
                                     break;
                                 case Type factType when factType == typeof(int):
                                     typeHandler = value =>
@@ -1248,10 +1224,10 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     break;
                                 case Type factType when factType == typeof(uint):
                                     typeHandler = value =>
-                                   {
-                                       if (value is DBNull) return null;
-                                       return BitConverter.GetBytes((uint)value);
-                                   };
+                                    {
+                                        if (value is DBNull) return null;
+                                        return BitConverter.GetBytes((uint)value);
+                                    };
                                     break;
                                 case Type factType when factType == typeof(long):
                                     typeHandler = value =>
@@ -1269,10 +1245,10 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     break;
                                 case Type factType when factType == typeof(float):
                                     typeHandler = value =>
-                                     {
-                                         if (value is DBNull) return null;
-                                         return BitConverter.GetBytes((float)value);
-                                     };
+                                    {
+                                        if (value is DBNull) return null;
+                                        return BitConverter.GetBytes((float)value);
+                                    };
                                     break;
                                 case Type factType when factType == typeof(double):
                                     typeHandler = value =>
@@ -1390,6 +1366,8 @@ public abstract partial class BaseOrmProvider : IOrmProvider
             return true;
         if (memberInfo.DeclaringType == typeof(DateTime) && this.TryGetDateTimeMemberAccessSqlFormatter(memberExpr, out formatter))
             return true;
+        if (memberInfo.DeclaringType == typeof(DateOnly) && this.TryGetDateOnlyMemberAccessSqlFormatter(memberExpr, out formatter))
+            return true;
         if (memberInfo.DeclaringType == typeof(TimeSpan) && this.TryGetTimeSpanMemberAccessSqlFormatter(memberExpr, out formatter))
             return true;
         if (memberInfo.DeclaringType == typeof(TimeOnly) && this.TryGetTimeOnlyMemberAccessSqlFormatter(memberExpr, out formatter))
@@ -1414,6 +1392,8 @@ public abstract partial class BaseOrmProvider : IOrmProvider
         if (methodInfo.DeclaringType == typeof(string) && this.TryGetStringMethodCallSqlFormatter(methodCallExpr, out formatter))
             return true;
         if (methodInfo.DeclaringType == typeof(DateTime) && this.TryGetDateTimeMethodCallSqlFormatter(methodCallExpr, out formatter))
+            return true;
+        if (methodInfo.DeclaringType == typeof(DateOnly) && this.TryGetDateOnlyMethodCallSqlFormatter(methodCallExpr, out formatter))
             return true;
         if (methodInfo.DeclaringType == typeof(TimeSpan) && this.TryGetTimeSpanMethodCallSqlFormatter(methodCallExpr, out formatter))
             return true;
@@ -1715,6 +1695,8 @@ public abstract partial class BaseOrmProvider : IOrmProvider
     public abstract bool TryGetDateTimeMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);
     public abstract bool TryGetTimeSpanMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter);
     public abstract bool TryGetTimeSpanMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);
+    public abstract bool TryGetDateOnlyMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter);
+    public abstract bool TryGetDateOnlyMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);
     public abstract bool TryGetTimeOnlyMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter);
     public abstract bool TryGetTimeOnlyMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);
     public abstract bool TryGetConvertMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);

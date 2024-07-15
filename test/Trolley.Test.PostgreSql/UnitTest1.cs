@@ -373,24 +373,30 @@ public class UnitTest1 : UnitTestBase
         Assert.Equal(1, count);
     }
     [Fact]
-    public async void Insert_WithBy_Dictionary_AutoIncrement()
+    public async void Insert_WithBy_AutoIncrement()
     {
         using var repository = dbFactory.Create();
-        //var result = repository.CreateIdentity<Company>(new
-        //{
-        //    Name = "微软11",
-        //    IsEnabled = true,
-        //    CreatedAt = DateTime.Now,
-        //    CreatedBy = 1,
-        //    UpdatedAt = DateTime.Now,
-        //    UpdatedBy = 1
-        //});
-        await repository.Delete<Company>().Where(f => f.Id == 1).ExecuteAsync();
-        var id = repository.Create<Company>()
+        repository.BeginTransaction();
+        var id = repository.CreateIdentity<Company>(new
+        {
+            Name = "微软",
+            IsEnabled = true,
+            CreatedAt = DateTime.Now,
+            CreatedBy = 1,
+            UpdatedAt = DateTime.Now,
+            UpdatedBy = 1
+        });
+        var maxId = repository.From<Company>().Max(f => f.Id);
+        repository.Commit();
+        Assert.Equal(maxId, id);
+
+        repository.BeginTransaction();
+        await repository.Delete<Company>().Where(f => f.Id == id).ExecuteAsync();
+        id = repository.Create<Company>()
             .WithBy(new Dictionary<string, object>()
             {
                     //{ "Id", 1},
-                    { "Name","微软11"},
+                    { "Name","谷歌"},
                     { "IsEnabled", true},
                     { "CreatedAt", DateTime.Now},
                     { "CreatedBy", 1},
@@ -398,7 +404,8 @@ public class UnitTest1 : UnitTestBase
                     { "UpdatedBy", 1}
             })
             .ExecuteIdentity();
-        var maxId = repository.From<Company>().Max(f => f.Id);
+        maxId = repository.From<Company>().Max(f => f.Id);
+        repository.Commit();
         Assert.Equal(maxId, id);
     }
     [Fact]
@@ -837,9 +844,9 @@ public class UnitTest1 : UnitTestBase
         Assert.True(parameters[5].ParameterName == "@BuyerSource");
         Assert.True(parameters[5].Value is DBNull);
         Assert.True(parameters[8].ParameterName == "@Products");
-        Assert.True((string)parameters[8].Value == new JsonTypeHandler().ToFieldValue(null, null, new List<int> { 1, 2 }).ToString());
+        Assert.True((string)parameters[8].Value == new JsonTypeHandler().ToFieldValue(null, new List<int> { 1, 2 }).ToString());
         Assert.True(parameters[9].ParameterName == "@Disputes");
-        Assert.True((string)parameters[9].Value == new JsonTypeHandler().ToFieldValue(null, null, dispute).ToString());
+        Assert.True((string)parameters[9].Value == new JsonTypeHandler().ToFieldValue(null, dispute).ToString());
 
         repository.BeginTransaction();
         repository.Delete<Order>("4");
@@ -865,8 +872,8 @@ public class UnitTest1 : UnitTestBase
         repository.Commit();
         Assert.NotEmpty(order.Products);
         Assert.NotNull(order.Disputes);
-        Assert.True(new JsonTypeHandler().ToFieldValue(null, null, order.Products).ToString() == new JsonTypeHandler().ToFieldValue(null, null, new List<int> { 1, 2 }).ToString());
-        Assert.True(new JsonTypeHandler().ToFieldValue(null, null, order.Disputes).ToString() == new JsonTypeHandler().ToFieldValue(null, null, dispute).ToString());
+        Assert.True(new JsonTypeHandler().ToFieldValue(null, order.Products).ToString() == new JsonTypeHandler().ToFieldValue(null, new List<int> { 1, 2 }).ToString());
+        Assert.True(new JsonTypeHandler().ToFieldValue(null, order.Disputes).ToString() == new JsonTypeHandler().ToFieldValue(null, dispute).ToString());
     }
     [Fact]
     public void Insert_Enum_Fields()
@@ -1101,7 +1108,7 @@ public class UnitTest1 : UnitTestBase
         await repository.CommitAsync();
         Assert.True(count == 1);
         Assert.True(order.TotalAmount == 500);
-        Assert.True(new JsonTypeHandler().ToFieldValue(null, null, order.Products).ToString() == new JsonTypeHandler().ToFieldValue(null, null, products).ToString());
+        Assert.True(new JsonTypeHandler().ToFieldValue(null, order.Products).ToString() == new JsonTypeHandler().ToFieldValue(null, products).ToString());
 
         buyerSource = UserSourceType.Taobao;
         var sql2 = repository.Create<Order>()

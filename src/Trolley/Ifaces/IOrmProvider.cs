@@ -171,7 +171,7 @@ public interface IOrmProvider
     string GetPagingTemplate(int? skip, int? limit, string orderBy = null);
     object GetNativeDbType(Type type);
     Type MapDefaultType(object nativeDbType);
-    string GetIdentitySql(Type entityType);
+    string GetIdentitySql(string keyField);
     string CastTo(Type type, object value);
     string GetQuotedValue(Type expectType, object value);
     string GetBinaryOperator(ExpressionType nodeType);

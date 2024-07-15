@@ -60,6 +60,31 @@ public class MethodCallUnitTest : UnitTestBase
             .ToListAsync();
         Assert.NotNull(result);
         Assert.True(result.Count == 1);
+
+        var ids = new int[] { 1, 2 };
+        var sql = repository.From<User>()
+            .Where(f => ids.Contains(f.Id))
+            .Select(f => f.Id)
+            .ToSql(out var dbParameters);
+        Assert.True(sql == "SELECT a.`Id` FROM `sys_user` a WHERE a.`Id` IN (@p0,@p1)");
+
+        var result = repository.From<User>()
+            .Where(f => ids.Contains(f.Id))
+            .ToList();
+        Assert.NotNull(result);
+        Assert.True(result.Count == 2);
+
+        var names = new List<string> { "kevin", "cindy" };
+        sql = repository.From<User>()
+            .Where(f => new List<string> { "kevin", "cindy" }.Contains(f.Name))
+            .Select(f => f.Id)
+            .ToSql(out dbParameters);
+        Assert.True(sql == "SELECT a.`Id` FROM `sys_user` a WHERE a.`Name` IN (@p0,@p1)");
+        result = await repository.From<User>()
+            .Where(f => new List<string> { "kevin", "cindy" }.Contains(f.Name))
+            .ToListAsync();
+        Assert.NotNull(result);
+        Assert.True(result.Count == 1);
     }
     [Fact]
     public async void Concat()
@@ -428,7 +453,7 @@ public class MethodCallUnitTest : UnitTestBase
             .Where(f => f.BuyerId == id || orderNos.Contains(f.OrderNo))
             .ToSql(out _);
         Assert.True(sql == "UPDATE `sys_order` SET `TotalAmount`=@p0 WHERE `BuyerId`=@p1 OR `OrderNo` IN (@p2,@p3,@p4)");
-		var count = repository.Update<Order>()
+        var count = repository.Update<Order>()
             .Set(f => new { TotalAmount = 100 })
             .Where(f => f.BuyerId == id || orderNos.Contains(f.OrderNo))
             .Execute();
@@ -479,7 +504,7 @@ public class MethodCallUnitTest : UnitTestBase
             })
             .ToSql(out _);
         Assert.True(sql1 == "SELECT a.`EnumField`,(CASE a.`EnumField` WHEN 0 THEN 'Unknown' WHEN 1 THEN 'Female' WHEN 2 THEN 'Male' END) AS `EnumField1`,(CASE a.`EnumField` WHEN 0 THEN 'Unknown' WHEN 1 THEN 'Female' WHEN 2 THEN 'Male' END) AS `EnumField2` FROM `sys_update_entity` a WHERE a.`Id`=1");
-		var result1 = repository.From<UpdateEntity>()
+        var result1 = repository.From<UpdateEntity>()
             .Where(f => f.Id == 1)
             .Select(f => new
             {
@@ -566,7 +591,7 @@ public class MethodCallUnitTest : UnitTestBase
         age = result.Age == 0 ? 20 : result.Age;
         Assert.True(result.NewField == $"{age}-{result.Gender.ToDescription()}");
 
-		sql = repository.From<User>()
+        sql = repository.From<User>()
            .Where(f => f.Id == 1)
            .Select(f => new
            {

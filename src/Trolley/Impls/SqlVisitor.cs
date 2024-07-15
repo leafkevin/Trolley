@@ -1575,14 +1575,16 @@ public class SqlVisitor : ISqlVisitor
                 var dbFieldValue = sqlSegment.Value;
                 if (expectType != null && sqlSegment.SegmentType != expectType)
                 {
-                    dbFieldValue = Enum.ToObject(expectType, dbFieldValue);
+                    if (expectType.IsEnum)
+                        dbFieldValue = Enum.ToObject(expectType, dbFieldValue);
+                    else dbFieldValue = Convert.ChangeType(dbFieldValue, expectType);
                     sqlSegment.SegmentType = expectType;
                 }
                 if (typeHandler != null)
                 {
                     //枚举类型或是有强制转换时，要取sqlSegment.ExpectType值
                     //常量、方法调用、计算表达式时，sqlSegment.FromMember没有值，只能取Expression.Type值
-                    dbFieldValue = typeHandler.ToFieldValue(this.OrmProvider, sqlSegment.SegmentType, dbFieldValue);
+                    dbFieldValue = typeHandler.ToFieldValue(this.OrmProvider, dbFieldValue);
                     if (nativeDbType != null)
                         dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, nativeDbType, dbFieldValue));
                     else dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, dbFieldValue));
@@ -1623,28 +1625,25 @@ public class SqlVisitor : ISqlVisitor
                 else dbFieldValue = Convert.ChangeType(dbFieldValue, expectType);
                 sqlSegment.SegmentType = expectType;
             }
-            //枚举类型或是有强制转换时，要取sqlSegment.ExpectType值
-            //常量、方法调用、计算表达式时，sqlSegment.FromMember没有值，只能取Expression.Type值
-            //不能使用sqlSegment.Expression.Type，有多于1级表达式访问，sqlSegment.Expression值可以已经发生变化了
             if (typeHandler != null)
-                dbFieldValue = typeHandler.GetQuotedValue(this.OrmProvider, sqlSegment.SegmentType, dbFieldValue);
+                return typeHandler.GetQuotedValue(this.OrmProvider, dbFieldValue);
             else
             {
+                var targetType = sqlSegment.SegmentType;
                 if (nativeDbType != null)
                 {
-                    var targetType = this.OrmProvider.MapDefaultType(nativeDbType);
+                    targetType = this.OrmProvider.MapDefaultType(nativeDbType);
                     if (sqlSegment.SegmentType != targetType)
                     {
                         var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, false);
                         dbFieldValue = valueGetter.Invoke(dbFieldValue);
-                        sqlSegment.SegmentType = targetType;
                     }
                 }
+                return this.OrmProvider.GetQuotedValue(targetType, dbFieldValue);
             }
-            return this.OrmProvider.GetQuotedValue(sqlSegment.SegmentType, dbFieldValue);
         }
         //带有参数或字段的表达式或函数调用、或是只有参数或字段
-        //TODO:本地函数调用返回值，非常量、变量、字段、SQL函数调用
+        //本地函数调用返回值，非常量、变量、字段、SQL函数调用
         return sqlSegment.ToString();
     }
     public virtual string GetQuotedValue(object elementValue, SqlSegment arraySegment, SqlSegment elementSegment)
@@ -1662,38 +1661,77 @@ public class SqlVisitor : ISqlVisitor
             var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + dbParameters.Count.ToString();
             if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
 
-            //枚举类型或是有强制转换时，要取sqlSegment.ExpectType值
-            //常量、方法调用、计算表达式时，sqlSegment.FromMember没有值，只能取Expression.Type值，
-
-            //if (elementSegment.TypeHandler != null)
-            //    fieldValue = elementSegment.TypeHandler.ToFieldValue(this.OrmProvider, memberMapper.UnderlyingType, fieldValue);
-            //else
-            //{
-            //    var targetType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);
-            //    var valueGetter = this.OrmProvider.GetParameterValueGetter(fieldValue.GetType(), targetType, false);
-            //    fieldValue = valueGetter.Invoke(fieldValue);
-            //}
-
-            var underlyingType = elementSegment.ExpectType ?? elementSegment.SegmentType?.ToUnderlyingType() ?? elementSegment.Value.GetType();
-            if (elementSegment.TypeHandler != null)
+            if (elementValue == null || elementValue == DBNull.Value)
+                dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, DBNull.Value));
+            else
             {
-                var dbFieldValue = elementSegment.TypeHandler.ToFieldValue(this.OrmProvider, underlyingType, elementValue);
-                dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, elementSegment.NativeDbType, dbFieldValue));
+                var dbFieldValue = elementValue;
+                var expectType = elementSegment.ExpectType;
+                var segmentType = elementSegment.SegmentType;
+                var nativeDbType = elementSegment.NativeDbType;
+                var typeHandler = elementSegment.TypeHandler;
+
+                if (expectType != null && segmentType != expectType)
+                {
+                    dbFieldValue = Enum.ToObject(expectType, dbFieldValue);
+                    segmentType = expectType;
+                }
+                if (typeHandler != null)
+                {
+                    dbFieldValue = typeHandler.ToFieldValue(this.OrmProvider, dbFieldValue);
+                    if (nativeDbType != null)
+                        dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, nativeDbType, dbFieldValue));
+                    else dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, dbFieldValue));
+                }
+                else
+                {
+                    if (nativeDbType != null)
+                    {
+                        var targetType = this.OrmProvider.MapDefaultType(nativeDbType);
+                        if (segmentType != targetType)
+                        {
+                            var valueGetter = this.OrmProvider.GetParameterValueGetter(segmentType, targetType, false);
+                            dbFieldValue = valueGetter.Invoke(dbFieldValue);
+                            dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, nativeDbType, dbFieldValue));
+                        }
+                    }
+                    else dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, dbFieldValue));
+                }
             }
-            //常量、方法调用、表达式计算等场景
-            else dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, elementValue));
             return parameterName;
         }
         if (arraySegment.IsConstant)
         {
-            //枚举类型或是有强制转换时，要取sqlSegment.ExpectType值
-            //常量、方法调用、计算表达式时，sqlSegment.FromMember没有值，只能取Expression.Type值，
-            var underlyingType = elementSegment.ExpectType ?? elementSegment.SegmentType?.ToUnderlyingType() ?? elementSegment.Value.GetType();
+            var dbFieldValue = elementValue;
+            var expectType = elementSegment.ExpectType;
+            var segmentType = elementSegment.SegmentType;
+            var nativeDbType = elementSegment.NativeDbType;
+            var typeHandler = elementSegment.TypeHandler;
 
-            if (elementSegment.TypeHandler != null)
-                return elementSegment.TypeHandler.GetQuotedValue(this.OrmProvider, underlyingType, elementValue);
-            return this.OrmProvider.GetQuotedValue(underlyingType, elementValue);
+            if (expectType != null && segmentType != expectType)
+            {
+                dbFieldValue = Enum.ToObject(expectType, dbFieldValue);
+                segmentType = expectType;
+            }
+            if (typeHandler != null)
+                return typeHandler.GetQuotedValue(this.OrmProvider, dbFieldValue);
+            //常量、方法调用、表达式计算等场景
+            else
+            {
+                var targetType = segmentType;
+                if (nativeDbType != null)
+                {
+                    targetType = this.OrmProvider.MapDefaultType(nativeDbType);
+                    if (segmentType != targetType)
+                    {
+                        var valueGetter = this.OrmProvider.GetParameterValueGetter(segmentType, targetType, false);
+                        dbFieldValue = valueGetter.Invoke(dbFieldValue);
+                    }
+                }
+                return this.OrmProvider.GetQuotedValue(targetType, dbFieldValue);
+            }
         }
+        //此场景走不到，通常是常量和变量
         return this.OrmProvider.GetQuotedValue(elementValue);
     }
     public virtual IQueryVisitor CreateQueryVisitor()
@@ -1937,7 +1975,7 @@ public class SqlVisitor : ISqlVisitor
                     valueGetter = value =>
                     {
                         var fieldValue = memberInfo.Evaluate(value);
-                        return refMemberMapper.TypeHandler.ToFieldValue(this.OrmProvider, refMemberMapper.UnderlyingType, fieldValue);
+                        return refMemberMapper.TypeHandler.ToFieldValue(this.OrmProvider, fieldValue);
                     };
                 }
                 else

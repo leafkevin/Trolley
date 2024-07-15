@@ -833,9 +833,9 @@ public class UnitTest1 : UnitTestBase
         Assert.True(parameters[5].ParameterName == "@BuyerSource");
         Assert.True(parameters[5].Value is DBNull);
         Assert.True(parameters[8].ParameterName == "@Products");
-        Assert.True((string)parameters[8].Value == new JsonTypeHandler().ToFieldValue(null, null, new List<int> { 1, 2 }).ToString());
+        Assert.True((string)parameters[8].Value == new JsonTypeHandler().ToFieldValue(null, new List<int> { 1, 2 }).ToString());
         Assert.True(parameters[9].ParameterName == "@Disputes");
-        Assert.True((string)parameters[9].Value == new JsonTypeHandler().ToFieldValue(null, null, dispute).ToString());
+        Assert.True((string)parameters[9].Value == new JsonTypeHandler().ToFieldValue(null, dispute).ToString());
 
         repository.BeginTransaction();
         repository.Delete<Order>("4");
@@ -861,8 +861,8 @@ public class UnitTest1 : UnitTestBase
         repository.Commit();
         Assert.NotEmpty(order.Products);
         Assert.NotNull(order.Disputes);
-        Assert.True(new JsonTypeHandler().ToFieldValue(null, null, order.Products).ToString() == new JsonTypeHandler().ToFieldValue(null, null, new List<int> { 1, 2 }).ToString());
-        Assert.True(new JsonTypeHandler().ToFieldValue(null, null, order.Disputes).ToString() == new JsonTypeHandler().ToFieldValue(null, null, dispute).ToString());
+        Assert.True(new JsonTypeHandler().ToFieldValue(null, order.Products).ToString() == new JsonTypeHandler().ToFieldValue(null, new List<int> { 1, 2 }).ToString());
+        Assert.True(new JsonTypeHandler().ToFieldValue(null, order.Disputes).ToString() == new JsonTypeHandler().ToFieldValue(null, dispute).ToString());
     }
     [Fact]
     public void Insert_Enum_Fields()

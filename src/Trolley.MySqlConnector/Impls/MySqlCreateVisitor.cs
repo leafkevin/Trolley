@@ -101,7 +101,7 @@ public class MySqlCreateVisitor : CreateVisitor
             if (!entityMapper.IsAutoIncrement)
                 throw new NotSupportedException($"实体{entityMapper.EntityType.FullName}表未配置自增长字段，无法返回Identity值");
             if (hasUpdateFields) throw new NotSupportedException("包含更新子句，不支持返回Identity");
-            valuesBuilder.Append(this.OrmProvider.GetIdentitySql(entityMapper.EntityType));
+            valuesBuilder.Append(this.OrmProvider.GetIdentitySql(null));
         }
 
         fieldsBuilder.Append(valuesBuilder);
@@ -469,7 +469,7 @@ public class MySqlCreateVisitor : CreateVisitor
 
             var dbFieldValue = sqlSegment.Value;
             if (memberMapper.TypeHandler != null)
-                dbFieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, memberMapper.UnderlyingType, dbFieldValue);
+                dbFieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, dbFieldValue);
             else
             {
                 var targetType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);
@@ -503,7 +503,7 @@ public class MySqlCreateVisitor : CreateVisitor
         if (!this.DbParameters.Contains(parameterName))
         {
             if (memberMapper.TypeHandler != null)
-                fieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, memberMapper.UnderlyingType, fieldValue);
+                fieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, fieldValue);
             else
             {
                 var targetType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);

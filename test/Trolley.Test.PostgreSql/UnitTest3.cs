@@ -518,9 +518,9 @@ public class UnitTest3 : UnitTestBase
         Assert.True(dbParameters[0].ParameterName == "@p0");
         Assert.True((double)dbParameters[0].Value == this.CalcAmount(updateObj.TotalAmount + increasedAmount, 3));
         Assert.True(dbParameters[1].ParameterName == "@p1");
-        Assert.True((string)dbParameters[1].Value == new JsonTypeHandler().ToFieldValue(null, null, this.GetProducts()).ToString());
+        Assert.True((string)dbParameters[1].Value == new JsonTypeHandler().ToFieldValue(null, this.GetProducts()).ToString());
         Assert.True(dbParameters[2].ParameterName == "@p2");
-        Assert.True((string)dbParameters[2].Value == new JsonTypeHandler().ToFieldValue(null, null, updateObj.Disputes).ToString());
+        Assert.True((string)dbParameters[2].Value == new JsonTypeHandler().ToFieldValue(null, updateObj.Disputes).ToString());
         Assert.True(dbParameters[3].ParameterName == "@kId");
         Assert.True((string)dbParameters[3].Value == updateObj.Id);
 
@@ -1181,7 +1181,7 @@ public class UnitTest3 : UnitTestBase
         Assert.True((double)parameters[0].Value == 200.56);
         Assert.True(parameters[1].ParameterName == "@Products");
         Assert.True(parameters[1].Value.GetType() == typeof(string));
-        Assert.True((string)parameters[1].Value == new JsonTypeHandler().ToFieldValue(null, null, new List<int> { 1, 2, 3 }).ToString());
+        Assert.True((string)parameters[1].Value == new JsonTypeHandler().ToFieldValue(null, new List<int> { 1, 2, 3 }).ToString());
 
         var sql1 = repository.Update<User>()
             .Set(new { Gender = Gender.Male })
