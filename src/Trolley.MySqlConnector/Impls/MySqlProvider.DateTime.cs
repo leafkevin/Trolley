@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Linq.Expressions;
 using System.Text;
 
@@ -301,14 +302,47 @@ partial class MySqlProvider
                     break;
                 case "Parse":
                 case "TryParse":
-                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
+                    if (parameterInfos.Length == 3)
                     {
-                        var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        if (valueSegment.IsConstant || valueSegment.IsVariable)
-                            return valueSegment.Change(DateTime.Parse(valueSegment.ToString()));
+                        formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
+                        {
+                            var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                            var providerSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
+                            var styleSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[2] });
 
-                        return valueSegment.Change($"CAST({valueSegment} AS DATETIME)", false, false, false, true);
-                    });
+                            if ((valueSegment.IsConstant || valueSegment.IsVariable)
+                                && (providerSegment.IsConstant || providerSegment.IsVariable)
+                                && (styleSegment.IsConstant || styleSegment.IsVariable))
+                                return valueSegment.Change(DateOnly.Parse(valueSegment.ToString(), (IFormatProvider)providerSegment.Value, (DateTimeStyles)styleSegment.Value));
+
+                            return valueSegment.Change($"CAST({valueSegment} AS DATETIME)", false, false, false, true);
+                        });
+                    }
+                    else if (parameterInfos.Length == 2)
+                    {
+                        formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
+                        {
+                            var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                            var providerSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
+
+                            if ((valueSegment.IsConstant || valueSegment.IsVariable)
+                                && (providerSegment.IsConstant || providerSegment.IsVariable))
+                                return valueSegment.Change(DateOnly.Parse(valueSegment.ToString(), (IFormatProvider)providerSegment.Value));
+
+                            return valueSegment.Change($"CAST({valueSegment} AS DATETIME)", false, false, false, true);
+                        });
+                    }
+                    else
+                    {
+                        formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
+                        {
+                            var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                            if (valueSegment.IsConstant || valueSegment.IsVariable)
+                                return valueSegment.Change(DateTime.Parse(valueSegment.ToString()));
+
+                            return valueSegment.Change($"CAST({valueSegment.Value} AS DATETIME)", false, false, false, true);
+                        });
+                    }
                     result = true;
                     if (methodInfo.IsStatic && parameterInfos.Length >= 3 && parameterInfos[0].ParameterType == typeof(ReadOnlySpan<char>))
                         throw new NotSupportedException("DateTime.Parse方法暂时不支持ReadOnlySpan<char>类型参数的解析，请转换成String类型");
@@ -377,7 +411,7 @@ partial class MySqlProvider
                             if (formatArgument.Contains("tt"))
                                 formatArgument = formatArgument.NextReplace("tt", "%p");
                             else if (formatArgument.Contains("t"))
-                                formatArgument = formatArgument.NextReplace("t", "SUBSTRING(%p,1,1)");              
+                                formatArgument = formatArgument.NextReplace("t", "SUBSTRING(%p,1,1)");
                         }
                         else formatArgument = visitor.GetQuotedValue(formatSegment);
                         var valueArgument = visitor.GetQuotedValue(valueSegment);
@@ -440,7 +474,7 @@ partial class MySqlProvider
                     break;
                 case "AddDays":
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
-                     {
+                    {
                          var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
                          var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                          if ((targetSegment.IsConstant || targetSegment.IsVariable)
@@ -642,7 +676,7 @@ partial class MySqlProvider
                                 return targetSegment.Change(targetSegment.ToString());
 
                             var targetArgument = visitor.GetQuotedValue(targetSegment);
-                            return targetSegment.Change($"DATE_FORMAT({this.GetQuotedValue(targetSegment)},'%Y-%m-%d %H:%i:%s')", false, false, false, true);
+                            return targetSegment.Change($"DATE_FORMAT({targetArgument},'%Y-%m-%d %H:%i:%s')", false, false, false, true);
                         });
                         result = true;
                     }

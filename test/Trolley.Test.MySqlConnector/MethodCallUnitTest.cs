@@ -62,13 +62,13 @@ public class MethodCallUnitTest : UnitTestBase
         Assert.True(result.Count == 1);
 
         var ids = new int[] { 1, 2 };
-        var sql = repository.From<User>()
+        sql = repository.From<User>()
             .Where(f => ids.Contains(f.Id))
             .Select(f => f.Id)
             .ToSql(out var dbParameters);
         Assert.True(sql == "SELECT a.`Id` FROM `sys_user` a WHERE a.`Id` IN (@p0,@p1)");
 
-        var result = repository.From<User>()
+        result = repository.From<User>()
             .Where(f => ids.Contains(f.Id))
             .ToList();
         Assert.NotNull(result);

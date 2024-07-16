@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 
@@ -43,7 +44,7 @@ partial class SqlServerProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((DateOnly)targetSegment.Value).Day);
 
-                        return targetSegment.Change($"EXTRACT(DAY FROM {targetSegment})::INT4", false, false, true);
+                        return targetSegment.Change($"DATEPART(DAY,{targetSegment})", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -59,7 +60,7 @@ partial class SqlServerProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((DateOnly)targetSegment.Value).DayOfWeek);
 
-                        return targetSegment.Change($"EXTRACT(DOW FROM {targetSegment})::INT4", false, false, true);
+                        return targetSegment.Change($"DATEPART(WEEKDAY,{targetSegment})-1", false, false, true);
                     });
                     result = true;
                     break;
@@ -75,7 +76,7 @@ partial class SqlServerProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((DateOnly)targetSegment.Value).DayOfYear);
 
-                        return targetSegment.Change($"EXTRACT(DOY FROM {targetSegment})::INT4", false, false, true);
+                        return targetSegment.Change($"DATEPART(DAYOFYEAR,{targetSegment})", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -92,7 +93,7 @@ partial class SqlServerProvider
                             return targetSegment.Change(((DateOnly)targetSegment.Value).Month);
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
-                        return targetSegment.Change($"EXTRACT(MONTH FROM {targetArgument})::INT4", false, false, true);
+                        return targetSegment.Change($"DATEPART(MONTH,{targetArgument})", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -108,7 +109,7 @@ partial class SqlServerProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((DateOnly)targetSegment.Value).Year);
 
-                        return targetSegment.Change($"EXTRACT(YEAR FROM {targetSegment})::INT4", false, false, true);
+                        return targetSegment.Change($"DATEPART(YEAR,{targetSegment})", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -124,7 +125,7 @@ partial class SqlServerProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((DateOnly)targetSegment.Value).DayNumber);
 
-                        return targetSegment.Change($"{targetSegment}-DATE '0001-01-01'", false, false, true);
+                        return targetSegment.Change($"DATEDIFF(DAY,'0001-01-01',{targetSegment.Value})", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -150,7 +151,7 @@ partial class SqlServerProvider
                         if (valueSegment.IsConstant || valueSegment.IsVariable)
                             return valueSegment.Change(DateOnly.FromDateTime((DateTime)valueSegment.Value));
 
-                        return valueSegment.Change($"{valueSegment.Value}::DATE", false, false, true);
+                        return valueSegment.Change($"CAST({valueSegment.Value} AS DATE)", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -161,20 +162,53 @@ partial class SqlServerProvider
                         if (valueSegment.IsConstant || valueSegment.IsVariable)
                             return valueSegment.Change(DateOnly.FromDayNumber(Convert.ToInt32(valueSegment.Value)));
 
-                        return valueSegment.Change($"DATE '0001-01-01'+{valueSegment.Value})", false, false, true);
+                        return valueSegment.Change($"CAST(DATEADD(DAY,{valueSegment.Value},'0001-01-01') AS DATE)", false, false, false, true);
                     });
                     result = true;
                     break;
                 case "Parse":
                 case "TryParse":
-                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
+                    if (parameterInfos.Length == 3)
                     {
-                        var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        if (valueSegment.IsConstant || valueSegment.IsVariable)
-                            return valueSegment.Change(DateOnly.Parse(valueSegment.ToString()));
+                        formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
+                        {
+                            var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                            var providerSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
+                            var styleSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[2] });
 
-                        return valueSegment.Change($"{this.CastTo(typeof(DateOnly), valueSegment.Value)}", false, false, false, true);
-                    });
+                            if ((valueSegment.IsConstant || valueSegment.IsVariable)
+                                && (providerSegment.IsConstant || providerSegment.IsVariable)
+                                && (styleSegment.IsConstant || styleSegment.IsVariable))
+                                return valueSegment.Change(DateOnly.Parse(valueSegment.ToString(), (IFormatProvider)providerSegment.Value, (DateTimeStyles)styleSegment.Value));
+
+                            return valueSegment.Change($"CAST({valueSegment.Value} AS DATE)", false, false, false, true);
+                        });
+                    }
+                    else if (parameterInfos.Length == 2)
+                    {
+                        formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
+                        {
+                            var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                            var providerSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
+
+                            if ((valueSegment.IsConstant || valueSegment.IsVariable)
+                                && (providerSegment.IsConstant || providerSegment.IsVariable))
+                                return valueSegment.Change(DateOnly.Parse(valueSegment.ToString(), (IFormatProvider)providerSegment.Value));
+
+                            return valueSegment.Change($"CAST({valueSegment.Value} AS DATE)", false, false, false, true);
+                        });
+                    }
+                    else
+                    {
+                        formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
+                        {
+                            var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                            if (valueSegment.IsConstant || valueSegment.IsVariable)
+                                return valueSegment.Change(DateOnly.Parse(valueSegment.ToString()));
+
+                            return valueSegment.Change($"CAST({valueSegment.Value} AS DATE)", false, false, false, true);
+                        });
+                    }
                     result = true;
                     if (methodInfo.IsStatic && parameterInfos.Length >= 3 && parameterInfos[0].ParameterType == typeof(ReadOnlySpan<char>))
                         throw new NotSupportedException("DateOnly.Parse方法暂时不支持ReadOnlySpan<char>类型参数的解析，请转换成String类型");
@@ -190,39 +224,29 @@ partial class SqlServerProvider
                         if ((valueSegment.IsConstant || valueSegment.IsVariable)
                             && (formatSegment.IsConstant || formatSegment.IsVariable)
                             && (providerSegment.IsConstant || providerSegment.IsVariable))
-                            return valueSegment.Merge(formatSegment, DateOnly.ParseExact(valueSegment.ToString(), formatSegment.ToString(), (IFormatProvider)providerSegment.Value));
+                            return valueSegment.Merge(formatSegment, DateTime.ParseExact(valueSegment.ToString(), formatSegment.ToString(), (IFormatProvider)providerSegment.Value));
 
-                        string formatArgument = null;
-                        if (formatSegment.IsConstant)
-                        {
-                            formatArgument = $"'{formatSegment}'";
+                        if (!(formatSegment.IsConstant || formatSegment.IsVariable))
+                            throw new NotSupportedException($"方法DateOnly.{methodInfo.Name}格式化字符串，暂时不支持非常量、变量的解析");
 
-                            if (formatArgument.Contains("yyyy"))
-                                formatArgument = formatArgument.NextReplace("yyyy", "YYYY");
-                            else if (formatArgument.Contains("yyy"))
-                                formatArgument = formatArgument.NextReplace("yyy", "YYY");
-                            else if (formatArgument.Contains("yy"))
-                                formatArgument = formatArgument.NextReplace("yy", "YY");
-
-                            if (formatArgument.Contains("MMMM"))
-                                formatArgument = formatArgument.NextReplace("MMMM", "Month");
-                            else if (formatArgument.Contains("MMM"))
-                                formatArgument = formatArgument.NextReplace("MMM", "Mon");
-                            else if (formatArgument.Contains("M") && !formatArgument.Contains("MM"))
-                                formatArgument = formatArgument.NextReplace("M", "FMMM");
-
-                            if (formatArgument.Contains("dddd"))
-                                formatArgument = formatArgument.NextReplace("dddd", "Day");
-                            else if (formatArgument.Contains("ddd"))
-                                formatArgument = formatArgument.NextReplace("ddd", "DY");
-                            else if (formatArgument.Contains("dd"))
-                                formatArgument = formatArgument.NextReplace("dd", "DD");
-                            else if (formatArgument.Contains("d"))
-                                formatArgument = formatArgument.NextReplace("d", "FMDD");
-                        }
-                        else formatArgument = visitor.GetQuotedValue(formatSegment);
                         var valueArgument = visitor.GetQuotedValue(valueSegment);
-                        return valueSegment.Merge(formatSegment, $"TO_DATE({valueArgument},{formatArgument})", false, false, false, true);
+                        var format = formatSegment.ToString();
+                        string formatValue = null;
+                        switch (format)
+                        {
+                            case "mm/dd/yyyy": formatValue = $"CONVERT(DATE,{valueArgument},101)"; break;
+                            case "yyyy.mm.dd": formatValue = $"CONVERT(DATE,{valueArgument},102)"; break;
+                            case "dd/mm/yyyy": formatValue = $"CONVERT(DATE,{valueArgument},103)"; break;
+                            case "dd.mm.yyyy": formatValue = $"CONVERT(DATE,{valueArgument},104)"; break;
+                            case "dd-mm-yyyy": formatValue = $"CONVERT(DATE,{valueArgument},105)"; break;
+                            case "dd mon yyyy": formatValue = $"CONVERT(DATE,{valueArgument},106)"; break;
+                            case "mon dd, yyyy": formatValue = $"CONVERT(DATE,{valueArgument},107)"; break;
+                            case "mm-dd-yyyy": formatValue = $"CONVERT(DATE,{valueArgument},110)"; break;
+                            case "yyyy/mm/dd": formatValue = $"CONVERT(DATE,{valueArgument},111)"; break;
+                            case "yyyymmdd": formatValue = $"CONVERT(DATE,{valueArgument},112)"; break;
+                            default: formatValue = $"CAST({valueArgument} AS DATE)"; break;
+                        }
+                        return valueSegment.Merge(formatSegment, formatValue, false, false, false, true);
                     });
                     result = true;
                     if (methodInfo.IsStatic && parameterInfos.Length >= 1 && parameterInfos[0].ParameterType == typeof(ReadOnlySpan<char>))
@@ -257,7 +281,7 @@ partial class SqlServerProvider
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Change($"{targetArgument}+{rightArgument}", false, false, true);
+                        return targetSegment.Merge(rightSegment, $"DATEADD(DAY,{rightArgument},{targetArgument})", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -272,7 +296,7 @@ partial class SqlServerProvider
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Change($"({targetArgument}+INTERVAL '1 MON'*{rightArgument})::DATE", false, false, true);
+                        return targetSegment.Merge(rightSegment, $"DATEADD(MONTH,{rightArgument},{targetArgument})", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -287,7 +311,7 @@ partial class SqlServerProvider
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Change($"({targetArgument}+INTERVAL '1Y'*{rightArgument})::DATE", false, false, true);
+                        return targetSegment.Merge(rightSegment, $"DATEADD(YEAR,{rightSegment},{targetArgument})", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -325,7 +349,7 @@ partial class SqlServerProvider
                                 return targetSegment.Change(targetSegment.ToString());
 
                             var targetArgument = visitor.GetQuotedValue(targetSegment);
-                            return targetSegment.Change($"TO_CHAR({targetArgument},'YYYY-MM-DD')", false, false, false, true);
+                            return targetSegment.Change($"CONVERT({targetArgument},'YYYY-MM-DD')", false, false, false, true);
                         });
                         result = true;
                     }

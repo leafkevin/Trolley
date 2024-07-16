@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 
@@ -167,14 +168,47 @@ partial class PostgreSqlProvider
                     break;
                 case "Parse":
                 case "TryParse":
-                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
+                    if (parameterInfos.Length == 3)
                     {
-                        var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        if (valueSegment.IsConstant || valueSegment.IsVariable)
-                            return valueSegment.Change(DateOnly.Parse(valueSegment.ToString()));
+                        formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
+                        {
+                            var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                            var providerSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
+                            var styleSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[2] });
 
-                        return valueSegment.Change($"{this.CastTo(typeof(DateOnly), valueSegment.Value)}", false, false, false, true);
-                    });
+                            if ((valueSegment.IsConstant || valueSegment.IsVariable)
+                                && (providerSegment.IsConstant || providerSegment.IsVariable)
+                                && (styleSegment.IsConstant || styleSegment.IsVariable))
+                                return valueSegment.Change(DateOnly.Parse(valueSegment.ToString(), (IFormatProvider)providerSegment.Value, (DateTimeStyles)styleSegment.Value));
+
+                            return valueSegment.Change($"CAST({valueSegment.Value} AS DATE)", false, false, false, true);
+                        });
+                    }
+                    else if (parameterInfos.Length == 2)
+                    {
+                        formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
+                        {
+                            var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                            var providerSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
+
+                            if ((valueSegment.IsConstant || valueSegment.IsVariable)
+                                && (providerSegment.IsConstant || providerSegment.IsVariable))
+                                return valueSegment.Change(DateOnly.Parse(valueSegment.ToString(), (IFormatProvider)providerSegment.Value));
+
+                            return valueSegment.Change($"CAST({valueSegment.Value} AS DATE)", false, false, false, true);
+                        });
+                    }
+                    else
+                    {
+                        formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
+                        {
+                            var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                            if (valueSegment.IsConstant || valueSegment.IsVariable)
+                                return valueSegment.Change(DateOnly.Parse(valueSegment.ToString()));
+
+                            return valueSegment.Change($"CAST({valueSegment.Value} AS DATE)", false, false, false, true);
+                        });
+                    }
                     result = true;
                     if (methodInfo.IsStatic && parameterInfos.Length >= 3 && parameterInfos[0].ParameterType == typeof(ReadOnlySpan<char>))
                         throw new NotSupportedException("DateOnly.Parse方法暂时不支持ReadOnlySpan<char>类型参数的解析，请转换成String类型");

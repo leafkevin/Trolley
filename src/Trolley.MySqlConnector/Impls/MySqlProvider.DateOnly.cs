@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 
@@ -43,7 +44,7 @@ partial class MySqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((DateOnly)targetSegment.Value).Day);
 
-                        return targetSegment.Change($"EXTRACT(DAY FROM {targetSegment})::INT4", false, false, true);
+                        return targetSegment.Change($"DAYOFMONTH({targetSegment})", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -59,7 +60,7 @@ partial class MySqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((DateOnly)targetSegment.Value).DayOfWeek);
 
-                        return targetSegment.Change($"EXTRACT(DOW FROM {targetSegment})::INT4", false, false, true);
+                        return targetSegment.Change($"DAYOFWEEK({targetSegment})-1", false, false, true);
                     });
                     result = true;
                     break;
@@ -75,7 +76,7 @@ partial class MySqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((DateOnly)targetSegment.Value).DayOfYear);
 
-                        return targetSegment.Change($"EXTRACT(DOY FROM {targetSegment})::INT4", false, false, true);
+                        return targetSegment.Change($"DAYOFYEAR({targetSegment})", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -92,7 +93,7 @@ partial class MySqlProvider
                             return targetSegment.Change(((DateOnly)targetSegment.Value).Month);
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
-                        return targetSegment.Change($"EXTRACT(MONTH FROM {targetArgument})::INT4", false, false, true);
+                        return targetSegment.Change($"MONTH({targetSegment})", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -108,7 +109,7 @@ partial class MySqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((DateOnly)targetSegment.Value).Year);
 
-                        return targetSegment.Change($"EXTRACT(YEAR FROM {targetSegment})::INT4", false, false, true);
+                        return targetSegment.Change($"YEAR({targetSegment})", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -124,7 +125,7 @@ partial class MySqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.Change(((DateOnly)targetSegment.Value).DayNumber);
 
-                        return targetSegment.Change($"{targetSegment}-DATE '0001-01-01'", false, false, true);
+                        return targetSegment.Change($"DATEDIFF({targetSegment},'0001-01-01')", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -150,7 +151,7 @@ partial class MySqlProvider
                         if (valueSegment.IsConstant || valueSegment.IsVariable)
                             return valueSegment.Change(DateOnly.FromDateTime((DateTime)valueSegment.Value));
 
-                        return valueSegment.Change($"{valueSegment.Value}::DATE", false, false, true);
+                        return valueSegment.Change($"DATE({valueSegment.Value})", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -161,26 +162,60 @@ partial class MySqlProvider
                         if (valueSegment.IsConstant || valueSegment.IsVariable)
                             return valueSegment.Change(DateOnly.FromDayNumber(Convert.ToInt32(valueSegment.Value)));
 
-                        return valueSegment.Change($"DATE '0001-01-01'+{valueSegment.Value})", false, false, true);
+                        return valueSegment.Change($"DATE_ADD('0001-01-01',INTERVAL {valueSegment.Value} DAY)", false, false, false, true);
                     });
                     result = true;
                     break;
                 case "Parse":
                 case "TryParse":
-                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
+                    if (parameterInfos.Length == 3)
                     {
-                        var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                        if (valueSegment.IsConstant || valueSegment.IsVariable)
-                            return valueSegment.Change(DateOnly.Parse(valueSegment.ToString()));
+                        formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
+                        {
+                            var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                            var providerSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
+                            var styleSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[2] });
 
-                        return valueSegment.Change($"{this.CastTo(typeof(DateOnly), valueSegment.Value)}", false, false, false, true);
-                    });
+                            if ((valueSegment.IsConstant || valueSegment.IsVariable)
+                                && (providerSegment.IsConstant || providerSegment.IsVariable)
+                                && (styleSegment.IsConstant || styleSegment.IsVariable))
+                                return valueSegment.Change(DateOnly.Parse(valueSegment.ToString(), (IFormatProvider)providerSegment.Value, (DateTimeStyles)styleSegment.Value));
+
+                            return valueSegment.Change($"CAST({valueSegment} AS DATE)", false, false, false, true);
+                        });
+                    }
+                    else if (parameterInfos.Length == 2)
+                    {
+                        formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
+                        {
+                            var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                            var providerSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
+
+                            if ((valueSegment.IsConstant || valueSegment.IsVariable)
+                                && (providerSegment.IsConstant || providerSegment.IsVariable))
+                                return valueSegment.Change(DateOnly.Parse(valueSegment.ToString(), (IFormatProvider)providerSegment.Value));
+
+                            return valueSegment.Change($"CAST({valueSegment} AS DATE)", false, false, false, true);
+                        });
+                    }
+                    else
+                    {
+                        formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
+                        {
+                            var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
+                            if (valueSegment.IsConstant || valueSegment.IsVariable)
+                                return valueSegment.Change(DateOnly.Parse(valueSegment.ToString()));
+
+                            return valueSegment.Change($"CAST({valueSegment} AS DATE)", false, false, false, true);
+                        });
+                    }
                     result = true;
                     if (methodInfo.IsStatic && parameterInfos.Length >= 3 && parameterInfos[0].ParameterType == typeof(ReadOnlySpan<char>))
                         throw new NotSupportedException("DateOnly.Parse方法暂时不支持ReadOnlySpan<char>类型参数的解析，请转换成String类型");
                     break;
                 case "ParseExact":
                 case "TryParseExact":
+
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
                         var valueSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
@@ -197,32 +232,38 @@ partial class MySqlProvider
                         {
                             formatArgument = $"'{formatSegment}'";
 
+                            if (formatArgument.Contains("mm"))
+                                formatArgument = formatArgument.NextReplace("mm", "%i");
+                            else formatArgument = formatArgument.NextReplace("m", "%i");
+
                             if (formatArgument.Contains("yyyy"))
-                                formatArgument = formatArgument.NextReplace("yyyy", "YYYY");
+                                formatArgument = formatArgument.NextReplace("yyyy", "%Y");
                             else if (formatArgument.Contains("yyy"))
-                                formatArgument = formatArgument.NextReplace("yyy", "YYY");
+                                formatArgument = formatArgument.NextReplace("yyy", "%Y");
                             else if (formatArgument.Contains("yy"))
-                                formatArgument = formatArgument.NextReplace("yy", "YY");
+                                formatArgument = formatArgument.NextReplace("yy", "%y");
 
                             if (formatArgument.Contains("MMMM"))
-                                formatArgument = formatArgument.NextReplace("MMMM", "Month");
+                                formatArgument = formatArgument.NextReplace("MMMM", "%M");
                             else if (formatArgument.Contains("MMM"))
-                                formatArgument = formatArgument.NextReplace("MMM", "Mon");
-                            else if (formatArgument.Contains("M") && !formatArgument.Contains("MM"))
-                                formatArgument = formatArgument.NextReplace("M", "FMMM");
+                                formatArgument = formatArgument.NextReplace("MMM", "%b");
+                            else if (formatArgument.Contains("MM"))
+                                formatArgument = formatArgument.NextReplace("MM", "%m");
+                            else if (formatArgument.Contains("M"))
+                                formatArgument = formatArgument.NextReplace("M", "%c");
 
                             if (formatArgument.Contains("dddd"))
-                                formatArgument = formatArgument.NextReplace("dddd", "Day");
+                                formatArgument = formatArgument.NextReplace("dddd", "%W");
                             else if (formatArgument.Contains("ddd"))
-                                formatArgument = formatArgument.NextReplace("ddd", "DY");
+                                formatArgument = formatArgument.NextReplace("ddd", "%a");
                             else if (formatArgument.Contains("dd"))
-                                formatArgument = formatArgument.NextReplace("dd", "DD");
+                                formatArgument = formatArgument.NextReplace("dd", "%d");
                             else if (formatArgument.Contains("d"))
-                                formatArgument = formatArgument.NextReplace("d", "FMDD");
+                                formatArgument = formatArgument.NextReplace("d", "%e");
                         }
                         else formatArgument = visitor.GetQuotedValue(formatSegment);
                         var valueArgument = visitor.GetQuotedValue(valueSegment);
-                        return valueSegment.Merge(formatSegment, $"TO_DATE({valueArgument},{formatArgument})", false, false, false, true);
+                        return valueSegment.Merge(formatSegment, $"STR_TO_DATE({valueArgument},{formatArgument})", false, false, false, true);
                     });
                     result = true;
                     if (methodInfo.IsStatic && parameterInfos.Length >= 1 && parameterInfos[0].ParameterType == typeof(ReadOnlySpan<char>))
@@ -253,11 +294,11 @@ partial class MySqlProvider
                         var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                         if ((targetSegment.IsConstant || targetSegment.IsVariable)
                            && (rightSegment.IsConstant || rightSegment.IsVariable))
-                            return targetSegment.Change(((DateOnly)targetSegment.Value).AddDays(Convert.ToInt32(rightSegment.Value)));
+                            return targetSegment.Merge(rightSegment, ((DateOnly)targetSegment.Value).AddDays(Convert.ToInt32(rightSegment.Value)));
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Change($"{targetArgument}+{rightArgument}", false, false, true);
+                        return targetSegment.Merge(rightSegment, $"DATE_ADD({targetArgument},INTERVAL {rightArgument} DAY)", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -272,7 +313,7 @@ partial class MySqlProvider
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Change($"({targetArgument}+INTERVAL '1 MON'*{rightArgument})::DATE", false, false, true);
+                        return targetSegment.Merge(rightSegment, $"DATE_ADD({targetArgument},INTERVAL {rightSegment} MONTH)", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -287,7 +328,7 @@ partial class MySqlProvider
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Change($"({targetArgument}+INTERVAL '1Y'*{rightArgument})::DATE", false, false, true);
+                        return targetSegment.Merge(rightSegment, $"DATE_ADD({targetArgument},INTERVAL {rightArgument} YEAR)", false, false, false, true);
                     });
                     result = true;
                     break;
@@ -325,7 +366,7 @@ partial class MySqlProvider
                                 return targetSegment.Change(targetSegment.ToString());
 
                             var targetArgument = visitor.GetQuotedValue(targetSegment);
-                            return targetSegment.Change($"TO_CHAR({targetArgument},'YYYY-MM-DD')", false, false, false, true);
+                            return targetSegment.Change($"DATE_FORMAT({targetArgument},'%Y-%m-%d')", false, false, false, true);
                         });
                         result = true;
                     }
@@ -371,7 +412,7 @@ partial class MySqlProvider
                                 return targetSegment.Merge(formatSegment, ((DateOnly)targetSegment.Value).ToString(formatSegment.ToString()));
 
                             var targetArgument = visitor.GetQuotedValue(targetSegment);
-                            return targetSegment.Merge(formatSegment, $"TO_CHAR({targetArgument},{formatArgument})", false, false, false, true);
+                            return targetSegment.Merge(formatSegment, $"DATE_FORMAT({targetArgument},{formatArgument})", false, false, false, true);
                         });
                         result = true;
                     }
@@ -393,8 +434,10 @@ partial class MySqlProvider
 
                             var targetArgument = visitor.GetQuotedValue(targetSegment);
                             var valueArgument = visitor.GetQuotedValue(valueSegment);
-                            var timezone = (DateTimeKind)kindSegment.Value == DateTimeKind.Utc ? " AT TIME ZONE 'UTC'" : string.Empty;
-                            return targetSegment.Change($"{targetArgument}+{valueArgument}{timezone}", false, false, true);
+                            var timezone = $"TIMESTAMP({targetArgument},{valueArgument})";
+                            if ((DateTimeKind)kindSegment.Value == DateTimeKind.Utc)
+                                timezone = $"CONVERT_TZ({timezone},'SYSTEM','UTC')";
+                            return targetSegment.Change(timezone, false, false, false, true);
                         });
                     }
                     else
@@ -409,7 +452,7 @@ partial class MySqlProvider
 
                             var targetArgument = visitor.GetQuotedValue(targetSegment);
                             var valueArgument = visitor.GetQuotedValue(valueSegment);
-                            return targetSegment.Change($"{targetArgument}+{valueArgument}", false, false, true);
+                            return targetSegment.Change($"TIMESTAMP({targetArgument},{valueArgument})", false, false, false, true);
                         });
                     }
                     result = true;
