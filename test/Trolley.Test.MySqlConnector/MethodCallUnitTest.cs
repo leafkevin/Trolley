@@ -67,7 +67,6 @@ public class MethodCallUnitTest : UnitTestBase
             .Select(f => f.Id)
             .ToSql(out var dbParameters);
         Assert.True(sql == "SELECT a.`Id` FROM `sys_user` a WHERE a.`Id` IN (@p0,@p1)");
-
         result = repository.From<User>()
             .Where(f => ids.Contains(f.Id))
             .ToList();
@@ -76,12 +75,12 @@ public class MethodCallUnitTest : UnitTestBase
 
         var names = new List<string> { "kevin", "cindy" };
         sql = repository.From<User>()
-            .Where(f => new List<string> { "kevin", "cindy" }.Contains(f.Name))
+            .Where(f => names.Contains(f.Name))
             .Select(f => f.Id)
             .ToSql(out dbParameters);
         Assert.True(sql == "SELECT a.`Id` FROM `sys_user` a WHERE a.`Name` IN (@p0,@p1)");
         result = await repository.From<User>()
-            .Where(f => new List<string> { "kevin", "cindy" }.Contains(f.Name))
+            .Where(f => names.Contains(f.Name))
             .ToListAsync();
         Assert.NotNull(result);
         Assert.True(result.Count == 1);
@@ -107,9 +106,9 @@ public class MethodCallUnitTest : UnitTestBase
         Assert.True(dbParameters[3].Value.GetType() == typeof(string));
 
         var result = await repository.From<User>()
-             .Where(f => f.Id == 1)
-             .Select(f => string.Concat(f.Name + "_1_" + isMale, f.Age + 5, isMale) + "_2_" + f.Age + "_3_" + isMale + "_4_" + count)
-             .FirstAsync();
+            .Where(f => f.Id == 1)
+            .Select(f => string.Concat(f.Name + "_1_" + isMale, f.Age + 5, isMale) + "_2_" + f.Age + "_3_" + isMale + "_4_" + count)
+            .FirstAsync();
         Assert.NotNull(result);
         Assert.True(result == "leafkevin_1_False30False_2_25_3_False_4_10");
     }
@@ -122,7 +121,7 @@ public class MethodCallUnitTest : UnitTestBase
         var sql = repository.From<User>()
             .Where(f => f.Name.Contains("cindy"))
             .Select(f => $"{f.Name + "222"}_111_{f.Age + isMale.ToString()}_{isMale}_{count}")
-           .ToSql(out var dbParameters);
+            .ToSql(out var dbParameters);
         Assert.True(sql == "SELECT CONCAT(a.`Name`,'222_111_',CAST(a.`Age` AS CHAR),@p0,'_',@p1,'_',@p2) FROM `sys_user` a WHERE a.`Name` LIKE '%cindy%'");
         Assert.True((string)dbParameters[0].Value == isMale.ToString());
         Assert.True(dbParameters[0].Value.GetType() == typeof(string));
@@ -130,7 +129,6 @@ public class MethodCallUnitTest : UnitTestBase
         Assert.True(dbParameters[1].Value.GetType() == typeof(string));
         Assert.True((string)dbParameters[2].Value == count.ToString());
         Assert.True(dbParameters[2].Value.GetType() == typeof(string));
-
         var result = await repository.From<User>()
             .Where(f => f.Name.Contains("cindy"))
             .Select(f => $"{f.Name + "222"}_111_{f.Age + isMale.ToString()}_{isMale}_{count}")

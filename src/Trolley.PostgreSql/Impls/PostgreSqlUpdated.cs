@@ -47,7 +47,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                         }
                         if (updateObjType == null) throw new Exception("批量更新，updateObjs参数至少要有一条数据");
                         var fromMapper = this.Visitor.Tables[0].Mapper;
-                        var memberMappers = this.Visitor.GetRefMemberMappers(updateObjType, fromMapper);
+                        var memberMappers = this.Visitor.GetRefMemberMappers(updateObjType, fromMapper, true);
                         var ormProvider = this.Visitor.OrmProvider;
                         var tableName = this.OrmProvider.GetTableName($"{fromMapper.TableName}_{Guid.NewGuid():N}");
 
@@ -122,24 +122,23 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                         var updateSql = builder.ToString();
 
                         var connection = this.DbContext.Connection as NpgsqlConnection;
-                        using var writer = connection.BeginBinaryImport(bulkCopySql);
-                        foreach (var updateObj in updateObjs)
+                        using (var writer = connection.BeginBinaryImport(bulkCopySql))
                         {
-                            writer.StartRow();
-                            foreach (var memberMapper in memberMappers)
+                            foreach (var updateObj in updateObjs)
                             {
-                                var refMemberMapper = memberMapper.RefMemberMapper;
-                                var fieldValue = memberMapper.ValueGetter.Invoke(updateObj);
-                                writer.Write(fieldValue, (NpgsqlDbType)refMemberMapper.NativeDbType);
+                                writer.StartRow();
+                                foreach (var memberMapper in memberMappers)
+                                {
+                                    var refMemberMapper = memberMapper.RefMemberMapper;
+                                    var fieldValue = memberMapper.ValueGetter.Invoke(updateObj);
+                                    writer.Write(fieldValue, (NpgsqlDbType)refMemberMapper.NativeDbType);
+                                }
+                                result++;
                             }
-                            result++;
+                            writer.Complete();
                         }
                         command.CommandText = updateSql;
                         result = command.ExecuteNonQuery();
-                        command.CommandText = $"DROP TABLE {tableName}";
-                        command.ExecuteNonQuery();
-                        writer.Complete();
-
                         command.Parameters.Clear();
                         command.Dispose();
                         command = null;
@@ -490,7 +489,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
             }
             if (updateObjType == null) throw new Exception("批量更新，updateObjs参数至少要有一条数据");
             var fromMapper = this.Visitor.Tables[0].Mapper;
-            var memberMappers = this.Visitor.GetRefMemberMappers(updateObjType, fromMapper);
+            var memberMappers = this.Visitor.GetRefMemberMappers(updateObjType, fromMapper, true);
             var ormProvider = this.Visitor.OrmProvider;
             var tableName = ormProvider.GetTableName($"{fromMapper.TableName}_{Guid.NewGuid():N}");
 

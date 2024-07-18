@@ -150,7 +150,7 @@ public class UnitTest1 : UnitTestBase
             Assert.True(dbParameter.SqlDbType == SqlDbType.NVarChar);
             Assert.True((string)dbParameter.Value == Gender.Male.ToString());
         }
-        Assert.True((int)dbParameters[6].Value == 1);
+        Assert.True((bool)dbParameters[6].Value == true);
         Assert.True((DateTime)dbParameters[7].Value == now);
         Assert.True((int)dbParameters[8].Value == 1);
         Assert.True((DateTime)dbParameters[9].Value == now);
@@ -246,7 +246,7 @@ public class UnitTest1 : UnitTestBase
            })
            .IgnoreFields(f => new { f.Gender, f.CompanyId })
            .ToSql(out dbParameters);
-        Assert.True(sql == "INSERT INTO `sys_user` (`Id`,`TenantId`,`Name`,`Age`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id,@TenantId,@Name,@Age,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)");
+        Assert.True(sql == "INSERT INTO [sys_user] ([Id],[TenantId],[Name],[Age],[IsEnabled],[CreatedAt],[CreatedBy],[UpdatedAt],[UpdatedBy]) VALUES (@Id,@TenantId,@Name,@Age,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)");
 
         repository.BeginTransaction();
         repository.Delete<User>().Where(f => f.Id == 1).Execute();
@@ -348,6 +348,7 @@ public class UnitTest1 : UnitTestBase
             .WithBy(guidField.HasValue, new { GuidField = guidField })
             .ToSql(out _);
         Assert.True(sql == "INSERT INTO [sys_user] ([Id],[Name],[Age],[CompanyId],[Gender],[IsEnabled],[CreatedAt],[CreatedBy],[UpdatedAt],[UpdatedBy],[GuidField]) VALUES (@Id,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy,@GuidField)");
+
         repository.BeginTransaction();
         var count = repository.Delete<User>().Where(f => f.Id == 1).Execute();
         count = await repository.Create<User>()
@@ -369,24 +370,30 @@ public class UnitTest1 : UnitTestBase
         Assert.Equal(1, count);
     }
     [Fact]
-    public async void Insert_WithBy_Dictionary_AutoIncrement()
+    public async void Insert_WithBy_AutoIncrement()
     {
         using var repository = dbFactory.Create();
-        //var result = repository.CreateIdentity<Company>(new
-        //{
-        //    Name = "微软11",
-        //    IsEnabled = true,
-        //    CreatedAt = DateTime.Now,
-        //    CreatedBy = 1,
-        //    UpdatedAt = DateTime.Now,
-        //    UpdatedBy = 1
-        //});
-        await repository.Delete<Company>().Where(f => f.Id == 1).ExecuteAsync();
-        var id = repository.Create<Company>()
+        repository.BeginTransaction();
+        var id = repository.CreateIdentity<Company>(new
+        {
+            Name = "微软",
+            IsEnabled = true,
+            CreatedAt = DateTime.Now,
+            CreatedBy = 1,
+            UpdatedAt = DateTime.Now,
+            UpdatedBy = 1
+        });
+        var maxId = repository.From<Company>().Max(f => f.Id);
+        repository.Commit();
+        Assert.Equal(maxId, id);
+
+        repository.BeginTransaction();
+        await repository.Delete<Company>().Where(f => f.Id == id).ExecuteAsync();
+        id = repository.Create<Company>()
             .WithBy(new Dictionary<string, object>()
             {
                     //{ "Id", 1},
-                    { "Name","微软11"},
+                    { "Name","谷歌"},
                     { "IsEnabled", true},
                     { "CreatedAt", DateTime.Now},
                     { "CreatedBy", 1},
@@ -394,7 +401,8 @@ public class UnitTest1 : UnitTestBase
                     { "UpdatedBy", 1}
             })
             .ExecuteIdentity();
-        var maxId = repository.From<Company>().Max(f => f.Id);
+        maxId = repository.From<Company>().Max(f => f.Id);
+        repository.Commit();
         Assert.Equal(maxId, id);
     }
     [Fact]
@@ -892,7 +900,6 @@ public class UnitTest1 : UnitTestBase
         var sql2 = repository.Create<Company>()
              .WithBy(new Company
              {
-                 Id = 1,
                  Name = "leafkevin",
                  Nature = CompanyNature.Internet,
                  IsEnabled = true,
@@ -902,10 +909,10 @@ public class UnitTest1 : UnitTestBase
                  UpdatedBy = 1
              })
              .ToSql(out var parameters2);
-        Assert.True(sql2 == "INSERT INTO [sys_company] ([Id],[Name],[Nature],[IsEnabled],[CreatedBy],[CreatedAt],[UpdatedBy],[UpdatedAt]) VALUES (@Id,@Name,@Nature,@IsEnabled,@CreatedBy,@CreatedAt,@UpdatedBy,@UpdatedAt)");
-        Assert.True(parameters2[2].ParameterName == "@Nature");
-        Assert.True(parameters2[2].Value.GetType() == typeof(string));
-        Assert.True((string)parameters2[2].Value == CompanyNature.Internet.ToString());
+        Assert.True(sql2 == "INSERT INTO [sys_company] ([Name],[Nature],[IsEnabled],[CreatedBy],[CreatedAt],[UpdatedBy],[UpdatedAt]) VALUES (@Name,@Nature,@IsEnabled,@CreatedBy,@CreatedAt,@UpdatedBy,@UpdatedAt)");
+        Assert.True(parameters2[1].ParameterName == "@Nature");
+        Assert.True(parameters2[1].Value.GetType() == typeof(string));
+        Assert.True((string)parameters2[1].Value == CompanyNature.Internet.ToString());
     }
     [Fact]
     public async void Insert_Output()

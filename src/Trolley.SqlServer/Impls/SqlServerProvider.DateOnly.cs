@@ -224,7 +224,7 @@ partial class SqlServerProvider
                         if ((valueSegment.IsConstant || valueSegment.IsVariable)
                             && (formatSegment.IsConstant || formatSegment.IsVariable)
                             && (providerSegment.IsConstant || providerSegment.IsVariable))
-                            return valueSegment.Merge(formatSegment, DateTime.ParseExact(valueSegment.ToString(), formatSegment.ToString(), (IFormatProvider)providerSegment.Value));
+                            return valueSegment.Merge(formatSegment, DateOnly.ParseExact(valueSegment.ToString(), formatSegment.ToString(), (IFormatProvider)providerSegment.Value));
 
                         if (!(formatSegment.IsConstant || formatSegment.IsVariable))
                             throw new NotSupportedException($"方法DateOnly.{methodInfo.Name}格式化字符串，暂时不支持非常量、变量的解析");
@@ -395,7 +395,10 @@ partial class SqlServerProvider
                                 return targetSegment.Merge(formatSegment, ((DateOnly)targetSegment.Value).ToString(formatSegment.ToString()));
 
                             var targetArgument = visitor.GetQuotedValue(targetSegment);
-                            return targetSegment.Merge(formatSegment, $"TO_CHAR({targetArgument},{formatArgument})", false, false, false, true);
+                            if (formatSegment.IsConstant || formatSegment.IsVariable)
+                                return targetSegment.Merge(formatSegment, $"FORMAT({targetArgument},{formatArgument})", false, false, false, true);
+
+                            throw new NotSupportedException("DateOnly类型暂时不支持非常量的格式化字符串");
                         });
                         result = true;
                     }
@@ -415,10 +418,7 @@ partial class SqlServerProvider
                                 && (valueSegment.IsConstant || valueSegment.IsVariable))
                                 return targetSegment.Change(((DateOnly)targetSegment.Value).ToDateTime((TimeOnly)valueSegment.Value, (DateTimeKind)kindSegment.Value));
 
-                            var targetArgument = visitor.GetQuotedValue(targetSegment);
-                            var valueArgument = visitor.GetQuotedValue(valueSegment);
-                            var timezone = (DateTimeKind)kindSegment.Value == DateTimeKind.Utc ? " AT TIME ZONE 'UTC'" : string.Empty;
-                            return targetSegment.Change($"{targetArgument}+{valueArgument}{timezone}", false, false, true);
+                            throw new NotSupportedException("DateOnly类型ToDateTime方法暂时不支持非常量的参数解析");
                         });
                     }
                     else
@@ -431,9 +431,7 @@ partial class SqlServerProvider
                                 && (valueSegment.IsConstant || valueSegment.IsVariable))
                                 return targetSegment.Change(((DateOnly)targetSegment.Value).ToDateTime((TimeOnly)valueSegment.Value));
 
-                            var targetArgument = visitor.GetQuotedValue(targetSegment);
-                            var valueArgument = visitor.GetQuotedValue(valueSegment);
-                            return targetSegment.Change($"{targetArgument}+{valueArgument}", false, false, true);
+                            throw new NotSupportedException("DateOnly类型ToDateTime方法暂时不支持非常量的参数解析");
                         });
                     }
                     result = true;

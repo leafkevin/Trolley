@@ -49,34 +49,39 @@ public class UnitTestBase
                 UpdatedBy = 1
             }
         });
-
-        repository.Delete<Company>(new[] { 1, 2 });
-        repository.Create<Company>(new[]
+        if (!repository.Exists<Company>())
         {
-            new Company
+            repository.Create<Company>(new[]
             {
-                Id = 1,
-                Name = "微软",
-                Nature = CompanyNature.Internet,
-                IsEnabled = true,
-                CreatedAt = DateTime.Now,
-                CreatedBy = 1,
-                UpdatedAt = DateTime.Now,
-                UpdatedBy = 1
-            },
-            new Company
-            {
-                Id = 2,
-                Name = "谷歌",
-                Nature = CompanyNature.Internet,
-                IsEnabled = true,
-                CreatedAt = DateTime.Now,
-                CreatedBy = 1,
-                UpdatedAt = DateTime.Now,
-                UpdatedBy = 1
-            }
-        });
-
+                new Company
+                {
+                    Name = "微软",
+                    Nature = CompanyNature.Internet,
+                    IsEnabled = true,
+                    CreatedAt = DateTime.Now,
+                    CreatedBy = 1,
+                    UpdatedAt = DateTime.Now,
+                    UpdatedBy = 1
+                },
+                new Company
+                {
+                    Name = "谷歌",
+                    Nature = CompanyNature.Internet,
+                    IsEnabled = true,
+                    CreatedAt = DateTime.Now,
+                    CreatedBy = 1,
+                    UpdatedAt = DateTime.Now,
+                    UpdatedBy = 1
+                }
+            });
+        }
+        else
+        {
+            repository.Update<Company>()
+                .Set(f => f.Nature, CompanyNature.Internet)
+                .Where(f => f.Id > 0)
+                .Execute();
+        }
         repository.Delete<Brand>(new[] { 1, 2, 3 });
         repository.Create<Brand>(new[]
         {

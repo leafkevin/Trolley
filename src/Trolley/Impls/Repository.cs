@@ -760,10 +760,18 @@ public class Repository : IRepository
         }, cancellationToken);
         return result > 0;
     }
-    public virtual bool Exists<TEntity>(Expression<Func<TEntity, bool>> wherePredicate)
-        => this.From<TEntity>().Where(wherePredicate).Count() > 0;
+    public virtual bool Exists<TEntity>(Expression<Func<TEntity, bool>> wherePredicate = null)
+    {
+        if (wherePredicate != null)
+            return this.From<TEntity>().Where(wherePredicate).Count() > 0;
+        return this.From<TEntity>().Count() > 0;
+    }
     public virtual async Task<bool> ExistsAsync<TEntity>(Expression<Func<TEntity, bool>> wherePredicate, CancellationToken cancellationToken = default)
-        => await this.From<TEntity>().Where(wherePredicate).CountAsync() > 0;
+    {
+        if (wherePredicate != null)
+            return await this.From<TEntity>().Where(wherePredicate).CountAsync(cancellationToken) > 0;
+        return await this.From<TEntity>().CountAsync(cancellationToken) > 0;
+    }
     #endregion
 
     #region Execute

@@ -57,8 +57,10 @@ public class UnitTest3 : UnitTestBase
     {
         Initialize();
         using var repository = dbFactory.Create();
+        repository.BeginTransaction();
         var parameters = await repository.From<OrderDetail>()
             .GroupBy(f => f.OrderId)
+            .OrderBy((x, f) => f.OrderId)
             .Select((x, f) => new
             {
                 Id = x.Grouping,
@@ -68,8 +70,10 @@ public class UnitTest3 : UnitTestBase
         var count = await repository.UpdateAsync<Order>(parameters);
         var ids = parameters.Select(f => f.Id).ToList();
         var orders = await repository.QueryAsync<Order>(f => ids.Contains(f.Id));
+        repository.Commit();
         Assert.True(count > 0);
         Assert.True(parameters.Count == orders.Count);
+        orders.Sort((x, y) => x.Id.CompareTo(y.Id));
         for (int i = 0; i < orders.Count; i++)
         {
             Assert.True(orders[i].TotalAmount == parameters[i].TotalAmount);
@@ -154,7 +158,10 @@ public class UnitTest3 : UnitTestBase
     {
         Initialize();
         using var repository = dbFactory.Create();
-        var orderDetails = await repository.From<OrderDetail>().ToListAsync();
+        var orderDetails = await repository.From<OrderDetail>()
+            .OrderBy(f => f.Id)
+            .Take(5)
+            .ToListAsync();
         var parameters = orderDetails.Select(f => new
         {
             f.Id,
@@ -168,7 +175,7 @@ public class UnitTest3 : UnitTestBase
             .SetBulk(parameters)
             .IgnoreFields(f => f.Price)
             .ToSql(out var dbParameters);
-        Assert.True(sql == "UPDATE [sys_order_detail] SET [Quantity]=@Quantity0,[Amount]=@Amount0,[UpdatedAt]=@UpdatedAt0 WHERE [Id]=@kId0;UPDATE [sys_order_detail] SET [Quantity]=@Quantity1,[Amount]=@Amount1,[UpdatedAt]=@UpdatedAt1 WHERE [Id]=@kId1;UPDATE [sys_order_detail] SET [Quantity]=@Quantity2,[Amount]=@Amount2,[UpdatedAt]=@UpdatedAt2 WHERE [Id]=@kId2;UPDATE [sys_order_detail] SET [Quantity]=@Quantity3,[Amount]=@Amount3,[UpdatedAt]=@UpdatedAt3 WHERE [Id]=@kId3;UPDATE [sys_order_detail] SET [Quantity]=@Quantity4,[Amount]=@Amount4,[UpdatedAt]=@UpdatedAt4 WHERE [Id]=@kId4;UPDATE [sys_order_detail] SET [Quantity]=@Quantity5,[Amount]=@Amount5,[UpdatedAt]=@UpdatedAt5 WHERE [Id]=@kId5;UPDATE [sys_order_detail] SET [Quantity]=@Quantity6,[Amount]=@Amount6,[UpdatedAt]=@UpdatedAt6 WHERE [Id]=@kId6");
+        Assert.True(sql == "UPDATE [sys_order_detail] SET [Quantity]=@Quantity0,[Amount]=@Amount0,[UpdatedAt]=@UpdatedAt0 WHERE [Id]=@kId0;UPDATE [sys_order_detail] SET [Quantity]=@Quantity1,[Amount]=@Amount1,[UpdatedAt]=@UpdatedAt1 WHERE [Id]=@kId1;UPDATE [sys_order_detail] SET [Quantity]=@Quantity2,[Amount]=@Amount2,[UpdatedAt]=@UpdatedAt2 WHERE [Id]=@kId2;UPDATE [sys_order_detail] SET [Quantity]=@Quantity3,[Amount]=@Amount3,[UpdatedAt]=@UpdatedAt3 WHERE [Id]=@kId3;UPDATE [sys_order_detail] SET [Quantity]=@Quantity4,[Amount]=@Amount4,[UpdatedAt]=@UpdatedAt4 WHERE [Id]=@kId4");
         Assert.True(dbParameters.Count == parameters.Count * 4);
         for (int i = 0; i < parameters.Count; i++)
         {
@@ -177,12 +184,13 @@ public class UnitTest3 : UnitTestBase
             Assert.True(dbParameters[i * 4 + 2].ParameterName == $"@UpdatedAt{i}");
             Assert.True(dbParameters[i * 4 + 3].ParameterName == $"@kId{i}");
         }
-
+        var ids = parameters.Select(f => f.Id).ToList();
+        repository.BeginTransaction();
         var result = repository.Update<OrderDetail>()
             .SetBulk(parameters)
             .IgnoreFields(f => f.Price)
             .Execute();
-        var updatedDetails = await repository.QueryAsync<OrderDetail>();
+        var updatedDetails = await repository.QueryAsync<OrderDetail>(f => ids.Contains(f.Id));
         repository.Commit();
         Assert.True(result == parameters.Count);
         for (int i = 0; i < parameters.Count; i++)
@@ -1349,10 +1357,10 @@ public class UnitTest3 : UnitTestBase
     public async void Update_BulkCopy()
     {
         using var repository = dbFactory.Create();
-        var orders = new List<Order>();
+        var orders = new List<dynamic>();
         for (int i = 1000; i < 2000; i++)
         {
-            orders.Add(new Order
+            orders.Add(new
             {
                 Id = $"ON_{i + 1}",
                 TenantId = "3",

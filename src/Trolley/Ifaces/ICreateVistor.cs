@@ -40,6 +40,6 @@ public interface ICreateVisitor : IDisposable
     void IgnoreFields(Expression fieldsSelector);
     void OnlyFields(string[] fieldNames);
     void OnlyFields(Expression fieldsSelector);
-    DataTable ToDataTable(Type parameterType, IEnumerable entities, EntityMap fromMapper, string tableName = null);
-    List<(MemberMap RefMemberMapper, Func<object, object> ValueGetter)> GetRefMemberMappers(Type entityType, EntityMap refEntityMapper, bool isUpdate = false);
+    DataTable ToDataTable(Type insertObjType, IEnumerable entities, List<(MemberMap RefMemberMapper, Func<object, object> ValueGetter)> memberMappers, string tableName = null);
+    List<(MemberMap RefMemberMapper, Func<object, object> ValueGetter)> GetRefMemberMappers(Type insertObjType, EntityMap refEntityMapper, bool isUpdate = false);
 }

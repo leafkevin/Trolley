@@ -52,7 +52,7 @@ public interface IUpdateVisitor : IDisposable
     void WhereWith(object whereObj);
     void Where(Expression whereExpr);
     void And(Expression whereExpr);
-    DataTable ToDataTable(Type entityType, IEnumerable entities, EntityMap fromMapper, string tableName = null);
+    DataTable ToDataTable(Type updateObjType, IEnumerable entities, List<(MemberMap RefMemberMapper, Func<object, object> ValueGetter)> memberMappers, string tableName = null);
     List<(MemberMap RefMemberMapper, Func<object, object> ValueGetter)> GetRefMemberMappers(Type entityType, EntityMap refEntityMapper, bool isUpdate = false);
     string BuildShardingTablesSql(string tableSchema);
     void SetShardingTables(List<string> shardingTables);

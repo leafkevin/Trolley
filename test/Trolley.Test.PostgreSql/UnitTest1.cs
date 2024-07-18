@@ -903,7 +903,6 @@ public class UnitTest1 : UnitTestBase
         var sql2 = repository.Create<Company>()
              .WithBy(new Company
              {
-                 Id = 1,
                  Name = "leafkevin",
                  Nature = CompanyNature.Internet,
                  IsEnabled = true,
@@ -913,10 +912,10 @@ public class UnitTest1 : UnitTestBase
                  UpdatedBy = 1
              })
              .ToSql(out var parameters2);
-        Assert.True(sql2 == "INSERT INTO \"sys_company\" (\"Id\",\"Name\",\"Nature\",\"IsEnabled\",\"CreatedBy\",\"CreatedAt\",\"UpdatedBy\",\"UpdatedAt\") VALUES (@Id,@Name,@Nature,@IsEnabled,@CreatedBy,@CreatedAt,@UpdatedBy,@UpdatedAt)");
-        Assert.True(parameters2[2].ParameterName == "@Nature");
-        Assert.True(parameters2[2].Value.GetType() == typeof(string));
-        Assert.True((string)parameters2[2].Value == CompanyNature.Internet.ToString());
+        Assert.True(sql2 == "INSERT INTO \"sys_company\" (\"Name\",\"Nature\",\"IsEnabled\",\"CreatedBy\",\"CreatedAt\",\"UpdatedBy\",\"UpdatedAt\") VALUES (@Name,@Nature,@IsEnabled,@CreatedBy,@CreatedAt,@UpdatedBy,@UpdatedAt)");
+        Assert.True(parameters2[1].ParameterName == "@Nature");
+        Assert.True(parameters2[1].Value.GetType() == typeof(string));
+        Assert.True((string)parameters2[1].Value == CompanyNature.Internet.ToString());
     }
     [Fact]
     public async void Insert_OnConflictDoNothing()

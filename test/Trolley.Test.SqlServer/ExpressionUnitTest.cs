@@ -58,6 +58,7 @@ public class ExpressionUnitTest : UnitTestBase
             })
             .ToSql(out _);
         Assert.True(sql == "SELECT (CASE WHEN a.[IsEnabled]=1 THEN 'Enabled' ELSE 'Disabled' END) AS [IsEnabled],(CASE WHEN a.[GuidField] IS NOT NULL THEN 'HasValue' ELSE 'NoValue' END) AS [GuidField],(CASE WHEN a.[Age]>35 THEN 1 ELSE 0 END) AS [IsOld],(CASE WHEN a.[Name] LIKE '%kevin%' THEN 'Yes' ELSE 'No' END) AS [IsNeedParameter] FROM [sys_user] a WHERE (CASE WHEN a.[IsEnabled]=1 THEN 'Enabled' ELSE 'Disabled' END)='Enabled' AND (CASE WHEN a.[GuidField] IS NOT NULL THEN 'HasValue' ELSE 'NoValue' END)='HasValue'");
+
         var enabled = "Enabled";
         var hasValue = "HasValue";
         sql = repository.From<User>()

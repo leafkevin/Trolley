@@ -369,24 +369,30 @@ public class UnitTest1 : UnitTestBase
         Assert.Equal(1, count);
     }
     [Fact]
-    public async void Insert_WithBy_Dictionary_AutoIncrement()
+    public async void Insert_WithBy_AutoIncrement()
     {
         using var repository = dbFactory.Create();
-        //var result = repository.CreateIdentity<Company>(new
-        //{
-        //    Name = "微软11",
-        //    IsEnabled = true,
-        //    CreatedAt = DateTime.Now,
-        //    CreatedBy = 1,
-        //    UpdatedAt = DateTime.Now,
-        //    UpdatedBy = 1
-        //});
-        await repository.Delete<Company>().Where(f => f.Id == 1).ExecuteAsync();
-        var id = repository.Create<Company>()
+        repository.BeginTransaction();
+        var id = repository.CreateIdentity<Company>(new
+        {
+            Name = "微软",
+            IsEnabled = true,
+            CreatedAt = DateTime.Now,
+            CreatedBy = 1,
+            UpdatedAt = DateTime.Now,
+            UpdatedBy = 1
+        });
+        var maxId = repository.From<Company>().Max(f => f.Id);
+        repository.Commit();
+        Assert.Equal(maxId, id);
+
+        repository.BeginTransaction();
+        await repository.Delete<Company>().Where(f => f.Id == id).ExecuteAsync();
+        id = repository.Create<Company>()
             .WithBy(new Dictionary<string, object>()
             {
                     //{ "Id", 1},
-                    { "Name","微软11"},
+                    { "Name","谷歌"},
                     { "IsEnabled", true},
                     { "CreatedAt", DateTime.Now},
                     { "CreatedBy", 1},
@@ -394,7 +400,8 @@ public class UnitTest1 : UnitTestBase
                     { "UpdatedBy", 1}
             })
             .ExecuteIdentity();
-        var maxId = repository.From<Company>().Max(f => f.Id);
+        maxId = repository.From<Company>().Max(f => f.Id);
+        repository.Commit();
         Assert.Equal(maxId, id);
     }
     [Fact]
@@ -918,7 +925,6 @@ public class UnitTest1 : UnitTestBase
         var sql2 = repository.Create<Company>()
              .WithBy(new Company
              {
-                 Id = 1,
                  Name = "leafkevin",
                  Nature = CompanyNature.Internet,
                  IsEnabled = true,
@@ -928,10 +934,10 @@ public class UnitTest1 : UnitTestBase
                  UpdatedBy = 1
              })
              .ToSql(out var parameters2);
-        Assert.True(sql2 == "INSERT INTO `sys_company` (`Id`,`Name`,`Nature`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) VALUES (@Id,@Name,@Nature,@IsEnabled,@CreatedBy,@CreatedAt,@UpdatedBy,@UpdatedAt)");
-        Assert.True(parameters2[2].ParameterName == "@Nature");
-        Assert.True(parameters2[2].Value.GetType() == typeof(string));
-        Assert.True((string)parameters2[2].Value == CompanyNature.Internet.ToString());
+        Assert.True(sql2 == "INSERT INTO `sys_company` (`Name`,`Nature`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) VALUES (@Name,@Nature,@IsEnabled,@CreatedBy,@CreatedAt,@UpdatedBy,@UpdatedAt)");
+        Assert.True(parameters2[1].ParameterName == "@Nature");
+        Assert.True(parameters2[1].Value.GetType() == typeof(string));
+        Assert.True((string)parameters2[1].Value == CompanyNature.Internet.ToString());
     }
     [Fact]
     public async void Insert_Ignore()
@@ -1085,9 +1091,7 @@ public class UnitTest1 : UnitTestBase
              )
             .ToSql(out _);
         Assert.True(sql1 == "INSERT INTO `sys_order` (`Id`,`TenantId`,`OrderNo`,`BuyerId`,`SellerId`,`TotalAmount`,`Products`,`Disputes`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id,@TenantId,@OrderNo,@BuyerId,@SellerId,@TotalAmount,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) ON DUPLICATE KEY UPDATE `TotalAmount`=@TotalAmount,`Products`=@Products,`BuyerSource`=@BuyerSource");
-
-        await repository.BeginTransactionAsync();
-        await repository.DeleteAsync<Order>("9");
+                
         var sql2 = repository.Create<Order>()
              .WithBy(new
              {

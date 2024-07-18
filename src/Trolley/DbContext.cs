@@ -1319,6 +1319,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             var masterTableSegment = visitor.ShardingTables[0];
             var loopCount = masterTableSegment.TableNames.Count;
+            if (loopCount > 1) masterTableSegment.TableNames.Sort((x, y) => x.CompareTo(y));
             var origMasterName = masterTableSegment.Mapper.TableName;
             for (int i = 0; i < loopCount; i++)
             {

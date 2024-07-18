@@ -6,7 +6,6 @@ class ModelConfiguration : IModelConfiguration
 {
     public void OnModelCreating(ModelBuilder builder)
     {
-
         builder.Entity<Brand>(f =>
         {
             f.ToTable("sys_brand").Key(t => t.Id);
@@ -19,7 +18,6 @@ class ModelConfiguration : IModelConfiguration
             f.Member(t => t.CreatedBy).Field(nameof(Brand.CreatedBy)).DbColumnType("int").NativeDbType(MySqlDbType.Int32).Position(7);
             f.Member(t => t.UpdatedAt).Field(nameof(Brand.UpdatedAt)).DbColumnType("datetime").NativeDbType(MySqlDbType.DateTime).Position(8);
             f.Member(t => t.UpdatedBy).Field(nameof(Brand.UpdatedBy)).DbColumnType("int").NativeDbType(MySqlDbType.Int32).Position(9);
-            f.HasMany(t => t.Products).HasForeignKey(t => t.BrandId);
 
             f.HasMany(t => t.Products).HasForeignKey(t => t.BrandId);
             f.HasOne(t => t.Company).HasForeignKey(t => t.CompanyId).MapTo<Company>();
@@ -27,7 +25,7 @@ class ModelConfiguration : IModelConfiguration
         builder.Entity<Company>(f =>
         {
             f.ToTable("sys_company").Key(t => t.Id);
-            f.Member(t => t.Id).Field(nameof(Company.Id)).DbColumnType("int").NativeDbType(MySqlDbType.Int32).Position(1).Required();
+            f.Member(t => t.Id).Field(nameof(Company.Id)).DbColumnType("int").NativeDbType(MySqlDbType.Int32).Position(1).AutoIncrement().Required();
             f.Member(t => t.Name).Field(nameof(Company.Name)).DbColumnType("varchar(50)").NativeDbType(MySqlDbType.VarChar).Position(2).Length(50);
             f.Member(t => t.Nature).Field(nameof(Company.Nature)).DbColumnType("varchar(50)").NativeDbType(MySqlDbType.VarChar).Position(3).Length(50);
             f.Member(t => t.IsEnabled).Field(nameof(Company.IsEnabled)).DbColumnType("tinyint(1)").NativeDbType(MySqlDbType.Bool).Position(4);
@@ -78,8 +76,8 @@ class ModelConfiguration : IModelConfiguration
             f.Member(t => t.BuyerSource).Field(nameof(Order.BuyerSource)).DbColumnType("varchar(50)").NativeDbType(MySqlDbType.VarChar).Position(7).Length(50);
             f.Member(t => t.SellerId).Field(nameof(Order.SellerId)).DbColumnType("int").NativeDbType(MySqlDbType.Int32).Position(8);
             //特殊类型JSON
-            f.Member(t => t.Products).Field(nameof(Order.Products)).DbColumnType("longtext").NativeDbType(MySqlDbType.JSON).Position(9).TypeHandler<JsonTypeHandler>();
-            f.Member(t => t.Disputes).Field(nameof(Order.Disputes)).DbColumnType("longtext").NativeDbType(MySqlDbType.JSON).Position(10).TypeHandler<JsonTypeHandler>();
+            f.Member(t => t.Products).Field(nameof(Order.Products)).DbColumnType("longtext").NativeDbType(MySqlDbType.LongText).Position(9).TypeHandler<JsonTypeHandler>();
+            f.Member(t => t.Disputes).Field(nameof(Order.Disputes)).DbColumnType("longtext").NativeDbType(MySqlDbType.LongText).Position(10).TypeHandler<JsonTypeHandler>();
             f.Member(t => t.IsEnabled).Field(nameof(Order.IsEnabled)).DbColumnType("tinyint(1)").NativeDbType(MySqlDbType.Bool).Position(11);
             f.Member(t => t.CreatedAt).Field(nameof(Order.CreatedAt)).DbColumnType("datetime").NativeDbType(MySqlDbType.DateTime).Position(12);
             f.Member(t => t.CreatedBy).Field(nameof(Order.CreatedBy)).DbColumnType("int").NativeDbType(MySqlDbType.Int32).Position(13);

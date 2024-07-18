@@ -587,7 +587,7 @@ partial class SqlServerProvider
 
                             var targetArgument = visitor.GetQuotedValue(targetSegment);
                             var rightArgument = visitor.GetQuotedValue(rightSegment);
-                            return targetSegment.Change($"CAST(DATEDIFF(DAY,'1900-01-01 00:00:00',{targetArgument}-{rightArgument}) AS VARCHAR)+'.'+CONVERT(VARCHAR,{targetArgument}-{rightArgument},108)", false, false, false, true);
+                            return targetSegment.Change($"CASE WHEN DATEDIFF(SECOND,{rightArgument},{targetArgument})>0 THEN CAST(DATEDIFF(DAY,{rightArgument},{targetArgument}) AS VARCHAR)+'.'+CAST(CONVERT(TIME,DATEADD(SECOND,DATEDIFF(SECOND,{rightArgument},{targetArgument})%86400,'00:00:00')) AS VARCHAR) ELSE CAST(DATEDIFF(DAY,{rightArgument},{targetArgument})+1 AS VARCHAR)+'.'+CAST(CONVERT(TIME,DATEADD(SECOND,86400-DATEDIFF(SECOND,{rightArgument},{targetArgument})%86400,'00:00:00')) AS VARCHAR) END", false, false, true);
                         });
                         result = true;
                     }

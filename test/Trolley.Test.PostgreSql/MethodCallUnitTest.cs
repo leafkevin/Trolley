@@ -59,6 +59,30 @@ public class MethodCallUnitTest : UnitTestBase
             .Select(f => f.Id)
             .ToSql(out _);
         Assert.True(sql == "SELECT a.\"Id\" FROM \"sys_user\" a WHERE a.\"Name\" IN ('kevin','cindy')");
+		result = await repository.From<User>()
+            .Where(f => new List<string> { "kevin", "cindy" }.Contains(f.Name))
+            .ToListAsync();
+        Assert.NotNull(result);
+        Assert.True(result.Count == 1);
+
+        var ids = new int[] { 1, 2 };
+        sql = repository.From<User>()
+            .Where(f => ids.Contains(f.Id))
+            .Select(f => f.Id)
+            .ToSql(out var dbParameters);
+        Assert.True(sql == "SELECT a.\"Id\" FROM \"sys_user\" a WHERE a.\"Id\" IN (@p0,@p1)");
+        result = repository.From<User>()
+            .Where(f => ids.Contains(f.Id))
+            .ToList();
+        Assert.NotNull(result);
+        Assert.True(result.Count == 2);
+
+        var names = new List<string> { "kevin", "cindy" };
+        sql = repository.From<User>()
+            .Where(f => names.Contains(f.Name))
+            .Select(f => f.Id)
+            .ToSql(out dbParameters);
+        Assert.True(sql == "SELECT a.\"Id\" FROM \"sys_user\" a WHERE a.\"Name\" IN (@p0,@p1)");
         result = await repository.From<User>()
             .Where(f => new List<string> { "kevin", "cindy" }.Contains(f.Name))
             .ToListAsync();
@@ -130,7 +154,7 @@ public class MethodCallUnitTest : UnitTestBase
                 UpdatedAtCompare = DateTime.Compare(f.UpdatedAt, f.UpdatedAt.Subtract(TimeSpan.FromMinutes(2005)))
             })
             .ToSql(out _);
-        Assert.True(sql1 == "SELECT (CASE WHEN a.\"Name\"='leafkevin' THEN 0 WHEN a.\"Name\">'leafkevin' THEN 1 ELSE -1 END) AS \"NameCompare\",(CASE WHEN a.\"CreatedAt\"=CAST(TO_CHAR(CURRENT_TIMESTAMP,'YYYY-MM-DD HH24:MI:SS') AS TIMESTAMP) THEN 0 WHEN a.\"CreatedAt\">CAST(TO_CHAR(CURRENT_TIMESTAMP,'YYYY-MM-DD HH24:MI:SS') AS TIMESTAMP) THEN 1 ELSE -1 END) AS \"CreatedAtCompare\",(CASE WHEN a.\"CreatedAt\"=CURRENT_TIMESTAMP THEN 0 WHEN a.\"CreatedAt\">CURRENT_TIMESTAMP THEN 1 ELSE -1 END) AS \"CreatedAtCompare1\",(CASE WHEN a.\"UpdatedAt\"=a.\"UpdatedAt\"-INTERVAL '1D 09:25:00.000000' THEN 0 WHEN a.\"UpdatedAt\">a.\"UpdatedAt\"-INTERVAL '1D 09:25:00.000000' THEN 1 ELSE -1 END) AS \"UpdatedAtCompare\" FROM \"sys_user\" a WHERE a.\"Id\"=1");
+        Assert.True(sql1 == "SELECT (CASE WHEN a.\"Name\"='leafkevin' THEN 0 WHEN a.\"Name\">'leafkevin' THEN 1 ELSE -1 END) AS \"NameCompare\",(CASE WHEN a.\"CreatedAt\"=TO_CHAR(CURRENT_TIMESTAMP,'YYYY-MM-DD HH24:MI:SS')::TIMESTAMP THEN 0 WHEN a.\"CreatedAt\">TO_CHAR(CURRENT_TIMESTAMP,'YYYY-MM-DD HH24:MI:SS')::TIMESTAMP THEN 1 ELSE -1 END) AS \"CreatedAtCompare\",(CASE WHEN a.\"CreatedAt\"=CURRENT_TIMESTAMP THEN 0 WHEN a.\"CreatedAt\">CURRENT_TIMESTAMP THEN 1 ELSE -1 END) AS \"CreatedAtCompare1\",(CASE WHEN a.\"UpdatedAt\"=a.\"UpdatedAt\"-INTERVAL '1D 09:25:00.000000' THEN 0 WHEN a.\"UpdatedAt\">a.\"UpdatedAt\"-INTERVAL '1D 09:25:00.000000' THEN 1 ELSE -1 END) AS \"UpdatedAtCompare\" FROM \"sys_user\" a WHERE a.\"Id\"=1");
 
         var result1 = repository.From<User>()
             .Where(f => f.Id == 1)
@@ -158,7 +182,7 @@ public class MethodCallUnitTest : UnitTestBase
                 UpdatedAtCompare = DateTime.Compare(f.UpdatedAt, f.UpdatedAt.Subtract(TimeSpan.FromMinutes(15)))
             })
             .ToSql(out _);
-        Assert.True(sql2 == "SELECT (CASE WHEN a.\"Name\"='leafkevin' THEN 0 WHEN a.\"Name\">'leafkevin' THEN 1 ELSE -1 END) AS \"NameCompare\",(CASE WHEN a.\"CreatedAt\"=CAST(TO_CHAR(CURRENT_TIMESTAMP,'YYYY-MM-DD HH24:MI:SS') AS TIMESTAMP) THEN 0 WHEN a.\"CreatedAt\">CAST(TO_CHAR(CURRENT_TIMESTAMP,'YYYY-MM-DD HH24:MI:SS') AS TIMESTAMP) THEN 1 ELSE -1 END) AS \"CreatedAtCompare\",(CASE WHEN a.\"CreatedAt\"=CURRENT_TIMESTAMP THEN 0 WHEN a.\"CreatedAt\">CURRENT_TIMESTAMP THEN 1 ELSE -1 END) AS \"CreatedAtCompare1\",(CASE WHEN a.\"UpdatedAt\"=a.\"UpdatedAt\"-INTERVAL '00:15:00.000000' THEN 0 WHEN a.\"UpdatedAt\">a.\"UpdatedAt\"-INTERVAL '00:15:00.000000' THEN 1 ELSE -1 END) AS \"UpdatedAtCompare\" FROM \"sys_user\" a WHERE a.\"Id\"=1");
+        Assert.True(sql2 == "SELECT (CASE WHEN a.\"Name\"='leafkevin' THEN 0 WHEN a.\"Name\">'leafkevin' THEN 1 ELSE -1 END) AS \"NameCompare\",(CASE WHEN a.\"CreatedAt\"=TO_CHAR(CURRENT_TIMESTAMP,'YYYY-MM-DD HH24:MI:SS')::TIMESTAMP THEN 0 WHEN a.\"CreatedAt\">TO_CHAR(CURRENT_TIMESTAMP,'YYYY-MM-DD HH24:MI:SS')::TIMESTAMP THEN 1 ELSE -1 END) AS \"CreatedAtCompare\",(CASE WHEN a.\"CreatedAt\"=CURRENT_TIMESTAMP THEN 0 WHEN a.\"CreatedAt\">CURRENT_TIMESTAMP THEN 1 ELSE -1 END) AS \"CreatedAtCompare1\",(CASE WHEN a.\"UpdatedAt\"=a.\"UpdatedAt\"-INTERVAL '00:15:00.000000' THEN 0 WHEN a.\"UpdatedAt\">a.\"UpdatedAt\"-INTERVAL '00:15:00.000000' THEN 1 ELSE -1 END) AS \"UpdatedAtCompare\" FROM \"sys_user\" a WHERE a.\"Id\"=1");
 
         var result2 = repository.From<User>()
             .Where(f => f.Id == 1)

@@ -199,7 +199,7 @@ public class MySqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IMySqlCon
                 }
             }
             else sqlExecutor.Invoke(builder, this.Visitor.Tables[0].Body ?? fromMapper.TableName);
-            builder.Append($"DROP TABLE {tableName}");
+            builder.Append($";DROP TABLE {tableName}");
             sql = builder.ToString();
         }
         else

@@ -49,7 +49,7 @@ public interface ISqlVisitor : IDisposable
     List<Expression> ConvertFormatToConcatList(Expression[] argsExprs);
     List<Expression> SplitConcatList(Expression[] argsExprs);
     string VisitFromQuery(LambdaExpression lambdaExpr);
-    DataTable ToDataTable(Type entityType, IEnumerable entities, EntityMap fromMapper, string tableName = null);
+    DataTable ToDataTable(Type entityType, IEnumerable entities, List<(MemberMap RefMemberMapper, Func<object, object> ValueGetter)> memberMappers, string tableName = null);
     List<(MemberMap RefMemberMapper, Func<object, object> ValueGetter)> GetRefMemberMappers(Type entityType, EntityMap refEntityMapper, bool isUpdate = false);
     SqlSegment BuildDeferredSqlSegment(MethodCallExpression methodCallExpr, SqlSegment sqlSegment);
     SqlSegment ToEnumString(SqlSegment sqlSegment);

@@ -853,11 +853,9 @@ public class SqlVisitor : ISqlVisitor
         {
             var elementSegment = new SqlSegment { Expression = elementExpr };
             elementSegment = this.VisitAndDeferred(elementSegment);
-            if (elementSegment.HasField)
-                throw new NotSupportedException("不支持的表达式访问，NewArrayExpression表达式只支持常量和变量，不支持参数访问");
             result.Add(elementSegment.Value);
         }
-        //走到这里肯定是常量
+        //走到这里肯定是常量，变量会走到成员访问
         return sqlSegment.Change(result, true);
     }
     public virtual SqlSegment VisitIndexExpression(SqlSegment sqlSegment)
@@ -1595,11 +1593,15 @@ public class SqlVisitor : ISqlVisitor
                     if (nativeDbType != null)
                     {
                         var targetType = this.OrmProvider.MapDefaultType(nativeDbType);
-                        var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, false);
-                        dbFieldValue = valueGetter.Invoke(dbFieldValue);
-                        sqlSegment.SegmentType = targetType;
+                        if (sqlSegment.SegmentType != targetType)
+                        {
+                            var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, false);
+                            dbFieldValue = valueGetter.Invoke(dbFieldValue);
+                            sqlSegment.SegmentType = targetType;
+                        }
+                        dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, nativeDbType, dbFieldValue));
                     }
-                    dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, dbFieldValue));
+                    else dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, dbFieldValue));
                 }
             }
             //清空指定的参数化名称
@@ -1692,8 +1694,8 @@ public class SqlVisitor : ISqlVisitor
                         {
                             var valueGetter = this.OrmProvider.GetParameterValueGetter(segmentType, targetType, false);
                             dbFieldValue = valueGetter.Invoke(dbFieldValue);
-                            dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, nativeDbType, dbFieldValue));
                         }
+                        dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, nativeDbType, dbFieldValue));
                     }
                     else dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, dbFieldValue));
                 }
@@ -1927,11 +1929,10 @@ public class SqlVisitor : ISqlVisitor
                 result.Add(cteQueryObj);
         }
     }
-    public DataTable ToDataTable(Type parameterType, IEnumerable entities, EntityMap fromMapper, string tableName = null)
+    public DataTable ToDataTable(Type parameterType, IEnumerable entities, List<(MemberMap RefMemberMapper, Func<object, object> ValueGetter)> memberMappers, string tableName = null)
     {
         var result = new DataTable();
-        result.TableName = tableName ?? this.OrmProvider.GetTableName(fromMapper.TableName);
-        var memberMappers = this.GetRefMemberMappers(parameterType, fromMapper);
+        result.TableName = tableName;
         foreach (var memberMapper in memberMappers)
         {
             var refMemberMapper = memberMapper.RefMemberMapper;

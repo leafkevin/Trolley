@@ -326,7 +326,7 @@ public interface IRepository : IDisposable, IAsyncDisposable
     /// <typeparam name="TEntity">实体对象类型</typeparam>
     /// <param name="predicate">where条件表达式</param>
     /// <returns>返回是否存在的布尔值</returns>
-    bool Exists<TEntity>(Expression<Func<TEntity, bool>> predicate);
+    bool Exists<TEntity>(Expression<Func<TEntity, bool>> predicate = null);
     /// <summary>
     /// 判断TEntity表是否存在满足predicate条件的记录，存在返回true，否则返回false，不支持分表
     /// </summary>
@@ -334,7 +334,7 @@ public interface IRepository : IDisposable, IAsyncDisposable
     /// <param name="predicate">where条件表达式</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回是否存在的布尔值</returns>
-    Task<bool> ExistsAsync<TEntity>(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default);
+    Task<bool> ExistsAsync<TEntity>(Expression<Func<TEntity, bool>> predicate = null, CancellationToken cancellationToken = default);
     #endregion
 
     #region Create

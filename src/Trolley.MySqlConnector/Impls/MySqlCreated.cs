@@ -275,7 +275,8 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
     private int ExecuteBulkCopy(ref bool isOpened, Type insertObjType, IEnumerable insertObjs, int? timeoutSeconds, string tableName = null)
     {
         var entityMapper = this.Visitor.Tables[0].Mapper;
-        var dataTable = this.Visitor.ToDataTable(insertObjType, insertObjs, entityMapper, tableName);
+        var memberMappers = this.Visitor.GetRefMemberMappers(insertObjType, entityMapper);
+        var dataTable = this.Visitor.ToDataTable(insertObjType, insertObjs, memberMappers, tableName ?? entityMapper.TableName);
         if (dataTable.Rows.Count == 0) return 0;
 
         if (!isOpened)
@@ -298,7 +299,8 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
     private async Task<int> ExecuteBulkCopyAsync(bool isOpened, Type insertObjType, IEnumerable insertObjs, int? timeoutSeconds, CancellationToken cancellationToken = default, string tableName = null)
     {
         var entityMapper = this.Visitor.Tables[0].Mapper;
-        var dataTable = this.Visitor.ToDataTable(insertObjType, insertObjs, entityMapper, tableName);
+        var memberMappers = this.Visitor.GetRefMemberMappers(insertObjType, entityMapper);
+        var dataTable = this.Visitor.ToDataTable(insertObjType, insertObjs, memberMappers, tableName ?? entityMapper.TableName);
         if (dataTable.Rows.Count == 0) return 0;
 
         if (!isOpened)

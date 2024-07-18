@@ -158,6 +158,7 @@ public class PostgreSqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
                         if (this.ShardingTables != null && this.ShardingTables.Count > 0)
                         {
                             var tableNames = this.ShardingTables[0].TableNames;
+                            if (tableNames.Count > 1) tableNames.Sort((x, y) => x.CompareTo(y));
                             for (int i = 0; i < tableNames.Count; i++)
                             {
                                 if (i > 0) builder.Append(';');

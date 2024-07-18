@@ -909,6 +909,7 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
             })
             .ToSql(out _);
         Assert.True(sql == "SELECT a.`BuyerId`,b.`Name` AS `BuyerName`,a.`Date` AS `BuyDate`,a.`ProductCount`,a.`OrderCount`,a.`TotalAmount` FROM (SELECT a.`BuyerId`,CONVERT(a.`CreatedAt`,DATE) AS `Date`,COUNT(a.`Id`) AS `OrderCount`,COUNT(DISTINCT b.`ProductId`) AS `ProductCount`,SUM(a.`TotalAmount`) AS `TotalAmount` FROM `sys_order` a,`sys_order_detail` b WHERE a.`Id`=b.`OrderId` GROUP BY a.`BuyerId`,CONVERT(a.`CreatedAt`,DATE)) a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>2 AND a.`TotalAmount`>300 ORDER BY b.`Id`");
+
         var result = await repository.From(f => f
             .From<Order, OrderDetail>()
                 .Where((x, y) => x.Id == y.OrderId)
@@ -1223,6 +1224,7 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
     [Fact]
     public void CteTable_Exists()
     {
+        this.Initialize();
         using var repository = dbFactory.Create();
         var myOrders = repository.From<OrderDetail, Order>()
             .Where((a, b) => a.OrderId == b.Id)

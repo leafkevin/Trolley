@@ -34,8 +34,8 @@ class ModelConfiguration : IModelConfiguration
     var connectionString = "Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true";
     var dbProvider = new SqlServerProvider(connectionString);  
 
-    var tableNames = new[]{"sys_user","sys_company","sys_order","sys_order_detail"};
-    var removePrefixes = new[]{"sys_"};
+    var tableNames = new[]{"sys_user","sys_company","sys_order","sys_order_detail","sys_brand","sys_product","sys_menu","sys_page","sys_function","sys_update_entity"};
+    var removePrefixes = new []{"sys_"};
     var separator = '_';
 
     var tableList = dbProvider.GetTableList(tableNames);

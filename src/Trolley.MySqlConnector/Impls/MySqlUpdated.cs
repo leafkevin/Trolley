@@ -45,7 +45,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                         }
                         if (updateObjType == null) throw new Exception("批量更新，updateObjs参数至少要有一条数据");
                         var fromMapper = this.Visitor.Tables[0].Mapper;
-                        var memberMappers = this.Visitor.GetRefMemberMappers(updateObjType, fromMapper);
+                        var memberMappers = this.Visitor.GetRefMemberMappers(updateObjType, fromMapper, true);
                         var ormProvider = this.Visitor.OrmProvider;
                         var tableName = ormProvider.GetTableName($"{fromMapper.TableName}_{Guid.NewGuid():N}");
 
@@ -69,26 +69,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                         builder.AppendLine(");");
                         if (this.Visitor.IsNeedFetchShardingTables)
                             builder.Append(this.Visitor.BuildShardingTablesSql(this.DbContext.TableSchema));
-
-                        var command = this.DbContext.CreateCommand();
-                        command.CommandText = builder.ToString();
-                        this.DbContext.Open();
-                        command.ExecuteNonQuery();
-
-                        var dataTable = this.Visitor.ToDataTable(updateObjType, updateObjs, fromMapper, tableName);
-                        if (dataTable.Rows.Count == 0) return 0;
-
-                        var connection = this.DbContext.Connection as MySqlConnection;
-                        var transaction = this.DbContext.Transaction as MySqlTransaction;
-                        var bulkCopy = new MySqlBulkCopy(connection, transaction);
-                        if (timeoutSeconds.HasValue) bulkCopy.BulkCopyTimeout = timeoutSeconds.Value;
-                        bulkCopy.DestinationTableName = dataTable.TableName;
-                        for (int i = 0; i < dataTable.Columns.Count; i++)
-                        {
-                            bulkCopy.ColumnMappings.Add(new MySqlBulkCopyColumnMapping(i, dataTable.Columns[i].ColumnName));
-                        }
-                        var bulkCopyResult = bulkCopy.WriteToServer(dataTable);
-                        result = bulkCopyResult.RowsInserted;
+                        var bulkCopySql = builder.ToString();
 
                         builder.Clear();
                         Action<string, string> sqlExecutor = (target, source) =>
@@ -120,12 +101,29 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                             }
                         }
                         else sqlExecutor.Invoke(this.Visitor.Tables[0].Body ?? fromMapper.TableName, tableName);
+                        builder.Append($";DROP TABLE {tableName}");
+                        var updateSql = builder.ToString();
+                        var dataTable = this.Visitor.ToDataTable(updateObjType, updateObjs, memberMappers, tableName ?? fromMapper.TableName);
 
-                        command.CommandText = builder.ToString();
-                        result = command.ExecuteNonQuery();
-
-                        command.CommandText = $"DROP TABLE {tableName}";
+                        var command = this.DbContext.CreateCommand();
+                        command.CommandText = bulkCopySql;
+                        this.DbContext.Open();
                         command.ExecuteNonQuery();
+
+                        var connection = this.DbContext.Connection as MySqlConnection;
+                        var transaction = this.DbContext.Transaction as MySqlTransaction;
+                        var bulkCopy = new MySqlBulkCopy(connection, transaction);
+                        if (timeoutSeconds.HasValue) bulkCopy.BulkCopyTimeout = timeoutSeconds.Value;
+                        bulkCopy.DestinationTableName = dataTable.TableName;
+                        for (int i = 0; i < dataTable.Columns.Count; i++)
+                        {
+                            bulkCopy.ColumnMappings.Add(new MySqlBulkCopyColumnMapping(i, dataTable.Columns[i].ColumnName));
+                        }
+                        var bulkCopyResult = bulkCopy.WriteToServer(dataTable);
+                        result = bulkCopyResult.RowsInserted;
+
+                        command.CommandText = updateSql;
+                        result = command.ExecuteNonQuery();
                         command.Parameters.Clear();
                         command.Dispose();
                         command = null;
@@ -256,7 +254,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                         }
                         if (updateObjType == null) throw new Exception("批量更新，updateObjs参数至少要有一条数据");
                         var fromMapper = this.Visitor.Tables[0].Mapper;
-                        var memberMappers = this.Visitor.GetRefMemberMappers(updateObjType, fromMapper);
+                        var memberMappers = this.Visitor.GetRefMemberMappers(updateObjType, fromMapper, true);
                         var ormProvider = this.Visitor.OrmProvider;
                         var tableName = ormProvider.GetTableName($"{fromMapper.TableName}_{Guid.NewGuid():N}");
 
@@ -280,26 +278,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                         builder.AppendLine(");");
                         if (this.Visitor.IsNeedFetchShardingTables)
                             builder.Append(this.Visitor.BuildShardingTablesSql(this.DbContext.TableSchema));
-
-                        var command = this.DbContext.CreateDbCommand();
-                        command.CommandText = builder.ToString();
-                        await this.DbContext.OpenAsync(cancellationToken);
-                        await command.ExecuteNonQueryAsync(cancellationToken);
-
-                        var dataTable = this.Visitor.ToDataTable(updateObjType, updateObjs, fromMapper, tableName);
-                        if (dataTable.Rows.Count == 0) return 0;
-
-                        var connection = this.DbContext.Connection as MySqlConnection;
-                        var transaction = this.DbContext.Transaction as MySqlTransaction;
-                        var bulkCopy = new MySqlBulkCopy(connection, transaction);
-                        if (timeoutSeconds.HasValue) bulkCopy.BulkCopyTimeout = timeoutSeconds.Value;
-                        bulkCopy.DestinationTableName = dataTable.TableName;
-                        for (int i = 0; i < dataTable.Columns.Count; i++)
-                        {
-                            bulkCopy.ColumnMappings.Add(new MySqlBulkCopyColumnMapping(i, dataTable.Columns[i].ColumnName));
-                        }
-                        var bulkCopyResult = await bulkCopy.WriteToServerAsync(dataTable, cancellationToken);
-                        result = bulkCopyResult.RowsInserted;
+                        var bulkCopySql = builder.ToString();
 
                         builder.Clear();
                         Action<string, string> sqlExecutor = (target, source) =>
@@ -327,16 +306,33 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                             for (int i = 0; i < tableNames.Count; i++)
                             {
                                 if (i > 0) builder.Append(';');
-                                sqlExecutor.Invoke(this.Visitor.Tables[0].Body ?? tableNames[i], tableName);
+                                sqlExecutor.Invoke(tableNames[i], tableName);
                             }
                         }
-                        else sqlExecutor.Invoke(fromMapper.TableName, tableName);
+                        else sqlExecutor.Invoke(this.Visitor.Tables[0].Body ?? fromMapper.TableName, tableName);
+                        builder.Append($";DROP TABLE {tableName}");
+                        var updateSql = builder.ToString();
+                        var dataTable = this.Visitor.ToDataTable(updateObjType, updateObjs, memberMappers, tableName ?? fromMapper.TableName);
 
-                        command.CommandText = builder.ToString();
-                        result = await command.ExecuteNonQueryAsync(cancellationToken);
-
-                        command.CommandText = $"DROP TABLE {tableName}";
+                        var command = this.DbContext.CreateDbCommand();
+                        command.CommandText = bulkCopySql;
+                        await this.DbContext.OpenAsync(cancellationToken);
                         await command.ExecuteNonQueryAsync(cancellationToken);
+
+                        var connection = this.DbContext.Connection as MySqlConnection;
+                        var transaction = this.DbContext.Transaction as MySqlTransaction;
+                        var bulkCopy = new MySqlBulkCopy(connection, transaction);
+                        if (timeoutSeconds.HasValue) bulkCopy.BulkCopyTimeout = timeoutSeconds.Value;
+                        bulkCopy.DestinationTableName = dataTable.TableName;
+                        for (int i = 0; i < dataTable.Columns.Count; i++)
+                        {
+                            bulkCopy.ColumnMappings.Add(new MySqlBulkCopyColumnMapping(i, dataTable.Columns[i].ColumnName));
+                        }
+                        var bulkCopyResult = await bulkCopy.WriteToServerAsync(dataTable, cancellationToken);
+                        result = bulkCopyResult.RowsInserted;
+
+                        command.CommandText = updateSql;
+                        result = await command.ExecuteNonQueryAsync(cancellationToken);
                         command.Parameters.Clear();
                         command.Dispose();
                         command = null;
@@ -465,7 +461,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
             }
             if (updateObjType == null) throw new Exception("批量更新，updateObjs参数至少要有一条数据");
             var fromMapper = this.Visitor.Tables[0].Mapper;
-            var memberMappers = this.Visitor.GetRefMemberMappers(updateObjType, fromMapper);
+            var memberMappers = this.Visitor.GetRefMemberMappers(updateObjType, fromMapper, true);
             var ormProvider = this.Visitor.OrmProvider;
             var tableName = ormProvider.GetTableName($"{fromMapper.TableName}_{Guid.NewGuid():N}");
 

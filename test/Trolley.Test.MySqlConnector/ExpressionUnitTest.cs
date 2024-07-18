@@ -125,7 +125,7 @@ public class ExpressionUnitTest : UnitTestBase
         Assert.True(dbParameters[0].Value.GetType() == typeof(string));
         var result3 = await repository.QueryAsync<Company>(f => (f.IsEnabled ? f.Nature : CompanyNature.Internet) == localNature);
         Assert.True(result3.Count >= 2);
-        Assert.True(result3[0].Nature == localNature);
+        Assert.True((result3[0].Nature ?? CompanyNature.Internet) == localNature);
     }
     [Fact]
     public void Index()

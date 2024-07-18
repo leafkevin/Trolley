@@ -41,6 +41,12 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
                     (insertObjs, var timeoutSeconds) = this.DialectVisitor.BuildWithBulkCopy();
 
                     bool isOpened = false;
+                    Type insertObjType = null;
+                    foreach (var insertObj in insertObjs)
+                    {
+                        insertObjType = insertObj.GetType();
+                        break;
+                    }
                     if (this.DbContext.ShardingProvider.TryGetShardingTable(entityType, out var shardingTable))
                     {
                         isNeedSplit = this.Visitor.Tables[0].Body == null;
@@ -49,12 +55,12 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
                             var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
                             foreach (var tabledInsertObj in tabledInsertObjs)
                             {
-                                result += this.ExecuteBulkCopy(ref isOpened, entityType, tabledInsertObj.Value, timeoutSeconds, tabledInsertObj.Key);
+                                result += this.ExecuteBulkCopy(ref isOpened, insertObjType, tabledInsertObj.Value, timeoutSeconds, tabledInsertObj.Key);
                             }
                         }
-                        else result = this.ExecuteBulkCopy(ref isOpened, entityType, insertObjs, timeoutSeconds, this.Visitor.Tables[0].Body);
+                        else result = this.ExecuteBulkCopy(ref isOpened, insertObjType, insertObjs, timeoutSeconds, this.Visitor.Tables[0].Body);
                     }
-                    else result = this.ExecuteBulkCopy(ref isOpened, entityType, insertObjs, timeoutSeconds);
+                    else result = this.ExecuteBulkCopy(ref isOpened, insertObjType, insertObjs, timeoutSeconds);
                     break;
                 case ActionMode.Bulk:
                     command = this.DbContext.CreateCommand();
@@ -155,7 +161,12 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
                 case ActionMode.BulkCopy:
                     (insertObjs, var timeoutSeconds) = this.DialectVisitor.BuildWithBulkCopy();
                     bool isOpened = false;
-
+                    Type insertObjType = null;
+                    foreach (var insertObj in insertObjs)
+                    {
+                        insertObjType = insertObj.GetType();
+                        break;
+                    }
                     if (this.DbContext.ShardingProvider.TryGetShardingTable(entityType, out _))
                     {
                         isNeedSplit = this.Visitor.Tables[0].Body == null;
@@ -164,13 +175,13 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
                             var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
                             foreach (var tabledInsertObj in tabledInsertObjs)
                             {
-                                result += await this.ExecuteBulkCopyAsync(isOpened, entityType, tabledInsertObj.Value, timeoutSeconds, cancellationToken, tabledInsertObj.Key);
+                                result += await this.ExecuteBulkCopyAsync(isOpened, insertObjType, tabledInsertObj.Value, timeoutSeconds, cancellationToken, tabledInsertObj.Key);
                                 if (!isOpened) isOpened = true;
                             }
                         }
-                        else result = await this.ExecuteBulkCopyAsync(isOpened, entityType, insertObjs, timeoutSeconds, cancellationToken, this.Visitor.Tables[0].Body);
+                        else result = await this.ExecuteBulkCopyAsync(isOpened, insertObjType, insertObjs, timeoutSeconds, cancellationToken, this.Visitor.Tables[0].Body);
                     }
-                    else result = await this.ExecuteBulkCopyAsync(isOpened, entityType, insertObjs, timeoutSeconds, cancellationToken);
+                    else result = await this.ExecuteBulkCopyAsync(isOpened, insertObjType, insertObjs, timeoutSeconds, cancellationToken);
                     break;
                 case ActionMode.Bulk:
                     command = this.DbContext.CreateDbCommand();
@@ -259,10 +270,11 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
         if (exception != null) throw exception;
         return result;
     }
-    private int ExecuteBulkCopy(ref bool isOpened, Type entityType, IEnumerable insertObjs, int? timeoutSeconds, string tableName = null)
+    private int ExecuteBulkCopy(ref bool isOpened, Type insertObjType, IEnumerable insertObjs, int? timeoutSeconds, string tableName = null)
     {
         var entityMapper = this.Visitor.Tables[0].Mapper;
-        var dataTable = this.Visitor.ToDataTable(entityType, insertObjs, entityMapper, tableName);
+        var memberMappers = this.Visitor.GetRefMemberMappers(insertObjType, entityMapper);
+        var dataTable = this.Visitor.ToDataTable(insertObjType, insertObjs, memberMappers, tableName ?? entityMapper.TableName);
         if (dataTable.Rows.Count == 0) return 0;
 
         if (!isOpened)
@@ -282,10 +294,11 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
         bulkCopy.WriteToServer(dataTable);
         return dataTable.Rows.Count;
     }
-    private async Task<int> ExecuteBulkCopyAsync(bool isOpened, Type entityType, IEnumerable insertObjs, int? timeoutSeconds, CancellationToken cancellationToken = default, string tableName = null)
+    private async Task<int> ExecuteBulkCopyAsync(bool isOpened, Type insertObjType, IEnumerable insertObjs, int? timeoutSeconds, CancellationToken cancellationToken = default, string tableName = null)
     {
         var entityMapper = this.Visitor.Tables[0].Mapper;
-        var dataTable = this.Visitor.ToDataTable(entityType, insertObjs, entityMapper, tableName);
+        var memberMappers = this.Visitor.GetRefMemberMappers(insertObjType, entityMapper);
+        var dataTable = this.Visitor.ToDataTable(insertObjType, insertObjs, memberMappers, tableName ?? entityMapper.TableName);
         if (dataTable.Rows.Count == 0) return 0;
 
         if (!isOpened)
