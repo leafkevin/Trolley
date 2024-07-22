@@ -435,7 +435,7 @@ partial class SqlServerProvider
                             var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
                             string rightArgument = null;
                             if (rightSegment.IsConstant)
-                                rightArgument = $"'%{rightSegment}%'";
+                                rightArgument = $"N'%{rightSegment}%'";
                             else rightArgument = $"'%'+{visitor.GetQuotedValue(rightSegment)}+'%'";
 
                             var targetArgument = visitor.GetQuotedValue(targetSegment);

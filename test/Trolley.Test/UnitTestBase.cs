@@ -75,13 +75,6 @@ public class UnitTestBase
                 }
             });
         }
-        else
-        {
-            repository.Update<Company>()
-                .Set(f => f.Nature, CompanyNature.Internet)
-                .Where(f => f.Id > 0)
-                .Execute();
-        }
         repository.Delete<Brand>(new[] { 1, 2, 3 });
         repository.Create<Brand>(new[]
         {

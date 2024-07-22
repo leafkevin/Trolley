@@ -67,6 +67,7 @@ public class MethodCallUnitTest : UnitTestBase
             .Select(f => f.Id)
             .ToSql(out var dbParameters);
         Assert.True(sql == "SELECT a.`Id` FROM `sys_user` a WHERE a.`Id` IN (@p0,@p1)");
+
         result = repository.From<User>()
             .Where(f => ids.Contains(f.Id))
             .ToList();
@@ -121,7 +122,7 @@ public class MethodCallUnitTest : UnitTestBase
         var sql = repository.From<User>()
             .Where(f => f.Name.Contains("cindy"))
             .Select(f => $"{f.Name + "222"}_111_{f.Age + isMale.ToString()}_{isMale}_{count}")
-            .ToSql(out var dbParameters);
+           	.ToSql(out var dbParameters);
         Assert.True(sql == "SELECT CONCAT(a.`Name`,'222_111_',CAST(a.`Age` AS CHAR),@p0,'_',@p1,'_',@p2) FROM `sys_user` a WHERE a.`Name` LIKE '%cindy%'");
         Assert.True((string)dbParameters[0].Value == isMale.ToString());
         Assert.True(dbParameters[0].Value.GetType() == typeof(string));

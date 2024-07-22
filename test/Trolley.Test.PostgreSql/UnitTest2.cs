@@ -1173,51 +1173,25 @@ SELECT a.""MenuId"",a.""ParentId"",a.""Url"" FROM ""menuPageList"" a WHERE a.""P
         var sql = repository.From<User>()
             .InnerJoin<Company>((a, b) => a.CompanyId == b.Id)
             .Where((x, y) => Sql.Exists(f => f
-                .From<Order, OrderDetail, Product>('c')
-                .Where((a, b, c) => a.BuyerId == x.Id && a.Id == b.OrderId && b.ProductId == c.Id && c.CompanyId == y.Id)
-                .GroupBy((a, b, c) => a.Id)
-                .Having((x, a, b, c) => Sql.CountDistinct(b.ProductId) > 0)
+                .From<Order, OrderDetail>('c')
+                .Where((a, b) => a.BuyerId == x.Id && a.Id == b.OrderId)
+                .GroupBy((a, b) => a.Id)
+                .Having((x, a, b) => Sql.CountDistinct(b.ProductId) > 0)
                 .Select()))
             .GroupBy((x, y) => new { x.Gender, x.CompanyId })
             .Select((x, a, b) => new { x.Grouping, UserTotal = x.CountDistinct(a.Id) })
             .ToSql(out _);
-        Assert.True(sql == "SELECT a.\"Gender\",a.\"CompanyId\",COUNT(DISTINCT a.\"Id\") AS \"UserTotal\" FROM \"sys_user\" a INNER JOIN \"sys_company\" b ON a.\"CompanyId\"=b.\"Id\" WHERE EXISTS(SELECT c.\"Id\" FROM \"sys_order\" c,\"sys_order_detail\" d,\"sys_product\" e WHERE c.\"BuyerId\"=a.\"Id\" AND c.\"Id\"=d.\"OrderId\" AND d.\"ProductId\"=e.\"Id\" AND e.\"CompanyId\"=b.\"Id\" GROUP BY c.\"Id\" HAVING COUNT(DISTINCT d.\"ProductId\")>0) GROUP BY a.\"Gender\",a.\"CompanyId\"");
+        Assert.True(sql == "SELECT a.\"Gender\",a.\"CompanyId\",COUNT(DISTINCT a.\"Id\") AS \"UserTotal\" FROM \"sys_user\" a INNER JOIN \"sys_company\" b ON a.\"CompanyId\"=b.\"Id\" WHERE EXISTS(SELECT c.\"Id\" FROM \"sys_order\" c,\"sys_order_detail\" d WHERE c.\"BuyerId\"=a.\"Id\" AND c.\"Id\"=d.\"OrderId\" GROUP BY c.\"Id\" HAVING COUNT(DISTINCT d.\"ProductId\")>0) GROUP BY a.\"Gender\",a.\"CompanyId\"");
         var result = await repository.From<User>()
             .InnerJoin<Company>((a, b) => a.CompanyId == b.Id)
             .Where((x, y) => Sql.Exists(f => f
-                .From<Order, OrderDetail, Product>('c')
-                .Where((a, b, c) => a.BuyerId == x.Id && a.Id == b.OrderId && b.ProductId == c.Id && c.CompanyId == y.Id)
-                .GroupBy((a, b, c) => a.Id)
-                .Having((x, a, b, c) => Sql.CountDistinct(b.ProductId) > 0)
+                .From<Order, OrderDetail>('c')
+                .Where((a, b) => a.BuyerId == x.Id && a.Id == b.OrderId)
+                .GroupBy((a, b) => a.Id)
+                .Having((x, a, b) => Sql.CountDistinct(b.ProductId) > 0)
                 .Select()))
             .GroupBy((x, y) => new { x.Gender, x.CompanyId })
             .Select((x, a, b) => new { x.Grouping, UserTotal = x.CountDistinct(a.Id) })
-            .ToListAsync();
-        Assert.NotNull(result);
-        Assert.True(result.Count > 0);
-
-        sql = repository.From<User>()
-            .InnerJoin<Company>((a, b) => a.CompanyId == b.Id)
-            .Where((x, y) => Sql.Exists(f => f
-                .From<Order, OrderDetail, Product>('c')
-                .Where((a, b, c) => a.BuyerId == x.Id && a.Id == b.OrderId && b.ProductId == c.Id && c.CompanyId == y.Id)
-                .GroupBy((a, b, c) => a.Id)
-                .Having((x, a, b, c) => Sql.CountDistinct(b.ProductId) > 0)
-                .Select()))
-            .GroupBy((x, y) => new { x.Gender, x.CompanyId })
-            .Select((t, a, b) => new { t.Grouping, UserTotal = t.CountDistinct(a.Id) })
-            .ToSql(out _);
-        Assert.True(sql == "SELECT a.\"Gender\",a.\"CompanyId\",COUNT(DISTINCT a.\"Id\") AS \"UserTotal\" FROM \"sys_user\" a INNER JOIN \"sys_company\" b ON a.\"CompanyId\"=b.\"Id\" WHERE EXISTS(SELECT c.\"Id\" FROM \"sys_order\" c,\"sys_order_detail\" d,\"sys_product\" e WHERE c.\"BuyerId\"=a.\"Id\" AND c.\"Id\"=d.\"OrderId\" AND d.\"ProductId\"=e.\"Id\" AND e.\"CompanyId\"=b.\"Id\" GROUP BY c.\"Id\" HAVING COUNT(DISTINCT d.\"ProductId\")>0) GROUP BY a.\"Gender\",a.\"CompanyId\"");
-        result = await repository.From<User>()
-            .InnerJoin<Company>((a, b) => a.CompanyId == b.Id)
-            .Where((x, y) => Sql.Exists(f => f
-                .From<Order, OrderDetail, Product>('c')
-                .Where((a, b, c) => a.BuyerId == x.Id && a.Id == b.OrderId && b.ProductId == c.Id && c.CompanyId == y.Id)
-                .GroupBy((a, b, c) => a.Id)
-                .Having((x, a, b, c) => Sql.CountDistinct(b.ProductId) > 0)
-                .Select()))
-            .GroupBy((x, y) => new { x.Gender, x.CompanyId })
-            .Select((t, a, b) => new { t.Grouping, UserTotal = t.CountDistinct(a.Id) })
             .ToListAsync();
         Assert.NotNull(result);
         Assert.True(result.Count > 0);
@@ -1229,7 +1203,7 @@ SELECT a.""MenuId"",a.""ParentId"",a.""Url"" FROM ""menuPageList"" a WHERE a.""P
         var myOrders = repository.From<OrderDetail, Order>()
             .Where((a, b) => a.OrderId == b.Id)
             .GroupBy((a, b) => new { a.OrderId, b.BuyerId })
-            .Having((x, a, b) => x.CountDistinct(a.ProductId) > 2)
+            .Having((x, a, b) => x.CountDistinct(a.ProductId) > 1)
             .Select((x, a, b) => x.Grouping)
             .AsCteTable("myOrders");
 
@@ -1240,7 +1214,7 @@ SELECT a.""MenuId"",a.""ParentId"",a.""Url"" FROM ""menuPageList"" a WHERE a.""P
             .ToSql(out _);
         Assert.True(sql == @"WITH ""myOrders""(""OrderId"",""BuyerId"") AS 
 (
-SELECT a.""OrderId"",b.""BuyerId"" FROM ""sys_order_detail"" a,""sys_order"" b WHERE a.""OrderId""=b.""Id"" GROUP BY a.""OrderId"",b.""BuyerId"" HAVING COUNT(DISTINCT a.""ProductId"")>2
+SELECT a.""OrderId"",b.""BuyerId"" FROM ""sys_order_detail"" a,""sys_order"" b WHERE a.""OrderId""=b.""Id"" GROUP BY a.""OrderId"",b.""BuyerId"" HAVING COUNT(DISTINCT a.""ProductId"")>1
 )
 SELECT a.""Id"",a.""Name"",b.""Name"" AS ""CompanyName"" FROM ""sys_user"" a INNER JOIN ""sys_company"" b ON a.""CompanyId""=b.""Id"" WHERE EXISTS(SELECT * FROM ""myOrders"" f WHERE f.""BuyerId""=a.""Id"")");
 

@@ -111,7 +111,10 @@ public class UnitTest3 : UnitTestBase
     {
         Initialize();
         using var repository = dbFactory.Create();
-        var orderDetails = await repository.From<OrderDetail>().ToListAsync();
+        var orderDetails = await repository.From<OrderDetail>()
+           .OrderBy(f => f.Id)
+           .Take(5)
+           .ToListAsync();
         var parameters = orderDetails.Select(f => new
         {
             f.Id,
@@ -129,7 +132,7 @@ public class UnitTest3 : UnitTestBase
                 f.Quantity
             })
             .ToSql(out var dbParameters);
-        Assert.True(sql == "UPDATE \"sys_order_detail\" SET \"Price\"=@Price0,\"Quantity\"=@Quantity0 WHERE \"Id\"=@kId0;UPDATE \"sys_order_detail\" SET \"Price\"=@Price1,\"Quantity\"=@Quantity1 WHERE \"Id\"=@kId1;UPDATE \"sys_order_detail\" SET \"Price\"=@Price2,\"Quantity\"=@Quantity2 WHERE \"Id\"=@kId2;UPDATE \"sys_order_detail\" SET \"Price\"=@Price3,\"Quantity\"=@Quantity3 WHERE \"Id\"=@kId3;UPDATE \"sys_order_detail\" SET \"Price\"=@Price4,\"Quantity\"=@Quantity4 WHERE \"Id\"=@kId4;UPDATE \"sys_order_detail\" SET \"Price\"=@Price5,\"Quantity\"=@Quantity5 WHERE \"Id\"=@kId5;UPDATE \"sys_order_detail\" SET \"Price\"=@Price6,\"Quantity\"=@Quantity6 WHERE \"Id\"=@kId6");
+        Assert.True(sql == "UPDATE \"sys_order_detail\" SET \"Price\"=@Price0,\"Quantity\"=@Quantity0 WHERE \"Id\"=@kId0;UPDATE \"sys_order_detail\" SET \"Price\"=@Price1,\"Quantity\"=@Quantity1 WHERE \"Id\"=@kId1;UPDATE \"sys_order_detail\" SET \"Price\"=@Price2,\"Quantity\"=@Quantity2 WHERE \"Id\"=@kId2;UPDATE \"sys_order_detail\" SET \"Price\"=@Price3,\"Quantity\"=@Quantity3 WHERE \"Id\"=@kId3;UPDATE \"sys_order_detail\" SET \"Price\"=@Price4,\"Quantity\"=@Quantity4 WHERE \"Id\"=@kId4");
         Assert.True(dbParameters.Count == parameters.Count * 3);
         for (int i = 0; i < parameters.Count; i++)
         {
@@ -138,6 +141,8 @@ public class UnitTest3 : UnitTestBase
             Assert.True(dbParameters[i * 3 + 2].ParameterName == $"@kId{i}");
         }
 
+        var ids = parameters.Select(f => f.Id).ToList();
+        repository.BeginTransaction();
         var result = repository.Update<OrderDetail>()
             .SetBulk(parameters)
             .OnlyFields(f => new
@@ -146,7 +151,7 @@ public class UnitTest3 : UnitTestBase
                 f.Quantity
             })
             .Execute();
-        var updatedDetails = await repository.QueryAsync<OrderDetail>();
+        var updatedDetails = await repository.QueryAsync<OrderDetail>(f => ids.Contains(f.Id));
         repository.Commit();
         Assert.True(result == parameters.Count);
         for (int i = 0; i < parameters.Count; i++)
@@ -210,7 +215,10 @@ public class UnitTest3 : UnitTestBase
     {
         Initialize();
         using var repository = dbFactory.Create();
-        var orderDetails = await repository.From<OrderDetail>().ToListAsync();
+        var orderDetails = await repository.From<OrderDetail>()
+            .OrderBy(f => f.Id)
+            .Take(5)
+            .ToListAsync();
         var parameters = orderDetails.Select(f => new
         {
             f.Id,
@@ -224,16 +232,18 @@ public class UnitTest3 : UnitTestBase
             .Set(new { Quantity = 5 })
             .Set(f => new { Price = f.Price + 10 })
             .ToSql(out var dbParameters);
-        Assert.True(sql == "UPDATE \"sys_order_detail\" SET \"ProductId\"=@ProductId,\"Quantity\"=@Quantity,\"Price\"=\"Price\"+10,\"Amount\"=@Amount0,\"UpdatedAt\"=@UpdatedAt0 WHERE \"Id\"=@kId0;UPDATE \"sys_order_detail\" SET \"ProductId\"=@ProductId,\"Quantity\"=@Quantity,\"Price\"=\"Price\"+10,\"Amount\"=@Amount1,\"UpdatedAt\"=@UpdatedAt1 WHERE \"Id\"=@kId1;UPDATE \"sys_order_detail\" SET \"ProductId\"=@ProductId,\"Quantity\"=@Quantity,\"Price\"=\"Price\"+10,\"Amount\"=@Amount2,\"UpdatedAt\"=@UpdatedAt2 WHERE \"Id\"=@kId2;UPDATE \"sys_order_detail\" SET \"ProductId\"=@ProductId,\"Quantity\"=@Quantity,\"Price\"=\"Price\"+10,\"Amount\"=@Amount3,\"UpdatedAt\"=@UpdatedAt3 WHERE \"Id\"=@kId3;UPDATE \"sys_order_detail\" SET \"ProductId\"=@ProductId,\"Quantity\"=@Quantity,\"Price\"=\"Price\"+10,\"Amount\"=@Amount4,\"UpdatedAt\"=@UpdatedAt4 WHERE \"Id\"=@kId4;UPDATE \"sys_order_detail\" SET \"ProductId\"=@ProductId,\"Quantity\"=@Quantity,\"Price\"=\"Price\"+10,\"Amount\"=@Amount5,\"UpdatedAt\"=@UpdatedAt5 WHERE \"Id\"=@kId5;UPDATE \"sys_order_detail\" SET \"ProductId\"=@ProductId,\"Quantity\"=@Quantity,\"Price\"=\"Price\"+10,\"Amount\"=@Amount6,\"UpdatedAt\"=@UpdatedAt6 WHERE \"Id\"=@kId6");
+        Assert.True(sql == "UPDATE \"sys_order_detail\" SET \"ProductId\"=@ProductId,\"Quantity\"=@Quantity,\"Price\"=\"Price\"+10,\"Amount\"=@Amount0,\"UpdatedAt\"=@UpdatedAt0 WHERE \"Id\"=@kId0;UPDATE \"sys_order_detail\" SET \"ProductId\"=@ProductId,\"Quantity\"=@Quantity,\"Price\"=\"Price\"+10,\"Amount\"=@Amount1,\"UpdatedAt\"=@UpdatedAt1 WHERE \"Id\"=@kId1;UPDATE \"sys_order_detail\" SET \"ProductId\"=@ProductId,\"Quantity\"=@Quantity,\"Price\"=\"Price\"+10,\"Amount\"=@Amount2,\"UpdatedAt\"=@UpdatedAt2 WHERE \"Id\"=@kId2;UPDATE \"sys_order_detail\" SET \"ProductId\"=@ProductId,\"Quantity\"=@Quantity,\"Price\"=\"Price\"+10,\"Amount\"=@Amount3,\"UpdatedAt\"=@UpdatedAt3 WHERE \"Id\"=@kId3;UPDATE \"sys_order_detail\" SET \"ProductId\"=@ProductId,\"Quantity\"=@Quantity,\"Price\"=\"Price\"+10,\"Amount\"=@Amount4,\"UpdatedAt\"=@UpdatedAt4 WHERE \"Id\"=@kId4");
         Assert.True(dbParameters.Count == parameters.Count * 3 + 2);
 
+        var ids = parameters.Select(f => f.Id).ToList();
+        repository.BeginTransaction();
         var result = repository.Update<OrderDetail>()
             .SetBulk(parameters)
             .Set(f => f.ProductId, 3)
             .Set(new { Price = 200, Quantity = 5 })
             .IgnoreFields(f => f.Price)
             .Execute();
-        var updatedDetails = await repository.QueryAsync<OrderDetail>();
+        var updatedDetails = await repository.QueryAsync<OrderDetail>(f => ids.Contains(f.Id));
         repository.Commit();
         Assert.True(result == parameters.Count);
         for (int i = 0; i < parameters.Count; i++)
@@ -441,6 +451,23 @@ public class UnitTest3 : UnitTestBase
             Assert.NotNull(result2);
             Assert.True(result2.Id == "1");
             Assert.True(result2.ProductCount == 11);
+        }
+        var updateObj = new Dictionary<string, object>();
+        updateObj.Add("ProductCount", result2.ProductCount + 1);
+        updateObj.Add("TotalAmount", result2.TotalAmount + 100);
+        repository.BeginTransaction();
+        result = repository.Update<Order>()
+            .Set(updateObj)
+            .Where(new { Id = "1" })
+            .Execute();
+        var result3 = repository.Get<Order>(new { Id = "1" });
+        repository.Commit();
+        if (result > 0)
+        {
+            Assert.NotNull(result3);
+            Assert.True(result3.Id == "1");
+            Assert.True(result3.ProductCount == result2.ProductCount + 1);
+            Assert.True(result3.TotalAmount == result2.TotalAmount + 100);
         }
     }
     [Fact]
@@ -795,9 +822,14 @@ public class UnitTest3 : UnitTestBase
                     .Where(f => f.Id == 1)
                     .Select(t => t.Nature)
             })
-            .Where(f => f.Nature == CompanyNature.Internet)
+            .Where(f => f.Nature != CompanyNature.Internet)
             .ToSql(out _);
-        Assert.True(sql == "UPDATE \"sys_company\" AS a SET \"Nature\"=(SELECT b.\"Nature\" FROM \"sys_company\" b WHERE b.\"Id\"=1) WHERE a.\"Nature\"='Internet'");
+        Assert.True(sql == "UPDATE \"sys_company\" AS a SET \"Nature\"=(SELECT b.\"Nature\" FROM \"sys_company\" b WHERE b.\"Id\"=1) WHERE a.\"Nature\"<>'Internet'");
+		repository.BeginTransaction();
+        repository.Update<Company>()
+            .Set(f => f.Nature, CompanyNature.Industry)
+            .Where(f => f.Id > 1)
+            .Execute();
         var result = repository.Update<Company>()
             .SetFrom((a, b) => new
             {
@@ -805,9 +837,18 @@ public class UnitTest3 : UnitTestBase
                     .Where(f => f.Id == 1)
                     .Select(t => t.Nature)
             })
-            .Where(f => f.Nature == CompanyNature.Internet)
+            .Where(f => f.Nature != CompanyNature.Internet)
             .Execute();
+        var microCompany = repository.From<Company>('b')
+            .Where(f => f.Name.Contains("微软"))
+            .First();
+        var companies = repository.Query<Company>(f => f.Id > 1);
+        repository.Commit();
         Assert.True(result > 0);
+        foreach (var company in companies)
+        {
+            Assert.True(company.Nature == microCompany.Nature);
+        }
     }
     [Fact]
     public async void Update_Set_FromQuery_Fields()

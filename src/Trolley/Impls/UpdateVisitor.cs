@@ -515,15 +515,31 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var entityType = entityMapper.EntityType;
         var updateObjType = updateObj.GetType();
         var commandInitializer = RepositoryHelper.BuildUpdateSetWithPartSqlParameters(this.OrmProvider, this.MapProvider, entityType, updateObjType, this.OnlyFieldNames, this.IgnoreFieldNames, this.IsMultiple);
-        if (this.IsMultiple)
+        if (typeof(IDictionary<string, object>).IsAssignableFrom(updateObjType))
         {
-            var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, IOrmProvider, List<string>, object, string>;
-            typedCommandInitializer.Invoke(this.DbParameters, this.OrmProvider, this.UpdateFields, updateObj, $"_m{this.CommandIndex}");
+            if (this.IsMultiple)
+            {
+                var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, IOrmProvider, EntityMap, List<string>, object, string>;
+                typedCommandInitializer.Invoke(this.DbParameters, this.OrmProvider, entityMapper, this.UpdateFields, updateObj, $"_m{this.CommandIndex}");
+            }
+            else
+            {
+                var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, IOrmProvider, EntityMap, List<string>, object>;
+                typedCommandInitializer.Invoke(this.DbParameters, this.OrmProvider, entityMapper, this.UpdateFields, updateObj);
+            }
         }
         else
         {
-            var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, IOrmProvider, List<string>, object>;
-            typedCommandInitializer.Invoke(this.DbParameters, this.OrmProvider, this.UpdateFields, updateObj);
+            if (this.IsMultiple)
+            {
+                var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, IOrmProvider, List<string>, object, string>;
+                typedCommandInitializer.Invoke(this.DbParameters, this.OrmProvider, this.UpdateFields, updateObj, $"_m{this.CommandIndex}");
+            }
+            else
+            {
+                var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, IOrmProvider, List<string>, object>;
+                typedCommandInitializer.Invoke(this.DbParameters, this.OrmProvider, this.UpdateFields, updateObj);
+            }
         }
     }
     public virtual void VisitSet(Expression fieldsAssignment)
@@ -610,19 +626,36 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     {
         var entityType = this.Tables[0].EntityType;
         var whereObjType = whereObj.GetType();
-        var whereSqlParametersSetter = RepositoryHelper.BuildSqlParametersPart(this.OrmProvider, this.MapProvider, entityType, whereObjType, false, false, false, true, true, false, this.IsMultiple, false, null, null, " AND ", null);
+        (var isDictionary, var whereSqlParametersSetter) = RepositoryHelper.BuildSqlParametersPart(this.OrmProvider, this.MapProvider, entityType, whereObjType, false, false, false, true, true, false, this.IsMultiple, false, null, null, " AND ", null);
         var builder = new StringBuilder();
         if (!string.IsNullOrEmpty(this.WhereSql))
             builder.Append($"{this.WhereSql} AND ");
-        if (this.IsMultiple)
+        if (isDictionary)
         {
-            var typedWhereSqlParametersSetter = whereSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
-            typedWhereSqlParametersSetter.Invoke(this.DbParameters, builder, this.OrmProvider, whereObj, $"_m{this.CommandIndex}");
+            var entityMapper = this.Tables[0].Mapper;
+            if (this.IsMultiple)
+            {
+                var typedWhereSqlParametersSetter = whereSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, EntityMap, object, string>;
+                typedWhereSqlParametersSetter.Invoke(this.DbParameters, builder, this.OrmProvider, entityMapper, whereObj, $"_m{this.CommandIndex}");
+            }
+            else
+            {
+                var typedWhereSqlParametersSetter = whereSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, EntityMap, object>;
+                typedWhereSqlParametersSetter.Invoke(this.DbParameters, builder, this.OrmProvider, entityMapper, whereObj);
+            }
         }
         else
         {
-            var typedWhereSqlParametersSetter = whereSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object>;
-            typedWhereSqlParametersSetter.Invoke(this.DbParameters, builder, this.OrmProvider, whereObj);
+            if (this.IsMultiple)
+            {
+                var typedWhereSqlParametersSetter = whereSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
+                typedWhereSqlParametersSetter.Invoke(this.DbParameters, builder, this.OrmProvider, whereObj, $"_m{this.CommandIndex}");
+            }
+            else
+            {
+                var typedWhereSqlParametersSetter = whereSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object>;
+                typedWhereSqlParametersSetter.Invoke(this.DbParameters, builder, this.OrmProvider, whereObj);
+            }
         }
         this.WhereSql = builder.ToString();
         builder.Clear();

@@ -27,19 +27,39 @@ public class ExpressionUnitTest : UnitTestBase
     {
         this.Initialize();
         using var repository = dbFactory.Create();
-        string firstName = "kevin", lastName = null;
+        string firstName = "千", lastName = null;
         var sql = repository.From<User>()
             .Where(f => f.Name.Contains(lastName ?? firstName))
             .Select(f => new { HasName = f.Name ?? "NoName" })
             .ToSql(out var dbParameters);
-        Assert.True(sql == "SELECT COALESCE(a.[Name],'NoName') AS [HasName] FROM [sys_user] a WHERE a.[Name] LIKE '%'+@p0+'%'");
+        Assert.True(sql == "SELECT COALESCE(a.[Name],N'NoName') AS [HasName] FROM [sys_user] a WHERE a.[Name] LIKE '%'+@p0+'%'");
         Assert.True(dbParameters[0].Value.ToString() == firstName);
+
+        repository.BeginTransaction();
+        var count = repository.Update<User>(new { Id = 1, Name = "千叶111" });
+        var result = repository.From<User>()
+            .Where(f => f.Name.Contains(lastName ?? firstName))
+            .Select(f => new { f.Id, HasName = f.Name ?? "NoName" })
+            .ToList();
+        repository.Commit();
+        Assert.NotNull(result);
+        Assert.True(result.Count > 0);
+        Assert.True(result.Exists(f => f.Id == 1));
 
         sql = repository.From<User>()
             .Where(f => (f.Name ?? f.Id.ToString()) == "leafkevin")
             .Select(f => f.Id)
             .ToSql(out dbParameters);
-        Assert.True(sql == "SELECT a.[Id] FROM [sys_user] a WHERE COALESCE(a.[Name],CAST(a.[Id] AS NVARCHAR(MAX)))='leafkevin'");
+        Assert.True(sql == "SELECT a.[Id] FROM [sys_user] a WHERE COALESCE(a.[Name],CAST(a.[Id] AS NVARCHAR(MAX)))=N'leafkevin'");
+        repository.BeginTransaction();
+        count = repository.Update<User>(new { Id = 1, Name = "leafkevin" });
+        var result1 = repository.From<User>()
+            .Where(f => (f.Name ?? f.Id.ToString()) == "leafkevin")
+            .Select(f => f.Id)
+            .ToList();
+        repository.Commit();
+        Assert.NotNull(result);
+        Assert.True(result.Exists(f => f.Id == 1));
     }
     [Fact]
     public void Conditional()
@@ -57,7 +77,7 @@ public class ExpressionUnitTest : UnitTestBase
                 IsNeedParameter = f.Name.Contains("kevin") ? "Yes" : "No",
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT (CASE WHEN a.[IsEnabled]=1 THEN 'Enabled' ELSE 'Disabled' END) AS [IsEnabled],(CASE WHEN a.[GuidField] IS NOT NULL THEN 'HasValue' ELSE 'NoValue' END) AS [GuidField],(CASE WHEN a.[Age]>35 THEN 1 ELSE 0 END) AS [IsOld],(CASE WHEN a.[Name] LIKE '%kevin%' THEN 'Yes' ELSE 'No' END) AS [IsNeedParameter] FROM [sys_user] a WHERE (CASE WHEN a.[IsEnabled]=1 THEN 'Enabled' ELSE 'Disabled' END)='Enabled' AND (CASE WHEN a.[GuidField] IS NOT NULL THEN 'HasValue' ELSE 'NoValue' END)='HasValue'");
+        Assert.True(sql == "SELECT (CASE WHEN a.[IsEnabled]=1 THEN N'Enabled' ELSE N'Disabled' END) AS [IsEnabled],(CASE WHEN a.[GuidField] IS NOT NULL THEN N'HasValue' ELSE N'NoValue' END) AS [GuidField],(CASE WHEN a.[Age]>35 THEN 1 ELSE 0 END) AS [IsOld],(CASE WHEN a.[Name] LIKE N'%kevin%' THEN N'Yes' ELSE N'No' END) AS [IsNeedParameter] FROM [sys_user] a WHERE (CASE WHEN a.[IsEnabled]=1 THEN N'Enabled' ELSE N'Disabled' END)=N'Enabled' AND (CASE WHEN a.[GuidField] IS NOT NULL THEN N'HasValue' ELSE N'NoValue' END)=N'HasValue'");
 
         var enabled = "Enabled";
         var hasValue = "HasValue";
@@ -72,7 +92,7 @@ public class ExpressionUnitTest : UnitTestBase
                 IsNeedParameter = f.Name.Contains("kevin") ? "Yes" : "No",
             })
             .ToSql(out var dbParameters);
-        Assert.True(sql == "SELECT (CASE WHEN a.[IsEnabled]=1 THEN @p4 ELSE 'Disabled' END) AS [IsEnabled],(CASE WHEN a.[GuidField] IS NOT NULL THEN @p5 ELSE 'NoValue' END) AS [GuidField],(CASE WHEN a.[Age]>35 THEN 1 ELSE 0 END) AS [IsOld],(CASE WHEN a.[Name] LIKE '%kevin%' THEN 'Yes' ELSE 'No' END) AS [IsNeedParameter] FROM [sys_user] a WHERE (CASE WHEN a.[IsEnabled]=1 THEN @p0 ELSE 'Disabled' END)=@p1 AND (CASE WHEN a.[GuidField] IS NOT NULL THEN @p2 ELSE 'NoValue' END)=@p3");
+        Assert.True(sql == "SELECT (CASE WHEN a.[IsEnabled]=1 THEN @p4 ELSE N'Disabled' END) AS [IsEnabled],(CASE WHEN a.[GuidField] IS NOT NULL THEN @p5 ELSE N'NoValue' END) AS [GuidField],(CASE WHEN a.[Age]>35 THEN 1 ELSE 0 END) AS [IsOld],(CASE WHEN a.[Name] LIKE N'%kevin%' THEN N'Yes' ELSE N'No' END) AS [IsNeedParameter] FROM [sys_user] a WHERE (CASE WHEN a.[IsEnabled]=1 THEN @p0 ELSE N'Disabled' END)=@p1 AND (CASE WHEN a.[GuidField] IS NOT NULL THEN @p2 ELSE N'NoValue' END)=@p3");
         Assert.True(dbParameters.Count == 6);
         Assert.True(dbParameters[0].Value.ToString() == enabled);
         Assert.True(dbParameters[1].Value.ToString() == enabled);
@@ -102,7 +122,7 @@ public class ExpressionUnitTest : UnitTestBase
         var sql1 = repository.From<Company>()
             .Where(f => (f.Nature ?? CompanyNature.Internet) == CompanyNature.Internet)
             .ToSql(out _);
-        Assert.True(sql1 == "SELECT a.[Id],a.[Name],a.[Nature],a.[IsEnabled],a.[CreatedAt],a.[CreatedBy],a.[UpdatedAt],a.[UpdatedBy] FROM [sys_company] a WHERE COALESCE(a.[Nature],'Internet')='Internet'");
+        Assert.True(sql1 == "SELECT a.[Id],a.[Name],a.[Nature],a.[IsEnabled],a.[CreatedAt],a.[CreatedBy],a.[UpdatedAt],a.[UpdatedBy] FROM [sys_company] a WHERE COALESCE(a.[Nature],N'Internet')=N'Internet'");
         var result1 = await repository.QueryAsync<Company>(f => (f.Nature ?? CompanyNature.Internet) == CompanyNature.Internet);
         Assert.True(result1.Count >= 2);
         Assert.True((result1[0].Nature ?? CompanyNature.Internet) == CompanyNature.Internet);
@@ -111,7 +131,7 @@ public class ExpressionUnitTest : UnitTestBase
         var sql2 = repository.From<Company>()
             .Where(f => (f.Nature ?? CompanyNature.Internet) == localNature)
             .ToSql(out var dbParameters);
-        Assert.True(sql2 == "SELECT a.[Id],a.[Name],a.[Nature],a.[IsEnabled],a.[CreatedAt],a.[CreatedBy],a.[UpdatedAt],a.[UpdatedBy] FROM [sys_company] a WHERE COALESCE(a.[Nature],'Internet')=@p0");
+        Assert.True(sql2 == "SELECT a.[Id],a.[Name],a.[Nature],a.[IsEnabled],a.[CreatedAt],a.[CreatedBy],a.[UpdatedAt],a.[UpdatedBy] FROM [sys_company] a WHERE COALESCE(a.[Nature],N'Internet')=@p0");
         Assert.True((string)dbParameters[0].Value == localNature.ToString());
         Assert.True(dbParameters[0].Value.GetType() == typeof(string));
         var result2 = await repository.QueryAsync<Company>(f => (f.Nature ?? CompanyNature.Internet) == localNature);
@@ -121,7 +141,7 @@ public class ExpressionUnitTest : UnitTestBase
         var sql3 = repository.From<Company>()
         .Where(f => (f.IsEnabled ? f.Nature : CompanyNature.Internet) == localNature)
         .ToSql(out dbParameters);
-        Assert.True(sql3 == "SELECT a.[Id],a.[Name],a.[Nature],a.[IsEnabled],a.[CreatedAt],a.[CreatedBy],a.[UpdatedAt],a.[UpdatedBy] FROM [sys_company] a WHERE (CASE WHEN a.[IsEnabled]=1 THEN a.[Nature] ELSE 'Internet' END)=@p0");
+        Assert.True(sql3 == "SELECT a.[Id],a.[Name],a.[Nature],a.[IsEnabled],a.[CreatedAt],a.[CreatedBy],a.[UpdatedAt],a.[UpdatedBy] FROM [sys_company] a WHERE (CASE WHEN a.[IsEnabled]=1 THEN a.[Nature] ELSE N'Internet' END)=@p0");
         Assert.True((string)dbParameters[0].Value == localNature.ToString());
         Assert.True(dbParameters[0].Value.GetType() == typeof(string));
         var result3 = await repository.QueryAsync<Company>(f => (f.IsEnabled ? f.Nature : CompanyNature.Internet) == localNature);

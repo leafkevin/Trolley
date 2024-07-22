@@ -167,6 +167,41 @@ public partial class SqlServerProvider : BaseOrmProvider
     public override string GetIdentitySql(string keyField) => ";SELECT SCOPE_IDENTITY()";
     public override string CastTo(Type type, object value)
         => $"CAST({value} AS {castTos[type]})";
+    public override string GetQuotedValue(Type expectType, object value)
+    {
+        if (value == null) return "NULL";
+        switch (expectType)
+        {
+            case Type factType when factType == typeof(bool):
+                return Convert.ToBoolean(value) ? "1" : "0";
+            case Type factType when factType == typeof(string):
+                return $"N'{Convert.ToString(value).Replace("'", @"\'")}'";
+            case Type factType when factType == typeof(Guid):
+                return $"'{value}'";
+            case Type factType when factType == typeof(DateTime):
+                return $"'{Convert.ToDateTime(value):yyyy\\-MM\\-dd\\ HH\\:mm\\:ss\\.fff}'";
+            case Type factType when factType == typeof(DateTimeOffset):
+                return $"'{(DateTimeOffset)value:yyyy\\-MM\\-dd\\ HH\\:mm\\:ss\\.fffZ}'";
+            case Type factType when factType == typeof(DateOnly):
+                return $"'{(DateOnly)value:yyyy\\-MM\\-dd}'";
+            case Type factType when factType == typeof(TimeSpan):
+                {
+                    var factValue = (TimeSpan)value;
+                    if (factValue.TotalDays > 1 || factValue.TotalDays < -1)
+                        return $"'{(int)factValue.TotalDays}.{factValue:hh\\:mm\\:ss\\.ffffff}'";
+                    return $"'{factValue:hh\\:mm\\:ss\\.ffffff}'";
+                }
+            case Type factType when factType == typeof(TimeOnly): return $"'{(TimeOnly)value:hh\\:mm\\:ss\\.ffffff}'";
+            case Type factType when factType == typeof(SqlSegment):
+                {
+                    var sqlSegment = value as SqlSegment;
+                    if (sqlSegment.IsConstant)
+                        return this.GetQuotedValue(sqlSegment.Value);
+                    return sqlSegment.ToString();
+                }
+            default: return value.ToString();
+        }
+    }
     public override bool TryGetMyMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)
     {
         var methodInfo = methodCallExpr.Method;

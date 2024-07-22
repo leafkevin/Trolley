@@ -34,7 +34,7 @@ public interface ICreateVisitor : IDisposable
     void WithBy(object insertObj);
     void WithByField(Expression fieldSelector, object fieldValue);
     void WithBulk(IEnumerable insertObjs, int bulkCount);
-    (bool, string, IEnumerable, int, object, Action<IDataParameterCollection, StringBuilder, string, object>,
+    (bool, string, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
         Action<IDataParameterCollection, StringBuilder, object, string>, List<ReaderField>) BuildWithBulk(IDbCommand command);
     void IgnoreFields(string[] fieldNames);
     void IgnoreFields(Expression fieldsSelector);

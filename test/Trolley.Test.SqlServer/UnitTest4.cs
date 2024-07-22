@@ -276,7 +276,7 @@ public class UnitTest4 : UnitTestBase
             .Where(f => f.Name.Contains("kevin"))
             .And(isMale.HasValue, f => f.Age > 25)
             .ToSql(out _);
-        Assert.True(sql == "DELETE FROM [sys_user] WHERE [Name] LIKE '%kevin%' AND [Age]>25");
+        Assert.True(sql == "DELETE FROM [sys_user] WHERE [Name] LIKE N'%kevin%' AND [Age]>25");
     }
     [Fact]
     public void Delete_Enum_Fields()
@@ -285,7 +285,7 @@ public class UnitTest4 : UnitTestBase
         var sql1 = repository.Delete<User>()
             .Where(f => f.Gender == Gender.Male)
             .ToSql(out _);
-        Assert.True(sql1 == "DELETE FROM [sys_user] WHERE [Gender]='Male'");
+        Assert.True(sql1 == "DELETE FROM [sys_user] WHERE [Gender]=N'Male'");
 
         var gender = Gender.Male;
         var sql2 = repository.Delete<User>()
@@ -299,7 +299,7 @@ public class UnitTest4 : UnitTestBase
         var sql3 = repository.Delete<Company>()
              .Where(f => f.Nature == CompanyNature.Internet)
              .ToSql(out _);
-        Assert.True(sql3 == "DELETE FROM [sys_company] WHERE [Nature]='Internet'");
+        Assert.True(sql3 == "DELETE FROM [sys_company] WHERE [Nature]=N'Internet'");
 
         var nature = CompanyNature.Internet;
         var sql4 = repository.Delete<Company>()

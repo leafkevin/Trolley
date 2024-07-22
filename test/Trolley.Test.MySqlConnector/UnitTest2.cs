@@ -706,7 +706,7 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
             })
             .ToSql(out _);
         Assert.True(sql == "SELECT a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) AS `Date`,COUNT(b.`Id`) AS `OrderCount`,SUM(b.`TotalAmount`) AS `TotalAmount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) ORDER BY a.`Id`,CONVERT(b.`CreatedAt`,DATE)");
-		var result = repository.From<User>()
+        var result = repository.From<User>()
             .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
             //.IncludeMany((a, b) => a.Orders)
             //.ThenIncludeMany(f => f.Details)
@@ -747,7 +747,7 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
         Assert.NotEmpty(result[0].Order.Details);
         Assert.True(result[0].Order.Details.Count == 3);
 
-		var sql1 = repository.From<User>()
+        var sql1 = repository.From<User>()
             .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
             .GroupBy((a, b) => new { a.Id, a.Name, b.CreatedAt.Date })
             .OrderBy((x, a, b) => new { UserId = a.Id })
@@ -993,7 +993,7 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
             })
             .ToSql(out _);
         Assert.True(sql == "SELECT a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) AS `Date`,COUNT(b.`Id`) AS `OrderCount`,SUM(b.`TotalAmount`) AS `TotalAmount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` WHERE EXISTS(SELECT * FROM `sys_order_detail` f WHERE b.`Id`=f.`OrderId` AND f.`ProductId`=2) GROUP BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) HAVING SUM(b.`TotalAmount`)>300 ORDER BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE)");
-		var result = repository.From<User>()
+        var result = repository.From<User>()
             .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
             .Where((a, b) => Sql.Exists<OrderDetail>(f => b.Id == f.OrderId && f.ProductId == 2))
             .GroupBy((a, b) => new { a.Id, a.Name, b.CreatedAt.Date })
@@ -1033,7 +1033,7 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
             })
             .ToSql(out _);
         Assert.True(sql == "SELECT a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) AS `Date`,COUNT(b.`Id`) AS `OrderCount`,SUM(b.`TotalAmount`) AS `TotalAmount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` WHERE EXISTS(SELECT * FROM `sys_order_detail` f WHERE b.`Id`=f.`OrderId` AND f.`ProductId`=2) GROUP BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) HAVING SUM(b.`TotalAmount`)>300 ORDER BY a.`Id`,a.`Name` DESC,CONVERT(b.`CreatedAt`,DATE)");
-		var result = repository.From<User>()
+        var result = repository.From<User>()
             .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
             .Where((a, b) => Sql.Exists<OrderDetail>(f => b.Id == f.OrderId && f.ProductId == 2))
             .GroupBy((a, b) => new { a.Id, a.Name, b.CreatedAt.Date })
@@ -1058,21 +1058,21 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
     {
         using var repository = dbFactory.Create();
         var sql = repository.From<User>()
-            .Where(f => repository.Exists<Company>(t => t.Name.Contains("微软") && f.CompanyId == t.Id))
+            .Where(f => repository.Exists<Company>(t => t.Name.Contains("谷歌") && f.CompanyId == t.Id))
             .ToSql(out _);
-        Assert.True(sql == "SELECT a.`Id`,a.`TenantId`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`SourceType`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_user` a WHERE EXISTS(SELECT * FROM `sys_company` t WHERE t.`Name` LIKE '%微软%' AND a.`CompanyId`=t.`Id`)");
-		var result = repository.From<User>()
-            .Where(f => repository.Exists<Company>(t => t.Name.Contains("微软") && f.CompanyId == t.Id))
+        Assert.True(sql == "SELECT a.`Id`,a.`TenantId`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`SourceType`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_user` a WHERE EXISTS(SELECT * FROM `sys_company` t WHERE t.`Name` LIKE '%谷歌%' AND a.`CompanyId`=t.`Id`)");
+        var result = repository.From<User>()
+            .Where(f => repository.Exists<Company>(t => t.Name.Contains("谷歌") && f.CompanyId == t.Id))
             .ToList();
         Assert.NotNull(result);
         Assert.True(result.Count > 0);
 
         sql = repository.From<User>()
-            .Where(f => repository.From<Company>('b').Exists(t => t.Name.Contains("微软") && f.CompanyId == t.Id))
+            .Where(f => repository.From<Company>('b').Exists(t => t.Name.Contains("谷歌") && f.CompanyId == t.Id))
             .ToSql(out _);
-        Assert.True(sql == "SELECT a.`Id`,a.`TenantId`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`SourceType`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_user` a WHERE EXISTS(SELECT * FROM `sys_company` b WHERE b.`Name` LIKE '%微软%' AND a.`CompanyId`=b.`Id`)");
-		result = repository.From<User>()
-            .Where(f => repository.From<Company>('b').Exists(t => t.Name.Contains("微软") && f.CompanyId == t.Id))
+        Assert.True(sql == "SELECT a.`Id`,a.`TenantId`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`SourceType`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_user` a WHERE EXISTS(SELECT * FROM `sys_company` b WHERE b.`Name` LIKE '%谷歌%' AND a.`CompanyId`=b.`Id`)");
+        result = repository.From<User>()
+            .Where(f => repository.From<Company>('b').Exists(t => t.Name.Contains("谷歌") && f.CompanyId == t.Id))
             .ToList();
         Assert.NotNull(result);
         Assert.True(result.Count > 0);
@@ -1083,7 +1083,7 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
                 .Exists((x, y) => x.BuyerId == f.Id && y.Price > 200))
             .ToSql(out _);
         Assert.True(sql == "SELECT a.`Id`,a.`TenantId`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`SourceType`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_user` a WHERE EXISTS(SELECT * FROM `sys_order` b INNER JOIN `sys_order_detail` c ON b.`Id`=c.`OrderId` WHERE b.`BuyerId`=a.`Id` AND c.`Price`>200)");
-		result = repository.From<User>()
+        result = repository.From<User>()
             .Where(f => repository.From<Order>('b')
                 .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
                 .Exists((x, y) => x.BuyerId == f.Id && y.Price > 200))
@@ -1097,7 +1097,7 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
                .Exists((x, y) => x.BuyerId == f.Id && y.Price > 200))
             .ToSql(out _);
         Assert.True(sql == "SELECT a.`Id`,a.`TenantId`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`SourceType`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_user` a WHERE EXISTS(SELECT * FROM `sys_order` b INNER JOIN `sys_order_detail` c ON b.`Id`=c.`OrderId` WHERE b.`BuyerId`=a.`Id` AND c.`Price`>200)");
-		result = repository.From<User>()
+        result = repository.From<User>()
             .Where(f => repository.From<Order, OrderDetail>('b')
                .InnerJoin((x, y) => x.Id == y.OrderId)
                .Exists((x, y) => x.BuyerId == f.Id && y.Price > 200))
@@ -1110,7 +1110,7 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
                .Exists((x, y) => x.Id == y.OrderId && x.BuyerId == f.Id && y.Price > 200))
             .ToSql(out _);
         Assert.True(sql == "SELECT a.`Id`,a.`TenantId`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`SourceType`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_user` a WHERE EXISTS(SELECT * FROM `sys_order` b,`sys_order_detail` c WHERE b.`Id`=c.`OrderId` AND b.`BuyerId`=a.`Id` AND c.`Price`>200)");
-		result = repository.From<User>()
+        result = repository.From<User>()
             .Where(f => repository.From<Order, OrderDetail>('b')
                .Exists((x, y) => x.Id == y.OrderId && x.BuyerId == f.Id && y.Price > 200))
            .ToList();
@@ -1123,7 +1123,7 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
                 .Exists((x, y) => x.BuyerId == f.Id && y.Price > 200))
             .ToSql(out _);
         Assert.True(sql == "SELECT a.`Id`,a.`TenantId`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`SourceType`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_user` a WHERE EXISTS(SELECT * FROM `sys_order` b,`sys_order_detail` c WHERE b.`Id`=c.`OrderId` AND b.`BuyerId`=a.`Id` AND c.`Price`>200)");
-		result = repository.From<User>()
+        result = repository.From<User>()
             .Where(f => repository.From<Order, OrderDetail>('b')
                 .Where((x, y) => x.Id == y.OrderId)
                 .Exists((x, y) => x.BuyerId == f.Id && y.Price > 200))
@@ -1132,11 +1132,11 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
         Assert.True(result.Count > 0);
 
         sql = repository.From<User>()
-            .Where(f => Sql.Exists<Company>(t => t.Name.Contains("微软") && f.CompanyId == t.Id))
+            .Where(f => Sql.Exists<Company>(t => t.Name.Contains("谷歌") && f.CompanyId == t.Id))
             .ToSql(out _);
-        Assert.True(sql == "SELECT a.`Id`,a.`TenantId`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`SourceType`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_user` a WHERE EXISTS(SELECT * FROM `sys_company` t WHERE t.`Name` LIKE '%微软%' AND a.`CompanyId`=t.`Id`)");
-		result = repository.From<User>()
-            .Where(f => Sql.Exists<Company>(t => t.Name.Contains("微软") && f.CompanyId == t.Id))
+        Assert.True(sql == "SELECT a.`Id`,a.`TenantId`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`SourceType`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_user` a WHERE EXISTS(SELECT * FROM `sys_company` t WHERE t.`Name` LIKE '%谷歌%' AND a.`CompanyId`=t.`Id`)");
+        result = repository.From<User>()
+            .Where(f => Sql.Exists<Company>(t => t.Name.Contains("谷歌") && f.CompanyId == t.Id))
             .ToList();
         Assert.NotNull(result);
         Assert.True(result.Count > 0);
@@ -1172,51 +1172,25 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
         var sql = repository.From<User>()
             .InnerJoin<Company>((a, b) => a.CompanyId == b.Id)
             .Where((x, y) => Sql.Exists(f => f
-                .From<Order, OrderDetail, Product>('c')
-                .Where((a, b, c) => a.BuyerId == x.Id && a.Id == b.OrderId && b.ProductId == c.Id && c.CompanyId == y.Id)
-                .GroupBy((a, b, c) => a.Id)
-                .Having((x, a, b, c) => Sql.CountDistinct(b.ProductId) > 0)
+                .From<Order, OrderDetail>('c')
+                .Where((a, b) => a.BuyerId == x.Id && a.Id == b.OrderId)
+                .GroupBy((a, b) => a.Id)
+                .Having((x, a, b) => Sql.CountDistinct(b.ProductId) > 0)
                 .Select()))
             .GroupBy((x, y) => new { x.Gender, x.CompanyId })
             .Select((x, a, b) => new { x.Grouping, UserTotal = x.CountDistinct(a.Id) })
             .ToSql(out _);
-        Assert.True(sql == "SELECT a.`Gender`,a.`CompanyId`,COUNT(DISTINCT a.`Id`) AS `UserTotal` FROM `sys_user` a INNER JOIN `sys_company` b ON a.`CompanyId`=b.`Id` WHERE EXISTS(SELECT c.`Id` FROM `sys_order` c,`sys_order_detail` d,`sys_product` e WHERE c.`BuyerId`=a.`Id` AND c.`Id`=d.`OrderId` AND d.`ProductId`=e.`Id` AND e.`CompanyId`=b.`Id` GROUP BY c.`Id` HAVING COUNT(DISTINCT d.`ProductId`)>0) GROUP BY a.`Gender`,a.`CompanyId`");
+        Assert.True(sql == "SELECT a.`Gender`,a.`CompanyId`,COUNT(DISTINCT a.`Id`) AS `UserTotal` FROM `sys_user` a INNER JOIN `sys_company` b ON a.`CompanyId`=b.`Id` WHERE EXISTS(SELECT c.`Id` FROM `sys_order` c,`sys_order_detail` d WHERE c.`BuyerId`=a.`Id` AND c.`Id`=d.`OrderId` GROUP BY c.`Id` HAVING COUNT(DISTINCT d.`ProductId`)>0) GROUP BY a.`Gender`,a.`CompanyId`");
         var result = await repository.From<User>()
             .InnerJoin<Company>((a, b) => a.CompanyId == b.Id)
             .Where((x, y) => Sql.Exists(f => f
-                .From<Order, OrderDetail, Product>('c')
-                .Where((a, b, c) => a.BuyerId == x.Id && a.Id == b.OrderId && b.ProductId == c.Id && c.CompanyId == y.Id)
-                .GroupBy((a, b, c) => a.Id)
-                .Having((x, a, b, c) => Sql.CountDistinct(b.ProductId) > 0)
+                .From<Order, OrderDetail>('c')
+                .Where((a, b) => a.BuyerId == x.Id && a.Id == b.OrderId)
+                .GroupBy((a, b) => a.Id)
+                .Having((x, a, b) => Sql.CountDistinct(b.ProductId) > 0)
                 .Select()))
             .GroupBy((x, y) => new { x.Gender, x.CompanyId })
             .Select((x, a, b) => new { x.Grouping, UserTotal = x.CountDistinct(a.Id) })
-            .ToListAsync();
-        Assert.NotNull(result);
-        Assert.True(result.Count > 0);
-
-        sql = repository.From<User>()
-            .InnerJoin<Company>((a, b) => a.CompanyId == b.Id)
-            .Where((x, y) => Sql.Exists(f => f
-                .From<Order, OrderDetail, Product>('c')
-                .Where((a, b, c) => a.BuyerId == x.Id && a.Id == b.OrderId && b.ProductId == c.Id && c.CompanyId == y.Id)
-                .GroupBy((a, b, c) => a.Id)
-                .Having((x, a, b, c) => Sql.CountDistinct(b.ProductId) > 0)
-                .Select()))
-            .GroupBy((x, y) => new { x.Gender, x.CompanyId })
-            .Select((t, a, b) => new { t.Grouping, UserTotal = t.CountDistinct(a.Id) })
-            .ToSql(out _);
-        Assert.True(sql == "SELECT a.`Gender`,a.`CompanyId`,COUNT(DISTINCT a.`Id`) AS `UserTotal` FROM `sys_user` a INNER JOIN `sys_company` b ON a.`CompanyId`=b.`Id` WHERE EXISTS(SELECT c.`Id` FROM `sys_order` c,`sys_order_detail` d,`sys_product` e WHERE c.`BuyerId`=a.`Id` AND c.`Id`=d.`OrderId` AND d.`ProductId`=e.`Id` AND e.`CompanyId`=b.`Id` GROUP BY c.`Id` HAVING COUNT(DISTINCT d.`ProductId`)>0) GROUP BY a.`Gender`,a.`CompanyId`");
-        result = await repository.From<User>()
-            .InnerJoin<Company>((a, b) => a.CompanyId == b.Id)
-            .Where((x, y) => Sql.Exists(f => f
-                .From<Order, OrderDetail, Product>('c')
-                .Where((a, b, c) => a.BuyerId == x.Id && a.Id == b.OrderId && b.ProductId == c.Id && c.CompanyId == y.Id)
-                .GroupBy((a, b, c) => a.Id)
-                .Having((x, a, b, c) => Sql.CountDistinct(b.ProductId) > 0)
-                .Select()))
-            .GroupBy((x, y) => new { x.Gender, x.CompanyId })
-            .Select((t, a, b) => new { t.Grouping, UserTotal = t.CountDistinct(a.Id) })
             .ToListAsync();
         Assert.NotNull(result);
         Assert.True(result.Count > 0);
@@ -1229,7 +1203,7 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
         var myOrders = repository.From<OrderDetail, Order>()
             .Where((a, b) => a.OrderId == b.Id)
             .GroupBy((a, b) => new { a.OrderId, b.BuyerId })
-            .Having((x, a, b) => x.CountDistinct(a.ProductId) > 2)
+            .Having((x, a, b) => x.CountDistinct(a.ProductId) > 1)
             .Select((x, a, b) => x.Grouping)
             .AsCteTable("myOrders");
 
@@ -1240,7 +1214,7 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
             .ToSql(out _);
         Assert.True(sql == @"WITH `myOrders`(`OrderId`,`BuyerId`) AS 
 (
-SELECT a.`OrderId`,b.`BuyerId` FROM `sys_order_detail` a,`sys_order` b WHERE a.`OrderId`=b.`Id` GROUP BY a.`OrderId`,b.`BuyerId` HAVING COUNT(DISTINCT a.`ProductId`)>2
+SELECT a.`OrderId`,b.`BuyerId` FROM `sys_order_detail` a,`sys_order` b WHERE a.`OrderId`=b.`Id` GROUP BY a.`OrderId`,b.`BuyerId` HAVING COUNT(DISTINCT a.`ProductId`)>1
 )
 SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `sys_company` b ON a.`CompanyId`=b.`Id` WHERE EXISTS(SELECT * FROM `myOrders` f WHERE f.`BuyerId`=a.`Id`)");
 
@@ -1269,7 +1243,7 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
             })
             .ToSql(out _);
         Assert.True(sql == "SELECT a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) AS `Date`,COUNT(b.`Id`) AS `OrderCount`,SUM(b.`TotalAmount`) AS `TotalAmount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` WHERE a.`Id` IN (1,2,3) AND EXISTS(SELECT * FROM `sys_order_detail` f WHERE b.`Id`=f.`OrderId` AND f.`ProductId`=2) GROUP BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) HAVING SUM(b.`TotalAmount`)>300 ORDER BY a.`Id`");
-		var result = repository.From<User>()
+        var result = repository.From<User>()
             .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
             .Where((x, y) => Sql.In(x.Id, new int[] { 1, 2, 3 }) && Sql.Exists<OrderDetail>(f => y.Id == f.OrderId && f.ProductId == 2))
             .GroupBy((a, b) => new { a.Id, a.Name, b.CreatedAt.Date })
@@ -1299,7 +1273,7 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
             })
             .ToSql(out _);
         Assert.True(sql == "SELECT a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) AS `Date`,COUNT(b.`Id`) AS `OrderCount`,SUM(b.`TotalAmount`) AS `TotalAmount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` WHERE a.`Id` IN (1,2,3) AND EXISTS(SELECT * FROM `sys_order_detail` f WHERE b.`Id`=f.`OrderId` AND f.`ProductId`=2) GROUP BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) HAVING SUM(b.`TotalAmount`)>300 ORDER BY a.`Id`,CONVERT(b.`CreatedAt`,DATE)");
-		result = repository.From<User>()
+        result = repository.From<User>()
             .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
             .Where((a, b) => Sql.In(a.Id, new int[] { 1, 2, 3 }) && Sql.Exists<OrderDetail>(f => b.Id == f.OrderId && f.ProductId == 2))
             .GroupBy((a, b) => new { a.Id, a.Name, b.CreatedAt.Date })
@@ -1326,7 +1300,7 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
             .Select(f => f.Id)
             .ToSql(out _);
         Assert.True(sql == "SELECT a.`Id` FROM `sys_user` a WHERE a.`Id` IN (SELECT b.`BuyerId` FROM `sys_order` b INNER JOIN `sys_order_detail` c ON b.`Id`=c.`OrderId` AND c.`ProductId`=1)");
-		var result = repository.From<User>()
+        var result = repository.From<User>()
             .Where(f => Sql.In(f.Id, t => t.From<Order>('b')
                 .InnerJoin<OrderDetail>((a, b) => a.Id == b.OrderId && b.ProductId == 1)
                 .Select((x, y) => x.BuyerId)))
@@ -1342,7 +1316,7 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
             .Select(f => f.Id)
             .ToSql(out _);
         Assert.True(sql == "SELECT a.`Id` FROM `sys_user` a WHERE a.`Id` IN (SELECT b.`BuyerId` FROM `sys_order` b,`sys_order_detail` c WHERE b.`Id`=c.`OrderId` AND c.`ProductId`=1)");
-		result = repository.From<User>()
+        result = repository.From<User>()
            .Where(f => Sql.In(f.Id, t => t.From<Order, OrderDetail>('b')
                .Where((a, b) => a.Id == b.OrderId && b.ProductId == 1)
                .Select((x, y) => x.BuyerId)))
@@ -1359,7 +1333,7 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
             .Select(f => f.Id)
             .ToSql(out _);
         Assert.True(sql == "SELECT a.`Id` FROM `sys_user` a WHERE a.`Id` IN (SELECT b.`BuyerId` FROM `sys_order` b INNER JOIN `sys_order_detail` c ON b.`Id`=c.`OrderId` AND c.`ProductId`=1)");
-		result = repository.From<User>()
+        result = repository.From<User>()
             .Where(f => Sql.In(f.Id, subQuery))
             .Select(f => f.Id)
             .ToList();
@@ -1374,7 +1348,7 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
            .Select(f => f.Id)
            .ToSql(out _);
         Assert.True(sql == "SELECT a.`Id` FROM `sys_user` a WHERE a.`Id` IN (SELECT b.`BuyerId` FROM `sys_order` b,`sys_order_detail` c WHERE b.`Id`=c.`OrderId` AND c.`ProductId`=1)");
-		result = repository.From<User>()
+        result = repository.From<User>()
            .Where(f => Sql.In(f.Id, subQuery))
            .Select(f => f.Id)
            .ToList();
@@ -1394,7 +1368,7 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
             .Select(f => f.Id)
             .ToSql(out _);
         Assert.True(sql == "SELECT a.`Id` FROM `sys_user` a WHERE a.`Id` IN (SELECT b.`BuyerId` FROM `sys_order` b INNER JOIN `sys_order_detail` c ON b.`Id`=c.`OrderId` AND c.`ProductId`=1) AND EXISTS(SELECT * FROM `sys_order` x,`sys_company` y WHERE a.`Id`=x.`SellerId` AND a.`CompanyId`=y.`Id`)");
-		var result = repository.From<User>()
+        var result = repository.From<User>()
             .Where(f => Sql.In(f.Id, t => t.From<Order>('b')
                 .InnerJoin<OrderDetail>((a, b) => a.Id == b.OrderId && b.ProductId == 1)
                 .Select((x, y) => x.BuyerId)))
@@ -1412,7 +1386,7 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
             .Select(f => f.Id)
             .ToSql(out _);
         Assert.True(sql == "SELECT a.`Id` FROM `sys_user` a WHERE a.`Id` IN (SELECT b.`BuyerId` FROM `sys_order` b,`sys_order_detail` c WHERE b.`Id`=c.`OrderId` AND c.`ProductId`=1) AND EXISTS(SELECT * FROM `sys_order` x,`sys_company` y WHERE a.`Id`=x.`SellerId` AND a.`CompanyId`=y.`Id`)");
-		result = repository.From<User>()
+        result = repository.From<User>()
             .Where(f => Sql.In(f.Id, t => t.From<Order, OrderDetail>('b')
                 .Where((a, b) => a.Id == b.OrderId && b.ProductId == 1)
                 .Select((x, y) => x.BuyerId)))
@@ -1612,7 +1586,7 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
             })
             .ToSql(out _);
         Assert.True(sql == "SELECT (CASE WHEN a.`OrderNo` IS NULL THEN 1 ELSE 0 END) AS `NoOrderNo`,(CASE WHEN a.`ProductCount` IS NOT NULL THEN 1 ELSE 0 END) AS `HasProduct` FROM `sys_order` a WHERE a.`ProductCount` IS NULL AND a.`ProductCount` IS NULL");
-		var result = repository.From<Order>()
+        var result = repository.From<Order>()
             .Where(x => x.ProductCount == null)
             .And(true, f => !f.ProductCount.HasValue)
             .Select(x => new

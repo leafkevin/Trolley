@@ -155,6 +155,39 @@ public class UnitTest1 : UnitTestBase
         Assert.True((DateTime)dbParameters[9].Value == now);
         Assert.True((int)dbParameters[10].Value == 1);
 
+        sql = repository.Create<User>()
+            .WithBy(new Dictionary<string, object>
+            {
+                { "Id", 1 },
+                { "TenantId", "1"},
+                { "Name", "leafkevin"},
+                { "Age", 25},
+                { "CompanyId", 1},
+                { "Gender", Gender.Male},
+                { "IsEnabled", true},
+                { "CreatedAt", now},
+                { "CreatedBy", 1},
+                { "UpdatedAt", now},
+                { "UpdatedBy", 1}
+            })
+          .ToSql(out dbParameters);
+        Assert.True(sql == "INSERT INTO `sys_user` (`Id`,`TenantId`,`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id,@TenantId,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)");
+        Assert.True((int)dbParameters[0].Value == 1);
+        Assert.True((string)dbParameters[1].Value == "1");
+        Assert.True((string)dbParameters[2].Value == "leafkevin");
+        Assert.True((int)dbParameters[3].Value == 25);
+        Assert.True((int)dbParameters[4].Value == 1);
+        if (dbParameters[5] is MySqlParameter dbParameter1)
+        {
+            Assert.True(dbParameter1.MySqlDbType == MySqlDbType.Enum);
+            Assert.True((string)dbParameter1.Value == Gender.Male.ToString());
+        }
+        Assert.True((bool)dbParameters[6].Value == true);
+        Assert.True((DateTime)dbParameters[7].Value == now);
+        Assert.True((int)dbParameters[8].Value == 1);
+        Assert.True((DateTime)dbParameters[9].Value == now);
+        Assert.True((int)dbParameters[10].Value == 1);
+
         repository.BeginTransaction();
         var count = repository.Delete<User>().Where(f => f.Id == 1).Execute();
         var result = repository.Create<User>()
@@ -171,6 +204,27 @@ public class UnitTest1 : UnitTestBase
                 CreatedBy = 1,
                 UpdatedAt = now,
                 UpdatedBy = 1
+            })
+            .Execute();
+        repository.Commit();
+        Assert.Equal(1, result);
+
+        repository.BeginTransaction();
+        count = repository.Delete<User>().Where(f => f.Id == 1).Execute();
+        result = repository.Create<User>()
+            .WithBy(new Dictionary<string, object>
+            {
+                { "Id", 1 },
+                { "TenantId", "1"},
+                { "Name", "leafkevin"},
+                { "Age", 25},
+                { "CompanyId", 1},
+                { "Gender", Gender.Male},
+                { "IsEnabled", true},
+                { "CreatedAt", now},
+                { "CreatedBy", 1},
+                { "UpdatedAt", now},
+                { "UpdatedBy", 1}
             })
             .Execute();
         repository.Commit();
@@ -391,7 +445,6 @@ public class UnitTest1 : UnitTestBase
         id = repository.Create<Company>()
             .WithBy(new Dictionary<string, object>()
             {
-                    //{ "Id", 1},
                     { "Name","谷歌"},
                     { "IsEnabled", true},
                     { "CreatedAt", DateTime.Now},
@@ -1091,7 +1144,7 @@ public class UnitTest1 : UnitTestBase
              )
             .ToSql(out _);
         Assert.True(sql1 == "INSERT INTO `sys_order` (`Id`,`TenantId`,`OrderNo`,`BuyerId`,`SellerId`,`TotalAmount`,`Products`,`Disputes`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id,@TenantId,@OrderNo,@BuyerId,@SellerId,@TotalAmount,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) ON DUPLICATE KEY UPDATE `TotalAmount`=@TotalAmount,`Products`=@Products,`BuyerSource`=@BuyerSource");
-                
+
         var sql2 = repository.Create<Order>()
              .WithBy(new
              {

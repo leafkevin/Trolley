@@ -149,8 +149,8 @@ public class PostgreSqlCreateVisitor : CreateVisitor
         //多命令查询或是ToSql才会走到此分支
         //多语句执行，一次性不分批次
         var builder = new StringBuilder();
-        (var isNeedSplit, var tableName, var insertObjs, _, var firstInsertObj,
-            var headSqlSetter, var valuesSqlSetter, readerFields) = this.BuildWithBulk(command);
+        (var isNeedSplit, var tableName, var insertObjs, _, var firstSqlSetter,
+            var loopSqlSetter, readerFields) = this.BuildWithBulk(command);
 
         string outputSql = null;
         if (this.OutputFieldNames != null && this.OutputFieldNames.Count > 0)
@@ -158,12 +158,12 @@ public class PostgreSqlCreateVisitor : CreateVisitor
 
         Action<string, IEnumerable> executor = (tableName, insertObjs) =>
         {
-            headSqlSetter.Invoke(command.Parameters, builder, tableName, firstInsertObj);
+            firstSqlSetter.Invoke(command.Parameters, builder, tableName);
             int index = 0;
             foreach (var insertObj in insertObjs)
             {
                 if (index > 0) builder.Append(',');
-                valuesSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
+                loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
                 index++;
             }
             if (outputSql != null)
@@ -216,16 +216,33 @@ public class PostgreSqlCreateVisitor : CreateVisitor
     {
         var entityType = this.Tables[0].EntityType;
         var updateObjType = updateObj.GetType();
-        var setFieldsInitializer = RepositoryHelper.BuildSqlParametersPart(this.OrmProvider, this.MapProvider, entityType, updateObjType, true, false, true, false, false, false, this.IsMultiple, false, this.OnlyFieldNames, this.IgnoreFieldNames, ",", null);
-        if (this.IsMultiple)
+        (var isDictionary, var setFieldsInitializer) = RepositoryHelper.BuildSqlParametersPart(this.OrmProvider, this.MapProvider, entityType, updateObjType, true, false, true, false, false, false, this.IsMultiple, false, this.OnlyFieldNames, this.IgnoreFieldNames, ",", null);
+        if (isDictionary)
         {
-            var typedSetFieldsInitializer = setFieldsInitializer as Action<StringBuilder, IOrmProvider, object, string>;
-            typedSetFieldsInitializer.Invoke(this.UpdateFields, this.OrmProvider, updateObj, $"_m{this.CommandIndex}");
+            var entityMapper = this.Tables[0].Mapper;
+            if (this.IsMultiple)
+            {
+                var typedSetFieldsInitializer = setFieldsInitializer as Action<StringBuilder, IOrmProvider, EntityMap, object, string>;
+                typedSetFieldsInitializer.Invoke(this.UpdateFields, this.OrmProvider, entityMapper, updateObj, $"_m{this.CommandIndex}");
+            }
+            else
+            {
+                var typedSetFieldsInitializer = setFieldsInitializer as Action<StringBuilder, IOrmProvider, EntityMap, object>;
+                typedSetFieldsInitializer.Invoke(this.UpdateFields, this.OrmProvider, entityMapper, updateObj);
+            }
         }
         else
         {
-            var typedSetFieldsInitializer = setFieldsInitializer as Action<StringBuilder, IOrmProvider, object>;
-            typedSetFieldsInitializer.Invoke(this.UpdateFields, this.OrmProvider, updateObj);
+            if (this.IsMultiple)
+            {
+                var typedSetFieldsInitializer = setFieldsInitializer as Action<StringBuilder, IOrmProvider, object, string>;
+                typedSetFieldsInitializer.Invoke(this.UpdateFields, this.OrmProvider, updateObj, $"_m{this.CommandIndex}");
+            }
+            else
+            {
+                var typedSetFieldsInitializer = setFieldsInitializer as Action<StringBuilder, IOrmProvider, object>;
+                typedSetFieldsInitializer.Invoke(this.UpdateFields, this.OrmProvider, updateObj);
+            }
         }
     }
     public void VisitSetExpression(LambdaExpression lambdaExpr)

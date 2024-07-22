@@ -236,6 +236,6 @@ public interface IMultipleQuery
     /// <typeparam name="TEntity">实体对象类型</typeparam>
     /// <param name="predicate">where条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultipleQuery Exists<TEntity>(Expression<Func<TEntity, bool>> predicate);
+    IMultipleQuery Exists<TEntity>(Expression<Func<TEntity, bool>> predicate = null);
     #endregion
 }

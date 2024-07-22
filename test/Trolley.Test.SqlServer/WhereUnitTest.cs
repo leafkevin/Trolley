@@ -50,14 +50,14 @@ public class WhereUnitTest : UnitTestBase
         var sql1 = repository.From<Company>()
             .Where(f => f.Nature == CompanyNature.Internet)
             .ToSql(out _);
-        Assert.True(sql1 == "SELECT a.[Id],a.[Name],a.[Nature],a.[IsEnabled],a.[CreatedAt],a.[CreatedBy],a.[UpdatedAt],a.[UpdatedBy] FROM [sys_company] a WHERE a.[Nature]='Internet'");
+        Assert.True(sql1 == "SELECT a.[Id],a.[Name],a.[Nature],a.[IsEnabled],a.[CreatedAt],a.[CreatedBy],a.[UpdatedAt],a.[UpdatedBy] FROM [sys_company] a WHERE a.[Nature]=N'Internet'");
         var result1 = await repository.QueryAsync<Company>(f => f.Nature == CompanyNature.Internet);
         Assert.True(result1.Count >= 2);
 
         var sql2 = repository.From<Company>()
             .Where(f => (f.Nature ?? CompanyNature.Internet) == CompanyNature.Internet)
             .ToSql(out _);
-        Assert.True(sql2 == "SELECT a.[Id],a.[Name],a.[Nature],a.[IsEnabled],a.[CreatedAt],a.[CreatedBy],a.[UpdatedAt],a.[UpdatedBy] FROM [sys_company] a WHERE COALESCE(a.[Nature],'Internet')='Internet'");
+        Assert.True(sql2 == "SELECT a.[Id],a.[Name],a.[Nature],a.[IsEnabled],a.[CreatedAt],a.[CreatedBy],a.[UpdatedAt],a.[UpdatedBy] FROM [sys_company] a WHERE COALESCE(a.[Nature],N'Internet')=N'Internet'");
         var result2 = await repository.QueryAsync<Company>(f => (f.Nature ?? CompanyNature.Internet) == CompanyNature.Internet);
         Assert.True(result2.Count >= 2);
 
@@ -65,7 +65,7 @@ public class WhereUnitTest : UnitTestBase
         var sql3 = repository.From<Company>()
             .Where(f => (f.Nature ?? CompanyNature.Internet) == localNature)
             .ToSql(out var dbParameters);
-        Assert.True(sql3 == "SELECT a.[Id],a.[Name],a.[Nature],a.[IsEnabled],a.[CreatedAt],a.[CreatedBy],a.[UpdatedAt],a.[UpdatedBy] FROM [sys_company] a WHERE COALESCE(a.[Nature],'Internet')=@p0");
+        Assert.True(sql3 == "SELECT a.[Id],a.[Name],a.[Nature],a.[IsEnabled],a.[CreatedAt],a.[CreatedBy],a.[UpdatedAt],a.[UpdatedBy] FROM [sys_company] a WHERE COALESCE(a.[Nature],N'Internet')=@p0");
         Assert.True((string)dbParameters[0].Value == localNature.ToString());
         Assert.True(dbParameters[0].Value.GetType() == typeof(string));
         var result3 = await repository.QueryAsync<Company>(f => (f.Nature ?? CompanyNature.Internet) == localNature);
@@ -74,12 +74,11 @@ public class WhereUnitTest : UnitTestBase
     [Fact]
     public async void WhereCoalesceConditional()
     {
-        this.Initialize();
         using var repository = dbFactory.Create();
         var sql1 = repository.From<Company>()
             .Where(f => (f.Nature ?? CompanyNature.Internet) == CompanyNature.Internet)
             .ToSql(out _);
-        Assert.True(sql1 == "SELECT a.[Id],a.[Name],a.[Nature],a.[IsEnabled],a.[CreatedAt],a.[CreatedBy],a.[UpdatedAt],a.[UpdatedBy] FROM [sys_company] a WHERE COALESCE(a.[Nature],'Internet')='Internet'");
+        Assert.True(sql1 == "SELECT a.[Id],a.[Name],a.[Nature],a.[IsEnabled],a.[CreatedAt],a.[CreatedBy],a.[UpdatedAt],a.[UpdatedBy] FROM [sys_company] a WHERE COALESCE(a.[Nature],N'Internet')=N'Internet'");
         var result1 = await repository.QueryAsync<Company>(f => (f.Nature ?? CompanyNature.Internet) == CompanyNature.Internet);
         Assert.True(result1.Count >= 2);
         Assert.True((result1[0].Nature ?? CompanyNature.Internet) == CompanyNature.Internet);
@@ -88,7 +87,7 @@ public class WhereUnitTest : UnitTestBase
         var sql2 = repository.From<Company>()
             .Where(f => (f.Nature ?? CompanyNature.Internet) == localNature)
             .ToSql(out var dbParameters);
-        Assert.True(sql2 == "SELECT a.[Id],a.[Name],a.[Nature],a.[IsEnabled],a.[CreatedAt],a.[CreatedBy],a.[UpdatedAt],a.[UpdatedBy] FROM [sys_company] a WHERE COALESCE(a.[Nature],'Internet')=@p0");
+        Assert.True(sql2 == "SELECT a.[Id],a.[Name],a.[Nature],a.[IsEnabled],a.[CreatedAt],a.[CreatedBy],a.[UpdatedAt],a.[UpdatedBy] FROM [sys_company] a WHERE COALESCE(a.[Nature],N'Internet')=@p0");
         Assert.True((string)dbParameters[0].Value == localNature.ToString());
         Assert.True(dbParameters[0].Value.GetType() == typeof(string));
         var result2 = await repository.QueryAsync<Company>(f => (f.Nature ?? CompanyNature.Internet) == localNature);
@@ -98,7 +97,7 @@ public class WhereUnitTest : UnitTestBase
         var sql3 = repository.From<Company>()
             .Where(f => (f.IsEnabled ? f.Nature : CompanyNature.Internet) == localNature)
             .ToSql(out dbParameters);
-        Assert.True(sql3 == "SELECT a.[Id],a.[Name],a.[Nature],a.[IsEnabled],a.[CreatedAt],a.[CreatedBy],a.[UpdatedAt],a.[UpdatedBy] FROM [sys_company] a WHERE (CASE WHEN a.[IsEnabled]=1 THEN a.[Nature] ELSE 'Internet' END)=@p0");
+        Assert.True(sql3 == "SELECT a.[Id],a.[Name],a.[Nature],a.[IsEnabled],a.[CreatedAt],a.[CreatedBy],a.[UpdatedAt],a.[UpdatedBy] FROM [sys_company] a WHERE (CASE WHEN a.[IsEnabled]=1 THEN a.[Nature] ELSE N'Internet' END)=@p0");
         Assert.True((string)dbParameters[0].Value == localNature.ToString());
         Assert.True(dbParameters[0].Value.GetType() == typeof(string));
         var result3 = await repository.QueryAsync<Company>(f => (f.IsEnabled ? f.Nature : CompanyNature.Internet) == localNature);
@@ -109,7 +108,7 @@ public class WhereUnitTest : UnitTestBase
             .Where(f => (f.IsEnabled ? f.SourceType : UserSourceType.Website) > UserSourceType.Website)
             .Select(f => f.Id)
             .ToSql(out dbParameters);
-        Assert.True(sql4 == "SELECT a.[Id] FROM [sys_user] a WHERE (CASE WHEN a.[IsEnabled]=1 THEN a.[SourceType] ELSE 'Website' END)>'Website'");
+        Assert.True(sql4 == "SELECT a.[Id] FROM [sys_user] a WHERE (CASE WHEN a.[IsEnabled]=1 THEN a.[SourceType] ELSE N'Website' END)>N'Website'");
         var result5 = await repository.QueryAsync<Company>(f => (f.IsEnabled ? f.Nature : CompanyNature.Internet) == localNature);
         Assert.True(result5.Count >= 2);
         Assert.True(result5[0].Nature == localNature);
@@ -159,7 +158,7 @@ public class WhereUnitTest : UnitTestBase
             .And(true, (a, b) => a.Products == null || a.Disputes == null)
             .Select((a, b) => "*")
         .ToSql(out _);
-        Assert.True(sql == "SELECT * FROM [sys_order] a,[sys_user] b WHERE (a.[BuyerId]=b.[Id] OR b.[SourceType]='Douyin') AND (a.[BuyerSource]='Taobao' OR (a.[SellerId] IS NULL AND a.[ProductCount] IS NULL) OR a.[ProductCount]>1 OR (a.[TotalAmount]>500 AND a.[BuyerSource]='Website')) AND ((a.[BuyerId]<=10 AND a.[ProductCount]>5 AND b.[SourceType]='Douyin') OR (a.[BuyerId]>10 AND a.[ProductCount]<=5 AND b.[SourceType]='Website') OR a.[BuyerSource]='Taobao') AND (a.[Products] IS NULL OR a.[Disputes] IS NULL)");
+        Assert.True(sql == "SELECT * FROM [sys_order] a,[sys_user] b WHERE (a.[BuyerId]=b.[Id] OR b.[SourceType]=N'Douyin') AND (a.[BuyerSource]=N'Taobao' OR (a.[SellerId] IS NULL AND a.[ProductCount] IS NULL) OR a.[ProductCount]>1 OR (a.[TotalAmount]>500 AND a.[BuyerSource]=N'Website')) AND ((a.[BuyerId]<=10 AND a.[ProductCount]>5 AND b.[SourceType]=N'Douyin') OR (a.[BuyerId]>10 AND a.[ProductCount]<=5 AND b.[SourceType]=N'Website') OR a.[BuyerSource]=N'Taobao') AND (a.[Products] IS NULL OR a.[Disputes] IS NULL)");
     }
     [Fact]
     public void Where()
@@ -170,13 +169,27 @@ public class WhereUnitTest : UnitTestBase
                 && (f.OrderNo.Contains("ON_") || string.IsNullOrEmpty(f.OrderNo)))
             .Select(f => f.Id)
             .ToSql(out _);
-        Assert.True(sql1 == "SELECT a.[Id] FROM [sys_order] a WHERE EXISTS(SELECT * FROM [sys_user] t WHERE t.[Id]=a.[BuyerId] AND t.[IsEnabled]=1) AND (a.[BuyerId] IS NULL OR a.[BuyerId]=2) AND (a.[OrderNo] LIKE '%ON_%' OR (a.[OrderNo] IS NULL OR a.[OrderNo]=''))");
+        Assert.True(sql1 == "SELECT a.[Id] FROM [sys_order] a WHERE EXISTS(SELECT * FROM [sys_user] t WHERE t.[Id]=a.[BuyerId] AND t.[IsEnabled]=1) AND (a.[BuyerId] IS NULL OR a.[BuyerId]=2) AND (a.[OrderNo] LIKE N'%ON_%' OR (a.[OrderNo] IS NULL OR a.[OrderNo]=''))");
+        var result1 = repository.From<Order>()
+           .Where(f => Sql.Exists<User>(t => t.Id == f.BuyerId && t.IsEnabled) && (f.BuyerId.IsNull() || f.BuyerId == 2)
+               && (f.OrderNo.Contains("ON_") || string.IsNullOrEmpty(f.OrderNo)))
+           .Select(f => f.Id)
+           .ToList();
+        Assert.NotNull(result1);
+        Assert.True(result1.Count > 0);
 
         var sql2 = repository.From<Order>()
           .Where(f => (f.BuyerId.IsNull() || f.BuyerId == 2) && (f.OrderNo.Contains("ON_") || string.IsNullOrEmpty(f.OrderNo))
               && (Sql.Exists<User>(t => t.Id == f.BuyerId && t.IsEnabled) || f.SellerId.IsNull()))
           .Select(f => f.Id)
           .ToSql(out _);
-        Assert.True(sql2 == "SELECT a.[Id] FROM [sys_order] a WHERE (a.[BuyerId] IS NULL OR a.[BuyerId]=2) AND (a.[OrderNo] LIKE '%ON_%' OR (a.[OrderNo] IS NULL OR a.[OrderNo]='')) AND (EXISTS(SELECT * FROM [sys_user] t WHERE t.[Id]=a.[BuyerId] AND t.[IsEnabled]=1) OR a.[SellerId] IS NULL)");
+        Assert.True(sql2 == "SELECT a.[Id] FROM [sys_order] a WHERE (a.[BuyerId] IS NULL OR a.[BuyerId]=2) AND (a.[OrderNo] LIKE N'%ON_%' OR (a.[OrderNo] IS NULL OR a.[OrderNo]='')) AND (EXISTS(SELECT * FROM [sys_user] t WHERE t.[Id]=a.[BuyerId] AND t.[IsEnabled]=1) OR a.[SellerId] IS NULL)");
+        var result2 = repository.From<Order>()
+           .Where(f => Sql.Exists<User>(t => t.Id == f.BuyerId && t.IsEnabled) && (f.BuyerId.IsNull() || f.BuyerId == 2)
+               && (f.OrderNo.Contains("ON_") || string.IsNullOrEmpty(f.OrderNo)))
+           .Select(f => f.Id)
+           .ToList();
+        Assert.NotNull(result2);
+        Assert.True(result2.Count > 0);
     }
 }

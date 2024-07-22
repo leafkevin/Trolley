@@ -746,7 +746,7 @@ public class UnitTest1 : UnitTestBase
                 UpdatedAt = x.UpdatedAt
             })
             .ToSql(out var parameters);
-        Assert.True(sql == "INSERT INTO [sys_order_detail] ([Id],[TenantId],[OrderId],[ProductId],[Price],[Quantity],[Amount],[IsEnabled],[CreatedBy],[CreatedAt],[UpdatedBy],[UpdatedAt]) SELECT '7','1',b.[Id],c.[Id],c.[Price],3,(c.[Price]*3),b.[IsEnabled],b.[CreatedBy],b.[CreatedAt],b.[UpdatedBy],b.[UpdatedAt] FROM [sys_order] b,[sys_product] c WHERE b.[Id]='3' AND c.[Id]=1");
+        Assert.True(sql == "INSERT INTO [sys_order_detail] ([Id],[TenantId],[OrderId],[ProductId],[Price],[Quantity],[Amount],[IsEnabled],[CreatedBy],[CreatedAt],[UpdatedBy],[UpdatedAt]) SELECT N'7',N'1',b.[Id],c.[Id],c.[Price],3,(c.[Price]*3),b.[IsEnabled],b.[CreatedBy],b.[CreatedAt],b.[UpdatedBy],b.[UpdatedAt] FROM [sys_order] b,[sys_product] c WHERE b.[Id]=N'3' AND c.[Id]=1");
         await repository.BeginTransactionAsync();
         repository.Delete<OrderDetail>("7");
         var result = await repository.Create<OrderDetail>()

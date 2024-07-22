@@ -449,24 +449,23 @@ public class UnitTest3 : UnitTestBase
             Assert.True(result2.Id == "1");
             Assert.True(result2.ProductCount == 11);
         }
-        //TODO:
-        //var updateObj = new Dictionary<string, object>();
-        //updateObj.Add("ProductCount", 20);
-        //updateObj.Add("TotalAmount", 800);
-        //repository.BeginTransaction();
-        //result = repository.Update<Order>()
-        //    .Set(updateObj)
-        //    .Where(new { Id = "1" })
-        //    .Execute();
-        //var result3 = repository.Get<Order>(new { Id = "1" });
-        //repository.Commit();
-        //if (result > 0)
-        //{
-        //    Assert.NotNull(result3);
-        //    Assert.True(result3.Id == "1");
-        //    Assert.True(result3.ProductCount == 20);
-        //    Assert.True(result3.TotalAmount != 800);
-        //}
+        var updateObj = new Dictionary<string, object>();
+        updateObj.Add("ProductCount", result2.ProductCount + 1);
+        updateObj.Add("TotalAmount", result2.TotalAmount + 100);
+        repository.BeginTransaction();
+        result = repository.Update<Order>()
+            .Set(updateObj)
+            .Where(new { Id = "1" })
+            .Execute();
+        var result3 = repository.Get<Order>(new { Id = "1" });
+        repository.Commit();
+        if (result > 0)
+        {
+            Assert.NotNull(result3);
+            Assert.True(result3.Id == "1");
+            Assert.True(result3.ProductCount == result2.ProductCount + 1);
+            Assert.True(result3.TotalAmount == result2.TotalAmount + 100);
+        }
     }
     [Fact]
     public async void Update_MultiParameters()
@@ -817,24 +816,36 @@ public class UnitTest3 : UnitTestBase
             .SetFrom((a, b) => new
             {
                 Nature = a.From<Company>('b')
-                    .Where(f => f.Name.Contains("微软"))
+                    .Where(f => f.Id == 1)
                     .Select(t => t.Nature)
-                    .Distinct()
             })
-            .Where(f => f.Nature == CompanyNature.Internet)
+            .Where(f => f.Nature != CompanyNature.Internet)
             .ToSql(out _);
-        Assert.True(sql == "UPDATE `sys_company` a SET a.`Nature`=(SELECT DISTINCT b.`Nature` FROM `sys_company` b WHERE b.`Name` LIKE '%微软%') WHERE a.`Nature`='Internet'");
+        Assert.True(sql == "UPDATE `sys_company` a SET a.`Nature`=(SELECT b.`Nature` FROM `sys_company` b WHERE b.`Id`=1) WHERE a.`Nature`<>'Internet'");
+        repository.BeginTransaction();
+        repository.Update<Company>()
+            .Set(f => f.Nature, CompanyNature.Industry)
+            .Where(f => f.Id > 1)
+            .Execute();
         var result = repository.Update<Company>()
             .SetFrom((a, b) => new
             {
                 Nature = a.From<Company>('b')
-                    .Where(f => f.Name.Contains("微软"))
+                    .Where(f => f.Id == 1)
                     .Select(t => t.Nature)
-                    .Distinct()
             })
-            .Where(f => f.Nature == CompanyNature.Internet)
+            .Where(f => f.Nature != CompanyNature.Internet)
             .Execute();
+        var microCompany = repository.From<Company>('b')
+            .Where(f => f.Name.Contains("微软"))
+            .First();
+        var companies = repository.Query<Company>(f => f.Id > 1);
+        repository.Commit();
         Assert.True(result > 0);
+        foreach (var company in companies)
+        {
+            Assert.True(company.Nature == microCompany.Nature);
+        }
     }
     [Fact]
     public async void Update_Set_FromQuery_Fields()
@@ -1369,10 +1380,10 @@ public class UnitTest3 : UnitTestBase
     public async void Update_BulkCopy()
     {
         using var repository = dbFactory.Create();
-        var orders = new List<dynamic>();
+        var orders = new List<Order>();
         for (int i = 1000; i < 2000; i++)
         {
-            orders.Add(new
+            orders.Add(new Order
             {
                 Id = $"ON_{i + 1}",
                 TenantId = "3",

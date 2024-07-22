@@ -140,7 +140,8 @@ public class MultipleQuery : IMultipleQuery, IDisposable
             throw new ArgumentNullException(nameof(whereObj));
 
         var targetType = typeof(TEntity);
-        var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.OrmProvider, this.MapProvider, targetType, whereObj, true);
+        var whereObjType = whereObj.GetType();
+        var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.OrmProvider, this.MapProvider, targetType, whereObjType, true);
         var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string, string>;
         var sql = typedCommandInitializer.Invoke(this.Command.Parameters, this.OrmProvider, whereObj, $"_m{this.ReaderAfters.Count}");
 
@@ -185,7 +186,8 @@ public class MultipleQuery : IMultipleQuery, IDisposable
             throw new ArgumentNullException(nameof(whereObj));
 
         var targetType = typeof(TEntity);
-        var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.OrmProvider, this.MapProvider, targetType, whereObj, true);
+        var whereObjType = whereObj.GetType();
+        var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.OrmProvider, this.MapProvider, targetType, whereObjType, true);
         var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string, string>;
         var sql = typedCommandInitializer.Invoke(this.Command.Parameters, this.OrmProvider, whereObj, $"_m{this.ReaderAfters.Count}");
 
@@ -202,7 +204,8 @@ public class MultipleQuery : IMultipleQuery, IDisposable
             throw new ArgumentNullException(nameof(whereObj));
 
         var targetType = typeof(TEntity);
-        var commandInitializer = RepositoryHelper.BuildGetSqlParameters(this.OrmProvider, this.MapProvider, targetType, whereObj, true);
+        var whereObjType = whereObj.GetType();
+        var commandInitializer = RepositoryHelper.BuildGetSqlParameters(this.OrmProvider, this.MapProvider, targetType, whereObjType, true);
         var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string, string>;
         var sql = typedCommandInitializer.Invoke(this.Command.Parameters, this.OrmProvider, whereObj, $"_m{this.ReaderAfters.Count}");
 
@@ -219,7 +222,8 @@ public class MultipleQuery : IMultipleQuery, IDisposable
             throw new ArgumentNullException(nameof(whereObj));
 
         var entityType = typeof(TEntity);
-        var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.OrmProvider, this.MapProvider, entityType, whereObj, true);
+        var whereObjType = whereObj.GetType();
+        var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.OrmProvider, this.MapProvider, entityType, whereObjType, true);
         var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string, string>;
         var sql = typedCommandInitializer.Invoke(this.Command.Parameters, this.OrmProvider, whereObj, $"_m{this.ReaderAfters.Count}");
 
@@ -227,13 +231,18 @@ public class MultipleQuery : IMultipleQuery, IDisposable
         this.AddReader(typeof(int), sql, readerGetter);
         return this;
     }
-    public IMultipleQuery Exists<TEntity>(Expression<Func<TEntity, bool>> wherePredicate)
+    public IMultipleQuery Exists<TEntity>(Expression<Func<TEntity, bool>> wherePredicate = null)
     {
         if (wherePredicate == null)
             throw new ArgumentNullException(nameof(wherePredicate));
 
         var sql = this.From<TEntity>().Where(wherePredicate)
             .Select(f => Sql.Count()).ToSql(out _);
+
+        if (wherePredicate != null)
+            sql = this.From<TEntity>().Where(wherePredicate).Select(f => Sql.Count()).ToSql(out _);
+        else sql = this.From<TEntity>().Select(f => Sql.Count()).ToSql(out _);
+
         Func<IDataReader, object> readerGetter = reader => reader.To<int>(this.OrmProvider) > 0;
         this.AddReader(typeof(int), sql, readerGetter);
         return this;

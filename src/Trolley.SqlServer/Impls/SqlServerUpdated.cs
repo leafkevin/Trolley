@@ -51,7 +51,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
 
                         //添加临时表
                         var builder = new StringBuilder();
-                        builder.AppendLine($"CREATE TEMPORARY TABLE {tableName}(");
+                        builder.AppendLine($"CREATE TABLE {tableName}(");
                         var pkColumns = new List<string>();
                         foreach (var memberMapper in memberMappers)
                         {
@@ -122,7 +122,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
                         bulkCopy.WriteToServer(dataTable);
 
                         command.CommandText = updateSql;
-                        command.ExecuteNonQuery();
+                        result = command.ExecuteNonQuery();
                         command.Parameters.Clear();
                         command.Dispose();
                         command = null;
@@ -259,7 +259,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
 
                         //添加临时表
                         var builder = new StringBuilder();
-                        builder.AppendLine($"CREATE TEMPORARY TABLE {tableName}(");
+                        builder.AppendLine($"CREATE TABLE {tableName}(");
                         var pkColumns = new List<string>();
                         foreach (var memberMapper in memberMappers)
                         {
@@ -330,7 +330,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
                         await bulkCopy.WriteToServerAsync(dataTable, cancellationToken);
 
                         command.CommandText = updateSql;
-                        await command.ExecuteNonQueryAsync(cancellationToken);
+                        result = await command.ExecuteNonQueryAsync(cancellationToken);
                         command.Parameters.Clear();
                         command.Dispose();
                         command = null;

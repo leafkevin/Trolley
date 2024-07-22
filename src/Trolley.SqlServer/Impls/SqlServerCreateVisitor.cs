@@ -116,7 +116,7 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
         }
         return builder.ToString();
     }
-    public override (bool, string, IEnumerable, int, object, Action<IDataParameterCollection, StringBuilder, string, object>,
+    public override (bool, string, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
         Action<IDataParameterCollection, StringBuilder, object, string>, List<ReaderField>) BuildWithBulk(IDbCommand command)
     {
         bool isNeedSplit = false;
@@ -141,10 +141,12 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
             //未指定分表，需要根据数据字段确定分表
             else isNeedSplit = true;
         }
-        Action<IDataParameterCollection, StringBuilder, string, object> headSqlSetter = null;
-        Action<IDataParameterCollection, StringBuilder, object, string> valuesSqlSetter = null;
         var fieldsSqlPartSetter = RepositoryHelper.BuildCreateFieldsSqlPart(this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames);
         var valuesSqlPartSetter = RepositoryHelper.BuildCreateValuesSqlParametes(this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames, true);
+        bool isDictionary = typeof(IDictionary<string, object>).IsAssignableFrom(insertObjType);
+
+        Action<IDataParameterCollection, StringBuilder, string> firstSqlSetter = null;
+        Action<IDataParameterCollection, StringBuilder, object, string> loopSqlSetter = null;
 
         string outputSql = null;
         List<ReaderField> readerFields = null;
@@ -170,53 +172,138 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
             }
 
             var fixedDbParameters = this.DbParameters.Cast<IDbDataParameter>().ToList();
-
-            headSqlSetter = (dbParameters, builder, tableName, insertObj) =>
+            if (isDictionary)
             {
-                builder.Append($"INSERT INTO {this.OrmProvider.GetFieldName(tableName)} (");
+                var typedFieldsSqlPartSetter = fieldsSqlPartSetter as Func<StringBuilder, object, List<MemberMap>>;
+                var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, List<MemberMap>, object, string>;
+
+                var builder = new StringBuilder();
                 for (int i = 0; i < this.InsertFields.Count; i++)
                 {
                     var insertField = this.InsertFields[i];
                     if (i > 0) builder.Append(',');
                     builder.Append(insertField.Fields);
                 }
-                fieldsSqlPartSetter.Invoke(builder, insertObj);
+                var memberMappers = typedFieldsSqlPartSetter.Invoke(builder, firstInsertObj);
                 builder.Append(')');
                 if (outputSql != null)
                     builder.Append(outputSql);
                 builder.Append(" VALUES ");
-                if (fixedDbParameters.Count > 0)
-                    fixedDbParameters.ForEach(f => dbParameters.Add(f));
-            };
-            var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
+                var firstHeadSql = builder.ToString();
+                builder.Clear();
+                builder = null;
 
-            valuesSqlSetter = (dbParameters, builder, insertObj, suffix) =>
-            {
-                builder.Append('(');
-                for (int i = 0; i < this.InsertFields.Count; i++)
+                firstSqlSetter = (dbParameters, builder, tableName) =>
                 {
-                    var insertField = this.InsertFields[i];
-                    if (i > 0) builder.Append(',');
-                    builder.Append(insertField.Values);
-                }
-                typedValuesSqlPartSetter.Invoke(dbParameters, builder, this.OrmProvider, insertObj, suffix);
-                builder.Append(')');
-            };
+                    builder.Append($"INSERT INTO {this.OrmProvider.GetFieldName(tableName)} (");
+                    builder.Append(firstHeadSql);
+                    if (fixedDbParameters.Count > 0)
+                        fixedDbParameters.ForEach(f => dbParameters.Add(f));
+                };
+                loopSqlSetter = (dbParameters, builder, insertObj, suffix) =>
+                {
+                    builder.Append('(');
+                    for (int i = 0; i < this.InsertFields.Count; i++)
+                    {
+                        var insertField = this.InsertFields[i];
+                        if (i > 0) builder.Append(',');
+                        builder.Append(insertField.Values);
+                    }
+                    var entityMapper = this.Tables[0].Mapper;
+                    typedValuesSqlPartSetter.Invoke(dbParameters, builder, this.OrmProvider, memberMappers, insertObj, suffix);
+                    builder.Append(')');
+                };
+            }
+            else
+            {
+                var typedFieldsSqlPartSetter = fieldsSqlPartSetter as Action<StringBuilder>;
+                var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
+
+                firstSqlSetter = (dbParameters, builder, tableName) =>
+                {
+                    builder.Append($"INSERT INTO {this.OrmProvider.GetFieldName(tableName)} (");
+                    for (int i = 0; i < this.InsertFields.Count; i++)
+                    {
+                        var insertField = this.InsertFields[i];
+                        if (i > 0) builder.Append(',');
+                        builder.Append(insertField.Fields);
+                    }
+                    typedFieldsSqlPartSetter.Invoke(builder);
+                    builder.Append(')');
+                    if (outputSql != null)
+                        builder.Append(outputSql);
+                    builder.Append(" VALUES ");
+                    if (fixedDbParameters.Count > 0)
+                        fixedDbParameters.ForEach(f => dbParameters.Add(f));
+                };
+                loopSqlSetter = (dbParameters, builder, insertObj, suffix) =>
+                {
+                    builder.Append('(');
+                    for (int i = 0; i < this.InsertFields.Count; i++)
+                    {
+                        var insertField = this.InsertFields[i];
+                        if (i > 0) builder.Append(',');
+                        builder.Append(insertField.Values);
+                    }
+                    typedValuesSqlPartSetter.Invoke(dbParameters, builder, this.OrmProvider, insertObj, suffix);
+                    builder.Append(')');
+                };
+            }
             this.DbParameters = command.Parameters;
         }
         else
         {
-            (_, var typedHeadSqlSetter, var sqlSetter) = RepositoryHelper.BuildCreateSqlParameters(this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames, true, false);
-            headSqlSetter = (dbParameters, builder, tableName, insertObj) =>
+            if (isDictionary)
             {
-                typedHeadSqlSetter.Invoke(builder, tableName, insertObj);
+                var typedFieldsSqlPartSetter = fieldsSqlPartSetter as Func<StringBuilder, object, List<MemberMap>>;
+                var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, List<MemberMap>, object, string>;
+
+                var builder = new StringBuilder();
+                var memberMappers = typedFieldsSqlPartSetter.Invoke(builder, firstInsertObj);
+                builder.Append(')');
                 if (outputSql != null)
                     builder.Append(outputSql);
                 builder.Append(" VALUES ");
-            };
-            valuesSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, object, string>;
+                var firstHeadSql = builder.ToString();
+                builder.Clear();
+                builder = null;
+
+                firstSqlSetter = (dbParameters, builder, tableName) =>
+                {
+                    builder.Append($"INSERT INTO {this.OrmProvider.GetFieldName(tableName)} (");
+                    builder.Append(firstHeadSql);
+                };
+                loopSqlSetter = (dbParameters, builder, insertObj, suffix) =>
+                {
+                    builder.Append('(');
+                    var entityMapper = this.Tables[0].Mapper;
+                    typedValuesSqlPartSetter.Invoke(dbParameters, builder, this.OrmProvider, memberMappers, insertObj, suffix);
+                    builder.Append(')');
+                };
+            }
+            else
+            {
+                var typedFieldsSqlPartSetter = fieldsSqlPartSetter as Action<StringBuilder>;
+                var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
+
+                firstSqlSetter = (dbParameters, builder, tableName) =>
+                {
+                    builder.Append($"INSERT INTO {this.OrmProvider.GetFieldName(tableName)} (");
+                    typedFieldsSqlPartSetter.Invoke(builder);
+                    builder.Append(')');
+                    if (outputSql != null)
+                        builder.Append(outputSql);
+                    builder.Append(" VALUES ");
+                };
+                loopSqlSetter = (dbParameters, builder, insertObj, suffix) =>
+                {
+                    builder.Append('(');
+                    typedValuesSqlPartSetter.Invoke(dbParameters, builder, this.OrmProvider, insertObj, suffix);
+                    builder.Append(')');
+                };
+            }
         }
-        return (isNeedSplit, tableName, insertObjs, bulkCount, firstInsertObj, headSqlSetter, valuesSqlSetter, readerFields);
+        return (isNeedSplit, tableName, insertObjs, bulkCount, firstSqlSetter, loopSqlSetter, readerFields);
     }
 
     public void Output(params string[] fieldNames)

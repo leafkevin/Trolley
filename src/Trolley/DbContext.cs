@@ -605,7 +605,8 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         try
         {
             var entityType = typeof(TEntity);
-            var commandInitializer = RepositoryHelper.BuildGetSqlParameters(this.OrmProvider, this.MapProvider, entityType, whereObj, false);
+            var whereObjType = whereObj.GetType();
+            var commandInitializer = RepositoryHelper.BuildGetSqlParameters(this.OrmProvider, this.MapProvider, entityType, whereObjType, false);
             var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
             command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this.OrmProvider, whereObj);
 
@@ -643,7 +644,8 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         try
         {
             var entityType = typeof(TEntity);
-            var commandInitializer = RepositoryHelper.BuildGetSqlParameters(this.OrmProvider, this.MapProvider, entityType, whereObj, false);
+            var whereObjType = whereObj.GetType();
+            var commandInitializer = RepositoryHelper.BuildGetSqlParameters(this.OrmProvider, this.MapProvider, entityType, whereObjType, false);
             var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
             command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this.OrmProvider, whereObj);
 
@@ -825,24 +827,63 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     public int CreateBulk(IDbCommand command, Type entityType, IEnumerable insertObjs, int bulkCount)
     {
         var builder = new StringBuilder();
-        var entities = insertObjs as IEnumerable;
         object firstInsertObj = null;
         Type insertObjType = null;
-        foreach (var entity in entities)
+        foreach (var insertObj in insertObjs)
         {
-            firstInsertObj = entity;
+            firstInsertObj = insertObj;
             break;
         }
         insertObjType = firstInsertObj.GetType();
 
-        (var tableName, var headSqlSetter, var valuesSqlSetter) = RepositoryHelper.BuildCreateSqlParameters(
-            this.OrmProvider, this.MapProvider, entityType, insertObjType, null, null, true, false);
-        var typedValuesSqlSetter = valuesSqlSetter as Action<IDataParameterCollection, StringBuilder, object, string>;
-        Action<string, object> firstExecutor = (tableName, insertObj) =>
+        var fieldsSqlPartSetter = RepositoryHelper.BuildCreateFieldsSqlPart(this.OrmProvider, this.MapProvider, entityType, insertObjType, null, null);
+        var valuesSqlPartSetter = RepositoryHelper.BuildCreateValuesSqlParametes(this.OrmProvider, this.MapProvider, entityType, insertObjType, null, null, true);
+        bool isDictionary = typeof(IDictionary<string, object>).IsAssignableFrom(insertObjType);
+
+        Action<IDataParameterCollection, StringBuilder, string> firstSqlSetter = null;
+        Action<IDataParameterCollection, StringBuilder, object, string> loopSqlSetter = null;
+
+        if (isDictionary)
         {
-            headSqlSetter.Invoke(builder, tableName, insertObj);
-            builder.Append(" VALUES");
-        };
+            var typedFieldsSqlPartSetter = fieldsSqlPartSetter as Func<StringBuilder, object, List<MemberMap>>;
+            var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, List<MemberMap>, object, string>;
+
+            var memberMappers = typedFieldsSqlPartSetter.Invoke(builder, firstInsertObj);
+            builder.Append(") VALUES ");
+            var firstHeadSql = builder.ToString();
+            builder.Clear();
+            builder = null;
+
+            firstSqlSetter = (dbParameters, builder, tableName) =>
+            {
+                builder.Append($"INSERT INTO {this.OrmProvider.GetFieldName(tableName)} (");
+                builder.Append(firstHeadSql);
+            };
+            loopSqlSetter = (dbParameters, builder, insertObj, suffix) =>
+            {
+                builder.Append('(');
+                typedValuesSqlPartSetter.Invoke(dbParameters, builder, this.OrmProvider, memberMappers, insertObj, suffix);
+                builder.Append(')');
+            };
+        }
+        else
+        {
+            var typedFieldsSqlPartSetter = fieldsSqlPartSetter as Action<StringBuilder>;
+            var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
+
+            firstSqlSetter = (dbParameters, builder, tableName) =>
+            {
+                builder.Append($"INSERT INTO {this.OrmProvider.GetFieldName(tableName)} (");
+                typedFieldsSqlPartSetter.Invoke(builder);
+                builder.Append(") VALUES ");
+            };
+            loopSqlSetter = (dbParameters, builder, insertObj, suffix) =>
+            {
+                builder.Append('(');
+                typedValuesSqlPartSetter.Invoke(dbParameters, builder, this.OrmProvider, insertObj, suffix);
+                builder.Append(')');
+            };
+        }
         Func<string, IEnumerable, int> executor = (tableName, insertObjs) =>
         {
             var isOpened = false;
@@ -850,7 +891,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             foreach (var insertObj in insertObjs)
             {
                 if (index > 0) builder.Append(',');
-                typedValuesSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
+                loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
                 if (index >= bulkCount)
                 {
                     command.CommandText = builder.ToString();
@@ -862,7 +903,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                     count += command.ExecuteNonQuery();
                     builder.Clear();
                     command.Parameters.Clear();
-                    firstExecutor.Invoke(tableName, insertObj);
+                    firstSqlSetter.Invoke(command.Parameters, builder, tableName);
                     index = 0;
                     continue;
                 }
@@ -880,10 +921,10 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         int result = 0;
         if (this.ShardingProvider.TryGetShardingTable(entityType, out _))
         {
-            var tabledInsertObjs = this.SplitShardingParameters(entityType, entities);
+            var tabledInsertObjs = this.SplitShardingParameters(entityType, insertObjs);
             foreach (var tabledInsertObj in tabledInsertObjs)
             {
-                firstExecutor.Invoke(tabledInsertObj.Key, tabledInsertObj);
+                firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
                 result += executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
                 builder.Clear();
                 command.Parameters.Clear();
@@ -891,8 +932,10 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         }
         else
         {
-            firstExecutor.Invoke(tableName, firstInsertObj);
-            result = executor.Invoke(tableName, entities);
+            var entityMapper = this.MapProvider.GetEntityMap(entityType);
+            var tableName = entityMapper.TableName;
+            firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+            result = executor.Invoke(tableName, insertObjs);
         }
         builder.Clear();
         builder = null;
@@ -901,24 +944,63 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     public async Task<int> CreateBulkAsync(DbCommand command, Type entityType, IEnumerable insertObjs, int bulkCount, CancellationToken cancellationToken = default)
     {
         var builder = new StringBuilder();
-        var entities = insertObjs as IEnumerable;
         object firstInsertObj = null;
         Type insertObjType = null;
-        foreach (var entity in entities)
+        foreach (var insertObj in insertObjs)
         {
-            firstInsertObj = entity;
+            firstInsertObj = insertObj;
             break;
         }
         insertObjType = firstInsertObj.GetType();
 
-        (var tableName, var headSqlSetter, var valuesSqlSetter) = RepositoryHelper.BuildCreateSqlParameters(
-            this.OrmProvider, this.MapProvider, entityType, insertObjType, null, null, true, false);
-        var typedValuesSqlSetter = valuesSqlSetter as Action<IDataParameterCollection, StringBuilder, object, string>;
-        Action<string, object> firstExecutor = (tableName, insertObj) =>
+        var fieldsSqlPartSetter = RepositoryHelper.BuildCreateFieldsSqlPart(this.OrmProvider, this.MapProvider, entityType, insertObjType, null, null);
+        var valuesSqlPartSetter = RepositoryHelper.BuildCreateValuesSqlParametes(this.OrmProvider, this.MapProvider, entityType, insertObjType, null, null, true);
+        bool isDictionary = typeof(IDictionary<string, object>).IsAssignableFrom(insertObjType);
+
+        Action<IDataParameterCollection, StringBuilder, string> firstSqlSetter = null;
+        Action<IDataParameterCollection, StringBuilder, object, string> loopSqlSetter = null;
+
+        if (isDictionary)
         {
-            headSqlSetter.Invoke(builder, tableName, insertObj);
-            builder.Append(" VALUES");
-        };
+            var typedFieldsSqlPartSetter = fieldsSqlPartSetter as Func<StringBuilder, object, List<MemberMap>>;
+            var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, List<MemberMap>, object, string>;
+
+            var memberMappers = typedFieldsSqlPartSetter.Invoke(builder, firstInsertObj);
+            builder.Append(") VALUES ");
+            var firstHeadSql = builder.ToString();
+            builder.Clear();
+            builder = null;
+
+            firstSqlSetter = (dbParameters, builder, tableName) =>
+            {
+                builder.Append($"INSERT INTO {this.OrmProvider.GetFieldName(tableName)} (");
+                builder.Append(firstHeadSql);
+            };
+            loopSqlSetter = (dbParameters, builder, insertObj, suffix) =>
+            {
+                builder.Append('(');
+                typedValuesSqlPartSetter.Invoke(dbParameters, builder, this.OrmProvider, memberMappers, insertObj, suffix);
+                builder.Append(')');
+            };
+        }
+        else
+        {
+            var typedFieldsSqlPartSetter = fieldsSqlPartSetter as Action<StringBuilder>;
+            var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
+
+            firstSqlSetter = (dbParameters, builder, tableName) =>
+            {
+                builder.Append($"INSERT INTO {this.OrmProvider.GetFieldName(tableName)} (");
+                typedFieldsSqlPartSetter.Invoke(builder);
+                builder.Append(") VALUES ");
+            };
+            loopSqlSetter = (dbParameters, builder, insertObj, suffix) =>
+            {
+                builder.Append('(');
+                typedValuesSqlPartSetter.Invoke(dbParameters, builder, this.OrmProvider, insertObj, suffix);
+                builder.Append(')');
+            };
+        }
         Func<string, IEnumerable, Task<int>> executor = async (tableName, insertObjs) =>
         {
             var isOpened = false;
@@ -926,7 +1008,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             foreach (var insertObj in insertObjs)
             {
                 if (index > 0) builder.Append(',');
-                typedValuesSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
+                loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
                 if (index >= bulkCount)
                 {
                     command.CommandText = builder.ToString();
@@ -938,7 +1020,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                     count += await command.ExecuteNonQueryAsync(cancellationToken);
                     builder.Clear();
                     command.Parameters.Clear();
-                    firstExecutor.Invoke(tableName, insertObj);
+                    firstSqlSetter.Invoke(command.Parameters, builder, tableName);
                     index = 0;
                     continue;
                 }
@@ -956,10 +1038,10 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         int result = 0;
         if (this.ShardingProvider.TryGetShardingTable(entityType, out _))
         {
-            var tabledInsertObjs = this.SplitShardingParameters(entityType, entities);
+            var tabledInsertObjs = this.SplitShardingParameters(entityType, insertObjs);
             foreach (var tabledInsertObj in tabledInsertObjs)
             {
-                firstExecutor.Invoke(tabledInsertObj.Key, tabledInsertObj);
+                firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
                 result += await executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
                 builder.Clear();
                 command.Parameters.Clear();
@@ -967,8 +1049,10 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         }
         else
         {
-            firstExecutor.Invoke(tableName, firstInsertObj);
-            result = await executor.Invoke(tableName, entities);
+            var entityMapper = this.MapProvider.GetEntityMap(entityType);
+            var tableName = entityMapper.TableName;
+            firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+            result = await executor.Invoke(tableName, insertObjs);
         }
         builder.Clear();
         builder = null;
@@ -978,14 +1062,14 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     {
         using var command = this.CreateCommand();
         var sqlBuilder = new StringBuilder();
-        (var isNeedSplit, var tableName, var insertObjs, var bulkCount, var firstInsertObj,
-            var headSqlSetter, var valuesSqlSetter, _) = visitor.BuildWithBulk(command);
+        (var isNeedSplit, var tableName, var insertObjs, var bulkCount,
+            var firstSqlSetter, var loopSqlSetter, _) = visitor.BuildWithBulk(command);
 
-        Action<string, object> clearCommand = (tableName, insertObj) =>
+        Action<string> clearCommand = tableName =>
         {
             sqlBuilder.Clear();
             command.Parameters.Clear();
-            headSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName, insertObj);
+            firstSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName);
         };
         Func<string, IEnumerable, int> executor = (tableName, insertObjs) =>
         {
@@ -994,7 +1078,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             foreach (var insertObj in insertObjs)
             {
                 if (index > 0) sqlBuilder.Append(',');
-                valuesSqlSetter.Invoke(command.Parameters, sqlBuilder, insertObj, index.ToString());
+                loopSqlSetter.Invoke(command.Parameters, sqlBuilder, insertObj, index.ToString());
                 if (index >= bulkCount)
                 {
                     command.CommandText = sqlBuilder.ToString();
@@ -1004,7 +1088,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                         isOpened = true;
                     }
                     count += command.ExecuteNonQuery();
-                    clearCommand.Invoke(tableName, insertObj);
+                    clearCommand.Invoke(tableName);
                     index = 0;
                     continue;
                 }
@@ -1025,13 +1109,13 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             var tabledInsertObjs = this.SplitShardingParameters(entityType, insertObjs);
             foreach (var tabledInsertObj in tabledInsertObjs)
             {
-                headSqlSetter.Invoke(command.Parameters, sqlBuilder, tabledInsertObj.Key, tabledInsertObj);
+                firstSqlSetter.Invoke(command.Parameters, sqlBuilder, tabledInsertObj.Key);
                 result += executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
             }
         }
         else
         {
-            headSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName, firstInsertObj);
+            firstSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName);
             result = executor.Invoke(tableName, insertObjs);
         }
         sqlBuilder.Clear();
@@ -1042,14 +1126,14 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     {
         using var command = this.CreateDbCommand();
         var sqlBuilder = new StringBuilder();
-        (var isNeedSplit, var tableName, var insertObjs, var bulkCount, var firstInsertObj,
-            var headSqlSetter, var valuesSqlSetter, _) = visitor.BuildWithBulk(command);
+        (var isNeedSplit, var tableName, var insertObjs, var bulkCount,
+            var firstSqlSetter, var loopSqlSetter, _) = visitor.BuildWithBulk(command);
 
-        Action<string, object> clearCommand = (tableName, insertObj) =>
+        Action<string> clearCommand = tableName =>
         {
             sqlBuilder.Clear();
             command.Parameters.Clear();
-            headSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName, insertObj);
+            firstSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName);
         };
         Func<string, IEnumerable, Task<int>> executor = async (tableName, insertObjs) =>
         {
@@ -1058,7 +1142,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             foreach (var insertObj in insertObjs)
             {
                 if (index > 0) sqlBuilder.Append(',');
-                valuesSqlSetter.Invoke(command.Parameters, sqlBuilder, insertObj, index.ToString());
+                loopSqlSetter.Invoke(command.Parameters, sqlBuilder, insertObj, index.ToString());
                 if (index >= bulkCount)
                 {
                     command.CommandText = sqlBuilder.ToString();
@@ -1068,7 +1152,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                         isOpened = true;
                     }
                     count += await command.ExecuteNonQueryAsync(cancellationToken);
-                    clearCommand.Invoke(tableName, insertObj);
+                    clearCommand.Invoke(tableName);
                     index = 0;
                     continue;
                 }
@@ -1089,13 +1173,13 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             var tabledInsertObjs = this.SplitShardingParameters(entityType, insertObjs);
             foreach (var tabledInsertObj in tabledInsertObjs)
             {
-                headSqlSetter.Invoke(command.Parameters, sqlBuilder, tabledInsertObj.Key, tabledInsertObj);
+                firstSqlSetter.Invoke(command.Parameters, sqlBuilder, tabledInsertObj.Key);
                 result += await executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
             }
         }
         else
         {
-            headSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName, firstInsertObj);
+            firstSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName);
             result = await executor.Invoke(tableName, insertObjs);
         }
         sqlBuilder.Clear();
@@ -1105,16 +1189,69 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     public void BuildCreateCommand(IDbCommand command, Type entityType, object insertObj, bool isReturnIdentity)
     {
         var insertObjType = insertObj.GetType();
-        (var tableName, var headSqlSetter, var valuesSqlSetter) = RepositoryHelper.BuildCreateSqlParameters(
-            this.OrmProvider, this.MapProvider, entityType, insertObjType, null, null, false, isReturnIdentity);
-        var builder = new StringBuilder();
+        var fieldsSqlPartSetter = RepositoryHelper.BuildCreateFieldsSqlPart(this.OrmProvider, this.MapProvider, entityType, insertObjType, null, null);
+        var valuesSqlPartSetter = RepositoryHelper.BuildCreateValuesSqlParametes(this.OrmProvider, this.MapProvider, entityType, insertObjType, null, null, false);
+        bool isDictionary = typeof(IDictionary<string, object>).IsAssignableFrom(insertObjType);
+
+        Action<IDataParameterCollection, StringBuilder, string> firstSqlSetter = null;
+        Action<IDataParameterCollection, StringBuilder, object> loopSqlSetter = null;
+
+        var entityMapper = this.MapProvider.GetEntityMap(entityType);
+        var tableName = entityMapper.TableName;
+        if (isDictionary)
+        {
+            var typedFieldsSqlPartSetter = fieldsSqlPartSetter as Func<StringBuilder, object, List<MemberMap>>;
+            var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, List<MemberMap>, object>;
+
+            var builder = new StringBuilder();
+            var memberMappers = typedFieldsSqlPartSetter.Invoke(builder, insertObj);
+            builder.Append(") VALUES ");
+            var firstHeadSql = builder.ToString();
+            builder.Clear();
+            builder = null;
+
+            firstSqlSetter = (dbParameters, builder, tableName) =>
+            {
+                builder.Append($"INSERT INTO {this.OrmProvider.GetFieldName(tableName)} (");
+                builder.Append(firstHeadSql);
+            };
+            loopSqlSetter = (dbParameters, builder, insertObj) =>
+            {
+                builder.Append('(');
+                typedValuesSqlPartSetter.Invoke(dbParameters, builder, this.OrmProvider, memberMappers, insertObj);
+                builder.Append(')');
+            };
+        }
+        else
+        {
+            var typedFieldsSqlPartSetter = fieldsSqlPartSetter as Action<StringBuilder>;
+            var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object>;
+
+            firstSqlSetter = (dbParameters, builder, tableName) =>
+            {
+                builder.Append($"INSERT INTO {this.OrmProvider.GetFieldName(tableName)} (");
+                typedFieldsSqlPartSetter.Invoke(builder);
+                builder.Append(") VALUES ");
+            };
+            loopSqlSetter = (dbParameters, builder, insertObj) =>
+            {
+                builder.Append('(');
+                typedValuesSqlPartSetter.Invoke(dbParameters, builder, this.OrmProvider, insertObj);
+                builder.Append(')');
+            };
+        }
+        var sqlBuilder = new StringBuilder();
         if (this.ShardingProvider.TryGetShardingTable(entityType, out _))
             tableName = this.GetShardingTableName(entityType, insertObjType, insertObj);
-        var typedValuesSqlSetter = valuesSqlSetter as Action<IDataParameterCollection, StringBuilder, object>;
-        headSqlSetter.Invoke(builder, tableName, insertObj);
-        builder.Append(" VALUES");
-        typedValuesSqlSetter.Invoke(command.Parameters, builder, insertObj);
-        command.CommandText = builder.ToString();
+        firstSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName);
+        loopSqlSetter.Invoke(command.Parameters, sqlBuilder, insertObj);
+        if (isReturnIdentity)
+        {
+            var keyField = entityMapper.KeyMembers[0].FieldName;
+            keyField = this.OrmProvider.GetFieldName(keyField);
+            sqlBuilder.Append(this.OrmProvider.GetIdentitySql(keyField));
+        }
+        command.CommandText = sqlBuilder.ToString();
     }
     #endregion
 

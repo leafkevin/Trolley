@@ -81,7 +81,7 @@ public class WhereUnitTest : UnitTestBase
         Assert.True(sql1 == "SELECT a.`Id`,a.`Name`,a.`Nature`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_company` a WHERE COALESCE(a.`Nature`,'Internet')='Internet'");
         var result1 = await repository.QueryAsync<Company>(f => (f.Nature ?? CompanyNature.Internet) == CompanyNature.Internet);
         Assert.True(result1.Count >= 2);
-        Assert.True(result1[0].Nature == CompanyNature.Internet);
+        Assert.True((result1[0].Nature ?? CompanyNature.Internet) == CompanyNature.Internet);
 
         var localNature = CompanyNature.Internet;
         var sql2 = repository.From<Company>()
@@ -92,7 +92,7 @@ public class WhereUnitTest : UnitTestBase
         Assert.True(dbParameters[0].Value.GetType() == typeof(string));
         var result2 = await repository.QueryAsync<Company>(f => (f.Nature ?? CompanyNature.Internet) == localNature);
         Assert.True(result2.Count >= 2);
-        Assert.True(result2[0].Nature == localNature);
+        Assert.True((result2[0].Nature ?? CompanyNature.Internet) == localNature);
 
         var sql3 = repository.From<Company>()
             .Where(f => (f.IsEnabled ? f.Nature : CompanyNature.Internet) == localNature)
