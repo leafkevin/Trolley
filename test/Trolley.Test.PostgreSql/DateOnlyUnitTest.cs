@@ -78,16 +78,16 @@ public class DateOnlyUnitTest : UnitTestBase
             .FirstAsync();
         Assert.True(result.MinValue == DateOnly.MinValue);
         Assert.True(result.MaxValue == DateOnly.MaxValue);
-        Assert.True(result.Today == DateTime.Now.Date);
-        Assert.True(result.Today1 == DateOnly.FromDateTime(DateTime.Now));
+        Assert.True(result.Today == DateTime.UtcNow.Date);
+        Assert.True(result.Today1 == DateOnly.FromDateTime(DateTime.UtcNow));
         Assert.True(result.localDate == localDate);
         Assert.True(result.IsEquals == result.UpdatedAt.Equals(DateTime.Parse("2023-03-25")));
         Assert.True(result.IsEquals1 == result.UpdatedAt.Equals(localDate));
-        Assert.True(result.DayNumber == DateOnly.FromDateTime(DateTime.Now).DayNumber);
-        Assert.True(result.Day == DateOnly.FromDateTime(DateTime.Now).Day);
-        Assert.True(result.Month == DateOnly.FromDateTime(DateTime.Now).Month);
-        Assert.True(result.Year == DateOnly.FromDateTime(DateTime.Now).Year);
-        Assert.True(result.DayOfWeek == DateOnly.FromDateTime(DateTime.Now).DayOfWeek);
+        Assert.True(result.DayNumber == DateOnly.FromDateTime(DateTime.UtcNow).DayNumber);
+        Assert.True(result.Day == DateOnly.FromDateTime(DateTime.UtcNow).Day);
+        Assert.True(result.Month == DateOnly.FromDateTime(DateTime.UtcNow).Month);
+        Assert.True(result.Year == DateOnly.FromDateTime(DateTime.UtcNow).Year);
+        Assert.True(result.DayOfWeek == DateOnly.FromDateTime(DateTime.UtcNow).DayOfWeek);
     }
     [Fact]
     public async void AddCompareTo()

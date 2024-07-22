@@ -4,7 +4,18 @@ using System.Linq.Expressions;
 namespace Trolley.PostgreSql;
 
 /// <summary>
-/// 分组去重查询对象
+/// 去重分组对象
+/// </summary>
+/// <typeparam name="TDistinctOn">去重分组对象类型</typeparam>
+public interface IDistinctOnObject<TDistinctOn>
+{
+    /// <summary>
+    /// 去重分组对象字段集合
+    /// </summary>
+    TDistinctOn DistinctOn { get; set; }
+}
+/// <summary>
+/// 去重分组查询对象
 /// </summary>
 /// <typeparam name="TDistinctOn">分组去重后的对象类型</typeparam>
 public interface IPostgreSqlDistinctOnQueryBase<TDistinctOn>
@@ -23,20 +34,21 @@ public interface IPostgreSqlDistinctOnQueryBase<TDistinctOn>
     IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*");
 }
 /// <summary>
-/// 分组查询对象
+/// 去重分组查询对象
 /// </summary>
 /// <typeparam name="T">原始表类型</typeparam>
 /// <typeparam name="TDistinctOn">分组后对象类型</typeparam>
 public interface IPostgreSqlDistinctOnQuery<T, TDistinctOn> : IPostgreSqlDistinctOnQueryBase<TDistinctOn>
 {
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象DistinctOn，也可以使用原始表字段，用法：
-    /// OrderBy(x =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy(x =&gt; x.Grouping.Date)
+    /// OrderBy(x =&gt; new { x.DistinctOn.Id, x.DistinctOn.OrderId }) 或是 OrderBy(x =&gt; x.DistinctOn.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T, TDistinctOn> OrderBy<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, T, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T, TDistinctOn> OrderBy<TFields>(Expression<Func<IDistinctOnObject<TDistinctOn>, T, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderBy(true, f =&gt; new { f.Id, f.OtherId }) 或是 OrderBy(true, x =&gt; x.CreatedAt.Date)
@@ -45,15 +57,15 @@ public interface IPostgreSqlDistinctOnQuery<T, TDistinctOn> : IPostgreSqlDistinc
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T, TDistinctOn> OrderBy<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, T, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T, TDistinctOn> OrderBy<TFields>(bool condition, Expression<Func<IDistinctOnObject<TDistinctOn>, T, TFields>> fieldsExpr);
     /// <summary>
     /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象DistinctOn，也可以使用原始表字段，用法：
-    /// OrderByDescending(x =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderByDescending(x =&gt; x.DistinctOn.Date)
+    /// OrderByDescending(x =&gt; new { x.DistinctOn.Id, x.DistinctOn.OrderId }) 或是 OrderByDescending(x =&gt; x.DistinctOn.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T, TDistinctOn> OrderByDescending<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, T, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T, TDistinctOn> OrderByDescending<TFields>(Expression<Func<IDistinctOnObject<TDistinctOn>, T, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderByDescending(true, f =&gt; new { f.Id, f.OtherId }) 或是 OrderByDescending(true, x =&gt; x.CreatedAt.Date)
@@ -62,7 +74,10 @@ public interface IPostgreSqlDistinctOnQuery<T, TDistinctOn> : IPostgreSqlDistinc
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, T, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IDistinctOnObject<TDistinctOn>, T, TFields>> fieldsExpr);
+    #endregion
+
+    #region Select
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select(x =&gt; new { x.DistinctOn, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select(x =&gt; a.Id)</code>
@@ -70,15 +85,8 @@ public interface IPostgreSqlDistinctOnQuery<T, TDistinctOn> : IPostgreSqlDistinc
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, T, TTarget>> fieldsExpr);
-    /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
-    /// <code> ...SelectFlattenTo((a, b) =&gt; new OrderInfo{ b.Id }) //使用第二表的Id字段作为Id成员</code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型</typeparam>
-    /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
-    /// <returns></returns>
-    IPostgreSqlQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, T, TTarget>> specialMemberSelector = null);
+    IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IDistinctOnObject<TDistinctOn>, T, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组去重查询对象
@@ -88,14 +96,15 @@ public interface IPostgreSqlDistinctOnQuery<T, TDistinctOn> : IPostgreSqlDistinc
 /// <typeparam name="TDistinctOn">分组后对象类型</typeparam>
 public interface IPostgreSqlDistinctOnQuery<T1, T2, TDistinctOn> : IPostgreSqlDistinctOnQueryBase<TDistinctOn>
 {
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象DistinctOn，也可以使用原始表字段，用法：
-    /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.DistinctOn.Date)
+    /// OrderBy((x, a, ...) =&gt; new { x.DistinctOn.Id, x.DistinctOn.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.DistinctOn.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, TDistinctOn> OrderBy<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, TDistinctOn> OrderBy<TFields>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
@@ -104,15 +113,15 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, TDistinctOn> : IPostgreSqlDi
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, TDistinctOn> OrderBy<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, TDistinctOn> OrderBy<TFields>(bool condition, Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, TFields>> fieldsExpr);
     /// <summary>
     /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象DistinctOn，也可以使用原始表字段，用法：
-    /// OrderByDescending((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.DistinctOn.Date)
+    /// OrderByDescending((x, a, ...) =&gt; new { x.DistinctOn.Id, x.DistinctOn.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.DistinctOn.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, TDistinctOn> OrderByDescending<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, TDistinctOn> OrderByDescending<TFields>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
@@ -121,7 +130,10 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, TDistinctOn> : IPostgreSqlDi
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, TFields>> fieldsExpr);
+    #endregion
+
+    #region Select
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -129,15 +141,8 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, TDistinctOn> : IPostgreSqlDi
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, TTarget>> fieldsExpr);
-    /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
-    /// <code> ...SelectFlattenTo((a, b) =&gt; new OrderInfo{ b.Id }) //使用第二表的Id字段作为Id成员</code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型</typeparam>
-    /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
-    /// <returns></returns>
-    IPostgreSqlQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, TTarget>> specialMemberSelector = null);
+    IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组去重查询对象
@@ -148,14 +153,15 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, TDistinctOn> : IPostgreSqlDi
 /// <typeparam name="TDistinctOn">分组后对象类型</typeparam>
 public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, TDistinctOn> : IPostgreSqlDistinctOnQueryBase<TDistinctOn>
 {
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象DistinctOn，也可以使用原始表字段，用法：
-    /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.DistinctOn.Date)
+    /// OrderBy((x, a, ...) =&gt; new { x.DistinctOn.Id, x.DistinctOn.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.DistinctOn.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, TDistinctOn> OrderBy<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, TDistinctOn> OrderBy<TFields>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
@@ -164,15 +170,15 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, TDistinctOn> : IPostgreS
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, TDistinctOn> OrderBy<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, TDistinctOn> OrderBy<TFields>(bool condition, Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, TFields>> fieldsExpr);
     /// <summary>
     /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象DistinctOn，也可以使用原始表字段，用法：
-    /// OrderByDescending((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.DistinctOn.Date)
+    /// OrderByDescending((x, a, ...) =&gt; new { x.DistinctOn.Id, x.DistinctOn.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.DistinctOn.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, TDistinctOn> OrderByDescending<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, TDistinctOn> OrderByDescending<TFields>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
@@ -181,7 +187,10 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, TDistinctOn> : IPostgreS
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, TFields>> fieldsExpr);
+    #endregion
+
+    #region Select
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -189,15 +198,8 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, TDistinctOn> : IPostgreS
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, TTarget>> fieldsExpr);
-    /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
-    /// <code> ...SelectFlattenTo((a, b) =&gt; new OrderInfo{ b.Id }) //使用第二表的Id字段作为Id成员</code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型</typeparam>
-    /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
-    /// <returns></returns>
-    IPostgreSqlQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, TTarget>> specialMemberSelector = null);
+    IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组去重查询对象
@@ -209,14 +211,15 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, TDistinctOn> : IPostgreS
 /// <typeparam name="TDistinctOn">分组后对象类型</typeparam>
 public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, TDistinctOn> : IPostgreSqlDistinctOnQueryBase<TDistinctOn>
 {
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象DistinctOn，也可以使用原始表字段，用法：
-    /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.DistinctOn.Date)
+    /// OrderBy((x, a, ...) =&gt; new { x.DistinctOn.Id, x.DistinctOn.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.DistinctOn.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, TDistinctOn> OrderBy<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, TDistinctOn> OrderBy<TFields>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
@@ -225,15 +228,15 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, TDistinctOn> : IPost
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, TDistinctOn> OrderBy<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, TDistinctOn> OrderBy<TFields>(bool condition, Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, TFields>> fieldsExpr);
     /// <summary>
     /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象DistinctOn，也可以使用原始表字段，用法：
-    /// OrderByDescending((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.DistinctOn.Date)
+    /// OrderByDescending((x, a, ...) =&gt; new { x.DistinctOn.Id, x.DistinctOn.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.DistinctOn.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, TDistinctOn> OrderByDescending<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, TDistinctOn> OrderByDescending<TFields>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
@@ -242,7 +245,10 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, TDistinctOn> : IPost
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, TFields>> fieldsExpr);
+    #endregion
+
+    #region Select
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -250,15 +256,8 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, TDistinctOn> : IPost
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, TTarget>> fieldsExpr);
-    /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
-    /// <code> ...SelectFlattenTo((a, b) =&gt; new OrderInfo{ b.Id }) //使用第二表的Id字段作为Id成员</code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型</typeparam>
-    /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
-    /// <returns></returns>
-    IPostgreSqlQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, TTarget>> specialMemberSelector = null);
+    IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组去重查询对象
@@ -271,14 +270,15 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, TDistinctOn> : IPost
 /// <typeparam name="TDistinctOn">分组后对象类型</typeparam>
 public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, TDistinctOn> : IPostgreSqlDistinctOnQueryBase<TDistinctOn>
 {
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象DistinctOn，也可以使用原始表字段，用法：
-    /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.DistinctOn.Date)
+    /// OrderBy((x, a, ...) =&gt; new { x.DistinctOn.Id, x.DistinctOn.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.DistinctOn.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, TDistinctOn> OrderBy<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, TDistinctOn> OrderBy<TFields>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
@@ -287,15 +287,15 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, TDistinctOn> : I
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, TDistinctOn> OrderBy<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, TDistinctOn> OrderBy<TFields>(bool condition, Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
     /// <summary>
     /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象DistinctOn，也可以使用原始表字段，用法：
-    /// OrderByDescending((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.DistinctOn.Date)
+    /// OrderByDescending((x, a, ...) =&gt; new { x.DistinctOn.Id, x.DistinctOn.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.DistinctOn.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, TDistinctOn> OrderByDescending<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, TDistinctOn> OrderByDescending<TFields>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
@@ -304,7 +304,10 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, TDistinctOn> : I
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
+    #endregion
+
+    #region Select
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -312,15 +315,8 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, TDistinctOn> : I
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, TTarget>> fieldsExpr);
-    /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
-    /// <code> ...SelectFlattenTo((a, b) =&gt; new OrderInfo{ b.Id }) //使用第二表的Id字段作为Id成员</code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型</typeparam>
-    /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
-    /// <returns></returns>
-    IPostgreSqlQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, TTarget>> specialMemberSelector = null);
+    IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组去重查询对象
@@ -334,14 +330,15 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, TDistinctOn> : I
 /// <typeparam name="TDistinctOn">分组后对象类型</typeparam>
 public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, TDistinctOn> : IPostgreSqlDistinctOnQueryBase<TDistinctOn>
 {
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象DistinctOn，也可以使用原始表字段，用法：
-    /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.DistinctOn.Date)
+    /// OrderBy((x, a, ...) =&gt; new { x.DistinctOn.Id, x.DistinctOn.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.DistinctOn.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, TDistinctOn> OrderBy<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, TDistinctOn> OrderBy<TFields>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
@@ -350,15 +347,15 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, TDistinctOn>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, TDistinctOn> OrderBy<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, TDistinctOn> OrderBy<TFields>(bool condition, Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr);
     /// <summary>
     /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象DistinctOn，也可以使用原始表字段，用法：
-    /// OrderByDescending((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.DistinctOn.Date)
+    /// OrderByDescending((x, a, ...) =&gt; new { x.DistinctOn.Id, x.DistinctOn.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.DistinctOn.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, TDistinctOn> OrderByDescending<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, TDistinctOn> OrderByDescending<TFields>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
@@ -367,7 +364,10 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, TDistinctOn>
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr);
+    #endregion
+
+    #region Select
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -375,15 +375,8 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, TDistinctOn>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr);
-    /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
-    /// <code> ...SelectFlattenTo((a, b) =&gt; new OrderInfo{ b.Id }) //使用第二表的Id字段作为Id成员</code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型</typeparam>
-    /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
-    /// <returns></returns>
-    IPostgreSqlQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, TTarget>> specialMemberSelector = null);
+    IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组去重查询对象
@@ -398,14 +391,15 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, TDistinctOn>
 /// <typeparam name="TDistinctOn">分组后对象类型</typeparam>
 public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, TDistinctOn> : IPostgreSqlDistinctOnQueryBase<TDistinctOn>
 {
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象DistinctOn，也可以使用原始表字段，用法：
-    /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.DistinctOn.Date)
+    /// OrderBy((x, a, ...) =&gt; new { x.DistinctOn.Id, x.DistinctOn.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.DistinctOn.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, TDistinctOn> OrderBy<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, TDistinctOn> OrderBy<TFields>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
@@ -414,15 +408,15 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, TDistinc
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, TDistinctOn> OrderBy<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, TDistinctOn> OrderBy<TFields>(bool condition, Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr);
     /// <summary>
     /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象DistinctOn，也可以使用原始表字段，用法：
-    /// OrderByDescending((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.DistinctOn.Date)
+    /// OrderByDescending((x, a, ...) =&gt; new { x.DistinctOn.Id, x.DistinctOn.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.DistinctOn.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, TDistinctOn> OrderByDescending<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, TDistinctOn> OrderByDescending<TFields>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
@@ -431,7 +425,10 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, TDistinc
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr);
+    #endregion
+
+    #region Select
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -439,15 +436,8 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, TDistinc
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, TTarget>> fieldsExpr);
-    /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
-    /// <code> ...SelectFlattenTo((a, b) =&gt; new OrderInfo{ b.Id }) //使用第二表的Id字段作为Id成员</code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型</typeparam>
-    /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
-    /// <returns></returns>
-    IPostgreSqlQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, TTarget>> specialMemberSelector = null);
+    IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组去重查询对象
@@ -463,14 +453,15 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, TDistinc
 /// <typeparam name="TDistinctOn">分组后对象类型</typeparam>
 public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, TDistinctOn> : IPostgreSqlDistinctOnQueryBase<TDistinctOn>
 {
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象DistinctOn，也可以使用原始表字段，用法：
-    /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.DistinctOn.Date)
+    /// OrderBy((x, a, ...) =&gt; new { x.DistinctOn.Id, x.DistinctOn.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.DistinctOn.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, TDistinctOn> OrderBy<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, TDistinctOn> OrderBy<TFields>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
@@ -479,15 +470,15 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, TDis
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, TDistinctOn> OrderBy<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, TDistinctOn> OrderBy<TFields>(bool condition, Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr);
     /// <summary>
     /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象DistinctOn，也可以使用原始表字段，用法：
-    /// OrderByDescending((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.DistinctOn.Date)
+    /// OrderByDescending((x, a, ...) =&gt; new { x.DistinctOn.Id, x.DistinctOn.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.DistinctOn.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, TDistinctOn> OrderByDescending<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, TDistinctOn> OrderByDescending<TFields>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
@@ -496,7 +487,10 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, TDis
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr);
+    #endregion
+
+    #region Select
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -504,15 +498,8 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, TDis
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, TTarget>> fieldsExpr);
-    /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
-    /// <code> ...SelectFlattenTo((a, b) =&gt; new OrderInfo{ b.Id }) //使用第二表的Id字段作为Id成员</code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型</typeparam>
-    /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
-    /// <returns></returns>
-    IPostgreSqlQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, TTarget>> specialMemberSelector = null);
+    IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组去重查询对象
@@ -529,14 +516,15 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, TDis
 /// <typeparam name="TDistinctOn">分组后对象类型</typeparam>
 public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TDistinctOn> : IPostgreSqlDistinctOnQueryBase<TDistinctOn>
 {
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象DistinctOn，也可以使用原始表字段，用法：
-    /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.DistinctOn.Date)
+    /// OrderBy((x, a, ...) =&gt; new { x.DistinctOn.Id, x.DistinctOn.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.DistinctOn.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TDistinctOn> OrderBy<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TDistinctOn> OrderBy<TFields>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
@@ -545,15 +533,15 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TDistinctOn> OrderBy<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TDistinctOn> OrderBy<TFields>(bool condition, Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr);
     /// <summary>
     /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象DistinctOn，也可以使用原始表字段，用法：
-    /// OrderByDescending((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.DistinctOn.Date)
+    /// OrderByDescending((x, a, ...) =&gt; new { x.DistinctOn.Id, x.DistinctOn.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.DistinctOn.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TDistinctOn> OrderByDescending<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TDistinctOn> OrderByDescending<TFields>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
@@ -562,7 +550,10 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr);
+    #endregion
+
+    #region Select
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -570,15 +561,8 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, TTarget>> fieldsExpr);
-    /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
-    /// <code> ...SelectFlattenTo((a, b) =&gt; new OrderInfo{ b.Id }) //使用第二表的Id字段作为Id成员</code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型</typeparam>
-    /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
-    /// <returns></returns>
-    IPostgreSqlQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, TTarget>> specialMemberSelector = null);
+    IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组去重查询对象
@@ -596,14 +580,15 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
 /// <typeparam name="TDistinctOn">分组后对象类型</typeparam>
 public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TDistinctOn> : IPostgreSqlDistinctOnQueryBase<TDistinctOn>
 {
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象DistinctOn，也可以使用原始表字段，用法：
-    /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.DistinctOn.Date)
+    /// OrderBy((x, a, ...) =&gt; new { x.DistinctOn.Id, x.DistinctOn.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.DistinctOn.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TDistinctOn> OrderBy<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TDistinctOn> OrderBy<TFields>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
@@ -612,15 +597,15 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TDistinctOn> OrderBy<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TDistinctOn> OrderBy<TFields>(bool condition, Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr);
     /// <summary>
     /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象DistinctOn，也可以使用原始表字段，用法：
-    /// OrderByDescending((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.DistinctOn.Date)
+    /// OrderByDescending((x, a, ...) =&gt; new { x.DistinctOn.Id, x.DistinctOn.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.DistinctOn.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TDistinctOn> OrderByDescending<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TDistinctOn> OrderByDescending<TFields>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
@@ -629,7 +614,10 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr);
+    #endregion
+
+    #region Select
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -637,15 +625,8 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TTarget>> fieldsExpr);
-    /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
-    /// <code> ...SelectFlattenTo((a, b) =&gt; new OrderInfo{ b.Id }) //使用第二表的Id字段作为Id成员</code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型</typeparam>
-    /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
-    /// <returns></returns>
-    IPostgreSqlQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TTarget>> specialMemberSelector = null);
+    IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组去重查询对象
@@ -664,14 +645,15 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
 /// <typeparam name="TDistinctOn">分组后对象类型</typeparam>
 public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TDistinctOn> : IPostgreSqlDistinctOnQueryBase<TDistinctOn>
 {
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象DistinctOn，也可以使用原始表字段，用法：
-    /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.DistinctOn.Date)
+    /// OrderBy((x, a, ...) =&gt; new { x.DistinctOn.Id, x.DistinctOn.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.DistinctOn.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TDistinctOn> OrderBy<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TDistinctOn> OrderBy<TFields>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
@@ -680,15 +662,15 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TDistinctOn> OrderBy<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TDistinctOn> OrderBy<TFields>(bool condition, Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr);
     /// <summary>
     /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象DistinctOn，也可以使用原始表字段，用法：
-    /// OrderByDescending((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.DistinctOn.Date)
+    /// OrderByDescending((x, a, ...) =&gt; new { x.DistinctOn.Id, x.DistinctOn.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.DistinctOn.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TDistinctOn> OrderByDescending<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TDistinctOn> OrderByDescending<TFields>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
@@ -697,7 +679,10 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr);
+    #endregion
+
+    #region Select
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -705,15 +690,8 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TTarget>> fieldsExpr);
-    /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
-    /// <code> ...SelectFlattenTo((a, b) =&gt; new OrderInfo{ b.Id }) //使用第二表的Id字段作为Id成员</code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型</typeparam>
-    /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
-    /// <returns></returns>
-    IPostgreSqlQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TTarget>> specialMemberSelector = null);
+    IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组去重查询对象
@@ -733,14 +711,15 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
 /// <typeparam name="TDistinctOn">分组后对象类型</typeparam>
 public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TDistinctOn> : IPostgreSqlDistinctOnQueryBase<TDistinctOn>
 {
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象DistinctOn，也可以使用原始表字段，用法：
-    /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.DistinctOn.Date)
+    /// OrderBy((x, a, ...) =&gt; new { x.DistinctOn.Id, x.DistinctOn.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.DistinctOn.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TDistinctOn> OrderBy<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TDistinctOn> OrderBy<TFields>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
@@ -749,15 +728,15 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TDistinctOn> OrderBy<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TDistinctOn> OrderBy<TFields>(bool condition, Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr);
     /// <summary>
     /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象DistinctOn，也可以使用原始表字段，用法：
-    /// OrderByDescending((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.DistinctOn.Date)
+    /// OrderByDescending((x, a, ...) =&gt; new { x.DistinctOn.Id, x.DistinctOn.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.DistinctOn.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TDistinctOn> OrderByDescending<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TDistinctOn> OrderByDescending<TFields>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
@@ -766,7 +745,10 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr);
+    #endregion
+
+    #region Select
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -774,15 +756,8 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TTarget>> fieldsExpr);
-    /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
-    /// <code> ...SelectFlattenTo((a, b) =&gt; new OrderInfo{ b.Id }) //使用第二表的Id字段作为Id成员</code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型</typeparam>
-    /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
-    /// <returns></returns>
-    IPostgreSqlQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TTarget>> specialMemberSelector = null);
+    IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组去重查询对象
@@ -803,14 +778,15 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
 /// <typeparam name="TDistinctOn">分组后对象类型</typeparam>
 public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TDistinctOn> : IPostgreSqlDistinctOnQueryBase<TDistinctOn>
 {
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象DistinctOn，也可以使用原始表字段，用法：
-    /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.DistinctOn.Date)
+    /// OrderBy((x, a, ...) =&gt; new { x.DistinctOn.Id, x.DistinctOn.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.DistinctOn.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TDistinctOn> OrderBy<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TDistinctOn> OrderBy<TFields>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
@@ -819,15 +795,15 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TDistinctOn> OrderBy<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TDistinctOn> OrderBy<TFields>(bool condition, Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr);
     /// <summary>
     /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象DistinctOn，也可以使用原始表字段，用法：
-    /// OrderByDescending((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.DistinctOn.Date)
+    /// OrderByDescending((x, a, ...) =&gt; new { x.DistinctOn.Id, x.DistinctOn.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.DistinctOn.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TDistinctOn> OrderByDescending<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TDistinctOn> OrderByDescending<TFields>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
@@ -836,7 +812,10 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr);
+    #endregion
+
+    #region Select
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -844,15 +823,8 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TTarget>> fieldsExpr);
-    /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
-    /// <code> ...SelectFlattenTo((a, b) =&gt; new OrderInfo{ b.Id }) //使用第二表的Id字段作为Id成员</code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型</typeparam>
-    /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
-    /// <returns></returns>
-    IPostgreSqlQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TTarget>> specialMemberSelector = null);
+    IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组去重查询对象
@@ -874,14 +846,15 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
 /// <typeparam name="TDistinctOn">分组后对象类型</typeparam>
 public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TDistinctOn> : IPostgreSqlDistinctOnQueryBase<TDistinctOn>
 {
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象DistinctOn，也可以使用原始表字段，用法：
-    /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.DistinctOn.Date)
+    /// OrderBy((x, a, ...) =&gt; new { x.DistinctOn.Id, x.DistinctOn.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.DistinctOn.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TDistinctOn> OrderBy<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TDistinctOn> OrderBy<TFields>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
@@ -890,15 +863,15 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TDistinctOn> OrderBy<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TDistinctOn> OrderBy<TFields>(bool condition, Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr);
     /// <summary>
     /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象DistinctOn，也可以使用原始表字段，用法：
-    /// OrderByDescending((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.DistinctOn.Date)
+    /// OrderByDescending((x, a, ...) =&gt; new { x.DistinctOn.Id, x.DistinctOn.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.DistinctOn.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TDistinctOn> OrderByDescending<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TDistinctOn> OrderByDescending<TFields>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
@@ -907,7 +880,10 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr);
+    #endregion
+
+    #region Select
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -915,15 +891,8 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TTarget>> fieldsExpr);
-    /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
-    /// <code> ...SelectFlattenTo((a, b) =&gt; new OrderInfo{ b.Id }) //使用第二表的Id字段作为Id成员</code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型</typeparam>
-    /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
-    /// <returns></returns>
-    IPostgreSqlQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TTarget>> specialMemberSelector = null);
+    IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组去重查询对象
@@ -946,14 +915,15 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
 /// <typeparam name="TDistinctOn">分组后对象类型</typeparam>
 public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TDistinctOn> : IPostgreSqlDistinctOnQueryBase<TDistinctOn>
 {
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象DistinctOn，也可以使用原始表字段，用法：
-    /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.DistinctOn.Date)
+    /// OrderBy((x, a, ...) =&gt; new { x.DistinctOn.Id, x.DistinctOn.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.DistinctOn.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TDistinctOn> OrderBy<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TDistinctOn> OrderBy<TFields>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成ASC排序，否则不生成ASC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderBy(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
@@ -962,15 +932,15 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TDistinctOn> OrderBy<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TDistinctOn> OrderBy<TFields>(bool condition, Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr);
     /// <summary>
     /// DESC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象DistinctOn，也可以使用原始表字段，用法：
-    /// OrderByDescending((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.DistinctOn.Date)
+    /// OrderByDescending((x, a, ...) =&gt; new { x.DistinctOn.Id, x.DistinctOn.OrderId }) 或是 OrderByDescending((x, a, ...) =&gt; x.DistinctOn.Date)
     /// </summary>
     /// <typeparam name="TFields">表达式fieldsExpr的类型</typeparam>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TDistinctOn> OrderByDescending<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TDistinctOn> OrderByDescending<TFields>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr);
     /// <summary>
     /// 判断condition布尔值，如果为true，生成DESC排序，否则不生成DESC排序。fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderByDescending(true, (a, b, ...) =&gt; new { a.Id, b.Id, ... }) 或是 OrderByDescending(true, (a, b, ...) =&gt; a.CreatedAt.Date)
@@ -979,7 +949,10 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
     /// <param name="condition">排序表达式生效条件，为true生效</param>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr);
+    IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr);
+    #endregion
+
+    #region Select
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -987,15 +960,8 @@ public interface IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> fieldsExpr);
-    /// <summary>
-    /// 选择指定字段返回，只需要指定特殊的成员赋值，其他的成员将从现有表的字段中按名称匹配赋值，多个表同名字段如果未特殊指定赋值，默认匹配第一个表中的字段。用法：
-    /// <code> ...SelectFlattenTo((a, b) =&gt; new OrderInfo{ b.Id }) //使用第二表的Id字段作为Id成员</code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型</typeparam>
-    /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
-    /// <returns></returns>
-    IPostgreSqlQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> specialMemberSelector = null);
+    IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IDistinctOnObject<TDistinctOn>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组去重查询对象

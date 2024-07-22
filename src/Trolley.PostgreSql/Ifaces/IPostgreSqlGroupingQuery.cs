@@ -6,29 +6,11 @@ namespace Trolley.PostgreSql;
 /// <summary>
 /// 分组查询对象
 /// </summary>
-/// <typeparam name="TGrouping">分组后的对象类型</typeparam>
-public interface IPostgreSqlQueryBase<TGrouping>
-{
-    /// <summary>
-    /// 使用分组后对象直接返回
-    /// </summary>
-    /// <returns>返回分组后对象</returns>
-    IPostgreSqlQuery<TGrouping> Select();
-    /// <summary>
-    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型</typeparam>
-    /// <param name="fields">原始字段字符串，默认值*</param>
-    /// <returns>返回查询对象</returns>
-    IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*");
-}
-/// <summary>
-/// 分组查询对象
-/// </summary>
 /// <typeparam name="T">原始表类型</typeparam>
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
 public interface IPostgreSqlGroupingQuery<T, TGrouping> : IGroupingQuery<T, TGrouping>
 {
+    #region Having
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
@@ -42,6 +24,9 @@ public interface IPostgreSqlGroupingQuery<T, TGrouping> : IGroupingQuery<T, TGro
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500, Sql.Sum(a.Amount) > 500，两者等效</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate);
+    #endregion
+
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
     /// OrderBy(x =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy(x =&gt; x.Grouping.Date)
@@ -76,6 +61,21 @@ public interface IPostgreSqlGroupingQuery<T, TGrouping> : IGroupingQuery<T, TGro
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr);
+    #endregion
+
+    #region Select
+    /// <summary>
+    /// 使用分组后对象直接返回
+    /// </summary>
+    /// <returns>返回分组后对象</returns>
+    new IPostgreSqlQuery<TGrouping> Select();
+    /// <summary>
+    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="fields">原始字段字符串，默认值*</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*");
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select(x =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select(x =&gt; a.Id)</code>
@@ -84,6 +84,7 @@ public interface IPostgreSqlGroupingQuery<T, TGrouping> : IGroupingQuery<T, TGro
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组查询对象
@@ -93,6 +94,7 @@ public interface IPostgreSqlGroupingQuery<T, TGrouping> : IGroupingQuery<T, TGro
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
 public interface IPostgreSqlGroupingQuery<T1, T2, TGrouping> : IGroupingQuery<T1, T2, TGrouping>
 {
+    #region Having
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
@@ -106,6 +108,9 @@ public interface IPostgreSqlGroupingQuery<T1, T2, TGrouping> : IGroupingQuery<T1
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500, Sql.Sum(a.Amount) > 500，两者等效</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, bool>> predicate);
+    #endregion
+
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
@@ -140,6 +145,21 @@ public interface IPostgreSqlGroupingQuery<T1, T2, TGrouping> : IGroupingQuery<T1
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TFields>> fieldsExpr);
+    #endregion
+
+    #region Select
+    /// <summary>
+    /// 使用分组后对象直接返回
+    /// </summary>
+    /// <returns>返回分组后对象</returns>
+    new IPostgreSqlQuery<TGrouping> Select();
+    /// <summary>
+    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="fields">原始字段字符串，默认值*</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*");
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -148,6 +168,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, TGrouping> : IGroupingQuery<T1
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组查询对象
@@ -158,6 +179,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, TGrouping> : IGroupingQuery<T1
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
 public interface IPostgreSqlGroupingQuery<T1, T2, T3, TGrouping> : IGroupingQuery<T1, T2, T3, TGrouping>
 {
+    #region Having
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
@@ -171,6 +193,9 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, TGrouping> : IGroupingQuer
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500, Sql.Sum(a.Amount) > 500，两者等效</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, bool>> predicate);
+    #endregion
+
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
@@ -205,6 +230,21 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, TGrouping> : IGroupingQuer
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TFields>> fieldsExpr);
+    #endregion
+
+    #region Select
+    /// <summary>
+    /// 使用分组后对象直接返回
+    /// </summary>
+    /// <returns>返回分组后对象</returns>
+    new IPostgreSqlQuery<TGrouping> Select();
+    /// <summary>
+    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="fields">原始字段字符串，默认值*</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*");
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -213,6 +253,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, TGrouping> : IGroupingQuer
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组查询对象
@@ -224,6 +265,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, TGrouping> : IGroupingQuer
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
 public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, TGrouping> : IGroupingQuery<T1, T2, T3, T4, TGrouping>
 {
+    #region Having
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
@@ -237,6 +279,9 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, TGrouping> : IGrouping
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500, Sql.Sum(a.Amount) > 500，两者等效</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, bool>> predicate);
+    #endregion
+
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
@@ -271,6 +316,21 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, TGrouping> : IGrouping
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TFields>> fieldsExpr);
+    #endregion
+
+    #region Select
+    /// <summary>
+    /// 使用分组后对象直接返回
+    /// </summary>
+    /// <returns>返回分组后对象</returns>
+    new IPostgreSqlQuery<TGrouping> Select();
+    /// <summary>
+    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="fields">原始字段字符串，默认值*</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*");
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -279,6 +339,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, TGrouping> : IGrouping
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组查询对象
@@ -291,6 +352,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, TGrouping> : IGrouping
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
 public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, TGrouping> : IGroupingQuery<T1, T2, T3, T4, T5, TGrouping>
 {
+    #region Having
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
@@ -304,6 +366,9 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, TGrouping> : IGrou
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500, Sql.Sum(a.Amount) > 500，两者等效</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, bool>> predicate);
+    #endregion
+
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
@@ -338,6 +403,21 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, TGrouping> : IGrou
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
+    #endregion
+
+    #region Select
+    /// <summary>
+    /// 使用分组后对象直接返回
+    /// </summary>
+    /// <returns>返回分组后对象</returns>
+    new IPostgreSqlQuery<TGrouping> Select();
+    /// <summary>
+    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="fields">原始字段字符串，默认值*</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*");
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -346,6 +426,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, TGrouping> : IGrou
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组查询对象
@@ -359,6 +440,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, TGrouping> : IGrou
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
 public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> : IGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping>
 {
+    #region Having
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
@@ -372,6 +454,9 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> : I
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500, Sql.Sum(a.Amount) > 500，两者等效</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, bool>> predicate);
+    #endregion
+
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
@@ -406,6 +491,21 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> : I
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr);
+    #endregion
+
+    #region Select
+    /// <summary>
+    /// 使用分组后对象直接返回
+    /// </summary>
+    /// <returns>返回分组后对象</returns>
+    new IPostgreSqlQuery<TGrouping> Select();
+    /// <summary>
+    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="fields">原始字段字符串，默认值*</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*");
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -414,6 +514,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> : I
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组查询对象
@@ -428,6 +529,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> : I
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
 public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> : IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping>
 {
+    #region Having
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
@@ -441,6 +543,9 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping>
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500, Sql.Sum(a.Amount) > 500，两者等效</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, bool>> predicate);
+    #endregion
+
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
@@ -475,6 +580,21 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr);
+    #endregion
+
+    #region Select
+    /// <summary>
+    /// 使用分组后对象直接返回
+    /// </summary>
+    /// <returns>返回分组后对象</returns>
+    new IPostgreSqlQuery<TGrouping> Select();
+    /// <summary>
+    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="fields">原始字段字符串，默认值*</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*");
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -483,6 +603,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping>
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组查询对象
@@ -498,6 +619,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping>
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
 public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> : IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping>
 {
+    #region Having
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
@@ -511,6 +633,9 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGroup
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500, Sql.Sum(a.Amount) > 500，两者等效</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate);
+    #endregion
+
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
@@ -545,6 +670,21 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGroup
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr);
+    #endregion
+
+    #region Select
+    /// <summary>
+    /// 使用分组后对象直接返回
+    /// </summary>
+    /// <returns>返回分组后对象</returns>
+    new IPostgreSqlQuery<TGrouping> Select();
+    /// <summary>
+    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="fields">原始字段字符串，默认值*</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*");
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -553,6 +693,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGroup
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组查询对象
@@ -569,6 +710,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGroup
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
 public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> : IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping>
 {
+    #region Having
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
@@ -582,6 +724,9 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TG
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500, Sql.Sum(a.Amount) > 500，两者等效</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate);
+    #endregion
+
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
@@ -616,6 +761,21 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TG
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr);
+    #endregion
+
+    #region Select
+    /// <summary>
+    /// 使用分组后对象直接返回
+    /// </summary>
+    /// <returns>返回分组后对象</returns>
+    new IPostgreSqlQuery<TGrouping> Select();
+    /// <summary>
+    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="fields">原始字段字符串，默认值*</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*");
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -624,6 +784,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TG
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组查询对象
@@ -641,6 +802,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TG
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
 public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> : IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping>
 {
+    #region Having
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
@@ -654,6 +816,9 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500, Sql.Sum(a.Amount) > 500，两者等效</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate);
+    #endregion
+
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
@@ -688,6 +853,21 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr);
+    #endregion
+
+    #region Select
+    /// <summary>
+    /// 使用分组后对象直接返回
+    /// </summary>
+    /// <returns>返回分组后对象</returns>
+    new IPostgreSqlQuery<TGrouping> Select();
+    /// <summary>
+    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="fields">原始字段字符串，默认值*</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*");
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -696,6 +876,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组查询对象
@@ -714,6 +895,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
 public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> : IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping>
 {
+    #region Having
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
@@ -727,6 +909,9 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500, Sql.Sum(a.Amount) > 500，两者等效</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate);
+    #endregion
+
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
@@ -761,6 +946,21 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr);
+    #endregion
+
+    #region Select
+    /// <summary>
+    /// 使用分组后对象直接返回
+    /// </summary>
+    /// <returns>返回分组后对象</returns>
+    new IPostgreSqlQuery<TGrouping> Select();
+    /// <summary>
+    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="fields">原始字段字符串，默认值*</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*");
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -769,6 +969,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组查询对象
@@ -788,6 +989,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
 public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping> : IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping>
 {
+    #region Having
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
@@ -801,6 +1003,9 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500, Sql.Sum(a.Amount) > 500，两者等效</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate);
+    #endregion
+
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
@@ -835,6 +1040,21 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr);
+    #endregion
+
+    #region Select
+    /// <summary>
+    /// 使用分组后对象直接返回
+    /// </summary>
+    /// <returns>返回分组后对象</returns>
+    new IPostgreSqlQuery<TGrouping> Select();
+    /// <summary>
+    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="fields">原始字段字符串，默认值*</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*");
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -843,6 +1063,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组查询对象
@@ -863,6 +1084,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
 public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping> : IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping>
 {
+    #region Having
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
@@ -876,6 +1098,9 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500, Sql.Sum(a.Amount) > 500，两者等效</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate);
+    #endregion
+
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
@@ -910,6 +1135,21 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr);
+    #endregion
+
+    #region Select
+    /// <summary>
+    /// 使用分组后对象直接返回
+    /// </summary>
+    /// <returns>返回分组后对象</returns>
+    new IPostgreSqlQuery<TGrouping> Select();
+    /// <summary>
+    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="fields">原始字段字符串，默认值*</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*");
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -918,6 +1158,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组查询对象
@@ -939,6 +1180,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
 public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping> : IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping>
 {
+    #region Having
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
@@ -952,6 +1194,9 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500, Sql.Sum(a.Amount) > 500，两者等效</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate);
+    #endregion
+
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
@@ -986,6 +1231,21 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr);
+    #endregion
+
+    #region Select
+    /// <summary>
+    /// 使用分组后对象直接返回
+    /// </summary>
+    /// <returns>返回分组后对象</returns>
+    new IPostgreSqlQuery<TGrouping> Select();
+    /// <summary>
+    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="fields">原始字段字符串，默认值*</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*");
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -994,6 +1254,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组查询对象
@@ -1016,6 +1277,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
 public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> : IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>
 {
+    #region Having
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
@@ -1029,6 +1291,9 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500, Sql.Sum(a.Amount) > 500，两者等效</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> predicate);
+    #endregion
+
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
@@ -1063,6 +1328,21 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr);
+    #endregion
+
+    #region Select
+    /// <summary>
+    /// 使用分组后对象直接返回
+    /// </summary>
+    /// <returns>返回分组后对象</returns>
+    new IPostgreSqlQuery<TGrouping> Select();
+    /// <summary>
+    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
+    /// </summary>
+    /// <typeparam name="TTarget">返回实体的类型</typeparam>
+    /// <param name="fields">原始字段字符串，默认值*</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*");
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -1071,6 +1351,7 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组查询对象

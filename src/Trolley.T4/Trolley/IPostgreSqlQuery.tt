@@ -45,9 +45,9 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     ///     })
     ///     ...
     /// SQL:
-    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// SELECT ... FROM "sys_order_104_202405" a INNER JOIN "sys_user_104" b ON a."BuyerId"=b."Id" ...
     /// UNION ALL
-    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
+    /// SELECT ... FROM "sys_order_105_202405" a INNER JOIN "sys_user_105" b ON a."BuyerId"=b."Id" ...
     /// </code>
     /// </summary>
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
@@ -90,8 +90,8 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// await repository.From&lt;Order&gt;() ...
     ///     .Union(subQuery).ToListAsync();
     /// SQL:
-    /// SELECT ... FROM `sys_order` ... UNION
-    /// SELECT ... FROM `sys_order` WHERE `Id`&gt;1
+    /// SELECT ... FROM "sys_order" ... UNION
+    /// SELECT ... FROM "sys_order" WHERE "Id"&gt;1
     /// </code>
     /// </summary>
     /// <param name="subQuery">子查询，需要有Select语句，如：
@@ -109,8 +109,8 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     ///         .Select(x =&gt; new { ... }))
     ///     .ToListAsync();
     /// SQL:
-    /// SELECT ... FROM `sys_order` ... UNION
-    /// SELECT ... FROM `sys_order` WHERE `Id`&gt;1
+    /// SELECT ... FROM "sys_order" ... UNION
+    /// SELECT ... FROM "sys_order" WHERE "Id"&gt;1
     /// </code>
     /// </summary>
     /// <param name="subQuery">子查询，需要有Select语句，如：
@@ -125,8 +125,8 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// await repository.From&lt;Order&gt;() ...
     ///     .UnionAll(subQuery).ToListAsync();
     /// SQL:
-    /// SELECT ... FROM `sys_order` ... UNION ALL
-    /// SELECT ... FROM `sys_order` ...
+    /// SELECT ... FROM "sys_order" ... UNION ALL
+    /// SELECT ... FROM "sys_order" ...
     /// </code>
     /// </summary>
     /// <param name="subQuery">子查询，需要有Select语句，如：
@@ -142,8 +142,8 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     ///         .Select(x =&gt; new { ... }))
     ///     .ToListAsync();
     /// SQL:
-    /// SELECT ... FROM `sys_order` ... UNION ALL
-    /// SELECT ... FROM `sys_order` WHERE `Id`&gt;1
+    /// SELECT ... FROM "sys_order" ... UNION ALL
+    /// SELECT ... FROM "sys_order" WHERE "Id"&gt;1
     /// </code>
     /// </summary>
     /// <param name="subQuery">子查询，需要有Select语句，如：
@@ -159,10 +159,10 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
     ///         .Select((a, b) =&gt; new { ... }))) ...
     /// SQL:
-    /// WITH RECURSIVE `myCteTable`(`Id`,`Name`,`ParentId`,`PageId`) AS 
+    /// WITH RECURSIVE "myCteTable"("Id","Name","ParentId","PageId") AS 
     /// (
-    /// SELECT ... FROM `sys_menu` a WHERE a.`Id`=1 UNION
-    /// SELECT ... FROM `sys_menu` a INNER JOIN `myCteTable` b ON a.`ParentId`=b.`Id` ...
+    /// SELECT ... FROM "sys_menu" a WHERE a."Id"=1 UNION
+    /// SELECT ... FROM "sys_menu" a INNER JOIN "myCteTable" b ON a."ParentId"=b."Id" ...
     /// ) ...
     /// </code>
     /// </summary>
@@ -180,10 +180,10 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
     ///         .Select((a, b) =&gt; new { ... }))) ...
     /// SQL:
-    /// WITH RECURSIVE `myCteTable`(`Id`,`Name`,`ParentId`,`PageId`) AS 
+    /// WITH RECURSIVE "myCteTable"("Id","Name","ParentId","PageId") AS 
     /// (
-    /// SELECT ... FROM `sys_menu` a WHERE a.`Id`=1 UNION ALL
-    /// SELECT ... FROM `sys_menu` a INNER JOIN `myCteTable` b ON a.`ParentId`=b.`Id` ...
+    /// SELECT ... FROM "sys_menu" a WHERE a."Id"=1 UNION ALL
+    /// SELECT ... FROM "sys_menu" a INNER JOIN "myCteTable" b ON a."ParentId"=b."Id" ...
     /// ) ...
     /// </summary>
     /// <param name="subQuery">子查询，需要有Select语句，如：
@@ -200,7 +200,7 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.From&lt;Menu&gt;()
     ///     .WithTable(subQuery)
-    /// SQL: ... FROM `sys_menu` a,(SELECT ... FROM ...) b ...
+    /// SQL: ... FROM "sys_menu" a,(SELECT ... FROM ...) b ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
@@ -213,7 +213,7 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// repository.From&lt;Menu&gt;()
     ///     .WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )
     ///     ...
-    /// SQL: ... FROM `sys_menu` a,(SELECT ... FROM `sys_page` c,`sys_menu` d ...) b ...
+    /// SQL: ... FROM "sys_menu" a,(SELECT ... FROM "sys_page" c,"sys_menu" d ...) b ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
@@ -299,8 +299,8 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// SQL:
     /// WITH RECURSIVE MyCte1(Id,Name,ParentId) AS
     /// (
-    ///     SELECT `Id`,`Name`,`ParentId` FROM `sys_menu` WHERE `Id`=1 UNION ALL
-    ///     SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a INNER JOIN MyCte1 b ON a.`ParentId`=b.`Id`
+    ///     SELECT "Id","Name","ParentId" FROM "sys_menu" WHERE "Id"=1 UNION ALL
+    ///     SELECT a."Id",a."Name",a."ParentId" FROM "sys_menu" a INNER JOIN MyCte1 b ON a."ParentId"=b."Id"
     /// ) ...
     /// </code>
     /// </summary>
@@ -322,8 +322,8 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// SQL:
     /// WITH RECURSIVE MyCte1(Id,Name,ParentId) AS
     /// (
-    ///     SELECT `Id`,`Name`,`ParentId` FROM `sys_menu` WHERE `Id`=1 UNION ALL
-    ///     SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a LEFT JOIN MyCte1 b ON a.`ParentId`=b.`Id`
+    ///     SELECT "Id","Name","ParentId" FROM "sys_menu" WHERE "Id"=1 UNION ALL
+    ///     SELECT a."Id",a."Name",a."ParentId" FROM "sys_menu" a LEFT JOIN MyCte1 b ON a."ParentId"=b."Id"
     /// ) ...
     /// </code>
     /// </summary>
@@ -345,8 +345,8 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// SQL:
     /// WITH RECURSIVE MyCte1(Id,Name,ParentId) AS
     /// (
-    ///     SELECT `Id`,`Name`,`ParentId` FROM `sys_menu` WHERE `Id`=1 UNION ALL
-    ///     SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a RIGHT JOIN MyCte1 b ON a.`ParentId`=b.`Id`
+    ///     SELECT "Id","Name","ParentId" FROM "sys_menu" WHERE "Id"=1 UNION ALL
+    ///     SELECT a."Id",a."Name",a."ParentId" FROM "sys_menu" a RIGHT JOIN MyCte1 b ON a."ParentId"=b."Id"
     /// ) ...
     /// </code>
     /// </summary>
@@ -365,7 +365,7 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     ///         .Select((x, y) =&gt; new { ... }), (a, b, c) =&gt; b.Id == c.OrderId)
     ///     ...
     /// SQL：
-    /// ... FROM `sys_user` a INNER JOIN `sys_order` b ON ... INNER JOIN (SELECT ... FROM `sys_order_detail` a ...) c ...
+    /// ... FROM "sys_user" a INNER JOIN "sys_order" b ON ... INNER JOIN (SELECT ... FROM "sys_order_detail" a ...) c ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -385,7 +385,7 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     ///     }), (a, b, c) =&gt; b.Id == c.OrderId)
     ///     ...
     /// SQL：
-    /// ... LEFT JOIN (SELECT ... FROM `sys_order_detail` a ...) c ON b.`Id`=c.`OrderId` ...
+    /// ... LEFT JOIN (SELECT ... FROM "sys_order_detail" a ...) c ON b."Id"=c."OrderId" ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -407,7 +407,7 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// </code>
     /// 生成的SQL：
     /// <code>
-    /// ... ... RIGHT JOIN (SELECT a.`OrderId`,COUNT(DISTINCT a.`ProductId`) AS ProductCount FROM `sys_order_detail` a GROUP BY a.`OrderId`) ... ...
+    /// ... ... RIGHT JOIN (SELECT a."OrderId",COUNT(DISTINCT a."ProductId") AS ProductCount FROM "sys_order_detail" a GROUP BY a."OrderId") ... ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的<paramref name="TOther"/>类型是一个匿名类</typeparam>
@@ -457,13 +457,29 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// repository.From&lt;User&gt;() ...
     ///    .GroupBy(f =&gt; new { f.Id, f.Name, f.CreatedAt.Date })
     ///    ...
-    /// SQL: ... FROM `sys_user` a ... GROUP BY a.`Id`,a.`Name`,CONVERT(a.`CreatedAt`,DATE) ...
+    /// SQL: ... FROM "sys_user" a ... GROUP BY a."Id",a."Name",CONVERT(a."CreatedAt",DATE) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TGrouping">分组后的实体对象类型，New类型表达式，可以一个或是多个字段</typeparam>
     /// <param name="groupingExpr">分组表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<T, TGrouping> GroupBy<TGrouping>(Expression<Func<T, TGrouping>> groupingExpr);
+    #endregion
+
+    #region DistinctOn
+    /// <summary>
+    /// 去重分组，字段选择表达式distinctOnExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// <code>
+    /// repository.From&lt;User&gt;() ...
+    ///    .DistinctOn(f =&gt; new { f.Id, f.Name, f.CreatedAt.Date })
+    ///    ...
+    /// SQL: SELECT DISTINCT ON (a."Id",a."Name",CAST(a."CreatedAt" AS DATE)) ... FROM "sys_user" a ... 
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TDistinctOn">去重分组后的实体对象类型，New类型表达式，可以一个或是多个字段</typeparam>
+    /// <param name="distinctOnExpr">字段选择表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <returns>返回查询对象</returns>
+    IPostgreSqlDistinctOnQuery<T, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<T, TDistinctOn>> distinctOnExpr);
     #endregion
 
     #region OrderBy
@@ -565,7 +581,7 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     ///        TotalAmount = x.Sum(a.TotalAmount)
     ///    })
     ///    .ToSql(out _);
-    /// SQL: SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` FROM `sys_order`
+    /// SQL: SELECT COUNT("Id") AS "OrderCount",SUM("TotalAmount") AS "TotalAmount" FROM "sys_order"
     /// </code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型，单个字段类型，或是多个字段的匿名类</typeparam>
@@ -633,9 +649,9 @@ public interface IPostgreSqlQuery<<#=tables#>> : IQuery<<#=tables#>>
     ///     })
     ///     ...
     /// SQL:
-    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// SELECT ... FROM "sys_order_104_202405" a INNER JOIN "sys_user_104" b ON a."BuyerId"=b."Id" ...
     /// UNION ALL
-    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
+    /// SELECT ... FROM "sys_order_105_202405" a INNER JOIN "sys_user_105" b ON a."BuyerId"=b."Id" ...
     /// </code>
     /// </summary>
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
@@ -679,7 +695,7 @@ public interface IPostgreSqlQuery<<#=tables#>> : IQuery<<#=tables#>>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
     /// repository.From&lt;Menu&gt;()
     ///     .WithTable(subQuery)
-    /// SQL: ... FROM `sys_menu` a,(SELECT ... FROM ...) b ...
+    /// SQL: ... FROM "sys_menu" a,(SELECT ... FROM ...) b ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
@@ -693,7 +709,7 @@ public interface IPostgreSqlQuery<<#=tables#>> : IQuery<<#=tables#>>
     ///     .From&lt;Menu&gt;()
     ///     .WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )
     ///     ...
-    /// SQL: ... FROM `sys_menu` a,(SELECT ... FROM `sys_page` c,`sys_menu` d ...) b ...
+    /// SQL: ... FROM "sys_menu" a,(SELECT ... FROM "sys_page" c,"sys_menu" d ...) b ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
@@ -843,7 +859,7 @@ public interface IPostgreSqlQuery<<#=tables#>> : IQuery<<#=tables#>>
     /// .InnerJoin((<#=tableAlias#>) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (<#=tableAlias#>) =&gt; ...) ...
     /// SQL:
-    /// ... INNER JOIN (SELECT ... FROM `sys_order_detail` ...) <#=currentAlias#> ON ...
+    /// ... INNER JOIN (SELECT ... FROM "sys_order_detail" ...) <#=currentAlias#> ON ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
@@ -857,7 +873,7 @@ public interface IPostgreSqlQuery<<#=tables#>> : IQuery<<#=tables#>>
     /// .LeftJoin((<#=tableAlias#>) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (<#=tableAlias#>) =&gt; ...) ...
     /// SQL:
-    /// ... LEFT JOIN (SELECT ... FROM `sys_order_detail` ...) <#=currentAlias#> ON ...
+    /// ... LEFT JOIN (SELECT ... FROM "sys_order_detail" ...) <#=currentAlias#> ON ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
@@ -871,7 +887,7 @@ public interface IPostgreSqlQuery<<#=tables#>> : IQuery<<#=tables#>>
     /// .RightJoin((<#=tableAlias#>) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (<#=tableAlias#>) =&gt; ...) ...
     /// SQL:
-    /// ... RIGHT JOIN (SELECT ... FROM `sys_order_detail` ...) <#=currentAlias#> ON ...
+    /// ... RIGHT JOIN (SELECT ... FROM "sys_order_detail" ...) <#=currentAlias#> ON ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
@@ -929,13 +945,29 @@ public interface IPostgreSqlQuery<<#=tables#>> : IQuery<<#=tables#>>
     ///    })
     ///    .ToSql(out _);
     /// SQL:
-    /// SELECT a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) AS `Date`,COUNT(b.`Id`) AS `OrderCount`,SUM(b.`TotalAmount`) AS `TotalAmount` FROM `sys_user` a ... GROUP BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) ...
+    /// SELECT a."Id",a."Name",CONVERT(b."CreatedAt",DATE) AS "Date",COUNT(b."Id") AS "OrderCount",SUM(b."TotalAmount") AS "TotalAmount" FROM "sys_user" a ... GROUP BY a."Id",a."Name",CONVERT(b."CreatedAt",DATE) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TGrouping">分组后的实体对象类型，可以是单个字段类型或是匿名类型</typeparam>
     /// <param name="groupingExpr">分组表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlGroupingQuery<<#=tables#>, TGrouping> GroupBy<TGrouping>(Expression<Func<<#=tables#>, TGrouping>> groupingExpr);
+    #endregion
+
+    #region DistinctOn
+    /// <summary>
+    /// 去重分组，字段选择表达式distinctOnExpr可以是单个字段或多个字段的匿名对象，用法:
+    /// <code>
+    /// repository.From&lt;User&gt;() ...
+    ///    .DistinctOn((a, b, ...) =&gt; new { a.Id, a.Name, a.CreatedAt.Date })
+    ///    ...
+    /// SQL: SELECT DISTINCT ON (a."Id",a."Name",CAST(a."CreatedAt" AS DATE)) ... FROM "sys_user" a ... 
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TDistinctOn">去重分组后的实体对象类型，New类型表达式，可以一个或是多个字段</typeparam>
+    /// <param name="distinctOnExpr">字段选择表达式，可以是单个字段或多个字段的匿名对象</param>
+    /// <returns>返回查询对象</returns>
+    IPostgreSqlDistinctOnQuery<<#=tables#>, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<<#=tables#>, TDistinctOn>> distinctOnExpr);
     #endregion
 
     #region OrderBy
@@ -1006,7 +1038,7 @@ public interface IPostgreSqlQuery<<#=tables#>> : IQuery<<#=tables#>>
     /// })
     /// </code>
     /// 生成的SQL:
-    /// <code>SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` ... </code>
+    /// <code>SELECT COUNT("Id") AS "OrderCount",SUM("TotalAmount") AS "TotalAmount" ... </code>
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型，通常是一个匿名类</typeparam>
     /// <param name="fieldsExpr">字段选择表达式，单个或多个聚合字段的匿名对象</param>

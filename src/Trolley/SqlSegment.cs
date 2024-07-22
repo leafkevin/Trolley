@@ -44,6 +44,10 @@ public class SqlSegment
     /// </summary>
     public bool IsMethodCall { get; set; }
     /// <summary>
+    /// 是否必须添加别名
+    /// </summary>
+    public bool IsNeedAlias { get; set; }
+    /// <summary>
     /// 是否DeferredFields,延迟方法调用
     /// </summary>
     public bool IsDeferredFields { get; set; }

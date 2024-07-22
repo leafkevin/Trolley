@@ -849,6 +849,36 @@ SELECT a.""MenuId"",a.""ParentId"",a.""Url"" FROM ""menuPageList"" a WHERE a.""P
           .ToList();
         Assert.NotNull(result);
         Assert.True(result.Count > 0);
+
+        var sql1 = repository.From<User>()
+            .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
+            .GroupBy((a, b) => new { a.Id, a.Name, b.CreatedAt.Date })
+            .OrderBy((x, a, b) => x.Grouping)
+            .Select((x, a, b) => new
+            {
+                x.Grouping.Id,
+                x.Grouping.Name,
+                CreatedAt = x.Grouping.Date,
+                OrderCount = x.Count(b.Id),
+                TotalAmount = x.Sum(b.TotalAmount)
+            })
+            .ToSql(out _);
+        Assert.True(sql1 == "SELECT a.\"Id\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE) AS \"CreatedAt\",COUNT(b.\"Id\") AS \"OrderCount\",SUM(b.\"TotalAmount\") AS \"TotalAmount\" FROM \"sys_user\" a INNER JOIN \"sys_order\" b ON a.\"Id\"=b.\"BuyerId\" GROUP BY a.\"Id\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE) ORDER BY a.\"Id\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE)");
+        var result1 = repository.From<User>()
+            .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
+            .GroupBy((a, b) => new { a.Id, a.Name, b.CreatedAt.Date })
+            .OrderBy((x, a, b) => x.Grouping)
+            .Select((x, a, b) => new
+            {
+                x.Grouping.Id,
+                x.Grouping.Name,
+                CreatedAt = x.Grouping.Date,
+                OrderCount = x.Count(b.Id),
+                TotalAmount = x.Sum(b.TotalAmount)
+            })
+            .ToList();
+        Assert.NotNull(result1);
+        Assert.True(result1.Count > 0);
     }
     [Fact]
     public async void FromQuery_Groupby_OrderBy_Fields()
@@ -2493,6 +2523,148 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
         if (result.Count > 1)
         {
             Assert.True(result[0].LastBuyAt >= result[1].LastBuyAt);
+        }
+    }
+    [Fact]
+    public void DistinctOn()
+    {
+        using var repository = dbFactory.Create();
+        var sql = repository.From<User>()
+            .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
+            .DistinctOn((a, b) => new { a.Id, a.Name, CreatedAt = b.CreatedAt.Date })
+            .OrderBy((x, a, b) => x.DistinctOn)
+            .Select((x, a, b) => new
+            {
+                x.DistinctOn,
+                b.TotalAmount
+            })
+            .ToSql(out _);
+        Assert.True(sql == "SELECT DISTINCT ON (a.\"Id\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE)) a.\"Id\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE) AS \"CreatedAt\",b.\"TotalAmount\" FROM \"sys_user\" a INNER JOIN \"sys_order\" b ON a.\"Id\"=b.\"BuyerId\" ORDER BY a.\"Id\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE)");
+        var result = repository.From<User>()
+            .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
+            .DistinctOn((a, b) => new { a.Id, a.Name, CreatedAt = b.CreatedAt.Date })
+            .OrderBy((x, a, b) => x.DistinctOn)
+            .Select((x, a, b) => new
+            {
+                x.DistinctOn,
+                b.TotalAmount
+            })
+            .ToList();
+        Assert.NotNull(result);
+        Assert.True(result.Count > 0);
+
+        var sql1 = repository.From<User>()
+            .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
+            .DistinctOn((a, b) => new { UserId = a.Id, a.Name, CreatedAt = b.CreatedAt.Date })
+            .OrderBy((x, a, b) => x.DistinctOn)
+            .Select((x, a, b) => new
+            {
+                x.DistinctOn.UserId,
+                x.DistinctOn.Name,
+                x.DistinctOn.CreatedAt,
+                b.TotalAmount
+            })
+            .ToSql(out _);
+        Assert.True(sql1 == "SELECT DISTINCT ON (a.\"Id\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE)) a.\"Id\" AS \"UserId\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE) AS \"CreatedAt\",b.\"TotalAmount\" FROM \"sys_user\" a INNER JOIN \"sys_order\" b ON a.\"Id\"=b.\"BuyerId\" ORDER BY a.\"Id\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE)");
+        var result1 = repository.From<User>()
+            .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
+            .DistinctOn((a, b) => new { UserId = a.Id, a.Name, CreatedAt = b.CreatedAt.Date })
+            .OrderBy((x, a, b) => x.DistinctOn)
+            .Select((x, a, b) => new
+            {
+                x.DistinctOn.UserId,
+                x.DistinctOn.Name,
+                x.DistinctOn.CreatedAt,
+                b.TotalAmount
+            })
+            .ToList();
+        Assert.NotNull(result1);
+        Assert.True(result1.Count > 0);
+    }
+    [Fact]
+    public async void Insert_Returnings()
+    {
+        using var repository = dbFactory.Create();
+        var products = new[]
+        {
+            new
+            {
+                Id = 1,
+                ProductNo="PN-001",
+                Name = "波司登羽绒服",
+                BrandId = 1,
+                CategoryId = 1,
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            },
+            new
+            {
+                Id = 2,
+                ProductNo="PN-002",
+                Name = "雪中飞羽绒裤",
+                BrandId = 2,
+                CategoryId = 2,
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            },
+            new
+            {
+                Id = 3,
+                ProductNo="PN-003",
+                Name = "优衣库保暖内衣",
+                BrandId = 3,
+                CategoryId = 3,
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            }
+        };
+
+        var sql1 = repository.Create<Product>()
+            .WithBulk(products)
+            .Returning(f => new { f.Id, f.ProductNo })
+            .ToSql(out var parameters1);
+        Assert.True(sql1 == "INSERT INTO \"sys_product\" (\"Id\",\"ProductNo\",\"Name\",\"BrandId\",\"CategoryId\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\") VALUES (@Id0,@ProductNo0,@Name0,@BrandId0,@CategoryId0,@IsEnabled0,@CreatedAt0,@CreatedBy0,@UpdatedAt0,@UpdatedBy0),(@Id1,@ProductNo1,@Name1,@BrandId1,@CategoryId1,@IsEnabled1,@CreatedAt1,@CreatedBy1,@UpdatedAt1,@UpdatedBy1),(@Id2,@ProductNo2,@Name2,@BrandId2,@CategoryId2,@IsEnabled2,@CreatedAt2,@CreatedBy2,@UpdatedAt2,@UpdatedBy2) RETURNING \"Id\",\"ProductNo\"");
+
+        await repository.BeginTransactionAsync();
+        await repository.Delete<Product>().Where(new int[] { 1, 2, 3 }).ExecuteAsync();
+        var results1 = await repository.Create<Product>()
+            .WithBulk(products)
+            .Returning(f => new { f.Id, f.ProductNo })
+            .ExecuteAsync();
+        await repository.CommitAsync();
+        Assert.True(results1.Count == 3);
+        for (int i = 0; i < results1.Count; i++)
+        {
+            Assert.True(results1[i].Id == products[i].Id);
+            Assert.True(results1[i].ProductNo == products[i].ProductNo);
+        }
+
+        var sql2 = repository.Create<Product>()
+            .WithBulk(products)
+            .Returning<Product>("*")
+            .ToSql(out var parameters2);
+        Assert.True(sql2 == "INSERT INTO \"sys_product\" (\"Id\",\"ProductNo\",\"Name\",\"BrandId\",\"CategoryId\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\") VALUES (@Id0,@ProductNo0,@Name0,@BrandId0,@CategoryId0,@IsEnabled0,@CreatedAt0,@CreatedBy0,@UpdatedAt0,@UpdatedBy0),(@Id1,@ProductNo1,@Name1,@BrandId1,@CategoryId1,@IsEnabled1,@CreatedAt1,@CreatedBy1,@UpdatedAt1,@UpdatedBy1),(@Id2,@ProductNo2,@Name2,@BrandId2,@CategoryId2,@IsEnabled2,@CreatedAt2,@CreatedBy2,@UpdatedAt2,@UpdatedBy2) RETURNING *");
+
+        await repository.BeginTransactionAsync();
+        await repository.Delete<Product>().Where(new int[] { 1, 2, 3 }).ExecuteAsync();
+        var result2 = await repository.Create<Product>()
+            .WithBulk(products)
+            .Returning<Product>("*")
+            .ExecuteAsync();
+        await repository.CommitAsync();
+        for (int i = 0; i < result2.Count; i++)
+        {
+            Assert.True(result2[i].Id == products[i].Id);
+            Assert.True(result2[i].ProductNo == products[i].ProductNo);
         }
     }
     private string DeferInvoke() => "DeferInvoke";

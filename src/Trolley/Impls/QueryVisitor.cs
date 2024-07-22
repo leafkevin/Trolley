@@ -15,11 +15,11 @@ namespace Trolley;
 
 public class QueryVisitor : SqlVisitor, IQueryVisitor
 {
-    private static ConcurrentDictionary<int, (string, Action<StringBuilder, IOrmProvider, object>)> includeSqlGetterCache = new();
-    private static ConcurrentDictionary<Type, Func<object>> typedListGetters = new();
-    private static ConcurrentDictionary<Type, Action<object, IDataReader, IOrmProvider, IEntityMapProvider>> typedReaderElementSetters = new();
-    private static ConcurrentDictionary<int, Action<object, object>> targetIncludeValuesSetters = new();
-    private static ConcurrentDictionary<int, Action<object>> targetRefIncludeValuesSetters = new();
+    protected static ConcurrentDictionary<int, (string, Action<StringBuilder, IOrmProvider, object>)> includeSqlGetterCache = new();
+    protected static ConcurrentDictionary<Type, Func<object>> typedListGetters = new();
+    protected static ConcurrentDictionary<Type, Action<object, IDataReader, IOrmProvider, IEntityMapProvider>> typedReaderElementSetters = new();
+    protected static ConcurrentDictionary<int, Action<object, object>> targetIncludeValuesSetters = new();
+    protected static ConcurrentDictionary<int, Action<object>> targetRefIncludeValuesSetters = new();
     private bool isDisposed;
 
     protected List<CommandSegment> deferredSegments = new();
@@ -1052,8 +1052,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     var fieldName = sqlSegment.Value.ToString();
                     builder.Append(fieldName);
                     bool isNeedAlias = false;
-                    if (sqlSegment.IsConstant || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall
-                         || sqlSegment.FromMember == null || sqlSegment.FromMember.Name != memberInfo.Name)
+                    //这里只设置必须加as别名的情况，常量，参数，表达式，方法调用
+                    //并且需要设置当前的成员名称，方便最外层做判断，是否添加as别名
+                    if (sqlSegment.IsConstant || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
                         isNeedAlias = true;
                     this.GroupFields.Add(new ReaderField
                     {
@@ -1076,7 +1077,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     var memberExpr = lambdaExpr.Body as MemberExpression;
                     var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = memberExpr });
                     var fieldName = sqlSegment.Value.ToString();
-                    //此时，字段不能加别名，后面有可能还会有OrderBy操作，到最外层Select的时候用到Grouping时，再加别名
+                    bool isNeedAlias = false;
+                    //这里只设置必须加as别名的情况，常量，参数，表达式，方法调用
+                    //并且需要设置当前的成员名称，方便最外层做判断，是否添加as别名
+                    if (sqlSegment.IsConstant || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
+                        isNeedAlias = true;
                     this.GroupFields.Add(new ReaderField
                     {
                         FieldType = ReaderFieldType.Field,
@@ -1085,7 +1090,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         TargetType = memberExpr.Member.GetMemberType(),
                         NativeDbType = sqlSegment.NativeDbType,
                         TypeHandler = sqlSegment.TypeHandler,
-                        Body = fieldName
+                        Body = fieldName,
+                        IsNeedAlias = isNeedAlias
                     });
                     this.GroupBySql = fieldName;
                 }
@@ -1433,9 +1439,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 sqlSegment.NativeDbType = readerField.NativeDbType;
                 sqlSegment.TypeHandler = readerField.TypeHandler;
                 sqlSegment.Value = readerField.Body;
+                //只有成员访问，只需要返回原始FromMember，是可以的。
+                //如果是常量、参数、表达式、方法调用，需要强制设置IsNeedAlias，才能在最外层正确判断是否增加AS别名
+                sqlSegment.IsNeedAlias = readerField.IsNeedAlias;
                 return sqlSegment;
             }
-            if (this.IsGroupingMember(memberExpr.Expression as MemberExpression))
+            else if (this.IsGroupingMember(memberExpr.Expression as MemberExpression))
             {
                 //此时是Grouping对象字段的引用，最外面可能会更改成员名称，要复制一份，防止更改Grouping对象中的字段
                 var readerField = this.GroupFields.Find(f => f.TargetMember.Name == memberInfo.Name);
@@ -1447,6 +1456,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 sqlSegment.NativeDbType = readerField.NativeDbType;
                 sqlSegment.TypeHandler = readerField.TypeHandler;
                 sqlSegment.Value = readerField.Body;
+                //只有成员访问，只需要返回原始FromMember，是可以的。
+                //如果是常量、参数、表达式、方法调用，需要强制设置IsNeedAlias，才能在最外层正确判断是否增加AS别名
+                sqlSegment.IsNeedAlias = readerField.IsNeedAlias;
                 return sqlSegment;
             }
             if (memberExpr.IsParameter(out var parameterName))
@@ -1817,7 +1829,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             //FromCommand的select语句可以不加别名
             //Union的第二个子句，在构建新子查询表的时候，已经单独处理过了，此处无需处理
             bool isNeedAlias = false;
-            if (sqlSegment.IsConstant || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall
+            if (sqlSegment.IsNeedAlias || sqlSegment.IsConstant || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall
                 || sqlSegment.FromMember == null || (memberInfo == null || sqlSegment.FromMember.Name != memberInfo.Name))
                 isNeedAlias = true;
             return new ReaderField
@@ -1928,6 +1940,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             {
                 if (typeof(IAggregateSelect).IsAssignableFrom(parameterExpr.Type))
                     continue;
+                if (typeof(IAggregateSelect).IsAssignableFrom(parameterExpr.Type))
+                    continue;
                 if (typeof(IFromQuery).IsAssignableFrom(parameterExpr.Type))
                     continue;
                 if (!parameterNames.Contains(parameterExpr.Name))
@@ -1992,6 +2006,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (this.IsFromCommand || this.IsSecondUnion) return false;
         if (readerField.ReaderFields != null && readerField.ReaderFields.Count > 1)
             return false;
+        //GroupFields中的ReaderField只设置了必须加as别名的情况，没有设置TargetMember.Name !=FromMember.Name的情况，这里把这种情况补上
+        //PostgreSql时，DistinctOnFields中的ReaderField也是这个场景
+        if (!readerField.IsNeedAlias && readerField.TargetMember != null && readerField.FromMember != null)
+            return readerField.TargetMember.Name != readerField.FromMember.Name;
         return readerField.IsNeedAlias;
     }
     public virtual void ClearUnionSql()
@@ -2092,7 +2110,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         return memberExprs;
     }
-    private int GetIncludeKey(Type targetType, MemberInfo firstMember, TableSegment includeSegment)
+    public int GetIncludeKey(Type targetType, MemberInfo firstMember, TableSegment includeSegment)
     {
         var hashCode = new HashCode();
         hashCode.Add(this.OrmProvider);
@@ -2108,7 +2126,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         hashCode.Add(includeSegment.FromMember.MemberName);
         return hashCode.ToHashCode();
     }
-    private int GetRefIncludeKey(Type targetType, string refPath)
+    public int GetRefIncludeKey(Type targetType, string refPath)
     {
         var hashCode = new HashCode();
         hashCode.Add(this.OrmProvider);

@@ -27,11 +27,6 @@ public class PostgreSqlDistinctOnQueryBase<TDistinctOn>: IPostgreSqlDistinctOnQu
     #endregion
 
     #region Select
-    public virtual IQueryAnonymousObject SelectAnonymous()
-    {
-        this.Visitor.Select("*");
-        return new QueryAnonymousObject(this.Visitor);
-    }
     public virtual IPostgreSqlQuery<TDistinctOn> Select()
     {
         var dialectVisitor = this.Visitor as PostgreSqlQueryVisitor;
@@ -56,9 +51,9 @@ public class PostgreSqlDistinctOnQuery<T, TDistinctOn> : PostgreSqlDistinctOnQue
     #endregion
 
     #region OrderBy/OrderByDescending
-    public virtual IPostgreSqlDistinctOnQuery<T, TDistinctOn> OrderBy<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, T, TFields>> fieldsExpr)
+    public virtual IPostgreSqlDistinctOnQuery<T, TDistinctOn> OrderBy<TFields>(Expression<Func<IDistinctOnObject<TDistinctOn>, T, TFields>> fieldsExpr)
         => this.OrderBy(true, fieldsExpr);
-    public virtual IPostgreSqlDistinctOnQuery<T, TDistinctOn> OrderBy<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, T, TFields>> fieldsExpr)
+    public virtual IPostgreSqlDistinctOnQuery<T, TDistinctOn> OrderBy<TFields>(bool condition, Expression<Func<IDistinctOnObject<TDistinctOn>, T, TFields>> fieldsExpr)
     {
         if (condition)
         {
@@ -68,9 +63,9 @@ public class PostgreSqlDistinctOnQuery<T, TDistinctOn> : PostgreSqlDistinctOnQue
         }
         return this;
     }
-    public virtual IPostgreSqlDistinctOnQuery<T, TDistinctOn> OrderByDescending<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, T, TFields>> fieldsExpr)
+    public virtual IPostgreSqlDistinctOnQuery<T, TDistinctOn> OrderByDescending<TFields>(Expression<Func<IDistinctOnObject<TDistinctOn>, T, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-    public virtual IPostgreSqlDistinctOnQuery<T, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, T, TFields>> fieldsExpr)
+    public virtual IPostgreSqlDistinctOnQuery<T, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IDistinctOnObject<TDistinctOn>, T, TFields>> fieldsExpr)
     {
         if (condition)
         {
@@ -83,7 +78,7 @@ public class PostgreSqlDistinctOnQuery<T, TDistinctOn> : PostgreSqlDistinctOnQue
     #endregion
 
     #region Select
-    public virtual IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, T, TTarget>> fieldsExpr)
+    public virtual IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IDistinctOnObject<TDistinctOn>, T, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
@@ -91,7 +86,7 @@ public class PostgreSqlDistinctOnQuery<T, TDistinctOn> : PostgreSqlDistinctOnQue
         this.Visitor.Select(null, fieldsExpr);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor) as IPostgreSqlQuery<TTarget>;
     }
-    public virtual IPostgreSqlQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, T, TTarget>> specialMemberSelector = null)
+    public virtual IPostgreSqlQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<IDistinctOnObject<TDistinctOn>, T, TTarget>> specialMemberSelector = null)
     {
         this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor) as IPostgreSqlQuery<TTarget>;
@@ -117,9 +112,9 @@ public class PostgreSqlDistinctOnQuery<<#=tables#>, TDistinctOn> : PostgreSqlDis
 #>
 
     #region OrderBy/OrderByDescending
-    public virtual IPostgreSqlDistinctOnQuery<<#=tables#>, TDistinctOn> OrderBy<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, <#=tables#>, TFields>> fieldsExpr)
+    public virtual IPostgreSqlDistinctOnQuery<<#=tables#>, TDistinctOn> OrderBy<TFields>(Expression<Func<IDistinctOnObject<TDistinctOn>, <#=tables#>, TFields>> fieldsExpr)
         => this.OrderBy(true, fieldsExpr);
-    public virtual IPostgreSqlDistinctOnQuery<<#=tables#>, TDistinctOn> OrderBy<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, <#=tables#>, TFields>> fieldsExpr)
+    public virtual IPostgreSqlDistinctOnQuery<<#=tables#>, TDistinctOn> OrderBy<TFields>(bool condition, Expression<Func<IDistinctOnObject<TDistinctOn>, <#=tables#>, TFields>> fieldsExpr)
     {
         if (condition)
         {
@@ -129,9 +124,9 @@ public class PostgreSqlDistinctOnQuery<<#=tables#>, TDistinctOn> : PostgreSqlDis
         }
         return this;
     }
-    public virtual IPostgreSqlDistinctOnQuery<<#=tables#>, TDistinctOn> OrderByDescending<TFields>(Expression<Func<IGroupingObject<TDistinctOn>, <#=tables#>, TFields>> fieldsExpr)
+    public virtual IPostgreSqlDistinctOnQuery<<#=tables#>, TDistinctOn> OrderByDescending<TFields>(Expression<Func<IDistinctOnObject<TDistinctOn>, <#=tables#>, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-    public virtual IPostgreSqlDistinctOnQuery<<#=tables#>, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingObject<TDistinctOn>, <#=tables#>, TFields>> fieldsExpr)
+    public virtual IPostgreSqlDistinctOnQuery<<#=tables#>, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IDistinctOnObject<TDistinctOn>, <#=tables#>, TFields>> fieldsExpr)
     {
         if (condition)
         {
@@ -144,7 +139,7 @@ public class PostgreSqlDistinctOnQuery<<#=tables#>, TDistinctOn> : PostgreSqlDis
     #endregion
 
     #region Select
-    public virtual IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, <#=tables#>, TTarget>> fieldsExpr)
+    public virtual IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IDistinctOnObject<TDistinctOn>, <#=tables#>, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
             throw new ArgumentNullException(nameof(fieldsExpr));
@@ -152,7 +147,7 @@ public class PostgreSqlDistinctOnQuery<<#=tables#>, TDistinctOn> : PostgreSqlDis
         this.Visitor.Select(null, fieldsExpr);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor) as IPostgreSqlQuery<TTarget>;
     }
-    public virtual IPostgreSqlQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<IGroupingObject<TDistinctOn>, <#=tables#>, TTarget>> specialMemberSelector = null)
+    public virtual IPostgreSqlQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<IDistinctOnObject<TDistinctOn>, <#=tables#>, TTarget>> specialMemberSelector = null)
     {
         this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor) as IPostgreSqlQuery<TTarget>;

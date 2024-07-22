@@ -33,11 +33,6 @@ public interface IGroupingAggregate<TGrouping> : IGroupingObject<TGrouping>, IAg
 public interface IGroupingQueryBase<TGrouping>
 {
     /// <summary>
-    /// 使用原始字段*返回匿名查询结果，主要用在不关注结果类型的地方，如：Sql.Exists语句，用于判断数据是否存在
-    /// </summary>
-    /// <returns>返回匿名查询对象</returns>
-    IQueryAnonymousObject SelectAnonymous();
-    /// <summary>
     /// 使用分组后对象直接返回
     /// </summary>
     /// <returns>返回分组后对象</returns>
@@ -57,6 +52,7 @@ public interface IGroupingQueryBase<TGrouping>
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
 public interface IGroupingQuery<T, TGrouping> : IGroupingQueryBase<TGrouping>
 {
+    #region Having
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
@@ -70,6 +66,9 @@ public interface IGroupingQuery<T, TGrouping> : IGroupingQueryBase<TGrouping>
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500, Sql.Sum(a.Amount) > 500，两者等效</param>
     /// <returns>返回分组查询对象</returns>
     IGroupingQuery<T, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate);
+    #endregion
+
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
     /// OrderBy(x =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy(x =&gt; x.Grouping.Date)
@@ -104,6 +103,9 @@ public interface IGroupingQuery<T, TGrouping> : IGroupingQueryBase<TGrouping>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IGroupingQuery<T, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr);
+    #endregion
+
+    #region Select
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select(x =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select(x =&gt; a.Id)</code>
@@ -112,6 +114,7 @@ public interface IGroupingQuery<T, TGrouping> : IGroupingQueryBase<TGrouping>
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T, TTarget>> fieldsExpr);
+    #endregion
 }
 <#
     var count = 16;
@@ -139,6 +142,7 @@ public interface IGroupingQuery<<#=tables#>, TGrouping> : IGroupingQueryBase<TGr
         if(i < count)
         {
 #>
+    #region Having
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
@@ -152,6 +156,9 @@ public interface IGroupingQuery<<#=tables#>, TGrouping> : IGroupingQueryBase<TGr
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500, Sql.Sum(a.Amount) > 500，两者等效</param>
     /// <returns>返回分组查询对象</returns>
     IGroupingQuery<<#=tables#>, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, bool>> predicate);
+    #endregion
+
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
@@ -186,6 +193,9 @@ public interface IGroupingQuery<<#=tables#>, TGrouping> : IGroupingQueryBase<TGr
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IGroupingQuery<<#=tables#>, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr);
+    #endregion
+
+    #region Select
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -194,6 +204,7 @@ public interface IGroupingQuery<<#=tables#>, TGrouping> : IGroupingQueryBase<TGr
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     IQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TTarget>> fieldsExpr);
+    #endregion
 <#      }#>
 }
 <#  }#>
