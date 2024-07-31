@@ -10,6 +10,7 @@ namespace Trolley.SqlServer;
 
 public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
 {
+    public string LockName { get; set; }
     public List<string> OutputFieldNames { get; set; }
     public SqlServerCreateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
         : base(dbKey, ormProvider, mapProvider, shardingProvider, isParameterized, tableAsStart, parameterPrefix) { }
@@ -52,7 +53,11 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
         }
         tableName = this.OrmProvider.GetTableName(tableName);
 
-        var builder = new StringBuilder($"INSERT INTO {tableName} (");
+        var builder = new StringBuilder($"INSERT INTO {tableName} ");
+        if (!string.IsNullOrEmpty(this.LockName))
+            builder.Append($"WITH {this.LockName} ");
+
+        builder.Append('(');
         for (int i = 0; i < this.InsertFields.Count; i++)
         {
             var insertField = this.InsertFields[i];
@@ -305,7 +310,7 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
         }
         return (isNeedSplit, tableName, insertObjs, bulkCount, firstSqlSetter, loopSqlSetter, readerFields);
     }
-
+    public void WithLock(string lockName) => this.LockName = lockName;
     public void Output(params string[] fieldNames)
     {
         this.OutputFieldNames ??= new();

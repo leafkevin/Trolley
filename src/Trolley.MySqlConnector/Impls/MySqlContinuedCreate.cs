@@ -3,7 +3,7 @@ using System.Linq.Expressions;
 
 namespace Trolley.MySqlConnector;
 
-public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlContinuedCreate<TEntity>
+public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCreated<TEntity>, IMySqlContinuedCreate<TEntity>
 {
     #region Properties
     public MySqlCreateVisitor DialectVisitor { get; private set; }
@@ -19,51 +19,27 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCon
 
     #region WithBy
     public override IMySqlContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj)
-    {
-        base.WithBy(insertObj);
-        return this;
-    }
+        => this.WithBy(true, insertObj);
     public override IMySqlContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj)
-    {
-        base.WithBy(condition, insertObj);
-        return this;
-    }
+        => base.WithBy(condition, insertObj) as IMySqlContinuedCreate<TEntity>;
     public override IMySqlContinuedCreate<TEntity> WithBy<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
-    {
-        base.WithBy(true, fieldSelector, fieldValue);
-        return this;
-    }
+        => this.WithBy(true, fieldSelector, fieldValue);
     public override IMySqlContinuedCreate<TEntity> WithBy<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
-    {
-        base.WithBy(condition, fieldSelector, fieldValue);
-        return this;
-    }
+        => base.WithBy(condition, fieldSelector, fieldValue) as IMySqlContinuedCreate<TEntity>;
     #endregion
 
     #region IgnoreFields
     public override IMySqlContinuedCreate<TEntity> IgnoreFields(params string[] fieldNames)
-    {
-        base.IgnoreFields(fieldNames);
-        return this;
-    }
+        => base.IgnoreFields(fieldNames) as IMySqlContinuedCreate<TEntity>;
     public override IMySqlContinuedCreate<TEntity> IgnoreFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector)
-    {
-        base.IgnoreFields(fieldsSelector);
-        return this;
-    }
+        => base.IgnoreFields(fieldsSelector) as IMySqlContinuedCreate<TEntity>;
     #endregion
 
     #region OnlyFields
     public override IMySqlContinuedCreate<TEntity> OnlyFields(params string[] fieldNames)
-    {
-        base.OnlyFields(fieldNames);
-        return this;
-    }
+        => base.OnlyFields(fieldNames) as IMySqlContinuedCreate<TEntity>;
     public override IMySqlContinuedCreate<TEntity> OnlyFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector)
-    {
-        base.OnlyFields(fieldsSelector);
-        return this;
-    }
+        => base.OnlyFields(fieldsSelector) as IMySqlContinuedCreate<TEntity>;
     #endregion
 
     #region Returnning
@@ -83,16 +59,16 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCon
     public IMySqlCreated<TEntity> OnDuplicateKeyUpdate<TUpdateFields>(TUpdateFields updateObj)
     {
         this.DialectVisitor.OnDuplicateKeyUpdate(updateObj);
-        return new MySqlCreated<TEntity>(this.DbContext, this.Visitor);
+        return this;
     }
     public IMySqlCreated<TEntity> OnDuplicateKeyUpdate<TUpdateFields>(Expression<Func<IMySqlCreateDuplicateKeyUpdate<TEntity>, TUpdateFields>> fieldsAssignment)
     {
         this.DialectVisitor.OnDuplicateKeyUpdate(fieldsAssignment);
-        return new MySqlCreated<TEntity>(this.DbContext, this.Visitor);
+        return this;
     }
     #endregion     
 }
-public class MySqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlBulkContinuedCreate<TEntity>
+public class MySqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCreated<TEntity>, IMySqlBulkContinuedCreate<TEntity>
 {
     #region Properties
     public MySqlCreateVisitor DialectVisitor { get; private set; }
@@ -108,51 +84,27 @@ public class MySqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySq
 
     #region WithBy
     public override IMySqlBulkContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj)
-    {
-        base.WithBy(insertObj);
-        return this;
-    }
+        => this.WithBy(true, insertObj);
     public override IMySqlBulkContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj)
-    {
-        base.WithBy(condition, insertObj);
-        return this;
-    }
+        => base.WithBy(condition, insertObj) as IMySqlBulkContinuedCreate<TEntity>;
     public override IMySqlBulkContinuedCreate<TEntity> WithBy<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
-    {
-        base.WithBy(true, fieldSelector, fieldValue);
-        return this;
-    }
+        => this.WithBy(true, fieldSelector, fieldValue);
     public override IMySqlBulkContinuedCreate<TEntity> WithBy<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
-    {
-        base.WithBy(condition, fieldSelector, fieldValue);
-        return this;
-    }
+        => base.WithBy(condition, fieldSelector, fieldValue) as IMySqlBulkContinuedCreate<TEntity>;
     #endregion
 
     #region IgnoreFields
     public override IMySqlBulkContinuedCreate<TEntity> IgnoreFields(params string[] fieldNames)
-    {
-        base.IgnoreFields(fieldNames);
-        return this;
-    }
+        => base.IgnoreFields(fieldNames) as IMySqlBulkContinuedCreate<TEntity>;
     public override IMySqlBulkContinuedCreate<TEntity> IgnoreFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector)
-    {
-        base.IgnoreFields(fieldsSelector);
-        return this;
-    }
+        => base.IgnoreFields(fieldsSelector) as IMySqlBulkContinuedCreate<TEntity>;
     #endregion
 
     #region OnlyFields
     public override IMySqlBulkContinuedCreate<TEntity> OnlyFields(params string[] fieldNames)
-    {
-        base.OnlyFields(fieldNames);
-        return this;
-    }
+        => base.OnlyFields(fieldNames) as IMySqlBulkContinuedCreate<TEntity>;
     public override IMySqlBulkContinuedCreate<TEntity> OnlyFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector)
-    {
-        base.OnlyFields(fieldsSelector);
-        return this;
-    }
+        => base.OnlyFields(fieldsSelector) as IMySqlBulkContinuedCreate<TEntity>;
     #endregion
 
     #region Returnning
@@ -172,12 +124,12 @@ public class MySqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySq
     public IMySqlCreated<TEntity> OnDuplicateKeyUpdate<TUpdateFields>(TUpdateFields updateObj)
     {
         this.DialectVisitor.OnDuplicateKeyUpdate(updateObj);
-        return new MySqlCreated<TEntity>(this.DbContext, this.Visitor);
+        return this;
     }
     public IMySqlCreated<TEntity> OnDuplicateKeyUpdate<TUpdateFields>(Expression<Func<IMySqlCreateDuplicateKeyUpdate<TEntity>, TUpdateFields>> fieldsAssignment)
     {
         this.DialectVisitor.OnDuplicateKeyUpdate(fieldsAssignment);
-        return new MySqlCreated<TEntity>(this.DbContext, this.Visitor);
+        return this;
     }
     #endregion
 }

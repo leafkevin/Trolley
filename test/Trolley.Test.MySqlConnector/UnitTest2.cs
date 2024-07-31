@@ -1465,18 +1465,6 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
         var sql1 = repository.From<User>()
             .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
             .OrderBy((a, b) => new { UserId = a.Id, OrderId = b.Id })
-            .SelectAggregate((x, a, b) => new
-            {
-                UserId = a.Id,
-                OrderId = b.Id,
-                OrderCount = x.Count(b.Id),
-                TotalAmount = x.Sum(b.TotalAmount)
-            })
-            .ToSql(out _);
-        Assert.True(sql1 == "SELECT a.`Id` AS `UserId`,b.`Id` AS `OrderId`,COUNT(b.`Id`) AS `OrderCount`,SUM(b.`TotalAmount`) AS `TotalAmount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` ORDER BY a.`Id`,b.`Id`");
-        var sql2 = repository.From<User>()
-            .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
-            .OrderBy((a, b) => new { UserId = a.Id, OrderId = b.Id })
             .Select((a, b) => new
             {
                 UserId = a.Id,
@@ -1485,7 +1473,7 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
                 TotalAmount = Sql.Sum(b.TotalAmount)
             })
             .ToSql(out _);
-        Assert.True(sql2 == "SELECT a.`Id` AS `UserId`,b.`Id` AS `OrderId`,COUNT(b.`Id`) AS `OrderCount`,SUM(b.`TotalAmount`) AS `TotalAmount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` ORDER BY a.`Id`,b.`Id`");
+        Assert.True(sql1 == "SELECT a.`Id` AS `UserId`,b.`Id` AS `OrderId`,COUNT(b.`Id`) AS `OrderCount`,SUM(b.`TotalAmount`) AS `TotalAmount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` ORDER BY a.`Id`,b.`Id`");
     }
     [Fact]
     public void Query_Count()

@@ -306,7 +306,7 @@ public static class Extensions
             visitor.RefQueries.Add(subQuery);
         if (visitor.DbParameters.Equals(subQuery.Visitor.DbParameters))
             return;
-        if (subQuery.Visitor.DbParameters.Count > 0)
+        if (subQuery.Visitor.DbParameters?.Count > 0)
             subQuery.Visitor.DbParameters.CopyTo(visitor.DbParameters);
     }
 

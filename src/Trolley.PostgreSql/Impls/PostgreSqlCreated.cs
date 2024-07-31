@@ -15,7 +15,6 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
 {
     #region Properties
     public PostgreSqlCreateVisitor DialectVisitor { get; protected set; }
-    public IOrmProvider OrmProvider => this.Visitor.OrmProvider;
     #endregion
 
     #region Constructor

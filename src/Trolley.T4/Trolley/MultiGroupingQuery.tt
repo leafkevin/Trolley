@@ -10,13 +10,10 @@ using System.Linq.Expressions;
 
 namespace Trolley;
 
-public class MultiGroupingQueryBase<TGrouping> : IMultiGroupingQueryBase<TGrouping>
+public class MultiGroupingQueryBase<TGrouping> :QueryInternal, IMultiGroupingQueryBase<TGrouping>
 {
     #region Properties
-    public IQueryVisitor Visitor { get; set; }
     public MultipleQuery MultipleQuery { get; set; }
-    public DbContext DbContext => this.MultipleQuery.DbContext;
-    public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
     #endregion
 
     #region Constructor
@@ -28,14 +25,6 @@ public class MultiGroupingQueryBase<TGrouping> : IMultiGroupingQueryBase<TGroupi
     #endregion
 
     #region Select
-    public IQueryAnonymousObject SelectAnonymous(string fields = "*")
-    {
-        if (string.IsNullOrEmpty(fields))
-            throw new ArgumentNullException(nameof(fields));
-
-        this.Visitor.Select(fields);
-        return new QueryAnonymousObject(this.Visitor);
-    }
     public IMultiQuery<TGrouping> Select()
     {
         this.Visitor.SelectGrouping();
@@ -43,10 +32,7 @@ public class MultiGroupingQueryBase<TGrouping> : IMultiGroupingQueryBase<TGroupi
     }
     public IMultiQuery<TTarget> Select<TTarget>(string fields = "*")
     {
-        if (string.IsNullOrEmpty(fields))
-            throw new ArgumentNullException(nameof(fields));
-
-        this.Visitor.Select(fields);
+        base.SelectInternal(fields);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     #endregion
@@ -63,12 +49,7 @@ class MultiGroupingQuery<T, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMul
         => this.Having(true, predicate);
     public IMultiGroupingQuery<T, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate)
     {
-        if (condition)
-        {
-            if (predicate == null)
-                throw new ArgumentNullException(nameof(predicate));
-            this.Visitor.Having(predicate);
-        }
+        base.HavingInternal(condition, predicate);
         return this;
     }
     #endregion
@@ -78,24 +59,14 @@ class MultiGroupingQuery<T, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMul
         => this.OrderBy(true, fieldsExpr);
     public IMultiGroupingQuery<T, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
     {
-        if (condition)
-        {
-            if (fieldsExpr == null)
-                throw new ArgumentNullException(nameof(fieldsExpr));
-            this.Visitor.OrderBy("ASC", fieldsExpr);
-        }
+        base.OrderByInternal(condition, fieldsExpr);
         return this;
     }
     public IMultiGroupingQuery<T, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
     public IMultiGroupingQuery<T, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
     {
-        if (condition)
-        {
-            if (fieldsExpr == null)
-                throw new ArgumentNullException(nameof(fieldsExpr));
-            this.Visitor.OrderBy("DESC", fieldsExpr);
-        }
+        base.OrderByDescendingInternal(condition, fieldsExpr);
         return this;
     }
     #endregion
@@ -103,10 +74,7 @@ class MultiGroupingQuery<T, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMul
     #region Select
     public IMultiQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T, TTarget>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
-        this.Visitor.Select(null, fieldsExpr);
+        base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     #endregion
@@ -131,21 +99,10 @@ public class MultiGroupingQuery<<#=tables#>, TGrouping> : MultiGroupingQueryBase
 
     #region Having
     public IMultiGroupingQuery<<#=tables#>, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, bool>> predicate)
-    {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        this.Visitor.Having(predicate);
-        return this;
-    }
+        => this.Having(true, predicate);
     public IMultiGroupingQuery<<#=tables#>, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, bool>> predicate)
     {
-        if (condition)
-        {
-            if (predicate == null)
-                throw new ArgumentNullException(nameof(predicate));
-            this.Visitor.Having(predicate);
-        }
+        base.HavingInternal(condition, predicate);
         return this;
     }
     #endregion
@@ -155,24 +112,14 @@ public class MultiGroupingQuery<<#=tables#>, TGrouping> : MultiGroupingQueryBase
         => this.OrderBy(true, fieldsExpr);
     public IMultiGroupingQuery<<#=tables#>, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr)
     {
-        if (condition)
-        {
-            if (fieldsExpr == null)
-                throw new ArgumentNullException(nameof(fieldsExpr));
-            this.Visitor.OrderBy("ASC", fieldsExpr);
-        }
+        base.OrderByInternal(condition, fieldsExpr);
         return this;
     }
     public IMultiGroupingQuery<<#=tables#>, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
     public IMultiGroupingQuery<<#=tables#>, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr)
     {
-        if (condition)
-        {
-            if (fieldsExpr == null)
-                throw new ArgumentNullException(nameof(fieldsExpr));
-            this.Visitor.OrderBy("DESC", fieldsExpr);
-        }
+        base.OrderByDescendingInternal(condition, fieldsExpr);
         return this;
     }
     #endregion
@@ -180,10 +127,7 @@ public class MultiGroupingQuery<<#=tables#>, TGrouping> : MultiGroupingQueryBase
     #region Select
     public IMultiQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TTarget>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
-        this.Visitor.Select(null, fieldsExpr);
+        base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
     #endregion

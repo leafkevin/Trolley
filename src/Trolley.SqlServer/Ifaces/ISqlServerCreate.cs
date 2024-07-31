@@ -1,5 +1,4 @@
 ﻿using System.Collections;
-using System.Collections.Generic;
 
 namespace Trolley.SqlServer;
 
@@ -19,6 +18,10 @@ public interface ISqlServerCreate<TEntity> : ICreate<TEntity>
     /// <param name="field2Value">字段2值</param>
     /// <returns>返回插入对象</returns>
     new ISqlServerCreate<TEntity> UseTableBy(object field1Value, object field2Value = null);
+    #endregion
+
+    #region WithLock
+    ISqlServerCreate<TEntity> WithLock(string lockName);
     #endregion
 
     #region WithBy

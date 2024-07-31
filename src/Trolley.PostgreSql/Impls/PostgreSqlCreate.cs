@@ -19,15 +19,9 @@ public class PostgreSqlCreate<TEntity> : Create<TEntity>, IPostgreSqlCreate<TEnt
 
     #region Sharding
     public override IPostgreSqlCreate<TEntity> UseTable(string tableName)
-    {
-        base.UseTable(tableName);
-        return this;
-    }
+        => base.UseTable(tableName) as IPostgreSqlCreate<TEntity>;
     public override IPostgreSqlCreate<TEntity> UseTableBy(object field1Value, object field2Value = null)
-    {
-        base.UseTableBy(field1Value, field2Value);
-        return this;
-    }
+        => base.UseTableBy(field1Value, field2Value) as IPostgreSqlCreate<TEntity>;
     #endregion
 
     #region WithBy

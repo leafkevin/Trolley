@@ -3,11 +3,10 @@ using System.Linq.Expressions;
 
 namespace Trolley.PostgreSql;
 
-public class PostgreSqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IPostgreSqlContinuedCreate<TEntity>
+public class PostgreSqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IPostgreSqlCreated<TEntity>, IPostgreSqlContinuedCreate<TEntity>
 {
     #region Properties
     public PostgreSqlCreateVisitor DialectVisitor { get; private set; }
-    public IOrmProvider OrmProvider => this.Visitor.OrmProvider;
     #endregion
 
     #region Constructor
@@ -20,51 +19,27 @@ public class PostgreSqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IPos
 
     #region WithBy
     public override IPostgreSqlContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj)
-    {
-        base.WithBy(insertObj);
-        return this;
-    }
+        => this.WithBy(true, insertObj);
     public override IPostgreSqlContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj)
-    {
-        base.WithBy(condition, insertObj);
-        return this;
-    }
+        => base.WithBy(condition, insertObj) as IPostgreSqlContinuedCreate<TEntity>;
     public override IPostgreSqlContinuedCreate<TEntity> WithBy<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
-    {
-        base.WithBy(true, fieldSelector, fieldValue);
-        return this;
-    }
+        => this.WithBy(true, fieldSelector, fieldValue);
     public override IPostgreSqlContinuedCreate<TEntity> WithBy<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
-    {
-        base.WithBy(condition, fieldSelector, fieldValue);
-        return this;
-    }
+        => base.WithBy(condition, fieldSelector, fieldValue) as IPostgreSqlContinuedCreate<TEntity>;
     #endregion
 
     #region IgnoreFields
     public override IPostgreSqlContinuedCreate<TEntity> IgnoreFields(params string[] fieldNames)
-    {
-        base.IgnoreFields(fieldNames);
-        return this;
-    }
+        => base.IgnoreFields(fieldNames) as IPostgreSqlContinuedCreate<TEntity>;
     public override IPostgreSqlContinuedCreate<TEntity> IgnoreFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector)
-    {
-        base.IgnoreFields(fieldsSelector);
-        return this;
-    }
+        => base.IgnoreFields(fieldsSelector) as IPostgreSqlContinuedCreate<TEntity>;
     #endregion
 
     #region OnlyFields
     public override IPostgreSqlContinuedCreate<TEntity> OnlyFields(params string[] fieldNames)
-    {
-        base.OnlyFields(fieldNames);
-        return this;
-    }
+        => base.OnlyFields(fieldNames) as IPostgreSqlContinuedCreate<TEntity>;
     public override IPostgreSqlContinuedCreate<TEntity> OnlyFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector)
-    {
-        base.OnlyFields(fieldsSelector);
-        return this;
-    }
+        => base.OnlyFields(fieldsSelector) as IPostgreSqlContinuedCreate<TEntity>;
     #endregion
 
     #region Returnning
@@ -84,11 +59,11 @@ public class PostgreSqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IPos
     public IPostgreSqlCreated<TEntity> OnConflict<TUpdateFields>(Expression<Func<IPostgreSqlCreateConflictDoUpdate<TEntity>, TUpdateFields>> fieldsAssignment)
     {
         this.DialectVisitor.OnConflict(fieldsAssignment);
-        return new PostgreSqlCreated<TEntity>(this.DbContext, this.Visitor);
+        return this;
     }
     #endregion     
 }
-public class PostgreSqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IPostgreSqlBulkContinuedCreate<TEntity>
+public class PostgreSqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IPostgreSqlCreated<TEntity>, IPostgreSqlBulkContinuedCreate<TEntity>
 {
     #region Properties
     public PostgreSqlCreateVisitor DialectVisitor { get; private set; }
@@ -104,51 +79,27 @@ public class PostgreSqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, 
 
     #region WithBy
     public override IPostgreSqlBulkContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj)
-    {
-        base.WithBy(insertObj);
-        return this;
-    }
+        => this.WithBy(true, insertObj);
     public override IPostgreSqlBulkContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj)
-    {
-        base.WithBy(condition, insertObj);
-        return this;
-    }
+        => base.WithBy(condition, insertObj) as IPostgreSqlBulkContinuedCreate<TEntity>;
     public override IPostgreSqlBulkContinuedCreate<TEntity> WithBy<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
-    {
-        base.WithBy(true, fieldSelector, fieldValue);
-        return this;
-    }
+        => this.WithBy(true, fieldSelector, fieldValue);
     public override IPostgreSqlBulkContinuedCreate<TEntity> WithBy<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
-    {
-        base.WithBy(condition, fieldSelector, fieldValue);
-        return this;
-    }
+        => base.WithBy(condition, fieldSelector, fieldValue) as IPostgreSqlBulkContinuedCreate<TEntity>;
     #endregion
 
     #region IgnoreFields
     public override IPostgreSqlBulkContinuedCreate<TEntity> IgnoreFields(params string[] fieldNames)
-    {
-        base.IgnoreFields(fieldNames);
-        return this;
-    }
+        => base.IgnoreFields(fieldNames) as IPostgreSqlBulkContinuedCreate<TEntity>;
     public override IPostgreSqlBulkContinuedCreate<TEntity> IgnoreFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector)
-    {
-        base.IgnoreFields(fieldsSelector);
-        return this;
-    }
+        => base.IgnoreFields(fieldsSelector) as IPostgreSqlBulkContinuedCreate<TEntity>;
     #endregion
 
     #region OnlyFields
     public override IPostgreSqlBulkContinuedCreate<TEntity> OnlyFields(params string[] fieldNames)
-    {
-        base.OnlyFields(fieldNames);
-        return this;
-    }
+        => base.OnlyFields(fieldNames) as IPostgreSqlBulkContinuedCreate<TEntity>;
     public override IPostgreSqlBulkContinuedCreate<TEntity> OnlyFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector)
-    {
-        base.OnlyFields(fieldsSelector);
-        return this;
-    }
+        => base.OnlyFields(fieldsSelector) as IPostgreSqlBulkContinuedCreate<TEntity>;
     #endregion
 
     #region Returnning
@@ -168,7 +119,7 @@ public class PostgreSqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, 
     public IPostgreSqlCreated<TEntity> OnConflict<TUpdateFields>(Expression<Func<IPostgreSqlCreateConflictDoUpdate<TEntity>, TUpdateFields>> fieldsAssignment)
     {
         this.DialectVisitor.OnConflict(fieldsAssignment);
-        return new PostgreSqlCreated<TEntity>(this.DbContext, this.Visitor);
+        return this;
     }
     #endregion
 }

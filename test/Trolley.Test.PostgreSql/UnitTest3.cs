@@ -151,7 +151,10 @@ public class UnitTest3 : UnitTestBase
                 f.Quantity
             })
             .Execute();
-        var updatedDetails = await repository.QueryAsync<OrderDetail>(f => ids.Contains(f.Id));
+        var updatedDetails = await repository.From<OrderDetail>()
+            .Where(f => ids.Contains(f.Id))
+            .OrderBy(f => f.Id)
+            .ToListAsync();
         repository.Commit();
         Assert.True(result == parameters.Count);
         for (int i = 0; i < parameters.Count; i++)
@@ -484,6 +487,7 @@ public class UnitTest3 : UnitTestBase
         var count = repository.Update<OrderDetail>(parameters);
         var orderDetails = await repository.From<OrderDetail>()
             .Where(f => new[] { "1", "2", "3", "4", "5", "6" }.Contains(f.Id))
+            .OrderBy(f => f.Id)
             .Select()
             .ToListAsync();
         repository.Commit();
@@ -825,7 +829,7 @@ public class UnitTest3 : UnitTestBase
             .Where(f => f.Nature != CompanyNature.Internet)
             .ToSql(out _);
         Assert.True(sql == "UPDATE \"sys_company\" AS a SET \"Nature\"=(SELECT b.\"Nature\" FROM \"sys_company\" b WHERE b.\"Id\"=1) WHERE a.\"Nature\"<>'Internet'");
-		repository.BeginTransaction();
+        repository.BeginTransaction();
         repository.Update<Company>()
             .Set(f => f.Nature, CompanyNature.Industry)
             .Where(f => f.Id > 1)

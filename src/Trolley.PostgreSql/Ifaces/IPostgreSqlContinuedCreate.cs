@@ -38,7 +38,22 @@ public interface IPostgreSqlContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     /// <returns>返回插入对象</returns>
     new IPostgreSqlContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用fieldValue单个字段插入，用法：
+    /// 单个字段插入，可多次调用，用法：
+    /// <code>
+    /// repository.Create&lt;User&gt;()
+    ///     .WithBy(new { Name = "kevin", Age = 25 })
+    ///     .WithBy(true, f =&gt; f.Gender, Gender.Female)
+    ///     ...
+    ///     .Execute();
+    /// SQL: INSERT INTO "sys_user" ("Name","Age","Gender", ... ) VALUES(@Name,@Age,@Gender, ... )
+    /// </summary>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="fieldSelector">字段选择表达式，只能选择单个字段</param>
+    /// <param name="fieldValue">字段值</param>
+    /// <returns>返回插入对象</returns>
+    new IPostgreSqlContinuedCreate<TEntity> WithBy<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，插入fieldSelector字段，为false则不插入，可多次调用，用法：
     /// <code>
     /// repository.Create&lt;User&gt;()
     ///     .WithBy(new { Name = "kevin", Age = 25 })
@@ -146,7 +161,22 @@ public interface IPostgreSqlBulkContinuedCreate<TEntity> : IContinuedCreate<TEnt
     /// <returns>返回插入对象</returns>
     new IPostgreSqlBulkContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用fieldValue单个字段插入，用法：
+    /// 单个字段插入，可多次调用，用法：
+    /// <code>
+    /// repository.Create&lt;User&gt;()
+    ///     .WithBy(new { Name = "kevin", Age = 25 })
+    ///     .WithBy(f =&gt; f.Gender, Gender.Female)
+    ///     ...
+    ///     .Execute();
+    /// SQL: INSERT INTO [sys_user] ([Name],[Age],[Gender], ... ) VALUES(@Name,@Age,@Gender, ... )
+    /// </summary>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="fieldSelector">字段选择表达式，只能选择单个字段</param>
+    /// <param name="fieldValue">字段值</param>
+    /// <returns>返回插入对象</returns>
+    new IPostgreSqlBulkContinuedCreate<TEntity> WithBy<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，插入fieldSelector字段，为false则不插入，可多次调用，用法：
     /// <code>
     /// repository.Create&lt;User&gt;()
     ///     .WithBy(new { Name = "kevin", Age = 25 })

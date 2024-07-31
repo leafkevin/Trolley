@@ -1,12 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq.Expressions;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Trolley.SqlServer;
 
-public class SqlServerBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, ISqlServerBulkContinuedCreate<TEntity>
+public class SqlServerBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, ISqlServerCreated<TEntity>, ISqlServerBulkContinuedCreate<TEntity>
 {
     #region Properties
     public SqlServerCreateVisitor DialectVisitor { get; private set; }
@@ -22,105 +19,39 @@ public class SqlServerBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, I
 
     #region WithBy
     public override ISqlServerBulkContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj)
-    {
-        base.WithBy(insertObj);
-        return this;
-    }
+        => this.WithBy(true, insertObj);
     public override ISqlServerBulkContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj)
-    {
-        base.WithBy(condition, insertObj);
-        return this;
-    }
+        => base.WithBy(condition, insertObj) as ISqlServerBulkContinuedCreate<TEntity>;
     public override ISqlServerBulkContinuedCreate<TEntity> WithBy<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
-    {
-        base.WithBy(true, fieldSelector, fieldValue);
-        return this;
-    }
+        => this.WithBy(true, fieldSelector, fieldValue);
     public override ISqlServerBulkContinuedCreate<TEntity> WithBy<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
-    {
-        base.WithBy(condition, fieldSelector, fieldValue);
-        return this;
-    }
+        => base.WithBy(condition, fieldSelector, fieldValue) as ISqlServerBulkContinuedCreate<TEntity>;
     #endregion
 
     #region IgnoreFields
     public override ISqlServerBulkContinuedCreate<TEntity> IgnoreFields(params string[] fieldNames)
-    {
-        base.IgnoreFields(fieldNames);
-        return this;
-    }
+        => base.IgnoreFields(fieldNames) as ISqlServerBulkContinuedCreate<TEntity>;
     public override ISqlServerBulkContinuedCreate<TEntity> IgnoreFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector)
-    {
-        base.IgnoreFields(fieldsSelector);
-        return this;
-    }
+        => base.IgnoreFields(fieldsSelector) as ISqlServerBulkContinuedCreate<TEntity>;
     #endregion
 
     #region OnlyFields
     public override ISqlServerBulkContinuedCreate<TEntity> OnlyFields(params string[] fieldNames)
-    {
-        base.OnlyFields(fieldNames);
-        return this;
-    }
+        => base.OnlyFields(fieldNames) as ISqlServerBulkContinuedCreate<TEntity>;
     public override ISqlServerBulkContinuedCreate<TEntity> OnlyFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector)
-    {
-        base.OnlyFields(fieldsSelector);
-        return this;
-    }
+        => base.OnlyFields(fieldsSelector) as ISqlServerBulkContinuedCreate<TEntity>;
     #endregion
 
     #region Output
-    public ISqlServerBulkContinuedCreate<TEntity, TResult> Output<TResult>(params string[] fieldNames)
+    public ISqlServerBulkCreated<TEntity, TResult> Output<TResult>(params string[] fieldNames)
     {
         this.DialectVisitor.Output(fieldNames);
-        return new SqlServerBulkContinuedCreate<TEntity, TResult>(this.DbContext, this.Visitor);
+        return new SqlServerBulkCreated<TEntity, TResult>(this.DbContext, this.Visitor);
     }
-    public ISqlServerBulkContinuedCreate<TEntity, TResult> Output<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector)
+    public ISqlServerBulkCreated<TEntity, TResult> Output<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector)
     {
         this.DialectVisitor.Output(fieldsSelector);
-        return new SqlServerBulkContinuedCreate<TEntity, TResult>(this.DbContext, this.Visitor);
+        return new SqlServerBulkCreated<TEntity, TResult>(this.DbContext, this.Visitor);
     }
-    #endregion
-}
-public class SqlServerBulkContinuedCreate<TEntity, TResult> : SqlServerBulkContinuedCreate<TEntity>, ISqlServerBulkContinuedCreate<TEntity, TResult>
-{
-    #region Constructor
-    public SqlServerBulkContinuedCreate(DbContext dbContext, ICreateVisitor visitor)
-        : base(dbContext, visitor) { }
-    #endregion
-
-    #region Execute
-    public new List<TResult> Execute() => this.DbContext.CreateResult<TResult>(this.Visitor);
-    public new async Task<List<TResult>> ExecuteAsync(CancellationToken cancellationToken)
-        => await this.DbContext.CreateResultAsync<TResult>(this.Visitor, cancellationToken);
-    #endregion
-
-    #region ExecuteIdentity
-    /// <summary>
-    /// 不支持的方法调用，调用Outpt方法后此方法无效，请使用Execute方法
-    /// </summary>
-    /// <returns>返回自增长主键值</returns>
-    public override int ExecuteIdentity()
-        => throw new NotSupportedException("不支持的方法调用，调用Outpt方法后此方法无效，请使用Execute方法");
-    /// <summary>
-    /// 不支持的方法调用，调用Outpt方法后此方法无效，请使用ExecuteAsync方法
-    /// </summary>
-    /// <param name="cancellationToken">取消token</param>
-    /// <returns>返回自增长主键值</returns>
-    public override Task<int> ExecuteIdentityAsync(CancellationToken cancellationToken = default)
-        => throw new NotSupportedException("不支持的方法调用，调用Outpt方法后此方法无效，请使用ExecuteAsync方法");
-    /// <summary>
-    /// 不支持的方法调用，调用Outpt方法后此方法无效，请使用Execute方法
-    /// </summary>
-    /// <returns>返回自增长主键值</returns>
-    public override long ExecuteIdentityLong()
-        => throw new NotSupportedException("不支持的方法调用，调用Outpt方法后此方法无效，请使用Execute方法");
-    /// <summary>
-    /// 不支持的方法调用，调用Outpt方法后此方法无效，请使用ExecuteAsync方法
-    /// </summary>
-    /// <param name="cancellationToken">取消token</param>
-    /// <returns>返回自增长主键值</returns>
-    public override Task<long> ExecuteIdentityLongAsync(CancellationToken cancellationToken = default)
-        => throw new NotSupportedException("不支持的方法调用，调用Outpt方法后此方法无效，请使用ExecuteAsync方法");
     #endregion
 }

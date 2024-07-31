@@ -856,6 +856,71 @@ public class UnitTest1 : UnitTestBase
         Assert.True(orderDetail.Amount == product.Price * 3);
     }
     [Fact]
+    public async void Insert_Select_From_SubQuery()
+    {
+        using var repository = dbFactory.Create();
+        var ordersQuery = repository.From<OrderDetail>()
+            .GroupBy(f => f.OrderId)
+            .Select((x, f) => new
+            {
+                Id = f.OrderId,
+                TenantId = "1",
+                OrderNo = $"ON-{f.OrderId}",
+                BuyerId = 1,
+                SellerId = 1,
+                BuyerSource = UserSourceType.Taobao.ToString(),
+                ProductCount = 2,
+                TotalAmount = x.Sum(f.Amount),
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            })
+            .AsCteTable("orders");
+        var sql = repository.Create<Order>()
+            .From(ordersQuery)
+            .ToSql(out var parameters);
+        Assert.True(sql == "INSERT INTO `sys_order` (`Id`,`TenantId`,`OrderNo`,`BuyerId`,`SellerId`,`BuyerSource`,`ProductCount`,`TotalAmount`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) WITH \r\n`orders`(`Id`,`TenantId`,`OrderNo`,`BuyerId`,`SellerId`,`BuyerSource`,`ProductCount`,`TotalAmount`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) AS \r\n(\r\nSELECT a.`OrderId`,'1',CONCAT('ON-',a.`OrderId`),1,1,'Taobao',2,SUM(a.`Amount`),1,NOW(),1,NOW(),1 FROM `sys_order_detail` a GROUP BY a.`OrderId`\r\n)\r\nSELECT b.`Id`,b.`TenantId`,b.`OrderNo`,b.`BuyerId`,b.`SellerId`,b.`BuyerSource`,b.`ProductCount`,b.`TotalAmount`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy` FROM `orders` b");
+        var orderIds = ordersQuery.Select(f => f.Id).ToList();
+        await repository.BeginTransactionAsync();
+        repository.Delete<Order>(orderIds);
+        var result = await repository.Create<Order>()
+            .From(ordersQuery)
+            .ExecuteAsync();
+        await repository.CommitAsync();
+        Assert.True(result == orderIds.Count);
+
+        sql = repository.Create<Order>()
+            .From<OrderDetail>()
+            .GroupBy(f => f.OrderId)
+            .Select((x, f) => new
+            {
+                Id = f.OrderId,
+                TenantId = "1",
+                OrderNo = $"ON-{f.OrderId}",
+                BuyerId = 1,
+                SellerId = 1,
+                BuyerSource = UserSourceType.Taobao.ToString(),
+                ProductCount = 2,
+                TotalAmount = x.Sum(f.Amount),
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            })
+            .ToSql(out parameters);
+        Assert.True(sql == "INSERT INTO `sys_order` (`Id`,`TenantId`,`OrderNo`,`BuyerId`,`SellerId`,`BuyerSource`,`ProductCount`,`TotalAmount`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) SELECT b.`OrderId`,'1',CONCAT('ON-',b.`OrderId`),1,1,'Taobao',2,SUM(b.`Amount`),1,NOW(),1,NOW(),1 FROM `sys_order_detail` b GROUP BY b.`OrderId`");
+        await repository.BeginTransactionAsync();
+        repository.Delete<Order>(orderIds);
+        result = await repository.Create<Order>()
+            .From(ordersQuery)
+            .ExecuteAsync();
+        await repository.CommitAsync();
+        Assert.True(result == orderIds.Count);
+    }
+    [Fact]
     public void Insert_Null_Field()
     {
         using var repository = dbFactory.Create();

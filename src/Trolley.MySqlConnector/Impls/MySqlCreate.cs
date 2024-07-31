@@ -19,15 +19,9 @@ public class MySqlCreate<TEntity> : Create<TEntity>, IMySqlCreate<TEntity>
 
     #region Sharding
     public override IMySqlCreate<TEntity> UseTable(string tableName)
-    {
-        base.UseTable(tableName);
-        return this;
-    }
+        => base.UseTable(tableName) as IMySqlCreate<TEntity>;
     public override IMySqlCreate<TEntity> UseTableBy(object field1Value, object field2Value = null)
-    {
-        base.UseTableBy(field1Value, field2Value);
-        return this;
-    }
+        => base.UseTableBy(field1Value, field2Value) as IMySqlCreate<TEntity>;
     #endregion
 
     #region IgnoreInto
@@ -61,9 +55,9 @@ public class MySqlCreate<TEntity> : Create<TEntity>, IMySqlCreate<TEntity>
         foreach (var insertObj in insertObjs)
         {
             isEmpty = false;
-            break;
+            break; 
         }
-        if (isEmpty) throw new Exception("批量更新，updateObjs参数至少要有一条数据");
+        if (isEmpty) throw new Exception("批量更新，insertObjs参数至少要有一条数据");
 
         this.DialectVisitor.WithBulkCopy(insertObjs, timeoutSeconds);
         return this.OrmProvider.NewCreated<TEntity>(this.DbContext, this.Visitor) as IMySqlCreated<TEntity>;

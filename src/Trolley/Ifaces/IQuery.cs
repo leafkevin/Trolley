@@ -1253,22 +1253,6 @@ public interface IQuery<T1, T2> : IQueryBase
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, TTarget>> specialMemberSelector = null);
-    /// <summary>
-    /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
-    /// <code>
-    /// .SelectAggregate((x, a, b) =&gt; new
-    /// {
-    ///     OrderCount = x.Count(a.Id),
-    ///     TotalAmount = x.Sum(a.TotalAmount)
-    /// })
-    /// </code>
-    /// 生成的SQL:
-    /// <code>SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` ... </code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型，通常是一个匿名类</typeparam>
-    /// <param name="fieldsExpr">字段选择表达式，单个或多个聚合字段的匿名对象</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, TTarget>> fieldsExpr);
     #endregion
 
     #region Count
@@ -1814,22 +1798,6 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, TTarget>> specialMemberSelector = null);
-    /// <summary>
-    /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
-    /// <code>
-    /// .SelectAggregate((x, a, b, c) =&gt; new
-    /// {
-    ///     OrderCount = x.Count(a.Id),
-    ///     TotalAmount = x.Sum(a.TotalAmount)
-    /// })
-    /// </code>
-    /// 生成的SQL:
-    /// <code>SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` ... </code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型，通常是一个匿名类</typeparam>
-    /// <param name="fieldsExpr">字段选择表达式，单个或多个聚合字段的匿名对象</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, TTarget>> fieldsExpr);
     #endregion
 
     #region Count
@@ -2376,22 +2344,6 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, TTarget>> specialMemberSelector = null);
-    /// <summary>
-    /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
-    /// <code>
-    /// .SelectAggregate((x, a, b, c, d) =&gt; new
-    /// {
-    ///     OrderCount = x.Count(a.Id),
-    ///     TotalAmount = x.Sum(a.TotalAmount)
-    /// })
-    /// </code>
-    /// 生成的SQL:
-    /// <code>SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` ... </code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型，通常是一个匿名类</typeparam>
-    /// <param name="fieldsExpr">字段选择表达式，单个或多个聚合字段的匿名对象</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, TTarget>> fieldsExpr);
     #endregion
 
     #region Count
@@ -2939,22 +2891,6 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, TTarget>> specialMemberSelector = null);
-    /// <summary>
-    /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
-    /// <code>
-    /// .SelectAggregate((x, a, b, c, d, e) =&gt; new
-    /// {
-    ///     OrderCount = x.Count(a.Id),
-    ///     TotalAmount = x.Sum(a.TotalAmount)
-    /// })
-    /// </code>
-    /// 生成的SQL:
-    /// <code>SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` ... </code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型，通常是一个匿名类</typeparam>
-    /// <param name="fieldsExpr">字段选择表达式，单个或多个聚合字段的匿名对象</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, TTarget>> fieldsExpr);
     #endregion
 
     #region Count
@@ -3503,22 +3439,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, TTarget>> specialMemberSelector = null);
-    /// <summary>
-    /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
-    /// <code>
-    /// .SelectAggregate((x, a, b, c, d, e, f) =&gt; new
-    /// {
-    ///     OrderCount = x.Count(a.Id),
-    ///     TotalAmount = x.Sum(a.TotalAmount)
-    /// })
-    /// </code>
-    /// 生成的SQL:
-    /// <code>SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` ... </code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型，通常是一个匿名类</typeparam>
-    /// <param name="fieldsExpr">字段选择表达式，单个或多个聚合字段的匿名对象</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr);
     #endregion
 
     #region Count
@@ -4068,22 +3988,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TTarget>> specialMemberSelector = null);
-    /// <summary>
-    /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
-    /// <code>
-    /// .SelectAggregate((x, a, b, c, d, e, f, g) =&gt; new
-    /// {
-    ///     OrderCount = x.Count(a.Id),
-    ///     TotalAmount = x.Sum(a.TotalAmount)
-    /// })
-    /// </code>
-    /// 生成的SQL:
-    /// <code>SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` ... </code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型，通常是一个匿名类</typeparam>
-    /// <param name="fieldsExpr">字段选择表达式，单个或多个聚合字段的匿名对象</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, TTarget>> fieldsExpr);
     #endregion
 
     #region Count
@@ -4634,22 +4538,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TTarget>> specialMemberSelector = null);
-    /// <summary>
-    /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
-    /// <code>
-    /// .SelectAggregate((x, a, b, c, d, e, f, g, h) =&gt; new
-    /// {
-    ///     OrderCount = x.Count(a.Id),
-    ///     TotalAmount = x.Sum(a.TotalAmount)
-    /// })
-    /// </code>
-    /// 生成的SQL:
-    /// <code>SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` ... </code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型，通常是一个匿名类</typeparam>
-    /// <param name="fieldsExpr">字段选择表达式，单个或多个聚合字段的匿名对象</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, TTarget>> fieldsExpr);
     #endregion
 
     #region Count
@@ -5201,22 +5089,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TTarget>> specialMemberSelector = null);
-    /// <summary>
-    /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
-    /// <code>
-    /// .SelectAggregate((x, a, b, c, d, e, f, g, h, i) =&gt; new
-    /// {
-    ///     OrderCount = x.Count(a.Id),
-    ///     TotalAmount = x.Sum(a.TotalAmount)
-    /// })
-    /// </code>
-    /// 生成的SQL:
-    /// <code>SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` ... </code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型，通常是一个匿名类</typeparam>
-    /// <param name="fieldsExpr">字段选择表达式，单个或多个聚合字段的匿名对象</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, TTarget>> fieldsExpr);
     #endregion
 
     #region Count
@@ -5769,22 +5641,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TTarget>> specialMemberSelector = null);
-    /// <summary>
-    /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
-    /// <code>
-    /// .SelectAggregate((x, a, b, c, d, e, f, g, h, i, j) =&gt; new
-    /// {
-    ///     OrderCount = x.Count(a.Id),
-    ///     TotalAmount = x.Sum(a.TotalAmount)
-    /// })
-    /// </code>
-    /// 生成的SQL:
-    /// <code>SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` ... </code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型，通常是一个匿名类</typeparam>
-    /// <param name="fieldsExpr">字段选择表达式，单个或多个聚合字段的匿名对象</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TTarget>> fieldsExpr);
     #endregion
 
     #region Count
@@ -6338,22 +6194,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TTarget>> specialMemberSelector = null);
-    /// <summary>
-    /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
-    /// <code>
-    /// .SelectAggregate((x, a, b, c, d, e, f, g, h, i, j, k) =&gt; new
-    /// {
-    ///     OrderCount = x.Count(a.Id),
-    ///     TotalAmount = x.Sum(a.TotalAmount)
-    /// })
-    /// </code>
-    /// 生成的SQL:
-    /// <code>SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` ... </code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型，通常是一个匿名类</typeparam>
-    /// <param name="fieldsExpr">字段选择表达式，单个或多个聚合字段的匿名对象</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TTarget>> fieldsExpr);
     #endregion
 
     #region Count
@@ -6908,22 +6748,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TTarget>> specialMemberSelector = null);
-    /// <summary>
-    /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
-    /// <code>
-    /// .SelectAggregate((x, a, b, c, d, e, f, g, h, i, j, k, l) =&gt; new
-    /// {
-    ///     OrderCount = x.Count(a.Id),
-    ///     TotalAmount = x.Sum(a.TotalAmount)
-    /// })
-    /// </code>
-    /// 生成的SQL:
-    /// <code>SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` ... </code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型，通常是一个匿名类</typeparam>
-    /// <param name="fieldsExpr">字段选择表达式，单个或多个聚合字段的匿名对象</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TTarget>> fieldsExpr);
     #endregion
 
     #region Count
@@ -7479,22 +7303,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TTarget>> specialMemberSelector = null);
-    /// <summary>
-    /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
-    /// <code>
-    /// .SelectAggregate((x, a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; new
-    /// {
-    ///     OrderCount = x.Count(a.Id),
-    ///     TotalAmount = x.Sum(a.TotalAmount)
-    /// })
-    /// </code>
-    /// 生成的SQL:
-    /// <code>SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` ... </code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型，通常是一个匿名类</typeparam>
-    /// <param name="fieldsExpr">字段选择表达式，单个或多个聚合字段的匿名对象</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TTarget>> fieldsExpr);
     #endregion
 
     #region Count
@@ -8051,22 +7859,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TTarget>> specialMemberSelector = null);
-    /// <summary>
-    /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
-    /// <code>
-    /// .SelectAggregate((x, a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; new
-    /// {
-    ///     OrderCount = x.Count(a.Id),
-    ///     TotalAmount = x.Sum(a.TotalAmount)
-    /// })
-    /// </code>
-    /// 生成的SQL:
-    /// <code>SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` ... </code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型，通常是一个匿名类</typeparam>
-    /// <param name="fieldsExpr">字段选择表达式，单个或多个聚合字段的匿名对象</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TTarget>> fieldsExpr);
     #endregion
 
     #region Count
@@ -8624,22 +8416,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> specialMemberSelector = null);
-    /// <summary>
-    /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
-    /// <code>
-    /// .SelectAggregate((x, a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; new
-    /// {
-    ///     OrderCount = x.Count(a.Id),
-    ///     TotalAmount = x.Sum(a.TotalAmount)
-    /// })
-    /// </code>
-    /// 生成的SQL:
-    /// <code>SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` ... </code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型，通常是一个匿名类</typeparam>
-    /// <param name="fieldsExpr">字段选择表达式，单个或多个聚合字段的匿名对象</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> fieldsExpr);
     #endregion
 
     #region Count

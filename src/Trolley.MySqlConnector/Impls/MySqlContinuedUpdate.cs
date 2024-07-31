@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Trolley.MySqlConnector;
 
-public class MySqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IMySqlContinuedUpdate<TEntity>
+public class MySqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IMySqlUpdated<TEntity>, IMySqlContinuedUpdate<TEntity>
 {
     #region Properties
     public MySqlUpdateVisitor DialectVisitor { get; private set; }
@@ -23,112 +23,58 @@ public class MySqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IMySqlCon
 
     #region Set
     public override IMySqlContinuedUpdate<TEntity> Set<TUpdateObj>(TUpdateObj updateObj)
-    {
-        base.Set(updateObj);
-        return this;
-    }
+        => this.Set(true, updateObj);
     public override IMySqlContinuedUpdate<TEntity> Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
-    {
-        base.Set(condition, updateObj);
-        return this;
-    }
+        => base.Set(condition, updateObj) as IMySqlContinuedUpdate<TEntity>;
     public override IMySqlContinuedUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
-    {
-        base.Set(fieldSelector, fieldValue);
-        return this;
-    }
+        => this.Set(true, fieldSelector, fieldValue);
     public override IMySqlContinuedUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
-    {
-        base.Set(condition, fieldSelector, fieldValue);
-        return this;
-    }
+        => base.Set(condition, fieldSelector, fieldValue) as IMySqlContinuedUpdate<TEntity>;
     public override IMySqlContinuedUpdate<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsAssignment)
-    {
-        base.Set(fieldsAssignment);
-        return this;
-    }
+        => this.Set(true, fieldsAssignment);
     public override IMySqlContinuedUpdate<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment)
-    {
-        base.Set(condition, fieldsAssignment);
-        return this;
-    }
+        => base.Set(condition, fieldsAssignment) as IMySqlContinuedUpdate<TEntity>;
     #endregion
 
     #region SetFrom
     public override IMySqlContinuedUpdate<TEntity> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
-    {
-        base.SetFrom(fieldSelector, valueSelector);
-        return this;
-    }
+        => this.SetFrom(true, fieldSelector, valueSelector);
     public override IMySqlContinuedUpdate<TEntity> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
-    {
-        base.SetFrom(condition, fieldSelector, valueSelector);
-        return this;
-    }
+        => base.SetFrom(condition, fieldSelector, valueSelector) as IMySqlContinuedUpdate<TEntity>;
     public override IMySqlContinuedUpdate<TEntity> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
-    {
-        base.SetFrom(fieldsAssignment);
-        return this;
-    }
+        => this.SetFrom(true, fieldsAssignment);
     public override IMySqlContinuedUpdate<TEntity> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
-    {
-        base.SetFrom(condition, fieldsAssignment);
-        return this;
-    }
+        => base.SetFrom(condition, fieldsAssignment) as IMySqlContinuedUpdate<TEntity>;
     #endregion
 
     #region IgnoreFields
     public override IMySqlContinuedUpdate<TEntity> IgnoreFields(params string[] fieldNames)
-    {
-        base.IgnoreFields(fieldNames);
-        return this;
-    }
+        => base.IgnoreFields(fieldNames) as IMySqlContinuedUpdate<TEntity>;
     public override IMySqlContinuedUpdate<TEntity> IgnoreFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector)
-    {
-        base.IgnoreFields(fieldsSelector);
-        return this;
-    }
+        => base.IgnoreFields(fieldsSelector) as IMySqlContinuedUpdate<TEntity>;
     #endregion
 
     #region OnlyFields
     public override IMySqlContinuedUpdate<TEntity> OnlyFields(params string[] fieldNames)
-    {
-        base.OnlyFields(fieldNames);
-        return this;
-    }
+        => base.OnlyFields(fieldNames) as IMySqlContinuedUpdate<TEntity>;
     public override IMySqlContinuedUpdate<TEntity> OnlyFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector)
-    {
-        base.OnlyFields(fieldsSelector);
-        return this;
-    }
+        => base.OnlyFields(fieldsSelector) as IMySqlContinuedUpdate<TEntity>;
     #endregion
 
     #region Where/And
     public override IMySqlUpdated<TEntity> Where<TWhereObj>(TWhereObj whereObj)
     {
         base.Where(whereObj);
-        return this.OrmProvider.NewUpdated<TEntity>(this.DbContext, this.Visitor) as IMySqlUpdated<TEntity>;
+        return this;
     }
     public override IMySqlContinuedUpdate<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
-    {
-        base.Where(predicate);
-        return this;
-    }
+        => this.Where(true, predicate);
     public override IMySqlContinuedUpdate<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
-    {
-        base.Where(condition, ifPredicate, elsePredicate);
-        return this;
-    }
+        => base.Where(condition, ifPredicate, elsePredicate) as IMySqlContinuedUpdate<TEntity>;
     public override IMySqlContinuedUpdate<TEntity> And(Expression<Func<TEntity, bool>> predicate)
-    {
-        base.And(predicate);
-        return this;
-    }
+        => this.And(true, predicate);
     public override IMySqlContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
-    {
-        base.And(condition, ifPredicate, elsePredicate);
-        return this;
-    }
+        => base.And(condition, ifPredicate, elsePredicate) as IMySqlContinuedUpdate<TEntity>;
     #endregion
 
     #region ToSql

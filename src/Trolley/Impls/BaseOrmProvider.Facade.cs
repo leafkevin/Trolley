@@ -56,19 +56,19 @@ partial class BaseOrmProvider
     public virtual IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> NewGroupQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>(DbContext dbContext, IQueryVisitor visitor) => new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>(dbContext, visitor);
     public virtual IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping> NewGroupQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping>(DbContext dbContext, IQueryVisitor visitor) => new GroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping>(dbContext, visitor);
 
-    public virtual IFromCommand<T> NewFromCommand<T>(Type entityType, DbContext dbContext, IQueryVisitor visitor) => new FromCommand<T>(entityType, dbContext, visitor);
-    public virtual IFromCommand<T1, T2> NewFromCommand<T1, T2>(Type entityType, DbContext dbContext, IQueryVisitor visitor) => new FromCommand<T1, T2>(entityType, dbContext, visitor);
-    public virtual IFromCommand<T1, T2, T3> NewFromCommand<T1, T2, T3>(Type entityType, DbContext dbContext, IQueryVisitor visitor) => new FromCommand<T1, T2, T3>(entityType, dbContext, visitor);
-    public virtual IFromCommand<T1, T2, T3, T4> NewFromCommand<T1, T2, T3, T4>(Type entityType, DbContext dbContext, IQueryVisitor visitor) => new FromCommand<T1, T2, T3, T4>(entityType, dbContext, visitor);
-    public virtual IFromCommand<T1, T2, T3, T4, T5> NewFromCommand<T1, T2, T3, T4, T5>(Type entityType, DbContext dbContext, IQueryVisitor visitor) => new FromCommand<T1, T2, T3, T4, T5>(entityType, dbContext, visitor);
-    public virtual IFromCommand<T1, T2, T3, T4, T5, T6> NewFromCommand<T1, T2, T3, T4, T5, T6>(Type entityType, DbContext dbContext, IQueryVisitor visitor) => new FromCommand<T1, T2, T3, T4, T5, T6>(entityType, dbContext, visitor);
+    public virtual IFromCommand<T> NewFromCommand<T>(DbContext dbContext, IQueryVisitor visitor) => new FromCommand<T>(dbContext, visitor);
+    public virtual IFromCommand<T1, T2> NewFromCommand<T1, T2>(DbContext dbContext, IQueryVisitor visitor) => new FromCommand<T1, T2>(dbContext, visitor);
+    public virtual IFromCommand<T1, T2, T3> NewFromCommand<T1, T2, T3>(DbContext dbContext, IQueryVisitor visitor) => new FromCommand<T1, T2, T3>(dbContext, visitor);
+    public virtual IFromCommand<T1, T2, T3, T4> NewFromCommand<T1, T2, T3, T4>(DbContext dbContext, IQueryVisitor visitor) => new FromCommand<T1, T2, T3, T4>(dbContext, visitor);
+    public virtual IFromCommand<T1, T2, T3, T4, T5> NewFromCommand<T1, T2, T3, T4, T5>(DbContext dbContext, IQueryVisitor visitor) => new FromCommand<T1, T2, T3, T4, T5>(dbContext, visitor);
+    public virtual IFromCommand<T1, T2, T3, T4, T5, T6> NewFromCommand<T1, T2, T3, T4, T5, T6>(DbContext dbContext, IQueryVisitor visitor) => new FromCommand<T1, T2, T3, T4, T5, T6>(dbContext, visitor);
 
-    public virtual IGroupingCommand<T, TGrouping> NewGroupCommand<T, TGrouping>(Type entityType, DbContext dbContext, IQueryVisitor visitor) => new GroupingCommand<T, TGrouping>(entityType, dbContext, visitor);
-    public virtual IGroupingCommand<T1, T2, TGrouping> NewGroupCommand<T1, T2, TGrouping>(Type entityType, DbContext dbContext, IQueryVisitor visitor) => new GroupingCommand<T1, T2, TGrouping>(entityType, dbContext, visitor);
-    public virtual IGroupingCommand<T1, T2, T3, TGrouping> NewGroupCommand<T1, T2, T3, TGrouping>(Type entityType, DbContext dbContext, IQueryVisitor visitor) => new GroupingCommand<T1, T2, T3, TGrouping>(entityType, dbContext, visitor);
-    public virtual IGroupingCommand<T1, T2, T3, T4, TGrouping> NewGroupCommand<T1, T2, T3, T4, TGrouping>(Type entityType, DbContext dbContext, IQueryVisitor visitor) => new GroupingCommand<T1, T2, T3, T4, TGrouping>(entityType, dbContext, visitor);
-    public virtual IGroupingCommand<T1, T2, T3, T4, T5, TGrouping> NewGroupCommand<T1, T2, T3, T4, T5, TGrouping>(Type entityType, DbContext dbContext, IQueryVisitor visitor) => new GroupingCommand<T1, T2, T3, T4, T5, TGrouping>(entityType, dbContext, visitor);
-    public virtual IGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> NewGroupCommand<T1, T2, T3, T4, T5, T6, TGrouping>(Type entityType, DbContext dbContext, IQueryVisitor visitor) => new GroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping>(entityType, dbContext, visitor);
+    public virtual IGroupingCommand<T, TGrouping> NewGroupCommand<T, TGrouping>(DbContext dbContext, IQueryVisitor visitor) => new GroupingCommand<T, TGrouping>(dbContext, visitor);
+    public virtual IGroupingCommand<T1, T2, TGrouping> NewGroupCommand<T1, T2, TGrouping>(DbContext dbContext, IQueryVisitor visitor) => new GroupingCommand<T1, T2, TGrouping>(dbContext, visitor);
+    public virtual IGroupingCommand<T1, T2, T3, TGrouping> NewGroupCommand<T1, T2, T3, TGrouping>(DbContext dbContext, IQueryVisitor visitor) => new GroupingCommand<T1, T2, T3, TGrouping>(dbContext, visitor);
+    public virtual IGroupingCommand<T1, T2, T3, T4, TGrouping> NewGroupCommand<T1, T2, T3, T4, TGrouping>(DbContext dbContext, IQueryVisitor visitor) => new GroupingCommand<T1, T2, T3, T4, TGrouping>(dbContext, visitor);
+    public virtual IGroupingCommand<T1, T2, T3, T4, T5, TGrouping> NewGroupCommand<T1, T2, T3, T4, T5, TGrouping>(DbContext dbContext, IQueryVisitor visitor) => new GroupingCommand<T1, T2, T3, T4, T5, TGrouping>(dbContext, visitor);
+    public virtual IGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> NewGroupCommand<T1, T2, T3, T4, T5, T6, TGrouping>(DbContext dbContext, IQueryVisitor visitor) => new GroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping>(dbContext, visitor);
 
     public virtual IMultiQuery<T> NewMultiQuery<T>(MultipleQuery multiQuery, IQueryVisitor visitor) => new MultiQuery<T>(multiQuery, visitor);
     public virtual IMultiQuery<T1, T2> NewMultiQuery<T1, T2>(MultipleQuery multiQuery, IQueryVisitor visitor) => new MultiQuery<T1, T2>(multiQuery, visitor);

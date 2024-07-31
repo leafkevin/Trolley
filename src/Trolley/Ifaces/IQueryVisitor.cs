@@ -38,10 +38,11 @@ public interface IQueryVisitor : IDisposable
     int PageSize { get; set; }
     bool IsNeedFetchShardingTables { get; }
     List<TableSegment> ShardingTables { get; set; }
+    bool IsFromQuery { get; set; }
     bool IsFromCommand { get; set; }
 
     string BuildSql(out List<ReaderField> readerFields);
-    string BuildCommandSql(Type targetType, out IDataParameterCollection dbParameters);
+    string BuildCommandSql(out IDataParameterCollection dbParameters);
     string BuildCteTableSql(string tableName, out List<ReaderField> readerFields, out bool isRecursive);
 
     string BuildShardingTablesSql(string tableSchema);

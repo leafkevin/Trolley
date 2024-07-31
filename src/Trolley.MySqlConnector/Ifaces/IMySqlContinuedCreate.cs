@@ -38,7 +38,22 @@ public interface IMySqlContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     /// <returns>返回插入对象</returns>
     new IMySqlContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用fieldValue单个字段插入，用法：
+    /// 单个字段插入，可多次调用，用法：
+    /// <code>
+    /// repository.Create&lt;User&gt;()
+    ///     .WithBy(new { Name = "kevin", Age = 25 })
+    ///     .WithBy(f =&gt; f.Gender, Gender.Female)
+    ///     ...
+    ///     .Execute();
+    /// SQL: INSERT INTO `sys_user` (`Name`,`Age`,`Gender`, ... ) VALUES(@Name,@Age,@Gender, ... )
+    /// </summary>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="fieldSelector">字段选择表达式，只能选择单个字段</param>
+    /// <param name="fieldValue">字段值</param>
+    /// <returns>返回插入对象</returns>
+    new IMySqlContinuedCreate<TEntity> WithBy<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，插入fieldSelector字段，为false则不插入，可多次调用，用法：
     /// <code>
     /// repository.Create&lt;User&gt;()
     ///     .WithBy(new { Name = "kevin", Age = 25 })
@@ -106,18 +121,18 @@ public interface IMySqlContinuedCreate<TEntity> : IContinuedCreate<TEntity>
 
     #region Returning
     /// <summary>
-    /// mariadb数据库支持
+    /// 返回插入后想要返回字段的内容，仅mariadb数据库支持
     /// </summary>
-    /// <typeparam name="TResult"></typeparam>
-    /// <param name="fieldNames"></param>
-    /// <returns></returns>
+    /// <typeparam name="TResult">返回类型</typeparam>
+    /// <param name="fieldNames">字段名称列表</param>
+    /// <returns>返回插入的部分字段</returns>
     IMySqlCreated<TEntity, TResult> Returning<TResult>(params string[] fieldNames);
     /// <summary>
-    /// mariadb数据库支持
+    /// 返回插入后想要返回字段的内容，仅mariadb数据库支持
     /// </summary>
-    /// <typeparam name="TResult"></typeparam>
-    /// <param name="fieldsSelector"></param>
-    /// <returns></returns>
+    /// <typeparam name="TResult">返回类型</typeparam>
+    /// <param name="fieldsSelector">字段筛选表达式</param>
+    /// <returns>返回插入的部分字段</returns>
     IMySqlCreated<TEntity, TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector);
     #endregion
 }
@@ -153,7 +168,23 @@ public interface IMySqlBulkContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     /// <returns>返回插入对象</returns>
     new IMySqlBulkContinuedCreate<TEntity> WithBy<TInsertObject>(bool condition, TInsertObject insertObj);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用fieldValue单个字段插入，用法：
+    /// 单个字段插入，可多次调用，用法：
+    /// <code>
+    /// repository.Create&lt;User&gt;()
+    ///     .WithBy(new { Name = "kevin", Age = 25 })
+    ///     .WithBy(f =&gt; f.Gender, Gender.Female)
+    ///     ...
+    ///     .Execute();
+    /// SQL: INSERT INTO [sys_user] ([Name],[Age],[Gender], ... ) VALUES(@Name,@Age,@Gender, ... )
+    /// </summary>
+    /// <typeparam name="TField">字段类型</typeparam>
+    /// <param name="condition">判断条件</param>
+    /// <param name="fieldSelector">字段选择表达式，只能选择单个字段</param>
+    /// <param name="fieldValue">字段值</param>
+    /// <returns>返回插入对象</returns>
+    new IMySqlBulkContinuedCreate<TEntity> WithBy<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，插入fieldSelector字段，为false则不插入，可多次调用，用法：
     /// <code>
     /// repository.Create&lt;User&gt;()
     ///     .WithBy(new { Name = "kevin", Age = 25 })

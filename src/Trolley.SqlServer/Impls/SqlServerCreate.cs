@@ -19,13 +19,15 @@ public class SqlServerCreate<TEntity> : Create<TEntity>, ISqlServerCreate<TEntit
 
     #region Sharding
     public override ISqlServerCreate<TEntity> UseTable(string tableName)
-    {
-        base.UseTable(tableName);
-        return this;
-    }
+        => base.UseTable(tableName) as ISqlServerCreate<TEntity>;
     public override ISqlServerCreate<TEntity> UseTableBy(object field1Value, object field2Value = null)
+        => base.UseTableBy(field1Value, field2Value) as ISqlServerCreate<TEntity>;
+    #endregion
+
+    #region WithLock
+    public ISqlServerCreate<TEntity> WithLock(string lockName)
     {
-        base.UseTableBy(field1Value, field2Value);
+        this.DialectVisitor.WithLock(lockName);
         return this;
     }
     #endregion

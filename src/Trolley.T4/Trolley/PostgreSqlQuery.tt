@@ -266,13 +266,6 @@ public class PostgreSqlQuery<<#=tables#>> : Query<<#=tables#>>, IPostgreSqlQuery
         => base.Select(fieldsExpr) as IPostgreSqlQuery<TTarget>;
     public override IPostgreSqlQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<<#=tables#>, TTarget>> specialMemberSelector = null)
         => base.SelectFlattenTo(specialMemberSelector) as IPostgreSqlQuery<TTarget>;
-<#
-        if(i < count)
-        {
-#>
-    public override IPostgreSqlQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, <#=tables#>, TTarget>> fieldsExpr)
-        => base.SelectAggregate(fieldsExpr) as IPostgreSqlQuery<TTarget>;
-<#      }#>
     #endregion
 }
 <#  }#>

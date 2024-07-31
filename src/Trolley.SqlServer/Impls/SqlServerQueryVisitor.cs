@@ -47,13 +47,11 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
         if (this.Tables.Count > 0)
         {
             //每个表都要有单独的GUID值，否则有类似的表前缀名，也会被替换导致表名替换错误
-            int startIndex = 0;
-            if (this.IsFromCommand) startIndex = 1;
-            for (int i = startIndex; i < this.Tables.Count; i++)
+            for (int i = 0; i < this.Tables.Count; i++)
             {
                 var tableSegment = this.Tables[i];
                 string tableName = this.GetTableName(tableSegment);
-                if (i > startIndex)
+                if (i > 0)
                 {
                     if (!string.IsNullOrEmpty(tableSegment.JoinType))
                     {
@@ -143,12 +141,14 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
         builder = null;
         return sql;
     }
-    public override string BuildCommandSql(Type targetType, out IDataParameterCollection dbParameters)
+    public override string BuildCommandSql(out IDataParameterCollection dbParameters)
     {
         var builder = new StringBuilder();
         var entityMapper = this.Tables[0].Mapper;
         builder.Append($"INSERT INTO {this.GetTableName(this.Tables[0])} (");
         int index = 0;
+        if (this.ReaderFields == null && this.IsFromQuery)
+            this.ReaderFields = this.Tables[1].ReaderFields;
         foreach (var readerField in this.ReaderFields)
         {
             //Union后，如果没有select语句时，通常实体类型或是select分组对象
@@ -165,6 +165,8 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
         //有CTE表
         if (this.IsUseCteTable && this.RefQueries != null && this.RefQueries.Count > 0)
         {
+            var fieldsSql = builder.ToString();
+            builder.Clear();
             var cteQueries = this.FlattenRefCteTables(this.RefQueries);
             if (cteQueries.Count > 0)
             {
@@ -176,6 +178,7 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
                 builder.Insert(0, "WITH ");
                 builder.AppendLine();
             }
+            builder.Append(fieldsSql);
         }
         dbParameters = this.DbParameters;
         string sql = null;
@@ -195,13 +198,11 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
         bool isManySharding = false;
         if (this.Tables.Count > 0)
         {
-            int startIndex = 0;
-            if (this.IsFromCommand) startIndex = 1;
-            for (int i = startIndex; i < this.Tables.Count; i++)
+            for (int i = 1; i < this.Tables.Count; i++)
             {
                 var tableSegment = this.Tables[i];
                 string tableName = this.GetTableName(tableSegment);
-                if (i > startIndex)
+                if (i > 1)
                 {
                     if (!string.IsNullOrEmpty(tableSegment.JoinType))
                     {

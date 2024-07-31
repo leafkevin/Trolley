@@ -1024,27 +1024,6 @@ public interface IPostgreSqlQuery<<#=tables#>> : IQuery<<#=tables#>>
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<<#=tables#>, TTarget>> specialMemberSelector = null);
-<#
-        if(i < count)
-        {
-#>
-    /// <summary>
-    /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
-    /// <code>
-    /// .SelectAggregate((x, <#=tableAlias#>) =&gt; new
-    /// {
-    ///     OrderCount = x.Count(a.Id),
-    ///     TotalAmount = x.Sum(a.TotalAmount)
-    /// })
-    /// </code>
-    /// 生成的SQL:
-    /// <code>SELECT COUNT("Id") AS "OrderCount",SUM("TotalAmount") AS "TotalAmount" ... </code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型，通常是一个匿名类</typeparam>
-    /// <param name="fieldsExpr">字段选择表达式，单个或多个聚合字段的匿名对象</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, <#=tables#>, TTarget>> fieldsExpr);
-<#      }#>
     #endregion
 }
 <#  }#>

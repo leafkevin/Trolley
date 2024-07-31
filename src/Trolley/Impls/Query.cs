@@ -8,14 +8,8 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-public class QueryBase : IQueryBase
-{
-    #region Properties
-    public virtual DbContext DbContext { get; private set; }
-    public virtual IQueryVisitor Visitor { get; protected set; }
-    public virtual IOrmProvider OrmProvider => this.DbContext.OrmProvider;
-    #endregion
-
+public class QueryBase : QueryInternal, IQueryBase
+{  
     #region Constructor
     public QueryBase(DbContext dbContext, IQueryVisitor visitor)
     {
@@ -31,6 +25,121 @@ public class QueryBase : IQueryBase
     public virtual long LongCount() => this.QueryFirstValue<long>("COUNT(1)");
     public virtual async Task<long> LongCountAsync(CancellationToken cancellationToken = default)
         => await this.QueryFirstValueAsync<long>("COUNT(1)", null, cancellationToken);
+    #endregion
+
+    #region Count/Aggregate Internal
+    protected int CountInternal<TField>(Expression fieldExpr)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
+    }
+    protected async Task<int> CountInternalAsync<TField>(Expression fieldExpr, CancellationToken cancellationToken = default)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<int>("COUNT({0})", fieldExpr, cancellationToken);
+    }
+    protected int CountDistinctInternal<TField>(Expression fieldExpr)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<int>("COUNT(DISTINCT {0})", fieldExpr);
+    }
+    protected async Task<int> CountDistinctInternalAsync<TField>(Expression fieldExpr, CancellationToken cancellationToken = default)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<int>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+    }
+    protected long LongCountInternal<TField>(Expression fieldExpr)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<long>("COUNT({0})", fieldExpr);
+    }
+    protected async Task<long> LongCountInternalAsync<TField>(Expression fieldExpr, CancellationToken cancellationToken = default)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<long>("COUNT({0})", fieldExpr, cancellationToken);
+    }
+    protected long LongCountDistinctInternal<TField>(Expression fieldExpr)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<long>("COUNT(DISTINCT {0})", fieldExpr);
+    }
+    protected async Task<long> LongCountDistinctInternalAsync<TField>(Expression fieldExpr, CancellationToken cancellationToken = default)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<long>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
+    }
+    protected TField SumInternal<TField>(Expression fieldExpr)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<TField>("SUM({0})", fieldExpr);
+    }
+    protected async Task<TField> SumInternalAsync<TField>(Expression fieldExpr, CancellationToken cancellationToken = default)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<TField>("SUM({0})", fieldExpr, cancellationToken);
+    }
+    protected TField AvgInternal<TField>(Expression fieldExpr)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<TField>("AVG({0})", fieldExpr);
+    }
+    protected async Task<TField> AvgInternalAsync<TField>(Expression fieldExpr, CancellationToken cancellationToken = default)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<TField>("AVG({0})", fieldExpr, cancellationToken);
+    }
+    protected TField MaxInternal<TField>(Expression fieldExpr)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<TField>("MAX({0})", fieldExpr);
+    }
+    protected async Task<TField> MaxInternalAsync<TField>(Expression fieldExpr, CancellationToken cancellationToken = default)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<TField>("MAX({0})", fieldExpr, cancellationToken);
+    }
+    protected TField MinInternal<TField>(Expression fieldExpr)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return this.QueryFirstValue<TField>("MIN({0})", fieldExpr);
+    }
+    protected async Task<TField> MinInternalAsync<TField>(Expression fieldExpr, CancellationToken cancellationToken = default)
+    {
+        if (fieldExpr == null)
+            throw new ArgumentNullException(nameof(fieldExpr));
+
+        return await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
+    }
     #endregion
 
     #region ToSql
@@ -118,52 +227,32 @@ public class Query<T> : QueryBase, IQuery<T>
     #region Union/UnionAll
     public virtual IQuery<T> Union(IQuery<T> subQuery)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
-
-        this.Visitor.Union(" UNION", typeof(T), subQuery);
+        base.UnionInternal(subQuery);
         return this;
     }
     public virtual IQuery<T> Union(Func<IFromQuery, IQuery<T>> subQuery)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
-
-        this.Visitor.Union(" UNION", typeof(T), this.DbContext, subQuery);
+        base.UnionInternal(subQuery);
         return this;
     }
     public virtual IQuery<T> UnionAll(IQuery<T> subQuery)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
-
-        this.Visitor.Union(" UNION ALL", typeof(T), subQuery);
+        base.UnionAllInternal(subQuery);
         return this;
     }
     public virtual IQuery<T> UnionAll(Func<IFromQuery, IQuery<T>> subQuery)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
-
-        this.Visitor.Union(" UNION ALL", typeof(T), this.DbContext, subQuery);
+        base.UnionAllInternal(subQuery);
         return this;
     }
     public virtual IQuery<T> UnionRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQuery)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
-
-        var cteQuery = new CteQuery<T>(this);
-        this.Visitor.UnionRecursive(" UNION", this.DbContext, cteQuery, subQuery);
+        base.UnionRecursiveInternal(subQuery);
         return this;
     }
     public virtual IQuery<T> UnionAllRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQuery)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
-
-        var cteQuery = new CteQuery<T>(this);
-        this.Visitor.UnionRecursive(" UNION ALL", this.DbContext, cteQuery, subQuery);
+        base.UnionAllRecursiveInternal(subQuery);
         return this;
     }
     #endregion
@@ -277,18 +366,12 @@ public class Query<T> : QueryBase, IQuery<T>
     #region Include
     public virtual IIncludableQuery<T, TMember> Include<TMember>(Expression<Func<T, TMember>> memberSelector)
     {
-        if (memberSelector == null)
-            throw new ArgumentNullException(nameof(memberSelector));
-
-        this.Visitor.Include(memberSelector);
+        base.IncludeInternal<TMember>(memberSelector);
         return this.OrmProvider.NewIncludableQuery<T, TMember>(this.DbContext, this.Visitor);
     }
     public virtual IIncludableQuery<T, TElment> IncludeMany<TElment>(Expression<Func<T, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
-        if (memberSelector == null)
-            throw new ArgumentNullException(nameof(memberSelector));
-
-        this.Visitor.Include(memberSelector, true, filter);
+        base.IncludeManyInternal<TElment>(memberSelector);
         return this.OrmProvider.NewIncludableQuery<T, TElment>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -296,38 +379,22 @@ public class Query<T> : QueryBase, IQuery<T>
     #region Where/And
     public virtual IQuery<T> Where(Expression<Func<T, bool>> predicate)
     {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        this.Visitor.Where(predicate);
+        base.WhereInternal(predicate);
         return this;
     }
     public virtual IQuery<T> Where(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
-        if (condition)
-            this.Visitor.Where(ifPredicate);
-        else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
+        base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
     public virtual IQuery<T> And(Expression<Func<T, bool>> predicate)
     {
-        if (predicate == null)
-            throw new ArgumentNullException(nameof(predicate));
-
-        this.Visitor.And(predicate);
+        base.AndInternal(predicate);
         return this;
     }
     public virtual IQuery<T> And(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
-        if (condition)
-            this.Visitor.And(ifPredicate);
-        else if (elsePredicate != null) this.Visitor.And(elsePredicate);
+        base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
     #endregion
@@ -335,10 +402,7 @@ public class Query<T> : QueryBase, IQuery<T>
     #region GroupBy
     public virtual IGroupingQuery<T, TGrouping> GroupBy<TGrouping>(Expression<Func<T, TGrouping>> groupingExpr)
     {
-        if (groupingExpr == null)
-            throw new ArgumentNullException(nameof(groupingExpr));
-
-        this.Visitor.GroupBy(groupingExpr);
+        base.GroupByInternal(groupingExpr);
         return this.OrmProvider.NewGroupQuery<T, TGrouping>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -348,22 +412,14 @@ public class Query<T> : QueryBase, IQuery<T>
         => this.OrderBy(true, fieldsExpr);
     public virtual IQuery<T> OrderBy<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
-        if (condition)
-            this.Visitor.OrderBy("ASC", fieldsExpr);
+        base.OrderByInternal(condition, fieldsExpr);
         return this;
     }
     public virtual IQuery<T> OrderByDescending<TFields>(Expression<Func<T, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
     public virtual IQuery<T> OrderByDescending<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
-        if (condition)
-            this.Visitor.OrderBy("DESC", fieldsExpr);
+        base.OrderByDescendingInternal(condition, fieldsExpr);
         return this;
     }
     #endregion
@@ -377,10 +433,7 @@ public class Query<T> : QueryBase, IQuery<T>
     }
     public virtual IQuery<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
-        this.Visitor.Select(null, fieldsExpr);
+        base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T, TTarget>> specialMemberSelector = null)
@@ -390,10 +443,7 @@ public class Query<T> : QueryBase, IQuery<T>
     }
     public virtual IQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
-        this.Visitor.Select(null, fieldsExpr);
+        base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -445,120 +495,40 @@ public class Query<T> : QueryBase, IQuery<T>
 
     #region Count
     public virtual int Count<TField>(Expression<Func<T, TField>> fieldExpr)
-    {
-        if (fieldExpr == null)
-            throw new ArgumentNullException(nameof(fieldExpr));
-
-        return this.QueryFirstValue<int>("COUNT({0})", fieldExpr);
-    }
+        => base.CountInternal<TField>(fieldExpr);
     public virtual async Task<int> CountAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
-    {
-        if (fieldExpr == null)
-            throw new ArgumentNullException(nameof(fieldExpr));
-
-        return await this.QueryFirstValueAsync<int>("COUNT({0})", fieldExpr, cancellationToken);
-    }
+        => await base.CountInternalAsync<TField>(fieldExpr, cancellationToken);
     public virtual int CountDistinct<TField>(Expression<Func<T, TField>> fieldExpr)
-    {
-        if (fieldExpr == null)
-            throw new ArgumentNullException(nameof(fieldExpr));
-
-        return this.QueryFirstValue<int>("COUNT(DISTINCT {0})", fieldExpr);
-    }
+        => base.CountDistinctInternal<TField>(fieldExpr);
     public virtual async Task<int> CountDistinctAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
-    {
-        if (fieldExpr == null)
-            throw new ArgumentNullException(nameof(fieldExpr));
-
-        return await this.QueryFirstValueAsync<int>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
-    }
+        => await base.CountDistinctInternalAsync<TField>(fieldExpr, cancellationToken);
     public virtual long LongCount<TField>(Expression<Func<T, TField>> fieldExpr)
-    {
-        if (fieldExpr == null)
-            throw new ArgumentNullException(nameof(fieldExpr));
-
-        return this.QueryFirstValue<long>("COUNT({0})", fieldExpr);
-    }
+        => base.LongCountInternal<TField>(fieldExpr);
     public virtual async Task<long> LongCountAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
-    {
-        if (fieldExpr == null)
-            throw new ArgumentNullException(nameof(fieldExpr));
-
-        return await this.QueryFirstValueAsync<long>("COUNT({0})", fieldExpr, cancellationToken);
-    }
+        => await base.LongCountInternalAsync<TField>(fieldExpr, cancellationToken);
     public virtual long LongCountDistinct<TField>(Expression<Func<T, TField>> fieldExpr)
-    {
-        if (fieldExpr == null)
-            throw new ArgumentNullException(nameof(fieldExpr));
-
-        return this.QueryFirstValue<long>("COUNT(DISTINCT {0})", fieldExpr);
-    }
+        => base.LongCountDistinctInternal<TField>(fieldExpr);
     public virtual async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
-    {
-        if (fieldExpr == null)
-            throw new ArgumentNullException(nameof(fieldExpr));
-
-        return await this.QueryFirstValueAsync<long>("COUNT(DISTINCT {0})", fieldExpr, cancellationToken);
-    }
+        => await base.LongCountDistinctInternalAsync<TField>(fieldExpr);
     #endregion
 
     #region Aggregate
     public virtual TField Sum<TField>(Expression<Func<T, TField>> fieldExpr)
-    {
-        if (fieldExpr == null)
-            throw new ArgumentNullException(nameof(fieldExpr));
-
-        return this.QueryFirstValue<TField>("SUM({0})", fieldExpr);
-    }
+        => base.SumInternal<TField>(fieldExpr);
     public virtual async Task<TField> SumAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
-    {
-        if (fieldExpr == null)
-            throw new ArgumentNullException(nameof(fieldExpr));
-
-        return await this.QueryFirstValueAsync<TField>("SUM({0})", fieldExpr, cancellationToken);
-    }
+        => await base.SumInternalAsync<TField>(fieldExpr, cancellationToken);
     public virtual TField Avg<TField>(Expression<Func<T, TField>> fieldExpr)
-    {
-        if (fieldExpr == null)
-            throw new ArgumentNullException(nameof(fieldExpr));
-
-        return this.QueryFirstValue<TField>("AVG({0})", fieldExpr);
-    }
+        => base.AvgInternal<TField>(fieldExpr);
     public virtual async Task<TField> AvgAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
-    {
-        if (fieldExpr == null)
-            throw new ArgumentNullException(nameof(fieldExpr));
-
-        return await this.QueryFirstValueAsync<TField>("AVG({0})", fieldExpr, cancellationToken);
-    }
+        => await base.AvgInternalAsync<TField>(fieldExpr, cancellationToken);
     public virtual TField Max<TField>(Expression<Func<T, TField>> fieldExpr)
-    {
-        if (fieldExpr == null)
-            throw new ArgumentNullException(nameof(fieldExpr));
-
-        return this.QueryFirstValue<TField>("MAX({0})", fieldExpr);
-    }
+        => base.MaxInternal<TField>(fieldExpr);
     public virtual async Task<TField> MaxAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
-    {
-        if (fieldExpr == null)
-            throw new ArgumentNullException(nameof(fieldExpr));
-
-        return await this.QueryFirstValueAsync<TField>("MAX({0})", fieldExpr, cancellationToken);
-    }
+        => await base.MaxInternalAsync<TField>(fieldExpr, cancellationToken);
     public virtual TField Min<TField>(Expression<Func<T, TField>> fieldExpr)
-    {
-        if (fieldExpr == null)
-            throw new ArgumentNullException(nameof(fieldExpr));
-
-        return this.QueryFirstValue<TField>("MIN({0})", fieldExpr);
-    }
+        => base.MinInternal<TField>(fieldExpr);
     public virtual async Task<TField> MinAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
-    {
-        if (fieldExpr == null)
-            throw new ArgumentNullException(nameof(fieldExpr));
-
-        return await this.QueryFirstValueAsync<TField>("MIN({0})", fieldExpr, cancellationToken);
-    }
+        => await base.MinInternalAsync<TField>(fieldExpr, cancellationToken);
     #endregion
 
     #region First/ToList/ToPageList/ToDictionary
@@ -644,8 +614,6 @@ public class CteQuery<T> : Query<T>, ICteQuery<T>
     #region Constructor
     public CteQuery(DbContext dbContext, IQueryVisitor visitor)
         : base(dbContext, visitor) { }
-    public CteQuery(IQuery queryObj)
-        : base(queryObj.DbContext, queryObj.Visitor) { }
     #endregion
 
     #region 不支持的方法

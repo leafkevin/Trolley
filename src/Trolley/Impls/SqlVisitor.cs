@@ -2121,7 +2121,6 @@ public class SqlVisitor : ISqlVisitor
 
         //应用子查询表，只删除元素，不能dispose，后续操作可能还会用到子查询
         this.RefQueries.Clear();
-        this.RefQueries = null;
     }
     private List<ConditionExpression> VisitLogicBinaryExpr(Expression conditionExpr)
     {

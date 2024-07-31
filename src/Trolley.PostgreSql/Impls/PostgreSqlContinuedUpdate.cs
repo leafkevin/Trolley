@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Trolley.PostgreSql;
 
-public class PostgreSqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IPostgreSqlContinuedUpdate<TEntity>
+public class PostgreSqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IPostgreSqlUpdated<TEntity>, IPostgreSqlContinuedUpdate<TEntity>
 {
     #region Properties
     public PostgreSqlUpdateVisitor DialectVisitor { get; private set; }
@@ -23,112 +23,58 @@ public class PostgreSqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IPos
 
     #region Set
     public override IPostgreSqlContinuedUpdate<TEntity> Set<TUpdateObj>(TUpdateObj updateObj)
-    {
-        base.Set(updateObj);
-        return this;
-    }
+        => this.Set(true, updateObj);
     public override IPostgreSqlContinuedUpdate<TEntity> Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
-    {
-        base.Set(condition, updateObj);
-        return this;
-    }
+        => base.Set(condition, updateObj) as PostgreSqlContinuedUpdate<TEntity>;
     public override IPostgreSqlContinuedUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
-    {
-        base.Set(fieldSelector, fieldValue);
-        return this;
-    }
+        => this.Set(true, fieldSelector, fieldValue);
     public override IPostgreSqlContinuedUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
-    {
-        base.Set(condition, fieldSelector, fieldValue);
-        return this;
-    }
+        => base.Set(condition, fieldSelector, fieldValue) as PostgreSqlContinuedUpdate<TEntity>;
     public override IPostgreSqlContinuedUpdate<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsAssignment)
-    {
-        base.Set(fieldsAssignment);
-        return this;
-    }
+        => this.Set(true, fieldsAssignment);
     public override IPostgreSqlContinuedUpdate<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment)
-    {
-        base.Set(condition, fieldsAssignment);
-        return this;
-    }
+        => base.Set(condition, fieldsAssignment) as PostgreSqlContinuedUpdate<TEntity>;
     #endregion
 
     #region SetFrom
     public override IPostgreSqlContinuedUpdate<TEntity> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
-    {
-        base.SetFrom(fieldSelector, valueSelector);
-        return this;
-    }
+        => this.SetFrom(true, fieldSelector, valueSelector);
     public override IPostgreSqlContinuedUpdate<TEntity> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
-    {
-        base.SetFrom(condition, fieldSelector, valueSelector);
-        return this;
-    }
+        => base.SetFrom(condition, fieldSelector, valueSelector) as PostgreSqlContinuedUpdate<TEntity>;
     public override IPostgreSqlContinuedUpdate<TEntity> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
-    {
-        base.SetFrom(fieldsAssignment);
-        return this;
-    }
+        => this.SetFrom(true, fieldsAssignment);
     public override IPostgreSqlContinuedUpdate<TEntity> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
-    {
-        base.SetFrom(condition, fieldsAssignment);
-        return this;
-    }
+        => base.SetFrom(condition, fieldsAssignment) as PostgreSqlContinuedUpdate<TEntity>;
     #endregion
 
     #region IgnoreFields
     public override IPostgreSqlContinuedUpdate<TEntity> IgnoreFields(params string[] fieldNames)
-    {
-        base.IgnoreFields(fieldNames);
-        return this;
-    }
+        => base.IgnoreFields(fieldNames) as PostgreSqlContinuedUpdate<TEntity>;
     public override IPostgreSqlContinuedUpdate<TEntity> IgnoreFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector)
-    {
-        base.IgnoreFields(fieldsSelector);
-        return this;
-    }
+        => base.IgnoreFields(fieldsSelector) as PostgreSqlContinuedUpdate<TEntity>;
     #endregion
 
     #region OnlyFields
     public override IPostgreSqlContinuedUpdate<TEntity> OnlyFields(params string[] fieldNames)
-    {
-        base.OnlyFields(fieldNames);
-        return this;
-    }
+        => base.OnlyFields(fieldNames) as PostgreSqlContinuedUpdate<TEntity>;
     public override IPostgreSqlContinuedUpdate<TEntity> OnlyFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector)
-    {
-        base.OnlyFields(fieldsSelector);
-        return this;
-    }
+        => base.OnlyFields(fieldsSelector) as PostgreSqlContinuedUpdate<TEntity>;
     #endregion
 
     #region Where/And
     public override IPostgreSqlUpdated<TEntity> Where<TWhereObj>(TWhereObj whereObj)
     {
         base.Where(whereObj);
-        return this.OrmProvider.NewUpdated<TEntity>(this.DbContext, this.Visitor) as IPostgreSqlUpdated<TEntity>;
+        return this;
     }
     public override IPostgreSqlContinuedUpdate<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
-    {
-        base.Where(predicate);
-        return this;
-    }
+        => this.Where(true, predicate);
     public override IPostgreSqlContinuedUpdate<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
-    {
-        base.Where(condition, ifPredicate, elsePredicate);
-        return this;
-    }
+        => base.Where(condition, ifPredicate, elsePredicate) as IPostgreSqlContinuedUpdate<TEntity>;
     public override IPostgreSqlContinuedUpdate<TEntity> And(Expression<Func<TEntity, bool>> predicate)
-    {
-        base.And(predicate);
-        return this;
-    }
+        => this.And(true, predicate);
     public override IPostgreSqlContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
-    {
-        base.And(condition, ifPredicate, elsePredicate);
-        return this;
-    }
+        => base.And(condition, ifPredicate, elsePredicate) as IPostgreSqlContinuedUpdate<TEntity>;
     #endregion
 
     #region ToSql

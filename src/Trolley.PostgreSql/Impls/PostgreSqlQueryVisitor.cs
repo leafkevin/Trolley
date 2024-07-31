@@ -157,12 +157,14 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         builder = null;
         return sql;
     }
-    public override string BuildCommandSql(Type targetType, out IDataParameterCollection dbParameters)
+    public override string BuildCommandSql(out IDataParameterCollection dbParameters)
     {
         var builder = new StringBuilder("INSERT INTO");
         var entityMapper = this.Tables[0].Mapper;
         builder.Append($" {this.GetTableName(this.Tables[0])} (");
         int index = 0;
+        if (this.ReaderFields == null && this.IsFromQuery)
+            this.ReaderFields = this.Tables[1].ReaderFields;
         foreach (var readerField in this.ReaderFields)
         {
             //Union后，如果没有select语句时，通常实体类型或是select分组对象
@@ -179,6 +181,8 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         //有CTE表
         if (this.IsUseCteTable && this.RefQueries != null && this.RefQueries.Count > 0)
         {
+            var fieldsSql = builder.ToString();
+            builder.Clear();
             bool isRecursive = false;
             var cteQueries = this.FlattenRefCteTables(this.RefQueries);
             if (cteQueries.Count > 0)
@@ -195,6 +199,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                 else builder.Insert(0, "WITH ");
                 builder.AppendLine();
             }
+            builder.Append(fieldsSql);
         }
         dbParameters = this.DbParameters;
         string sql = null;
