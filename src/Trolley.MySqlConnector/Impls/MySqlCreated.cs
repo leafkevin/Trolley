@@ -65,15 +65,15 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                     break;
                 case ActionMode.Bulk:
                     command = this.DbContext.CreateCommand();
-                    var sqlBuilder = new StringBuilder();
+                    var builder = new StringBuilder();
                     (isNeedSplit, var tableName, insertObjs, var bulkCount,
                         var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
 
                     Action<string> clearCommand = tableName =>
                     {
-                        sqlBuilder.Clear();
+                        builder.Clear();
                         command.Parameters.Clear();
-                        firstSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName);
+                        firstSqlSetter.Invoke(command.Parameters, builder, tableName);
                     };
                     Func<string, IEnumerable, int> executor = (tableName, insertObjs) =>
                     {
@@ -81,11 +81,11 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                         int count = 0, index = 0;
                         foreach (var insertObj in insertObjs)
                         {
-                            if (index > 0) sqlBuilder.Append(',');
-                            loopSqlSetter.Invoke(command.Parameters, sqlBuilder, insertObj, index.ToString());
+                            if (index > 0) builder.Append(',');
+                            loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
                             if (index >= bulkCount)
                             {
-                                command.CommandText = sqlBuilder.ToString();
+                                command.CommandText = builder.ToString();
                                 if (isFirst)
                                 {
                                     this.DbContext.Open();
@@ -100,7 +100,7 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                         }
                         if (index > 0)
                         {
-                            command.CommandText = sqlBuilder.ToString();
+                            command.CommandText = builder.ToString();
                             if (isFirst) this.DbContext.Open();
                             count += command.ExecuteNonQuery();
                         }
@@ -112,17 +112,17 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                         var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
                         foreach (var tabledInsertObj in tabledInsertObjs)
                         {
-                            firstSqlSetter.Invoke(command.Parameters, sqlBuilder, tabledInsertObj.Key);
+                            firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
                             result += executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
                         }
                     }
                     else
                     {
-                        firstSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName);
+                        firstSqlSetter.Invoke(command.Parameters, builder, tableName);
                         result = executor.Invoke(tableName, insertObjs);
                     }
-                    sqlBuilder.Clear();
-                    sqlBuilder = null;
+                    builder.Clear();
+                    builder = null;
                     break;
                 default:
                     //默认单条
@@ -161,7 +161,6 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
             {
                 case ActionMode.BulkCopy:
                     (insertObjs, var timeoutSeconds) = this.DialectVisitor.BuildWithBulkCopy();
-
                     bool isOpened = false;
                     Type insertObjType = null;
                     foreach (var insertObj in insertObjs)
@@ -319,7 +318,7 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
     }
     #endregion
 }
-public class MySqlCreated<TEntity, TResult> : MySqlContinuedCreate<TEntity>, IMySqlCreated<TEntity, TResult>
+public class MySqlCreated<TEntity, TResult> : Created<TEntity>, IMySqlCreated<TEntity, TResult>
 {
     #region Constructor
     public MySqlCreated(DbContext dbContext, ICreateVisitor visitor)
@@ -368,7 +367,7 @@ public class MySqlCreated<TEntity, TResult> : MySqlContinuedCreate<TEntity>, IMy
         => throw new NotSupportedException("不支持的方法调用，调用Outpt方法后此方法无效，请使用ExecuteAsync方法");
     #endregion
 }
-public class MySqlBulkCreated<TEntity, TResult> : MySqlBulkContinuedCreate<TEntity>, IMySqlBulkCreated<TEntity, TResult>
+public class MySqlBulkCreated<TEntity, TResult> : Created<TEntity>, IMySqlBulkCreated<TEntity, TResult>
 {
     #region Constructor
     public MySqlBulkCreated(DbContext dbContext, ICreateVisitor visitor)

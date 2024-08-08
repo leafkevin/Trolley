@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 
@@ -18,7 +17,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
     public PostgreSqlCreateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
         : base(dbKey, ormProvider, mapProvider, shardingProvider, isParameterized, tableAsStart, parameterPrefix) { }
 
-    public override string BuildCommand(IDbCommand command, bool isReturnIdentity, out List<ReaderField> readerFields)
+    public override string BuildCommand(IDbCommand command, bool isReturnIdentity, out List<SqlFieldSegment> readerFields)
     {
         string sql = null;
         this.IsReturnIdentity = isReturnIdentity;
@@ -51,7 +50,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
         }
         return sql;
     }
-    public override string BuildSql(out List<ReaderField> readerFields)
+    public override string BuildSql(out List<SqlFieldSegment> readerFields)
     {
         readerFields = null;
         var entityType = this.Tables[0].EntityType;
@@ -114,37 +113,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
         valuesBuilder = null;
         return sql;
     }
-    public override string BuildShardingTablesSql(string tableSchema)
-    {
-        var count = this.ShardingTables.FindAll(f => f.ShardingType > ShardingTableType.MultiTable).Count;
-        var builder = new StringBuilder($"SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND b.nspname='{tableSchema}' AND a.relkind='r' AND ");
-        if (count > 1)
-        {
-            builder.Append('(');
-            int index = 0;
-            foreach (var tableSegment in this.ShardingTables)
-            {
-                if (tableSegment.ShardingType > ShardingTableType.MultiTable)
-                {
-                    if (index > 0) builder.Append(" OR ");
-                    builder.Append($"a.relname LIKE '{tableSegment.Mapper.TableName}%'");
-                    index++;
-                }
-            }
-            builder.Append(')');
-        }
-        else
-        {
-            if (this.ShardingTables.Count > 1)
-            {
-                var tableSegment = this.ShardingTables.Find(f => f.ShardingType > ShardingTableType.MultiTable);
-                builder.Append($"a.relname LIKE '{tableSegment.Mapper.TableName}%'");
-            }
-            else builder.Append($"a.relname LIKE '{this.ShardingTables[0].Mapper.TableName}%'");
-        }
-        return builder.ToString();
-    }
-    public override string BuildWithBulkSql(IDbCommand command, out List<ReaderField> readerFields)
+    public override string BuildWithBulkSql(IDbCommand command, out List<SqlFieldSegment> readerFields)
     {
         //多命令查询或是ToSql才会走到此分支
         //多语句执行，一次性不分批次
@@ -294,7 +263,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
                         if (callExpr.Arguments[0].Type.BaseType == typeof(LambdaExpression))
                         {
                             var argumentExpr = callExpr.Arguments[0];
-                            this.VisitAndDeferred(new SqlSegment { Expression = callExpr.Arguments[0] });
+                            this.VisitAndDeferred(new SqlFieldSegment { Expression = callExpr.Arguments[0] });
                         }
                         //Set<TUpdateObj>(TUpdateObj updateObj), 走参数
                         else this.VisitSetObject(this.Evaluate(callExpr.Arguments[0]));
@@ -314,7 +283,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
                                 if (condition)
                                 {
                                     this.IsUpdate = true;
-                                    this.VisitAndDeferred(new SqlSegment { Expression = callExpr.Arguments[1] });
+                                    this.VisitAndDeferred(new SqlFieldSegment { Expression = callExpr.Arguments[1] });
                                     this.IsUpdate = false;
                                 }
                             }
@@ -347,7 +316,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
                                 this.VisitSetFieldExpression(callExpr.Arguments[1], callExpr.Arguments[2]);
                             else
                             {
-                                var leftSegment = this.VisitAndDeferred(new SqlSegment { Expression = callExpr.Arguments[0] });
+                                var leftSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = callExpr.Arguments[0] });
                                 this.VisitWithSetField(callExpr.Arguments[1], this.Evaluate(callExpr.Arguments[2]));
                             }
                         }
@@ -360,7 +329,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
         builder = null;
         this.IsUpdate = false;
     }
-    public override SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
+    public override SqlFieldSegment VisitMemberAccess(SqlFieldSegment sqlSegment)
     {
         if (this.IsUpdate)
         {
@@ -371,17 +340,18 @@ public class PostgreSqlCreateVisitor : CreateVisitor
             //在解析过程中，引用原值时使用别名，最后再设置IsNeedTableAlias
             this.IsUseTableAlias = true;
             var fieldName = $"{this.Tables[0].AliasName}.{this.OrmProvider.GetFieldName(memberMapper.FieldName)}";
-            return new SqlSegment
+            return new SqlFieldSegment
             {
-                MemberMapper = memberMapper,
-                FromMember = memberMapper.Member,
                 HasField = true,
-                Value = fieldName
+                FromMember = memberMapper.Member,
+                NativeDbType = memberMapper.NativeDbType,
+                TypeHandler = memberMapper.TypeHandler,
+                Body = fieldName
             };
         }
         return base.VisitMemberAccess(sqlSegment);
     }
-    public override SqlSegment VisitNew(SqlSegment sqlSegment)
+    public override SqlFieldSegment VisitNew(SqlFieldSegment sqlSegment)
     {
         //只有OnDuplicateKeyUpdate.Set时，才会走到此场景，如：.Set(f => new { TotalAmount = f.TotalAmount + x.Values(f.TotalAmount) })
         //INSERT INTO ... SELECT ... FROM ... 由FromCommand单独处理了，FromCommand走的是QueryVisitor的解析
@@ -394,14 +364,19 @@ public class PostgreSqlCreateVisitor : CreateVisitor
                 var memberInfo = newExpr.Members[i];
                 if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper))
                     continue;
-                sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = newExpr.Arguments[i], MemberMapper = memberMapper });
+                sqlSegment = this.VisitAndDeferred(new SqlFieldSegment
+                {
+                    Expression = newExpr.Arguments[i],
+                    NativeDbType = memberMapper.NativeDbType,
+                    TypeHandler = memberMapper.TypeHandler
+                });
                 this.AddMemberElement(sqlSegment, memberMapper);
             }
             return sqlSegment;
         }
         return this.Evaluate(sqlSegment);
     }
-    public override SqlSegment VisitMemberInit(SqlSegment sqlSegment)
+    public override SqlFieldSegment VisitMemberInit(SqlFieldSegment sqlSegment)
     {
         var memberInitExpr = sqlSegment.Expression as MemberInitExpression;
         var entityMapper = this.Tables[0].Mapper;
@@ -412,7 +387,12 @@ public class PostgreSqlCreateVisitor : CreateVisitor
             var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
             if (!entityMapper.TryGetMemberMap(memberAssignment.Member.Name, out var memberMapper))
                 continue;
-            sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = memberAssignment.Expression, MemberMapper = memberMapper });
+            sqlSegment = this.VisitAndDeferred(new SqlFieldSegment
+            {
+                Expression = memberAssignment.Expression,
+                NativeDbType = memberMapper.NativeDbType,
+                TypeHandler = memberMapper.TypeHandler
+            });
             this.AddMemberElement(sqlSegment, memberMapper);
         }
         return this.Evaluate(sqlSegment);
@@ -439,12 +419,12 @@ public class PostgreSqlCreateVisitor : CreateVisitor
             this.TableAliases.TryAdd(parameterExpr.Name, this.Tables[0]);
         }
     }
-    public void AddMemberElement(SqlSegment sqlSegment, MemberMap memberMapper)
+    public void AddMemberElement(SqlFieldSegment sqlSegment, MemberMap memberMapper)
     {
         if (this.UpdateFields.Length > 0) this.UpdateFields.Append(',');
         var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
 
-        if (sqlSegment == SqlSegment.Null)
+        if (sqlSegment == SqlFieldSegment.Null)
             this.UpdateFields.Append($"{fieldName}=NULL");
         else if (sqlSegment.IsConstant || sqlSegment.IsVariable)
         {
@@ -467,16 +447,16 @@ public class PostgreSqlCreateVisitor : CreateVisitor
         //带有参数或字段的表达式或函数调用、或是只有参数或字段
         //.Set(true, f => f.TotalAmount))
         //.Set(f => new { TotalAmount = x.Values(f.TotalAmount) })
-        else this.UpdateFields.Append($"{fieldName}={sqlSegment.Value.ToString()}");
+        else this.UpdateFields.Append($"{fieldName}={sqlSegment.Body}");
     }
     public void VisitSetFieldExpression(Expression fieldSelector, Expression fieldValueSelector)
     {
-        var fieldSegment = this.VisitAndDeferred(new SqlSegment { Expression = fieldSelector });
+        var fieldSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = fieldSelector });
         this.IsUpdate = true;
-        var valueSegment = this.VisitAndDeferred(new SqlSegment { Expression = fieldValueSelector });
+        var valueSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = fieldValueSelector });
         this.IsUpdate = false;
         if (this.UpdateFields.Length > 0) this.UpdateFields.Append(',');
-        this.UpdateFields.Append($"{fieldSegment}={valueSegment}");
+        this.UpdateFields.Append($"{fieldSegment.Body}={valueSegment.Body}");
     }
     public void VisitWithSetField(Expression fieldSelector, object fieldValue)
     {
@@ -502,19 +482,19 @@ public class PostgreSqlCreateVisitor : CreateVisitor
         if (this.UpdateFields.Length > 0) this.UpdateFields.Append(',');
         this.UpdateFields.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
     }
-    private (string, List<ReaderField>) BuildOutputSqlReaderFields()
+    private (string, List<SqlFieldSegment>) BuildOutputSqlReaderFields()
     {
-        var readerFields = new List<ReaderField>();
+        var readerFields = new List<SqlFieldSegment>();
         var entityMapper = this.Tables[0].Mapper;
         var builder = new StringBuilder();
         Action<MemberMap> addReaderField = memberMapper =>
         {
-            readerFields.Add(new ReaderField
+            readerFields.Add(new SqlFieldSegment
             {
-                FieldType = ReaderFieldType.Field,
+                FieldType = SqlFieldType.Field,
                 FromMember = memberMapper.Member,
                 TargetMember = memberMapper.Member,
-                TargetType = memberMapper.MemberType,
+                SegmentType = memberMapper.MemberType,
                 NativeDbType = memberMapper.NativeDbType,
                 TypeHandler = memberMapper.TypeHandler,
                 Body = memberMapper.FieldName

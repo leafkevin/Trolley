@@ -687,7 +687,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         await this.OpenAsync(cancellationToken);
         return await command.ExecuteNonQueryAsync(cancellationToken);
     }
-    public TResult CreateResult<TResult>(Func<IDbCommand, DbContext, List<ReaderField>> commandInitializer)
+    public TResult CreateResult<TResult>(Func<IDbCommand, DbContext, List<SqlFieldSegment>> commandInitializer)
     {
         TResult result = default;
         IDataReader reader = null;
@@ -722,7 +722,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         if (exception != null) throw exception;
         return result;
     }
-    public async Task<TResult> CreateResultAsync<TResult>(Func<IDbCommand, DbContext, List<ReaderField>> commandInitializer, CancellationToken cancellationToken = default)
+    public async Task<TResult> CreateResultAsync<TResult>(Func<IDbCommand, DbContext, List<SqlFieldSegment>> commandInitializer, CancellationToken cancellationToken = default)
     {
         TResult result = default;
         DbDataReader reader = null;

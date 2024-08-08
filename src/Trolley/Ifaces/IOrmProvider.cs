@@ -5,8 +5,8 @@ using System.Linq.Expressions;
 
 namespace Trolley;
 
-public delegate SqlSegment MemberAccessSqlFormatter(ISqlVisitor visitor, SqlSegment target);
-public delegate SqlSegment MethodCallSqlFormatter(ISqlVisitor visitor, Expression orgExpr, Expression target, Stack<DeferredExpr> DeferredExprs, params Expression[] arguments);
+public delegate SqlFieldSegment MemberAccessSqlFormatter(ISqlVisitor visitor, SqlFieldSegment target);
+public delegate SqlFieldSegment MethodCallSqlFormatter(ISqlVisitor visitor, Expression orgExpr, Expression target, Stack<DeferredExpr> DeferredExprs, params Expression[] arguments);
 
 public enum OrmProviderType
 {
@@ -26,7 +26,7 @@ public interface IOrmProvider
     IDbConnection CreateConnection(string connectionString);
     IDbDataParameter CreateParameter(string parameterName, object value);
     IDbDataParameter CreateParameter(string parameterName, object nativeDbType, object value);
-
+    void ChangeParameter(object dbParameter, Type targetType, object value);
     IRepository CreateRepository(DbContext dbContext);
     IQuery<T> NewQuery<T>(DbContext dbContext, IQueryVisitor visitor);
     IQuery<T1, T2> NewQuery<T1, T2>(DbContext dbContext, IQueryVisitor visitor);

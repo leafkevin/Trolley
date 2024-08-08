@@ -13,7 +13,7 @@ public class WhereUnitTest : UnitTestBase
         services.AddSingleton(f =>
         {
             var builder = new OrmDbFactoryBuilder()
-            .Register<SqlServerProvider>("fengling", "Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", true)
+            .Register<SqlServerProvider>("fengling", "Server=172.16.30.190;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", true)
             .Configure<SqlServerProvider, ModelConfiguration>();
             return builder.Build();
         });
@@ -191,5 +191,19 @@ public class WhereUnitTest : UnitTestBase
            .ToList();
         Assert.NotNull(result2);
         Assert.True(result2.Count > 0);
+
+        var sql3 = repository.From<Order>()
+            .Where(f => Sql.Exists<User>(t => t.Id == f.BuyerId && t.IsEnabled) && (f.BuyerId.IsNull() || f.BuyerId == 2)
+                && (f.OrderNo.Contains("ON_") && string.IsNullOrEmpty(f.OrderNo)) || DateTime.IsLeapYear(f.CreatedAt.Year))
+            .Select(f => f.Id)
+            .ToSql(out _);
+        Assert.True(sql3 == "SELECT a.[Id] FROM [sys_order] a WHERE EXISTS(SELECT * FROM [sys_user] t WHERE t.[Id]=a.[BuyerId] AND t.[IsEnabled]=1) AND (a.[BuyerId] IS NULL OR a.[BuyerId]=2) AND a.[OrderNo] LIKE N'%ON_%' AND (a.[OrderNo] IS NULL OR a.[OrderNo]='') OR (DATEPART(YEAR,a.[CreatedAt])%4=0 AND DATEPART(YEAR,a.[CreatedAt])%100<>0 OR DATEPART(YEAR,a.[CreatedAt])%400=0)");
+        var result3 = repository.From<Order>()
+            .Where(f => Sql.Exists<User>(t => t.Id == f.BuyerId && t.IsEnabled) && (f.BuyerId.IsNull() || f.BuyerId == 2)
+                && (f.OrderNo.Contains("ON_") && string.IsNullOrEmpty(f.OrderNo)) || DateTime.IsLeapYear(f.CreatedAt.Year))
+            .Select(f => f.Id)
+            .ToList();
+        Assert.NotNull(result3);
+        Assert.True(result3.Count > 0);
     }
 }

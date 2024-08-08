@@ -13,9 +13,9 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         : base(dbKey, ormProvider, mapProvider, shardingProvider, isParameterized, tableAsStart, parameterPrefix, dbParameters) { }
 
     public bool IsDistinctOn { get; set; }
-    public List<ReaderField> DistinctOnFields { get; set; }
+    public List<SqlFieldSegment> DistinctOnFields { get; set; }
     public string DistinctOnSql { get; set; }
-    public override string BuildSql(out List<ReaderField> readerFields)
+    public override string BuildSql(out List<SqlFieldSegment> readerFields)
     {
         var builder = new StringBuilder();
         if (this.IsUseCteTable && this.RefQueries != null && this.RefQueries.Count > 0)
@@ -86,9 +86,6 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         }
         builder.Clear();
 
-        //再判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不对
-        bool isNeedWrap = (this.IsUnion || this.IsSecondUnion || isManySharding) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue);
-
         //各种单值查询，如：SELECT COUNT(*)/MAX(*)..等，都有SELECT操作     
         //如：From(f=>...).InnerJoin/UnionAll(f=>...)
 
@@ -99,7 +96,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
 
         if (this.IsDistinctOn)
             builder.Append($"DISTINCT ON ({this.DistinctOnSql}) ");
-        this.AddSelectFieldsSql(builder, this.ReaderFields, isNeedWrap);
+        this.AddSelectFieldsSql(builder, this.ReaderFields);
 
         string selectSql = null;
         if (this.IsDistinct)
@@ -146,7 +143,8 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         }
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
 
-        //UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不对
+        //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不正确
+        bool isNeedWrap = (this.IsUnion || this.IsSecondUnion || isManySharding) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue);
         if (isNeedWrap)
         {
             builder.Insert(0, "SELECT * FROM (");
@@ -164,7 +162,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         builder.Append($" {this.GetTableName(this.Tables[0])} (");
         int index = 0;
         if (this.ReaderFields == null && this.IsFromQuery)
-            this.ReaderFields = this.Tables[1].ReaderFields;
+            this.ReaderFields = this.Tables[1].Fields;
         foreach (var readerField in this.ReaderFields)
         {
             //Union后，如果没有select语句时，通常实体类型或是select分组对象
@@ -248,9 +246,6 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         }
         builder.Clear();
 
-        //再判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不对
-        bool isNeedWrap = (this.IsUnion || this.IsSecondUnion || isManySharding) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue);
-
         //各种单值查询，如：SELECT COUNT(*)/MAX(*)..等，都有SELECT操作     
         //如：From(f=>...).InnerJoin/UnionAll(f=>...)
         //生成sql时，include表的字段，一定要紧跟着主表字段后面，方便赋值主表实体的属性中，所以在插入时候就排好序
@@ -260,7 +255,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
 
         if (this.IsDistinctOn)
             builder.Append($"DISTINCT ON ({this.DistinctOnSql}) ");
-        this.AddSelectFieldsSql(builder, this.ReaderFields, isNeedWrap);
+        this.AddSelectFieldsSql(builder, this.ReaderFields);
 
         string selectSql = null;
         if (this.IsDistinct)
@@ -300,7 +295,8 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         }
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
 
-        //UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不对
+        //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不正确
+        bool isNeedWrap = (this.IsUnion || this.IsSecondUnion || isManySharding) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue);
         if (isNeedWrap)
         {
             builder.Insert(0, "SELECT * FROM (");
@@ -366,28 +362,15 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                 foreach (var argumentExpr in newExpr.Arguments)
                 {
                     var memberInfo = newExpr.Members[index];
-                    var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = argumentExpr });
+                    var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = argumentExpr });
                     if (builder.Length > 0)
                         builder.Append(',');
 
-                    var fieldName = sqlSegment.Value.ToString();
+                    var fieldName = sqlSegment.Body ?? sqlSegment.Value.ToString();
                     builder.Append(fieldName);
-                    bool isNeedAlias = false;
-                    //这里只设置必须加as别名的情况，常量，参数，表达式，方法调用
-                    //并且需要设置当前的成员名称，方便最外层做判断，是否添加as别名
-                    if (sqlSegment.IsConstant || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
-                        isNeedAlias = true;
-                    this.DistinctOnFields.Add(new ReaderField
-                    {
-                        FieldType = ReaderFieldType.Field,
-                        FromMember = sqlSegment.FromMember,
-                        TargetMember = memberInfo,
-                        TargetType = memberInfo.GetMemberType(),
-                        NativeDbType = sqlSegment.NativeDbType,
-                        TypeHandler = sqlSegment.TypeHandler,
-                        Body = fieldName,
-                        IsNeedAlias = isNeedAlias
-                    });
+                    sqlSegment.TargetMember = memberInfo;
+                    sqlSegment.SegmentType = memberInfo.GetMemberType();
+                    this.DistinctOnFields.Add(sqlSegment);
                     index++;
                 }
                 //DistinctOn都不需要别名，没有别名
@@ -396,24 +379,11 @@ public class PostgreSqlQueryVisitor : QueryVisitor
             case ExpressionType.MemberAccess:
                 {
                     var memberExpr = lambdaExpr.Body as MemberExpression;
-                    var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = memberExpr });
-                    var fieldName = sqlSegment.Value.ToString();
-                    bool isNeedAlias = false;
-                    //这里只设置必须加as别名的情况，常量，参数，表达式，方法调用
-                    //并且需要设置当前的成员名称，方便最外层做判断，是否添加as别名
-                    if (sqlSegment.IsConstant || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
-                        isNeedAlias = true;
-                    this.DistinctOnFields.Add(new ReaderField
-                    {
-                        FieldType = ReaderFieldType.Field,
-                        FromMember = sqlSegment.FromMember,
-                        TargetMember = memberExpr.Member,
-                        TargetType = memberExpr.Member.GetMemberType(),
-                        NativeDbType = sqlSegment.NativeDbType,
-                        TypeHandler = sqlSegment.TypeHandler,
-                        Body = fieldName,
-                        IsNeedAlias = isNeedAlias
-                    });
+                    var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = memberExpr });
+                    var fieldName = sqlSegment.Body ?? sqlSegment.Value.ToString();
+                    var memberInfo = memberExpr.Member;
+                    sqlSegment.TargetMember = memberInfo;
+                    sqlSegment.SegmentType = memberInfo.GetMemberType();
                     this.DistinctOnSql = fieldName;
                 }
                 break;
@@ -486,11 +456,10 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                         else
                         {
                             var memberInfo = newExpr.Members[index];
-                            var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = argumentExpr });
+                            var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = argumentExpr });
                             if (builder.Length > 0)
                                 builder.Append(',');
-
-                            builder.Append(sqlSegment.Value.ToString());
+                            builder.Append(sqlSegment.Body ?? sqlSegment.Value.ToString());
                             if (orderType == "DESC")
                                 builder.Append(" DESC");
                         }
@@ -519,8 +488,8 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                         }
                         else
                         {
-                            var sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = memberExpr });
-                            builder.Append(sqlSegment.Value.ToString());
+                            var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = memberExpr });
+                            builder.Append(sqlSegment.Body ?? sqlSegment.Value.ToString());
                             if (orderType == "DESC")
                                 builder.Append(" DESC");
                         }
@@ -531,7 +500,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         this.OrderBySql = builder.ToString();
     }
     public virtual void SelectDistinctOn() => this.ReaderFields = this.DistinctOnFields;
-    public override SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
+    public override SqlFieldSegment VisitMemberAccess(SqlFieldSegment sqlSegment)
     {
         //Select场景，实体成员访问，返回ReaderField实体类型，ReaderFields并且有值，子ReaderFields的Body可无值
         //Select场景和Where场景，单个字段成员访(包括Json实体类型字段)，返回FromMember，TargetMember，字段类型，Body有值为带有别名的FieldName
@@ -549,7 +518,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
             {
                 if (memberExpr.Member.Name == nameof(Nullable<bool>.HasValue))
                 {
-                    sqlSegment.Push(new DeferredExpr { OperationType = OperationType.Equal, Value = SqlSegment.Null });
+                    sqlSegment.Push(new DeferredExpr { OperationType = OperationType.Equal, Value = SqlFieldSegment.Null });
                     sqlSegment.Push(new DeferredExpr { OperationType = OperationType.Not });
                     return this.Visit(sqlSegment.Next(memberExpr.Expression));
                 }
@@ -571,100 +540,53 @@ public class PostgreSqlQueryVisitor : QueryVisitor
             //此场景一定是select
             if (this.IsGroupingMember(memberExpr))
             {
-                List<ReaderField> groupFields = null;
+                List<SqlFieldSegment> groupFields = new();
                 //在子查询中，Select了Group分组对象，为了避免在Clear时，把GroupFields元素清掉，放到一个新列表中
-                if (this.IsFromQuery)
+                if (this.GroupFields.Count > 1)
                 {
-                    groupFields = new();
-                    this.GroupFields.ForEach(f => groupFields.Add(f));
+                    this.GroupFields.ForEach(f => groupFields.Add(f.Clone()));
+                    sqlSegment.FieldType = SqlFieldType.Entity;
+                    sqlSegment.HasField = true;
+                    sqlSegment.FromMember = memberInfo;
+                    sqlSegment.TargetMember = memberInfo;
+                    sqlSegment.SegmentType = memberInfo.GetMemberType();
+                    sqlSegment.Fields = groupFields;
                 }
-                else groupFields = this.GroupFields;
-                if (groupFields.Count > 1)
-                {
-                    return sqlSegment.Change(new ReaderField
-                    {
-                        FieldType = ReaderFieldType.Entity,
-                        FromMember = memberInfo,
-                        TargetMember = memberInfo,
-                        TargetType = memberInfo.GetMemberType(),
-                        ReaderFields = groupFields
-                    });
-                }
-                //分组对象为单个字段，要返回单个字段，防止后面Reader处理实体时候报错
-                var readerField = groupFields[0];
-                //要返回原始FromMember，后续方便判断是否使用AS别名
-                sqlSegment.FromMember = readerField.FromMember;
-                if (readerField.TargetType.IsEnumType(out var underlyingType))
-                    sqlSegment.ExpectType = underlyingType;
-                sqlSegment.SegmentType = underlyingType;
-                sqlSegment.NativeDbType = readerField.NativeDbType;
-                sqlSegment.TypeHandler = readerField.TypeHandler;
-                sqlSegment.Value = readerField.Body;
+                else sqlSegment = this.GroupFields[0].Clone();
                 return sqlSegment;
             }
             else if (this.IsDistinctOnMember(memberExpr))
             {
-                List<ReaderField> distinctOnFields = null;
+                List<SqlFieldSegment> distinctOnFields = new();
                 //在子查询中，Select了Group分组对象，为了避免在Clear时，把GroupFields元素清掉，放到一个新列表中
-                if (this.IsFromQuery)
+
+                if (this.DistinctOnFields.Count > 1)
                 {
-                    distinctOnFields = new();
                     this.DistinctOnFields.ForEach(f => distinctOnFields.Add(f));
-                }
-                else distinctOnFields = this.DistinctOnFields;
-                if (distinctOnFields.Count > 1)
-                {
-                    return sqlSegment.Change(new ReaderField
-                    {
-                        FieldType = ReaderFieldType.Entity,
-                        FromMember = memberInfo,
-                        TargetMember = memberInfo,
-                        TargetType = memberInfo.GetMemberType(),
-                        ReaderFields = distinctOnFields
-                    });
+                    sqlSegment.FieldType = SqlFieldType.Entity;
+                    sqlSegment.HasField = true;
+                    sqlSegment.FromMember = memberInfo;
+                    sqlSegment.TargetMember = memberInfo;
+                    sqlSegment.SegmentType = memberInfo.GetMemberType();
+                    sqlSegment.Fields = distinctOnFields;
                 }
                 //分组对象为单个字段，要返回单个字段，防止后面Reader处理实体时候报错
-                var readerField = distinctOnFields[0];
                 //要返回原始FromMember，后续方便判断是否使用AS别名
-                sqlSegment.FromMember = readerField.FromMember;
-                if (readerField.TargetType.IsEnumType(out var underlyingType))
-                    sqlSegment.ExpectType = underlyingType;
-                sqlSegment.SegmentType = underlyingType;
-                sqlSegment.NativeDbType = readerField.NativeDbType;
-                sqlSegment.TypeHandler = readerField.TypeHandler;
-                sqlSegment.Value = readerField.Body;
+                else sqlSegment = this.DistinctOnFields[0].Clone();
                 return sqlSegment;
             }
             else if (this.IsGroupingMember(memberExpr.Expression as MemberExpression))
             {
                 //此时是Grouping对象字段的引用，最外面可能会更改成员名称，要复制一份，防止更改Grouping对象中的字段
                 var readerField = this.GroupFields.Find(f => f.TargetMember.Name == memberInfo.Name);
-                sqlSegment.FromMember = readerField.FromMember;
-                if (readerField.TargetType.IsEnumType(out var underlyingType))
-                    sqlSegment.ExpectType = underlyingType;
-                sqlSegment.SegmentType = underlyingType;
-                sqlSegment.NativeDbType = readerField.NativeDbType;
-                sqlSegment.TypeHandler = readerField.TypeHandler;
-                sqlSegment.Value = readerField.Body;
-                //只有成员访问，只需要返回原始FromMember，是可以的。
-                //如果是常量、参数、表达式、方法调用，需要强制设置IsNeedAlias，才能在最外层正确判断是否增加AS别名
-                sqlSegment.IsNeedAlias = readerField.IsNeedAlias;
+                sqlSegment = readerField.Clone();
                 return sqlSegment;
             }
             else if (this.IsDistinctOnMember(memberExpr.Expression as MemberExpression))
             {
                 //此时是Grouping对象字段的引用，最外面可能会更改成员名称，要复制一份，防止更改Grouping对象中的字段
                 var readerField = this.DistinctOnFields.Find(f => f.TargetMember.Name == memberInfo.Name);
-                sqlSegment.FromMember = readerField.FromMember;
-                if (readerField.TargetType.IsEnumType(out var underlyingType))
-                    sqlSegment.ExpectType = underlyingType;
-                sqlSegment.SegmentType = underlyingType;
-                sqlSegment.NativeDbType = readerField.NativeDbType;
-                sqlSegment.TypeHandler = readerField.TypeHandler;
-                sqlSegment.Value = readerField.Body;
-                //只有成员访问，只需要返回原始FromMember，是可以的。
-                //如果是常量、参数、表达式、方法调用，需要强制设置IsNeedAlias，才能在最外层正确判断是否增加AS别名
-                sqlSegment.IsNeedAlias = readerField.IsNeedAlias;
+                sqlSegment = readerField.Clone();
                 return sqlSegment;
             }
             if (memberExpr.IsParameter(out var parameterName))
@@ -752,13 +674,11 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                             this.deferredRefIncludeValuesSetters.Add(deferredSetter);
 
                             //只有select场景才会Include对象
-                            sqlSegment.Value = new ReaderField
-                            {
-                                //需要在构建实体的时候做处理
-                                FieldType = ReaderFieldType.IncludeRef,
-                                FromMember = memberMapper.Member,
-                                TargetMember = memberInfo
-                            };
+                            sqlSegment.HasField = true;
+                            sqlSegment.FieldType = SqlFieldType.IncludeRef;
+                            sqlSegment.FromMember = memberMapper.Member;
+                            sqlSegment.TargetMember = memberInfo;
+                            return sqlSegment;
                         }
                         else
                         {
@@ -769,50 +689,37 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                             sqlSegment.HasField = true;
                             var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
                             if (this.IsNeedTableAlias) fieldName = fromSegment.AliasName + "." + fieldName;
-                            if (this.IsSelect)
-                            {
-                                sqlSegment.Value = new ReaderField
-                                {
-                                    FieldType = ReaderFieldType.Field,
-                                    FromMember = memberMapper.Member,
-                                    TargetMember = memberInfo,
-                                    TargetType = memberMapper.MemberType,
-                                    NativeDbType = memberMapper.NativeDbType,
-                                    TypeHandler = memberMapper.TypeHandler,
-                                    Body = fieldName
-                                };
-                            }
-                            else
-                            {
-                                sqlSegment.FromMember = memberMapper.Member;
-                                sqlSegment.MemberMapper = memberMapper;
-                                sqlSegment.SegmentType = memberMapper.UnderlyingType;
-                                if (memberMapper.UnderlyingType.IsEnum)
-                                    sqlSegment.ExpectType = memberMapper.UnderlyingType;
-                                sqlSegment.NativeDbType = memberMapper.NativeDbType;
-                                sqlSegment.TypeHandler = memberMapper.TypeHandler;
-                                sqlSegment.Value = fieldName;
-                            }
+                            sqlSegment.FieldType = SqlFieldType.Field;
+                            sqlSegment.HasField = true;
+                            sqlSegment.FromMember = memberMapper.Member;
+                            sqlSegment.TargetMember = memberInfo;
+                            sqlSegment.SegmentType = memberMapper.MemberType;
+                            if (memberMapper.UnderlyingType.IsEnum)
+                                sqlSegment.ExpectType = memberMapper.UnderlyingType;
+                            sqlSegment.NativeDbType = memberMapper.NativeDbType;
+                            sqlSegment.TypeHandler = memberMapper.TypeHandler;
+                            sqlSegment.Body = fieldName;
                         }
                     }
                     else
                     {
                         sqlSegment.HasField = true;
-
                         //子查询和CTE子查询场景
                         //子查询和CTE子查询中，Select了Grouping分组对象或是临时匿名对象，目前子查询，只有分组对象才是实体类型，后续会支持匿名对象
                         //OrderBy中的实体类型对象访问已经单独处理了，包括Grouping对象
                         //fromSegment.TableType: TableType.FromQuery || TableType.CteSelfRef
-                        var readerField = fromSegment.ReaderFields.Find(f => f.TargetMember.Name == memberExpr.Member.Name);
-                        if (this.IsSelect) sqlSegment.Value = readerField;
-                        //非Select场景，直接访问字段，只有是Json实体类型字段，FieldType: Field
-                        else sqlSegment.Value = readerField.Body;
+                        var readerField = fromSegment.Fields.Find(f => f.TargetMember.Name == memberExpr.Member.Name);
+                        sqlSegment.HasField = true;
+                        sqlSegment.FieldType = readerField.FieldType;
                         sqlSegment.FromMember = readerField.TargetMember;
-                        if (readerField.TargetType.IsEnumType(out var underlyingType))
+                        sqlSegment.TargetMember = readerField.TargetMember;
+                        sqlSegment.SegmentType = readerField.SegmentType;
+                        if (readerField.SegmentType.IsEnumType(out var underlyingType))
                             sqlSegment.ExpectType = underlyingType;
-                        sqlSegment.SegmentType = underlyingType;
                         sqlSegment.NativeDbType = readerField.NativeDbType;
                         sqlSegment.TypeHandler = readerField.TypeHandler;
+                        sqlSegment.Body = readerField.Body;
+                        sqlSegment.Fields = readerField.Fields;
                     }
                 }
                 else
@@ -830,19 +737,21 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                         if (memberMapper.MemberType.IsEntityType(out _) && !memberMapper.IsNavigation && memberMapper.TypeHandler == null)
                             throw new Exception($"类{fromSegment.EntityType.FullName}的成员{memberExpr.Member.Name}不是值类型，未配置为导航属性也没有配置TypeHandler");
 
+                        sqlSegment.FieldType = SqlFieldType.Field;
                         sqlSegment.FromMember = memberMapper.Member;
-                        sqlSegment.MemberMapper = memberMapper;
+                        sqlSegment.TargetMember = memberMapper.Member;
                         if (memberMapper.UnderlyingType.IsEnum)
                             sqlSegment.ExpectType = memberMapper.UnderlyingType;
-                        sqlSegment.SegmentType = memberMapper.UnderlyingType;
+                        sqlSegment.SegmentType = memberMapper.MemberType;
                         sqlSegment.NativeDbType = memberMapper.NativeDbType;
                         sqlSegment.TypeHandler = memberMapper.TypeHandler;
+
                         //查询时，IsNeedAlias始终为true，新增、更新、删除时，引用联表操作时，才会为true
                         fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
                         //IncludeMany表时，fromSegment.AliasName为null
                         if (this.IsNeedTableAlias && !string.IsNullOrEmpty(fromSegment.AliasName))
                             fieldName = fromSegment.AliasName + "." + fieldName;
-                        sqlSegment.Value = fieldName;
+                        sqlSegment.Body = fieldName;
                     }
                     else
                     {
@@ -851,24 +760,26 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                         //Json的实体类型字段                       
                         //子查询，Select了Grouping分组对象或是匿名对象，目前子查询中，只支持一层，匿名对象后续会做支持
                         //取AS后的字段名，与原字段名不一定一样,AS后的字段名与memberExpr.Member.Name一致
-                        ReaderField readerField = null;
+                        SqlFieldSegment readerField = null;
                         if (memberExpr.Expression.NodeType != ExpressionType.Parameter)
                         {
                             var parentMemberExpr = memberExpr.Expression as MemberExpression;
-                            var parenetReaderField = fromSegment.ReaderFields.Find(f => f.TargetMember.Name == parentMemberExpr.Member.Name);
-                            readerField = parenetReaderField.ReaderFields.Find(f => f.TargetMember.Name == memberExpr.Member.Name);
+                            var parenetReaderField = fromSegment.Fields.Find(f => f.TargetMember.Name == parentMemberExpr.Member.Name);
+                            readerField = parenetReaderField.Fields.Find(f => f.TargetMember.Name == memberExpr.Member.Name);
                         }
                         else
                         {
-                            var fromReaderFields = fromSegment.ReaderFields;
-                            if (fromReaderFields.Count == 1 && fromReaderFields[0].FieldType != ReaderFieldType.Field)
-                                fromReaderFields = fromReaderFields[0].ReaderFields;
+                            var fromReaderFields = fromSegment.Fields;
+                            if (fromReaderFields.Count == 1 && fromReaderFields[0].FieldType != SqlFieldType.Field)
+                                fromReaderFields = fromReaderFields[0].Fields;
                             readerField = fromReaderFields.Find(f => f.TargetMember.Name == memberExpr.Member.Name);
                         }
-                        sqlSegment.FromMember = readerField.TargetMember;
-                        if (readerField.TargetType.IsEnumType(out var underlyingType))
+                        sqlSegment.FieldType = readerField.FieldType;
+                        sqlSegment.FromMember = readerField.FromMember;
+                        sqlSegment.TargetMember = readerField.TargetMember;
+                        if (readerField.SegmentType.IsEnumType(out var underlyingType))
                             sqlSegment.ExpectType = underlyingType;
-                        sqlSegment.SegmentType = underlyingType;
+                        sqlSegment.SegmentType = readerField.SegmentType;
                         sqlSegment.NativeDbType = readerField.NativeDbType;
                         sqlSegment.TypeHandler = readerField.TypeHandler;
                         if (fromSegment.TableType == TableType.TempReaderFields)
@@ -878,7 +789,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                             fieldName = this.OrmProvider.GetFieldName(memberExpr.Member.Name);
                             if (this.IsNeedTableAlias) fieldName = fromSegment.AliasName + "." + fieldName;
                         }
-                        sqlSegment.Value = fieldName;
+                        sqlSegment.Body = fieldName;
                     }
                 }
                 return sqlSegment;
@@ -886,7 +797,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         }
 
         if (memberExpr.Member.DeclaringType == typeof(DBNull))
-            return SqlSegment.Null;
+            return SqlFieldSegment.Null;
 
         //各种静态成员访问，如：DateTime.Now,int.MaxValue,string.Empty
         if (this.OrmProvider.TryGetMemberAccessSqlFormatter(memberExpr, out formatter))
@@ -923,7 +834,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
             this.TableAliases.Add(parameterNames[0], tableSegment = new TableSegment
             {
                 TableType = TableType.TempReaderFields,
-                ReaderFields = this.ReaderFields,
+                Fields = this.ReaderFields,
             });
             return tableSegment;
         }

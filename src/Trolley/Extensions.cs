@@ -213,7 +213,7 @@ public static class Extensions
     }
     public static TEntity To<TEntity>(this IDataReader reader, DbContext dbContext)
         => reader.To<TEntity>(dbContext.OrmProvider, dbContext.MapProvider);
-    public static TEntity To<TEntity>(this IDataReader reader, DbContext dbContext, List<ReaderField> readerFields)
+    public static TEntity To<TEntity>(this IDataReader reader, DbContext dbContext, List<SqlFieldSegment> readerFields)
         => reader.To<TEntity>(dbContext.OrmProvider, readerFields);
     /// <summary>
     /// 使用SQL+参数查询,返回的是单纯的实体
@@ -257,7 +257,7 @@ public static class Extensions
     /// <param name="ormProvider"></param>
     /// <param name="readerFields"></param>
     /// <returns></returns>
-    public static TEntity To<TEntity>(this IDataReader reader, IOrmProvider ormProvider, List<ReaderField> readerFields, bool isUseReaderOrder = false)
+    public static TEntity To<TEntity>(this IDataReader reader, IOrmProvider ormProvider, List<SqlFieldSegment> readerFields, bool isUseReaderOrder = false)
     {
         var entityType = typeof(TEntity);
         var ormProviderType = ormProvider.GetType();
@@ -355,7 +355,7 @@ public static class Extensions
         blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(entityType)));
         return Expression.Lambda(Expression.Block(blockParameters, blockBodies), readerExpr).Compile();
     }
-    private static Delegate CreateReaderDeserializer(IOrmProvider ormProvider, IDataReader reader, Type entityType, List<ReaderField> readerFields, bool isUseReaderOrder = false)
+    private static Delegate CreateReaderDeserializer(IOrmProvider ormProvider, IDataReader reader, Type entityType, List<SqlFieldSegment> readerFields, bool isUseReaderOrder = false)
     {
         var blockParameters = new List<ParameterExpression>();
         var blockBodies = new List<Expression>();
@@ -367,11 +367,11 @@ public static class Extensions
         var root = NewBuildInfo(entityType);
         var current = root;
         var parent = root;
-        var readerBuilders = new Dictionary<ReaderField, EntityBuildInfo>();
+        var readerBuilders = new Dictionary<SqlFieldSegment, EntityBuildInfo>();
         var deferredBuilds = new Stack<EntityBuildInfo>();
         while (readerIndex < readerFields.Count)
         {
-            ReaderField readerField = null;
+            SqlFieldSegment readerField = null;
             //PostgreSql，使用RETURNING *返回的字段顺序不固定，需要根据reader的顺序来绑定接收实体
             //此时的字段都是基础类型
             if (isUseReaderOrder)
@@ -380,11 +380,11 @@ public static class Extensions
                 readerField = readerFields.Find(f => f.Body == fieldName);
             }
             else readerField = readerFields[readerIndex];
-            if (readerField.FieldType == ReaderFieldType.Field)
+            if (readerField.FieldType == SqlFieldType.Field)
             {
                 var fieldType = reader.GetFieldType(index);
                 var readerValueExpr = GetReaderValue(ormProvider, ormProviderExpr, readerExpr, Expression.Constant(index),
-                    readerField.TargetType, fieldType, readerField.TypeHandler, blockParameters, blockBodies);
+                    readerField.SegmentType, fieldType, readerField.TypeHandler, blockParameters, blockBodies);
                 if (root.IsDefault) root.Bindings.Add(Expression.Bind(readerField.TargetMember, readerValueExpr));
                 else root.Arguments.Add(readerValueExpr);
                 index++;
@@ -392,18 +392,18 @@ public static class Extensions
             else
             {
                 Expression readerValueExpr = null;
-                ReaderField childReaderField = null;
+                SqlFieldSegment childReaderField = null;
                 var childIndex = 0;
                 var endIndex = index;
                 //当无参数的Deferred函数调用，ReaderFields的值为null，也没有从数据库读取字段，count=0
-                if (readerField.ReaderFields != null)
-                    endIndex += readerField.ReaderFields.Count;
+                if (readerField.Fields != null)
+                    endIndex += readerField.Fields.Count;
 
-                if (readerField.FieldType == ReaderFieldType.DeferredFields)
+                if (readerField.FieldType == SqlFieldType.DeferredFields)
                 {
-                    if (readerField.TargetType.IsEntityType(out _))
+                    if (readerField.SegmentType.IsEntityType(out _))
                     {
-                        current = NewBuildInfo(readerField.TargetType, readerField.TargetMember, parent);
+                        current = NewBuildInfo(readerField.SegmentType, readerField.TargetMember, parent);
                         readerBuilders.Add(readerField, current);
                     }
 
@@ -421,9 +421,9 @@ public static class Extensions
                         {
                             var fieldType = reader.GetFieldType(index);
                             //延迟的方法调用，有字段值作为方法参数就读取，没有什么也不做
-                            childReaderField = readerField.ReaderFields[childIndex];
+                            childReaderField = readerField.Fields[childIndex];
                             readerValueExpr = GetReaderValue(ormProvider, ormProviderExpr, readerExpr, Expression.Constant(index),
-                                childReaderField.TargetType, fieldType, childReaderField.TypeHandler, blockParameters, blockBodies);
+                                childReaderField.SegmentType, fieldType, childReaderField.TypeHandler, blockParameters, blockBodies);
                             argsExprs.Add(readerValueExpr);
                             childIndex++;
                             index++;
@@ -436,11 +436,11 @@ public static class Extensions
                         current.Bindings.Add(Expression.Bind(readerField.TargetMember, executeExpr));
                     else current.Arguments.Add(executeExpr);
                 }
-                else if (readerField.FieldType == ReaderFieldType.IncludeRef)
+                else if (readerField.FieldType == SqlFieldType.IncludeRef)
                 {
                     //Include导航属性引用不能单独Select，前面一定有Parameter访问
                     //Include导航属性引用单独处理，先设置默认值，在整个实体初始化完后，再设置具体值，初始化Action在成员访问的时候，已经构建好了
-                    var instanceExpr = Expression.Default(readerField.TargetType);
+                    var instanceExpr = Expression.Default(readerField.SegmentType);
                     if (parent.IsDefault)
                         parent.Bindings.Add(Expression.Bind(readerField.TargetMember, instanceExpr));
                     else parent.Arguments.Add(instanceExpr);
@@ -455,14 +455,14 @@ public static class Extensions
                         if (readerField.Parent != null)
                             parent = readerBuilders[readerField.Parent];
                         else parent = root;
-                        current = NewBuildInfo(readerField.TargetType, readerField.TargetMember, parent);
+                        current = NewBuildInfo(readerField.SegmentType, readerField.TargetMember, parent);
                     }
                     while (index < endIndex)
                     {
                         var fieldType = reader.GetFieldType(index);
-                        childReaderField = readerField.ReaderFields[childIndex];
+                        childReaderField = readerField.Fields[childIndex];
                         readerValueExpr = GetReaderValue(ormProvider, ormProviderExpr, readerExpr, Expression.Constant(index),
-                            childReaderField.TargetType, fieldType, childReaderField.TypeHandler, blockParameters, blockBodies);
+                            childReaderField.SegmentType, fieldType, childReaderField.TypeHandler, blockParameters, blockBodies);
 
                         if (current.IsDefault) current.Bindings.Add(Expression.Bind(childReaderField.TargetMember, readerValueExpr));
                         else current.Arguments.Add(readerValueExpr);
@@ -581,7 +581,7 @@ public static class Extensions
         }
         return hashCode.ToHashCode();
     }
-    private static int GetTypeReaderKey(Type entityType, Type ormProviderType, IDataReader reader, List<ReaderField> readerFields, bool isUseReaderOrder, out List<object> deferredFuncs)
+    private static int GetTypeReaderKey(Type entityType, Type ormProviderType, IDataReader reader, List<SqlFieldSegment> readerFields, bool isUseReaderOrder, out List<object> deferredFuncs)
     {
         deferredFuncs = null;
         var hashCode = new HashCode();
@@ -595,13 +595,13 @@ public static class Extensions
         hashCode.Add(readerFields.Count);
         foreach (var readerField in readerFields)
         {
-            if (readerField.FieldType == ReaderFieldType.DeferredFields)
+            if (readerField.FieldType == SqlFieldType.DeferredFields)
             {
                 deferredFuncs ??= new();
                 deferredFuncs.Add(readerField.DeferredDelegate);
             }
             hashCode.Add(readerField.FieldType);
-            if (readerField.FieldType == ReaderFieldType.Entity && readerField.IsTargetType)
+            if (readerField.FieldType == SqlFieldType.Entity && readerField.IsTargetType)
                 hashCode.Add("TargetEntity");
             else hashCode.Add(readerField.TargetMember.Name);
         }

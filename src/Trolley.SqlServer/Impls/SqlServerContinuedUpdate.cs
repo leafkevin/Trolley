@@ -85,10 +85,16 @@ public class SqlServerContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqlS
         var builder = new StringBuilder();
         if (this.Visitor.ActionMode == ActionMode.BulkCopy)
         {
-            var entityType = this.Visitor.Tables[0].EntityType;
+            (var insertObjs, _) = this.DialectVisitor.BuildWithBulkCopy();
+            Type insertObjType = null;
+            foreach (var insertObj in insertObjs)
+            {
+                insertObjType = insertObj.GetType();
+                break;
+            }
             var fromMapper = this.Visitor.Tables[0].Mapper;
             var tableName = this.Visitor.OrmProvider.GetTableName($"{fromMapper.TableName}_{Guid.NewGuid():N}");
-            var memberMappers = this.Visitor.GetRefMemberMappers(entityType, fromMapper);
+            var memberMappers = this.Visitor.GetRefMemberMappers(insertObjType, fromMapper);
             //添加临时表           
             builder.AppendLine($"CREATE TEMPORARY TABLE {tableName}(");
             var pkColumns = new List<string>();

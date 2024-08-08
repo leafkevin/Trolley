@@ -20,7 +20,7 @@ public class MySqlCreateVisitor : CreateVisitor
     public MySqlCreateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
         : base(dbKey, ormProvider, mapProvider, shardingProvider, isParameterized, tableAsStart, parameterPrefix) { }
 
-    public override string BuildCommand(IDbCommand command, bool isReturnIdentity, out List<ReaderField> readerFields)
+    public override string BuildCommand(IDbCommand command, bool isReturnIdentity, out List<SqlFieldSegment> readerFields)
     {
         string sql = null;
         this.IsReturnIdentity = isReturnIdentity;
@@ -53,7 +53,7 @@ public class MySqlCreateVisitor : CreateVisitor
         }
         return sql;
     }
-    public override string BuildSql(out List<ReaderField> readerFields)
+    public override string BuildSql(out List<SqlFieldSegment> readerFields)
     {
         readerFields = null;
         var entityType = this.Tables[0].EntityType;
@@ -112,7 +112,7 @@ public class MySqlCreateVisitor : CreateVisitor
         valuesBuilder = null;
         return sql;
     }
-    public override string BuildWithBulkSql(IDbCommand command, out List<ReaderField> readerFields)
+    public override string BuildWithBulkSql(IDbCommand command, out List<SqlFieldSegment> readerFields)
     {
         //多命令查询或是ToSql才会走到此分支
         //多语句执行，一次性不分批次
@@ -156,7 +156,7 @@ public class MySqlCreateVisitor : CreateVisitor
         return sql;
     }
     public override (bool, string, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
-        Action<IDataParameterCollection, StringBuilder, object, string>, List<ReaderField>) BuildWithBulk(IDbCommand command)
+        Action<IDataParameterCollection, StringBuilder, object, string>, List<SqlFieldSegment>) BuildWithBulk(IDbCommand command)
     {
         bool isNeedSplit = false;
         object firstInsertObj = null;
@@ -431,7 +431,7 @@ public class MySqlCreateVisitor : CreateVisitor
                         if (callExpr.Arguments[0].Type.BaseType == typeof(LambdaExpression))
                         {
                             var argumentExpr = callExpr.Arguments[0];
-                            this.VisitAndDeferred(new SqlSegment { Expression = callExpr.Arguments[0] });
+                            this.VisitAndDeferred(new SqlFieldSegment { Expression = callExpr.Arguments[0] });
                             isNeedAlias = true;
                         }
                         //Set<TUpdateObj>(TUpdateObj updateObj), 走参数
@@ -448,7 +448,7 @@ public class MySqlCreateVisitor : CreateVisitor
                             if (callExpr.Arguments[0].Type == typeof(bool))
                             {
                                 var condition = this.Evaluate<bool>(callExpr.Arguments[0]);
-                                if (condition) this.VisitAndDeferred(new SqlSegment { Expression = callExpr.Arguments[1] });
+                                if (condition) this.VisitAndDeferred(new SqlFieldSegment { Expression = callExpr.Arguments[1] });
                             }
                             else
                             {
@@ -480,7 +480,7 @@ public class MySqlCreateVisitor : CreateVisitor
                                 this.VisitSetFieldExpression(callExpr.Arguments[1], callExpr.Arguments[2]);
                             else
                             {
-                                var leftSegment = this.VisitAndDeferred(new SqlSegment { Expression = callExpr.Arguments[0] });
+                                var leftSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = callExpr.Arguments[0] });
                                 this.VisitWithSetField(callExpr.Arguments[1], this.Evaluate(callExpr.Arguments[2]));
                             }
                         }
@@ -492,7 +492,7 @@ public class MySqlCreateVisitor : CreateVisitor
         if (this.IsUseSetAlias && isNeedAlias) this.UpdateFields.Insert(0, $" AS {this.SetRowAlias}");
         this.IsUpdate = false;
     }
-    public override SqlSegment VisitNew(SqlSegment sqlSegment)
+    public override SqlFieldSegment VisitNew(SqlFieldSegment sqlSegment)
     {
         //只有OnDuplicateKeyUpdate.Set时，才会走到此场景，如：.Set(f => new { TotalAmount = f.TotalAmount + x.Values(f.TotalAmount) })
         //INSERT INTO ... SELECT ... FROM ... 由FromCommand单独处理了，FromCommand走的是QueryVisitor的解析
@@ -505,14 +505,19 @@ public class MySqlCreateVisitor : CreateVisitor
                 var memberInfo = newExpr.Members[i];
                 if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper))
                     continue;
-                sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = newExpr.Arguments[i], MemberMapper = memberMapper });
+                sqlSegment = this.VisitAndDeferred(new SqlFieldSegment
+                {
+                    Expression = newExpr.Arguments[i],
+                    NativeDbType = memberMapper.NativeDbType,
+                    TypeHandler = memberMapper.TypeHandler
+                });
                 this.AddMemberElement(sqlSegment, memberMapper);
             }
             return sqlSegment;
         }
         return this.Evaluate(sqlSegment);
     }
-    public override SqlSegment VisitMemberInit(SqlSegment sqlSegment)
+    public override SqlFieldSegment VisitMemberInit(SqlFieldSegment sqlSegment)
     {
         var memberInitExpr = sqlSegment.Expression as MemberInitExpression;
         var entityMapper = this.Tables[0].Mapper;
@@ -523,7 +528,12 @@ public class MySqlCreateVisitor : CreateVisitor
             var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
             if (!entityMapper.TryGetMemberMap(memberAssignment.Member.Name, out var memberMapper))
                 continue;
-            sqlSegment = this.VisitAndDeferred(new SqlSegment { Expression = memberAssignment.Expression, MemberMapper = memberMapper });
+            sqlSegment = this.VisitAndDeferred(new SqlFieldSegment
+            {
+                Expression = memberAssignment.Expression,
+                NativeDbType = memberMapper.NativeDbType,
+                TypeHandler = memberMapper.TypeHandler
+            });
             this.AddMemberElement(sqlSegment, memberMapper);
         }
         return this.Evaluate(sqlSegment);
@@ -551,12 +561,12 @@ public class MySqlCreateVisitor : CreateVisitor
             this.TableAliases.TryAdd(parameterExpr.Name, this.Tables[0]);
         }
     }
-    public void AddMemberElement(SqlSegment sqlSegment, MemberMap memberMapper)
+    public void AddMemberElement(SqlFieldSegment sqlSegment, MemberMap memberMapper)
     {
         if (this.UpdateFields.Length > 0) this.UpdateFields.Append(',');
         var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
 
-        if (sqlSegment == SqlSegment.Null)
+        if (sqlSegment == SqlFieldSegment.Null)
             this.UpdateFields.Append($"{fieldName}=NULL");
         else if (sqlSegment.IsConstant || sqlSegment.IsVariable)
         {
@@ -578,14 +588,14 @@ public class MySqlCreateVisitor : CreateVisitor
         //带有参数或字段的表达式或函数调用、或是只有参数或字段
         //.Set(true, f => f.TotalAmount))
         //.Set(f => new { TotalAmount = x.Values(f.TotalAmount) })
-        else this.UpdateFields.Append($"{fieldName}={sqlSegment.Value.ToString()}");
+        else this.UpdateFields.Append($"{fieldName}={sqlSegment.Body}");
     }
     public void VisitSetFieldExpression(Expression fieldSelector, Expression fieldValueSelector)
     {
-        var fieldSegment = this.VisitAndDeferred(new SqlSegment { Expression = fieldSelector });
-        var valueSegment = this.VisitAndDeferred(new SqlSegment { Expression = fieldValueSelector });
+        var fieldSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = fieldSelector });
+        var valueSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = fieldValueSelector });
         if (this.UpdateFields.Length > 0) this.UpdateFields.Append(',');
-        this.UpdateFields.Append($"{fieldSegment}={valueSegment}");
+        this.UpdateFields.Append($"{fieldSegment.Body}={valueSegment.Body}");
     }
     public void VisitWithSetField(Expression fieldSelector, object fieldValue)
     {
@@ -611,19 +621,19 @@ public class MySqlCreateVisitor : CreateVisitor
         if (this.UpdateFields.Length > 0) this.UpdateFields.Append(',');
         this.UpdateFields.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
     }
-    private (string, List<ReaderField>) BuildOutputSqlReaderFields()
+    private (string, List<SqlFieldSegment>) BuildOutputSqlReaderFields()
     {
-        var readerFields = new List<ReaderField>();
+        var readerFields = new List<SqlFieldSegment>();
         var entityMapper = this.Tables[0].Mapper;
         var builder = new StringBuilder();
         Action<MemberMap> addReaderField = memberMapper =>
         {
-            readerFields.Add(new ReaderField
+            readerFields.Add(new SqlFieldSegment
             {
-                FieldType = ReaderFieldType.Field,
+                FieldType = SqlFieldType.Field,
                 FromMember = memberMapper.Member,
                 TargetMember = memberMapper.Member,
-                TargetType = memberMapper.MemberType,
+                SegmentType = memberMapper.MemberType,
                 NativeDbType = memberMapper.NativeDbType,
                 TypeHandler = memberMapper.TypeHandler,
                 Body = memberMapper.FieldName

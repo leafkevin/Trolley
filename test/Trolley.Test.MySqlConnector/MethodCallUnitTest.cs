@@ -85,6 +85,17 @@ public class MethodCallUnitTest : UnitTestBase
             .ToListAsync();
         Assert.NotNull(result);
         Assert.True(result.Count == 1);
+
+        sql = repository.From<Company>()
+            .Where(f => f.Name.Contains("微软"))
+            .Select(f => f.Id)
+            .ToSql(out _);
+        Assert.True(sql == "SELECT a.[Id] FROM [sys_company] a WHERE a.[Name] LIKE N'%微软%'");
+        var result1 = await repository.From<Company>()
+            .Where(f => f.Name.Contains("微软"))
+            .ToListAsync();
+        Assert.NotNull(result1);
+        Assert.True(result1.Count > 0);
     }
     [Fact]
     public async void Concat()
@@ -122,7 +133,7 @@ public class MethodCallUnitTest : UnitTestBase
         var sql = repository.From<User>()
             .Where(f => f.Name.Contains("cindy"))
             .Select(f => $"{f.Name + "222"}_111_{f.Age + isMale.ToString()}_{isMale}_{count}")
-           	.ToSql(out var dbParameters);
+               .ToSql(out var dbParameters);
         Assert.True(sql == "SELECT CONCAT(a.`Name`,'222_111_',CAST(a.`Age` AS CHAR),@p0,'_',@p1,'_',@p2) FROM `sys_user` a WHERE a.`Name` LIKE '%cindy%'");
         Assert.True((string)dbParameters[0].Value == isMale.ToString());
         Assert.True(dbParameters[0].Value.GetType() == typeof(string));
@@ -579,27 +590,27 @@ public class MethodCallUnitTest : UnitTestBase
         Assert.True(sql == "SELECT CONCAT(CAST(IFNULL(a.`Age`,20) AS CHAR),'-',a.`Gender`) AS `NewField` FROM `sys_user` a WHERE a.`Id`=1");
 
         result = await repository.From<User>()
-           .Where(f => f.Id == 1)
-           .Select(f => new
-           {
-               NewField = $"{f.Age.IsNull(20)}-{f.Gender.ToDescription()}",
-               f.Age,
-               f.Gender
-           })
-           .FirstAsync();
+        .Where(f => f.Id == 1)
+        .Select(f => new
+        {
+            NewField = $"{f.Age.IsNull(20)}-{f.Gender}",
+            f.Age,
+            f.Gender
+        })
+        .FirstAsync();
         age = result.Age == 0 ? 20 : result.Age;
-        Assert.True(result.NewField == $"{age}-{result.Gender.ToDescription()}");
+        Assert.True(result.NewField == $"{age}-{result.Gender.ToString()}");
 
         sql = repository.From<User>()
-           .Where(f => f.Id == 1)
-           .Select(f => new
-           {
-               NewField = $"{f.Age.IsNull(20)}-{f.Gender.ToDescription()}"
-           })
-           .ToSql(out _);
+        .Where(f => f.Id == 1)
+        .Select(f => new
+        {
+            NewField = $"{f.Age.IsNull(20)}-{f.Gender.ToDescription()}"
+        })
+        .ToSql(out _);
         Assert.True(sql == "SELECT a.`Age`,a.`Gender` FROM `sys_user` a WHERE a.`Id`=1");
 
-        result = await repository.From<User>()
+        var result1 = await repository.From<User>()
            .Where(f => f.Id == 1)
            .Select(f => new
            {
@@ -608,7 +619,7 @@ public class MethodCallUnitTest : UnitTestBase
                f.Gender
            })
            .FirstAsync();
-        age = result.Age == 0 ? 20 : result.Age;
-        Assert.True(result.NewField == $"{age}-{result.Gender.ToDescription()}");
+        age = result1.Age == 0 ? 20 : result.Age;
+        Assert.True(result1.NewField == $"{age}-{result1.Gender.ToDescription()}");
     }
 }

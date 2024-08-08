@@ -27,13 +27,15 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
     {
         if (!isMultiple)
         {
-            this.Tables = new();
-            this.Tables.Add(new TableSegment
+            this.Tables = new()
             {
-                EntityType = entityType,
-                AliasName = "a",
-                Mapper = this.MapProvider.GetEntityMap(entityType)
-            });
+                new TableSegment
+                {
+                    EntityType = entityType,
+                    AliasName = "a",
+                    Mapper = this.MapProvider.GetEntityMap(entityType)
+                }
+            };
         }
         if (!isFirst) this.Clear();
     }
@@ -200,7 +202,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         return this;
     }
 
-    public override SqlSegment VisitMemberAccess(SqlSegment sqlSegment)
+    public override SqlFieldSegment VisitMemberAccess(SqlFieldSegment sqlSegment)
     {
         var memberExpr = sqlSegment.Expression as MemberExpression;
         MemberAccessSqlFormatter formatter = null;
@@ -214,7 +216,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
             {
                 if (memberExpr.Member.Name == nameof(Nullable<bool>.HasValue))
                 {
-                    sqlSegment.Push(new DeferredExpr { OperationType = OperationType.Equal, Value = SqlSegment.Null });
+                    sqlSegment.Push(new DeferredExpr { OperationType = OperationType.Equal, Value = SqlFieldSegment.Null });
                     sqlSegment.Push(new DeferredExpr { OperationType = OperationType.Not });
                     return sqlSegment.Next(memberExpr.Expression);
                 }
@@ -252,22 +254,20 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
 
                 var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
                 sqlSegment.HasField = true;
-                sqlSegment.IsConstant = false;
                 sqlSegment.TableSegment = this.Tables[0];
                 sqlSegment.FromMember = memberMapper.Member;
-                sqlSegment.MemberMapper = memberMapper;
-                sqlSegment.SegmentType = memberMapper.UnderlyingType;
+                sqlSegment.SegmentType = memberMapper.MemberType;
                 if (memberMapper.UnderlyingType.IsEnum)
                     sqlSegment.ExpectType = memberMapper.UnderlyingType;
                 sqlSegment.NativeDbType = memberMapper.NativeDbType;
                 sqlSegment.TypeHandler = memberMapper.TypeHandler;
-                sqlSegment.Value = fieldName;
+                sqlSegment.Body = fieldName;
                 return sqlSegment;
             }
         }
 
         if (memberExpr.Member.DeclaringType == typeof(DBNull))
-            return SqlSegment.Null;
+            return SqlFieldSegment.Null;
 
         //各种静态成员访问，如：DateTime.Now,int.MaxValue,string.Empty
         if (this.OrmProvider.TryGetMemberAccessSqlFormatter(memberExpr, out formatter))
@@ -285,7 +285,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         sqlSegment.IsVariable = true;
         return sqlSegment;
     }
-    public override SqlSegment VisitNew(SqlSegment sqlSegment)
+    public override SqlFieldSegment VisitNew(SqlFieldSegment sqlSegment)
     {
         var newExpr = sqlSegment.Expression as NewExpression;
         if (newExpr.Type.Name.StartsWith("<>"))
@@ -303,7 +303,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         }
         return this.Evaluate(sqlSegment);
     }
-    public override SqlSegment VisitMemberInit(SqlSegment sqlSegment)
+    public override SqlFieldSegment VisitMemberInit(SqlFieldSegment sqlSegment)
     {
         var memberInitExpr = sqlSegment.Expression as MemberInitExpression;
         var builder = new StringBuilder();
@@ -358,13 +358,13 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         else this.WhereSql = conditionSql;
         this.IsWhere = false;
     }
-    private void AddMemberElement(SqlSegment sqlSegment, MemberMap memberMapper, StringBuilder builder)
+    private void AddMemberElement(SqlFieldSegment sqlSegment, MemberMap memberMapper, StringBuilder builder)
     {
         sqlSegment = this.VisitAndDeferred(sqlSegment);
         if (builder.Length > 0)
             builder.Append(',');
         builder.Append(this.OrmProvider.GetFieldName(memberMapper.FieldName) + "=");
-        if (sqlSegment == SqlSegment.Null)
+        if (sqlSegment == SqlFieldSegment.Null)
             builder.Append("NULL");
         else builder.Append(this.GetQuotedValue(sqlSegment));
     }

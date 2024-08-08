@@ -43,7 +43,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         }
         if (!isFirst) this.Clear();
     }
-    public virtual string BuildCommand(IDbCommand command, bool isReturnIdentity, out List<ReaderField> readerFields)
+    public virtual string BuildCommand(IDbCommand command, bool isReturnIdentity, out List<SqlFieldSegment> readerFields)
     {
         string sql = null;
         readerFields = null;
@@ -99,7 +99,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         sqlBuilder.Append(this.BuildCommand(command, false, out var readerFields));
         this.ReaderFields = readerFields;
     }
-    public virtual string BuildSql(out List<ReaderField> readerFields)
+    public virtual string BuildSql(out List<SqlFieldSegment> readerFields)
     {
         readerFields = null;
         var entityType = this.Tables[0].EntityType;
@@ -184,7 +184,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     }
     public virtual void OnlyFields(Expression fieldsSelector)
         => this.OnlyFieldNames = this.VisitFields(fieldsSelector);
-    public virtual string BuildWithBulkSql(IDbCommand command, out List<ReaderField> readerFields)
+    public virtual string BuildWithBulkSql(IDbCommand command, out List<SqlFieldSegment> readerFields)
     {
         //多命令查询或是ToSql才会走到此分支
         //多语句执行，一次性不分批次
@@ -222,7 +222,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         return sql;
     }
     public virtual (bool, string, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
-        Action<IDataParameterCollection, StringBuilder, object, string>, List<ReaderField>) BuildWithBulk(IDbCommand command)
+        Action<IDataParameterCollection, StringBuilder, object, string>, List<SqlFieldSegment>) BuildWithBulk(IDbCommand command)
     {
         bool isNeedSplit = false;
         object firstInsertObj = null;

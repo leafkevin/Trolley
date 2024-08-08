@@ -43,6 +43,12 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                     (insertObjs, var timeoutSeconds) = this.DialectVisitor.BuildWithBulkCopy();
 
                     bool isOpened = false;
+                    Type insertObjType = null;
+                    foreach (var insertObj in insertObjs)
+                    {
+                        insertObjType = insertObj.GetType();
+                        break;
+                    }
                     if (this.DbContext.ShardingProvider.TryGetShardingTable(entityType, out var shardingTable))
                     {
                         isNeedSplit = this.Visitor.Tables[0].Body == null;
@@ -51,24 +57,24 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                             var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
                             foreach (var tabledInsertObj in tabledInsertObjs)
                             {
-                                result += this.ExecuteBulkCopy(ref isOpened, tabledInsertObj.Value, timeoutSeconds, tabledInsertObj.Key);
+                                result += this.ExecuteBulkCopy(ref isOpened, insertObjType, tabledInsertObj.Value, timeoutSeconds, tabledInsertObj.Key);
                             }
                         }
-                        else result = this.ExecuteBulkCopy(ref isOpened, insertObjs, timeoutSeconds, this.Visitor.Tables[0].Body);
+                        else result = this.ExecuteBulkCopy(ref isOpened, insertObjType, insertObjs, timeoutSeconds, this.Visitor.Tables[0].Body);
                     }
-                    else result = this.ExecuteBulkCopy(ref isOpened, insertObjs, timeoutSeconds);
+                    else result = this.ExecuteBulkCopy(ref isOpened, insertObjType, insertObjs, timeoutSeconds);
                     break;
                 case ActionMode.Bulk:
                     command = this.DbContext.CreateCommand();
-                    var sqlBuilder = new StringBuilder();
+                    var builder = new StringBuilder();
                     (isNeedSplit, var tableName, insertObjs, var bulkCount,
                         var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
 
                     Action<string> clearCommand = tableName =>
                     {
-                        sqlBuilder.Clear();
+                        builder.Clear();
                         command.Parameters.Clear();
-                        firstSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName);
+                        firstSqlSetter.Invoke(command.Parameters, builder, tableName);
                     };
                     Func<string, IEnumerable, int> executor = (tableName, insertObjs) =>
                     {
@@ -76,11 +82,11 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                         int count = 0, index = 0;
                         foreach (var insertObj in insertObjs)
                         {
-                            if (index > 0) sqlBuilder.Append(',');
-                            loopSqlSetter.Invoke(command.Parameters, sqlBuilder, insertObj, index.ToString());
+                            if (index > 0) builder.Append(',');
+                            loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
                             if (index >= bulkCount)
                             {
-                                command.CommandText = sqlBuilder.ToString();
+                                command.CommandText = builder.ToString();
                                 if (isFirst)
                                 {
                                     this.DbContext.Open();
@@ -95,7 +101,7 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                         }
                         if (index > 0)
                         {
-                            command.CommandText = sqlBuilder.ToString();
+                            command.CommandText = builder.ToString();
                             if (isFirst) this.DbContext.Open();
                             count += command.ExecuteNonQuery();
                         }
@@ -107,17 +113,17 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                         var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
                         foreach (var tabledInsertObj in tabledInsertObjs)
                         {
-                            firstSqlSetter.Invoke(command.Parameters, sqlBuilder, tabledInsertObj.Key);
+                            firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
                             result += executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
                         }
                     }
                     else
                     {
-                        firstSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName);
+                        firstSqlSetter.Invoke(command.Parameters, builder, tableName);
                         result = executor.Invoke(tableName, insertObjs);
                     }
-                    sqlBuilder.Clear();
-                    sqlBuilder = null;
+                    builder.Clear();
+                    builder = null;
                     break;
                 default:
                     //默认单条
@@ -157,7 +163,12 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                 case ActionMode.BulkCopy:
                     (insertObjs, var timeoutSeconds) = this.DialectVisitor.BuildWithBulkCopy();
                     bool isOpened = false;
-
+                    Type insertObjType = null;
+                    foreach (var insertObj in insertObjs)
+                    {
+                        insertObjType = insertObj.GetType();
+                        break;
+                    }
                     if (this.DbContext.ShardingProvider.TryGetShardingTable(entityType, out _))
                     {
                         isNeedSplit = this.Visitor.Tables[0].Body == null;
@@ -166,13 +177,13 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                             var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
                             foreach (var tabledInsertObj in tabledInsertObjs)
                             {
-                                result += await this.ExecuteBulkCopyAsync(isOpened, tabledInsertObj.Value, timeoutSeconds, cancellationToken, tabledInsertObj.Key);
+                                result += await this.ExecuteBulkCopyAsync(isOpened, insertObjType, tabledInsertObj.Value, timeoutSeconds, cancellationToken, tabledInsertObj.Key);
                                 if (!isOpened) isOpened = true;
                             }
                         }
-                        else result = await this.ExecuteBulkCopyAsync(isOpened, insertObjs, timeoutSeconds, cancellationToken, this.Visitor.Tables[0].Body);
+                        else result = await this.ExecuteBulkCopyAsync(isOpened, insertObjType, insertObjs, timeoutSeconds, cancellationToken, this.Visitor.Tables[0].Body);
                     }
-                    else result = await this.ExecuteBulkCopyAsync(isOpened, insertObjs, timeoutSeconds, cancellationToken);
+                    else result = await this.ExecuteBulkCopyAsync(isOpened, insertObjType, insertObjs, timeoutSeconds, cancellationToken);
                     break;
                 case ActionMode.Bulk:
                     command = this.DbContext.CreateDbCommand();
@@ -261,21 +272,19 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
         if (exception != null) throw exception;
         return result;
     }
-    private int ExecuteBulkCopy(ref bool isOpened, IEnumerable insertObjs, int? timeoutSeconds, string tableName = null)
+    private int ExecuteBulkCopy(ref bool isOpened, Type insertObjType, IEnumerable insertObjs, int? timeoutSeconds, string tableName = null)
     {
+        var entityMapper = this.Visitor.Tables[0].Mapper;
+        var memberMappers = this.Visitor.GetRefMemberMappers(insertObjType, entityMapper);
+        var dataTable = this.Visitor.ToDataTable(insertObjType, insertObjs, memberMappers, tableName ?? entityMapper.TableName);
+        if (dataTable.Rows.Count == 0) return 0;
+
         if (!isOpened)
         {
             this.DbContext.Open();
             isOpened = true;
         }
-        Type insertObjType = null;
-        foreach (var insertObj in insertObjs)
-        {
-            insertObjType = insertObj.GetType();
-            break;
-        }
         var fromMapper = this.Visitor.Tables[0].Mapper;
-        var memberMappers = this.Visitor.GetRefMemberMappers(insertObjType, fromMapper);
         int index = 0;
         tableName ??= fromMapper.TableName;
         var builder = new StringBuilder($"COPY {this.OrmProvider.GetTableName(tableName)}(");
@@ -306,21 +315,19 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
         builder = null;
         return result;
     }
-    private async Task<int> ExecuteBulkCopyAsync(bool isOpened, IEnumerable insertObjs, int? timeoutSeconds, CancellationToken cancellationToken = default, string tableName = null)
+    private async Task<int> ExecuteBulkCopyAsync(bool isOpened, Type insertObjType, IEnumerable insertObjs, int? timeoutSeconds, CancellationToken cancellationToken = default, string tableName = null)
     {
+        var entityMapper = this.Visitor.Tables[0].Mapper;
+        var memberMappers = this.Visitor.GetRefMemberMappers(insertObjType, entityMapper);
+        var dataTable = this.Visitor.ToDataTable(insertObjType, insertObjs, memberMappers, tableName ?? entityMapper.TableName);
+        if (dataTable.Rows.Count == 0) return 0;
+
         if (!isOpened)
         {
             await this.DbContext.OpenAsync(cancellationToken);
             isOpened = true;
         }
-        Type insertObjType = null;
-        foreach (var insertObj in insertObjs)
-        {
-            insertObjType = insertObj.GetType();
-            break;
-        }
         var fromMapper = this.Visitor.Tables[0].Mapper;
-        var memberMappers = this.Visitor.GetRefMemberMappers(insertObjType, fromMapper);
         int index = 0;
         tableName ??= fromMapper.TableName;
         var builder = new StringBuilder($"COPY {this.OrmProvider.GetTableName(tableName)}(");
@@ -353,7 +360,7 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
     }
     #endregion
 }
-public class PostgreSqlCreated<TEntity, TResult> : PostgreSqlContinuedCreate<TEntity>, IPostgreSqlCreated<TEntity, TResult>
+public class PostgreSqlCreated<TEntity, TResult> : Created<TEntity>, IPostgreSqlCreated<TEntity, TResult>
 {
     #region Constructor
     public PostgreSqlCreated(DbContext dbContext, ICreateVisitor visitor)
@@ -390,7 +397,7 @@ public class PostgreSqlCreated<TEntity, TResult> : PostgreSqlContinuedCreate<TEn
     /// <summary>
     /// 不支持的方法调用，调用Outpt方法后此方法无效，请使用Execute方法
     /// </summary>
-    /// <returns>返回自增长主键值</returns>   
+    /// <returns>返回自增长主键值</returns>
     public override long ExecuteIdentityLong()
         => throw new NotSupportedException("不支持的方法调用，调用Outpt方法后此方法无效，请使用Execute方法");
     /// <summary>
@@ -402,7 +409,7 @@ public class PostgreSqlCreated<TEntity, TResult> : PostgreSqlContinuedCreate<TEn
         => throw new NotSupportedException("不支持的方法调用，调用Outpt方法后此方法无效，请使用ExecuteAsync方法");
     #endregion
 }
-public class PostgreSqlBulkCreated<TEntity, TResult> : PostgreSqlBulkContinuedCreate<TEntity>, IPostgreSqlBulkCreated<TEntity, TResult>
+public class PostgreSqlBulkCreated<TEntity, TResult> : Created<TEntity>, IPostgreSqlBulkCreated<TEntity, TResult>
 {
     #region Constructor
     public PostgreSqlBulkCreated(DbContext dbContext, ICreateVisitor visitor)

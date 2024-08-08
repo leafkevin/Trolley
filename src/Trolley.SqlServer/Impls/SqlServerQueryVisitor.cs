@@ -10,7 +10,7 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
     public SqlServerQueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", IDataParameterCollection dbParameters = null)
      : base(dbKey, ormProvider, mapProvider, shardingProvider, isParameterized, tableAsStart, parameterPrefix, dbParameters) { }
 
-    public override string BuildSql(out List<ReaderField> readerFields)
+    public override string BuildSql(out List<SqlFieldSegment> readerFields)
     {
         var builder = new StringBuilder();
         if (this.IsUseCteTable && this.RefQueries != null && this.RefQueries.Count > 0)
@@ -74,15 +74,16 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
         }
         builder.Clear();
 
-        //再判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不对
-        bool isNeedWrap = (this.IsUnion || this.IsSecondUnion || isManySharding) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue);
-
         //各种单值查询，如：SELECT COUNT(*)/MAX(*)..等，都有SELECT操作     
         //如：From(f=>...).InnerJoin/UnionAll(f=>...)
         //生成sql时，include表的字段，一定要紧跟着主表字段后面，方便赋值主表实体的属性中，所以在插入时候就排好序
         //方案：在buildSql时确定，ReaderFields要重新排好序，include字段放到对应主表字段后面，表别名顺序不变
         if (this.ReaderFields == null)
             throw new Exception("缺少Select语句");
+
+        //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不对
+        //SqlServer数据库，Union子句在SELECT * FROM包装后，每个列都需要有一个明确的列名，没有则需要增加as别名
+        bool isNeedWrap = (this.IsUnion || this.IsSecondUnion || isManySharding) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue);
         this.AddSelectFieldsSql(builder, this.ReaderFields, isNeedWrap);
 
         string selectSql = null;
@@ -129,8 +130,6 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
             builder.Append($"{pageSql}");
         }
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
-
-        //UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不对
         if (isNeedWrap)
         {
             builder.Insert(0, "SELECT * FROM (");
@@ -148,7 +147,7 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
         builder.Append($"INSERT INTO {this.GetTableName(this.Tables[0])} (");
         int index = 0;
         if (this.ReaderFields == null && this.IsFromQuery)
-            this.ReaderFields = this.Tables[1].ReaderFields;
+            this.ReaderFields = this.Tables[1].Fields;
         foreach (var readerField in this.ReaderFields)
         {
             //Union后，如果没有select语句时，通常实体类型或是select分组对象
@@ -224,8 +223,6 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
             tableSql = builder.ToString();
         }
         builder.Clear();
-        //再判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不对
-        bool isNeedWrap = (this.IsUnion || this.IsSecondUnion || isManySharding) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue);
 
         //各种单值查询，如：SELECT COUNT(*)/MAX(*)..等，都有SELECT操作     
         //如：From(f=>...).InnerJoin/UnionAll(f=>...)
@@ -233,6 +230,8 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
         //方案：在buildSql时确定，ReaderFields要重新排好序，include字段放到对应主表字段后面，表别名顺序不变
         if (this.ReaderFields == null)
             throw new Exception("缺少Select语句");
+        //SqlServer数据库，Union子句在SELECT * FROM包装后，每个列都需要有一个明确的列名，没有则需要增加as别名
+        bool isNeedWrap = (this.IsUnion || this.IsSecondUnion || isManySharding) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue);
         this.AddSelectFieldsSql(builder, this.ReaderFields, isNeedWrap);
 
         string selectSql = null;
@@ -273,7 +272,7 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
         }
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
 
-        //UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不对
+        //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不正确
         if (isNeedWrap)
         {
             builder.Insert(0, "SELECT * FROM (");
@@ -313,5 +312,57 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
             else builder.Append($"name LIKE '{this.ShardingTables[0].Mapper.TableName}%'");
         }
         return builder.ToString();
+    }
+    public virtual void AddSelectFieldsSql(StringBuilder builder, List<SqlFieldSegment> readerFields, bool isSecondUnionWrap)
+    {
+        int index = 0;
+        string body = null;
+        bool isOnlyField = readerFields.Count == 1 && readerFields[0].FieldType == SqlFieldType.Field;
+        foreach (var readerField in readerFields)
+        {
+            if (index > 0) builder.Append(',');
+            switch (readerField.FieldType)
+            {
+                case SqlFieldType.Entity:
+                    this.AddSelectFieldsSql(builder, readerField.Fields, isSecondUnionWrap);
+                    break;
+                case SqlFieldType.DeferredFields:
+                    if (readerField.Fields == null)
+                        continue;
+                    body = this.GetQuotedValue(readerField);
+                    builder.Append(body);
+                    //生成SQL的时候，才加上AS别名
+                    if (this.IsNeedAlias(readerField, isOnlyField, isSecondUnionWrap))
+                        builder.Append($" AS {this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}");
+                    break;
+                default:
+                    body = this.GetQuotedValue(readerField);
+                    //CTE表字段是常量/变量/字段名称，都有可能和声明的字段不一致，所以需要获取CTE表的声明字段
+                    //body里面的值，是原始的值或是字段名
+                    if (readerField.TableSegment != null && readerField.TableSegment.TableType == TableType.CteSelfRef)
+                        body = $"{readerField.TableSegment.AliasName}.{this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}";
+                    builder.Append(body);
+                    //生成SQL的时候，才加上AS别名
+                    if (this.IsNeedAlias(readerField, isOnlyField, isSecondUnionWrap))
+                        builder.Append($" AS {this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}");
+                    break;
+            }
+            index++;
+        }
+    }
+    public virtual bool IsNeedAlias(SqlFieldSegment readerField, bool isOnlyField, bool isSecondUnionWrap)
+    {
+        if (!isSecondUnionWrap && (this.IsSecondUnion || this.IsFromCommand || this.IsSecondUnion || this.IsCteTable)) return false;
+        if (readerField.IsNeedAlias) return true;
+        if (isOnlyField) return false;
+        if (readerField.Fields != null && readerField.Fields.Count > 1)
+            return false;
+        //GroupFields中的ReaderField只设置了必须加as别名的情况，没有设置TargetMember.Name !=FromMember.Name的情况，这里把这种情况补上
+        //PostgreSql时，DistinctOnFields中的ReaderField也是这个场景
+        if (readerField.IsConstant || readerField.IsVariable || readerField.HasParameter
+            || readerField.IsExpression || readerField.IsMethodCall) return true;
+        if (readerField.TargetMember != null && readerField.FromMember != null)
+            return readerField.TargetMember.Name != readerField.FromMember.Name;
+        return false;
     }
 }

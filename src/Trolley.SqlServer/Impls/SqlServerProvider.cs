@@ -131,6 +131,14 @@ public partial class SqlServerProvider : BaseOrmProvider
         parameter.Value = value;
         return parameter;
     }
+    public override void ChangeParameter(object dbParameter, Type targetType, object value)
+    {
+        var fieldValue = Convert.ChangeType(value, targetType);
+        var myDbParameter = dbParameter as SqlParameter;
+        var nativeDbType = (SqlDbType)this.GetNativeDbType(targetType);
+        myDbParameter.SqlDbType = nativeDbType;
+        myDbParameter.Value = fieldValue;
+    }
     public override string GetTableName(string tableName) => "[" + tableName + "]";
     public override string GetFieldName(string fieldName) => "[" + fieldName + "]";
     public override string GetPagingTemplate(int? skip, int? limit, string orderBy = null)
@@ -192,12 +200,12 @@ public partial class SqlServerProvider : BaseOrmProvider
                     return $"'{factValue:hh\\:mm\\:ss\\.ffffff}'";
                 }
             case Type factType when factType == typeof(TimeOnly): return $"'{(TimeOnly)value:hh\\:mm\\:ss\\.ffffff}'";
-            case Type factType when factType == typeof(SqlSegment):
+            case Type factType when factType == typeof(SqlFieldSegment):
                 {
-                    var sqlSegment = value as SqlSegment;
-                    if (sqlSegment.IsConstant)
+                    var sqlSegment = value as SqlFieldSegment;
+                    if (sqlSegment.IsConstant || sqlSegment.IsVariable)
                         return this.GetQuotedValue(sqlSegment.Value);
-                    return sqlSegment.ToString();
+                    return sqlSegment.Body;
                 }
             default: return value.ToString();
         }
@@ -210,14 +218,14 @@ public partial class SqlServerProvider : BaseOrmProvider
         switch (methodInfo.Name)
         {
             case "IsNull":
-                cacheKey = HashCode.Combine(typeof(Sql), methodInfo);
+                cacheKey = HashCode.Combine(typeof(Sql), methodInfo.GetGenericMethodDefinition());
                 formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                 {
-                    var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                    var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
+                    var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
+                    var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[1] });
                     var targetArgument = visitor.GetQuotedValue(targetSegment);
                     var rightArgument = visitor.GetQuotedValue(rightSegment);
-                    return targetSegment.Merge(rightSegment, $"ISNULL({targetArgument},{rightArgument})", false, false, false, true);
+                    return targetSegment.Merge(rightSegment, $"ISNULL({targetArgument},{rightArgument})", false, true);
                 });
                 return true;
         }

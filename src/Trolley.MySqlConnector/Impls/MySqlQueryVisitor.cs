@@ -20,7 +20,7 @@ public class MySqlQueryVisitor : QueryVisitor
         builder.Append($" {this.GetTableName(this.Tables[0])} (");
         int index = 0;
         if (this.ReaderFields == null && this.IsFromQuery)
-            this.ReaderFields = this.Tables[1].ReaderFields;
+            this.ReaderFields = this.Tables[1].Fields;
         foreach (var readerField in this.ReaderFields)
         {
             //Union后，如果没有select语句时，通常实体类型或是select分组对象
@@ -76,13 +76,11 @@ public class MySqlQueryVisitor : QueryVisitor
         bool isManySharding = false;
         if (this.Tables.Count > 0)
         {
-            int startIndex = 0;
-            if (this.IsFromCommand) startIndex = 1;
-            for (int i = startIndex; i < this.Tables.Count; i++)
+            for (int i = 1; i < this.Tables.Count; i++)
             {
                 var tableSegment = this.Tables[i];
                 string tableName = this.GetTableName(tableSegment);
-                if (i > startIndex)
+                if (i > 1)
                 {
                     if (!string.IsNullOrEmpty(tableSegment.JoinType))
                     {
@@ -105,16 +103,13 @@ public class MySqlQueryVisitor : QueryVisitor
         }
         builder.Clear();
 
-        //再判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不对
-        bool isNeedWrap = (this.IsUnion || this.IsSecondUnion || isManySharding) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue);
-
         //各种单值查询，如：SELECT COUNT(*)/MAX(*)..等，都有SELECT操作     
         //如：From(f=>...).InnerJoin/UnionAll(f=>...)
         //生成sql时，include表的字段，一定要紧跟着主表字段后面，方便赋值主表实体的属性中，所以在插入时候就排好序
         //方案：在buildSql时确定，ReaderFields要重新排好序，include字段放到对应主表字段后面，表别名顺序不变
         if (this.ReaderFields == null)
             throw new Exception("缺少Select语句");
-        this.AddSelectFieldsSql(builder, this.ReaderFields, isNeedWrap);
+        this.AddSelectFieldsSql(builder, this.ReaderFields);
 
         string selectSql = null;
         if (this.IsDistinct)
@@ -154,7 +149,8 @@ public class MySqlQueryVisitor : QueryVisitor
         }
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
 
-        //UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不对
+        //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不正确
+        bool isNeedWrap = (this.IsUnion || this.IsSecondUnion || isManySharding) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue);
         if (isNeedWrap)
         {
             builder.Insert(0, "SELECT * FROM (");

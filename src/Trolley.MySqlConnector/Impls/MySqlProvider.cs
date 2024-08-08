@@ -136,6 +136,14 @@ public partial class MySqlProvider : BaseOrmProvider
         parameter.Value = value;
         return parameter;
     }
+    public override void ChangeParameter(object dbParameter, Type targetType, object value)
+    {
+        var fieldValue = Convert.ChangeType(value, targetType);
+        var myDbParameter = dbParameter as MySqlParameter;
+        var nativeDbType = (MySqlDbType)this.GetNativeDbType(targetType);
+        myDbParameter.MySqlDbType = nativeDbType;
+        myDbParameter.Value = fieldValue;
+    }
     public override string GetTableName(string tableName) => "`" + tableName + "`";
     public override string GetFieldName(string fieldName) => "`" + fieldName + "`";
     public override object GetNativeDbType(Type fieldType)
@@ -177,12 +185,13 @@ public partial class MySqlProvider : BaseOrmProvider
                         var fieldName = this.GetFieldName(memberMapper.FieldName);
                         if (myVisitor.IsUseSetAlias) fieldName = myVisitor.SetRowAlias + "." + fieldName;
                         else fieldName = $"VALUES({fieldName})";
-                        return new SqlSegment
+                        return new SqlFieldSegment
                         {
-                            MemberMapper = memberMapper,
-                            FromMember = memberMapper.Member,
                             HasField = true,
-                            Value = fieldName
+                            FromMember = memberMapper.Member,
+                            NativeDbType = memberMapper.NativeDbType,
+                            TypeHandler = memberMapper.TypeHandler,
+                            Body = fieldName
                         };
                     });
                     return true;
@@ -192,11 +201,11 @@ public partial class MySqlProvider : BaseOrmProvider
                 cacheKey = HashCode.Combine(typeof(Sql), methodInfo.GetGenericMethodDefinition());
                 formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                 {
-                    var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                    var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
+                    var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
+                    var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[1] });
                     var targetArgument = visitor.GetQuotedValue(targetSegment);
                     var rightArgument = visitor.GetQuotedValue(rightSegment);
-                    return targetSegment.Merge(rightSegment, $"IFNULL({targetArgument},{rightArgument})", false, false, false, true);
+                    return targetSegment.Merge(rightSegment, $"IFNULL({targetArgument},{rightArgument})", false, true);
                 });
                 return true;
         }

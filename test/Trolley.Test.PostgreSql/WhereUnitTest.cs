@@ -173,12 +173,40 @@ public class WhereUnitTest : UnitTestBase
             .Select(f => f.Id)
             .ToSql(out _);
         Assert.True(sql1 == "SELECT a.\"Id\" FROM \"sys_order\" a WHERE EXISTS(SELECT * FROM \"sys_user\" t WHERE t.\"Id\"=a.\"BuyerId\" AND t.\"IsEnabled\"=TRUE) AND (a.\"BuyerId\" IS NULL OR a.\"BuyerId\"=2) AND (a.\"OrderNo\" LIKE '%ON_%' OR (a.\"OrderNo\" IS NULL OR a.\"OrderNo\"=''))");
+        var result1 = repository.From<Order>()
+            .Where(f => Sql.Exists<User>(t => t.Id == f.BuyerId && t.IsEnabled) && (f.BuyerId.IsNull() || f.BuyerId == 2)
+                && (f.OrderNo.Contains("ON_") || string.IsNullOrEmpty(f.OrderNo)))
+            .Select(f => f.Id)
+            .ToList();
+        Assert.NotNull(result1);
+        Assert.True(result1.Count > 0);
 
         var sql2 = repository.From<Order>()
-          .Where(f => (f.BuyerId.IsNull() || f.BuyerId == 2) && (f.OrderNo.Contains("ON_") || string.IsNullOrEmpty(f.OrderNo))
-              && (Sql.Exists<User>(t => t.Id == f.BuyerId && t.IsEnabled) || f.SellerId.IsNull()))
-          .Select(f => f.Id)
-          .ToSql(out _);
+            .Where(f => (f.BuyerId.IsNull() || f.BuyerId == 2) && (f.OrderNo.Contains("ON_") || string.IsNullOrEmpty(f.OrderNo))
+                && (Sql.Exists<User>(t => t.Id == f.BuyerId && t.IsEnabled) || f.SellerId.IsNull()))
+            .Select(f => f.Id)
+            .ToSql(out _);
         Assert.True(sql2 == "SELECT a.\"Id\" FROM \"sys_order\" a WHERE (a.\"BuyerId\" IS NULL OR a.\"BuyerId\"=2) AND (a.\"OrderNo\" LIKE '%ON_%' OR (a.\"OrderNo\" IS NULL OR a.\"OrderNo\"='')) AND (EXISTS(SELECT * FROM \"sys_user\" t WHERE t.\"Id\"=a.\"BuyerId\" AND t.\"IsEnabled\"=TRUE) OR a.\"SellerId\" IS NULL)");
+        var result2 = repository.From<Order>()
+            .Where(f => Sql.Exists<User>(t => t.Id == f.BuyerId && t.IsEnabled) && (f.BuyerId.IsNull() || f.BuyerId == 2)
+                && (f.OrderNo.Contains("ON_") || string.IsNullOrEmpty(f.OrderNo)))
+            .Select(f => f.Id)
+            .ToList();
+        Assert.NotNull(result2);
+        Assert.True(result2.Count > 0);
+
+        var sql3 = repository.From<Order>()
+            .Where(f => Sql.Exists<User>(t => t.Id == f.BuyerId && t.IsEnabled) && (f.BuyerId.IsNull() || f.BuyerId == 2)
+                && (f.OrderNo.Contains("ON_") && string.IsNullOrEmpty(f.OrderNo)) || DateTime.IsLeapYear(f.CreatedAt.Year))
+            .Select(f => f.Id)
+            .ToSql(out _);
+        Assert.True(sql3 == "SELECT a.\"Id\" FROM \"sys_order\" a WHERE EXISTS(SELECT * FROM \"sys_user\" t WHERE t.\"Id\"=a.\"BuyerId\" AND t.\"IsEnabled\"=TRUE) AND (a.\"BuyerId\" IS NULL OR a.\"BuyerId\"=2) AND a.\"OrderNo\" LIKE '%ON_%' AND (a.\"OrderNo\" IS NULL OR a.\"OrderNo\"='') OR ((EXTRACT(YEAR FROM a.\"CreatedAt\")::INT4)%4=0 AND (EXTRACT(YEAR FROM a.\"CreatedAt\")::INT4)%100<>0 OR (EXTRACT(YEAR FROM a.\"CreatedAt\")::INT4)%400=0)");
+        var result3 = repository.From<Order>()
+            .Where(f => Sql.Exists<User>(t => t.Id == f.BuyerId && t.IsEnabled) && (f.BuyerId.IsNull() || f.BuyerId == 2)
+                && (f.OrderNo.Contains("ON_") && string.IsNullOrEmpty(f.OrderNo)) || DateTime.IsLeapYear(f.CreatedAt.Year))
+            .Select(f => f.Id)
+            .ToList();
+        Assert.NotNull(result3);
+        Assert.True(result3.Count > 0);
     }
 }

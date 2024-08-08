@@ -92,7 +92,7 @@ public class TableSegment
     /// <summary>
     /// 子查询表时，所有字段定义，包括CTE表
     /// </summary>
-    public List<ReaderField> ReaderFields { get; set; }
+    public List<SqlFieldSegment> Fields { get; set; }
     /// <summary>
     /// Include 1:N关系表时，从最外层Select参数访问到Include成员的父亲路径所有成员访问列表，方便最后赋值
     /// </summary>
@@ -147,7 +147,7 @@ public class TableSegment
             Path = this.Path,
             Filter = this.Filter,
             OnExpr = joinOnExpr,
-            ReaderFields = this.ReaderFields
+            Fields = this.Fields
         };
     }
 

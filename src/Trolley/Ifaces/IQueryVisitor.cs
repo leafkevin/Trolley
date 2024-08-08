@@ -41,9 +41,9 @@ public interface IQueryVisitor : IDisposable
     bool IsFromQuery { get; set; }
     bool IsFromCommand { get; set; }
 
-    string BuildSql(out List<ReaderField> readerFields);
+    string BuildSql(out List<SqlFieldSegment> readerFields);
     string BuildCommandSql(out IDataParameterCollection dbParameters);
-    string BuildCteTableSql(string tableName, out List<ReaderField> readerFields, out bool isRecursive);
+    string BuildCteTableSql(string tableName, out List<SqlFieldSegment> readerFields, out bool isRecursive);
 
     string BuildShardingTablesSql(string tableSchema);
     void SetShardingTables(List<string> shardingTables);
@@ -93,10 +93,9 @@ public interface IQueryVisitor : IDisposable
     void Skip(int skip);
     void Take(int limit);
 
-    void AddSelectElement(Expression elementExpr, MemberInfo memberInfo, List<ReaderField> readerFields);
+    void AddSelectElement(Expression elementExpr, MemberInfo memberInfo, List<SqlFieldSegment> readerFields);
     TableSegment AddTable(TableSegment tableSegment);
-    TableSegment AddTable(Type entityType, string joinType = "", TableType tableType = TableType.Entity, string body = null, List<ReaderField> readerFields = null);
-    void RemoveTable(TableSegment tableSegment);
+    TableSegment AddTable(Type entityType, string joinType = "", TableType tableType = TableType.Entity, string body = null, List<SqlFieldSegment> readerFields = null);
     TableSegment InitTableAlias(LambdaExpression lambdaExpr);
     void Clear(bool isClearReaderFields = false);
 }

@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace Trolley;
 
 public class QueryBase : QueryInternal, IQueryBase
-{  
+{
     #region Constructor
     public QueryBase(DbContext dbContext, IQueryVisitor visitor)
     {
@@ -607,7 +607,7 @@ public class CteQuery<T> : Query<T>, ICteQuery<T>
 {
     #region Properties
     public string TableName { get; set; }
-    public List<ReaderField> ReaderFields { get; set; }
+    public List<SqlFieldSegment> ReaderFields { get; set; }
     public bool IsRecursive { get; set; }
     #endregion
 

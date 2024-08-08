@@ -496,7 +496,7 @@ public class UnitTest2 : UnitTestBase
             .ToSql(out var dbParameters);
         Assert.True(sql == @"WITH ""menuPageList""(""MenuId"",""ParentId"",""Url"") AS 
 (
-SELECT b.""Id"" AS ""MenuId"",b.""ParentId"",a.""Url"" FROM ""sys_page"" a,""sys_menu"" b WHERE a.""Id""=b.""PageId"" AND b.""Id"">@MenuId
+SELECT b.""Id"",b.""ParentId"",a.""Url"" FROM ""sys_page"" a,""sys_menu"" b WHERE a.""Id""=b.""PageId"" AND b.""Id"">@MenuId
 )
 SELECT b.""MenuId"",a.""Name"",b.""ParentId"",a.""PageId"",b.""Url"" FROM ""sys_menu"" a INNER JOIN ""menuPageList"" b ON a.""Id""=b.""MenuId"" AND a.""PageId"">@p1");
         Assert.True(dbParameters.Count == 2);
@@ -524,7 +524,7 @@ SELECT b.""MenuId"",a.""Name"",b.""ParentId"",a.""PageId"",b.""Url"" FROM ""sys_
             .ToSql(out dbParameters);
         Assert.True(sql == @"WITH ""menuPageList""(""MenuId"",""ParentId"",""Url"") AS 
 (
-SELECT b.""Id"" AS ""MenuId"",b.""ParentId"",a.""Url"" FROM ""sys_page"" a,""sys_menu"" b WHERE a.""Id""=b.""PageId"" AND b.""Id"">@MenuId
+SELECT b.""Id"",b.""ParentId"",a.""Url"" FROM ""sys_page"" a,""sys_menu"" b WHERE a.""Id""=b.""PageId"" AND b.""Id"">@MenuId
 )
 SELECT a.""Id"" AS ""MenuId"",a.""ParentId"",b.""Url"" FROM ""sys_menu"" a INNER JOIN ""sys_page"" b ON a.""PageId""=b.""Id"" AND b.""Id"">@p0 UNION
 SELECT a.""MenuId"",a.""ParentId"",a.""Url"" FROM ""menuPageList"" a WHERE a.""ParentId""<@p2");
@@ -2088,7 +2088,7 @@ SELECT * FROM (SELECT a.""Id"",a.""OrderNo"",a.""SellerId"",a.""BuyerId"" FROM "
                 .Take(1))
             .ToSql(out _);
         Assert.True(sql == @"SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM (SELECT a.""Id"",a.""Name"",a.""ParentId"",a.""PageId"" FROM ""sys_menu"" a) a INNER JOIN ""sys_page"" b ON a.""Id""=b.""Id"" UNION ALL
-SELECT * FROM (SELECT a.""BuyerId"" AS ""Id"",a.""OrderNo"" AS ""Name"",a.""SellerId"" AS ""ParentId"",CAST(a.""BuyerId"" AS VARCHAR) AS ""Url"" FROM ""sys_order"" a WHERE a.""Id""='2' ORDER BY a.""Id"" DESC LIMIT 1) a");
+SELECT * FROM (SELECT a.""BuyerId"",a.""OrderNo"",a.""SellerId"",CAST(a.""BuyerId"" AS VARCHAR) FROM ""sys_order"" a WHERE a.""Id""='2' ORDER BY a.""Id"" DESC LIMIT 1) a");
 
         var result = repository
             .From(f => f.From<Menu>()

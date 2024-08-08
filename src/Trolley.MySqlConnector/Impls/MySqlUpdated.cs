@@ -13,6 +13,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
 {
     #region Properties
     public MySqlUpdateVisitor DialectVisitor { get; protected set; }
+	public IOrmProvider OrmProvider => this.Visitor.OrmProvider;
     #endregion
 
     #region Constructor
@@ -46,8 +47,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                         if (updateObjType == null) throw new Exception("批量更新，updateObjs参数至少要有一条数据");
                         var fromMapper = this.Visitor.Tables[0].Mapper;
                         var memberMappers = this.Visitor.GetRefMemberMappers(updateObjType, fromMapper, true);
-                        var ormProvider = this.Visitor.OrmProvider;
-                        var tableName = ormProvider.GetTableName($"{fromMapper.TableName}_{Guid.NewGuid():N}");
+                        var tableName = this.OrmProvider.GetTableName($"{fromMapper.TableName}_{Guid.NewGuid():N}");
 
                         //添加临时表
                         var builder = new StringBuilder();
@@ -56,7 +56,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                         foreach (var memberMapper in memberMappers)
                         {
                             var refMemberMapper = memberMapper.RefMemberMapper;
-                            var fieldName = ormProvider.GetFieldName(refMemberMapper.FieldName);
+                            var fieldName = this.OrmProvider.GetFieldName(refMemberMapper.FieldName);
                             builder.Append($"{fieldName} {refMemberMapper.DbColumnType}");
                             if (refMemberMapper.IsKey)
                             {
@@ -255,8 +255,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                         if (updateObjType == null) throw new Exception("批量更新，updateObjs参数至少要有一条数据");
                         var fromMapper = this.Visitor.Tables[0].Mapper;
                         var memberMappers = this.Visitor.GetRefMemberMappers(updateObjType, fromMapper, true);
-                        var ormProvider = this.Visitor.OrmProvider;
-                        var tableName = ormProvider.GetTableName($"{fromMapper.TableName}_{Guid.NewGuid():N}");
+                        var tableName = this.OrmProvider.GetTableName($"{fromMapper.TableName}_{Guid.NewGuid():N}");
 
                         //添加临时表
                         var builder = new StringBuilder();
@@ -265,7 +264,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                         foreach (var memberMapper in memberMappers)
                         {
                             var refMemberMapper = memberMapper.RefMemberMapper;
-                            var fieldName = ormProvider.GetFieldName(refMemberMapper.FieldName);
+                            var fieldName = this.OrmProvider.GetFieldName(refMemberMapper.FieldName);
                             builder.Append($"{fieldName} {refMemberMapper.DbColumnType}");
                             if (refMemberMapper.IsKey)
                             {

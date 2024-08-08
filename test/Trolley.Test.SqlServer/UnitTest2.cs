@@ -15,7 +15,7 @@ public class UnitTest2 : UnitTestBase
         services.AddSingleton(f =>
         {
             var builder = new OrmDbFactoryBuilder()
-            .Register<SqlServerProvider>("fengling", "Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", true)
+            .Register<SqlServerProvider>("fengling", "Server=172.16.30.190;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", true)
             .Configure<SqlServerProvider, ModelConfiguration>();
             return builder.Build();
         });
@@ -495,7 +495,7 @@ public class UnitTest2 : UnitTestBase
             .ToSql(out var dbParameters);
         Assert.True(sql == @"WITH [menuPageList]([MenuId],[ParentId],[Url]) AS 
 (
-SELECT b.[Id] AS [MenuId],b.[ParentId],a.[Url] FROM [sys_page] a,[sys_menu] b WHERE a.[Id]=b.[PageId] AND b.[Id]>@MenuId
+SELECT b.[Id],b.[ParentId],a.[Url] FROM [sys_page] a,[sys_menu] b WHERE a.[Id]=b.[PageId] AND b.[Id]>@MenuId
 )
 SELECT b.[MenuId],a.[Name],b.[ParentId],a.[PageId],b.[Url] FROM [sys_menu] a INNER JOIN [menuPageList] b ON a.[Id]=b.[MenuId] AND a.[PageId]>@p1");
         Assert.True(dbParameters.Count == 2);
@@ -523,7 +523,7 @@ SELECT b.[MenuId],a.[Name],b.[ParentId],a.[PageId],b.[Url] FROM [sys_menu] a INN
             .ToSql(out dbParameters);
         Assert.True(sql == @"WITH [menuPageList]([MenuId],[ParentId],[Url]) AS 
 (
-SELECT b.[Id] AS [MenuId],b.[ParentId],a.[Url] FROM [sys_page] a,[sys_menu] b WHERE a.[Id]=b.[PageId] AND b.[Id]>@MenuId
+SELECT b.[Id],b.[ParentId],a.[Url] FROM [sys_page] a,[sys_menu] b WHERE a.[Id]=b.[PageId] AND b.[Id]>@MenuId
 )
 SELECT a.[Id] AS [MenuId],a.[ParentId],b.[Url] FROM [sys_menu] a INNER JOIN [sys_page] b ON a.[PageId]=b.[Id] AND b.[Id]>@p0 UNION
 SELECT a.[MenuId],a.[ParentId],a.[Url] FROM [menuPageList] a WHERE a.[ParentId]<@p2");

@@ -13,6 +13,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
 {
     #region Properties
     public SqlServerUpdateVisitor DialectVisitor { get; protected set; }
+	public IOrmProvider OrmProvider => this.Visitor.OrmProvider;
     #endregion
 
     #region Constructor
@@ -46,8 +47,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
                         if (updateObjType == null) throw new Exception("批量更新，updateObjs参数至少要有一条数据");
                         var fromMapper = this.Visitor.Tables[0].Mapper;
                         var memberMappers = this.Visitor.GetRefMemberMappers(updateObjType, fromMapper, true);
-                        var ormProvider = this.Visitor.OrmProvider;
-                        var tableName = ormProvider.GetTableName($"{fromMapper.TableName}_{Guid.NewGuid():N}");
+                        var tableName = this.OrmProvider.GetTableName($"{fromMapper.TableName}_{Guid.NewGuid():N}");
 
                         //添加临时表
                         var builder = new StringBuilder();
@@ -56,7 +56,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
                         foreach (var memberMapper in memberMappers)
                         {
                             var refMemberMapper = memberMapper.RefMemberMapper;
-                            var fieldName = ormProvider.GetFieldName(refMemberMapper.FieldName);
+                            var fieldName = this.OrmProvider.GetFieldName(refMemberMapper.FieldName);
                             builder.Append($"{fieldName} {refMemberMapper.DbColumnType}");
                             if (refMemberMapper.IsKey)
                             {
@@ -84,7 +84,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
                                 builder.Append($"a.{fieldName}=b.{fieldName}");
                                 setIndex++;
                             }
-                            builder.Append($" FROM {this.DbContext.OrmProvider.GetTableName(target)} a INNER JOIN {source} b ON ");
+                            builder.Append($" FROM {this.OrmProvider.GetTableName(target)} a INNER JOIN {source} b ON ");
                             for (int i = 0; i < pkColumns.Count; i++)
                             {
                                 if (i > 0) builder.Append(" AND ");
@@ -254,8 +254,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
                         if (updateObjType == null) throw new Exception("批量更新，updateObjs参数至少要有一条数据");
                         var fromMapper = this.Visitor.Tables[0].Mapper;
                         var memberMappers = this.Visitor.GetRefMemberMappers(updateObjType, fromMapper, true);
-                        var ormProvider = this.Visitor.OrmProvider;
-                        var tableName = $"#{fromMapper.TableName}_{Guid.NewGuid():N}";
+                        var tableName = this.OrmProvider.GetTableName($"{fromMapper.TableName}_{Guid.NewGuid():N}");
 
                         //添加临时表
                         var builder = new StringBuilder();
@@ -264,7 +263,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
                         foreach (var memberMapper in memberMappers)
                         {
                             var refMemberMapper = memberMapper.RefMemberMapper;
-                            var fieldName = ormProvider.GetFieldName(refMemberMapper.FieldName);
+                            var fieldName = this.OrmProvider.GetFieldName(refMemberMapper.FieldName);
                             builder.Append($"{fieldName} {refMemberMapper.DbColumnType}");
                             if (refMemberMapper.IsKey)
                             {
@@ -292,7 +291,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
                                 builder.Append($"a.{fieldName}=b.{fieldName}");
                                 setIndex++;
                             }
-                            builder.Append($" FROM {this.DbContext.OrmProvider.GetTableName(target)} a INNER JOIN {source} b ON ");
+                            builder.Append($" FROM {this.OrmProvider.GetTableName(target)} a INNER JOIN {source} b ON ");
                             for (int i = 0; i < pkColumns.Count; i++)
                             {
                                 if (i > 0) builder.Append(" AND ");

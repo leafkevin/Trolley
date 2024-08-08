@@ -15,7 +15,7 @@ public class MethodCallUnitTest : UnitTestBase
         services.AddSingleton(f =>
         {
             var builder = new OrmDbFactoryBuilder()
-            .Register<SqlServerProvider>("fengling", "Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", true)
+            .Register<SqlServerProvider>("fengling", "Server=172.16.30.190;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", true)
             .Configure<SqlServerProvider, ModelConfiguration>();
             return builder.Build();
         });
@@ -565,7 +565,7 @@ public class MethodCallUnitTest : UnitTestBase
                 NewField = $"{f.Age.IsNull(20)}-{f.Gender}"
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT (CAST(ISNULL(a.[Age],20) AS NVARCHAR(MAX))+'-'+CAST(a.[Gender] AS NVARCHAR(MAX))) AS [NewField] FROM [sys_user] a WHERE a.[Id]=1");
+        Assert.True(sql == "SELECT (CAST(ISNULL(a.[Age],20) AS NVARCHAR(MAX))+'-'+a.[Gender]) AS [NewField] FROM [sys_user] a WHERE a.[Id]=1");
 
         var result = await repository.From<User>()
             .Where(f => f.Id == 1)
@@ -586,19 +586,19 @@ public class MethodCallUnitTest : UnitTestBase
                NewField = $"{f.Age.IsNull(20)}-{f.Gender}"
            })
            .ToSql(out _);
-        Assert.True(sql == "SELECT (CAST(ISNULL(a.[Age],20) AS NVARCHAR(MAX))+'-'+CAST(a.[Gender] AS NVARCHAR(MAX))) AS [NewField] FROM [sys_user] a WHERE a.[Id]=1");
+        Assert.True(sql == "SELECT (CAST(ISNULL(a.[Age],20) AS NVARCHAR(MAX))+'-'+a.[Gender]) AS [NewField] FROM [sys_user] a WHERE a.[Id]=1");
 
         result = await repository.From<User>()
-           .Where(f => f.Id == 1)
-           .Select(f => new
-           {
-               NewField = $"{f.Age.IsNull(20)}-{f.Gender.ToDescription()}",
-               f.Age,
-               f.Gender
-           })
-           .FirstAsync();
+        .Where(f => f.Id == 1)
+        .Select(f => new
+        {
+            NewField = $"{f.Age.IsNull(20)}-{f.Gender}",
+            f.Age,
+            f.Gender
+        })
+        .FirstAsync();
         age = result.Age == 0 ? 20 : result.Age;
-        Assert.True(result.NewField == $"{age}-{result.Gender.ToDescription()}");
+        Assert.True(result.NewField == $"{age}-{result.Gender.ToString()}");
 
         sql = repository.From<User>()
            .Where(f => f.Id == 1)
@@ -609,7 +609,7 @@ public class MethodCallUnitTest : UnitTestBase
            .ToSql(out _);
         Assert.True(sql == "SELECT a.[Age],a.[Gender] FROM [sys_user] a WHERE a.[Id]=1");
 
-        result = await repository.From<User>()
+        var result1 = await repository.From<User>()
            .Where(f => f.Id == 1)
            .Select(f => new
            {
@@ -618,8 +618,8 @@ public class MethodCallUnitTest : UnitTestBase
                f.Gender
            })
            .FirstAsync();
-        age = result.Age == 0 ? 20 : result.Age;
-        Assert.True(result.NewField == $"{age}-{result.Gender.ToDescription()}");
+        age = result1.Age == 0 ? 20 : result.Age;
+        Assert.True(result1.NewField == $"{age}-{result1.Gender.ToDescription()}");
     }
     [Fact]
     public void ContainsEquals()

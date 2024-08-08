@@ -15,7 +15,7 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
     public SqlServerCreateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
         : base(dbKey, ormProvider, mapProvider, shardingProvider, isParameterized, tableAsStart, parameterPrefix) { }
 
-    public override string BuildCommand(IDbCommand command, bool isReturnIdentity, out List<ReaderField> readerFields)
+    public override string BuildCommand(IDbCommand command, bool isReturnIdentity, out List<SqlFieldSegment> readerFields)
     {
         string sql = null;
         this.IsReturnIdentity = isReturnIdentity;
@@ -40,7 +40,7 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
         }
         return sql;
     }
-    public override string BuildSql(out List<ReaderField> readerFields)
+    public override string BuildSql(out List<SqlFieldSegment> readerFields)
     {
         var entityType = this.Tables[0].EntityType;
         var entityMapper = this.Tables[0].Mapper;
@@ -91,38 +91,8 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
         builder = null;
         return sql;
     }
-    public override string BuildShardingTablesSql(string tableSchema)
-    {
-        var count = this.ShardingTables.FindAll(f => f.ShardingType > ShardingTableType.MultiTable).Count;
-        var builder = new StringBuilder($"SELECT name FROM sys.sysobjects WHERE xtype='U' AND ");
-        if (count > 1)
-        {
-            builder.Append('(');
-            int index = 0;
-            foreach (var tableSegment in this.ShardingTables)
-            {
-                if (tableSegment.ShardingType > ShardingTableType.MultiTable)
-                {
-                    if (index > 0) builder.Append(" OR ");
-                    builder.Append($"name LIKE '{tableSegment.Mapper.TableName}%'");
-                    index++;
-                }
-            }
-            builder.Append(')');
-        }
-        else
-        {
-            if (this.ShardingTables.Count > 1)
-            {
-                var tableSegment = this.ShardingTables.Find(f => f.ShardingType > ShardingTableType.MultiTable);
-                builder.Append($"name LIKE '{tableSegment.Mapper.TableName}%'");
-            }
-            else builder.Append($"name LIKE '{this.ShardingTables[0].Mapper.TableName}%'");
-        }
-        return builder.ToString();
-    }
     public override (bool, string, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
-        Action<IDataParameterCollection, StringBuilder, object, string>, List<ReaderField>) BuildWithBulk(IDbCommand command)
+        Action<IDataParameterCollection, StringBuilder, object, string>, List<SqlFieldSegment>) BuildWithBulk(IDbCommand command)
     {
         bool isNeedSplit = false;
         object firstInsertObj = null;
@@ -154,7 +124,7 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
         Action<IDataParameterCollection, StringBuilder, object, string> loopSqlSetter = null;
 
         string outputSql = null;
-        List<ReaderField> readerFields = null;
+        List<SqlFieldSegment> readerFields = null;
         if (this.OutputFieldNames != null && this.OutputFieldNames.Count > 0)
             (outputSql, readerFields) = this.BuildOutputSqlReaderFields();
 
@@ -214,7 +184,6 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
                         if (i > 0) builder.Append(',');
                         builder.Append(insertField.Values);
                     }
-                    var entityMapper = this.Tables[0].Mapper;
                     typedValuesSqlPartSetter.Invoke(dbParameters, builder, this.OrmProvider, memberMappers, insertObj, suffix);
                     builder.Append(')');
                 };
@@ -281,7 +250,6 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
                 loopSqlSetter = (dbParameters, builder, insertObj, suffix) =>
                 {
                     builder.Append('(');
-                    var entityMapper = this.Tables[0].Mapper;
                     typedValuesSqlPartSetter.Invoke(dbParameters, builder, this.OrmProvider, memberMappers, insertObj, suffix);
                     builder.Append(')');
                 };
@@ -329,19 +297,19 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
     }
     public (IEnumerable, int?) BuildWithBulkCopy() => ((IEnumerable, int?))this.deferredSegments[0].Value;
 
-    private (string, List<ReaderField>) BuildOutputSqlReaderFields()
+    private (string, List<SqlFieldSegment>) BuildOutputSqlReaderFields()
     {
-        var readerFields = new List<ReaderField>();
+        var readerFields = new List<SqlFieldSegment>();
         var entityMapper = this.Tables[0].Mapper;
         var builder = new StringBuilder();
         Action<MemberMap> addReaderField = memberMapper =>
         {
-            readerFields.Add(new ReaderField
+            readerFields.Add(new SqlFieldSegment
             {
-                FieldType = ReaderFieldType.Field,
+                FieldType = SqlFieldType.Field,
                 FromMember = memberMapper.Member,
                 TargetMember = memberMapper.Member,
-                TargetType = memberMapper.MemberType,
+                SegmentType = memberMapper.MemberType,
                 NativeDbType = memberMapper.NativeDbType,
                 TypeHandler = memberMapper.TypeHandler,
                 Body = memberMapper.FieldName

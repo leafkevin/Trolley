@@ -141,6 +141,14 @@ public partial class PostgreSqlProvider : BaseOrmProvider
         parameter.Value = value;
         return parameter;
     }
+    public override void ChangeParameter(object dbParameter, Type targetType, object value)
+    {
+        var fieldValue = Convert.ChangeType(value, targetType);
+        var myDbParameter = dbParameter as NpgsqlParameter;
+        var nativeDbType = (NpgsqlDbType)this.GetNativeDbType(targetType);
+        myDbParameter.NpgsqlDbType = nativeDbType;
+        myDbParameter.Value = fieldValue;
+    }
     public override string GetTableName(string tableName) => "\"" + tableName + "\"";
     public override string GetFieldName(string fieldName) => "\"" + fieldName + "\"";
     public override object GetNativeDbType(Type fieldType)
@@ -183,12 +191,12 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                     return $"INTERVAL '{factValue:hh\\:mm\\:ss\\.ffffff}'";
                 }
             case Type factType when factType == typeof(TimeOnly): return $"TIME '{(TimeOnly)value:hh\\:mm\\:ss\\.ffffff}'";
-            case Type factType when factType == typeof(SqlSegment):
+            case Type factType when factType == typeof(SqlFieldSegment):
                 {
-                    var sqlSegment = value as SqlSegment;
-                    if (sqlSegment.IsConstant)
+                    var sqlSegment = value as SqlFieldSegment;
+                    if (sqlSegment.IsConstant || sqlSegment.IsVariable)
                         return this.GetQuotedValue(sqlSegment.Value);
-                    return sqlSegment.ToString();
+                    return sqlSegment.Body;
                 }
             default: return value.ToString();
         }
@@ -215,12 +223,13 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                             throw new MissingMemberException($"类{myVisitor.Tables[0].EntityType.FullName}未找到成员{memberExpr.Member.Name}");
 
                         var fieldName = $"EXCLUDED.{this.GetFieldName(memberMapper.FieldName)}";
-                        return new SqlSegment
+                        return new SqlFieldSegment
                         {
-                            MemberMapper = memberMapper,
-                            FromMember = memberMapper.Member,
                             HasField = true,
-                            Value = fieldName
+                            FromMember = memberMapper.Member,
+                            NativeDbType = memberMapper.NativeDbType,
+                            TypeHandler = memberMapper.TypeHandler,
+                            Body = fieldName
                         };
                     });
                     return true;
@@ -230,11 +239,11 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                 cacheKey = HashCode.Combine(typeof(Sql), methodInfo.GetGenericMethodDefinition());
                 formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                 {
-                    var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                    var rightSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[1] });
+                    var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
+                    var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[1] });
                     var targetArgument = visitor.GetQuotedValue(targetSegment);
                     var rightArgument = visitor.GetQuotedValue(rightSegment);
-                    return targetSegment.Merge(rightSegment, $"COALESCE({targetArgument},{rightArgument})", false, false, false, true);
+                    return targetSegment.Merge(rightSegment, $"COALESCE({targetArgument},{rightArgument})", false, true);
                 });
                 return true;
         }

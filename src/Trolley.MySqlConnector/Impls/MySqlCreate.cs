@@ -55,7 +55,7 @@ public class MySqlCreate<TEntity> : Create<TEntity>, IMySqlCreate<TEntity>
         foreach (var insertObj in insertObjs)
         {
             isEmpty = false;
-            break; 
+            break;
         }
         if (isEmpty) throw new Exception("批量更新，insertObjs参数至少要有一条数据");
 

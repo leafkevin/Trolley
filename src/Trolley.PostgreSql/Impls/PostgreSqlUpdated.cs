@@ -48,7 +48,6 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                         if (updateObjType == null) throw new Exception("批量更新，updateObjs参数至少要有一条数据");
                         var fromMapper = this.Visitor.Tables[0].Mapper;
                         var memberMappers = this.Visitor.GetRefMemberMappers(updateObjType, fromMapper, true);
-                        var ormProvider = this.Visitor.OrmProvider;
                         var tableName = this.OrmProvider.GetTableName($"{fromMapper.TableName}_{Guid.NewGuid():N}");
 
                         //添加临时表
@@ -58,7 +57,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                         foreach (var memberMapper in memberMappers)
                         {
                             var refMemberMapper = memberMapper.RefMemberMapper;
-                            var fieldName = ormProvider.GetFieldName(refMemberMapper.FieldName);
+                            var fieldName = this.OrmProvider.GetFieldName(refMemberMapper.FieldName);
                             builder.Append($"{fieldName} {refMemberMapper.DbColumnType}");
                             if (refMemberMapper.IsKey)
                             {
@@ -83,7 +82,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                         {
                             if (i > 0) builder.Append(',');
                             var refMemberMapper = memberMappers[i].RefMemberMapper;
-                            builder.Append(ormProvider.GetFieldName(refMemberMapper.FieldName));
+                            builder.Append(this.OrmProvider.GetFieldName(refMemberMapper.FieldName));
                         }
                         builder.Append(") FROM STDIN BINARY");
                         var bulkCopySql = builder.ToString();
@@ -91,7 +90,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                         builder.Clear();
                         Action<string, string> sqlExecutor = (target, source) =>
                         {
-                            builder.Append($"UPDATE {this.DbContext.OrmProvider.GetTableName(target)} a SET ");
+                            builder.Append($"UPDATE {this.OrmProvider.GetTableName(target)} a SET ");
                             int setIndex = 0;
                             for (int i = 0; i < memberMappers.Count; i++)
                             {
@@ -270,7 +269,6 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                         if (updateObjType == null) throw new Exception("批量更新，updateObjs参数至少要有一条数据");
                         var fromMapper = this.Visitor.Tables[0].Mapper;
                         var memberMappers = this.Visitor.GetRefMemberMappers(updateObjType, fromMapper, true);
-                        var ormProvider = this.Visitor.OrmProvider;
                         var tableName = this.OrmProvider.GetTableName($"{fromMapper.TableName}_{Guid.NewGuid():N}");
 
                         //添加临时表
@@ -280,7 +278,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                         foreach (var memberMapper in memberMappers)
                         {
                             var refMemberMapper = memberMapper.RefMemberMapper;
-                            var fieldName = ormProvider.GetFieldName(refMemberMapper.FieldName);
+                            var fieldName = this.OrmProvider.GetFieldName(refMemberMapper.FieldName);
                             builder.Append($"{fieldName} {refMemberMapper.DbColumnType}");
                             if (refMemberMapper.IsKey)
                             {
@@ -305,7 +303,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                         {
                             if (i > 0) builder.Append(',');
                             var refMemberMapper = memberMappers[i].RefMemberMapper;
-                            builder.Append(ormProvider.GetFieldName(refMemberMapper.FieldName));
+                            builder.Append(this.OrmProvider.GetFieldName(refMemberMapper.FieldName));
                         }
                         builder.Append(") FROM STDIN BINARY");
                         var bulkCopySql = builder.ToString();

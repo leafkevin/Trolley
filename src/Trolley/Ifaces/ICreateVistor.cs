@@ -17,12 +17,12 @@ public interface ICreateVisitor : IDisposable
     ActionMode ActionMode { get; set; }
     List<TableSegment> Tables { get; }
 
-    string BuildCommand(IDbCommand command, bool isReturnIdentity, out List<ReaderField> readerFields);
+    string BuildCommand(IDbCommand command, bool isReturnIdentity, out List<SqlFieldSegment> readerFields);
     MultipleCommand CreateMultipleCommand();
     IQueryVisitor CreateQueryVisitor();
     void BuildMultiCommand(IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex);
     void Initialize(Type entityType, bool isMultiple = false, bool isFirst = true);
-    string BuildSql(out List<ReaderField> readerFields);
+    string BuildSql(out List<SqlFieldSegment> readerFields);
 
     void UseTable(Type entityType, params string[] tableNames);
     void UseTable(Type entityType, Func<string, bool> tableNamePredicate);
@@ -35,7 +35,7 @@ public interface ICreateVisitor : IDisposable
     void WithByField(Expression fieldSelector, object fieldValue);
     void WithBulk(IEnumerable insertObjs, int bulkCount);
     (bool, string, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
-        Action<IDataParameterCollection, StringBuilder, object, string>, List<ReaderField>) BuildWithBulk(IDbCommand command);
+        Action<IDataParameterCollection, StringBuilder, object, string>, List<SqlFieldSegment>) BuildWithBulk(IDbCommand command);
     void IgnoreFields(string[] fieldNames);
     void IgnoreFields(Expression fieldsSelector);
     void OnlyFields(string[] fieldNames);

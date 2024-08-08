@@ -45,7 +45,7 @@ public interface ICteQuery : IQuery
     /// <summary>
     /// CTE表字段定义
     /// </summary>
-    List<ReaderField> ReaderFields { get; set; }
+    List<SqlFieldSegment> ReaderFields { get; set; }
     /// <summary>
     /// CTE表主体SQL
     /// </summary>
