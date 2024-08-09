@@ -14,8 +14,8 @@ public class DateOnlyUnitTest : UnitTestBase
         services.AddSingleton(f =>
         {
             var builder = new OrmDbFactoryBuilder()
-            .Register<PostgreSqlProvider>("fengling", "Host=localhost;Database=fengling;Username=postgres;Password=123456;SearchPath=public", true, "public")
-            .Configure<PostgreSqlProvider, ModelConfiguration>();
+            .Register(OrmProviderType.PostgreSql, "fengling", "Host=localhost;Database=fengling;Username=postgres;Password=123456;SearchPath=public", true, "public")
+            .Configure<ModelConfiguration>(OrmProviderType.PostgreSql);
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();

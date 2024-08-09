@@ -32,12 +32,6 @@ public static class Extensions
         configuration.OnModelCreating(new ModelBuilder(mapProvider));
         return dbFactory;
     }
-    public static IOrmDbFactory Register<TOrmProvider>(this IOrmDbFactory dbFactory, string dbKey, string connectionString, bool isDefault, string defaultTableSchema = null) where TOrmProvider : class, IOrmProvider, new()
-    {
-        var ormProviderType = typeof(TOrmProvider);
-        dbFactory.Register(dbKey, connectionString, ormProviderType, isDefault, defaultTableSchema);
-        return dbFactory;
-    }
     public static IOrmDbFactory Configure<TOrmProvider, TModelConfiguration>(this IOrmDbFactory dbFactory)
         where TOrmProvider : class, IOrmProvider, new()
         where TModelConfiguration : class, IModelConfiguration, new()

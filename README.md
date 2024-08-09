@@ -930,74 +930,8 @@ var sql = repository.From<Order>()
 
 `ITypeHandler`类型处理器
 对特殊类型进行处理，不是默认映射，就需要`TypeHandler`类型处理器类处理，完成模型与数据库之间的数据转换
-`Trolley`内置多个类型处理器，这些类型处理器在启动时会自动注册，映射时可以直接使用，`Trolley`也会根据字段类型进行默认匹配，选择适合的类型处理器
-只有`JsonTypeHandler`,`ToStringTypeHandler`类型处理器或是`object`类型的实体成员，才需要手动指定，其他的类型处理器或是明确的实体成员类型(如：基础类型)，`Trolley`都会根据字段类型进行默认匹配
-
-```csharp
-BooleanTypeHandler
-NullableBooleanTypeHandler
-BooleanAsIntTypeHandler
-NullableBooleanAsIntTypeHandler
-
-ByteArrayTypeHandler
-ByteArrayAsLongTypeHandler
-
-CharTypeHandler
-NullableCharTypeHandler
-
-DateOnlyTypeHandler
-NullableDateOnlyTypeHandler
-DateOnlyAsStringTypeHandler
-NullableDateOnlyAsStringTypeHandler
-
-DateTimeOffsetTypeHandler
-NullableDateTimeOffsetTypeHandler
-DateTimeOffsetAsStringTypeHandler
-NullableDateTimeOffsetAsStringTypeHandler
-
-DateTimeTypeHandler
-NullableDateTimeTypeHandler
-DateTimeAsStringTypeHandler
-NullableDateTimeAsStringTypeHandler
-
-EnumTypeHandler
-NullableEnumTypeHandler
-ConvertEnumTypeHandler
-NullableConvertEnumTypeHandler
-EnumAsStringTypeHandler
-NullableEnumAsStringTypeHandler
-
-GuidTypeHandler
-GuidAsStringTypeHandler
-NullableGuidTypeHandler
-NullableGuidAsStringTypeHandler
-
-JsonTypeHandler
-
-NumberTypeHandler
-NullableNumberTypeHandler
-ConvertNumberTypeHandler
-NullableConvertNumberTypeHandler
-
-StringTypeHandler
-NullableStringTypeHandler
-
-TimeOnlyTypeHandler
-NullableTimeOnlyTypeHandler
-TimeOnlyAsStringTypeHandler
-NullableTimeOnlyAsStringTypeHandler
-TimeOnlyAsLongTypeHandler
-NullableTimeOnlyAsLongTypeHandler
-
-TimeSpanTypeHandler
-NullableTimeSpanTypeHandler
-TimeSpanAsStringTypeHandler
-NullableTimeSpanAsStringTypeHandler
-TimeSpanAsLongTypeHandler
-NullableTimeSpanAsLongTypeHandler
-
-ToStringTypeHandler
-```
+`Trolley`内置2个类型处理器`JsonTypeHandler`,`ToStringTypeHandler`，这2个类型处理器在启动时会自动注册，映射时可以直接使用
+默认情况下，只有`object`类型或是实体类类型的类成员，才需要手动指定，一般的基础类型，`Trolley`都会根据字段类型进行自动映射，除非你想特殊处理，才需要创建类型处理器
 
 `JsonTypeHandler`类型处理器支持`Json`
 在类型映射时，配置字段为`json`类型，并指定`JsonTypeHandler`类型处理器
@@ -1280,8 +1214,8 @@ using var repository = this.dbFactory.CreateRepository();
 
 #### 新增
 支持匿名对象、实体对象、字典参数插入
-支持`enum`,`null`做了特殊支持
-支持批量插入，支持匿名对象、实体对象、字典参数插入
+支持单条、批量操作，也支持`BulkCopy`
+对`enum`,`null`做了特殊支持
 实体对象，原值插入，字段值是`0`，插入数据库后也是`0`，字段值是`null`，插入数据库后也是`NULL`
 如果不想插入类型默认值，可以使用匿名对象不插入字段，或是把字段设置为可为null类型，带`?`类型
 
@@ -1317,7 +1251,7 @@ var result = await repository.CreateAsync<User>(new
 这种方式相对于普通插入方式性能要高，但不适合大批量，适合小批量的
 可设置单次入库的数据条数，可根据表插入字段个数和条数，设置一个性能最高的条数
 通常会有一个插入性能最高的阈值，高于或低于这个阈值，批量插入的性能都会有所下降
-这个阈值和数据库类型、插入字段的个数，两者都有关系。
+这个阈值和数据库类型、插入字段的个数,参数个数，都有关系。
 ```csharp
 var count = repository.Create<Product>(new[]
 {
@@ -1407,8 +1341,8 @@ var result = repository.CreateIdentity<Company>(new Dictionary<string, object>()
 使用`Create<User>()`方法，支持更复杂的场景
 WithBy方法可以多次调用
 
-带条件的插入字段数据
-这样可避免字符串列，插入空字符串数据
+支持带条件的插入字段数据，也可以使用匿名对象。使用匿名对象的好处，没有的字段将不会插入值。
+这样可避免基础类型插入了默认值，如：整型插入`0`,字符串类型插入了`''`等。
 或者插入的列数据赋值`null`或不赋值，也不会插入空字符串数据
 
 ```csharp
@@ -1432,7 +1366,7 @@ var sql = repository.Create<User>()
 repository.Commit();
 //user.SomeTimes栏位没有值，guidField有值，得到如下SQL:
 //INSERT INTO `sys_user` (`Id`,`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`,`GuidField`) VALUES(@Id,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy,@GuidField)
-	
+
 //未赋值的字段，进入数据库后，将是NULL值
 var count = repository.Create<Order>(new
 {
@@ -1485,11 +1419,11 @@ var count = repository.Create<Order>()
 ```
 
 使用`WithBulk`方法，支持批量操作
-`Trolley`的所有批量新增采用的是多表值方式，就是`INSERT TABLE(...) VALUES(..),(...),(...)...`
+`Trolley`的批量新增采用的是多表值方式，就是`INSERT TABLE(...) VALUES(..),(...),(...)...`
 这种方式相对于普通插入方式性能要高，但不适合大批量，适合小批量的
 可设置单次入库的数据条数，可根据表插入字段个数和条数，设置一个性能最高的条数
 通常会有一个插入性能最高的阈值，高于或低于这个阈值，批量插入的性能都会有所下降
-这个阈值和数据库类型、插入字段的个数，两者都有关系。
+这个阈值和数据库类型、插入字段的个数,参数个数，都有关系。
 
 效果同扩展简化操作方法是一样的。
 ```csharp
@@ -1631,7 +1565,7 @@ var count = repository.Create<Product>()
 ```
 
 `BulkCopy`支持
-大批量的插入，推荐使用WithBulkCopy方法，性能更优，底层实现就是BulkCopy
+大批量的插入，推荐使用`WithBulkCopy`方法，性能更优，底层实现就是`BulkCopy`
 ```csharp
 var orders = new List<Order>();
 for (int i = 0; i < 10000; i++)
@@ -1666,7 +1600,7 @@ var count = await repository.Create<Order>()
 ```
 
 部分字段插入`OnlyFields`
-单条插入、批量插入，都可以使用
+单条、批量，都可以使用
 
 ```csharp
 OnlyFields(params string[] fieldNames);
@@ -1742,7 +1676,7 @@ SQL: INSERT INTO `sys_product` (`Id`,`ProductNo`,`Name`,`IsEnabled`,`CreatedAt`,
 ```
 
 忽略字段插入`IgnoreFields`
-单条插入、批量插入，都可以使用
+单条、批量插入，都可以使用
 
 ```csharp
 IgnoreFields(params string[] fieldNames);
@@ -1790,7 +1724,7 @@ repository.Create<User>()
 对枚举`enum`的支持
 `Trolley`允许在代码中使用`enum`类型方便开发，在数据库端可以是数字类型或是字符串类型
 只需要在映射的时候设置为对应的`DbType`或是对应的`Int`类型值即可
-在实际项目中，通常会在项目中使用`enum`类型，数据库端使用字符串类型字段，这样可读性比较强
+在实际项目中，通常会在项目中使用`enum`类型，数据库端使用字符串类型字段，这样可读性比较强，字符串类型时使用枚举名字惊醒保存
 
 ```csharp
 builder.Entity<User>(f =>
@@ -1930,26 +1864,26 @@ SQL: INSERT IGNORE INTO `sys_user` (`Id`,`TenantId`,`Name`,`Age`,`CompanyId`,`Ge
 var count = await repository.Create<Order>()
      .WithBy(new
      {
-         Id = "9",
-         TenantId = "3",
-         OrderNo = "ON-001",
-         BuyerId = 1,
-         SellerId = 2,
-         TotalAmount = 500,
-         Products = new List<int> { 1, 2 },
-         Disputes = new Dispute
-         {
+        Id = "9",
+        TenantId = "3",
+        OrderNo = "ON-001",
+        BuyerId = 1,
+        SellerId = 2,
+        TotalAmount = 500,
+        Products = new List<int> { 1, 2 },
+        Disputes = new Dispute
+        {
 			Id = 2,
 			Content = "无良商家",
 			Result = "同意退款",
 			Users = "Buyer2,Seller2",
 			CreatedAt = DateTime.Now
-         },
-         IsEnabled = true,
-         CreatedAt = DateTime.Now,
-         CreatedBy = 1,
-         UpdatedAt = DateTime.Now,
-         UpdatedBy = 1
+        },
+        IsEnabled = true,
+        CreatedAt = DateTime.Now,
+        CreatedBy = 1,
+        UpdatedAt = DateTime.Now,
+        UpdatedBy = 1
      })
      .OnDuplicateKeyUpdate(x => x
         .Set(new
@@ -2057,7 +1991,7 @@ var count = await repository.Create<Product>()
 SQL: INSERT INTO `sys_product` (`Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id0,@ProductNo0,@Name0,@BrandId0,@CategoryId0,@IsEnabled0,@CreatedAt0,@CreatedBy0,@UpdatedAt0,@UpdatedBy0),(@Id1,@ProductNo1,@Name1,@BrandId1,@CategoryId1,@IsEnabled1,@CreatedAt1,@CreatedBy1,@UpdatedAt1,@UpdatedBy1),(@Id2,@ProductNo2,@Name2,@BrandId2,@CategoryId2,@IsEnabled2,@CreatedAt2,@CreatedBy2,@UpdatedAt2,@UpdatedBy2) RETURNING *
 ```
 
-`SqlServer`数据库支持`Output`操作,效果同`mariadb`数据库的`Returning`，也依赖`SqlServer`数据库的版本，有的版本支持，有的版本不支持
+`SqlServer`数据库支持`Output`操作,也依赖`SqlServer`数据库的版本，有的版本支持，有的版本不支持
 同样支持单挑、批量插入
 
 ```csharp
@@ -2135,18 +2069,21 @@ var results = await repository.Create<Product>()
 SQL: INSERT INTO [sys_product] ([Id],[ProductNo],[Name],[BrandId],[CategoryId],[IsEnabled],[CreatedAt],[CreatedBy],[UpdatedAt],[UpdatedBy]) OUTPUT INSERTED.* VALUES (@Id0,@ProductNo0,@Name0,@BrandId0,@CategoryId0,@IsEnabled0,@CreatedAt0,@CreatedBy0,@UpdatedAt0,@UpdatedBy0),(@Id1,@ProductNo1,@Name1,@BrandId1,@CategoryId1,@IsEnabled1,@CreatedAt1,@CreatedBy1,@UpdatedAt1,@UpdatedBy1),(@Id2,@ProductNo2,@Name2,@BrandId2,@CategoryId2,@IsEnabled2,@CreatedAt2,@CreatedBy2,@UpdatedAt2,@UpdatedBy2)
 ```
 
-其他数据库本地化支持，有待后续丰富
+其他数据库本地化支持，有待后续丰富...
 
 
 
 #### 更新
-支持匿名对象、字典参数插入
-支持`enum`,`null`做了特殊支持
-支持批量更新，支持匿名对象、字典参数插入，是`By`主键更新
+支持匿名对象、实体对象、字典参数更新
+支持单条、批量操作，也支持`BulkCopy`
+对`enum`,`null`做了特殊支持
+批量更新，支持匿名对象、字典参数更新，是`By`主键更新
 
 
 简化操作
 支持单条、批量操作
+匿名对象、实体对象、字典参数都可以
+使用匿名对象，存在的字段将会更新
 ```csharp
 var result = repository.Update<User>(new { Id = 1, Name = "leafkevin11" });
 //UPDATE `sys_user` SET `Name`=@Name WHERE `Id`=@kId
@@ -2155,18 +2092,6 @@ var result = repository.Update<User>(f => f.Name, new { Id = 1, Name = "leafkevi
 var result = repository.Update<User>(f => new { Name = f.Name + "_1", Gender = Gender.Female }, t => t.Id == 1);
 //UPDATE `sys_user` SET `Name`=CONCAT(`Name`,'_1'),`Gender`=@Gender WHERE `Id`=1
 
-```
-
-部分字段更新
-直接使用匿名对象参数
-带有明确更新字段的表达式+对象参数，对象参数可以是匿名也可以是实体对象
-```csharp
-var result = repository.Update<User>(new { Id = 1, Name = "leafkevin11" });
-//UPDATE `sys_user` SET `Name`=@Name WHERE `Id`=@kId
-var result = repository.Update<User>(f => f.Name, new { Id = 1, Name = "leafkevin11" });
-//UPDATE `sys_user` SET `Name`=@Name WHERE `Id`=@kId
-var result = repository.Update<User>(f => new { Name = f.Name + "_1", Gender = Gender.Female }, t => t.Id == 1);
-//UPDATE `sys_user` SET `Name`=CONCAT(`Name`,'_1'),`Gender`=@Gender WHERE `Id`=1
 ```
 
 对`null`的支持
@@ -2184,23 +2109,26 @@ var result = repository.Update<User>(f => new { Age = 25, f.Name, CompanyId = DB
 //后面参数的中，有Age字段，但是前面的表达式是 Age = 25，所以不生效，如果是 f.Age ,后面的参数就生效了
 ```
 
-
+批量参数更新
 ```csharp
 //批量参数更新，Where条件是主键，其他的更新字段由表达式指定
-var orderDetails = await repository.From<OrderDetail>().ToListAsync();
-var parameters = orderDetails.Select(f => new { f.Id, Price = f.Price + 80, Quantity = f.Quantity + 1, Amount = f.Amount + 50 }).ToList();
-var result = repository.Update<OrderDetail>(f => new { Price = 200, f.Quantity, UpdatedBy = 2, f.Amount, ProductId = DBNull.Value }, parameters);
-//UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity0,`Amount`=@Amount0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity1,`Amount`=@Amount1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity2,`Amount`=@Amount2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity3,`Amount`=@Amount3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity4,`Amount`=@Amount4 WHERE `Id`=@kId4;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity5,`Amount`=@Amount5 WHERE `Id`=@kId5
-//说明：
-//Price = 200 ，UpdatedBy = 2 ，ProductId = DBNull.Value 表达式更新，直接以SQL形式更新
-//DBNull.Value ,null 都可用来更新NULL字段
-//f.Quantity ，f.Amount 只成员访问，将作为后面参数更新的字段
-//后面参数的中，有Price，Quantity，Amount 字段，但是前面的表达式是 Price = 200，所以不生效，后面的只更新Quantity，Amount 字段
+var parameters = await repository.From<OrderDetail>()
+    .GroupBy(f => f.OrderId)
+    .OrderBy((x, f) => f.OrderId)
+    .Select((x, f) => new
+    {
+        Id = x.Grouping,
+        TotalAmount = x.Sum(f.Amount) + 50
+    })
+    .ToListAsync();
+var result = repository.Update<OrderDetail>(parameters);
+//UPDATE `sys_order` SET `TotalAmount`=@TotalAmount0 WHERE `Id`=@kId0;UPDATE `sys_order` SET `TotalAmount`=@TotalAmount1 WHERE `Id`=@kId1;UPDATE `sys_order` SET `TotalAmount`=@TotalAmount2 WHERE `Id`=@kId2 ...
 ```
 
 
 使用Update<T>，支持各种复杂更新操作
 
+WithBy 单条更新
 ```csharp
 //WithBy 单个更新，Where条件是主键
 var result = repository.Update<User>().WithBy(new { Name = "leafkevin1", Id = 1 }).Execute();

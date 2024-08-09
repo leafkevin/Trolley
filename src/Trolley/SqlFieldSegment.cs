@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Diagnostics;
 using System.Linq.Expressions;
-using System.Net.NetworkInformation;
 using System.Reflection;
 
 namespace Trolley;
@@ -27,22 +25,16 @@ public enum SqlFieldType : byte
     /// </summary>
     DeferredFields
 }
-
+[DebuggerDisplay("Value: {Value,nq}     Expression: {Expression,nq}")]
 public class SqlFieldSegment
 {
-    private bool isFixValue = false;
-    public static readonly SqlFieldSegment True = new SqlFieldSegment { isFixValue = true, IsConstant = true, Value = true, Body = "True" };
-    public static readonly SqlFieldSegment Null = new SqlFieldSegment { isFixValue = true, Value = "NULL", Body = "NULL" };
+    public static readonly SqlFieldSegment True = new SqlFieldSegment { IsConstant = true, Value = true, Body = "True" };
+    public static readonly SqlFieldSegment Null = new SqlFieldSegment { Value = "NULL", Body = "NULL" };
 
-    /// <summary>
-    /// 操作符:None,Equal,Not,And,Or
-    /// </summary>
-    public OperationType OperationType { get; set; } = OperationType.None;
     /// <summary>
     /// 延迟表达式操作，通常是非或是不等于等操作
     /// </summary>
     public Stack<DeferredExpr> DeferredExprs { get; set; }
-
     /// <summary>
     /// 字段类型
     /// </summary>
@@ -348,12 +340,6 @@ public class SqlFieldSegment
             Parent = this.Parent,
             Path = this.Path
         };
-    }
-    public override string ToString()
-    {
-        if (this.Value == null)
-            throw new Exception("SqlFieldSegment.Value值不能为null，使用错误");
-        return this.Value.ToString();
     }
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private string DebugDisplayText => $"Value: {this.Value} Expression: {this.Expression}";

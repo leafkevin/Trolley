@@ -16,8 +16,8 @@ public class UnitTest3 : UnitTestBase
         services.AddSingleton(t =>
         {
             var builder = new OrmDbFactoryBuilder()
-            .Register<MySqlProvider>("fengling", "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true", true)
-            .Configure<MySqlProvider, ModelConfiguration>();
+            .Register(OrmProviderType.MySql, "fengling", "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;", true)
+            .Configure<ModelConfiguration>(OrmProviderType.MySql);
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();
