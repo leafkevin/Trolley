@@ -88,7 +88,7 @@ public class UnitTest6 : UnitTestBase
                     //.UseTable<Order>(t => t.DependOn(d => d.Id).UseRule((dbKey, origName, id) => $"{origName}_{HashCode.Combine(id) % 5}", "^sys_order_\\S{24}$"))
                     .UseTable<User>(t => t.DependOn(d => d.TenantId).UseRule((dbKey, origName, tenantId) => $"{origName}_{tenantId}", "^sys_user_\\d{1,4}$"));
                 })
-                .Configure<ModelConfiguration>(OrmProviderType.MySql)
+                .Configure<ModelConfiguration>(OrmProviderType.SqlServer)
                 .UseDbFilter(df =>
                 {
                     df.OnConnectionCreated += evt =>
