@@ -23,7 +23,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     public IDbTransaction Transaction { get; set; }
     public bool IsParameterized { get; set; }
     public int CommandTimeout { get; set; }
-    public DbFilters DbFilters { get; set; }
+    public DbInterceptors DbFilters { get; set; }
     public bool IsNeedClose => this.Transaction == null;
     #endregion
 

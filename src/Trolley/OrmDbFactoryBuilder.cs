@@ -32,12 +32,12 @@ public sealed class OrmDbFactoryBuilder
         this.dbFactory.With(optionsInitializer);
         return this;
     }
-    public OrmDbFactoryBuilder UseDbFilter(Action<DbFilters> filterInitializer)
+    public OrmDbFactoryBuilder UseInterceptors(Action<DbInterceptors> filterInitializer)
     {
         if (filterInitializer == null)
             throw new ArgumentNullException(nameof(filterInitializer));
 
-        filterInitializer.Invoke(this.dbFactory.DbFilters);
+        filterInitializer.Invoke(this.dbFactory.Interceptors);
         return this;
     }
     public IOrmDbFactory Build()

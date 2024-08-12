@@ -22,7 +22,7 @@ public class WhereUnitTest : UnitTestBase
             var builder = new OrmDbFactoryBuilder()
                 .Register(OrmProviderType.SqlServer, "fengling", "Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", true)
                 .Configure<ModelConfiguration>(OrmProviderType.SqlServer)
-                .UseDbFilter(df =>
+                .UseInterceptors(df =>
                 {
                     df.OnConnectionCreated += evt =>
                     {

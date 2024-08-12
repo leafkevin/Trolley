@@ -89,7 +89,7 @@ public class UnitTest6 : UnitTestBase
                     .UseTable<User>(t => t.DependOn(d => d.TenantId).UseRule((dbKey, origName, tenantId) => $"{origName}_{tenantId}", "^sys_user_\\d{1,4}$"));
                 })
                 .Configure<ModelConfiguration>(OrmProviderType.PostgreSql)
-                .UseDbFilter(df =>
+                .UseInterceptors(df =>
                 {
                     df.OnConnectionCreated += evt =>
                     {

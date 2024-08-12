@@ -12,12 +12,12 @@ public sealed class OrmDbFactory : IOrmDbFactory
     private ConcurrentDictionary<string, TheaDatabase> databases = new();
     private ConcurrentDictionary<OrmProviderType, IEntityMapProvider> mapProviders = new();
     private IShardingProvider shardingProvider = new ShardingProvider();
-    private DbFilters dbFilters = new();
+    private DbInterceptors interceptors = new();
 
     public ICollection<TheaDatabase> Databases => this.databases.Values;
     public ICollection<IOrmProvider> OrmProviders => this.ormProviders.Values;
     public ICollection<IEntityMapProvider> MapProviders => this.mapProviders.Values;
-    public DbFilters DbFilters => this.dbFilters;
+    public DbInterceptors Interceptors => this.interceptors;
 
     public void Register(OrmProviderType ormProviderType, string dbKey, string connectionString, bool isDefault, string defaultTableSchema = null)
     {
@@ -93,7 +93,7 @@ public sealed class OrmDbFactory : IOrmDbFactory
         if (!this.TryGetMapProvider(ormProviderType, out var mapProvider))
             throw new Exception($"未注册Key为{ormProviderType}的EntityMapProvider对象");
         var connection = ormProvider.CreateConnection(database.ConnectionString);
-        this.dbFilters.OnConnectionCreated?.Invoke(new ConectionEventArgs
+        this.interceptors.OnConnectionCreated?.Invoke(new ConectionEventArgs
         {
             ConnectionId = Guid.NewGuid().ToString("N"),
             DbKey = localDbKey,
@@ -112,7 +112,7 @@ public sealed class OrmDbFactory : IOrmDbFactory
             ShardingProvider = this.shardingProvider,
             CommandTimeout = this.options?.Timeout ?? 30,
             IsParameterized = this.options?.IsParameterized ?? false,
-            DbFilters = this.dbFilters
+            DbFilters = this.interceptors
         };
         return ormProvider.CreateRepository(dbContext);
     }

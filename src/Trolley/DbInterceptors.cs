@@ -3,7 +3,7 @@ using System.Data;
 
 namespace Trolley;
 
-public class DbFilters
+public class DbInterceptors
 {
     public Action<ConectionEventArgs> OnConnectionCreated { get; set; }
     public Action<ConectionEventArgs> OnConnectionOpening { get; set; }

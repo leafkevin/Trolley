@@ -23,7 +23,7 @@ public class DateTimeUnitTest : UnitTestBase
             var builder = new OrmDbFactoryBuilder()
                 .Register(OrmProviderType.PostgreSql, "fengling", "Host=localhost;Database=fengling;Username=postgres;Password=123456;SearchPath=public", true, "public")
                 .Configure<ModelConfiguration>(OrmProviderType.PostgreSql)
-                .UseDbFilter(df =>
+                .UseInterceptors(df =>
                 {
                     df.OnConnectionCreated += evt =>
                     {
