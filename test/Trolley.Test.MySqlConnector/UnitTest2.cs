@@ -2,21 +2,53 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Trolley.MySqlConnector;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Trolley.Test.MySqlConnector;
 
 public class UnitTest2 : UnitTestBase
 {
-    public UnitTest2()
+    private static int connTotal = 0;
+    private static int connOpenTotal = 0;
+    private readonly ITestOutputHelper output;
+    public UnitTest2(ITestOutputHelper output)
     {
+        this.output = output;
         var services = new ServiceCollection();
         services.AddSingleton(f =>
         {
             var builder = new OrmDbFactoryBuilder()
-           .Register(OrmProviderType.MySql, "fengling", "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;", true)
-            .Configure<ModelConfiguration>(OrmProviderType.MySql);
+                .Register(OrmProviderType.MySql, "fengling", "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;", true)
+                .Configure<ModelConfiguration>(OrmProviderType.MySql)
+                .UseDbFilter(df =>
+                {
+                    df.OnConnectionCreated += evt =>
+                    {
+                        Interlocked.Increment(ref connTotal);
+                        this.output.WriteLine($"{evt.ConnectionId} Created, Total:{Volatile.Read(ref connTotal)}");
+                    };
+                    df.OnConnectionOpened += evt =>
+                    {
+                        Interlocked.Increment(ref connOpenTotal);
+                        this.output.WriteLine($"{evt.ConnectionId} Opened, Total:{Volatile.Read(ref connOpenTotal)}");
+                    };
+                    df.OnConnectionClosed += evt =>
+                    {
+                        Interlocked.Decrement(ref connOpenTotal);
+                        this.output.WriteLine($"{evt.ConnectionId} Closed, Total:{Volatile.Read(ref connOpenTotal)}");
+                    };
+                    df.OnCommandExecuting += evt =>
+                    {
+                        this.output.WriteLine($"{evt.SqlType} Begin, Sql: {evt.Sql}");
+                    };
+                    df.OnCommandExecuted += evt =>
+                    {
+                        this.output.WriteLine($"{evt.SqlType} End, Elapsed: {evt.Elapsed} ms, Sql: {evt.Sql}");
+                    };
+                });
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();

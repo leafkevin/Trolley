@@ -569,7 +569,7 @@ partial class SqlServerProvider
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"DATEADD(YEAR,{rightSegment},{targetArgument})", false, true);
+                        return targetSegment.Merge(rightSegment, $"DATEADD(YEAR,{rightArgument},{targetArgument})", false, true);
                     });
                     result = true;
                     break;

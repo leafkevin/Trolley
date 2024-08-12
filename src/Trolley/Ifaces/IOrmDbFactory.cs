@@ -8,6 +8,7 @@ public interface IOrmDbFactory
     ICollection<TheaDatabase> Databases { get; }
     ICollection<IOrmProvider> OrmProviders { get; }
     ICollection<IEntityMapProvider> MapProviders { get; }
+    DbFilters DbFilters { get; }
 
     void UseDatabase(Func<string> dbKeySelector);
     bool TryGetShardingTable(Type entityType, out ShardingTable shardingTable);

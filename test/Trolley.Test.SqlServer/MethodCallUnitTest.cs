@@ -2,21 +2,53 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Trolley.SqlServer;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Trolley.Test.SqlServer;
 
 public class MethodCallUnitTest : UnitTestBase
 {
-    public MethodCallUnitTest()
+    private static int connTotal = 0;
+    private static int connOpenTotal = 0;
+    private readonly ITestOutputHelper output;
+    public MethodCallUnitTest(ITestOutputHelper output)
     {
+        this.output = output;
         var services = new ServiceCollection();
         services.AddSingleton(f =>
         {
             var builder = new OrmDbFactoryBuilder()
-            .Register<SqlServerProvider>("fengling", "Server=172.16.30.190;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", true)
-            .Configure<SqlServerProvider, ModelConfiguration>();
+                .Register(OrmProviderType.SqlServer, "fengling", "Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", true)
+                .Configure<ModelConfiguration>(OrmProviderType.SqlServer)
+                .UseDbFilter(df =>
+                {
+                    df.OnConnectionCreated += evt =>
+                    {
+                        Interlocked.Increment(ref connTotal);
+                        this.output.WriteLine($"{evt.ConnectionId} Created, Total:{Volatile.Read(ref connTotal)}");
+                    };
+                    df.OnConnectionOpened += evt =>
+                    {
+                        Interlocked.Increment(ref connOpenTotal);
+                        this.output.WriteLine($"{evt.ConnectionId} Opened, Total:{Volatile.Read(ref connOpenTotal)}");
+                    };
+                    df.OnConnectionClosed += evt =>
+                    {
+                        Interlocked.Decrement(ref connOpenTotal);
+                        this.output.WriteLine($"{evt.ConnectionId} Closed, Total:{Volatile.Read(ref connOpenTotal)}");
+                    };
+                    df.OnCommandExecuting += evt =>
+                    {
+                        this.output.WriteLine($"{evt.SqlType} Begin, Sql: {evt.Sql}");
+                    };
+                    df.OnCommandExecuted += evt =>
+                    {
+                        this.output.WriteLine($"{evt.SqlType} End, Elapsed: {evt.Elapsed} ms, Sql: {evt.Sql}");
+                    };
+                });
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();
@@ -580,46 +612,65 @@ public class MethodCallUnitTest : UnitTestBase
         Assert.True(result.NewField == $"{age}-{result.Gender}");
 
         sql = repository.From<User>()
-           .Where(f => f.Id == 1)
-           .Select(f => new
-           {
-               NewField = $"{f.Age.IsNull(20)}-{f.Gender}"
-           })
-           .ToSql(out _);
+            .Where(f => f.Id == 1)
+            .Select(f => new
+            {
+                NewField = $"{f.Age.IsNull(20)}-{f.Gender}"
+            })
+            .ToSql(out _);
         Assert.True(sql == "SELECT (CAST(ISNULL(a.[Age],20) AS NVARCHAR(MAX))+'-'+a.[Gender]) AS [NewField] FROM [sys_user] a WHERE a.[Id]=1");
 
         result = await repository.From<User>()
-        .Where(f => f.Id == 1)
-        .Select(f => new
-        {
-            NewField = $"{f.Age.IsNull(20)}-{f.Gender}",
-            f.Age,
-            f.Gender
-        })
-        .FirstAsync();
+            .Where(f => f.Id == 1)
+            .Select(f => new
+            {
+                NewField = $"{f.Age.IsNull(20)}-{f.Gender}",
+                f.Age,
+                f.Gender
+            })
+            .FirstAsync();
         age = result.Age == 0 ? 20 : result.Age;
         Assert.True(result.NewField == $"{age}-{result.Gender.ToString()}");
 
         sql = repository.From<User>()
-           .Where(f => f.Id == 1)
-           .Select(f => new
-           {
-               NewField = $"{f.Age.IsNull(20)}-{f.Gender.ToDescription()}"
-           })
-           .ToSql(out _);
+            .Where(f => f.Id == 1)
+            .Select(f => new
+            {
+                NewField = $"{f.Age.IsNull(20)}-{f.Gender.ToDescription()}"
+            })
+            .ToSql(out _);
         Assert.True(sql == "SELECT a.[Age],a.[Gender] FROM [sys_user] a WHERE a.[Id]=1");
 
         var result1 = await repository.From<User>()
-           .Where(f => f.Id == 1)
-           .Select(f => new
-           {
-               NewField = $"{f.Age.IsNull(20)}-{f.Gender.ToDescription()}",
-               f.Age,
-               f.Gender
-           })
-           .FirstAsync();
+            .Where(f => f.Id == 1)
+            .Select(f => new
+            {
+                NewField = $"{f.Age.IsNull(20)}-{f.Gender.ToDescription()}",
+                f.Age,
+                f.Gender
+            })
+            .FirstAsync();
         age = result1.Age == 0 ? 20 : result.Age;
         Assert.True(result1.NewField == $"{age}-{result1.Gender.ToDescription()}");
+
+        sql = repository.From<UpdateEntity>()
+            .Where(f => f.Id == 1)
+            .Select(f => new
+            {
+                NewField = $"{f.EnumField}"
+            })
+            .ToSql(out _);
+        Assert.True(sql == "SELECT (CASE a.[EnumField] WHEN 0 THEN N'Unknown' WHEN 1 THEN N'Female' WHEN 2 THEN N'Male' END) AS [NewField] FROM [sys_update_entity] a WHERE a.[Id]=1");
+
+        var result2 = await repository.From<UpdateEntity>()
+            .Where(f => f.Id == 1)
+            .Select(f => new
+            {
+                f.EnumField,
+                NewField = $"{f.EnumField}"
+            })
+            .FirstAsync();
+        Assert.True(result2.NewField == $"{result2.EnumField}");
     }
     [Fact]
     public void ContainsEquals()

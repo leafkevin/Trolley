@@ -228,7 +228,7 @@ partial class MySqlProvider
                         string formatArgument = null;
                         if (formatSegment.IsConstant)
                         {
-                            formatArgument = $"'{formatSegment}'";
+                            formatArgument = $"'{formatSegment.Value}'";
 
                             if (formatArgument.Contains("mm"))
                                 formatArgument = formatArgument.NextReplace("mm", "%i");
@@ -311,7 +311,7 @@ partial class MySqlProvider
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"DATE_ADD({targetArgument},INTERVAL {rightSegment} MONTH)", false, true);
+                        return targetSegment.Merge(rightSegment, $"DATE_ADD({targetArgument},INTERVAL {rightArgument} MONTH)", false, true);
                     });
                     result = true;
                     break;
@@ -377,7 +377,7 @@ partial class MySqlProvider
                             string formatArgument = null;
                             if (formatSegment.IsConstant || formatSegment.IsVariable)
                             {
-                                formatArgument = $"'{formatSegment}'";
+                                formatArgument = $"'{formatSegment.Value}'";
 
                                 if (formatArgument.Contains("yyyy"))
                                     formatArgument = formatArgument.NextReplace("yyyy", "YYYY");

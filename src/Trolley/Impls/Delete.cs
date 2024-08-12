@@ -104,11 +104,34 @@ public class Deleted<TEntity> : IDeleted<TEntity>
             throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
         if (this.Visitor.IsNeedFetchShardingTables)
             this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
-        return this.DbContext.Execute(f =>
+
+        using var command = this.DbContext.CreateCommand();
+        int result = 0;
+        bool isNeedClose = this.DbContext.IsNeedClose;
+        Exception exception = null;
+        CommandEventArgs eventArgs = null;
+        try
         {
-            f.CommandText = this.Visitor.BuildCommand(this.DbContext, f);
-            return this.Visitor.IsNeedFetchShardingTables;
-        });
+            command.CommandText = this.Visitor.BuildCommand(this.DbContext, command);
+            this.DbContext.Open();
+            eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.Delete);
+            result = command.ExecuteNonQuery();
+        }
+        catch (Exception ex)
+        {
+            isNeedClose = true;
+            exception = ex;
+            this.DbContext.AddCommandFailedFilter(command, CommandSqlType.Delete, eventArgs, exception);
+        }
+        finally
+        {
+            this.DbContext.AddCommandAfterFilter(command, CommandSqlType.Delete, eventArgs, exception == null, exception);
+            command.Parameters.Clear();
+            command.Dispose();
+            if (isNeedClose) this.DbContext.Close();
+        }
+        if (exception != null) throw exception;
+        return result;
     }
     public virtual async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
@@ -116,11 +139,34 @@ public class Deleted<TEntity> : IDeleted<TEntity>
             throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
         if (this.Visitor.IsNeedFetchShardingTables)
             await this.DbContext.FetchShardingTablesAsync(this.Visitor as SqlVisitor, cancellationToken);
-        return await this.DbContext.ExecuteAsync(f =>
+
+        using var command = this.DbContext.CreateDbCommand();
+        int result = 0;
+        bool isNeedClose = this.DbContext.IsNeedClose;
+        Exception exception = null;
+        CommandEventArgs eventArgs = null;
+        try
         {
-            f.CommandText = this.Visitor.BuildCommand(this.DbContext, f);
-            return this.Visitor.IsNeedFetchShardingTables;
-        }, cancellationToken);
+            command.CommandText = this.Visitor.BuildCommand(this.DbContext, command);
+            await this.DbContext.OpenAsync(cancellationToken);
+            eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.Delete);
+            result = await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            isNeedClose = true;
+            exception = ex;
+            this.DbContext.AddCommandFailedFilter(command, CommandSqlType.Delete, eventArgs, exception);
+        }
+        finally
+        {
+            this.DbContext.AddCommandAfterFilter(command, CommandSqlType.Delete, eventArgs, exception == null, exception);
+            command.Parameters.Clear();
+            await command.DisposeAsync();
+            if (isNeedClose) await this.DbContext.CloseAsync();
+        }
+        if (exception != null) throw exception;
+        return result;
     }
     #endregion
 

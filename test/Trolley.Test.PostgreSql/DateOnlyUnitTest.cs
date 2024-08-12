@@ -1,21 +1,53 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Globalization;
+using System.Threading;
 using Trolley.PostgreSql;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Trolley.Test.PostgreSql;
 
 public class DateOnlyUnitTest : UnitTestBase
 {
-    public DateOnlyUnitTest()
+    private static int connTotal = 0;
+    private static int connOpenTotal = 0;
+    private readonly ITestOutputHelper output;
+    public DateOnlyUnitTest(ITestOutputHelper output)
     {
+        this.output = output;
         var services = new ServiceCollection();
         services.AddSingleton(f =>
         {
             var builder = new OrmDbFactoryBuilder()
-            .Register(OrmProviderType.PostgreSql, "fengling", "Host=localhost;Database=fengling;Username=postgres;Password=123456;SearchPath=public", true, "public")
-            .Configure<ModelConfiguration>(OrmProviderType.PostgreSql);
+                .Register(OrmProviderType.PostgreSql, "fengling", "Host=localhost;Database=fengling;Username=postgres;Password=123456;SearchPath=public", true, "public")
+                .Configure<ModelConfiguration>(OrmProviderType.PostgreSql)
+                .UseDbFilter(df =>
+                {
+                    df.OnConnectionCreated += evt =>
+                    {
+                        Interlocked.Increment(ref connTotal);
+                        this.output.WriteLine($"{evt.ConnectionId} Created, Total:{Volatile.Read(ref connTotal)}");
+                    };
+                    df.OnConnectionOpened += evt =>
+                    {
+                        Interlocked.Increment(ref connOpenTotal);
+                        this.output.WriteLine($"{evt.ConnectionId} Opened, Total:{Volatile.Read(ref connOpenTotal)}");
+                    };
+                    df.OnConnectionClosed += evt =>
+                    {
+                        Interlocked.Decrement(ref connOpenTotal);
+                        this.output.WriteLine($"{evt.ConnectionId} Closed, Total:{Volatile.Read(ref connOpenTotal)}");
+                    };
+                    df.OnCommandExecuting += evt =>
+                    {
+                        this.output.WriteLine($"{evt.SqlType} Begin, Sql: {evt.Sql}");
+                    };
+                    df.OnCommandExecuted += evt =>
+                    {
+                        this.output.WriteLine($"{evt.SqlType} End, Elapsed: {evt.Elapsed} ms, Sql: {evt.Sql}");
+                    };
+                });
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();

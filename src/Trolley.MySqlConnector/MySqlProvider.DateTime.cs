@@ -361,7 +361,7 @@ partial class MySqlProvider
                         string formatArgument = null;
                         if (formatSegment.IsConstant)
                         {
-                            formatArgument = $"'{formatSegment}'";
+                            formatArgument = $"'{formatSegment.Value}'";
 
                             if (formatArgument.Contains("mm"))
                                 formatArgument = formatArgument.NextReplace("mm", "%i");
@@ -541,7 +541,7 @@ partial class MySqlProvider
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"DATE_ADD({targetArgument},INTERVAL {rightSegment} MONTH)", false, true);
+                        return targetSegment.Merge(rightSegment, $"DATE_ADD({targetArgument},INTERVAL {rightArgument} MONTH)", false, true);
                     });
                     result = true;
                     break;
@@ -687,7 +687,7 @@ partial class MySqlProvider
                             string formatArgument = null;
                             if (formatSegment.IsConstant || formatSegment.IsVariable)
                             {
-                                formatArgument = $"'{formatSegment}'";
+                                formatArgument = $"'{formatSegment.Value}'";
 
                                 //分钟
                                 if (formatArgument.Contains("mm"))
@@ -736,7 +736,7 @@ partial class MySqlProvider
                                 if (formatArgument.Contains("tt"))
                                     formatArgument = formatArgument.NextReplace("tt", "%p");
                                 else if (formatArgument.Contains("t"))
-                                    formatArgument = formatArgument.NextReplace("t", "SUBSTRING(%p,1,1)");
+                                    formatArgument = formatArgument.NextReplace("t", "%p");
                             }
                             else formatArgument = visitor.GetQuotedValue(formatSegment);
 

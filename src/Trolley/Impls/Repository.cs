@@ -341,20 +341,144 @@ public class Repository : IRepository
         int result = 0;
         bool isNeedClose = this.DbContext.IsNeedClose;
         Exception exception = null;
+        CommandEventArgs eventArgs = null;
+        bool isBulk = insertObjs is IEnumerable && insertObjs is not string && insertObjs is not IDictionary<string, object>;
         try
         {
             var entityType = typeof(TEntity);
-            bool isBulk = insertObjs is IEnumerable && insertObjs is not string && insertObjs is not IDictionary<string, object>;
-            if (isBulk) result = this.DbContext.CreateBulk(command, entityType, insertObjs as IEnumerable, bulkCount);
-            else result = this.DbContext.Create(command, entityType, insertObjs);
+            if (isBulk)
+            {
+                var builder = new StringBuilder();
+                object firstInsertObj = null;
+                Type insertObjType = null;
+                var entities = insertObjs as IEnumerable;
+                foreach (var insertObj in entities)
+                {
+                    firstInsertObj = insertObj;
+                    break;
+                }
+                insertObjType = firstInsertObj.GetType();
+                var ormProvider = this.DbContext.OrmProvider;
+                var mapProvider = this.DbContext.MapProvider;
+
+                var fieldsSqlPartSetter = RepositoryHelper.BuildCreateFieldsSqlPart(ormProvider, mapProvider, entityType, insertObjType, null, null);
+                var valuesSqlPartSetter = RepositoryHelper.BuildCreateValuesSqlParametes(ormProvider, mapProvider, entityType, insertObjType, null, null, true);
+                bool isDictionary = typeof(IDictionary<string, object>).IsAssignableFrom(insertObjType);
+
+                Action<IDataParameterCollection, StringBuilder, string> firstSqlSetter = null;
+                Action<IDataParameterCollection, StringBuilder, object, string> loopSqlSetter = null;
+
+                if (isDictionary)
+                {
+                    var typedFieldsSqlPartSetter = fieldsSqlPartSetter as Func<StringBuilder, object, List<MemberMap>>;
+                    var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, List<MemberMap>, object, string>;
+
+                    var memberMappers = typedFieldsSqlPartSetter.Invoke(builder, firstInsertObj);
+                    builder.Append(") VALUES ");
+                    var firstHeadSql = builder.ToString();
+                    builder.Clear();
+                    builder = null;
+
+                    firstSqlSetter = (dbParameters, builder, tableName) =>
+                    {
+                        builder.Append($"INSERT INTO {ormProvider.GetFieldName(tableName)} (");
+                        builder.Append(firstHeadSql);
+                    };
+                    loopSqlSetter = (dbParameters, builder, insertObj, suffix) =>
+                    {
+                        builder.Append('(');
+                        typedValuesSqlPartSetter.Invoke(dbParameters, builder, ormProvider, memberMappers, insertObj, suffix);
+                        builder.Append(')');
+                    };
+                }
+                else
+                {
+                    var typedFieldsSqlPartSetter = fieldsSqlPartSetter as Action<StringBuilder>;
+                    var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
+
+                    firstSqlSetter = (dbParameters, builder, tableName) =>
+                    {
+                        builder.Append($"INSERT INTO {ormProvider.GetFieldName(tableName)} (");
+                        typedFieldsSqlPartSetter.Invoke(builder);
+                        builder.Append(") VALUES ");
+                    };
+                    loopSqlSetter = (dbParameters, builder, insertObj, suffix) =>
+                    {
+                        builder.Append('(');
+                        typedValuesSqlPartSetter.Invoke(dbParameters, builder, ormProvider, insertObj, suffix);
+                        builder.Append(')');
+                    };
+                }
+                Func<string, IEnumerable, int> executor = (tableName, insertObjs) =>
+                {
+                    int count = 0, index = 0;
+                    foreach (var insertObj in insertObjs)
+                    {
+                        if (index > 0) builder.Append(',');
+                        loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
+                        if (index >= bulkCount)
+                        {
+                            command.CommandText = builder.ToString();
+                            eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkInsert, eventArgs);
+                            count += command.ExecuteNonQuery();
+                            builder.Clear();
+                            command.Parameters.Clear();
+                            firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                            index = 0;
+                            continue;
+                        }
+                        index++;
+                    }
+                    if (index > 0)
+                    {
+                        command.CommandText = builder.ToString();
+                        eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkInsert, eventArgs);
+                        count += command.ExecuteNonQuery();
+                    }
+                    return count;
+                };
+
+                this.DbContext.Open();
+                if (this.DbContext.ShardingProvider.TryGetShardingTable(entityType, out _))
+                {
+                    var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, entities);
+                    foreach (var tabledInsertObj in tabledInsertObjs)
+                    {
+                        firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
+                        result += executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
+                        builder.Clear();
+                        command.Parameters.Clear();
+                    }
+                }
+                else
+                {
+                    var entityMapper = mapProvider.GetEntityMap(entityType);
+                    var tableName = entityMapper.TableName;
+                    firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                    result = executor.Invoke(tableName, entities);
+                }
+                builder.Clear();
+                builder = null;
+            }
+            else
+            {
+                this.DbContext.BuildCreateCommand(command, entityType, insertObjs, false);
+                this.DbContext.Open();
+                eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.Insert);
+                result = command.ExecuteNonQuery();
+            }
         }
         catch (Exception ex)
         {
             isNeedClose = true;
             exception = ex;
+            var sqlType = isBulk ? CommandSqlType.BulkInsert : CommandSqlType.Insert;
+            this.DbContext.AddCommandFailedFilter(command, sqlType, eventArgs, exception);
         }
         finally
         {
+            var sqlType = isBulk ? CommandSqlType.BulkInsert : CommandSqlType.Insert;
+            this.DbContext.AddCommandAfterFilter(command, sqlType, eventArgs, exception == null, exception);
             command.Parameters.Clear();
             command.Dispose();
             if (isNeedClose) this.Dispose();
@@ -371,20 +495,144 @@ public class Repository : IRepository
         int result = 0;
         bool isNeedClose = this.DbContext.IsNeedClose;
         Exception exception = null;
+        CommandEventArgs eventArgs = null;
+        bool isBulk = insertObjs is IEnumerable && insertObjs is not string && insertObjs is not IDictionary<string, object>;
         try
         {
             var entityType = typeof(TEntity);
-            bool isBulk = insertObjs is IEnumerable && insertObjs is not string && insertObjs is not IDictionary<string, object>;
-            if (isBulk) result = await this.DbContext.CreateBulkAsync(command, entityType, insertObjs as IEnumerable, bulkCount, cancellationToken);
-            else result = await this.DbContext.CreateAsync(command, entityType, insertObjs, cancellationToken);
+            eventArgs = this.DbContext.AddCommandBeforeFilter(command, isBulk ? CommandSqlType.BulkInsert : CommandSqlType.Insert);
+            if (isBulk)
+            {
+                var builder = new StringBuilder();
+                object firstInsertObj = null;
+                Type insertObjType = null;
+                var entities = insertObjs as IEnumerable;
+                foreach (var insertObj in entities)
+                {
+                    firstInsertObj = insertObj;
+                    break;
+                }
+                insertObjType = firstInsertObj.GetType();
+                var ormProvider = this.DbContext.OrmProvider;
+                var mapProvider = this.DbContext.MapProvider;
+
+                var fieldsSqlPartSetter = RepositoryHelper.BuildCreateFieldsSqlPart(ormProvider, mapProvider, entityType, insertObjType, null, null);
+                var valuesSqlPartSetter = RepositoryHelper.BuildCreateValuesSqlParametes(ormProvider, mapProvider, entityType, insertObjType, null, null, true);
+                bool isDictionary = typeof(IDictionary<string, object>).IsAssignableFrom(insertObjType);
+
+                Action<IDataParameterCollection, StringBuilder, string> firstSqlSetter = null;
+                Action<IDataParameterCollection, StringBuilder, object, string> loopSqlSetter = null;
+
+                if (isDictionary)
+                {
+                    var typedFieldsSqlPartSetter = fieldsSqlPartSetter as Func<StringBuilder, object, List<MemberMap>>;
+                    var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, List<MemberMap>, object, string>;
+
+                    var memberMappers = typedFieldsSqlPartSetter.Invoke(builder, firstInsertObj);
+                    builder.Append(") VALUES ");
+                    var firstHeadSql = builder.ToString();
+                    builder.Clear();
+                    builder = null;
+
+                    firstSqlSetter = (dbParameters, builder, tableName) =>
+                    {
+                        builder.Append($"INSERT INTO {ormProvider.GetFieldName(tableName)} (");
+                        builder.Append(firstHeadSql);
+                    };
+                    loopSqlSetter = (dbParameters, builder, insertObj, suffix) =>
+                    {
+                        builder.Append('(');
+                        typedValuesSqlPartSetter.Invoke(dbParameters, builder, ormProvider, memberMappers, insertObj, suffix);
+                        builder.Append(')');
+                    };
+                }
+                else
+                {
+                    var typedFieldsSqlPartSetter = fieldsSqlPartSetter as Action<StringBuilder>;
+                    var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
+
+                    firstSqlSetter = (dbParameters, builder, tableName) =>
+                    {
+                        builder.Append($"INSERT INTO {ormProvider.GetFieldName(tableName)} (");
+                        typedFieldsSqlPartSetter.Invoke(builder);
+                        builder.Append(") VALUES ");
+                    };
+                    loopSqlSetter = (dbParameters, builder, insertObj, suffix) =>
+                    {
+                        builder.Append('(');
+                        typedValuesSqlPartSetter.Invoke(dbParameters, builder, ormProvider, insertObj, suffix);
+                        builder.Append(')');
+                    };
+                }
+                Func<string, IEnumerable, Task<int>> executor = async (tableName, insertObjs) =>
+                {
+                    int count = 0, index = 0;
+                    foreach (var insertObj in insertObjs)
+                    {
+                        if (index > 0) builder.Append(',');
+                        loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
+                        if (index >= bulkCount)
+                        {
+                            command.CommandText = builder.ToString();
+                            eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkInsert, eventArgs);
+                            count += await command.ExecuteNonQueryAsync(cancellationToken);
+                            builder.Clear();
+                            command.Parameters.Clear();
+                            firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                            index = 0;
+                            continue;
+                        }
+                        index++;
+                    }
+                    if (index > 0)
+                    {
+                        command.CommandText = builder.ToString();
+                        eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkInsert, eventArgs);
+                        count += await command.ExecuteNonQueryAsync(cancellationToken);
+                    }
+                    return count;
+                };
+                await this.DbContext.OpenAsync(cancellationToken);
+                if (this.DbContext.ShardingProvider.TryGetShardingTable(entityType, out _))
+                {
+                    var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, entities);
+                    foreach (var tabledInsertObj in tabledInsertObjs)
+                    {
+                        firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
+                        result += await executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
+                        builder.Clear();
+                        command.Parameters.Clear();
+                    }
+                }
+                else
+                {
+                    var entityMapper = mapProvider.GetEntityMap(entityType);
+                    var tableName = entityMapper.TableName;
+                    firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                    result = await executor.Invoke(tableName, entities);
+                }
+                builder.Clear();
+                builder = null;
+            }
+            else
+            {
+                this.DbContext.BuildCreateCommand(command, entityType, insertObjs, false);
+                await this.DbContext.OpenAsync(cancellationToken);
+                eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.Insert);
+                result = await command.ExecuteNonQueryAsync(cancellationToken);
+            }
         }
         catch (Exception ex)
         {
             isNeedClose = true;
             exception = ex;
+            var sqlType = isBulk ? CommandSqlType.BulkInsert : CommandSqlType.Insert;
+            this.DbContext.AddCommandFailedFilter(command, sqlType, eventArgs, exception);
         }
         finally
         {
+            var sqlType = isBulk ? CommandSqlType.BulkInsert : CommandSqlType.Insert;
+            this.DbContext.AddCommandAfterFilter(command, sqlType, eventArgs, exception == null, exception);
             command.Parameters.Clear();
             await command.DisposeAsync();
             if (isNeedClose) await this.DisposeAsync();
@@ -455,15 +703,15 @@ public class Repository : IRepository
         int result = 0;
         bool isNeedClose = this.DbContext.IsNeedClose;
         Exception exception = null;
+        CommandEventArgs eventArgs = null;
+        bool isBulk = updateObjs is IEnumerable && updateObjs is not string && updateObjs is not IDictionary<string, object>;
         try
         {
             var entityType = typeof(TEntity);
             var builder = new StringBuilder();
-            bool isBulk = updateObjs is IEnumerable && updateObjs is not string && updateObjs is not IDictionary<string, object>;
             if (isBulk)
             {
                 int index = 0;
-                bool isOpened = false;
                 var entities = updateObjs as IEnumerable;
                 Type updateObjType = null;
                 foreach (var updateObj in entities)
@@ -474,6 +722,7 @@ public class Repository : IRepository
                 (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.ormProvider, this.mapProvider, entityType, updateObjType, true, null, null);
                 var typedSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
 
+                this.DbContext.Open();
                 foreach (var updateObj in entities)
                 {
                     if (index > 0) builder.Append(';');
@@ -482,11 +731,7 @@ public class Repository : IRepository
                     if (index >= bulkCount)
                     {
                         command.CommandText = builder.ToString();
-                        if (!isOpened)
-                        {
-                            this.DbContext.Open();
-                            isOpened = true;
-                        }
+                        eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkUpdate, eventArgs);
                         result += command.ExecuteNonQuery();
                         command.Parameters.Clear();
                         builder.Clear();
@@ -498,7 +743,7 @@ public class Repository : IRepository
                 if (index > 0)
                 {
                     command.CommandText = builder.ToString();
-                    if (!isOpened) this.DbContext.Open();
+                    eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkUpdate, eventArgs);
                     result += command.ExecuteNonQuery();
                 }
             }
@@ -511,6 +756,7 @@ public class Repository : IRepository
                 typedSqlSetter.Invoke(command.Parameters, builder, this.ormProvider, updateObjs);
                 command.CommandText = builder.ToString();
                 this.DbContext.Open();
+                eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.Update);
                 result = command.ExecuteNonQuery();
             }
             builder.Clear();
@@ -520,9 +766,13 @@ public class Repository : IRepository
         {
             isNeedClose = true;
             exception = ex;
+            var sqlType = isBulk ? CommandSqlType.BulkUpdate : CommandSqlType.Update;
+            this.DbContext.AddCommandFailedFilter(command, sqlType, eventArgs, exception);
         }
         finally
         {
+            var sqlType = isBulk ? CommandSqlType.BulkUpdate : CommandSqlType.Update;
+            this.DbContext.AddCommandAfterFilter(command, sqlType, eventArgs, exception == null, exception);
             command.Parameters.Clear();
             command.Dispose();
             if (isNeedClose) this.Dispose();
@@ -539,15 +789,15 @@ public class Repository : IRepository
         int result = 0;
         bool isNeedClose = this.DbContext.IsNeedClose;
         Exception exception = null;
+        CommandEventArgs eventArgs = null;
+        bool isBulk = updateObjs is IEnumerable && updateObjs is not string && updateObjs is not IDictionary<string, object>;
         try
         {
             var entityType = typeof(TEntity);
             var builder = new StringBuilder();
-            bool isBulk = updateObjs is IEnumerable && updateObjs is not string && updateObjs is not IDictionary<string, object>;
             if (isBulk)
             {
                 int index = 0;
-                bool isOpened = false;
                 var entities = updateObjs as IEnumerable;
                 Type updateObjType = null;
                 foreach (var updateObj in entities)
@@ -557,7 +807,7 @@ public class Repository : IRepository
                 }
                 (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.ormProvider, this.mapProvider, entityType, updateObjType, true, null, null);
                 var typedSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
-
+                await this.DbContext.OpenAsync(cancellationToken);
                 foreach (var updateObj in entities)
                 {
                     if (index > 0) builder.Append(';');
@@ -566,11 +816,7 @@ public class Repository : IRepository
                     if (index >= bulkCount)
                     {
                         command.CommandText = builder.ToString();
-                        if (!isOpened)
-                        {
-                            await this.DbContext.OpenAsync(cancellationToken);
-                            isOpened = true;
-                        }
+                        eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkUpdate, eventArgs);
                         result += await command.ExecuteNonQueryAsync(cancellationToken);
                         command.Parameters.Clear();
                         builder.Clear();
@@ -582,7 +828,7 @@ public class Repository : IRepository
                 if (index > 0)
                 {
                     command.CommandText = builder.ToString();
-                    if (!isOpened) await this.DbContext.OpenAsync(cancellationToken);
+                    eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkUpdate, eventArgs);
                     result += await command.ExecuteNonQueryAsync(cancellationToken);
                 }
             }
@@ -595,6 +841,7 @@ public class Repository : IRepository
                 typedSqlSetter.Invoke(command.Parameters, builder, this.ormProvider, updateObjs);
                 command.CommandText = builder.ToString();
                 await this.DbContext.OpenAsync(cancellationToken);
+                eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.Update);
                 result = await command.ExecuteNonQueryAsync(cancellationToken);
             }
             builder.Clear();
@@ -604,9 +851,13 @@ public class Repository : IRepository
         {
             isNeedClose = true;
             exception = ex;
+            var sqlType = isBulk ? CommandSqlType.BulkUpdate : CommandSqlType.Update;
+            this.DbContext.AddCommandFailedFilter(command, sqlType, eventArgs, exception);
         }
         finally
         {
+            var sqlType = isBulk ? CommandSqlType.BulkUpdate : CommandSqlType.Update;
+            this.DbContext.AddCommandAfterFilter(command, sqlType, eventArgs, exception == null, exception);
             command.Parameters.Clear();
             await command.DisposeAsync();
             if (isNeedClose) await this.DisposeAsync();
@@ -627,6 +878,7 @@ public class Repository : IRepository
         int result = 0;
         bool isNeedClose = this.DbContext.IsNeedClose;
         Exception exception = null;
+        CommandEventArgs eventArgs = null;
         try
         {
             var entityType = typeof(TEntity);
@@ -635,15 +887,18 @@ public class Repository : IRepository
 
             this.BuildDeleteCommand(command, entityType, whereKeys);
             this.DbContext.Open();
+            eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.Delete);
             result = command.ExecuteNonQuery();
         }
         catch (Exception ex)
         {
             isNeedClose = true;
             exception = ex;
+            this.DbContext.AddCommandFailedFilter(command, CommandSqlType.Delete, eventArgs, exception);
         }
         finally
         {
+            this.DbContext.AddCommandAfterFilter(command, CommandSqlType.Delete, eventArgs, exception == null, exception);
             command.Parameters.Clear();
             command.Dispose();
             if (isNeedClose) this.Dispose();
@@ -660,6 +915,7 @@ public class Repository : IRepository
         int result = 0;
         bool isNeedClose = this.DbContext.IsNeedClose;
         Exception exception = null;
+        CommandEventArgs eventArgs = null;
         try
         {
             var entityType = typeof(TEntity);
@@ -668,15 +924,18 @@ public class Repository : IRepository
 
             this.BuildDeleteCommand(command, entityType, whereKeys);
             await this.DbContext.OpenAsync(cancellationToken);
+            eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.Delete);
             result = await command.ExecuteNonQueryAsync(cancellationToken);
         }
         catch (Exception ex)
         {
             isNeedClose = true;
             exception = ex;
+            this.DbContext.AddCommandFailedFilter(command, CommandSqlType.Delete, eventArgs, exception);
         }
         finally
         {
+            this.DbContext.AddCommandAfterFilter(command, CommandSqlType.Delete, eventArgs, exception == null, exception);
             command.Parameters.Clear();
             await command.DisposeAsync();
             if (isNeedClose) await this.DisposeAsync();
@@ -822,12 +1081,14 @@ public class Repository : IRepository
         IDataReader reader = null;
         bool isNeedClose = false;
         Exception exception = null;
+        CommandEventArgs eventArgs = null;
         try
         {
             using var multiQuery = new MultipleQuery(this.DbContext, command);
             subQueries.Invoke(multiQuery);
             command.CommandText = multiQuery.BuildSql(out var readerAfters);
             this.DbContext.Open();
+            eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.MultiQuery);
             reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
             result = new MultiQueryReader(this.ormProvider, command, reader, readerAfters, isNeedClose);
         }
@@ -835,9 +1096,11 @@ public class Repository : IRepository
         {
             isNeedClose = true;
             exception = ex;
+            this.DbContext.AddCommandFailedFilter(command, CommandSqlType.MultiQuery, eventArgs, exception);
         }
         finally
         {
+            this.DbContext.AddCommandAfterFilter(command, CommandSqlType.MultiQuery, eventArgs, exception == null, exception);
             if (isNeedClose)
             {
                 reader?.Dispose();
@@ -859,12 +1122,14 @@ public class Repository : IRepository
         DbDataReader reader = null;
         bool isNeedClose = false;
         Exception exception = null;
+        CommandEventArgs eventArgs = null;
         try
         {
             using var multiQuery = new MultipleQuery(this.DbContext, command);
             subQueries.Invoke(multiQuery);
             command.CommandText = multiQuery.BuildSql(out var readerAfters);
             await this.DbContext.OpenAsync(cancellationToken);
+            eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.MultiQuery);
             reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
             result = new MultiQueryReader(this.ormProvider, command, reader, readerAfters, isNeedClose);
         }
@@ -872,9 +1137,11 @@ public class Repository : IRepository
         {
             isNeedClose = true;
             exception = ex;
+            this.DbContext.AddCommandFailedFilter(command, CommandSqlType.MultiQuery, eventArgs, exception);
         }
         finally
         {
+            this.DbContext.AddCommandAfterFilter(command, CommandSqlType.MultiQuery, eventArgs, exception == null, exception);
             if (isNeedClose)
             {
                 if (reader != null)
@@ -897,8 +1164,9 @@ public class Repository : IRepository
 
         using var command = this.DbContext.CreateCommand();
         bool isNeedClose = this.DbContext.IsNeedClose;
-        Exception exception = null;
         int result = 0;
+        Exception exception = null;
+        CommandEventArgs eventArgs = null;
         try
         {
             int commandIndex = 0;
@@ -941,15 +1209,18 @@ public class Repository : IRepository
             }
             command.CommandText = sqlBuilder.ToString();
             this.DbContext.Open();
+            eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.MultiCommand);
             result = command.ExecuteNonQuery();
         }
         catch (Exception ex)
         {
             isNeedClose = true;
             exception = ex;
+            this.DbContext.AddCommandFailedFilter(command, CommandSqlType.MultiCommand, eventArgs, exception);
         }
         finally
         {
+            this.DbContext.AddCommandAfterFilter(command, CommandSqlType.MultiCommand, eventArgs, exception == null, exception);
             command.Parameters.Clear();
             command.Dispose();
             if (isNeedClose) this.Dispose();
@@ -964,8 +1235,9 @@ public class Repository : IRepository
 
         using var command = this.DbContext.CreateDbCommand();
         bool isNeedClose = this.DbContext.IsNeedClose;
-        Exception exception = null;
         int result = 0;
+        Exception exception = null;
+        CommandEventArgs eventArgs = null;
         try
         {
             int commandIndex = 0;
@@ -1008,15 +1280,18 @@ public class Repository : IRepository
             }
             command.CommandText = sqlBuilder.ToString();
             await this.DbContext.OpenAsync(cancellationToken);
+            eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.MultiCommand);
             result = await command.ExecuteNonQueryAsync(cancellationToken);
         }
         catch (Exception ex)
         {
             isNeedClose = true;
             exception = ex;
+            this.DbContext.AddCommandFailedFilter(command, CommandSqlType.MultiCommand, eventArgs, exception);
         }
         finally
         {
+            this.DbContext.AddCommandAfterFilter(command, CommandSqlType.MultiCommand, eventArgs, exception == null, exception);
             command.Parameters.Clear();
             await command.DisposeAsync();
             if (isNeedClose) await this.DisposeAsync();

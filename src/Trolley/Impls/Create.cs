@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -110,22 +111,77 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
         int result = 0;
         Exception exception = null;
         bool isNeedClose = this.DbContext.IsNeedClose;
+        CommandEventArgs eventArgs = null;
+        using var command = this.DbContext.CreateCommand();
         try
         {
             switch (this.Visitor.ActionMode)
             {
                 case ActionMode.Bulk:
-                    result = this.DbContext.CreateBulk(this.Visitor);
+                    {
+                        var builder = new StringBuilder();
+                        (var isNeedSplit, var tableName, var insertObjs, var bulkCount,
+                            var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
+
+                        Action<string> clearCommand = tableName =>
+                        {
+                            builder.Clear();
+                            command.Parameters.Clear();
+                            firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                        };
+                        Func<string, IEnumerable, int> executor = (tableName, insertObjs) =>
+                        {
+                            int count = 0, index = 0;
+                            foreach (var insertObj in insertObjs)
+                            {
+                                if (index > 0) builder.Append(',');
+                                loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
+                                if (index >= bulkCount)
+                                {
+                                    command.CommandText = builder.ToString();
+                                    eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkInsert, eventArgs);
+                                    count += command.ExecuteNonQuery();
+                                    clearCommand.Invoke(tableName);
+                                    index = 0;
+                                    continue;
+                                }
+                                index++;
+                            }
+                            if (index > 0)
+                            {
+                                command.CommandText = builder.ToString();
+                                eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkInsert, eventArgs);
+                                count += command.ExecuteNonQuery();
+                            }
+                            return count;
+                        };
+                        this.DbContext.Open();
+                        if (isNeedSplit)
+                        {
+                            var entityType = this.Visitor.Tables[0].EntityType;
+                            var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
+                            foreach (var tabledInsertObj in tabledInsertObjs)
+                            {
+                                firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
+                                result += executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
+                            }
+                        }
+                        else
+                        {
+                            firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                            result = executor.Invoke(tableName, insertObjs);
+                        }
+                        builder.Clear();
+                        builder = null;
+                    }
                     break;
                 default:
                     {
                         //默认单条
-                        using var command = this.DbContext.CreateCommand();
                         command.CommandText = this.Visitor.BuildCommand(command, false, out _);
                         this.DbContext.Open();
+                        eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.Insert);
                         result = command.ExecuteNonQuery();
-                        command.Parameters.Clear();
-                        command.Dispose();
                     }
                     break;
             }
@@ -134,9 +190,15 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
         {
             isNeedClose = true;
             exception = ex;
+            var sqlType = this.Visitor.ActionMode == ActionMode.Bulk ? CommandSqlType.BulkInsert : CommandSqlType.Insert;
+            this.DbContext.AddCommandFailedFilter(command, sqlType, eventArgs, exception);
         }
         finally
         {
+            var sqlType = this.Visitor.ActionMode == ActionMode.Bulk ? CommandSqlType.BulkInsert : CommandSqlType.Insert;
+            this.DbContext.AddCommandAfterFilter(command, sqlType, eventArgs, exception == null, exception);
+            command.Parameters.Clear();
+            command.Dispose();
             if (isNeedClose) this.Close();
         }
         if (exception != null) throw exception;
@@ -147,19 +209,76 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
         int result = 0;
         Exception exception = null;
         bool isNeedClose = this.DbContext.IsNeedClose;
+        CommandEventArgs eventArgs = null;
+        using var command = this.DbContext.CreateDbCommand();
         try
         {
             switch (this.Visitor.ActionMode)
             {
                 case ActionMode.Bulk:
-                    result = await this.DbContext.CreateBulkAsync(this.Visitor, cancellationToken);
+                    {
+                        var builder = new StringBuilder();
+                        (var isNeedSplit, var tableName, var insertObjs, var bulkCount,
+                            var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
+
+                        Action<string> clearCommand = tableName =>
+                        {
+                            builder.Clear();
+                            command.Parameters.Clear();
+                            firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                        };
+                        Func<string, IEnumerable, Task<int>> executor = async (tableName, insertObjs) =>
+                        {
+                            int count = 0, index = 0;
+                            foreach (var insertObj in insertObjs)
+                            {
+                                if (index > 0) builder.Append(',');
+                                loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
+                                if (index >= bulkCount)
+                                {
+                                    command.CommandText = builder.ToString();
+                                    eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkInsert, eventArgs);
+                                    count += await command.ExecuteNonQueryAsync(cancellationToken);
+                                    clearCommand.Invoke(tableName);
+                                    index = 0;
+                                    continue;
+                                }
+                                index++;
+                            }
+                            if (index > 0)
+                            {
+                                command.CommandText = builder.ToString();
+                                eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkInsert, eventArgs);
+                                count += await command.ExecuteNonQueryAsync(cancellationToken);
+                            }
+                            return count;
+                        };
+                        await this.DbContext.OpenAsync(cancellationToken);
+                        if (isNeedSplit)
+                        {
+                            var entityType = this.Visitor.Tables[0].EntityType;
+                            var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
+                            foreach (var tabledInsertObj in tabledInsertObjs)
+                            {
+                                firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
+                                result += await executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
+                            }
+                        }
+                        else
+                        {
+                            firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                            result = await executor.Invoke(tableName, insertObjs);
+                        }
+                        builder.Clear();
+                        builder = null;
+                    }
                     break;
                 default:
                     {
                         //默认单条
-                        using var command = this.DbContext.CreateDbCommand();
                         command.CommandText = this.Visitor.BuildCommand(command, false, out _);
                         await this.DbContext.OpenAsync(cancellationToken);
+                        eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.Insert);
                         result = await command.ExecuteNonQueryAsync(cancellationToken);
                     }
                     break;
@@ -169,9 +288,15 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
         {
             isNeedClose = true;
             exception = ex;
+            var sqlType = this.Visitor.ActionMode == ActionMode.Bulk ? CommandSqlType.BulkInsert : CommandSqlType.Insert;
+            this.DbContext.AddCommandFailedFilter(command, sqlType, eventArgs, exception);
         }
         finally
         {
+            var sqlType = this.Visitor.ActionMode == ActionMode.Bulk ? CommandSqlType.BulkInsert : CommandSqlType.Insert;
+            this.DbContext.AddCommandAfterFilter(command, sqlType, eventArgs, exception == null, exception);
+            command.Parameters.Clear();
+            await command.DisposeAsync();
             if (isNeedClose) await this.CloseAsync();
         }
         if (exception != null) throw exception;

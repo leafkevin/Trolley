@@ -14,7 +14,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
 {
     #region Properties
     public string DbKey { get; set; }
-    public IDbConnection Connection { get; set; }
+    public TheaConnection Connection { get; set; }
     public string ConnectionString { get; set; }
     public string TableSchema { get; set; }
     public IOrmProvider OrmProvider { get; set; }
@@ -23,12 +23,24 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     public IDbTransaction Transaction { get; set; }
     public bool IsParameterized { get; set; }
     public int CommandTimeout { get; set; }
+    public DbFilters DbFilters { get; set; }
     public bool IsNeedClose => this.Transaction == null;
     #endregion
 
     #region CreateConnection
     public void CreateConnection()
-        => this.Connection = this.OrmProvider.CreateConnection(this.ConnectionString);
+    {
+        var connection = this.OrmProvider.CreateConnection(this.ConnectionString);
+        this.Connection = new TheaConnection(connection);
+        this.DbFilters.OnConnectionCreated?.Invoke(new ConectionEventArgs
+        {
+            ConnectionId = this.Connection.ConnectionId,
+            ConnectionString = this.ConnectionString,
+            DbKey = this.DbKey,
+            OrmProvider = this.OrmProvider,
+            CreatedAt = DateTime.Now
+        });
+    }
     #endregion
 
     #region CreateCommand
@@ -59,12 +71,14 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         IDataReader reader = null;
         bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
+        CommandEventArgs eventArgs = null;
         try
         {
             var entityType = typeof(TResult);
             commandInitializer.Invoke(command);
             this.Open();
             var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Select);
             reader = command.ExecuteReader(behavior);
             if (reader.Read())
             {
@@ -77,9 +91,11 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             isNeedClose = true;
             exception = ex;
+            this.AddCommandFailedFilter(command, CommandSqlType.Select, eventArgs, exception);
         }
         finally
         {
+            this.AddCommandAfterFilter(command, CommandSqlType.Select, eventArgs, exception == null, exception);
             reader?.Dispose();
             command.Parameters.Clear();
             command.Dispose();
@@ -95,6 +111,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         DbDataReader reader = null;
         bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
+        CommandEventArgs eventArgs = null;
         try
         {
             var entityType = typeof(TResult);
@@ -102,6 +119,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
 
             await this.OpenAsync(cancellationToken);
             var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Select);
             reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
             if (await reader.ReadAsync(cancellationToken))
             {
@@ -114,9 +132,11 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             isNeedClose = true;
             exception = ex;
+            this.AddCommandFailedFilter(command, CommandSqlType.Select, eventArgs, exception);
         }
         finally
         {
+            this.AddCommandAfterFilter(command, CommandSqlType.Select, eventArgs, exception == null, exception);
             if (reader != null)
                 await reader.DisposeAsync();
             command.Parameters.Clear();
@@ -133,6 +153,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         IDataReader reader = null;
         bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
+        CommandEventArgs eventArgs = null;
         try
         {
             if (visitor.IsNeedFetchShardingTables)
@@ -140,12 +161,13 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
             visitor.SelectDefault(defaultExpr);
             var sql = visitor.BuildSql(out var readerFields);
-            (var isOpened, sql) = this.BuildSql(visitor, sql, " UNOIN ALL ");
+            sql = this.BuildSql(visitor, sql, " UNOIN ALL ");
             command.CommandText = sql;
             visitor.DbParameters.CopyTo(command.Parameters);
 
-            if (!isOpened) this.Open();
+            this.Open();
             var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Select);
             reader = command.ExecuteReader(behavior);
             var entityType = typeof(TResult);
             if (reader.Read())
@@ -160,6 +182,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                 command.CommandText = sql;
                 command.Parameters.Clear();
                 visitor.NextDbParameters.CopyTo(command.Parameters);
+                eventArgs = this.AddCommandNextBeforeFilter(command, eventArgs);
                 reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
                 visitor.SetIncludeValues(entityType, result, reader);
             }
@@ -168,9 +191,11 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             isNeedClose = true;
             exception = ex;
+            this.AddCommandFailedFilter(command, CommandSqlType.Select, eventArgs, exception);
         }
         finally
         {
+            this.AddCommandAfterFilter(command, CommandSqlType.Select, eventArgs, exception == null, exception);
             reader?.Close();
             command.Parameters.Clear();
             command.Dispose();
@@ -187,6 +212,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         DbDataReader reader = null;
         bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
+        CommandEventArgs eventArgs = null;
         try
         {
             if (visitor.IsNeedFetchShardingTables)
@@ -194,12 +220,13 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
             visitor.SelectDefault(defaultExpr);
             var sql = visitor.BuildSql(out var readerFields);
-            (var isOpened, sql) = this.BuildSql(visitor, sql, " UNION ALL ");
+            sql = this.BuildSql(visitor, sql, " UNION ALL ");
             command.CommandText = sql;
             visitor.DbParameters.CopyTo(command.Parameters);
 
-            if (!isOpened) await this.OpenAsync(cancellationToken);
+            await this.OpenAsync(cancellationToken);
             var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Select);
             reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
             var entityType = typeof(TResult);
             if (await reader.ReadAsync(cancellationToken))
@@ -214,6 +241,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                 command.CommandText = sql;
                 command.Parameters.Clear();
                 visitor.NextDbParameters.CopyTo(command.Parameters);
+                eventArgs = this.AddCommandNextBeforeFilter(command, eventArgs);
                 reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
                 await visitor.SetIncludeValuesAsync(entityType, result, reader, cancellationToken);
             }
@@ -222,11 +250,12 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             isNeedClose = true;
             exception = ex;
+            this.AddCommandFailedFilter(command, CommandSqlType.Select, eventArgs, exception);
         }
         finally
         {
-            if (reader != null)
-                await reader.DisposeAsync();
+            this.AddCommandAfterFilter(command, CommandSqlType.Select, eventArgs, exception == null, exception);
+            reader?.Close();
             command.Parameters.Clear();
             await command.DisposeAsync();
             if (isNeedClose) await this.CloseAsync();
@@ -245,6 +274,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         IDataReader reader = null;
         bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
+        CommandEventArgs eventArgs = null;
         try
         {
             var entityType = typeof(TResult);
@@ -252,6 +282,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
 
             this.Open();
             var behavior = CommandBehavior.SequentialAccess;
+            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Select);
             reader = command.ExecuteReader(behavior);
 
             if (entityType.IsEntityType(out _))
@@ -273,9 +304,11 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             isNeedClose = true;
             exception = ex;
+            this.AddCommandFailedFilter(command, CommandSqlType.Select, eventArgs, exception);
         }
         finally
         {
+            this.AddCommandAfterFilter(command, CommandSqlType.Select, eventArgs, exception == null, exception);
             reader?.Dispose();
             command.Parameters.Clear();
             command.Dispose();
@@ -291,12 +324,14 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         DbDataReader reader = null;
         bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
+        CommandEventArgs eventArgs = null;
         try
         {
             var entityType = typeof(TResult);
             commandInitializer.Invoke(command);
             await this.OpenAsync(cancellationToken);
             var behavior = CommandBehavior.SequentialAccess;
+            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Select);
             reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
             if (entityType.IsEntityType(out _))
             {
@@ -317,9 +352,11 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             isNeedClose = true;
             exception = ex;
+            this.AddCommandFailedFilter(command, CommandSqlType.Select, eventArgs, exception);
         }
         finally
         {
+            this.AddCommandAfterFilter(command, CommandSqlType.Select, eventArgs, exception == null, exception);
             if (reader != null)
                 await reader.DisposeAsync();
             command.Parameters.Clear();
@@ -336,6 +373,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         IDataReader reader = null;
         bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
+        CommandEventArgs eventArgs = null;
         try
         {
             if (visitor.IsNeedFetchShardingTables)
@@ -343,12 +381,13 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
             visitor.SelectDefault(defaultExpr);
             var sql = visitor.BuildSql(out var readerFields);
-            (var isOpened, sql) = this.BuildSql(visitor, sql, " UNION ALL ");
+            sql = this.BuildSql(visitor, sql, " UNION ALL ");
             command.CommandText = sql;
             visitor.DbParameters.CopyTo(command.Parameters);
 
-            if (!isOpened) this.Open();
+            this.Open();
             var behavior = CommandBehavior.SequentialAccess;
+            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Select);
             reader = command.ExecuteReader(behavior);
 
             var entityType = typeof(TResult);
@@ -372,6 +411,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                 command.CommandText = sql;
                 command.Parameters.Clear();
                 visitor.NextDbParameters.CopyTo(command.Parameters);
+                eventArgs = this.AddCommandNextBeforeFilter(command, eventArgs);
                 reader = command.ExecuteReader(behavior);
                 visitor.SetIncludeValues(entityType, result, reader);
             }
@@ -380,9 +420,11 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             isNeedClose = true;
             exception = ex;
+            this.AddCommandFailedFilter(command, CommandSqlType.Select, eventArgs, exception);
         }
         finally
         {
+            this.AddCommandAfterFilter(command, CommandSqlType.Select, eventArgs, exception == null, exception);
             reader?.Dispose();
             command.Parameters.Clear();
             command.Dispose();
@@ -399,6 +441,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         DbDataReader reader = null;
         bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
+        CommandEventArgs eventArgs = null;
         try
         {
             if (visitor.IsNeedFetchShardingTables)
@@ -407,12 +450,13 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
             visitor.SelectDefault(defaultExpr);
             var sql = visitor.BuildSql(out var readerFields);
-            (var isOpened, sql) = this.BuildSql(visitor, sql, " UNION ALL ");
+            sql = this.BuildSql(visitor, sql, " UNION ALL ");
             command.CommandText = sql;
             visitor.DbParameters.CopyTo(command.Parameters);
 
-            if (!isOpened) await this.OpenAsync(cancellationToken);
+            await this.OpenAsync(cancellationToken);
             var behavior = CommandBehavior.SequentialAccess;
+            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Select);
             reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
 
             var entityType = typeof(TResult);
@@ -436,6 +480,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                 command.CommandText = sql;
                 command.Parameters.Clear();
                 visitor.NextDbParameters.CopyTo(command.Parameters);
+                eventArgs = this.AddCommandNextBeforeFilter(command, eventArgs);
                 reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
                 await visitor.SetIncludeValuesAsync(entityType, result, reader, cancellationToken);
             }
@@ -444,9 +489,11 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             isNeedClose = true;
             exception = ex;
+            this.AddCommandFailedFilter(command, CommandSqlType.Select, eventArgs, exception);
         }
         finally
         {
+            this.AddCommandAfterFilter(command, CommandSqlType.Select, eventArgs, exception == null, exception);
             if (reader != null)
                 await reader.DisposeAsync();
             command.Parameters.Clear();
@@ -467,6 +514,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         IDataReader reader = null;
         bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
+        CommandEventArgs eventArgs = null;
         try
         {
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
@@ -476,6 +524,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
 
             this.Open();
             var behavior = CommandBehavior.SequentialAccess;
+            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Select);
             reader = command.ExecuteReader(behavior);
             if (reader.Read()) result.TotalCount = reader.To<int>(this.OrmProvider);
             result.PageNumber = visitor.PageNumber;
@@ -504,6 +553,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                 command.CommandText = sql;
                 command.Parameters.Clear();
                 visitor.NextDbParameters.CopyTo(command.Parameters);
+                eventArgs = this.AddCommandNextBeforeFilter(command, eventArgs);
                 reader = command.ExecuteReader(behavior);
                 visitor.SetIncludeValues(entityType, result, reader);
             }
@@ -512,9 +562,11 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             isNeedClose = true;
             exception = ex;
+            this.AddCommandFailedFilter(command, CommandSqlType.Select, eventArgs, exception);
         }
         finally
         {
+            this.AddCommandAfterFilter(command, CommandSqlType.Select, eventArgs, exception == null, exception);
             reader?.Dispose();
             command.Parameters.Clear();
             command.Dispose();
@@ -531,6 +583,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         DbDataReader reader = null;
         bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
+        CommandEventArgs eventArgs = null;
         try
         {
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
@@ -540,6 +593,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
 
             await this.OpenAsync(cancellationToken);
             var behavior = CommandBehavior.SequentialAccess;
+            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Select);
             reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
             if (await reader.ReadAsync(cancellationToken)) result.TotalCount = reader.To<int>(this.OrmProvider);
             result.PageNumber = visitor.PageNumber;
@@ -568,6 +622,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                 command.CommandText = sql;
                 command.Parameters.Clear();
                 visitor.NextDbParameters.CopyTo(command.Parameters);
+                eventArgs = this.AddCommandNextBeforeFilter(command, eventArgs);
                 reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
                 await visitor.SetIncludeValuesAsync(entityType, result.Data, reader, cancellationToken);
             }
@@ -576,9 +631,11 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             isNeedClose = true;
             exception = ex;
+            this.AddCommandFailedFilter(command, CommandSqlType.Select, eventArgs, exception);
         }
         finally
         {
+            this.AddCommandAfterFilter(command, CommandSqlType.Select, eventArgs, exception == null, exception);
             if (reader != null)
                 await reader.DisposeAsync();
             command.Parameters.Clear();
@@ -602,6 +659,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         IDataReader reader = null;
         bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
+        CommandEventArgs eventArgs = null;
         try
         {
             var entityType = typeof(TEntity);
@@ -612,6 +670,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
 
             this.Open();
             var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Select);
             reader = command.ExecuteReader(behavior);
             if (reader.Read())
                 result = reader.To<TEntity>(this.OrmProvider, this.MapProvider);
@@ -620,9 +679,11 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             isNeedClose = true;
             exception = ex;
+            this.AddCommandFailedFilter(command, CommandSqlType.Select, eventArgs, exception);
         }
         finally
         {
+            this.AddCommandAfterFilter(command, CommandSqlType.Select, eventArgs, exception == null, exception);
             reader?.Dispose();
             command.Parameters.Clear();
             command.Dispose();
@@ -641,6 +702,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         DbDataReader reader = null;
         bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
+        CommandEventArgs eventArgs = null;
         try
         {
             var entityType = typeof(TEntity);
@@ -651,6 +713,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
 
             await this.OpenAsync(cancellationToken);
             var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Select);
             reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
 
             if (await reader.ReadAsync(cancellationToken))
@@ -660,9 +723,11 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             isNeedClose = true;
             exception = ex;
+            this.AddCommandFailedFilter(command, CommandSqlType.Select, eventArgs, exception);
         }
         finally
         {
+            this.AddCommandAfterFilter(command, CommandSqlType.Select, eventArgs, exception == null, exception);
             if (reader != null)
                 await reader.DisposeAsync();
             command.Parameters.Clear();
@@ -675,30 +740,20 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     #endregion
 
     #region Create
-    public int Create(IDbCommand command, Type entityType, object insertObj)
-    {
-        this.BuildCreateCommand(command, entityType, insertObj, false);
-        this.Open();
-        return command.ExecuteNonQuery();
-    }
-    public async Task<int> CreateAsync(DbCommand command, Type entityType, object insertObj, CancellationToken cancellationToken = default)
-    {
-        this.BuildCreateCommand(command, entityType, insertObj, false);
-        await this.OpenAsync(cancellationToken);
-        return await command.ExecuteNonQueryAsync(cancellationToken);
-    }
     public TResult CreateResult<TResult>(Func<IDbCommand, DbContext, List<SqlFieldSegment>> commandInitializer)
     {
         TResult result = default;
         IDataReader reader = null;
         bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
+        CommandEventArgs eventArgs = null;
         using var command = this.CreateCommand();
         try
         {
             var readerFields = commandInitializer.Invoke(command, this);
             this.Open();
             var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Insert);
             reader = command.ExecuteReader(behavior);
             if (reader.Read())
             {
@@ -711,9 +766,11 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             isNeedClose = true;
             exception = ex;
+            this.AddCommandFailedFilter(command, CommandSqlType.Insert, eventArgs, exception);
         }
         finally
         {
+            this.AddCommandAfterFilter(command, CommandSqlType.Insert, eventArgs, exception == null, exception);
             reader?.Dispose();
             command.Parameters.Clear();
             command.Dispose();
@@ -728,12 +785,14 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         DbDataReader reader = null;
         bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
+        CommandEventArgs eventArgs = null;
         using var command = this.CreateDbCommand();
         try
         {
             var readerFields = commandInitializer.Invoke(command, this);
             await this.OpenAsync(cancellationToken);
             var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Insert);
             reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
             if (await reader.ReadAsync(cancellationToken))
             {
@@ -746,9 +805,11 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             isNeedClose = true;
             exception = ex;
+            this.AddCommandFailedFilter(command, CommandSqlType.Insert, eventArgs, exception);
         }
         finally
         {
+            this.AddCommandAfterFilter(command, CommandSqlType.Insert, eventArgs, exception == null, exception);
             if (reader != null)
                 await reader.DisposeAsync();
             command.Parameters.Clear();
@@ -764,11 +825,13 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         IDataReader reader = null;
         bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
+        CommandEventArgs eventArgs = null;
         using var command = this.CreateCommand();
         try
         {
             command.CommandText = visitor.BuildCommand(command, false, out var readerFields);
             this.Open();
+            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Insert);
             reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
             while (reader.Read())
             {
@@ -779,9 +842,11 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             isNeedClose = true;
             exception = ex;
+            this.AddCommandFailedFilter(command, CommandSqlType.Insert, eventArgs, exception);
         }
         finally
         {
+            this.AddCommandAfterFilter(command, CommandSqlType.Insert, eventArgs, exception == null, exception);
             reader?.Dispose();
             command.Parameters.Clear();
             command.Dispose();
@@ -796,11 +861,13 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         DbDataReader reader = null;
         bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
+        CommandEventArgs eventArgs = null;
         using var command = this.CreateDbCommand();
         try
         {
             command.CommandText = visitor.BuildCommand(command, false, out var readerFields);
             await this.OpenAsync(cancellationToken);
+            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Insert);
             reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
             while (await reader.ReadAsync(cancellationToken))
             {
@@ -811,381 +878,22 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             isNeedClose = true;
             exception = ex;
+            this.AddCommandFailedFilter(command, CommandSqlType.Insert, eventArgs, exception);
         }
         finally
         {
+            this.AddCommandAfterFilter(command, CommandSqlType.Insert, eventArgs, exception == null, exception);
             if (reader != null)
                 await reader.DisposeAsync();
             command.Parameters.Clear();
             await command.DisposeAsync();
             if (isNeedClose) await this.CloseAsync();
+            visitor.Dispose();
         }
         if (exception != null) throw exception;
         return result;
     }
 
-    public int CreateBulk(IDbCommand command, Type entityType, IEnumerable insertObjs, int bulkCount)
-    {
-        var builder = new StringBuilder();
-        object firstInsertObj = null;
-        Type insertObjType = null;
-        foreach (var insertObj in insertObjs)
-        {
-            firstInsertObj = insertObj;
-            break;
-        }
-        insertObjType = firstInsertObj.GetType();
-
-        var fieldsSqlPartSetter = RepositoryHelper.BuildCreateFieldsSqlPart(this.OrmProvider, this.MapProvider, entityType, insertObjType, null, null);
-        var valuesSqlPartSetter = RepositoryHelper.BuildCreateValuesSqlParametes(this.OrmProvider, this.MapProvider, entityType, insertObjType, null, null, true);
-        bool isDictionary = typeof(IDictionary<string, object>).IsAssignableFrom(insertObjType);
-
-        Action<IDataParameterCollection, StringBuilder, string> firstSqlSetter = null;
-        Action<IDataParameterCollection, StringBuilder, object, string> loopSqlSetter = null;
-
-        if (isDictionary)
-        {
-            var typedFieldsSqlPartSetter = fieldsSqlPartSetter as Func<StringBuilder, object, List<MemberMap>>;
-            var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, List<MemberMap>, object, string>;
-
-            var memberMappers = typedFieldsSqlPartSetter.Invoke(builder, firstInsertObj);
-            builder.Append(") VALUES ");
-            var firstHeadSql = builder.ToString();
-            builder.Clear();
-            builder = null;
-
-            firstSqlSetter = (dbParameters, builder, tableName) =>
-            {
-                builder.Append($"INSERT INTO {this.OrmProvider.GetFieldName(tableName)} (");
-                builder.Append(firstHeadSql);
-            };
-            loopSqlSetter = (dbParameters, builder, insertObj, suffix) =>
-            {
-                builder.Append('(');
-                typedValuesSqlPartSetter.Invoke(dbParameters, builder, this.OrmProvider, memberMappers, insertObj, suffix);
-                builder.Append(')');
-            };
-        }
-        else
-        {
-            var typedFieldsSqlPartSetter = fieldsSqlPartSetter as Action<StringBuilder>;
-            var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
-
-            firstSqlSetter = (dbParameters, builder, tableName) =>
-            {
-                builder.Append($"INSERT INTO {this.OrmProvider.GetFieldName(tableName)} (");
-                typedFieldsSqlPartSetter.Invoke(builder);
-                builder.Append(") VALUES ");
-            };
-            loopSqlSetter = (dbParameters, builder, insertObj, suffix) =>
-            {
-                builder.Append('(');
-                typedValuesSqlPartSetter.Invoke(dbParameters, builder, this.OrmProvider, insertObj, suffix);
-                builder.Append(')');
-            };
-        }
-        Func<string, IEnumerable, int> executor = (tableName, insertObjs) =>
-        {
-            var isOpened = false;
-            int count = 0, index = 0;
-            foreach (var insertObj in insertObjs)
-            {
-                if (index > 0) builder.Append(',');
-                loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
-                if (index >= bulkCount)
-                {
-                    command.CommandText = builder.ToString();
-                    if (!isOpened)
-                    {
-                        this.Open();
-                        isOpened = true;
-                    }
-                    count += command.ExecuteNonQuery();
-                    builder.Clear();
-                    command.Parameters.Clear();
-                    firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                    index = 0;
-                    continue;
-                }
-                index++;
-            }
-            if (index > 0)
-            {
-                command.CommandText = builder.ToString();
-                if (!isOpened) this.Open();
-                count += command.ExecuteNonQuery();
-            }
-            return count;
-        };
-
-        int result = 0;
-        if (this.ShardingProvider.TryGetShardingTable(entityType, out _))
-        {
-            var tabledInsertObjs = this.SplitShardingParameters(entityType, insertObjs);
-            foreach (var tabledInsertObj in tabledInsertObjs)
-            {
-                firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
-                result += executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
-                builder.Clear();
-                command.Parameters.Clear();
-            }
-        }
-        else
-        {
-            var entityMapper = this.MapProvider.GetEntityMap(entityType);
-            var tableName = entityMapper.TableName;
-            firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-            result = executor.Invoke(tableName, insertObjs);
-        }
-        builder.Clear();
-        builder = null;
-        return result;
-    }
-    public async Task<int> CreateBulkAsync(DbCommand command, Type entityType, IEnumerable insertObjs, int bulkCount, CancellationToken cancellationToken = default)
-    {
-        var builder = new StringBuilder();
-        object firstInsertObj = null;
-        Type insertObjType = null;
-        foreach (var insertObj in insertObjs)
-        {
-            firstInsertObj = insertObj;
-            break;
-        }
-        insertObjType = firstInsertObj.GetType();
-
-        var fieldsSqlPartSetter = RepositoryHelper.BuildCreateFieldsSqlPart(this.OrmProvider, this.MapProvider, entityType, insertObjType, null, null);
-        var valuesSqlPartSetter = RepositoryHelper.BuildCreateValuesSqlParametes(this.OrmProvider, this.MapProvider, entityType, insertObjType, null, null, true);
-        bool isDictionary = typeof(IDictionary<string, object>).IsAssignableFrom(insertObjType);
-
-        Action<IDataParameterCollection, StringBuilder, string> firstSqlSetter = null;
-        Action<IDataParameterCollection, StringBuilder, object, string> loopSqlSetter = null;
-
-        if (isDictionary)
-        {
-            var typedFieldsSqlPartSetter = fieldsSqlPartSetter as Func<StringBuilder, object, List<MemberMap>>;
-            var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, List<MemberMap>, object, string>;
-
-            var memberMappers = typedFieldsSqlPartSetter.Invoke(builder, firstInsertObj);
-            builder.Append(") VALUES ");
-            var firstHeadSql = builder.ToString();
-            builder.Clear();
-            builder = null;
-
-            firstSqlSetter = (dbParameters, builder, tableName) =>
-            {
-                builder.Append($"INSERT INTO {this.OrmProvider.GetFieldName(tableName)} (");
-                builder.Append(firstHeadSql);
-            };
-            loopSqlSetter = (dbParameters, builder, insertObj, suffix) =>
-            {
-                builder.Append('(');
-                typedValuesSqlPartSetter.Invoke(dbParameters, builder, this.OrmProvider, memberMappers, insertObj, suffix);
-                builder.Append(')');
-            };
-        }
-        else
-        {
-            var typedFieldsSqlPartSetter = fieldsSqlPartSetter as Action<StringBuilder>;
-            var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
-
-            firstSqlSetter = (dbParameters, builder, tableName) =>
-            {
-                builder.Append($"INSERT INTO {this.OrmProvider.GetFieldName(tableName)} (");
-                typedFieldsSqlPartSetter.Invoke(builder);
-                builder.Append(") VALUES ");
-            };
-            loopSqlSetter = (dbParameters, builder, insertObj, suffix) =>
-            {
-                builder.Append('(');
-                typedValuesSqlPartSetter.Invoke(dbParameters, builder, this.OrmProvider, insertObj, suffix);
-                builder.Append(')');
-            };
-        }
-        Func<string, IEnumerable, Task<int>> executor = async (tableName, insertObjs) =>
-        {
-            var isOpened = false;
-            int count = 0, index = 0;
-            foreach (var insertObj in insertObjs)
-            {
-                if (index > 0) builder.Append(',');
-                loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
-                if (index >= bulkCount)
-                {
-                    command.CommandText = builder.ToString();
-                    if (!isOpened)
-                    {
-                        await this.OpenAsync(cancellationToken);
-                        isOpened = true;
-                    }
-                    count += await command.ExecuteNonQueryAsync(cancellationToken);
-                    builder.Clear();
-                    command.Parameters.Clear();
-                    firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                    index = 0;
-                    continue;
-                }
-                index++;
-            }
-            if (index > 0)
-            {
-                command.CommandText = builder.ToString();
-                if (!isOpened) await this.OpenAsync(cancellationToken);
-                count += await command.ExecuteNonQueryAsync(cancellationToken);
-            }
-            return count;
-        };
-
-        int result = 0;
-        if (this.ShardingProvider.TryGetShardingTable(entityType, out _))
-        {
-            var tabledInsertObjs = this.SplitShardingParameters(entityType, insertObjs);
-            foreach (var tabledInsertObj in tabledInsertObjs)
-            {
-                firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
-                result += await executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
-                builder.Clear();
-                command.Parameters.Clear();
-            }
-        }
-        else
-        {
-            var entityMapper = this.MapProvider.GetEntityMap(entityType);
-            var tableName = entityMapper.TableName;
-            firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-            result = await executor.Invoke(tableName, insertObjs);
-        }
-        builder.Clear();
-        builder = null;
-        return result;
-    }
-    public int CreateBulk(ICreateVisitor visitor)
-    {
-        using var command = this.CreateCommand();
-        var sqlBuilder = new StringBuilder();
-        (var isNeedSplit, var tableName, var insertObjs, var bulkCount,
-            var firstSqlSetter, var loopSqlSetter, _) = visitor.BuildWithBulk(command);
-
-        Action<string> clearCommand = tableName =>
-        {
-            sqlBuilder.Clear();
-            command.Parameters.Clear();
-            firstSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName);
-        };
-        Func<string, IEnumerable, int> executor = (tableName, insertObjs) =>
-        {
-            var isOpened = false;
-            int count = 0, index = 0;
-            foreach (var insertObj in insertObjs)
-            {
-                if (index > 0) sqlBuilder.Append(',');
-                loopSqlSetter.Invoke(command.Parameters, sqlBuilder, insertObj, index.ToString());
-                if (index >= bulkCount)
-                {
-                    command.CommandText = sqlBuilder.ToString();
-                    if (!isOpened)
-                    {
-                        this.Open();
-                        isOpened = true;
-                    }
-                    count += command.ExecuteNonQuery();
-                    clearCommand.Invoke(tableName);
-                    index = 0;
-                    continue;
-                }
-                index++;
-            }
-            if (index > 0)
-            {
-                command.CommandText = sqlBuilder.ToString();
-                if (!isOpened) this.Open();
-                count += command.ExecuteNonQuery();
-            }
-            return count;
-        };
-        int result = 0;
-        if (isNeedSplit)
-        {
-            var entityType = visitor.Tables[0].EntityType;
-            var tabledInsertObjs = this.SplitShardingParameters(entityType, insertObjs);
-            foreach (var tabledInsertObj in tabledInsertObjs)
-            {
-                firstSqlSetter.Invoke(command.Parameters, sqlBuilder, tabledInsertObj.Key);
-                result += executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
-            }
-        }
-        else
-        {
-            firstSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName);
-            result = executor.Invoke(tableName, insertObjs);
-        }
-        sqlBuilder.Clear();
-        sqlBuilder = null;
-        return result;
-    }
-    public async Task<int> CreateBulkAsync(ICreateVisitor visitor, CancellationToken cancellationToken = default)
-    {
-        using var command = this.CreateDbCommand();
-        var sqlBuilder = new StringBuilder();
-        (var isNeedSplit, var tableName, var insertObjs, var bulkCount,
-            var firstSqlSetter, var loopSqlSetter, _) = visitor.BuildWithBulk(command);
-
-        Action<string> clearCommand = tableName =>
-        {
-            sqlBuilder.Clear();
-            command.Parameters.Clear();
-            firstSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName);
-        };
-        Func<string, IEnumerable, Task<int>> executor = async (tableName, insertObjs) =>
-        {
-            var isOpened = false;
-            int count = 0, index = 0;
-            foreach (var insertObj in insertObjs)
-            {
-                if (index > 0) sqlBuilder.Append(',');
-                loopSqlSetter.Invoke(command.Parameters, sqlBuilder, insertObj, index.ToString());
-                if (index >= bulkCount)
-                {
-                    command.CommandText = sqlBuilder.ToString();
-                    if (!isOpened)
-                    {
-                        await this.OpenAsync(cancellationToken);
-                        isOpened = true;
-                    }
-                    count += await command.ExecuteNonQueryAsync(cancellationToken);
-                    clearCommand.Invoke(tableName);
-                    index = 0;
-                    continue;
-                }
-                index++;
-            }
-            if (index > 0)
-            {
-                command.CommandText = sqlBuilder.ToString();
-                if (!isOpened) await this.OpenAsync(cancellationToken);
-                count += await command.ExecuteNonQueryAsync(cancellationToken);
-            }
-            return count;
-        };
-        int result = 0;
-        if (isNeedSplit)
-        {
-            var entityType = visitor.Tables[0].EntityType;
-            var tabledInsertObjs = this.SplitShardingParameters(entityType, insertObjs);
-            foreach (var tabledInsertObj in tabledInsertObjs)
-            {
-                firstSqlSetter.Invoke(command.Parameters, sqlBuilder, tabledInsertObj.Key);
-                result += await executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
-            }
-        }
-        else
-        {
-            firstSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName);
-            result = await executor.Invoke(tableName, insertObjs);
-        }
-        sqlBuilder.Clear();
-        sqlBuilder = null;
-        return result;
-    }
     public void BuildCreateCommand(IDbCommand command, Type entityType, object insertObj, bool isReturnIdentity)
     {
         var insertObjType = insertObj.GetType();
@@ -1262,19 +970,23 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         int result = 0;
         bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
+        CommandEventArgs eventArgs = null;
         try
         {
             if (!commandInitializer.Invoke(command))
                 this.Open();
+            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Execute);
             result = command.ExecuteNonQuery();
         }
         catch (Exception ex)
         {
             isNeedClose = true;
             exception = ex;
+            this.AddCommandFailedFilter(command, CommandSqlType.Execute, eventArgs, exception);
         }
         finally
         {
+            this.AddCommandAfterFilter(command, CommandSqlType.Execute, eventArgs, exception == null, exception);
             command.Parameters.Clear();
             command.Dispose();
             if (isNeedClose) this.Close();
@@ -1288,19 +1000,23 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         int result = 0;
         bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
+        CommandEventArgs eventArgs = null;
         try
         {
             if (!commandInitializer.Invoke(command))
                 await this.OpenAsync(cancellationToken);
+            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Execute);
             result = await command.ExecuteNonQueryAsync(cancellationToken);
         }
         catch (Exception ex)
         {
             isNeedClose = true;
             exception = ex;
+            this.AddCommandFailedFilter(command, CommandSqlType.Execute, eventArgs, exception);
         }
         finally
         {
+            this.AddCommandAfterFilter(command, CommandSqlType.Execute, eventArgs, exception == null, exception);
             command.Parameters.Clear();
             await command.DisposeAsync();
             if (isNeedClose) await this.CloseAsync();
@@ -1314,25 +1030,85 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     public void Open()
     {
         if (this.Connection.State == ConnectionState.Broken)
+        {
             this.Connection.Close();
+            this.DbFilters.OnConnectionClosed?.Invoke(new ConectionEventArgs
+            {
+                ConnectionId = this.Connection.ConnectionId,
+                ConnectionString = this.ConnectionString,
+                DbKey = this.DbKey,
+                OrmProvider = this.OrmProvider,
+                CreatedAt = DateTime.Now
+            });
+        }
         if (this.Connection.State == ConnectionState.Closed)
         {
             //关闭后，连接串被重置，需要重新设置
             this.Connection.ConnectionString = this.ConnectionString;
+            this.DbFilters.OnConnectionOpening?.Invoke(new ConectionEventArgs
+            {
+                ConnectionId = this.Connection.ConnectionId,
+                ConnectionString = this.ConnectionString,
+                DbKey = this.DbKey,
+                OrmProvider = this.OrmProvider,
+                CreatedAt = DateTime.Now
+            });
             this.Connection.Open();
+            this.DbFilters.OnConnectionOpened?.Invoke(new ConectionEventArgs
+            {
+                ConnectionId = this.Connection.ConnectionId,
+                ConnectionString = this.ConnectionString,
+                DbKey = this.DbKey,
+                OrmProvider = this.OrmProvider,
+                CreatedAt = DateTime.Now
+            });
         }
     }
     public async Task OpenAsync(CancellationToken cancellationToken = default)
     {
-        if (this.Connection is not DbConnection connection)
+        if (this.Connection.BaseConnection is not DbConnection connection)
             throw new NotSupportedException("当前数据库驱动不支持异步操作");
         if (connection.State == ConnectionState.Broken)
+        {
+            this.DbFilters.OnConnectionClosing?.Invoke(new ConectionEventArgs
+            {
+                ConnectionId = this.Connection.ConnectionId,
+                ConnectionString = this.ConnectionString,
+                DbKey = this.DbKey,
+                OrmProvider = this.OrmProvider,
+                CreatedAt = DateTime.Now
+            });
             await connection.CloseAsync();
+            this.DbFilters.OnConnectionClosed?.Invoke(new ConectionEventArgs
+            {
+                ConnectionId = this.Connection.ConnectionId,
+                ConnectionString = this.ConnectionString,
+                DbKey = this.DbKey,
+                OrmProvider = this.OrmProvider,
+                CreatedAt = DateTime.Now
+            });
+        }
         if (connection.State == ConnectionState.Closed)
         {
             //关闭后，连接串被重置，需要重新设置
             connection.ConnectionString = this.ConnectionString;
+            this.DbFilters.OnConnectionOpening?.Invoke(new ConectionEventArgs
+            {
+                ConnectionId = this.Connection.ConnectionId,
+                ConnectionString = this.ConnectionString,
+                DbKey = this.DbKey,
+                OrmProvider = this.OrmProvider,
+                CreatedAt = DateTime.Now
+            });
             await connection.OpenAsync(cancellationToken);
+            this.DbFilters.OnConnectionOpened?.Invoke(new ConectionEventArgs
+            {
+                ConnectionId = this.Connection.ConnectionId,
+                ConnectionString = this.ConnectionString,
+                DbKey = this.DbKey,
+                OrmProvider = this.OrmProvider,
+                CreatedAt = DateTime.Now
+            });
         }
     }
     public IDbTransaction BeginTransaction()
@@ -1344,7 +1120,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     public async ValueTask<IDbTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
     {
         await this.OpenAsync(cancellationToken);
-        if (this.Connection is DbConnection connection)
+        if (this.Connection.BaseConnection is DbConnection connection)
             this.Transaction = await connection.BeginTransactionAsync(cancellationToken);
         else throw new NotSupportedException("当前数据库驱动不支持异步操作");
         return this.Transaction;
@@ -1383,12 +1159,54 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         await this.CloseAsync();
         this.Transaction = null;
     }
-    public void Close() => this.Connection?.Close();
+    public void Close()
+    {
+        if (this.Connection == null) return;
+        if (this.Connection.State == ConnectionState.Closed)
+            return;
+        this.DbFilters.OnConnectionClosing?.Invoke(new ConectionEventArgs
+        {
+            ConnectionId = this.Connection.ConnectionId,
+            ConnectionString = this.ConnectionString,
+            DbKey = this.DbKey,
+            OrmProvider = this.OrmProvider,
+            CreatedAt = DateTime.Now
+        });
+        this.Connection.Close();
+        this.DbFilters.OnConnectionClosed?.Invoke(new ConectionEventArgs
+        {
+            ConnectionId = this.Connection.ConnectionId,
+            ConnectionString = this.ConnectionString,
+            DbKey = this.DbKey,
+            OrmProvider = this.OrmProvider,
+            CreatedAt = DateTime.Now
+        });
+    }
     public async Task CloseAsync()
     {
-        if (this.Connection is not DbConnection connection)
+        if (this.Connection == null) return;
+        if (this.Connection.State == ConnectionState.Closed)
+            return;
+        if (this.Connection.BaseConnection is not DbConnection connection)
             throw new NotSupportedException("当前数据库驱动不支持异步操作");
-        await connection?.CloseAsync();
+
+        this.DbFilters.OnConnectionClosing?.Invoke(new ConectionEventArgs
+        {
+            ConnectionId = this.Connection.ConnectionId,
+            ConnectionString = this.ConnectionString,
+            DbKey = this.DbKey,
+            OrmProvider = this.OrmProvider,
+            CreatedAt = DateTime.Now
+        });
+        await connection.CloseAsync();
+        this.DbFilters.OnConnectionClosed?.Invoke(new ConectionEventArgs
+        {
+            ConnectionId = this.Connection.ConnectionId,
+            ConnectionString = this.ConnectionString,
+            DbKey = this.DbKey,
+            OrmProvider = this.OrmProvider,
+            CreatedAt = DateTime.Now
+        });
     }
     public void Dispose()
     {
@@ -1402,47 +1220,87 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     }
     #endregion
 
-    public (bool, string) BuildSql(IQueryVisitor visitor, string formatSql, string jointMark)
+    public string BuildSql(IQueryVisitor visitor, string formatSql, string jointMark)
     {
         var sql = formatSql;
         if (visitor.ShardingTables != null && visitor.ShardingTables.Count > 0)
             sql = this.BuildShardingTablesSqlByFormat(visitor as SqlVisitor, formatSql, jointMark);
-        return (visitor.IsNeedFetchShardingTables, sql);
+        return sql;
     }
     public void FetchShardingTables(SqlVisitor visitor)
     {
         var fetchSql = visitor.BuildShardingTablesSql(this.TableSchema);
         using var command = this.CreateCommand();
-        command.CommandText = fetchSql;
-        this.Open();
-        var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
-        var shardingTables = new List<string>();
-        while (reader.Read())
+        IDataReader reader = null;
+        bool isNeedClose = this.IsNeedClose;
+        Exception exception = null;
+        CommandEventArgs eventArgs = null;
+        try
         {
-            shardingTables.Add(reader.To<string>(this.OrmProvider));
+            command.CommandText = fetchSql;
+            this.Open();
+            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Select);
+            reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
+            var shardingTables = new List<string>();
+            while (reader.Read())
+            {
+                shardingTables.Add(reader.To<string>(this.OrmProvider));
+            }
+            visitor.SetShardingTables(shardingTables);
         }
-        reader.Dispose();
-        command.Parameters.Clear();
-        command.Dispose();
-        visitor.SetShardingTables(shardingTables);
+        catch (Exception ex)
+        {
+            isNeedClose = true;
+            exception = ex;
+            this.AddCommandFailedFilter(command, CommandSqlType.Select, eventArgs, exception);
+        }
+        finally
+        {
+            this.AddCommandAfterFilter(command, CommandSqlType.Select, eventArgs, exception == null, exception);
+            reader.Dispose();
+            command.Parameters.Clear();
+            command.Dispose();
+            if (isNeedClose) this.Close();
+        }
+        if (exception != null) throw exception;
     }
     public async Task FetchShardingTablesAsync(SqlVisitor visitor, CancellationToken cancellationToken = default)
     {
         var fetchSql = visitor.BuildShardingTablesSql(this.TableSchema);
         using var command = this.CreateDbCommand();
-        command.CommandText = fetchSql;
-        command.Parameters.Clear();
-        await this.OpenAsync(cancellationToken);
-        var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
-        var shardingTables = new List<string>();
-        while (await reader.ReadAsync(cancellationToken))
+        DbDataReader reader = null;
+        bool isNeedClose = this.IsNeedClose;
+        Exception exception = null;
+        CommandEventArgs eventArgs = null;
+        try
         {
-            shardingTables.Add(reader.To<string>(this.OrmProvider));
+            command.CommandText = fetchSql;
+            command.Parameters.Clear();
+            await this.OpenAsync(cancellationToken);
+            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Select);
+            reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
+            var shardingTables = new List<string>();
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                shardingTables.Add(reader.To<string>(this.OrmProvider));
+            }
+            visitor.SetShardingTables(shardingTables);
         }
-        await reader.DisposeAsync();
-        command.Parameters.Clear();
-        await command.DisposeAsync();
-        visitor.SetShardingTables(shardingTables);
+        catch (Exception ex)
+        {
+            isNeedClose = true;
+            exception = ex;
+            this.AddCommandFailedFilter(command, CommandSqlType.Select, eventArgs, exception);
+        }
+        finally
+        {
+            this.AddCommandAfterFilter(command, CommandSqlType.Select, eventArgs, exception == null, exception);
+            await reader.DisposeAsync();
+            command.Parameters.Clear();
+            await command.DisposeAsync();
+            if (isNeedClose) this.Close();
+        }
+        if (exception != null) throw exception;
     }
     public Dictionary<string, List<object>> SplitShardingParameters(Type entityType, IEnumerable parameters)
         => RepositoryHelper.SplitShardingParameters(this.DbKey, this.MapProvider, this.ShardingProvider, entityType, parameters);
@@ -1497,5 +1355,122 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         builder.Clear();
         builder = null;
         return result;
+    }
+    public CommandEventArgs AddCommandBeforeFilter(IDbCommand command, CommandSqlType sqlType)
+    {
+        var eventArgs = new CommandEventArgs
+        {
+            DbKey = this.DbKey,
+            ConnectionString = this.ConnectionString,
+            SqlType = sqlType,
+            Sql = command.CommandText,
+            DbParameters = command.Parameters,
+            OrmProvider = this.OrmProvider,
+            CreatedAt = DateTime.Now
+        };
+        this.DbFilters.OnCommandExecuting?.Invoke(eventArgs);
+        return eventArgs;
+    }
+    public CommandEventArgs AddCommandNextBeforeFilter(IDbCommand command, CommandEventArgs eventArgs)
+    {
+        eventArgs.Sql = command.CommandText;
+        eventArgs.DbParameters = command.Parameters;
+        this.DbFilters.OnCommandExecuting?.Invoke(eventArgs);
+        return eventArgs;
+    }
+    public CommandEventArgs AddCommandBeforeFilter(CommandSqlType sqlType, CommandEventArgs eventArgs)
+    {
+        if (eventArgs == null)
+        {
+            eventArgs = new CommandEventArgs
+            {
+                DbKey = this.DbKey,
+                ConnectionString = this.ConnectionString,
+                SqlType = sqlType,
+                OrmProvider = this.OrmProvider,
+                CreatedAt = DateTime.Now
+            };
+        }
+        else eventArgs.BulkIndex++;
+        this.DbFilters.OnCommandExecuting?.Invoke(eventArgs);
+        return eventArgs;
+    }
+    public CommandEventArgs AddCommandBeforeFilter(IDbCommand command, CommandSqlType sqlType, CommandEventArgs eventArgs)
+    {
+        if (eventArgs == null)
+        {
+            eventArgs = new CommandEventArgs
+            {
+                DbKey = this.DbKey,
+                ConnectionString = this.ConnectionString,
+                SqlType = sqlType,
+                Sql = command.CommandText,
+                DbParameters = command.Parameters,
+                OrmProvider = this.OrmProvider,
+                CreatedAt = DateTime.Now
+            };
+        }
+        else
+        {
+            eventArgs.Sql = command.CommandText;
+            eventArgs.DbParameters = command.Parameters;
+            eventArgs.BulkIndex++;
+        }
+        this.DbFilters.OnCommandExecuting?.Invoke(eventArgs);
+        return eventArgs;
+    }
+    public void AddCommandAfterFilter(IDbCommand command, CommandSqlType sqlType, CommandEventArgs eventArgs, bool isSuccess = true, Exception exception = null)
+    {
+        if (eventArgs == null)
+        {
+            this.DbFilters.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs
+            {
+                IsSuccess = isSuccess,
+                CommandId = Guid.NewGuid().ToString("N"),
+                DbKey = this.DbKey,
+                ConnectionString = this.ConnectionString,
+                SqlType = sqlType,
+                Sql = command.CommandText,
+                DbParameters = command.Parameters,
+                OrmProvider = this.OrmProvider,
+                CreatedAt = DateTime.Now,
+                Exception = exception
+            });
+        }
+        else
+        {
+            this.DbFilters.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs(eventArgs)
+            {
+                IsSuccess = isSuccess,
+                Exception = exception
+            });
+        }
+    }
+    public void AddCommandFailedFilter(IDbCommand command, CommandSqlType sqlType, CommandEventArgs eventArgs, Exception exception)
+    {
+        if (eventArgs == null)
+        {
+            this.DbFilters.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs
+            {
+                IsSuccess = false,
+                CommandId = Guid.NewGuid().ToString("N"),
+                DbKey = this.DbKey,
+                ConnectionString = this.ConnectionString,
+                SqlType = sqlType,
+                Sql = command.CommandText,
+                DbParameters = command.Parameters,
+                OrmProvider = this.OrmProvider,
+                CreatedAt = DateTime.Now,
+                Exception = exception
+            });
+        }
+        else
+        {
+            this.DbFilters.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs(eventArgs)
+            {
+                IsSuccess = false,
+                Exception = exception
+            });
+        }
     }
 }

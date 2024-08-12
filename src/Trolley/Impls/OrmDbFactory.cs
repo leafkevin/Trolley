@@ -13,10 +13,12 @@ public sealed class OrmDbFactory : IOrmDbFactory
     private ConcurrentDictionary<string, TheaDatabase> databases = new();
     private ConcurrentDictionary<Type, IEntityMapProvider> mapProviders = new();
     private IShardingProvider shardingProvider = new ShardingProvider();
+    private DbFilters dbFilters = new();
 
     public ICollection<TheaDatabase> Databases => this.databases.Values;
     public ICollection<IOrmProvider> OrmProviders => this.ormProviders.Values;
     public ICollection<IEntityMapProvider> MapProviders => this.mapProviders.Values;
+    public DbFilters DbFilters => this.dbFilters;
 
     public void Register(string dbKey, string connectionString, Type ormProviderType, bool isDefault, string defaultTableSchema = null)
     {
@@ -88,7 +90,6 @@ public sealed class OrmDbFactory : IOrmDbFactory
             throw new Exception($"未配置dbKey:{dbKey}的数据库");
         return database;
     }
-
     public void UseDatabase(Func<string> dbKeySelector) => this.shardingProvider.UseDatabase(dbKeySelector);
     public bool TryGetShardingTable(Type entityType, out ShardingTable shardingTable)
         => this.shardingProvider.TryGetShardingTable(entityType, out shardingTable);
@@ -111,19 +112,27 @@ public sealed class OrmDbFactory : IOrmDbFactory
         if (!this.TryGetMapProvider(ormProviderType, out var mapProvider))
             throw new Exception($"未注册Key为{ormProviderType.FullName}的EntityMapProvider");
         var connection = ormProvider.CreateConnection(database.ConnectionString);
+        this.dbFilters.OnConnectionCreated?.Invoke(new ConectionEventArgs
+        {
+            ConnectionId = Guid.NewGuid().ToString("N"),
+            DbKey = localDbKey,
+            ConnectionString = database.ConnectionString,
+            OrmProvider = ormProvider,
+            CreatedAt = DateTime.UtcNow
+        });
         var dbContext = new DbContext
         {
             DbKey = localDbKey,
             ConnectionString = database.ConnectionString,
-            Connection = connection,
+            Connection = new TheaConnection(connection),
             TableSchema = database.DefaultTableSchema ?? connection.Database,
             OrmProvider = ormProvider,
             MapProvider = mapProvider,
             ShardingProvider = this.shardingProvider,
             CommandTimeout = this.options?.Timeout ?? 30,
-            IsParameterized = this.options?.IsParameterized ?? false
+            IsParameterized = this.options?.IsParameterized ?? false,
+            DbFilters = this.dbFilters
         };
-
         return ormProvider.CreateRepository(dbContext);
     }
     public void With(Action<OrmDbFactoryOptions> optionsInitializer)

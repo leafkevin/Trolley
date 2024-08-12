@@ -454,7 +454,7 @@ partial class PostgreSqlProvider
                             var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
                             string rightArgument = null;
                             if (rightSegment.IsConstant)
-                                rightArgument = $"'%{rightSegment}%'";
+                                rightArgument = $"'%{rightSegment.Value}%'";
                             else rightArgument = $"CONCAT('%',{visitor.GetQuotedValue(rightSegment)},'%')";
 
                             var targetArgument = visitor.GetQuotedValue(targetSegment);
@@ -671,7 +671,7 @@ partial class PostgreSqlProvider
 
                             string rightArgument = null;
                             if (rightSegment.IsConstant)
-                                rightArgument = $"'{rightSegment}%'";
+                                rightArgument = $"'{rightSegment.Value}%'";
                             else rightArgument = $"CONCAT({visitor.GetQuotedValue(rightSegment)},'%')";
 
                             var notString = deferExprs.IsDeferredNot() ? "NOT " : "";
@@ -691,7 +691,7 @@ partial class PostgreSqlProvider
 
                             string rightArgument = null;
                             if (rightSegment.IsConstant)
-                                rightArgument = $"'%{rightSegment}'";
+                                rightArgument = $"'%{rightSegment.Value}'";
                             else rightArgument = $"CONCAT('%',{visitor.GetQuotedValue(rightSegment)})";
 
                             var notString = deferExprs.IsDeferredNot() ? "NOT " : "";

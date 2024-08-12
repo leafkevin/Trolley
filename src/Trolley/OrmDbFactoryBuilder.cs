@@ -70,6 +70,14 @@ public sealed class OrmDbFactoryBuilder
         this.dbFactory.With(optionsInitializer);
         return this;
     }
+    public OrmDbFactoryBuilder UseDbFilter(Action<DbFilters> filterInitializer)
+    {
+        if (filterInitializer == null)
+            throw new ArgumentNullException(nameof(filterInitializer));
+
+        filterInitializer.Invoke(this.dbFactory.DbFilters);
+        return this;
+    }
     public IOrmDbFactory Build()
     {
         this.dbFactory.Build();
@@ -86,8 +94,8 @@ public sealed class OrmDbFactoryBuilder
                 strOrmProviderType = "Trolley.MySqlConnector.MySqlProvider, Trolley.MySqlConnector";
                 break;
             case OrmProviderType.PostgreSql:
-                fileName = "Trolley.PostgresSql.dll";
-                strOrmProviderType = "Trolley.PostgresSql.PostgreSqlProvider, Trolley.PostgresSql";
+                fileName = "Trolley.PostgreSql.dll";
+                strOrmProviderType = "Trolley.PostgreSql.PostgreSqlProvider, Trolley.PostgreSql";
                 break;
             case OrmProviderType.SqlServer:
                 fileName = "Trolley.SqlServer.dll";

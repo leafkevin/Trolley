@@ -313,6 +313,32 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
         }
         return builder.ToString();
     }
+    public override SqlFieldSegment ToEnumString(SqlFieldSegment sqlSegment)
+    {
+        if (sqlSegment.HasField)
+        {
+            var targetType = this.OrmProvider.MapDefaultType(sqlSegment.NativeDbType);
+            if (targetType != typeof(string))
+            {
+                var enumValues = Enum.GetValues(sqlSegment.SegmentType);
+                var enumUnderlyingType = Enum.GetUnderlyingType(sqlSegment.SegmentType);
+                var enumBuilder = new StringBuilder($"CASE {sqlSegment.Body}");
+                foreach (var enumValue in enumValues)
+                {
+                    var enumName = Enum.GetName(sqlSegment.SegmentType, enumValue);
+                    var numberValue = Convert.ChangeType(enumValue, enumUnderlyingType);
+                    enumBuilder.Append($" WHEN {numberValue} THEN N'{enumName}'");
+                }
+                enumBuilder.Append(" END");
+                sqlSegment.IsExpression = true;
+                sqlSegment.Body = enumBuilder.ToString();
+            }
+        }
+        else if (sqlSegment.IsConstant || sqlSegment.IsVariable)
+            sqlSegment.Value = Enum.GetName(sqlSegment.SegmentType, sqlSegment.Value);
+        sqlSegment.SegmentType = typeof(string);
+        return sqlSegment;
+    }
     public virtual void AddSelectFieldsSql(StringBuilder builder, List<SqlFieldSegment> readerFields, bool isSecondUnionWrap)
     {
         int index = 0;

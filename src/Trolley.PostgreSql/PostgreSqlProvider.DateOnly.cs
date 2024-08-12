@@ -228,7 +228,7 @@ partial class PostgreSqlProvider
                         string formatArgument = null;
                         if (formatSegment.IsConstant)
                         {
-                            formatArgument = $"'{formatSegment}'";
+                            formatArgument = $"'{formatSegment.Value}'";
 
                             if (formatArgument.Contains("yyyy"))
                                 formatArgument = formatArgument.NextReplace("yyyy", "YYYY");
@@ -370,7 +370,7 @@ partial class PostgreSqlProvider
                             string formatArgument = null;
                             if (formatSegment.IsConstant || formatSegment.IsVariable)
                             {
-                                formatArgument = $"'{formatSegment}'";
+                                formatArgument = $"'{formatSegment.Value}'";
 
                                 if (formatArgument.Contains("yyyy"))
                                     formatArgument = formatArgument.NextReplace("yyyy", "YYYY");

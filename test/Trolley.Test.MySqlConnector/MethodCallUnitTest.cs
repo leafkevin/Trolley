@@ -3,21 +3,53 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
 using Trolley.MySqlConnector;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Trolley.Test.MySqlConnector;
 
 public class MethodCallUnitTest : UnitTestBase
 {
-    public MethodCallUnitTest()
+    private static int connTotal = 0;
+    private static int connOpenTotal = 0;
+    private readonly ITestOutputHelper output;
+    public MethodCallUnitTest(ITestOutputHelper output)
     {
+        this.output = output;
         var services = new ServiceCollection();
         services.AddSingleton(f =>
         {
             var builder = new OrmDbFactoryBuilder()
-            .Register(OrmProviderType.MySql, "fengling", "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;", true)
-            .Configure<ModelConfiguration>(OrmProviderType.MySql);
+                .Register(OrmProviderType.MySql, "fengling", "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;", true)
+                .Configure<ModelConfiguration>(OrmProviderType.MySql)
+                .UseDbFilter(df =>
+                {
+                    df.OnConnectionCreated += evt =>
+                    {
+                        Interlocked.Increment(ref connTotal);
+                        this.output.WriteLine($"{evt.ConnectionId} Created, Total:{Volatile.Read(ref connTotal)}");
+                    };
+                    df.OnConnectionOpened += evt =>
+                    {
+                        Interlocked.Increment(ref connOpenTotal);
+                        this.output.WriteLine($"{evt.ConnectionId} Opened, Total:{Volatile.Read(ref connOpenTotal)}");
+                    };
+                    df.OnConnectionClosed += evt =>
+                    {
+                        Interlocked.Decrement(ref connOpenTotal);
+                        this.output.WriteLine($"{evt.ConnectionId} Closed, Total:{Volatile.Read(ref connOpenTotal)}");
+                    };
+                    df.OnCommandExecuting += evt =>
+                    {
+                        this.output.WriteLine($"{evt.SqlType} Begin, Sql: {evt.Sql}");
+                    };
+                    df.OnCommandExecuted += evt =>
+                    {
+                        this.output.WriteLine($"{evt.SqlType} End, Elapsed: {evt.Elapsed} ms, Sql: {evt.Sql}");
+                    };
+                });
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();
@@ -90,7 +122,7 @@ public class MethodCallUnitTest : UnitTestBase
             .Where(f => f.Name.Contains("微软"))
             .Select(f => f.Id)
             .ToSql(out _);
-        Assert.True(sql == "SELECT a.[Id] FROM [sys_company] a WHERE a.[Name] LIKE N'%微软%'");
+        Assert.True(sql == "SELECT a.`Id` FROM `sys_company` a WHERE a.`Name` LIKE '%微软%'");
         var result1 = await repository.From<Company>()
             .Where(f => f.Name.Contains("微软"))
             .ToListAsync();
@@ -581,45 +613,64 @@ public class MethodCallUnitTest : UnitTestBase
         Assert.True(result.NewField == $"{age}-{result.Gender}");
 
         sql = repository.From<User>()
-           .Where(f => f.Id == 1)
-           .Select(f => new
-           {
-               NewField = $"{f.Age.IsNull(20)}-{f.Gender}"
-           })
-           .ToSql(out _);
+            .Where(f => f.Id == 1)
+            .Select(f => new
+            {
+                NewField = $"{f.Age.IsNull(20)}-{f.Gender}"
+            })
+            .ToSql(out _);
         Assert.True(sql == "SELECT CONCAT(CAST(IFNULL(a.`Age`,20) AS CHAR),'-',a.`Gender`) AS `NewField` FROM `sys_user` a WHERE a.`Id`=1");
 
         result = await repository.From<User>()
-        .Where(f => f.Id == 1)
-        .Select(f => new
-        {
-            NewField = $"{f.Age.IsNull(20)}-{f.Gender}",
-            f.Age,
-            f.Gender
-        })
-        .FirstAsync();
+            .Where(f => f.Id == 1)
+            .Select(f => new
+            {
+                NewField = $"{f.Age.IsNull(20)}-{f.Gender}",
+                f.Age,
+                f.Gender
+            })
+            .FirstAsync();
         age = result.Age == 0 ? 20 : result.Age;
         Assert.True(result.NewField == $"{age}-{result.Gender.ToString()}");
 
         sql = repository.From<User>()
-        .Where(f => f.Id == 1)
-        .Select(f => new
-        {
-            NewField = $"{f.Age.IsNull(20)}-{f.Gender.ToDescription()}"
-        })
-        .ToSql(out _);
+            .Where(f => f.Id == 1)
+            .Select(f => new
+            {
+                NewField = $"{f.Age.IsNull(20)}-{f.Gender.ToDescription()}"
+            })
+            .ToSql(out _);
         Assert.True(sql == "SELECT a.`Age`,a.`Gender` FROM `sys_user` a WHERE a.`Id`=1");
 
         var result1 = await repository.From<User>()
-           .Where(f => f.Id == 1)
-           .Select(f => new
-           {
-               NewField = $"{f.Age.IsNull(20)}-{f.Gender.ToDescription()}",
-               f.Age,
-               f.Gender
-           })
-           .FirstAsync();
+            .Where(f => f.Id == 1)
+            .Select(f => new
+            {
+                NewField = $"{f.Age.IsNull(20)}-{f.Gender.ToDescription()}",
+                f.Age,
+                f.Gender
+            })
+            .FirstAsync();
         age = result1.Age == 0 ? 20 : result.Age;
         Assert.True(result1.NewField == $"{age}-{result1.Gender.ToDescription()}");
+
+        sql = repository.From<UpdateEntity>()
+            .Where(f => f.Id == 1)
+            .Select(f => new
+            {
+                NewField = $"{f.EnumField}"
+            })
+            .ToSql(out _);
+        Assert.True(sql == "SELECT CONCAT(CASE a.`EnumField` WHEN 0 THEN 'Unknown' WHEN 1 THEN 'Female' WHEN 2 THEN 'Male' END) AS `NewField` FROM `sys_update_entity` a WHERE a.`Id`=1");
+
+        var result2 = await repository.From<UpdateEntity>()
+            .Where(f => f.Id == 1)
+            .Select(f => new
+            {
+                f.EnumField,
+                NewField = $"{f.EnumField}"
+            })
+            .FirstAsync();
+        Assert.True(result2.NewField == $"{result2.EnumField}");
     }
 }

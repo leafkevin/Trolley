@@ -2033,7 +2033,7 @@ public class SqlVisitor : ISqlVisitor
             tableName = this.OrmProvider.GetTableName(tableName);
         return tableName;
     }
-    public SqlFieldSegment BuildDeferredSqlSegment(MethodCallExpression methodCallExpr, SqlFieldSegment sqlSegment)
+    public virtual SqlFieldSegment BuildDeferredSqlSegment(MethodCallExpression methodCallExpr, SqlFieldSegment sqlSegment)
     {
         string fields = null;
         List<SqlFieldSegment> readerFields = null;
@@ -2087,7 +2087,7 @@ public class SqlVisitor : ISqlVisitor
         sqlSegment.IsMethodCall = true;
         return sqlSegment;
     }
-    public SqlFieldSegment ToEnumString(SqlFieldSegment sqlSegment)
+    public virtual SqlFieldSegment ToEnumString(SqlFieldSegment sqlSegment)
     {
         if (sqlSegment.HasField)
         {

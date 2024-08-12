@@ -32,6 +32,7 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
         Exception exception = null;
         IEnumerable insertObjs = null;
         bool isNeedClose = this.DbContext.IsNeedClose;
+        CommandEventArgs eventArgs = null;
         try
         {
             bool isNeedSplit = false;
@@ -41,7 +42,6 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                 case ActionMode.BulkCopy:
                     (insertObjs, var timeoutSeconds) = this.DialectVisitor.BuildWithBulkCopy();
 
-                    bool isOpened = false;
                     Type insertObjType = null;
                     foreach (var insertObj in insertObjs)
                     {
@@ -56,12 +56,21 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                             var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
                             foreach (var tabledInsertObj in tabledInsertObjs)
                             {
-                                result += this.ExecuteBulkCopy(ref isOpened, insertObjType, tabledInsertObj.Value, timeoutSeconds, tabledInsertObj.Key);
+                                eventArgs = this.DbContext.AddCommandBeforeFilter(CommandSqlType.BulkCopyInsert, eventArgs);
+                                result += this.ExecuteBulkCopy(insertObjType, tabledInsertObj.Value, timeoutSeconds, tabledInsertObj.Key);
                             }
                         }
-                        else result = this.ExecuteBulkCopy(ref isOpened, insertObjType, insertObjs, timeoutSeconds, this.Visitor.Tables[0].Body);
+                        else
+                        {
+                            eventArgs = this.DbContext.AddCommandBeforeFilter(CommandSqlType.BulkCopyInsert, eventArgs);
+                            result = this.ExecuteBulkCopy(insertObjType, insertObjs, timeoutSeconds, this.Visitor.Tables[0].Body);
+                        }
                     }
-                    else result = this.ExecuteBulkCopy(ref isOpened, insertObjType, insertObjs, timeoutSeconds);
+                    else
+                    {
+                        eventArgs = this.DbContext.AddCommandBeforeFilter(CommandSqlType.BulkCopyInsert, eventArgs);
+                        result = this.ExecuteBulkCopy(insertObjType, insertObjs, timeoutSeconds);
+                    }
                     break;
                 case ActionMode.Bulk:
                     command = this.DbContext.CreateCommand();
@@ -77,7 +86,6 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                     };
                     Func<string, IEnumerable, int> executor = (tableName, insertObjs) =>
                     {
-                        var isFirst = true;
                         int count = 0, index = 0;
                         foreach (var insertObj in insertObjs)
                         {
@@ -86,11 +94,7 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                             if (index >= bulkCount)
                             {
                                 command.CommandText = builder.ToString();
-                                if (isFirst)
-                                {
-                                    this.DbContext.Open();
-                                    isFirst = false;
-                                }
+                                eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkInsert, eventArgs);
                                 count += command.ExecuteNonQuery();
                                 clearCommand.Invoke(tableName);
                                 index = 0;
@@ -101,12 +105,12 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                         if (index > 0)
                         {
                             command.CommandText = builder.ToString();
-                            if (isFirst) this.DbContext.Open();
+                            eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkInsert, eventArgs);
                             count += command.ExecuteNonQuery();
                         }
                         return count;
                     };
-
+                    this.DbContext.Open();
                     if (isNeedSplit)
                     {
                         var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
@@ -129,6 +133,7 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                     command = this.DbContext.CreateCommand();
                     command.CommandText = this.Visitor.BuildCommand(command, false, out _);
                     this.DbContext.Open();
+                    eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.Insert);
                     result = command.ExecuteNonQuery();
                     break;
             }
@@ -137,9 +142,23 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
         {
             isNeedClose = true;
             exception = ex;
+            var sqlType = this.Visitor.ActionMode switch
+            {
+                ActionMode.BulkCopy => CommandSqlType.BulkCopyInsert,
+                ActionMode.Bulk => CommandSqlType.BulkInsert,
+                _ => CommandSqlType.Insert
+            };
+            this.DbContext.AddCommandFailedFilter(command, sqlType, eventArgs, exception);
         }
         finally
         {
+            var sqlType = this.Visitor.ActionMode switch
+            {
+                ActionMode.BulkCopy => CommandSqlType.BulkCopyInsert,
+                ActionMode.Bulk => CommandSqlType.BulkInsert,
+                _ => CommandSqlType.Insert
+            };
+            this.DbContext.AddCommandAfterFilter(command, sqlType, eventArgs, exception == null, exception);
             command?.Dispose();
             if (isNeedClose) this.Close();
         }
@@ -153,6 +172,7 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
         Exception exception = null;
         IEnumerable insertObjs = null;
         bool isNeedClose = this.DbContext.IsNeedClose;
+        CommandEventArgs eventArgs = null;
         try
         {
             bool isNeedSplit = false;
@@ -161,7 +181,6 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
             {
                 case ActionMode.BulkCopy:
                     (insertObjs, var timeoutSeconds) = this.DialectVisitor.BuildWithBulkCopy();
-                    bool isOpened = false;
                     Type insertObjType = null;
                     foreach (var insertObj in insertObjs)
                     {
@@ -176,13 +195,21 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                             var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
                             foreach (var tabledInsertObj in tabledInsertObjs)
                             {
-                                result += await this.ExecuteBulkCopyAsync(isOpened, insertObjType, tabledInsertObj.Value, timeoutSeconds, cancellationToken, tabledInsertObj.Key);
-                                if (!isOpened) isOpened = true;
+                                eventArgs = this.DbContext.AddCommandBeforeFilter(CommandSqlType.BulkCopyInsert, eventArgs);
+                                result += await this.ExecuteBulkCopyAsync(insertObjType, tabledInsertObj.Value, timeoutSeconds, cancellationToken, tabledInsertObj.Key);
                             }
                         }
-                        else result = await this.ExecuteBulkCopyAsync(isOpened, insertObjType, insertObjs, timeoutSeconds, cancellationToken, this.Visitor.Tables[0].Body);
+                        else
+                        {
+                            eventArgs = this.DbContext.AddCommandBeforeFilter(CommandSqlType.BulkCopyInsert, eventArgs);
+                            result = await this.ExecuteBulkCopyAsync(insertObjType, insertObjs, timeoutSeconds, cancellationToken, this.Visitor.Tables[0].Body);
+                        }
                     }
-                    else result = await this.ExecuteBulkCopyAsync(isOpened, insertObjType, insertObjs, timeoutSeconds, cancellationToken);
+                    else
+                    {
+                        eventArgs = this.DbContext.AddCommandBeforeFilter(CommandSqlType.BulkCopyInsert, eventArgs);
+                        result = await this.ExecuteBulkCopyAsync(insertObjType, insertObjs, timeoutSeconds, cancellationToken);
+                    }
                     break;
                 case ActionMode.Bulk:
                     command = this.DbContext.CreateDbCommand();
@@ -198,7 +225,6 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                     };
                     Func<string, IEnumerable, Task<int>> executor = async (tableName, insertObjs) =>
                     {
-                        var isFirst = true;
                         int count = 0, index = 0;
                         foreach (var insertObj in insertObjs)
                         {
@@ -207,11 +233,7 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                             if (index >= bulkCount)
                             {
                                 command.CommandText = sqlBuilder.ToString();
-                                if (isFirst)
-                                {
-                                    await this.DbContext.OpenAsync(cancellationToken);
-                                    isFirst = false;
-                                }
+                                eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkInsert, eventArgs);
                                 count += await command.ExecuteNonQueryAsync(cancellationToken);
                                 clearCommand.Invoke(tableName);
                                 index = 0;
@@ -222,12 +244,12 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                         if (index > 0)
                         {
                             command.CommandText = sqlBuilder.ToString();
-                            if (isFirst) await this.DbContext.OpenAsync(cancellationToken);
+                            eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkInsert, eventArgs);
                             count += await command.ExecuteNonQueryAsync(cancellationToken);
                         }
                         return count;
                     };
-
+                    await this.DbContext.OpenAsync(cancellationToken);
                     if (isNeedSplit)
                     {
                         var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
@@ -250,6 +272,7 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                     command = this.DbContext.CreateDbCommand();
                     command.CommandText = this.Visitor.BuildCommand(command, false, out _);
                     await this.DbContext.OpenAsync(cancellationToken);
+                    eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.Insert);
                     result = await command.ExecuteNonQueryAsync(cancellationToken);
                     break;
             }
@@ -258,9 +281,23 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
         {
             isNeedClose = true;
             exception = ex;
+            var sqlType = this.Visitor.ActionMode switch
+            {
+                ActionMode.BulkCopy => CommandSqlType.BulkCopyInsert,
+                ActionMode.Bulk => CommandSqlType.BulkInsert,
+                _ => CommandSqlType.Insert
+            };
+            this.DbContext.AddCommandFailedFilter(command, sqlType, eventArgs, exception);
         }
         finally
         {
+            var sqlType = this.Visitor.ActionMode switch
+            {
+                ActionMode.BulkCopy => CommandSqlType.BulkCopyInsert,
+                ActionMode.Bulk => CommandSqlType.BulkInsert,
+                _ => CommandSqlType.Insert
+            };
+            this.DbContext.AddCommandAfterFilter(command, sqlType, eventArgs, exception == null, exception);
             if (command != null)
             {
                 command.Parameters.Clear();
@@ -271,19 +308,15 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
         if (exception != null) throw exception;
         return result;
     }
-    private int ExecuteBulkCopy(ref bool isOpened, Type insertObjType, IEnumerable insertObjs, int? timeoutSeconds, string tableName = null)
+    private int ExecuteBulkCopy(Type insertObjType, IEnumerable insertObjs, int? timeoutSeconds, string tableName = null)
     {
         var entityMapper = this.Visitor.Tables[0].Mapper;
         var memberMappers = this.Visitor.GetRefMemberMappers(insertObjType, entityMapper);
         var dataTable = this.Visitor.ToDataTable(insertObjType, insertObjs, memberMappers, tableName ?? entityMapper.TableName);
         if (dataTable.Rows.Count == 0) return 0;
 
-        if (!isOpened)
-        {
-            this.DbContext.Open();
-            isOpened = true;
-        }
-        var connection = this.DbContext.Connection as MySqlConnection;
+        this.DbContext.Open();
+        var connection = this.DbContext.Connection.BaseConnection as MySqlConnection;
         var transaction = this.DbContext.Transaction as MySqlTransaction;
         var bulkCopy = new MySqlBulkCopy(connection, transaction);
         if (timeoutSeconds.HasValue) bulkCopy.BulkCopyTimeout = timeoutSeconds.Value;
@@ -295,16 +328,15 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
         var bulkCopyResult = bulkCopy.WriteToServer(dataTable);
         return bulkCopyResult.RowsInserted;
     }
-    private async Task<int> ExecuteBulkCopyAsync(bool isOpened, Type insertObjType, IEnumerable insertObjs, int? timeoutSeconds, CancellationToken cancellationToken = default, string tableName = null)
+    private async Task<int> ExecuteBulkCopyAsync(Type insertObjType, IEnumerable insertObjs, int? timeoutSeconds, CancellationToken cancellationToken = default, string tableName = null)
     {
         var entityMapper = this.Visitor.Tables[0].Mapper;
         var memberMappers = this.Visitor.GetRefMemberMappers(insertObjType, entityMapper);
         var dataTable = this.Visitor.ToDataTable(insertObjType, insertObjs, memberMappers, tableName ?? entityMapper.TableName);
         if (dataTable.Rows.Count == 0) return 0;
 
-        if (!isOpened)
-            await this.DbContext.OpenAsync(cancellationToken);
-        var connection = this.DbContext.Connection as MySqlConnection;
+        await this.DbContext.OpenAsync(cancellationToken);
+        var connection = this.DbContext.Connection.BaseConnection as MySqlConnection;
         var transaction = this.DbContext.Transaction as MySqlTransaction;
         var bulkCopy = new MySqlBulkCopy(connection, transaction);
         if (timeoutSeconds.HasValue) bulkCopy.BulkCopyTimeout = timeoutSeconds.Value;

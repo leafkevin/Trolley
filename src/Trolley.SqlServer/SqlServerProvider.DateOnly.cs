@@ -310,7 +310,7 @@ partial class SqlServerProvider
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"DATEADD(YEAR,{rightSegment},{targetArgument})", false, true);
+                        return targetSegment.Merge(rightSegment, $"DATEADD(YEAR,{rightArgument},{targetArgument})", false, true);
                     });
                     result = true;
                     break;
@@ -361,7 +361,7 @@ partial class SqlServerProvider
                             string formatArgument = null;
                             if (formatSegment.IsConstant || formatSegment.IsVariable)
                             {
-                                formatArgument = $"'{formatSegment}'";
+                                formatArgument = $"'{formatSegment.Value}'";
 
                                 if (formatArgument.Contains("yyyy"))
                                     formatArgument = formatArgument.NextReplace("yyyy", "YYYY");

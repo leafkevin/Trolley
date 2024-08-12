@@ -446,7 +446,7 @@ partial class SqlServerProvider
                             var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
                             string rightArgument = null;
                             if (rightSegment.IsConstant)
-                                rightArgument = $"N'%{rightSegment}%'";
+                                rightArgument = $"N'%{rightSegment.Value}%'";
                             else rightArgument = $"'%'+{visitor.GetQuotedValue(rightSegment)}+'%'";
 
                             var targetArgument = visitor.GetQuotedValue(targetSegment);
@@ -666,7 +666,7 @@ partial class SqlServerProvider
 
                             string rightArgument = null;
                             if (rightSegment.IsConstant)
-                                rightArgument = $"'{rightSegment}%'";
+                                rightArgument = $"'{rightSegment.Value}%'";
                             else rightArgument = $"{visitor.GetQuotedValue(rightSegment)}+'%'";
 
                             var notString = deferExprs.IsDeferredNot() ? "NOT " : "";
@@ -686,7 +686,7 @@ partial class SqlServerProvider
 
                             string rightArgument = null;
                             if (rightSegment.IsConstant)
-                                rightArgument = $"'%{rightSegment}'";
+                                rightArgument = $"'%{rightSegment.Value}'";
                             else rightArgument = $"'%'+{visitor.GetQuotedValue(rightSegment)}";
 
                             var notString = deferExprs.IsDeferredNot() ? "NOT " : "";

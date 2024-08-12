@@ -288,7 +288,7 @@ partial class PostgreSqlProvider
                         string formatArgument = null;
                         if (formatSegment.IsConstant || formatSegment.IsVariable)
                         {
-                            formatArgument = $"'{formatSegment}'";
+                            formatArgument = $"'{formatSegment.Value}'";
 
                             if (formatArgument.Contains("HH"))
                                 formatArgument = formatArgument.NextReplace("HH", "HH24");

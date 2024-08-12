@@ -4,92 +4,122 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Trolley.SqlServer;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Trolley.Test.SqlServer;
 
 public class UnitTest6 : UnitTestBase
 {
-    public UnitTest6()
+    private static int connTotal = 0;
+    private static int connOpenTotal = 0;
+    private readonly ITestOutputHelper output;
+    public UnitTest6(ITestOutputHelper output)
     {
+        this.output = output;
         var services = new ServiceCollection();
         services.AddSingleton(f =>
         {
             var builder = new OrmDbFactoryBuilder()
-            .Register<SqlServerProvider>("fengling", "Server=172.16.30.190;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", true)
-            .Register<SqlServerProvider>("fengling_tenant1", "Server=127.0.0.1;Database=fengling_tenant1;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", false)
-            .Register<SqlServerProvider>("fengling_tenant2", "Server=127.0.0.1;Database=fengling_tenant2;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", false)
-            .UseSharding(s =>
-            {
-                s.UseDatabase(() =>
+                .Register(OrmProviderType.SqlServer, "fengling", "Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", true)
+                .Register(OrmProviderType.SqlServer, "fengling_tenant1", "Server=127.0.0.1;Database=fengling_tenant1;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", false)
+                .Register(OrmProviderType.SqlServer, "fengling_tenant2", "Server=127.0.0.1;Database=fengling_tenant2;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", false)
+                .UseSharding(s =>
                 {
-                    //可以硬编码分库，也可以使用redis，映射表 ...，其他方式等
-                    var passport = f.GetService<IPassport>();
-                    return passport.TenantId switch
+                    s.UseDatabase(() =>
                     {
-                        "200" => "fengling_tenant1",
-                        "300" => "fengling_tenant2",
-                        _ => "fengling"
+                        //可以硬编码分库，也可以使用redis，映射表 ...，其他方式等
+                        var passport = f.GetService<IPassport>();
+                        return passport.TenantId switch
+                        {
+                            "200" => "fengling_tenant1",
+                            "300" => "fengling_tenant2",
+                            _ => "fengling"
+                        };
+                    })
+                    //按照租户+时间分表
+                    .UseTable<Order>(t =>
+                    {
+                        t.DependOn(d => d.TenantId).DependOn(d => d.CreatedAt)
+                        .UseRule((dbKey, origName, tenantId, createdAt) => $"{origName}_{tenantId}_{createdAt:yyyyMM}", "^sys_order_\\d{1,4}_[1,2]\\d{3}[0,1][0-9]$")
+                        //时间分表，通常都是支持范围查询
+                        .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =>
+                        {
+                            var tableNames = new List<string>();
+                            var current = beginTime;
+                            while (current <= endTime)
+                            {
+                                var tableName = $"{origName}_{tenantId}_{current:yyyyMM}";
+                                if (tableNames.Contains(tableName))
+                                    continue;
+                                tableNames.Add(tableName);
+                            }
+                            return tableNames;
+                        });
+                    })
+                    //按照租户+时间分表
+                    .UseTable<OrderDetail>(t =>
+                    {
+                        t.DependOn(d => d.TenantId).DependOn(d => d.CreatedAt)
+                        .UseRule((dbKey, origName, tenantId, createdAt) => $"{origName}_{tenantId}_{createdAt:yyyyMM}", "^sys_order_detail_\\d{1,4}_[1,2]\\d{3}[0,1][0-9]$")
+                        //时间分表，通常都是支持范围查询
+                        .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =>
+                        {
+                            var tableNames = new List<string>();
+                            var current = beginTime;
+                            while (current <= endTime)
+                            {
+                                var tableName = $"{origName}_{tenantId}_{current:yyyyMM}";
+                                if (tableNames.Contains(tableName))
+                                    continue;
+                                tableNames.Add(tableName);
+                            }
+                            return tableNames;
+                        });
+                    })
+                    //按租户分表
+                    //.UseTable<Order>(t => t.DependOn(d => d.TenantId).UseRule((dbKey, origName, tenantId) => $"{origName}_{tenantId}", "^sys_order_\\d{1,4}$"))
+                    ////按照Id字段分表，Id字段是带有时间属性的ObjectId
+                    //.UseTable<Order>(t => t.DependOn(d => d.Id).UseRule((dbKey, origName, id) => $"{origName}_{new DateTime(ObjectId.Parse(id).Timestamp):yyyyMM}", "^sys_order_\\S{24}$"))
+                    ////按照Id字段哈希取模分表
+                    //.UseTable<Order>(t => t.DependOn(d => d.Id).UseRule((dbKey, origName, id) => $"{origName}_{HashCode.Combine(id) % 5}", "^sys_order_\\S{24}$"))
+                    .UseTable<User>(t => t.DependOn(d => d.TenantId).UseRule((dbKey, origName, tenantId) => $"{origName}_{tenantId}", "^sys_user_\\d{1,4}$"));
+                })
+                .Configure<ModelConfiguration>(OrmProviderType.MySql)
+                .UseDbFilter(df =>
+                {
+                    df.OnConnectionCreated += evt =>
+                    {
+                        Interlocked.Increment(ref connTotal);
+                        this.output.WriteLine($"{evt.ConnectionId} Created, Total:{Volatile.Read(ref connTotal)}");
                     };
-                })
-                //按照租户+时间分表
-                .UseTable<Order>(t =>
-                {
-                    t.DependOn(d => d.TenantId).DependOn(d => d.CreatedAt)
-                    .UseRule((dbKey, origName, tenantId, createdAt) => $"{origName}_{tenantId}_{createdAt:yyyyMM}", "^sys_order_\\d{1,4}_[1,2]\\d{3}[0,1][0-9]$")
-                    //时间分表，通常都是支持范围查询
-                    .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =>
+                    df.OnConnectionOpened += evt =>
                     {
-                        var tableNames = new List<string>();
-                        var current = beginTime;
-                        while (current <= endTime)
-                        {
-                            var tableName = $"{origName}_{tenantId}_{current:yyyyMM}";
-                            if (tableNames.Contains(tableName))
-                                continue;
-                            tableNames.Add(tableName);
-                        }
-                        return tableNames;
-                    });
-                })
-                //按照租户+时间分表
-                .UseTable<OrderDetail>(t =>
-                {
-                    t.DependOn(d => d.TenantId).DependOn(d => d.CreatedAt)
-                    .UseRule((dbKey, origName, tenantId, createdAt) => $"{origName}_{tenantId}_{createdAt:yyyyMM}", "^sys_order_detail_\\d{1,4}_[1,2]\\d{3}[0,1][0-9]$")
-                    //时间分表，通常都是支持范围查询
-                    .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =>
+                        Interlocked.Increment(ref connOpenTotal);
+                        this.output.WriteLine($"{evt.ConnectionId} Opened, Total:{Volatile.Read(ref connOpenTotal)}");
+                    };
+                    df.OnConnectionClosed += evt =>
                     {
-                        var tableNames = new List<string>();
-                        var current = beginTime;
-                        while (current <= endTime)
-                        {
-                            var tableName = $"{origName}_{tenantId}_{current:yyyyMM}";
-                            if (tableNames.Contains(tableName))
-                                continue;
-                            tableNames.Add(tableName);
-                        }
-                        return tableNames;
-                    });
-                })
-                //按租户分表
-                //.UseTable<Order>(t => t.DependOn(d => d.TenantId).UseRule((dbKey, origName, tenantId) => $"{origName}_{tenantId}", "^sys_order_\\d{1,4}$"))
-                ////按照Id字段分表，Id字段是带有时间属性的ObjectId
-                //.UseTable<Order>(t => t.DependOn(d => d.Id).UseRule((dbKey, origName, id) => $"{origName}_{new DateTime(ObjectId.Parse(id).Timestamp):yyyyMM}", "^sys_order_\\S{24}$"))
-                ////按照Id字段哈希取模分表
-                //.UseTable<Order>(t => t.DependOn(d => d.Id).UseRule((dbKey, origName, id) => $"{origName}_{HashCode.Combine(id) % 5}", "^sys_order_\\S{24}$"))
-                .UseTable<User>(t => t.DependOn(d => d.TenantId).UseRule((dbKey, origName, tenantId) => $"{origName}_{tenantId}", "^sys_user_\\d{1,4}$"));
-            })
-            .Configure<SqlServerProvider, ModelConfiguration>();
+                        Interlocked.Decrement(ref connOpenTotal);
+                        this.output.WriteLine($"{evt.ConnectionId} Closed, Total:{Volatile.Read(ref connOpenTotal)}");
+                    };
+                    df.OnCommandExecuting += evt =>
+                    {
+                        this.output.WriteLine($"{evt.SqlType} Begin, Sql: {evt.Sql}");
+                    };
+                    df.OnCommandExecuted += evt =>
+                    {
+                        this.output.WriteLine($"{evt.SqlType} End, Elapsed: {evt.Elapsed} ms, Sql: {evt.Sql}");
+                    };
+                });
             return builder.Build();
         });
         services.AddTransient<IPassport>(f => new Passport { TenantId = "104", UserId = "1" });
         var serviceProvider = services.BuildServiceProvider();
         this.dbFactory = serviceProvider.GetService<IOrmDbFactory>();
-
-
     }
     public interface IPassport
     {
