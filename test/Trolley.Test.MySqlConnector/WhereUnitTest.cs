@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Trolley.MySqlConnector;
 using Xunit;
 using Xunit.Abstractions;
@@ -53,7 +54,7 @@ public class WhereUnitTest : UnitTestBase
         dbFactory = serviceProvider.GetService<IOrmDbFactory>();
     }
     [Fact]
-    public async void WhereBoolean()
+    public async Task WhereBoolean()
     {
         this.Initialize();
         using var repository = dbFactory.Create();
@@ -64,7 +65,7 @@ public class WhereUnitTest : UnitTestBase
         Assert.True(result1.Count == result2.Count);
     }
     [Fact]
-    public async void WhereMemberVisit()
+    public async Task WhereMemberVisit()
     {
         this.Initialize();
         using var repository = dbFactory.Create();
@@ -75,7 +76,7 @@ public class WhereUnitTest : UnitTestBase
         Assert.True(result1.Count == result2.Count);
     }
     [Fact]
-    public async void WhereStringEnum()
+    public async Task WhereStringEnum()
     {
         this.Initialize();
         using var repository = dbFactory.Create();
@@ -104,7 +105,7 @@ public class WhereUnitTest : UnitTestBase
         Assert.True(result3.Count >= 2);
     }
     [Fact]
-    public async void WhereCoalesceConditional()
+    public async Task WhereCoalesceConditional()
     {
         using var repository = dbFactory.Create();
         var sql1 = repository.From<Company>()
@@ -146,7 +147,7 @@ public class WhereUnitTest : UnitTestBase
         Assert.True(result5[0].Nature == localNature);
     }
     [Fact]
-    public async void WhereIsNull()
+    public async Task WhereIsNull()
     {
         this.Initialize();
         using var repository = dbFactory.Create();

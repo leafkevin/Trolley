@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Trolley.MySqlConnector;
 using Xunit;
 using Xunit.Abstractions;
@@ -103,7 +104,7 @@ public class UnitTest4 : UnitTestBase
         Assert.True(typeof(Dictionary<string, Studuent>).IsEntityType(out _));
     }
     [Fact]
-    public async void Delete()
+    public async Task Delete()
     {
         using var repository = dbFactory.Create();
         repository.BeginTransaction();
@@ -133,7 +134,7 @@ public class UnitTest4 : UnitTestBase
         Assert.True(sql == "DELETE FROM `sys_user` WHERE `Id`=1");
     }
     [Fact]
-    public async void Delete_Multi()
+    public async Task Delete_Multi()
     {
         using var repository = dbFactory.Create();
         repository.BeginTransaction();
@@ -192,7 +193,7 @@ public class UnitTest4 : UnitTestBase
         Assert.True((int)parameters[3].Value == 2);
     }
     [Fact]
-    public async void Delete_Multi1()
+    public async Task Delete_Multi1()
     {
         using var repository = dbFactory.Create();
         repository.BeginTransaction();
@@ -250,7 +251,7 @@ public class UnitTest4 : UnitTestBase
         Assert.True((string)parameters[2].Value == orderNos[2]);
     }
     [Fact]
-    public async void Delete_Multi_Where()
+    public async Task Delete_Multi_Where()
     {
         using var repository = dbFactory.Create();
         repository.BeginTransaction();

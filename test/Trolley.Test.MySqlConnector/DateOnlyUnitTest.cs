@@ -2,6 +2,7 @@
 using System;
 using System.Globalization;
 using System.Threading;
+using System.Threading.Tasks;
 using Trolley.MySqlConnector;
 using Xunit;
 using Xunit.Abstractions;
@@ -54,7 +55,7 @@ public class DateOnlyUnitTest : UnitTestBase
         dbFactory = serviceProvider.GetService<IOrmDbFactory>();
     }
     [Fact]
-    public async void MemberAccess()
+    public async Task MemberAccess()
     {
         this.Initialize();
         var localDate = DateOnly.FromDateTime(DateTime.Parse("2023-05-06"));
@@ -119,7 +120,7 @@ public class DateOnlyUnitTest : UnitTestBase
         Assert.True(result.DayOfWeek == DateOnly.FromDateTime(DateTime.Now).DayOfWeek);
     }
     [Fact]
-    public async void AddCompareTo()
+    public async Task AddCompareTo()
     {
         this.Initialize();
         var localDate = DateOnly.FromDateTime(DateTime.Parse("2023-05-06"));

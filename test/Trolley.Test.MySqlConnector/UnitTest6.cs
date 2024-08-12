@@ -336,7 +336,7 @@ public class UnitTest6 : UnitTestBase
         await repository.CommitAsync();
     }
     [Fact]
-    public async void Create_WithBy_UseTable()
+    public async Task Create_WithBy_UseTable()
     {
         using var repository = this.dbFactory.Create();
         await repository.Delete<User>()
@@ -377,7 +377,7 @@ public class UnitTest6 : UnitTestBase
         Assert.True(result.TenantId == "104");
     }
     [Fact]
-    public async void Create_WithBy_WithoutUseTable()
+    public async Task Create_WithBy_WithoutUseTable()
     {
         using var repository = this.dbFactory.Create();
         await repository.Delete<User>()
@@ -417,7 +417,7 @@ public class UnitTest6 : UnitTestBase
         Assert.True(result.TenantId == "104");
     }
     [Fact]
-    public async void Create_WithBulk_UseTable()
+    public async Task Create_WithBulk_UseTable()
     {
         using var repository = this.dbFactory.Create();
         await repository.Delete<User>()
@@ -458,7 +458,7 @@ public class UnitTest6 : UnitTestBase
         Assert.True(result.TenantId == "104");
     }
     [Fact]
-    public async void Create_WithoutUseTable()
+    public async Task Create_WithoutUseTable()
     {
         using var repository = this.dbFactory.Create();
         await repository.Delete<User>()
@@ -543,7 +543,7 @@ public class UnitTest6 : UnitTestBase
         Assert.True(result.TenantId == "105");
     }
     [Fact]
-    public async void Create_WithBulk_WithoutUseTable()
+    public async Task Create_WithBulk_WithoutUseTable()
     {
         using var repository = this.dbFactory.Create();
         var userIds = new[] { 101, 102, 103 };
@@ -621,7 +621,7 @@ public class UnitTest6 : UnitTestBase
         Assert.True(result.TenantId == "104");
     }
     [Fact]
-    public async void Create_BulkCopy_UseTable()
+    public async Task Create_BulkCopy_UseTable()
     {
         var createdAt = DateTime.Parse("2024-05-24");
         var orders = new List<Order>();
@@ -797,7 +797,7 @@ public class UnitTest6 : UnitTestBase
         Assert.True(count2 == 2000);
     }
     [Fact]
-    public async void Create_BulkCopy_WithoutUseTable()
+    public async Task Create_BulkCopy_WithoutUseTable()
     {
         var createdAt = DateTime.Parse("2024-05-24");
         var orders = new List<Order>();
@@ -950,7 +950,7 @@ public class UnitTest6 : UnitTestBase
         Assert.True(count2 == 4000);
     }
     [Fact]
-    public async void Query_ManySharding_SingleTable()
+    public async Task Query_ManySharding_SingleTable()
     {
         await this.InitSharding();
         var productCount = 1;
@@ -972,7 +972,7 @@ public class UnitTest6 : UnitTestBase
         }
     }
     [Fact]
-    public async void Query_SingleSharding_Value()
+    public async Task Query_SingleSharding_Value()
     {
         await this.InitSharding();
         var orderId = "ON_1015";
@@ -999,7 +999,7 @@ public class UnitTest6 : UnitTestBase
         }
     }
     [Fact]
-    public async void Query_ManySharding_SingleTable_SubQuery()
+    public async Task Query_ManySharding_SingleTable_SubQuery()
     {
         await this.InitSharding();
         using var repository = dbFactory.Create();
@@ -1060,7 +1060,7 @@ public class UnitTest6 : UnitTestBase
         }
     }
     [Fact]
-    public async void Query_ManySharding_MultiTable1()
+    public async Task Query_ManySharding_MultiTable1()
     {
         await this.InitSharding();
         var productCount = 1;
@@ -1104,7 +1104,7 @@ public class UnitTest6 : UnitTestBase
         }
     }
     [Fact]
-    public async void Query_ManySharding_MultiTable2()
+    public async Task Query_ManySharding_MultiTable2()
     {
         await this.InitSharding();
         var productCount = 1;
@@ -1148,7 +1148,7 @@ public class UnitTest6 : UnitTestBase
         }
     }
     [Fact]
-    public async void Query_ManySharding_MultiTable3()
+    public async Task Query_ManySharding_MultiTable3()
     {
         await this.InitSharding();
         var productCount = 1;
@@ -1184,7 +1184,7 @@ public class UnitTest6 : UnitTestBase
         }
     }
     [Fact]
-    public async void Query_SingleSharding_Exists1()
+    public async Task Query_SingleSharding_Exists1()
     {
         await this.InitSharding();
         using var repository = dbFactory.Create();
@@ -1209,7 +1209,7 @@ public class UnitTest6 : UnitTestBase
         }
     }
     [Fact]
-    public async void Query_SingleSharding_Exists2()
+    public async Task Query_SingleSharding_Exists2()
     {
         await this.InitSharding();
         using var repository = dbFactory.Create();
@@ -1248,7 +1248,7 @@ public class UnitTest6 : UnitTestBase
         }
     }
     [Fact]
-    public async void Update_SingleSharding()
+    public async Task Update_SingleSharding()
     {
         await this.InitSharding();
         using var repository = dbFactory.Create();
@@ -1274,7 +1274,7 @@ public class UnitTest6 : UnitTestBase
         Assert.True(result > 0);
     }
     [Fact]
-    public async void Update_ManySharding1()
+    public async Task Update_ManySharding1()
     {
         await this.InitSharding();
         using var repository = dbFactory.Create();
@@ -1313,7 +1313,7 @@ public class UnitTest6 : UnitTestBase
         }
     }
     [Fact]
-    public async void Update_ManySharding2()
+    public async Task Update_ManySharding2()
     {
         await this.InitSharding();
         using var repository = dbFactory.Create();
@@ -1352,7 +1352,7 @@ public class UnitTest6 : UnitTestBase
         }
     }
     [Fact]
-    public async void Update_SetBulk_ManySharding()
+    public async Task Update_SetBulk_ManySharding()
     {
         await this.InitSharding();
         var createdAt = DateTime.Parse("2024-05-24");
@@ -1410,7 +1410,7 @@ public class UnitTest6 : UnitTestBase
         }
     }
     [Fact]
-    public async void Update_BulkCopy_ManySharding()
+    public async Task Update_BulkCopy_ManySharding()
     {
         await this.InitSharding();
         var createdAt = DateTime.Parse("2024-05-24");

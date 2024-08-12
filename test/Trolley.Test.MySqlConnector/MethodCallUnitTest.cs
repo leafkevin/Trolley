@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Trolley.MySqlConnector;
 using Xunit;
 using Xunit.Abstractions;
@@ -56,7 +57,7 @@ public class MethodCallUnitTest : UnitTestBase
         dbFactory = serviceProvider.GetService<IOrmDbFactory>();
     }
     [Fact]
-    public async void Contains()
+    public async Task Contains()
     {
         this.Initialize();
         using var repository = dbFactory.Create();
@@ -130,7 +131,7 @@ public class MethodCallUnitTest : UnitTestBase
         Assert.True(result1.Count > 0);
     }
     [Fact]
-    public async void Concat()
+    public async Task Concat()
     {
         using var repository = dbFactory.Create();
         bool isMale = false;
@@ -157,7 +158,7 @@ public class MethodCallUnitTest : UnitTestBase
         Assert.True(result == "leafkevin_1_False30False_2_25_3_False_4_10");
     }
     [Fact]
-    public async void Format()
+    public async Task Format()
     {
         using var repository = dbFactory.Create();
         bool isMale = false;
@@ -560,7 +561,7 @@ public class MethodCallUnitTest : UnitTestBase
         Assert.True(result1.EnumField2 == Convert.ToString(result1.EnumField));
     }
     [Fact]
-    public async void Method_Convert2()
+    public async Task Method_Convert2()
     {
         this.Initialize();
         using var repository = dbFactory.Create();
@@ -588,7 +589,7 @@ public class MethodCallUnitTest : UnitTestBase
         Assert.True(sql == "SELECT a.`Id` FROM `sys_user` a WHERE a.`CreatedAt` IN ('2023-03-03 00:00:00.000','2023-03-03 00:00:00.000','2023-03-03 06:06:06.000')");
     }
     [Fact]
-    public async void ComplexDeferredCall()
+    public async Task ComplexDeferredCall()
     {
         using var repository = dbFactory.Create();
         var sql = repository.From<User>()

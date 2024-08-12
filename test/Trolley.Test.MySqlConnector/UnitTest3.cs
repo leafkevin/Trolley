@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
+using System.Threading.Tasks;
 using Trolley.MySqlConnector;
 using Xunit;
 using Xunit.Abstractions;
@@ -85,7 +86,7 @@ public class UnitTest3 : UnitTestBase
         Assert.True(result.SourceType == UserSourceType.Douyin);
     }
     [Fact]
-    public async void Update_AnonymousObjects()
+    public async Task Update_AnonymousObjects()
     {
         Initialize();
         using var repository = dbFactory.Create();
@@ -112,7 +113,7 @@ public class UnitTest3 : UnitTestBase
         }
     }
     [Fact]
-    public async void Update_SetBulk()
+    public async Task Update_SetBulk()
     {
         Initialize();
         using var repository = dbFactory.Create();
@@ -136,7 +137,7 @@ public class UnitTest3 : UnitTestBase
         }
     }
     [Fact]
-    public async void Update_SetBulk_OnlyFields()
+    public async Task Update_SetBulk_OnlyFields()
     {
         Initialize();
         using var repository = dbFactory.Create();
@@ -191,7 +192,7 @@ public class UnitTest3 : UnitTestBase
         }
     }
     [Fact]
-    public async void Update_SetBulk_IgnoreFields()
+    public async Task Update_SetBulk_IgnoreFields()
     {
         Initialize();
         using var repository = dbFactory.Create();
@@ -240,7 +241,7 @@ public class UnitTest3 : UnitTestBase
         }
     }
     [Fact]
-    public async void Update_SetBulk_SetFields()
+    public async Task Update_SetBulk_SetFields()
     {
         Initialize();
         using var repository = dbFactory.Create();
@@ -500,7 +501,7 @@ public class UnitTest3 : UnitTestBase
         }
     }
     [Fact]
-    public async void Update_MultiParameters()
+    public async Task Update_MultiParameters()
     {
         this.Initialize();
         using var repository = dbFactory.Create();
@@ -676,7 +677,7 @@ public class UnitTest3 : UnitTestBase
         Assert.True(count > 0);
     }
     [Fact]
-    public async void Update_SetFrom()
+    public async Task Update_SetFrom()
     {
         Initialize();
         using var repository = dbFactory.Create();
@@ -778,7 +779,7 @@ public class UnitTest3 : UnitTestBase
         Assert.True(result > 0);
     }
     [Fact]
-    public async void Update_Set_FromQuery_One()
+    public async Task Update_Set_FromQuery_One()
     {
         Initialize();
         using var repository = dbFactory.Create();
@@ -880,7 +881,7 @@ public class UnitTest3 : UnitTestBase
         }
     }
     [Fact]
-    public async void Update_Set_FromQuery_Fields()
+    public async Task Update_Set_FromQuery_Fields()
     {
         this.Initialize();
         using var repository = dbFactory.Create();
@@ -960,7 +961,7 @@ public class UnitTest3 : UnitTestBase
         Assert.True(result > 0);
     }
     [Fact]
-    public async void Update_InnerJoin_Multi()
+    public async Task Update_InnerJoin_Multi()
     {
         this.Initialize();
         using var repository = dbFactory.Create();
@@ -1011,7 +1012,7 @@ public class UnitTest3 : UnitTestBase
         }
     }
     [Fact]
-    public async void Update_InnerJoin_Fields()
+    public async Task Update_InnerJoin_Fields()
     {
         this.Initialize();
         using var repository = dbFactory.Create();
@@ -1364,7 +1365,7 @@ public class UnitTest3 : UnitTestBase
         Assert.True((string)parameters10[0].Value == company.Name);
     }
     [Fact]
-    public async void Update_TimeSpan_Fields()
+    public async Task Update_TimeSpan_Fields()
     {
         using var repository = dbFactory.Create();
         var timeSpan = TimeSpan.FromMinutes(455);
@@ -1409,7 +1410,7 @@ public class UnitTest3 : UnitTestBase
         Assert.True(userInfo.SomeTimes.Value == TimeOnly.FromTimeSpan(timeSpan));
     }
     [Fact]
-    public async void Update_BulkCopy()
+    public async Task Update_BulkCopy()
     {
         using var repository = dbFactory.Create();
         var orders = new List<Order>();

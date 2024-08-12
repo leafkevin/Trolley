@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Trolley.SqlServer;
 using Xunit;
 using Xunit.Abstractions;
@@ -55,7 +56,7 @@ public class UnitTest5 : UnitTestBase
         dbFactory = serviceProvider.GetService<IOrmDbFactory>();
     }
     [Fact]
-    public async void MultipleQuery()
+    public async Task MultipleQuery()
     {
         Initialize();
         using var repository = dbFactory.Create();
@@ -94,7 +95,7 @@ public class UnitTest5 : UnitTestBase
         Assert.True(groupedOrderInfo.Grouping.OrderId == "1");
     }
     [Fact]
-    public async void MultipleCommand()
+    public async Task MultipleCommand()
     {
         using var repository = dbFactory.Create();
         int[] productIds = new int[] { 2, 4, 5, 6 };

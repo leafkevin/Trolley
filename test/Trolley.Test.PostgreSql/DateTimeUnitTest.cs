@@ -2,6 +2,7 @@
 using System;
 using System.Globalization;
 using System.Threading;
+using System.Threading.Tasks;
 using Trolley.PostgreSql;
 using Xunit;
 using Xunit.Abstractions;
@@ -57,7 +58,7 @@ public class DateTimeUnitTest : UnitTestBase
         AppContext.SetSwitch("Npgsql.DisableDateTimeInfinityConversions", true);
     }
     [Fact]
-    public async void MemberAccess()
+    public async Task MemberAccess()
     {
         this.Initialize();
         var localDate = DateTime.Parse("2023-05-06").Date;
@@ -115,7 +116,7 @@ public class DateTimeUnitTest : UnitTestBase
         Assert.True(result.IsEquals == result.UpdatedAt.Equals(DateTime.Parse("2023-03-25")));
     }
     [Fact]
-    public async void AddSubtract()
+    public async Task AddSubtract()
     {
         this.Initialize();
         var days = 365;
@@ -173,7 +174,7 @@ public class DateTimeUnitTest : UnitTestBase
         Assert.True(result.ParseExact == DateTime.ParseExact("05-07/2023 13-08-45", "MM-dd/yyyy HH-mm-ss", CultureInfo.InvariantCulture));
     }
     [Fact]
-    public async void Compare()
+    public async Task Compare()
     {
         this.Initialize();
         using var repository = dbFactory.Create();
@@ -225,7 +226,7 @@ public class DateTimeUnitTest : UnitTestBase
         Assert.True(result.ParseExact == DateTime.ParseExact("05-07/2023 13-08-45", "MM-dd/yyyy HH-mm-ss", CultureInfo.InvariantCulture));
     }
     [Fact]
-    public async void Operation()
+    public async Task Operation()
     {
         this.Initialize();
         using var repository = dbFactory.Create();

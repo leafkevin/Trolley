@@ -2,6 +2,7 @@
 using System;
 using System.Globalization;
 using System.Threading;
+using System.Threading.Tasks;
 using Trolley.PostgreSql;
 using Xunit;
 using Xunit.Abstractions;
@@ -57,7 +58,7 @@ public class DateOnlyUnitTest : UnitTestBase
         AppContext.SetSwitch("Npgsql.DisableDateTimeInfinityConversions", true);
     }
     [Fact]
-    public async void MemberAccess()
+    public async Task MemberAccess()
     {
         this.Initialize();
         var localDate = DateOnly.FromDateTime(DateTime.Parse("2023-05-06"));
@@ -122,7 +123,7 @@ public class DateOnlyUnitTest : UnitTestBase
         Assert.True(result.DayOfWeek == DateOnly.FromDateTime(DateTime.UtcNow).DayOfWeek);
     }
     [Fact]
-    public async void AddCompareTo()
+    public async Task AddCompareTo()
     {
         this.Initialize();
         var localDate = DateOnly.FromDateTime(DateTime.Parse("2023-05-06"));

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Trolley.PostgreSql;
 using Xunit;
 using Xunit.Abstractions;
@@ -58,7 +59,7 @@ public class UnitTest2 : UnitTestBase
         AppContext.SetSwitch("Npgsql.DisableDateTimeInfinityConversions", true);
     }
     [Fact]
-    public async void QueryFirst()
+    public async Task QueryFirst()
     {
         Initialize();
         using var repository = dbFactory.Create();
@@ -80,7 +81,7 @@ public class UnitTest2 : UnitTestBase
         }
     }
     [Fact]
-    public async void Get()
+    public async Task Get()
     {
         Initialize();
         using var repository = dbFactory.Create();
@@ -90,7 +91,7 @@ public class UnitTest2 : UnitTestBase
         Assert.True(user.Name == result.Name);
     }
     [Fact]
-    public async void Query()
+    public async Task Query()
     {
         Initialize();
         using var repository = dbFactory.Create();
@@ -98,7 +99,7 @@ public class UnitTest2 : UnitTestBase
         Assert.True(result.Count >= 3);
     }
     [Fact]
-    public async void QueryPage()
+    public async Task QueryPage()
     {
         Initialize();
         using var repository = dbFactory.Create();
@@ -115,7 +116,7 @@ public class UnitTest2 : UnitTestBase
         Assert.True(result.Count == 1);
     }
     [Fact]
-    public async void QueryDictionary()
+    public async Task QueryDictionary()
     {
         Initialize();
         using var repository = dbFactory.Create();
@@ -131,7 +132,7 @@ public class UnitTest2 : UnitTestBase
         public int ProductTotal { get; set; }
     }
     [Fact]
-    public async void QueryRawSql()
+    public async Task QueryRawSql()
     {
         this.Initialize();
         using var repository = dbFactory.Create();
@@ -353,7 +354,7 @@ public class UnitTest2 : UnitTestBase
         }
     }
     [Fact]
-    public async void WithTable_SubQuery()
+    public async Task WithTable_SubQuery()
     {
         using var repository = dbFactory.Create();
         var sql = repository.From<Menu>()
@@ -464,7 +465,7 @@ public class UnitTest2 : UnitTestBase
         }
     }
     [Fact]
-    public async void FromQuery_InnerJoin1()
+    public async Task FromQuery_InnerJoin1()
     {
         using var repository = dbFactory.Create();
         var sql = repository.From<User>()
@@ -583,7 +584,7 @@ SELECT a.""MenuId"",a.""ParentId"",a.""Url"" FROM ""menuPageList"" a WHERE a.""P
         }
     }
     [Fact]
-    public async void FromQuery_Include()
+    public async Task FromQuery_Include()
     {
         Initialize();
         using var repository = dbFactory.Create();
@@ -661,7 +662,7 @@ SELECT a.""MenuId"",a.""ParentId"",a.""Url"" FROM ""menuPageList"" a WHERE a.""P
         Assert.True(result[1].Order.Details[0].ProductId == productId);
     }
     [Fact]
-    public async void FromQuery_Include_ThenInclude()
+    public async Task FromQuery_Include_ThenInclude()
     {
         Initialize();
         using var repository = dbFactory.Create();
@@ -681,7 +682,7 @@ SELECT a.""MenuId"",a.""ParentId"",a.""Url"" FROM ""menuPageList"" a WHERE a.""P
         }
     }
     //[Fact]
-    //public async void FromQuery_IncludeMany_ThenInclude()
+    //public async Task FromQuery_IncludeMany_ThenInclude()
     //{
     //    using var repository = this.dbFactory.Create();
     //    var result = await repository.From<Order>()
@@ -912,7 +913,7 @@ SELECT a.""MenuId"",a.""ParentId"",a.""Url"" FROM ""menuPageList"" a WHERE a.""P
         Assert.True(result1.Count > 0);
     }
     [Fact]
-    public async void FromQuery_Groupby_OrderBy_Fields()
+    public async Task FromQuery_Groupby_OrderBy_Fields()
     {
         using var repository = dbFactory.Create();
         var sql = repository.From<User>()
@@ -945,7 +946,7 @@ SELECT a.""MenuId"",a.""ParentId"",a.""Url"" FROM ""menuPageList"" a WHERE a.""P
            .FirstAsync();
     }
     [Fact]
-    public async void FromQuery_Groupby_Having()
+    public async Task FromQuery_Groupby_Having()
     {
         using var repository = dbFactory.Create();
         var sql = repository.From(f => f.From<Order, OrderDetail>()
@@ -1228,7 +1229,7 @@ SELECT a.""MenuId"",a.""ParentId"",a.""Url"" FROM ""menuPageList"" a WHERE a.""P
         Assert.True(result1.Count > 0);
     }
     [Fact]
-    public async void FromQuery_Exists()
+    public async Task FromQuery_Exists()
     {
         using var repository = dbFactory.Create();
         var sql = repository.From<User>()
@@ -1688,7 +1689,7 @@ SELECT a.""Id"",a.""Name"",b.""Name"" AS ""CompanyName"" FROM ""sys_user"" a INN
         Assert.True(result.Count > 0);
     }
     [Fact]
-    public async void Query_Where_IsNull()
+    public async Task Query_Where_IsNull()
     {
         this.Initialize();
         using var repository = dbFactory.Create();
@@ -1741,7 +1742,7 @@ SELECT a.""Id"",a.""Name"",b.""Name"" AS ""CompanyName"" FROM ""sys_user"" a INN
         Assert.True(myOrders[2].TotalAmount == 0);
     }
     [Fact]
-    public async void Query_Union()
+    public async Task Query_Union()
     {
         var id1 = "1";
         var id2 = "2";
@@ -1791,7 +1792,7 @@ SELECT a.""Id"",a.""OrderNo"",a.""SellerId"",a.""BuyerId"" FROM ""sys_order"" a 
         Assert.True(result.Count > 0);
     }
     [Fact]
-    public async void Query_Union_Take()
+    public async Task Query_Union_Take()
     {
         this.Initialize();
         string id1 = "3", id2 = "2";
@@ -1916,7 +1917,7 @@ SELECT a.""Id"",a.""OrderNo"",a.""SellerId"",a.""BuyerId"" FROM ""sys_order"" a 
         Assert.True(result1.Count > 0);
     }
     [Fact]
-    public async void FromQuery_Union_Limit()
+    public async Task FromQuery_Union_Limit()
     {
         this.Initialize();
         string id1 = "4", id2 = "2";
@@ -2034,7 +2035,7 @@ SELECT * FROM (SELECT a.""Id"",a.""OrderNo"",a.""SellerId"",a.""BuyerId"" FROM "
         Assert.True(result.Count > 0);
     }
     [Fact]
-    public async void FromQuery_Union_SubQuery_OrderBy()
+    public async Task FromQuery_Union_SubQuery_OrderBy()
     {
         this.Initialize();
         string id1 = "4", id2 = "2";
@@ -2143,7 +2144,7 @@ SELECT * FROM (SELECT a.""BuyerId"",a.""OrderNo"",a.""SellerId"",CAST(a.""BuyerI
         Assert.True(result.Count > 0);
     }
     [Fact]
-    public async void Query_WithCte_SelfRef()
+    public async Task Query_WithCte_SelfRef()
     {
         this.Initialize();
         using var repository = dbFactory.Create();
@@ -2181,7 +2182,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""MenuList"" a INNER JO
         Assert.True(result.Count > 0);
     }
     [Fact]
-    public async void Query_WithNextCte()
+    public async Task Query_WithNextCte()
     {
         this.Initialize();
         int rootId = 1;
@@ -2318,7 +2319,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""MenuList"" a INNER JO
         Assert.True(result3.Count > 0);
     }
     [Fact]
-    public async void Query_WithTable()
+    public async Task Query_WithTable()
     {
         using var repository = dbFactory.Create();
         var sql = repository.From<Menu>()
@@ -2613,7 +2614,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
         Assert.True(result1.Count > 0);
     }
     [Fact]
-    public async void Insert_Returnings()
+    public async Task Insert_Returnings()
     {
         using var repository = dbFactory.Create();
         var products = new[]

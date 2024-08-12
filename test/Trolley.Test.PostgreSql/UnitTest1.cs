@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Trolley.PostgreSql;
 using Xunit;
 using Xunit.Abstractions;
@@ -60,7 +61,7 @@ public class UnitTest1 : UnitTestBase
         AppContext.SetSwitch("Npgsql.DisableDateTimeInfinityConversions", true);
     }
     [Fact]
-    public async void Insert_Parameter()
+    public async Task Insert_Parameter()
     {
         using var repository = dbFactory.Create();
         repository.Query<User>(f => f.Id == 4);
@@ -86,7 +87,7 @@ public class UnitTest1 : UnitTestBase
         Assert.Equal(1, count);
     }
     [Fact]
-    public async void Insert_RawSql()
+    public async Task Insert_RawSql()
     {
         using var repository = dbFactory.Create();
         repository.BeginTransaction();
@@ -103,7 +104,7 @@ public class UnitTest1 : UnitTestBase
         Assert.Equal(1, count);
     }
     [Fact]
-    public async void Insert_Parameters()
+    public async Task Insert_Parameters()
     {
         using var repository = dbFactory.Create();
         repository.BeginTransaction();
@@ -362,7 +363,7 @@ public class UnitTest1 : UnitTestBase
         Assert.True(user.CompanyId == 0);
     }
     [Fact]
-    public async void Insert_WithBy_Condition()
+    public async Task Insert_WithBy_Condition()
     {
         this.Initialize();
         Guid? guidField = Guid.NewGuid();
@@ -413,7 +414,7 @@ public class UnitTest1 : UnitTestBase
         Assert.Equal(1, count);
     }
     [Fact]
-    public async void Insert_WithBy_AnonymousObject_Condition()
+    public async Task Insert_WithBy_AnonymousObject_Condition()
     {
         this.Initialize();
         Guid? guidField = Guid.NewGuid();
@@ -459,7 +460,7 @@ public class UnitTest1 : UnitTestBase
         Assert.Equal(1, count);
     }
     [Fact]
-    public async void Insert_WithBy_AutoIncrement()
+    public async Task Insert_WithBy_AutoIncrement()
     {
         using var repository = dbFactory.Create();
         repository.BeginTransaction();
@@ -494,7 +495,7 @@ public class UnitTest1 : UnitTestBase
         Assert.Equal(maxId, id);
     }
     [Fact]
-    public async void Insert_WithBulk()
+    public async Task Insert_WithBulk()
     {
         using var repository = dbFactory.Create();
         var sql = repository.Create<Product>()
@@ -593,7 +594,7 @@ public class UnitTest1 : UnitTestBase
         Assert.Equal(3, count);
     }
     [Fact]
-    public async void Insert_WithBulk_Dictionaries()
+    public async Task Insert_WithBulk_Dictionaries()
     {
         using var repository = dbFactory.Create();
         repository.BeginTransaction();
@@ -646,7 +647,7 @@ public class UnitTest1 : UnitTestBase
         Assert.Equal(3, count);
     }
     [Fact]
-    public async void Insert_WithBulk_OnlyFields()
+    public async Task Insert_WithBulk_OnlyFields()
     {
         using var repository = dbFactory.Create();
         var sql = repository.Create<Product>()
@@ -812,7 +813,7 @@ public class UnitTest1 : UnitTestBase
         Assert.True(product.BrandId == brandId);
     }
     [Fact]
-    public async void Insert_Select_From_Table2()
+    public async Task Insert_Select_From_Table2()
     {
         using var repository = dbFactory.Create();
         var sql = repository.Create<OrderDetail>()
@@ -866,7 +867,7 @@ public class UnitTest1 : UnitTestBase
         Assert.True(orderDetail.Amount == product.Price * 3);
     }
     [Fact]
-    public async void Insert_Select_From_SubQuery()
+    public async Task Insert_Select_From_SubQuery()
     {
         using var repository = dbFactory.Create();
         var ordersQuery = repository.From<OrderDetail>()
@@ -1068,7 +1069,7 @@ public class UnitTest1 : UnitTestBase
         Assert.True((string)parameters2[1].Value == CompanyNature.Internet.ToString());
     }
     [Fact]
-    public async void Insert_OnConflictDoNothing()
+    public async Task Insert_OnConflictDoNothing()
     {
         this.Initialize();
         using var repository = dbFactory.Create();
@@ -1110,7 +1111,7 @@ public class UnitTest1 : UnitTestBase
         Assert.True(count == 0);
     }
     [Fact]
-    public async void Insert_OnConflictDoNothing_OnlyFields()
+    public async Task Insert_OnConflictDoNothing_OnlyFields()
     {
         this.Initialize();
         using var repository = dbFactory.Create();
@@ -1179,7 +1180,7 @@ public class UnitTest1 : UnitTestBase
         Assert.True(count == 0);
     }
     [Fact]
-    public async void Insert_OnConflictDoUpdate()
+    public async Task Insert_OnConflictDoUpdate()
     {
         using var repository = dbFactory.Create();
         UserSourceType? buyerSource = UserSourceType.Douyin;
@@ -1400,7 +1401,7 @@ public class UnitTest1 : UnitTestBase
         Assert.True(updatedOrder.TotalAmount == order.TotalAmount + 500);
     }
     [Fact]
-    public async void Insert_Returning()
+    public async Task Insert_Returning()
     {
         using var repository = dbFactory.Create();
         var sql1 = repository.Create<User>()
@@ -1486,7 +1487,7 @@ public class UnitTest1 : UnitTestBase
         Assert.True(result2.TenantId == "1");
     }
     [Fact]
-    public async void Insert_Returnings()
+    public async Task Insert_Returnings()
     {
         using var repository = dbFactory.Create();
         var products = new[]
@@ -1572,7 +1573,7 @@ public class UnitTest1 : UnitTestBase
         }
     }
     [Fact]
-    public async void Insert_BulkCopy()
+    public async Task Insert_BulkCopy()
     {
         using var repository = dbFactory.Create();
         var orders = new List<dynamic>();

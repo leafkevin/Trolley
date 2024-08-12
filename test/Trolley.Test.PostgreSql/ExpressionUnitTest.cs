@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading;
+using System.Threading.Tasks;
 using Trolley.PostgreSql;
 using Xunit;
 using Xunit.Abstractions;
@@ -130,7 +131,7 @@ public class ExpressionUnitTest : UnitTestBase
         Assert.NotNull(result);
     }
     [Fact]
-    public async void WhereCoalesceConditional()
+    public async Task WhereCoalesceConditional()
     {
         this.Initialize();
         using var repository = dbFactory.Create();
