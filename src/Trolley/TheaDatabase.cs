@@ -12,7 +12,7 @@ public class TheaDatabase
     /// 默认是数据库名字，只有明确设置才不是默认值
     /// </summary>
     public string DefaultTableSchema { get; set; }
-    public Type OrmProviderType { get; set; }
+    public OrmProviderType OrmProviderType { get; set; }
     public IOrmProvider OrmProvider { get; internal set; }
     public IEntityMapProvider MapProvider { get; internal set; }
 }

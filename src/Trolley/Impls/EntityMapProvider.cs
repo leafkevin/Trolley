@@ -7,7 +7,7 @@ namespace Trolley;
 public class EntityMapProvider : IEntityMapProvider
 {
     private readonly ConcurrentDictionary<Type, EntityMap> entityMappers = new();
-    public Type OrmProviderType { get; set; }
+    public OrmProviderType OrmProviderType { get; set; }
     public ICollection<EntityMap> EntityMaps => this.entityMappers.Values;
 
     public void AddEntityMap(Type entityType, EntityMap entityMapper) =>

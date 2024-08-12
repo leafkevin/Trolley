@@ -8,10 +8,9 @@ public sealed class OrmDbFactory : IOrmDbFactory
 {
     private OrmDbFactoryOptions options;
     private TheaDatabase defaultDatabase;
-    private Dictionary<OrmProviderType, IOrmProvider> typedOrmProviders = new();
-    private ConcurrentDictionary<Type, IOrmProvider> ormProviders = new();
+    private ConcurrentDictionary<OrmProviderType, IOrmProvider> ormProviders = new();
     private ConcurrentDictionary<string, TheaDatabase> databases = new();
-    private ConcurrentDictionary<Type, IEntityMapProvider> mapProviders = new();
+    private ConcurrentDictionary<OrmProviderType, IEntityMapProvider> mapProviders = new();
     private IShardingProvider shardingProvider = new ShardingProvider();
     private DbFilters dbFilters = new();
 
@@ -20,11 +19,10 @@ public sealed class OrmDbFactory : IOrmDbFactory
     public ICollection<IEntityMapProvider> MapProviders => this.mapProviders.Values;
     public DbFilters DbFilters => this.dbFilters;
 
-    public void Register(string dbKey, string connectionString, Type ormProviderType, bool isDefault, string defaultTableSchema = null)
+    public void Register(OrmProviderType ormProviderType, string dbKey, string connectionString, bool isDefault, string defaultTableSchema = null)
     {
         if (string.IsNullOrEmpty(dbKey)) throw new ArgumentNullException(nameof(dbKey));
         if (string.IsNullOrEmpty(connectionString)) throw new ArgumentNullException(nameof(connectionString));
-        if (ormProviderType == null) throw new ArgumentNullException(nameof(ormProviderType));
 
         TheaDatabase database = null;
         if (!this.databases.TryAdd(dbKey, database = new TheaDatabase
@@ -39,45 +37,28 @@ public sealed class OrmDbFactory : IOrmDbFactory
         if (isDefault) this.defaultDatabase = database;
         if (!this.ormProviders.ContainsKey(ormProviderType))
         {
-            var ormProvider = Activator.CreateInstance(ormProviderType) as IOrmProvider;
-            if (this.ormProviders.TryAdd(ormProviderType, ormProvider))
-                this.typedOrmProviders.TryAdd(ormProvider.OrmProviderType, ormProvider);
+            var type = this.GetOrmProviderType(ormProviderType);
+            var ormProvider = Activator.CreateInstance(type) as IOrmProvider;
+            this.ormProviders.TryAdd(ormProviderType, ormProvider);
         }
     }
     public void AddOrmProvider(IOrmProvider ormProvider)
     {
         if (ormProvider == null)
             throw new ArgumentNullException(nameof(ormProvider));
-
-        var ormProviderType = ormProvider.GetType();
-        if (this.ormProviders.TryAdd(ormProviderType, ormProvider))
-            this.typedOrmProviders.TryAdd(ormProvider.OrmProviderType, ormProvider);
-    }
-    public bool TryGetOrmProvider(Type ormProviderType, out IOrmProvider ormProvider)
-    {
-        if (ormProviderType == null)
-            throw new ArgumentNullException(nameof(ormProviderType));
-
-        return this.ormProviders.TryGetValue(ormProviderType, out ormProvider);
+        this.ormProviders.TryAdd(ormProvider.OrmProviderType, ormProvider);
     }
     public bool TryGetOrmProvider(OrmProviderType ormProviderType, out IOrmProvider ormProvider)
-        => this.typedOrmProviders.TryGetValue(ormProviderType, out ormProvider);
-    public void AddMapProvider(Type ormProviderType, IEntityMapProvider entityMapProvider)
+        => this.ormProviders.TryGetValue(ormProviderType, out ormProvider);
+    public void AddMapProvider(OrmProviderType ormProviderType, IEntityMapProvider entityMapProvider)
     {
-        if (ormProviderType == null)
-            throw new ArgumentNullException(nameof(ormProviderType));
         if (entityMapProvider == null)
             throw new ArgumentNullException(nameof(entityMapProvider));
 
         this.mapProviders.TryAdd(ormProviderType, entityMapProvider);
     }
-    public bool TryGetMapProvider(Type ormProviderType, out IEntityMapProvider entityMapProvider)
-    {
-        if (ormProviderType == null)
-            throw new ArgumentNullException(nameof(ormProviderType));
-
-        return this.mapProviders.TryGetValue(ormProviderType, out entityMapProvider);
-    }
+    public bool TryGetMapProvider(OrmProviderType ormProviderType, out IEntityMapProvider entityMapProvider)
+        => this.mapProviders.TryGetValue(ormProviderType, out entityMapProvider);
     public TheaDatabase GetDatabase(string dbKey = null)
     {
         if (string.IsNullOrEmpty(dbKey))
@@ -108,9 +89,9 @@ public sealed class OrmDbFactory : IOrmDbFactory
         var database = this.GetDatabase(localDbKey);
         var ormProviderType = database.OrmProviderType;
         if (!this.TryGetOrmProvider(ormProviderType, out var ormProvider))
-            throw new Exception($"未注册类型为{ormProviderType.FullName}的OrmProvider");
+            throw new Exception($"未注册类型为{ormProviderType}的OrmProvider对象");
         if (!this.TryGetMapProvider(ormProviderType, out var mapProvider))
-            throw new Exception($"未注册Key为{ormProviderType.FullName}的EntityMapProvider");
+            throw new Exception($"未注册Key为{ormProviderType}的EntityMapProvider对象");
         var connection = ormProvider.CreateConnection(database.ConnectionString);
         this.dbFilters.OnConnectionCreated?.Invoke(new ConectionEventArgs
         {
@@ -141,6 +122,31 @@ public sealed class OrmDbFactory : IOrmDbFactory
             throw new ArgumentNullException(nameof(optionsInitializer));
         this.options = new OrmDbFactoryOptions();
         optionsInitializer.Invoke(this.options);
+    }
+    public Type GetOrmProviderType(OrmProviderType ormProviderType)
+    {
+        string fileName = null;
+        string strOrmProviderType = null;
+        switch (ormProviderType)
+        {
+            case OrmProviderType.MySql:
+                fileName = "Trolley.MySqlConnector.dll";
+                strOrmProviderType = "Trolley.MySqlConnector.MySqlProvider, Trolley.MySqlConnector";
+                break;
+            case OrmProviderType.PostgreSql:
+                fileName = "Trolley.PostgreSql.dll";
+                strOrmProviderType = "Trolley.PostgreSql.PostgreSqlProvider, Trolley.PostgreSql";
+                break;
+            case OrmProviderType.SqlServer:
+                fileName = "Trolley.SqlServer.dll";
+                strOrmProviderType = "Trolley.SqlServer.SqlServerProvider, Trolley.SqlServer";
+                break;
+        }
+        var type = Type.GetType(strOrmProviderType);
+        var packageName = fileName.Replace(".dll", "");
+        if (type == null)
+            throw new DllNotFoundException($"没有找到[{fileName}]文件，或是没有引入[{packageName}]nuget包");
+        return type;
     }
     public void Build()
     {

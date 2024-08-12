@@ -14,12 +14,11 @@ public interface IOrmDbFactory
     bool TryGetShardingTable(Type entityType, out ShardingTable shardingTable);
     void AddShardingTable(Type entityType, ShardingTable shardingTable);
 
-    void Register(string dbKey, string connectionString, Type ormProviderType, bool isDefault, string defaultTableSchema = null);
+    void Register(OrmProviderType ormProviderType, string dbKey, string connectionString, bool isDefault, string defaultTableSchema = null);
     void AddOrmProvider(IOrmProvider ormProvider);
-    bool TryGetOrmProvider(Type ormProviderType, out IOrmProvider ormProvider);
     bool TryGetOrmProvider(OrmProviderType ormProviderType, out IOrmProvider ormProvider);
-    void AddMapProvider(Type ormProviderType, IEntityMapProvider mapProvider);
-    bool TryGetMapProvider(Type ormProviderType, out IEntityMapProvider mapProvider);
+    void AddMapProvider(OrmProviderType ormProviderType, IEntityMapProvider mapProvider);
+    bool TryGetMapProvider(OrmProviderType ormProviderType, out IEntityMapProvider mapProvider);
     TheaDatabase GetDatabase(string dbKey = null);
     /// <summary>
     /// 使用指定的dbKey，创建仓储对象。

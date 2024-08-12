@@ -20,25 +20,14 @@ public static class Extensions
     private static readonly ConcurrentDictionary<int, Delegate> queryReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<int, Delegate> readerValueConverterCache = new();
 
-    public static IOrmDbFactory Configure<TOrmProvider>(this IOrmDbFactory dbFactory, IModelConfiguration configuration) where TOrmProvider : class, IOrmProvider, new()
+    public static void Configure(this IOrmDbFactory dbFactory, OrmProviderType ormProviderType, IModelConfiguration configuration)
     {
-        var ormProviderType = typeof(TOrmProvider);
         if (!dbFactory.TryGetMapProvider(ormProviderType, out var mapProvider))
-        {
-            if (!dbFactory.TryGetOrmProvider(ormProviderType, out _))
-                dbFactory.AddOrmProvider(new TOrmProvider());
-            dbFactory.AddMapProvider(ormProviderType, new EntityMapProvider { OrmProviderType = ormProviderType });
-        }
+            dbFactory.AddMapProvider(ormProviderType, mapProvider = new EntityMapProvider() { OrmProviderType = ormProviderType });
         configuration.OnModelCreating(new ModelBuilder(mapProvider));
-        return dbFactory;
     }
-    public static IOrmDbFactory Configure<TOrmProvider, TModelConfiguration>(this IOrmDbFactory dbFactory)
-        where TOrmProvider : class, IOrmProvider, new()
-        where TModelConfiguration : class, IModelConfiguration, new()
-    {
-        dbFactory.Configure<TOrmProvider>(new TModelConfiguration());
-        return dbFactory;
-    }
+    public static void Configure<TModelConfiguration>(this IOrmDbFactory dbFactory, OrmProviderType ormProviderType) where TModelConfiguration : class, IModelConfiguration, new()
+       => dbFactory.Configure(ormProviderType, new TModelConfiguration());
     public static string GetQuotedValue(this IOrmProvider ormProvider, object value)
         => ormProvider.GetQuotedValue(value.GetType(), value);
     public static EntityMap GetEntityMap(this IEntityMapProvider mapProvider, Type entityType)
