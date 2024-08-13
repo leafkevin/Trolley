@@ -5,6 +5,7 @@ cd $PSScriptRoot
 $projects = (
 	"Trolley",
 	"Trolley.MySqlConnector",
+	"Trolley.PostgreSql",
 	"Trolley.SqlServer"
 )
 Remove-Item *.nupkg -recurse

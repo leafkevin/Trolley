@@ -1,14 +1,36 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFramework>net6.0</TargetFramework>
+		<AssemblyName>Trolley.PostgreSql</AssemblyName>
+		<PackageId>$(AssemblyName)</PackageId>
+		<Title>$(AssemblyName)</Title>
+		<Description>Trolley的MySql、Mariadb数据库提供程序</Description>
+		<Authors>leaf kevin</Authors>
+		<Copyright>2022 leafkevin</Copyright>
+		<TargetFrameworks>net6.0</TargetFrameworks>
 		<Version>2.0.5</Version>
+		<PackageTags>orm;trolley;postgresql;npgsql</PackageTags>
+		<PublishRepositoryUrl>true</PublishRepositoryUrl>
+		<PackageProjectUrl>https://github.com/leafkevin/Trolley</PackageProjectUrl>
+		<RepositoryType>git</RepositoryType>
+		<RepositoryUrl>https://github.com/leafkevin/Trolley</RepositoryUrl>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<Deterministic>false</Deterministic>
+		<DebugSymbols>true</DebugSymbols>
+		<SignAssembly>true</SignAssembly>
 		<IncludeSymbols>true</IncludeSymbols>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<AssemblyOriginatorKeyFile>key.snk</AssemblyOriginatorKeyFile>
 	</PropertyGroup>
 	<ItemGroup>
+		<None Include="..\..\README.md">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
 		<PackageReference Include="Npgsql" Version="8.0.3" />
-	</ItemGroup>
-	<ItemGroup>
 		<ProjectReference Include="..\Trolley\Trolley.csproj" />
 	</ItemGroup>
 </Project>
