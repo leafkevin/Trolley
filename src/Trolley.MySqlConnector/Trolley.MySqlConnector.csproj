@@ -14,7 +14,6 @@
 		<RepositoryType>git</RepositoryType>
 		<RepositoryUrl>https://github.com/leafkevin/Trolley</RepositoryUrl>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
-		<Deterministic>false</Deterministic>
 		<DebugSymbols>true</DebugSymbols>
 		<SignAssembly>true</SignAssembly>
 		<IncludeSymbols>true</IncludeSymbols>
