@@ -1306,7 +1306,9 @@ var count = repository.Create<Product>(new[]
 //INSERT INTO `sys_product` (`Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id0,@ProductNo0,@Name0,@BrandId0,@CategoryId0,@IsEnabled0,@CreatedAt0,@CreatedBy0,@UpdatedAt0,@UpdatedBy0),(@Id1,@ProductNo1,@Name1,@BrandId1,@CategoryId1,@IsEnabled1,@CreatedAt1,@CreatedBy1,@UpdatedAt1,@UpdatedBy1),(@Id2,@ProductNo2,@Name2,@BrandId2,@CategoryId2,@IsEnabled2,@CreatedAt2,@CreatedBy2,@UpdatedAt2,@UpdatedBy2)
 ```
 
-#### 自增长列，无需为自增长列赋值，并返回增长的ID值。在字段映射的时候需要设置为自增长列`AutoIncrement()`。
+#### 自增长列，无需为自增长列赋值，并返回增长的ID值
+在字段映射的时候需要设置为自增长列`AutoIncrement()`
+
 ```csharp
 int CreateIdentity<TEntity>(object insertObj);
 Task<int> CreateIdentityAsync<TEntity>(object insertObj, CancellationToken cancellationToken = default);
@@ -1349,9 +1351,8 @@ var result = repository.CreateIdentity<Company>(new Dictionary<string, object>()
 #### 使用`Create<User>()`方法，支持更复杂的场景
 WithBy方法可以多次调用
 
-支持带条件的插入字段数据，也可以使用匿名对象。使用匿名对象的好处，没有的字段将不会插入值。
-这样可避免基础类型插入了默认值，如：整型插入`0`,字符串类型插入了`''`等。
-或者插入的列数据赋值`null`或不赋值，也不会插入空字符串数据
+支持带条件的插入字段数据，可以使用命名、匿名对象、字典类型(Dictionary<string, object>)等参数完成。使用匿名对象的好处，没有的字段将不会插入值。
+这样可避免基础类型插入了默认值，如：整型插入`0`,字符串类型插入了`''`等，或者插入的列数据赋值`null`或不赋值，也不会插入空字符串数据
 
 ```csharp
 var sql = repository.Create<User>()
@@ -1427,7 +1428,8 @@ var count = repository.Create<Order>()
 ```
 
 #### 使用`WithBulk`方法，支持批量操作
-`Trolley`的批量新增采用的是多表值方式，就是`INSERT TABLE(...) VALUES(..),(...),(...)...`
+`Trolley`的批量新增采用的是多表值方式，就是`INSERT TABLE(...) VALUES(..),(...),(...)...`  
+`WithBulk`之后，可以继续使用`WithBy`,`OnlyFields`,`IgnoreFields`方法  
 这种方式相对于普通插入方式性能要高，但不适合大批量，适合小批量的，可设置单次入库的数据条数，可根据表插入字段个数和条数，设置一个性能最高的条数  
 通常会有一个插入性能最高的阈值，高于或低于这个阈值，批量插入的性能都会有所下降，这个阈值和数据库类型、插入字段的个数,参数个数，都有关系。  
 
@@ -1838,6 +1840,41 @@ var count = await repository.Create<OrderDetail>()
 //INSERT INTO `sys_order_detail` (`Id`,`OrderId`,`ProductId`,`Price`,`Quantity`,`Amount`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT @Id,a.`Id`,b.`Id`,b.`Price`,@Quantity,b.`Price`*3,a.`IsEnabled`,a.`CreatedBy`,a.`CreatedAt`,a.`UpdatedBy`,a.`UpdatedAt` FROM `sys_order` a,`sys_product` b WHERE a.`Id`=3 AND b.`Id`=1
 ```
 
+#### `Insert From`支持CTE子句
+与子查询`From`用法一样，把`CTE`表当作一个子查询处理，不同的的数据库生成的`SQL`会有些不同
+```csharp
+var ordersQuery = repository.From<OrderDetail>()
+    .GroupBy(f => f.OrderId)
+    .Select((x, f) => new
+    {
+	Id = f.OrderId,
+	TenantId = "1",
+	OrderNo = $"ON-{f.OrderId}",
+	BuyerId = 1,
+	SellerId = 1,
+	BuyerSource = UserSourceType.Taobao.ToString(),
+	ProductCount = 2,
+	TotalAmount = x.Sum(f.Amount),
+	IsEnabled = true,
+	CreatedAt = DateTime.Now,
+	CreatedBy = 1,
+	UpdatedAt = DateTime.Now,
+	UpdatedBy = 1
+    })
+    .AsCteTable("orders");
+var result = await repository.Create<Order>()
+    .From(ordersQuery)
+    .ExecuteAsync();
+//INSERT INTO `sys_order` (`Id`,`TenantId`,`OrderNo`,`BuyerId`,`SellerId`,`BuyerSource`,`ProductCount`,`TotalAmount`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) WITH 
+`orders`(`Id`,`TenantId`,`OrderNo`,`BuyerId`,`SellerId`,`BuyerSource`,`ProductCount`,`TotalAmount`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) AS 
+(
+SELECT a.`OrderId`,'1',CONCAT('ON-',a.`OrderId`),1,1,'Taobao',2,SUM(a.`Amount`),1,NOW(),1,NOW(),1 FROM `sys_order_detail` a GROUP BY a.`OrderId`
+)
+SELECT b.`Id`,b.`TenantId`,b.`OrderNo`,b.`BuyerId`,b.`SellerId`,b.`BuyerSource`,b.`ProductCount`,b.`TotalAmount`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy` FROM `orders` b
+```
+
+
+
 #### 本地化`mysql`/`mariadb`数据库支持
 支持`IgnoreInto`,`OnDuplicateKeyUpdate`操作，单条插入、批量插入，都可以使用
 
@@ -1863,8 +1900,7 @@ SQL: INSERT IGNORE INTO `sys_user` (`Id`,`TenantId`,`Name`,`Age`,`CompanyId`,`Ge
 ```
 
 #### `OnDuplicateKeyUpdate`支持三种方式
-直接使用参数，使用`VALUES`带别名，一种不带别名，根据`mysql`/`mariadb`的版本决定使用哪个
-推荐使用VALUES方式
+直接使用参数Set，或者使用`VALUES`带别名，或是不带别名进行Set都可以，却决于`mysql`/`mariadb`的版本，推荐使用`VALUES`方式
 
 ```csharp
 //直接使用参数方式
@@ -2080,17 +2116,17 @@ SQL: INSERT INTO [sys_product] ([Id],[ProductNo],[Name],[BrandId],[CategoryId],[
 
 
 
-#### 更新
-支持匿名对象、实体对象、字典参数更新
-支持单条、批量操作，也支持`BulkCopy`
-对`enum`,`null`做了特殊支持
-批量更新，支持匿名对象、字典参数更新，是`By`主键更新
+### 更新
+支持命名、匿名对象、字典参数更新，支持单条、批量操作，也支持`BulkCopy`  
+对`enum`,`null`做了特殊支持  
+批量更新，是`By`主键更新的
 
 
 #### 基本简单操作
-支持单条、批量操作
-匿名对象、实体对象、字典参数都可以
-使用匿名对象，存在的字段将会更新
+支持单条、批量操作  
+命名、匿名对象、字典参数都可以  
+使用匿名对象，存在的字段将会参与更新  
+
 ```csharp
 var result = repository.Update<User>(new { Id = 1, Name = "leafkevin11" });
 //UPDATE `sys_user` SET `Name`=@Name WHERE `Id`=@kId
@@ -2102,7 +2138,7 @@ var result = repository.Update<User>(f => new { Name = f.Name + "_1", Gender = G
 ```
 
 #### 对`null`的支持
-直接使用匿名对象，对应字段设置为DBNull.Value，或是使用`From Set`直接设置`null`
+直接使用匿名对象，对应字段设置为DBNull.Value，或是直接设置`null`也可以
 
 ```csharp
 //部分表达式更新，部分参数更新，更新的字段由前面的表达式指定，Where条件是主键
@@ -2134,21 +2170,136 @@ var result = repository.Update<OrderDetail>(parameters);
 
 #### 使用Update<T>，支持各种复杂更新操作
 
-#### WithBy 单条更新
+#### Set单条更新
+一个或多个字段更新，直接使用参数，也可以是表达式，都需要有`Where`子句  
+`Set`字句后，可以继续使用`OnlyFields`和`IgnoreFields`方法，也可以多次调用`Set`方法
+参数可以是命名对象、匿名对象或是字典对象
+
+
+#### Set参数
 ```csharp
-//WithBy 单个更新，Where条件是主键
-var result = repository.Update<User>().WithBy(new { Name = "leafkevin1", Id = 1 }).Execute();
-//UPDATE `sys_user` SET `Name`=@Name WHERE `Id`=@kId
+result = repository.Update<Order>()
+    .Set(new
+    {
+        parameter.TotalAmount,
+        Products = new List<int> { 1, 2, 3 },
+        Disputes = new Dispute
+        {
+            Id = 1,
+            Content = "43dss",
+            Users = "1,2",
+            Result = "OK",
+            CreatedAt = DateTime.Now
+        }
+    })
+  .Where(x => x.Id == "1")
+  .Execute();
+//UPDATE `sys_order` SET `TotalAmount`=@TotalAmount,`Products`=@Products,`Disputes`=@Disputes WHERE `Id`='1'
+//Products和Disputes都是实体类型属性，有指定`JsonTypeHandler`类型处理器，会调用`JsonTypeHandler`.`ToFieldValue`方法序列化成字符串，再变成参数完成后续的更新操作
+
+//字典参数
+var updateObj = new Dictionary<string, object>();
+updateObj.Add("ProductCount", result2.ProductCount + 1);
+updateObj.Add("TotalAmount", result2.TotalAmount + 100);
+result = repository.Update<Order>()
+    .Set(updateObj)
+    .Where(new { Id = "1" })
+    .Execute();
+//UPDATE `sys_order` SET `ProductCount`=@ProductCount,`TotalAmount`=@TotalAmount WHERE `Id`=@kId
 ```
+#### Set参数后，可以继续调用`OnlyFields`和`IgnoreFields`方法
+```csharp
+OnlyFields方法
+repository.Update<User>()
+    .Set(new
+    {
+        Age = 30,
+        Name = "leafkevinabc",
+        CompanyId = 1
+    })
+    .OnlyFields(f => f.Name)
+    .Where(f => f.Id == 1)
+    .Execute();
+//UPDATE `sys_user` SET `Name`=@Name WHERE `Id`=1
+
+IgnoreFields方法
+repository.Update<User>()
+    .Set(new
+    {
+        Age = 25,
+        Name = "leafkevin22",
+        CompanyId = DBNull.Value
+    })
+    .IgnoreFields(f => f.Name)
+    .Where(f => f.Id == 1)
+    .Execute();
+//UPDATE `sys_user` SET `Age`=@Age,`CompanyId`=@CompanyId WHERE `Id`=1
+```
+
+#### Set表达式
+除了可以使用参数外，也可以引用原值，实现自增、自减...等运算操作
+
+```csharp
+//多个字段更新，表达式
+var result = repository.Update<Order>()
+    .Set(f => new
+    {
+        parameter.TotalAmount,
+        Products = new List<int> { 1, 2, 3 },
+        Disputes = new Dispute
+        {
+            Id = 1,
+            Content = "43dss",
+            Users = "1,2",
+            Result = "OK",
+            CreatedAt = DateTime.Now
+        }
+    })
+    .Where(x => x.Id == "1")
+    .Execute();
+//UPDATE `sys_order` SET `TotalAmount`=@p0,`Products`=@p1,`Disputes`=@p2 WHERE `Id`='1'
+```
+
+自增、自减...等 运算操作
+```csharp
+//多个字段更新，表达式
+var result = repository.Update<Order>()
+    .Set(f => new
+    {
+        TotalAmount = f.TotalAmount + 50,
+        Products = new List<int> { 1, 2, 3 }
+    })
+    .Where(x => x.Id == "1")
+    .Execute();
+//UPDATE `sys_order` SET `TotalAmount`=`TotalAmount`+50,`Products`=@p0 WHERE `Id`='1'
+```
+
+#### Set方法可多次调用
+参数、表达式交替使用
+```csharp
+var count = await repository.Update<Order>()
+    .Set(new { TotalAmount = 300d })
+    .Set(x => x.OrderNo, "ON_111")
+    .Set(f => new { BuyerId = DBNull.Value })
+    .Where(a => a.Id == "1")
+    .ExecuteAsync();
+//UPDATE `sys_order` SET `TotalAmount`=@TotalAmount,`OrderNo`=@OrderNo,`BuyerId`=NULL WHERE `Id`='1'
+```
+
 	
-#### WithBy 批量更新
-Where条件是主键
+#### WithBulk 批量更新
+`Where`条件是主键，`WithBulk`之后，可以继续使用`WithBy`,`OnlyFields`,`IgnoreFields`方法  
+生成的SQL是多个UPDATE语句拼接在一起后的SQL，这种方式相对于普通插入方式性能要高，但不适合大批量，适合小批量的，可设置单次入库的数据条数，可根据表插入字段个数和条数，设置一个性能最高的条数  
+通常会有一个插入性能最高的阈值，高于或低于这个阈值，批量插入的性能都会有所下降，这个阈值和数据库类型、插入字段的个数,参数个数，都有关系。
+
 ```csharp
 var parameters = await repository.From<OrderDetail>()
     .Where(f => new int[] { 1, 2, 3, 4, 5, 6 }.Contains(f.Id))
     .Select(f => new { f.Id, Price = f.Price + 80, Quantity = f.Quantity + 2, Amount = f.Amount + 100 })
     .ToListAsync();
-var sql = repository.Update<OrderDetail>().WithBy(parameters).ToSql(out _);
+var sql = repository.Update<OrderDetail>()
+    .WithBulk(parameters)
+    .ToSql(out _);
 //UPDATE `sys_order_detail` SET `Price`=@Price0,`Quantity`=@Quantity0,`Amount`=@Amount0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Price`=@Price1,`Quantity`=@Quantity1,`Amount`=@Amount1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Price`=@Price2,`Quantity`=@Quantity2,`Amount`=@Amount2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `Price`=@Price3,`Quantity`=@Quantity3,`Amount`=@Amount3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `Price`=@Price4,`Quantity`=@Quantity4,`Amount`=@Amount4 WHERE `Id`=@kId4;UPDATE `sys_order_detail` SET `Price`=@Price5,`Quantity`=@Quantity5,`Amount`=@Amount5 WHERE `Id`=@kId5
 ```
 
@@ -2166,6 +2317,15 @@ var sql = repository.Update<OrderDetail>()
 //原理同上
 ```
 
+var result = repository.Update<OrderDetail>()
+    .SetBulk(parameters)
+    .OnlyFields(f => new
+    {
+        f.Price,
+        f.Quantity
+    })
+    .Execute();
+    
 #### Set子句
 支持1个或多个字段，也支持子查询字段
 
