@@ -2912,13 +2912,17 @@ services.AddSingleton(f =>
                 .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =>
                 {
                     var tableNames = new List<string>();
-                    var current = beginTime;
+                    var current = beginTime.AddDays(1 - beginTime.Day);
                     while (current <= endTime)
                     {
                         var tableName = $"{origName}_{tenantId}_{current:yyyyMM}";
                         if (tableNames.Contains(tableName))
+                        {
+                            current = current.AddMonths(1);
                             continue;
+                        }
                         tableNames.Add(tableName);
+                        current = current.AddMonths(1);
                     }
                     return tableNames;
                 });
@@ -2932,13 +2936,17 @@ services.AddSingleton(f =>
                 .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =>
                 {
                     var tableNames = new List<string>();
-                    var current = beginTime;
+                    var current = beginTime.AddDays(1 - beginTime.Day);
                     while (current <= endTime)
                     {
                         var tableName = $"{origName}_{tenantId}_{current:yyyyMM}";
                         if (tableNames.Contains(tableName))
+                        {
+                            current = current.AddMonths(1);
                             continue;
+                        }
                         tableNames.Add(tableName);
+                        current = current.AddMonths(1);
                     }
                     return tableNames;
                 });

@@ -1483,7 +1483,7 @@ public class UnitTest6 : UnitTestBase
             })
             .OrderByDescending(f => f.Id)
             .ToSql(out _);
-        Assert.Equal(sql, "SELECT a.[Id],a.[TenantId],a.[OrderNo],a.[TotalAmount] FROM [sys_order_104_202405] a ORDER BY a.[Id] DESC");
+        Assert.Equal("SELECT a.[Id],a.[TenantId],a.[OrderNo],a.[TotalAmount] FROM [sys_order_104_202405] a ORDER BY a.[Id] DESC", sql);
         var orders = repository.From<Order>()
             .UseTableByRange("104", beginTime, endTime)
             .Select(f => new
@@ -1513,7 +1513,7 @@ public class UnitTest6 : UnitTestBase
            })
            .OrderByDescending(f => f.Id)
            .ToSql(out _);
-        Assert.Equal(sql, "SELECT a.[Id],a.[TenantId],b.[Name] AS [BuyerName],a.[TotalAmount] FROM [sys_order_104_202405] a INNER JOIN [sys_user_104] b ON a.[BuyerId]=b.[Id] ORDER BY a.[Id] DESC");
+        Assert.Equal("SELECT a.[Id],a.[TenantId],b.[Name] AS [BuyerName],a.[TotalAmount] FROM [sys_order_104_202405] a INNER JOIN [sys_user_104] b ON a.[BuyerId]=b.[Id] ORDER BY a.[Id] DESC", sql);
         var orderInfos = repository.From<Order>()
             .UseTableByRange("104", beginTime, endTime)
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
