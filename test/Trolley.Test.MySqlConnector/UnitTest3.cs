@@ -482,9 +482,11 @@ public class UnitTest3 : UnitTestBase
             Assert.True(result2.Id == "1");
             Assert.True(result2.ProductCount == 11);
         }
-        var updateObj = new Dictionary<string, object>();
-        updateObj.Add("ProductCount", result2.ProductCount + 1);
-        updateObj.Add("TotalAmount", result2.TotalAmount + 100);
+        var updateObj = new Dictionary<string, object>
+        {
+            { "ProductCount", result2.ProductCount + 1 },
+            { "TotalAmount", result2.TotalAmount + 100 }
+        };
         repository.BeginTransaction();
         result = repository.Update<Order>()
             .Set(updateObj)
@@ -899,11 +901,11 @@ public class UnitTest3 : UnitTestBase
         Assert.True(sql == "UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT SUM(b.`Amount`) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=@OrderNo,a.`BuyerId`=NULL WHERE a.`BuyerId`=1");
 
         var origValues = await repository.From<Order, OrderDetail>()
-        .InnerJoin((x, y) => x.Id == y.OrderId)
-        .Where((a, b) => a.BuyerId == 1)
-        .GroupBy((a, b) => new { a.Id, a.OrderNo, a.BuyerId })
-        .Select((x, a, b) => new { x.Grouping, TotalAmount = x.Sum(b.Amount) })
-        .ToListAsync();
+            .InnerJoin((x, y) => x.Id == y.OrderId)
+            .Where((a, b) => a.BuyerId == 1)
+            .GroupBy((a, b) => new { a.Id, a.OrderNo, a.BuyerId })
+            .Select((x, a, b) => new { x.Grouping, TotalAmount = x.Sum(b.Amount) })
+            .ToListAsync();
 
         await repository.BeginTransactionAsync();
         var result = repository.Update<Order>()
@@ -1300,9 +1302,9 @@ public class UnitTest3 : UnitTestBase
         Assert.True((string)parameters7[1].Value == Gender.Male.ToString());
 
         var sql4 = repository.Update<Company>()
-             .Set(new { Nature = CompanyNature.Internet })
-             .Where(new { Id = 1 })
-             .ToSql(out var parameters4);
+            .Set(new { Nature = CompanyNature.Internet })
+            .Where(new { Id = 1 })
+            .ToSql(out var parameters4);
         Assert.True(sql4 == "UPDATE `sys_company` SET `Nature`=@Nature WHERE `Id`=@kId");
         Assert.True(parameters4[0].ParameterName == "@Nature");
         Assert.True(parameters4[0].Value.GetType() == typeof(string));
@@ -1425,14 +1427,6 @@ public class UnitTest3 : UnitTestBase
                 SellerId = 2,
                 TotalAmount = 500,
                 Products = new List<int> { 1, 2 },
-                //Disputes = new Dispute
-                //{
-                //    Id = i + 1,
-                //    Content = "无良商家",
-                //    Result = "同意退款",
-                //    Users = "Buyer2,Seller2",
-                //    CreatedAt = DateTime.Now
-                //},
                 IsEnabled = true,
                 CreatedAt = DateTime.Now,
                 CreatedBy = 1,
@@ -1471,12 +1465,6 @@ public class UnitTest3 : UnitTestBase
 
         Assert.True(count == orders.Count);
     }
-    private double CalcAmount(double price, double amount)
-    {
-        return price * amount - 150;
-    }
-    private int[] GetProducts()
-    {
-        return new int[] { 1, 2, 3 };
-    }
+    private double CalcAmount(double price, double amount) => price * amount - 150;
+    private int[] GetProducts() => new int[] { 1, 2, 3 };
 }

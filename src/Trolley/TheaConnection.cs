@@ -46,8 +46,6 @@ public sealed class TheaConnection : IDbConnection
     }
     public ConnectionState State => this.BaseConnection.State;
 
-    public event StateChangeEventHandler StateChange;
-
     public TheaConnection(IDbConnection connection)
     {
         this.ConnectionId = Guid.NewGuid().ToString("N");

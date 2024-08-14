@@ -184,6 +184,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
 
         //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不对
+        if (isManySharding)
+            isManySharding = this.ShardingTables != null && this.ShardingTables[0].TableNames != null && this.ShardingTables[0].TableNames.Count > 1;
         bool isNeedWrap = (this.IsUnion || this.IsSecondUnion || isManySharding) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue);
         if (isNeedWrap)
         {
@@ -330,6 +332,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
 
         //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不正确
+        if (isManySharding)
+            isManySharding = this.ShardingTables != null && this.ShardingTables[0].TableNames != null && this.ShardingTables[0].TableNames.Count > 1;
         bool isNeedWrap = (this.IsUnion || this.IsSecondUnion || isManySharding) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue);
         if (isNeedWrap)
         {

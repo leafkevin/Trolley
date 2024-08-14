@@ -23,7 +23,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     public IDbTransaction Transaction { get; set; }
     public bool IsParameterized { get; set; }
     public int CommandTimeout { get; set; }
-    public DbInterceptors DbFilters { get; set; }
+    public DbInterceptors DbInterceptors { get; set; }
     public bool IsNeedClose => this.Transaction == null;
     #endregion
 
@@ -32,7 +32,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     {
         var connection = this.OrmProvider.CreateConnection(this.ConnectionString);
         this.Connection = new TheaConnection(connection);
-        this.DbFilters.OnConnectionCreated?.Invoke(new ConectionEventArgs
+        this.DbInterceptors.OnConnectionCreated?.Invoke(new ConectionEventArgs
         {
             ConnectionId = this.Connection.ConnectionId,
             ConnectionString = this.ConnectionString,
@@ -1032,7 +1032,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         if (this.Connection.State == ConnectionState.Broken)
         {
             this.Connection.Close();
-            this.DbFilters.OnConnectionClosed?.Invoke(new ConectionEventArgs
+            this.DbInterceptors.OnConnectionClosed?.Invoke(new ConectionEventArgs
             {
                 ConnectionId = this.Connection.ConnectionId,
                 ConnectionString = this.ConnectionString,
@@ -1045,7 +1045,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             //关闭后，连接串被重置，需要重新设置
             this.Connection.ConnectionString = this.ConnectionString;
-            this.DbFilters.OnConnectionOpening?.Invoke(new ConectionEventArgs
+            this.DbInterceptors.OnConnectionOpening?.Invoke(new ConectionEventArgs
             {
                 ConnectionId = this.Connection.ConnectionId,
                 ConnectionString = this.ConnectionString,
@@ -1054,7 +1054,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                 CreatedAt = DateTime.Now
             });
             this.Connection.Open();
-            this.DbFilters.OnConnectionOpened?.Invoke(new ConectionEventArgs
+            this.DbInterceptors.OnConnectionOpened?.Invoke(new ConectionEventArgs
             {
                 ConnectionId = this.Connection.ConnectionId,
                 ConnectionString = this.ConnectionString,
@@ -1070,7 +1070,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             throw new NotSupportedException("当前数据库驱动不支持异步操作");
         if (connection.State == ConnectionState.Broken)
         {
-            this.DbFilters.OnConnectionClosing?.Invoke(new ConectionEventArgs
+            this.DbInterceptors.OnConnectionClosing?.Invoke(new ConectionEventArgs
             {
                 ConnectionId = this.Connection.ConnectionId,
                 ConnectionString = this.ConnectionString,
@@ -1079,7 +1079,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                 CreatedAt = DateTime.Now
             });
             await connection.CloseAsync();
-            this.DbFilters.OnConnectionClosed?.Invoke(new ConectionEventArgs
+            this.DbInterceptors.OnConnectionClosed?.Invoke(new ConectionEventArgs
             {
                 ConnectionId = this.Connection.ConnectionId,
                 ConnectionString = this.ConnectionString,
@@ -1092,7 +1092,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             //关闭后，连接串被重置，需要重新设置
             connection.ConnectionString = this.ConnectionString;
-            this.DbFilters.OnConnectionOpening?.Invoke(new ConectionEventArgs
+            this.DbInterceptors.OnConnectionOpening?.Invoke(new ConectionEventArgs
             {
                 ConnectionId = this.Connection.ConnectionId,
                 ConnectionString = this.ConnectionString,
@@ -1101,7 +1101,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                 CreatedAt = DateTime.Now
             });
             await connection.OpenAsync(cancellationToken);
-            this.DbFilters.OnConnectionOpened?.Invoke(new ConectionEventArgs
+            this.DbInterceptors.OnConnectionOpened?.Invoke(new ConectionEventArgs
             {
                 ConnectionId = this.Connection.ConnectionId,
                 ConnectionString = this.ConnectionString,
@@ -1164,7 +1164,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         if (this.Connection == null) return;
         if (this.Connection.State == ConnectionState.Closed)
             return;
-        this.DbFilters.OnConnectionClosing?.Invoke(new ConectionEventArgs
+        this.DbInterceptors.OnConnectionClosing?.Invoke(new ConectionEventArgs
         {
             ConnectionId = this.Connection.ConnectionId,
             ConnectionString = this.ConnectionString,
@@ -1173,7 +1173,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             CreatedAt = DateTime.Now
         });
         this.Connection.Close();
-        this.DbFilters.OnConnectionClosed?.Invoke(new ConectionEventArgs
+        this.DbInterceptors.OnConnectionClosed?.Invoke(new ConectionEventArgs
         {
             ConnectionId = this.Connection.ConnectionId,
             ConnectionString = this.ConnectionString,
@@ -1190,7 +1190,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         if (this.Connection.BaseConnection is not DbConnection connection)
             throw new NotSupportedException("当前数据库驱动不支持异步操作");
 
-        this.DbFilters.OnConnectionClosing?.Invoke(new ConectionEventArgs
+        this.DbInterceptors.OnConnectionClosing?.Invoke(new ConectionEventArgs
         {
             ConnectionId = this.Connection.ConnectionId,
             ConnectionString = this.ConnectionString,
@@ -1199,7 +1199,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             CreatedAt = DateTime.Now
         });
         await connection.CloseAsync();
-        this.DbFilters.OnConnectionClosed?.Invoke(new ConectionEventArgs
+        this.DbInterceptors.OnConnectionClosed?.Invoke(new ConectionEventArgs
         {
             ConnectionId = this.Connection.ConnectionId,
             ConnectionString = this.ConnectionString,
@@ -1318,24 +1318,12 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             var origMasterName = masterTableSegment.Mapper.TableName;
             for (int i = 0; i < loopCount; i++)
             {
-                if (i > 0) builder.Append(jointMark);
+                if (builder.Length > 0) builder.Append(jointMark);
                 var masterTableName = masterTableSegment.TableNames[i];
                 var sql = formatSql.Replace($"__SHARDING_{masterTableSegment.ShardingId}_{origMasterName}", masterTableName);
 
-                for (int j = 1; j < visitor.ShardingTables.Count; j++)
-                {
-                    var tableSegment = visitor.ShardingTables[j];
-                    var origName = tableSegment.Mapper.TableName;
-
-                    //如果主表分表名不存在，直接忽略本次关联                       
-                    var tableName = tableSegment.ShardingMapGetter.Invoke(this.DbKey, origMasterName, origName, masterTableName);
-                    //主表存在分表，但从表不存在分表，直接忽略本次关联
-                    //TOTO:此处需要记录日志
-                    if (!tableSegment.TableNames.Exists(f => f == tableName))
-                        continue;
-                    sql = sql.Replace($"__SHARDING_{tableSegment.ShardingId}_{origName}", tableName);
-                }
-                builder.Append(sql);
+                if (this.GetdShardingMapTableName(visitor, origMasterName, masterTableName, sql, out sql))
+                    builder.Append(sql);
             }
         }
         else
@@ -1356,6 +1344,24 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         builder = null;
         return result;
     }
+    private bool GetdShardingMapTableName(SqlVisitor visitor, string origMasterName, string masterTableName, string formatSql, out string sql)
+    {
+        sql = formatSql;
+        for (int j = 1; j < visitor.ShardingTables.Count; j++)
+        {
+            var tableSegment = visitor.ShardingTables[j];
+            var origName = tableSegment.Mapper.TableName;
+
+            //如果主表分表名不存在，直接忽略本次关联
+            var tableName = tableSegment.ShardingMapGetter.Invoke(this.DbKey, origMasterName, origName, masterTableName);
+            //主表存在分表，但从表不存在分表，直接忽略本次关联
+            //TOTO:此处需要记录日志
+            if (!tableSegment.TableNames.Exists(f => f == tableName))
+                return false;
+            sql = sql.Replace($"__SHARDING_{tableSegment.ShardingId}_{origName}", tableName);
+        }
+        return true;
+    }
     public CommandEventArgs AddCommandBeforeFilter(IDbCommand command, CommandSqlType sqlType)
     {
         var eventArgs = new CommandEventArgs
@@ -1368,14 +1374,14 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             OrmProvider = this.OrmProvider,
             CreatedAt = DateTime.Now
         };
-        this.DbFilters.OnCommandExecuting?.Invoke(eventArgs);
+        this.DbInterceptors.OnCommandExecuting?.Invoke(eventArgs);
         return eventArgs;
     }
     public CommandEventArgs AddCommandNextBeforeFilter(IDbCommand command, CommandEventArgs eventArgs)
     {
         eventArgs.Sql = command.CommandText;
         eventArgs.DbParameters = command.Parameters;
-        this.DbFilters.OnCommandExecuting?.Invoke(eventArgs);
+        this.DbInterceptors.OnCommandExecuting?.Invoke(eventArgs);
         return eventArgs;
     }
     public CommandEventArgs AddCommandBeforeFilter(CommandSqlType sqlType, CommandEventArgs eventArgs)
@@ -1392,7 +1398,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             };
         }
         else eventArgs.BulkIndex++;
-        this.DbFilters.OnCommandExecuting?.Invoke(eventArgs);
+        this.DbInterceptors.OnCommandExecuting?.Invoke(eventArgs);
         return eventArgs;
     }
     public CommandEventArgs AddCommandBeforeFilter(IDbCommand command, CommandSqlType sqlType, CommandEventArgs eventArgs)
@@ -1416,14 +1422,14 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             eventArgs.DbParameters = command.Parameters;
             eventArgs.BulkIndex++;
         }
-        this.DbFilters.OnCommandExecuting?.Invoke(eventArgs);
+        this.DbInterceptors.OnCommandExecuting?.Invoke(eventArgs);
         return eventArgs;
     }
     public void AddCommandAfterFilter(IDbCommand command, CommandSqlType sqlType, CommandEventArgs eventArgs, bool isSuccess = true, Exception exception = null)
     {
         if (eventArgs == null)
         {
-            this.DbFilters.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs
+            this.DbInterceptors.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs
             {
                 IsSuccess = isSuccess,
                 CommandId = Guid.NewGuid().ToString("N"),
@@ -1439,7 +1445,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         }
         else
         {
-            this.DbFilters.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs(eventArgs)
+            this.DbInterceptors.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs(eventArgs)
             {
                 IsSuccess = isSuccess,
                 Exception = exception
@@ -1450,7 +1456,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     {
         if (eventArgs == null)
         {
-            this.DbFilters.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs
+            this.DbInterceptors.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs
             {
                 IsSuccess = false,
                 CommandId = Guid.NewGuid().ToString("N"),
@@ -1466,7 +1472,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         }
         else
         {
-            this.DbFilters.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs(eventArgs)
+            this.DbInterceptors.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs(eventArgs)
             {
                 IsSuccess = false,
                 Exception = exception

@@ -48,13 +48,17 @@ public class UnitTest6 : UnitTestBase
                         .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =>
                         {
                             var tableNames = new List<string>();
-                            var current = beginTime;
+                            var current = beginTime.AddDays(1 - beginTime.Day);
                             while (current <= endTime)
                             {
                                 var tableName = $"{origName}_{tenantId}_{current:yyyyMM}";
                                 if (tableNames.Contains(tableName))
+                                {
+                                    current = current.AddMonths(1);
                                     continue;
+                                }
                                 tableNames.Add(tableName);
+                                current = current.AddMonths(1);
                             }
                             return tableNames;
                         });
@@ -68,13 +72,17 @@ public class UnitTest6 : UnitTestBase
                         .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =>
                         {
                             var tableNames = new List<string>();
-                            var current = beginTime;
+                            var current = beginTime.AddDays(1 - beginTime.Day);
                             while (current <= endTime)
                             {
                                 var tableName = $"{origName}_{tenantId}_{current:yyyyMM}";
                                 if (tableNames.Contains(tableName))
+                                {
+                                    current = current.AddMonths(1);
                                     continue;
+                                }
                                 tableNames.Add(tableName);
+                                current = current.AddMonths(1);
                             }
                             return tableNames;
                         });
@@ -533,14 +541,14 @@ public class UnitTest6 : UnitTestBase
            .Where(f => f.Id == 102)
            .FirstAsync();
         Assert.NotNull(result);
-        Assert.True(result.TenantId == "105");
+        Assert.Equal("105", result.TenantId);
 
         result = await repository.From<User>()
            .UseTableBy("105")
            .Where(f => f.Id == 103)
            .FirstAsync();
         Assert.NotNull(result);
-        Assert.True(result.TenantId == "105");
+        Assert.Equal("105", result.TenantId);
     }
     [Fact]
     public async Task Create_WithBulk_WithoutUseTable()
@@ -1455,5 +1463,74 @@ public class UnitTest6 : UnitTestBase
             Assert.True(orders[i].ProductCount == updatedOrders[i].ProductCount);
             Assert.True(updatedOrders[i].TenantId == "104" || updatedOrders[i].TenantId == "105");
         }
+    }
+    [Fact]
+    public async Task Update_ManySharding_Range()
+    {
+        await this.InitSharding();
+        var beginTime = DateTime.Parse("2020-01-01");
+        var endTime = DateTime.Parse("2024-12-31");
+        using var repository = dbFactory.Create();
+        var sql = repository.From<Order>()
+            .UseTableByRange("104", beginTime, endTime)
+            .Select(f => new
+            {
+                f.Id,
+                f.TenantId,
+                f.OrderNo,
+                f.TotalAmount
+            })
+            .OrderByDescending(f => f.Id)
+            .ToSql(out _);
+        Assert.Equal(sql, "SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`TotalAmount` FROM `sys_order_104_202405` a ORDER BY a.`Id` DESC");
+        var orders = repository.From<Order>()
+            .UseTableByRange("104", beginTime, endTime)
+            .Select(f => new
+            {
+                f.Id,
+                f.TenantId,
+                f.OrderNo,
+                f.TotalAmount
+            })
+            .OrderByDescending(f => f.Id)
+            .ToList();
+
+        sql = repository.From<Order>()
+           .UseTableByRange("104", beginTime, endTime)
+           .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
+           .UseTable<Order>((dbKey, orderOrigName, userOrigName, orderTableName) =>
+           {
+               var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+               return tableName.Substring(0, tableName.Length - 7);
+           })
+           .Select((x, y) => new
+           {
+               x.Id,
+               x.TenantId,
+               BuyerName = y.Name,
+               x.TotalAmount
+           })
+           .OrderByDescending(f => f.Id)
+           .ToSql(out _);
+        Assert.Equal(sql, "SELECT a.`Id`,a.`TenantId`,b.`Name` AS `BuyerName`,a.`TotalAmount` FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ORDER BY a.`Id` DESC");
+        var orderInfos = repository.From<Order>()
+            .UseTableByRange("104", beginTime, endTime)
+            .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
+            .UseTable<Order>((dbKey, orderOrigName, userOrigName, orderTableName) =>
+            {
+                var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+                return tableName[..^7];
+            })
+            .Select((x, y) => new
+            {
+                x.Id,
+                x.TenantId,
+                BuyerName = y.Name,
+                x.TotalAmount
+            })
+            .OrderByDescending(f => f.Id)
+            .ToList();
+
+        Assert.Equal(orders.Count, orderInfos.Count);
     }
 }

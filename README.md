@@ -7,14 +7,14 @@
 强类型的DDD仓储操作，基本可以不用写SQL，支持多种数据库终端，目前是在.NET 6 基础上开发的。
 目前支持：`MySql`,`PostgreSql`,`SqlSever`,其他的`OrmProvider`会稍后慢慢提供。
 
-支持`Page`分页查询
-支持`Join`，`GroupBy`，`OrderBy`等操作
-支持`Count`, `Max`, `Min`， `Avg`，`Sum`等聚合操作
-支持`In`，`Exists`操作
-支持`Insert Select From`，`Update Join`
-支持批量`Insert`，`Update`，`Delete`
-支持`BulkCopy`插入，`BulkCopy`更新
-支持导航属性，值对象导航属性(瘦身版模型)
+支持`Page`分页查询  
+支持`Join`，`GroupBy`，`OrderBy`等操作  
+支持`Count`, `Max`, `Min`， `Avg`，`Sum`等聚合操作  
+支持`In`，`Exists`操作  
+支持`Insert Select From`，`Update Join`  
+支持批量`Insert`，`Update`，`Delete`  
+支持`BulkCopy`插入，`BulkCopy`更新  
+支持`Include`导航属性，值对象导航属性(瘦身版模型)  
 支持模型映射，采用流畅API方式，目前不支持特性方式映射  
 支持分库，分表
 
@@ -270,7 +270,7 @@ var result = repository.Get<Product>(new { Id = 1 });
 ```
 
 
-### `From`查询，支持各种复杂场景，支持分表操作
+### `From`&lt;T...&gt;()查询，支持各种复杂场景，支持分表操作
 
 #### 简单表达式查询
 
@@ -497,7 +497,7 @@ var sql = repository.From<User>()
         TotalAmount = x.Sum(b.TotalAmount)
     })
     .ToSql(out _);
-//SELECT a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) AS `Date`,COUNT(b.`Id`) AS `OrderCount`,SUM(b.`TotalAmount`) AS `TotalAmount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` WHERE a.`Id` IN (1,2,3) AND EXISTS(SELECT * FROM `sys_order_detail` f WHERE b.`Id`=f.`OrderId` AND f.`ProductId`=2) GROUP BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) HAVING SUM(b.`TotalAmount`)>300 ORDER BY a.`Id`,CONVERT(b.`CreatedAt`,DATE)");
+//SELECT a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) AS `Date`,COUNT(b.`Id`) AS `OrderCount`,SUM(b.`TotalAmount`) AS `TotalAmount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` WHERE a.`Id` IN (1,2,3) AND EXISTS(SELECT * FROM `sys_order_detail` f WHERE b.`Id`=f.`OrderId` AND f.`ProductId`=2) GROUP BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) HAVING SUM(b.`TotalAmount`)>300 ORDER BY a.`Id`,CONVERT(b.`CreatedAt`,DATE)
  ```
 
 子查询
@@ -764,16 +764,15 @@ var sql = repository
     .ToSql(out _);
 //SQL:
 SELECT * FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id`<3 ORDER BY a.`Id` LIMIT 1) a UNION ALL
-SELECT * FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id`>2 LIMIT 1) a"
+SELECT * FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id`>2 LIMIT 1) a
 ```
 > 注意：
 > 带有`OrderBy`和`Take`的`Union`，会生成一个子查询，在里面完成`OrderBy`和`Take`操作
 
 
 #### `CTE`支持
-`CTE`其实也是一个子查询，使用`AsCteTable(string tableName)`方法把一个子查询包装成一个`CTE`表
-可以在查询中直接使用，也可以单独声明使用，两者效果是一样的
-在`CTE`的子查询中，可以使用`UnionAllRecursive`方法，完成自身引用实现递归查询
+`CTE`其实也是一个子查询，使用`AsCteTable(string tableName)`方法把一个子查询包装成一个`CTE`表，可以在查询中直接使用，也可以单独声明使用，两者效果是一样的  
+在`CTE`的子查询中，可以使用`UnionAllRecursive`或`UnionRecursive`方法，完成自身引用实现递归查询
 
 
 #### 直接在查询中使用
@@ -781,15 +780,14 @@ SELECT * FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_orde
 int menuId = 2;
 int pageId = 1;
 var sql = repository
-	.From(f => f.From<Menu>()
-		.Where(t => t.Id >= menuId)
-		.Select(x => new { x.Id, x.Name, x.ParentId, x.PageId })
-		.AsCteTable("MenuList"))
-	.InnerJoin<Page>((a, b) => a.Id == b.Id)
-	.Where((x, y) => y.Id >= pageId)
-	.Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
-	.ToList();
-
+    .From(f => f.From<Menu>()
+        .Where(t => t.Id >= menuId)
+        .Select(x => new { x.Id, x.Name, x.ParentId, x.PageId })
+        .AsCteTable("MenuList"))
+    .InnerJoin<Page>((a, b) => a.Id == b.Id)
+    .Where((x, y) => y.Id >= pageId)
+    .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
+    .ToList();
 SQL:
 WITH `MenuList`(`Id`,`Name`,`ParentId`,`PageId`) AS 
 (
@@ -897,6 +895,53 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
 > 注意： 一般CTE常用来处理树形结构递归操作，比如：根据当前角色获取菜单列表
 > 从叶子找菜单根，或是从菜单根查找所有叶子，都是递归CTE的常用场景
 
+
+
+#### 多语句查询 QueryMultiple
+`Trolley`提供多语句查询，通过调用下面方法实现，不需要写SQL  
+每个子句都可以使用上面用到的所有查询方法
+
+```csharp
+IMultiQueryReader QueryMultiple(Action<IMultipleQuery> subQueries);
+Task<IMultiQueryReader> QueryMultipleAsync(Action<IMultipleQuery> subQueries, CancellationToken cancellationToken = default);
+```
+
+```csharp
+using var repository = dbFactory.Create();
+var reader = await repository.QueryMultipleAsync(f => f
+    .Get<User>(new { Id = 1 })
+    .Exists<Order>(f => f.BuyerId.IsNull())
+    .From<Order>()
+        .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
+        .Where((x, y) => x.Id == "1")
+        .Select((x, y) => new { x.Id, x.OrderNo, x.BuyerId, BuyerName = y.Name, x.TotalAmount })
+        .First()
+    .QueryFirst<User>(new { Id = 2 })
+    .From<Product>()
+        .Include(f => f.Brand)
+        .Where(f => f.ProductNo.Contains("PN-00"))
+        .ToList()
+    .From(f => f.From<Order, OrderDetail>('a')
+            .Where((a, b) => a.Id == b.OrderId && a.Id == "1")
+            .GroupBy((a, b) => new { a.BuyerId, OrderId = a.Id })
+            .Having((x, a, b) => Sql.CountDistinct(b.ProductId) > 0)
+            .Select((x, a, b) => new { a.Id, x.Grouping, ProductTotal = Sql.CountDistinct(b.ProductId), BuyerId1 = x.Grouping.BuyerId }))
+        .InnerJoin<User>((x, y) => x.Grouping.BuyerId == y.Id)
+        .Select((x, y) => new { x.Id, x.Grouping, x.Grouping.BuyerId, x.ProductTotal, BuyerName = y.Name, BuyerId2 = x.BuyerId1 })
+        .First());
+var sql = reader.ToSql(out var dbParameters);
+var userInfo = await reader.ReadFirstAsync<User>();
+var isExists = await reader.ReadFirstAsync<bool>();
+var orderInfo = await reader.ReadFirstAsync<dynamic>();
+var userInfo2 = await reader.ReadFirstAsync<User>();
+var products = await reader.ReadAsync<Product>();
+var groupedOrderInfo = await reader.ReadFirstAsync<dynamic>();
+
+//生成的SQL，用;拼接在一起
+//SELECT `Id`,`TenantId`,`Name`,`Gender`,`Age`,`CompanyId`,`SomeTimes`,`GuidField`,`SourceType`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_user` WHERE `Id`=@Id_m0;SELECT COUNT(1) FROM `sys_order` a WHERE a.`BuyerId` IS NULL;SELECT a.`Id`,a.`OrderNo`,a.`BuyerId`,b.`Name` AS `BuyerName`,a.`TotalAmount` FROM `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` WHERE a.`Id`='1';SELECT `Id`,`TenantId`,`Name`,`Gender`,`Age`,`CompanyId`,`SomeTimes`,`GuidField`,`SourceType`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_user` WHERE `Id`=@Id_m3;SELECT a.`Id`,a.`ProductNo`,a.`Name`,a.`BrandId`,a.`CategoryId`,a.`Price`,a.`CompanyId`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,b.`Id`,b.`BrandNo`,b.`Name` FROM `sys_product` a LEFT JOIN `sys_brand` b ON a.`BrandId`=b.`Id` WHERE a.`ProductNo` LIKE '%PN-00%';SELECT a.`Id`,a.`BuyerId`,a.`OrderId`,a.`BuyerId`,a.`ProductTotal`,b.`Name` AS `BuyerName`,a.`BuyerId1` AS `BuyerId2` FROM (SELECT a.`Id`,a.`BuyerId`,a.`Id` AS `OrderId`,COUNT(DISTINCT b.`ProductId`) AS `ProductTotal`,a.`BuyerId` AS `BuyerId1` FROM `sys_order` a,`sys_order_detail` b WHERE a.`Id`=b.`OrderId` AND a.`Id`='1' GROUP BY a.`BuyerId`,a.`Id` HAVING COUNT(DISTINCT b.`ProductId`)>0) a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id`
+
+上面语句`var groupedOrderInfo = await reader.ReadFirstAsync<dynamic>();`中，尽管使用了`dynamic`关键字，其实里面的类型就是`.Select((x, y) => new { x.Id, x.Grouping, x.Grouping.BuyerId, x.ProductTotal, BuyerName = y.Name, BuyerId2 = x.BuyerId1 })`方法返回的类型
+```
 
 
 
@@ -1078,7 +1123,7 @@ private string DeferInvoke() => "DeferInvoke";
 ```
 
 #### 使用`ToParameter`方法，指定参数名称
-子查询或是单独的`CTE`表包含参数，与查询语句中参数重复，导致报错无法执行，可以使用本方法更改参数名
+子查询或是单独的`CTE`表包含参数，与查询语句中参数名重复，导致报错无法执行，可以使用本方法更改参数名
 
 ```csharp
 int rootId = 1;
@@ -1102,8 +1147,9 @@ var result = repository.Query<(int OrderId, string OrderNo, double TotalAmount)>
 > 注意：
 > 有`DTO`对象接收，有`SelectFlattenTo`方法支持，无需使用`ValueTuple`
 
+
 #### `IsNull`扩展方法
-有两个方法
+有两个方法，前者主要用于`WHERE`条件判断，后者主要用在`SELECT`中`NULL`值的默认值
 ```csharp
 bool IsNull<TField>(this TField field)
 TField IsNull<TField>(this TField field, TField nullVaueExpr)
@@ -1112,8 +1158,12 @@ TField IsNull<TField>(this TField field, TField nullVaueExpr)
 有时候数据库字段是可为空的，实体字段却不是可为空类型的，需要判断是否为空，可以使用本方法
 ```csharp
 var result = repository.From<Order>()
-   .Where(f => f.BuyerId.IsNull())
-   .First();
+	.Where(x => x.ProductCount == null || x.BuyerId.IsNull())
+	.And(true, f => !f.ProductCount.HasValue)
+	.Select(x => x.Id)
+	.ToList();
+//SELECT a.`Id` FROM `sys_order` a WHERE (a.`ProductCount` IS NULL OR a.`BuyerId` IS NULL) AND a.`ProductCount` IS NULL
+
 
 var sql = repository.From<Order>()
    .Where(x => x.ProductCount.IsNull(0) > 0 || x.BuyerId.IsNull(0) >= 0)
@@ -1126,6 +1176,7 @@ var sql = repository.From<Order>()
        TotalAmount = f.TotalAmount.IsNull(0)
    })
    .ToSql(out _);
+//SELECT a.`Id`,a.`OrderNo`,IFNULL(a.`ProductCount`,0) AS `ProductCount`,IFNULL(a.`BuyerId`,0) AS `BuyerId`,IFNULL(a.`TotalAmount`,0) AS `TotalAmount` FROM `sys_order` a WHERE IFNULL(a.`ProductCount`,0)>0 OR IFNULL(a.`BuyerId`,0)>=0
 ```
 
 
@@ -1180,25 +1231,26 @@ services.AddSingleton(f =>
 {
     //添加一个默认数据库和两个租户数据库
     var builder = new OrmDbFactoryBuilder()
-    .Register<MySqlProvider>(OrmProviderType.MySql, "fengling", "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true", true)
-    .Register<MySqlProvider>(OrmProviderType.MySql, "fengling_tenant1", "Server=localhost;Database=fengling_tenant1;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true", false)
-    .Register<MySqlProvider>(OrmProviderType.MySql, "fengling_tenant2", "Server=localhost;Database=fengling_tenant2;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true", false)
-    .UseSharding(s =>
-    {
-        //分库规则
-        s.UseDatabase(() =>
+        .Register(OrmProviderType.MySql, "fengling", "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true", true)
+        .Register(OrmProviderType.MySql, "fengling_tenant1", "Server=localhost;Database=fengling_tenant1;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true", false)
+        .Register(OrmProviderType.MySql, "fengling_tenant2", "Server=localhost;Database=fengling_tenant2;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true", false)
+        .UseSharding(s =>
         {
-            //可以硬编码分库，也可以使用redis，映射表 ...，其他方式等
-            var passport = f.GetService<IPassport>();
-            return passport.TenantId switch
+            //分库规则
+            s.UseDatabase(() =>
             {
-                "200" => "fengling_tenant1",
-                "300" => "fengling_tenant2",
-                _ => "fengling"
-            };
-        })
-	...
-    }
+                //可以硬编码分库，也可以使用redis，映射表 ...，其他方式等
+                var passport = f.GetService<IPassport>();
+                return passport.TenantId switch
+                {
+                    "200" => "fengling_tenant1",
+                    "300" => "fengling_tenant2",
+                    _ => "fengling"
+                };
+            })
+	    ...
+        });
+	return builder.Build();
 });
 var serviceProvider = services.BuildServiceProvider();
 dbFactory = serviceProvider.GetService<IOrmDbFactory>();
@@ -1209,13 +1261,23 @@ using var repository = this.dbFactory.CreateRepository();
 ```
 
 
+### `dbKey`的选取逻辑：
+按照以下步骤选取`dbKey`  
+  1. 如果有指定`dbKey`，优先使用指定的`dbKey`，创建`IRepository`对象  
+  2. 如果有指定分库规则，则使用分库规则获取`dbKey`，创建`IRepository`对象  
+  3. 都没有指定，就选取配置的默认数据库的`dbKey`，创建`IRepository`对象
+```csharp
+using var repository = this.dbFactory.CreateRepository("fengling");
+using var repository = this.dbFactory.CreateRepository();
+```
+
 
 
 
 各种操作命令
 ------------------------------------------------------------
 `Trolley`的所有插入、更新操作，都可以使用命名、匿名对象、字典类型(Dictionary<string, object>)等参数完成，
-插入和更新接口支持得比较丰富，基本大多数场景都支持，对`enum`,`null`都做了支持，还支持特殊的本地化数据库操作，比如：mySql的Insert Ignore, OnDuplicateKeyUpdate等
+插入和更新、删除接口支持得比较丰富，基本大多数场景都支持，对`enum`,`null`都做了支持，还支持特殊的本地化数据库操作，比如：mySql的Insert Ignore, OnDuplicateKeyUpdate等
 所有插入、更新、删除操作都支持批量操作，插入和更新还支持`BulkCopy`操作
 
 
@@ -1348,7 +1410,7 @@ var result = repository.CreateIdentity<Company>(new Dictionary<string, object>()
 //INSERT INTO `sys_company` (`Name`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES(@Name,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy);SELECT @@IDENTITY
 ```
 
-#### 使用`Create<User>()`方法，支持更复杂的场景
+#### 使用`Create&lt;T&gt;()`方法，支持更复杂的场景
 WithBy方法可以多次调用
 
 支持带条件的插入字段数据，可以使用命名、匿名对象、字典类型(Dictionary<string, object>)等参数完成。使用匿名对象的好处，没有的字段将不会插入值。
@@ -2123,37 +2185,59 @@ SQL: INSERT INTO [sys_product] ([Id],[ProductNo],[Name],[BrandId],[CategoryId],[
 
 
 #### 基本简单操作
-支持单条、批量操作  
+支持单条、批量操作   
 命名、匿名对象、字典参数都可以  
-使用匿名对象，存在的字段将会参与更新  
+使用匿名对象，存在的字段将会参与更新 
 
+
+#### 直接使用参数，By主键更新
 ```csharp
+//直接使用参数，By主键更新
 var result = repository.Update<User>(new { Id = 1, Name = "leafkevin11" });
 //UPDATE `sys_user` SET `Name`=@Name WHERE `Id`=@kId
-var result = repository.Update<User>(f => f.Name, new { Id = 1, Name = "leafkevin11" });
-//UPDATE `sys_user` SET `Name`=@Name WHERE `Id`=@kId
-var result = repository.Update<User>(f => new { Name = f.Name + "_1", Gender = Gender.Female }, t => t.Id == 1);
-//UPDATE `sys_user` SET `Name`=CONCAT(`Name`,'_1'),`Gender`=@Gender WHERE `Id`=1
+```
 
+#### 用表达式，Where条件更新
+```csharp
+//使用表达式，Where条件更新
+var result = repository.Update<User>(f => new
+    {
+        parameter.TotalAmount, //直接赋值，使用同名变量
+        Products = this.GetProducts(), //直接赋值，使用本地函数
+        BuyerId = DBNull.Value, //直接赋值 NULL
+        Disputes = new Dispute { ... } //实体对象由JsonTypeHandler序列化后再变成参数
+    }, x => x.Id == 1);
+//UPDATE `sys_order` SET `TotalAmount`=@TotalAmount,`Products`=@Products,`BuyerId`=NULL,`Disputes`=@Disputes WHERE `Id`=1
 ```
 
 #### 对`null`的支持
-直接使用匿名对象，对应字段设置为DBNull.Value，或是直接设置`null`也可以
-
+直接使用匿名对象，对应字段设置为DBNull.Value，或是可为空列直接设置`null`也可以，如上例
 ```csharp
-//部分表达式更新，部分参数更新，更新的字段由前面的表达式指定，Where条件是主键
-var result = repository.Update<User>(f => new { Age = 25, f.Name, CompanyId = DBNull.Value }, new { Id = 1, Age = 18, Name = "leafkevin22" });
-//UPDATE `sys_user` SET `Age`=25,`CompanyId`=NULL,`Name`=@Name WHERE `Id`=@kId
-//说明：
-//Age = 25 ，CompanyId = DBNull.Value 表达式更新，直接以SQL形式更新
-//DBNull.Value ,null 都可用来更新NULL字段
-//f.Name 只成员访问，将作为后面参数更新的字段
-//后面参数的中，有Age字段，但是前面的表达式是 Age = 25，所以不生效，如果是 f.Age ,后面的参数就生效了
+var sql = repository.Update<Order>()
+    .Set(x => new
+    {
+        BuyerId = DBNull.Value,
+        Seller = (int?)null
+    })
+    .Where(x => x.OrderNo == null)
+    .ToSql(out _);
+//UPDATE `sys_order` SET `BuyerId`=NULL,`Seller`=NULL WHERE `OrderNo` IS NULL
 ```
 
-#### 批量参数更新
+#### 对`enum`的支持
+更新枚举列字段，会根据数据字段类型，自动转换为对应的类型
 ```csharp
-//批量参数更新，`Where`条件是主键，其他的更新字段由表达式指定
+repository.Update<User>(new { Id = 1, Gender = Gender.Male });
+//UPDATE `sys_user` SET `Gender`=@Gender WHERE `Id`=@kId
+//根据主键Id=1条件更新，Gender字段数据库的类型是varchar(50)，字段赋值时给的时枚举值，更新数据库时会把对应的枚举值名称保存到数据库中。
+```
+
+
+#### 批量参数更新
+By主键更新，一定要包含主键列，只能使用参数方式
+
+```csharp
+//批量参数更新，`Where`条件是主键，除主键外其他的字段将参与更新
 var parameters = await repository.From<OrderDetail>()
     .GroupBy(f => f.OrderId)
     .OrderBy((x, f) => f.OrderId)
@@ -2168,7 +2252,9 @@ var result = repository.Update<OrderDetail>(parameters);
 ```
 
 
-#### 使用Update<T>，支持各种复杂更新操作
+
+
+#### 使用Update&lt;T&gt;，支持各种复杂更新操作
 
 #### Set单条更新
 一个或多个字段更新，直接使用参数，也可以是表达式，都需要有`Where`子句  
@@ -2176,7 +2262,16 @@ var result = repository.Update<OrderDetail>(parameters);
 参数可以是命名对象、匿名对象或是字典对象
 
 
-#### Set参数
+#### Set参数 单字段
+```csharp
+result = repository.Update<Order>()
+    .Set(new { parameter.TotalAmount })
+    .Where(x => x.Id == "1")
+    .Execute();
+//UPDATE `sys_order` SET `TotalAmount`=@TotalAmount WHERE `Id`='1'
+```
+
+#### Set参数 多字段
 ```csharp
 result = repository.Update<Order>()
     .Set(new
@@ -2192,12 +2287,14 @@ result = repository.Update<Order>()
             CreatedAt = DateTime.Now
         }
     })
-  .Where(x => x.Id == "1")
-  .Execute();
+    .Where(x => x.Id == "1")
+    .Execute();
 //UPDATE `sys_order` SET `TotalAmount`=@TotalAmount,`Products`=@Products,`Disputes`=@Disputes WHERE `Id`='1'
 //Products和Disputes都是实体类型属性，有指定`JsonTypeHandler`类型处理器，会调用`JsonTypeHandler`.`ToFieldValue`方法序列化成字符串，再变成参数完成后续的更新操作
+```
 
-//字典参数
+#### Set参数 字典参数
+```csharp
 var updateObj = new Dictionary<string, object>();
 updateObj.Add("ProductCount", result2.ProductCount + 1);
 updateObj.Add("TotalAmount", result2.TotalAmount + 100);
@@ -2236,11 +2333,21 @@ repository.Update<User>()
 //UPDATE `sys_user` SET `Age`=@Age,`CompanyId`=@CompanyId WHERE `Id`=1
 ```
 
-#### Set表达式
+#### Set表达式 单字段
 除了可以使用参数外，也可以引用原值，实现自增、自减...等运算操作
 
 ```csharp
 //多个字段更新，表达式
+var result = repository.Update<Order>()
+    .Set(f => f.Age, 20)
+    .Where(x => x.Id == "1")
+    .Execute();
+//UPDATE `sys_order` SET `Age`=@p0 WHERE `Id`='1'
+```
+
+#### Set表达式 多字段
+
+```csharp
 var result = repository.Update<Order>()
     .Set(f => new
     {
@@ -2260,7 +2367,9 @@ var result = repository.Update<Order>()
 //UPDATE `sys_order` SET `TotalAmount`=@p0,`Products`=@p1,`Disputes`=@p2 WHERE `Id`='1'
 ```
 
-自增、自减...等 运算操作
+#### Set表达式 原值引用，自增、自减...等 运算操作
+除了可以使用参数外，也可以引用原值，实现自增、自减...等运算操作
+
 ```csharp
 //多个字段更新，表达式
 var result = repository.Update<Order>()
@@ -2286,87 +2395,111 @@ var count = await repository.Update<Order>()
 //UPDATE `sys_order` SET `TotalAmount`=@TotalAmount,`OrderNo`=@OrderNo,`BuyerId`=NULL WHERE `Id`='1'
 ```
 
-	
-#### WithBulk 批量更新
-`Where`条件是主键，`WithBulk`之后，可以继续使用`WithBy`,`OnlyFields`,`IgnoreFields`方法  
-生成的SQL是多个UPDATE语句拼接在一起后的SQL，这种方式相对于普通插入方式性能要高，但不适合大批量，适合小批量的，可设置单次入库的数据条数，可根据表插入字段个数和条数，设置一个性能最高的条数  
-通常会有一个插入性能最高的阈值，高于或低于这个阈值，批量插入的性能都会有所下降，这个阈值和数据库类型、插入字段的个数,参数个数，都有关系。
-
+#### SetFrom 单字段联表更新
+某个字段值是从一个或多个表联合查询出来的，支持以下三种方式
 ```csharp
-var parameters = await repository.From<OrderDetail>()
-    .Where(f => new int[] { 1, 2, 3, 4, 5, 6 }.Contains(f.Id))
-    .Select(f => new { f.Id, Price = f.Price + 80, Quantity = f.Quantity + 2, Amount = f.Amount + 100 })
-    .ToListAsync();
-var sql = repository.Update<OrderDetail>()
-    .WithBulk(parameters)
-    .ToSql(out _);
-//UPDATE `sys_order_detail` SET `Price`=@Price0,`Quantity`=@Quantity0,`Amount`=@Amount0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Price`=@Price1,`Quantity`=@Quantity1,`Amount`=@Amount1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Price`=@Price2,`Quantity`=@Quantity2,`Amount`=@Amount2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `Price`=@Price3,`Quantity`=@Quantity3,`Amount`=@Amount3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `Price`=@Price4,`Quantity`=@Quantity4,`Amount`=@Amount4 WHERE `Id`=@kId4;UPDATE `sys_order_detail` SET `Price`=@Price5,`Quantity`=@Quantity5,`Amount`=@Amount5 WHERE `Id`=@kId5
+SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment);
+SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
+SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector);
 ```
 
 ```csharp
-//WithBy 部分表达式，部分参数 批量更新 Where条件是主键
-var parameters = await repository.From<OrderDetail>()
-    .Where(f => new int[] { 1, 2, 3, 4, 5, 6 }.Contains(f.Id))
-    .Select(f => new { f.Id, Price = f.Price + 80, Quantity = f.Quantity + 2, Amount = f.Amount + 100 })
-    .ToListAsync();
-var sql = repository.Update<OrderDetail>()
-    .WithBy(f => new { Price = 200, f.Quantity, UpdatedBy = 2, f.Amount, ProductId = DBNull.Value }, parameters)
-    .ToSql(out _);
-//UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity0,`Amount`=@Amount0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity1,`Amount`=@Amount1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity2,`Amount`=@Amount2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity3,`Amount`=@Amount3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity4,`Amount`=@Amount4 WHERE `Id`=@kId4;UPDATE `sys_order_detail` SET `Price`=200,`UpdatedBy`=2,`ProductId`=NULL,`Quantity`=@Quantity5,`Amount`=@Amount5 WHERE `Id`=@kId5
-	
-//原理同上
-```
-
-var result = repository.Update<OrderDetail>()
-    .SetBulk(parameters)
-    .OnlyFields(f => new
+await repository.Update<Order>()
+    .SetFrom((x, y) => new
     {
-        f.Price,
-        f.Quantity
+        TotalAmount = x.From<OrderDetail>('b')
+            .Where(f => f.OrderId == y.Id)
+            .Select(t => Sql.Sum(t.Amount))
     })
-    .Execute();
-    
-#### Set子句
-支持1个或多个字段，也支持子查询字段
-
-```csharp
-var sql = repository.Update<Order>()
-    //new 表达式支持多字段
-    .Set((a, b) => new
-    {
-	TotalAmount = a.From<OrderDetail>('b')
-	    .Where(f => f.OrderId == b.Id)
-	    .Select(t => Sql.Sum(t.Amount)),
-	OrderNo = b.OrderNo + "_111",
-	BuyerId = DBNull.Value
-    })
-    .Where(a => a.BuyerId == 1)
-    .ToSql(out _);
-//UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT SUM(b.`Amount`) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`BuyerId`=1
-```
-	
-```csharp
-//Set子句 From 多个字段，与其他Set子句一起使用，单个字段、多个字段都支持
-var sql = repository.Update<Order>()
-    //new 表达式支持多字段 
-    .Set((a, b) => new
-    {
-	TotalAmount = a.From<OrderDetail>('b')
-	    .Where(f => f.OrderId == b.Id)
-	    .Select(t => Sql.Sum(t.Amount))
-    })
-    //单个字段+值方式
     .Set(x => x.OrderNo, "ON_111")
-    //单个字段、多个字段 表达式方式
     .Set(f => new { BuyerId = DBNull.Value })
     .Where(a => a.BuyerId == 1)
-    .ToSql(out _);
+    .ExecuteAsync();
+//UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT SUM(b.`Amount`) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=@OrderNo,a.`BuyerId`=NULL WHERE a.`BuyerId`=1
+
+result = repository.Update<Order>()
+    .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
+    .SetFrom(f => f.TotalAmount, (x, y) => x.From<OrderDetail>('c')
+        .Where(f => f.OrderId == y.Id)
+        .Select(t => Sql.Sum(t.Amount)))
+    .Set((a, b) => new { OrderNo = a.OrderNo + " - " + b.Id.ToString() })
+    .Set((x, y) => new { BuyerId = DBNull.Value })
+    .Where((x, y) => x.Id == "2")
+    .Execute();
+```
+
+#### Set、SetFrom方法可多次调用，也可结合`OnlyFields`和`IgnoreFields`方法使用
+```csharp
+await repository.Update<Order>()
+    .SetFrom((x, y) => new
+    {
+        TotalAmount = x.From<OrderDetail>('b')
+            .Where(f => f.OrderId == y.Id)
+            .Select(t => Sql.Sum(t.Amount))
+    })
+    .Set(x => x.OrderNo, "ON_111")
+    .Set(f => new { BuyerId = DBNull.Value })
+    .Where(a => a.BuyerId == 1)
+    .ExecuteAsync();
 //UPDATE `sys_order` a SET a.`TotalAmount`=(SELECT SUM(b.`Amount`) FROM `sys_order_detail` b WHERE b.`OrderId`=a.`Id`),a.`OrderNo`=@OrderNo,a.`BuyerId`=NULL WHERE a.`BuyerId`=1
 ```
 
-Update<T> InnerJoin/LeftJoin 联合表更新
-支持的数据库：
-MySql
+
+	
+#### SetBulk 批量更新
+By主键更新，`SetBulk`之后，可以继续使用`Set`,`SetFrom`,`OnlyFields`,`IgnoreFields`方法  
+生成的SQL是多个UPDATE语句拼接在一起后的SQL，这种方式相对于普通更新方式性能要高，但不适合大批量，适合小批量的，可设置单次更新的数据条数，可根据表更新字段个数和条数，设置一个性能最高的条数  
+通常会有一个更新性能最高的阈值，高于或低于这个阈值，批量更新的性能都会有所下降，这个阈值和数据库类型、更新字段的个数，参数个数，都有关系。
+
+```csharp
+var parameters = await repository.From<OrderDetail>()
+    .Where(f => new int[] { 1, 2, 3, 4, 5, 6 }.Contains(f.Id))
+    .Select(f => new { f.Id, Price = f.Price + 80, Quantity = f.Quantity + 2, Amount = f.Amount + 100 })
+    .ToListAsync();
+var result = repository.Update<OrderDetail>()
+    .WithBulk(parameters)
+    .Execute();
+//UPDATE `sys_order_detail` SET `Price`=@Price0,`Quantity`=@Quantity0,`Amount`=@Amount0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Price`=@Price1,`Quantity`=@Quantity1,`Amount`=@Amount1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Price`=@Price2,`Quantity`=@Quantity2,`Amount`=@Amount2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `Price`=@Price3,`Quantity`=@Quantity3,`Amount`=@Amount3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `Price`=@Price4,`Quantity`=@Quantity4,`Amount`=@Amount4 WHERE `Id`=@kId4;UPDATE `sys_order_detail` SET `Price`=@Price5,`Quantity`=@Quantity5,`Amount`=@Amount5 WHERE `Id`=@kId5
+```
+
+#### SetBulk 批量更新 结合`Set`,`SetFrom`,`OnlyFields`,`IgnoreFields`方法
+
+```csharp
+var orderDetails = await repository.From<OrderDetail>()
+    .Select(f => new
+    {
+        f.Id,
+        Amount = f.Amount + 50,
+        UpdatedAt = f.UpdatedAt.AddDays(1)
+    })
+    .OrderBy(f => f.Id)
+    .Take(5)
+    .ToListAsync();
+
+var result = repository.Update<OrderDetail>()
+    .SetBulk(parameters)
+    .Set(f => f.ProductId, 3)
+    .Set(new { Price = 200, Quantity = 5 })
+    .IgnoreFields(f => f.Price)
+    .Execute();
+//UPDATE `sys_order_detail` SET `ProductId`=@ProductId,`Quantity`=@Quantity,`Price`=`Price`+10,`Amount`=@Amount0,`UpdatedAt`=@UpdatedAt0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `ProductId`=@ProductId,`Quantity`=@Quantity,`Price`=`Price`+10,`Amount`=@Amount1,`UpdatedAt`=@UpdatedAt1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `ProductId`=@ProductId,`Quantity`=@Quantity,`Price`=`Price`+10,`Amount`=@Amount2,`UpdatedAt`=@UpdatedAt2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `ProductId`=@ProductId,`Quantity`=@Quantity,`Price`=`Price`+10,`Amount`=@Amount3,`UpdatedAt`=@UpdatedAt3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `ProductId`=@ProductId,`Quantity`=@Quantity,`Price`=`Price`+10,`Amount`=@Amount4,`UpdatedAt`=@UpdatedAt4 WHERE `Id`=@kId4
+
+
+var result = repository.Update<OrderDetail>()
+    .SetBulk(parameters)
+    .Set(f => f.ProductId, 3)
+    .Set(new { Quantity = 5 })
+    .Set(f => new { Price = f.Price + 10 })
+    .Execute();
+//UPDATE [sys_order_detail] SET [ProductId]=@ProductId,[Quantity]=@Quantity,[Price]=[Price]+10,[Amount]=@Amount0,[UpdatedAt]=@UpdatedAt0 WHERE [Id]=@kId0;UPDATE [sys_order_detail] SET [ProductId]=@ProductId,[Quantity]=@Quantity,[Price]=[Price]+10,[Amount]=@Amount1,[UpdatedAt]=@UpdatedAt1 WHERE [Id]=@kId1;UPDATE [sys_order_detail] SET [ProductId]=@ProductId,[Quantity]=@Quantity,[Price]=[Price]+10,[Amount]=@Amount2,[UpdatedAt]=@UpdatedAt2 WHERE [Id]=@kId2;UPDATE [sys_order_detail] SET [ProductId]=@ProductId,[Quantity]=@Quantity,[Price]=[Price]+10,[Amount]=@Amount3,[UpdatedAt]=@UpdatedAt3 WHERE [Id]=@kId3;UPDATE [sys_order_detail] SET [ProductId]=@ProductId,[Quantity]=@Quantity,[Price]=[Price]+10,[Amount]=@Amount4,[UpdatedAt]=@UpdatedAt4 WHERE [Id]=@kId4
+```
+
+`SetBulk`方法只能使用一次，`Set`,`SetFrom`可以使用多次
+
+
+#### Update&lt;T&gt; Join 联表更新
+使用`Set`,`SetFrom`方法完成字段更新，只支持`InnerJoin`和`LeftJoin`两种关联方式
+支持的数据库：`MySql`，`Mariadb`，`SqlServer`，`PostgreSql`，生成的`SQL`会有一些差别
 
 ```csharp
 //Update<T> InnerJoin 一个或多个字段
@@ -2384,33 +2517,15 @@ var sql = repository.Update<Order>()
     .Where((a, b) => a.BuyerId == 1)
     .ToSql(out _);
 //UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId`SET a.`TotalAmount`=@TotalAmount,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`BuyerId`=1
+//UPDATE "sys_order" AS a SET "TotalAmount"=@TotalAmount,"OrderNo"=CONCAT(a."OrderNo",'_111'),"BuyerId"=NULL FROM "sys_order_detail" b WHERE a."Id"=b."OrderId" AND a."BuyerId"=1
+//UPDATE a SET a.[TotalAmount]=@TotalAmount,a.[OrderNo]=a.[OrderNo]+'_111',a.[BuyerId]=NULL FROM [sys_order] a INNER JOIN [sys_order_detail] b ON a.[Id]=b.[OrderId] WHERE a.[BuyerId]=1
 
-```
-	
-```csharp
-//Update<T> InnerJoin 一个或多个字段
+//包含SetFrom
 var sql = repository.Update<Order>()
     .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
-    .Set((x, y) => new
-    {
-	TotalAmount = y.Amount,
-	OrderNo = x.OrderNo + "_111",
-	BuyerId = DBNull.Value
-    })
-    .Where((a, b) => a.BuyerId == 1)
-    .ToSql(out _);
-//UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId`SET a.`TotalAmount`=b.`Amount`,a.`OrderNo`=CONCAT(a.`OrderNo`,'_111'),a.`BuyerId`=NULL WHERE a.`BuyerId`=1
-```
-	
-```csharp	
-//Update<T> InnerJoin 一个或多个字段 + Set联合表子句
-var sql = repository.Update<Order>()
-    .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
-    //Set联合表子句，自己单独联合其他表进行更新
-    .Set(f => f.TotalAmount, (x, y) => x.From<OrderDetail>('c')
+    .SetFrom(f => f.TotalAmount, (x, y) => x.From<OrderDetail>('c')
 	.Where(f => f.OrderId == y.Id)
 	.Select(t => Sql.Sum(t.Amount)))
-    //后面2个Set子句，都是和OrderDetail表联合进行更新的
     .Set((a, b) => new { OrderNo = a.OrderNo + b.ProductId.ToString() })
     .Set((x, y) => new { BuyerId = DBNull.Value })
     .Where((a, b) => a.BuyerId == 1)
@@ -2418,7 +2533,8 @@ var sql = repository.Update<Order>()
 //UPDATE `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId`SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`=CONCAT(a.`OrderNo`,CAST(b.`ProductId` AS CHAR)),a.`BuyerId`=NULL WHERE a.`BuyerId`=1
 ```
 
-Set Null， 是用表达式，用DBNull.Value或是null都可以实现Set Null
+
+#### Set Null 用DBNull.Value或是null
 ```csharp
 var sql = repository.Update<Order>()
     .Set(x => new
@@ -2431,102 +2547,188 @@ var sql = repository.Update<Order>()
 //UPDATE `sys_order` SET `BuyerId`=NULL,`Seller`=NULL WHERE `OrderNo` IS NULL
 ```
 
-Update<T> From 联合表更新
-支持的数据库：
-Sql Server
-PostgreSql
-
-
+#### Set 对枚举的支持
+设置时，可以直接设置枚举值，更新时会根据数据库字段的类型进行转成对应的值，如果是字符串会转换成枚举名称
 ```csharp
-//Update<T> From 同样支持 一个或多个字段 + Set联合表子句
-var sql = repository.Update<Order>()
-    .From<OrderDetail>()
-    .Set(x => x.TotalAmount, 200.56)
-    .Set((a, b) => new
-    {
-	OrderNo = a.OrderNo + "_111",
-	BuyerId = DBNull.Value
-    })
-    .Where((x, y) => x.Id == y.OrderId && x.BuyerId == 1)
-    .ToSql(out _);
-//UPDATE [sys_order] SET [TotalAmount]=@TotalAmount,[OrderNo]=[sys_order].[OrderNo]+'_111',[BuyerId]=NULL FROM [sys_order_detail] b WHERE [sys_order].[Id]=b.[OrderId] AND [sys_order].[BuyerId]=1
+var result = repository.Update<Company>()
+    .SetBulk(new[] { new { Id = 1, company.Nature }, new { Id = 2, Nature = nature } })
+    .Set(f => new { company.Name })
+    .OnlyFields(f => f.Nature)
+    .Execute();
+//UPDATE [sys_company] SET [Name]=@p0,[Nature]=@Nature0 WHERE [Id]=@kId0;UPDATE [sys_company] SET [Name]=@p0,[Nature]=@Nature1 WHERE [Id]=@kId1
 ```
 
-
+#### Set 对Json的支持
+只要在字段映射的设置的时候，有配置`JsonTypeHandler`类型处理器，在`Set`时候，直接使用对象值，在更新的时候，自动调用`JsonTypeHandler`的`ToFieldValue`序列化字符串再完成更新
 ```csharp
-//Update<T> From 同样支持 多个字段
-var sql = repository.Update<Order>()
-    .From<OrderDetail>()
-    .Set((x, y) => new
+var result = repository.Update<Order>()
+    .Set(f => new
     {
-	TotalAmount = y.Amount,
-	OrderNo = x.OrderNo + "_111",
-	BuyerId = DBNull.Value
+        Products = new List<int> { 1, 2, 3 },
+        Disputes = new Dispute
+        {
+            Id = 1,
+            Content = "43dss",
+            Users = "1,2",
+            Result = "OK",
+            CreatedAt = DateTime.Now
+        }
     })
-    .Where((x, y) => x.Id == y.OrderId && x.BuyerId == 1)
-    .ToSql(out _);
-//UPDATE [sys_order] SET [TotalAmount]=b.[Amount],[OrderNo]=[sys_order].[OrderNo]+'_111',[BuyerId]=NULL FROM [sys_order_detail] b WHERE [sys_order].[Id]=b.[OrderId] AND [sys_order].[BuyerId]=1
-```  
+    .Where(x => x.Id == "1")
+    .Execute();
+//UPDATE `sys_order` SET `Products`=@p0,`Disputes`=@p1 WHERE `Id`='1'
+```
+
+#### 支持本地方法调用
+直接调用本地函数，得到值后再执行数据库操作
 
 ```csharp
-//Update<T> From 同样支持 一个或多个字段 + Set联合表子句
-var sql = repository.Update<Order>()
-    .From<OrderDetail>()
-    .Set(f => f.TotalAmount, (x, y) => x.From<OrderDetail>('c')
-	.Where(f => f.OrderId == y.Id)
-	.Select(t => Sql.Sum(t.Amount)))
-    .Set((a, b) => new { OrderNo = a.OrderNo + b.ProductId.ToString() })
-    .Set((x, y) => new { BuyerId = DBNull.Value })
-    .Where((x, y) => x.Id == y.OrderId && x.BuyerId == 1)
-    .ToSql(out _);
-//UPDATE [sys_order] SET [TotalAmount]=(SELECT SUM(c.[Amount]) FROM [sys_order_detail] c WHERE c.[OrderId]=[sys_order].[Id]),[OrderNo]=[sys_order].[OrderNo]+CAST(b.[ProductId] AS NVARCHAR(MAX)),[BuyerId]=NULL FROM [sys_order_detail] b WHERE [sys_order].[Id]=b.[OrderId] AND [sys_order].[BuyerId]=1
-```	
+var updateObj = repository.Get<Order>("1");
+updateObj.Disputes = new Dispute
+{
+    Id = 2,
+    Content = "无良商家",
+    Result = "同意退款",
+    Users = "Buyer2,Seller2",
+    CreatedAt = DateTime.Now
+};
+updateObj.UpdatedAt = DateTime.Now;
+int increasedAmount = 50;
+var result = repository.Update<Order>()
+    .Set(f => new
+    {
+        TotalAmount = this.CalcAmount(updateObj.TotalAmount + increasedAmount, 3),
+        Products = this.GetProducts(),
+        updateObj.Disputes,
+        UpdatedAt = DateTime.Now
+    })
+    .Where(new { updateObj.Id })
+    .Execute();
+private double CalcAmount(double price, double amount) => price * amount - 150;
+private int[] GetProducts() => new int[] { 1, 2, 3 };
 
+//UPDATE [sys_order] SET [TotalAmount]=@p0,[Products]=@p1,[Disputes]=@p2,[UpdatedAt]=GETDATE() WHERE [Id]=@kId
+```
+
+#### BulkCopy 更新支持
+`BulkCopy`支持大量数据更新，先将数据`BulkCopy`到数据库中，再使用联表更新，当数据量很大时，性能比`SetBulk`要强很多
+
+```csharp
+var orders = new List<Order>();
+for (int i = 0; i < 5000; i++)
+{
+    orders.Add(new Order
+    {
+        Id = $"ON_{i + 1}",
+        TenantId = "3",
+        OrderNo = $"ON-{i + 1}",
+        BuyerId = 1,
+        SellerId = 2,
+        TotalAmount = 500,
+        Products = new List<int> { 1, 2 },
+        IsEnabled = true,
+        CreatedAt = DateTime.Now,
+        CreatedBy = 1,
+        UpdatedAt = DateTime.Now,
+        UpdatedBy = 1
+    });
+}
+var count = await repository.Create<Order>()
+    .WithBulkCopy(orders)
+    .ExecuteAsync();
+```
+
+ 
 
 #### 删除
+支持单条、批量删除，使用参数、值，表达式都可以完成
 
+#### 单条删除 表达式
 ```csharp
-//单个表达式
 var count = await repository.DeleteAsync<User>(f => f.Id == 1);	
 //DELETE FROM [sys_user] WHERE [Id]=1
 ```
 
+#### 批量删除 只能使用参数方式
+可以使用主键值的数组或是列表，或是包含主键值的对象数组或是列表都可以
+`Trolley`会根据删除表的主键个数多少决定是用`IN`操作还是`OR`操作，多个主键就是`OR`操作，一个主键就是`IN`
+
+#### 包含主键值的对象列表
 ```csharp
-//批量删除 表达式
-条件是带有主键的多个对象
 var count = await repository.DeleteAsync<User>(new[] { new { Id = 1 }, new { Id = 2 } });
-//DELETE FROM [sys_user] WHERE [Id]=@Id0;DELETE FROM [sys_user] WHERE [Id]=@Id1
-//批量删除会生成多个删除语句
+//DELETE FROM `sys_user` WHERE `Id` IN (@Id0,@Id1)
+```
 
-//多个主键值也可以，这种情况只适合只有一个主键字段
+#### 主键值列表
+```csharp
 var count = await repository.DeleteAsync<User>(new int[] { 1, 2 });
-//DELETE FROM [sys_user] WHERE [Id]=@Id0;DELETE FROM [sys_user] WHERE [Id]=@Id1
+//DELETE FROM `sys_user` WHERE `Id` IN (@Id0,@Id1)
+```
+上面两种方式生成的`SQL`完全一样的
+
+#### 多主键值的对象列表
+多主键的时候，就会使用`OR`操作
+```csharp
+var count = repository.Delete<Function>()
+    .Where(new[] { new { MenuId = 1, PageId = 1 }, new { MenuId = 2, PageId = 2 } })
+    .Execute();
+//DELETE FROM `sys_function` WHERE `MenuId`=@MenuId0 AND `PageId`=@PageId0 OR `MenuId`=@MenuId1 AND `PageId`=@PageId1
+```
+#### 表达式条件删除
+```csharp
+repository.Delete<User>()
+    .Where(f => f.Id == 1)
+    .Execute();
+//DELETE FROM `sys_user` WHERE `Id`=1
 ```
 
-
+#### 同样Delete&lt;T&gt; 支持更多的删除操作
+可以使用`Where`、多次`And`操作
 ```csharp
-//也支持Where条件表达式
-var count = await repository.DeleteAsync<User>(f => new int[] { 1, 2 }.Contains(f.Id));
-//DELETE FROM [sys_user] WHERE [Id] IN (1,2)
-```
-	
-同样支持Delete<T> 支持更多的删除操作
-```csharp
-repository.Delete<User>().Where(f => f.Id == 1).Execute();
-repository.Delete<User>().Where(new int[] { 1, 2 }).Execute()
+repository.Delete<User>()
+    .Where(f => f.Id == 1)
+    .Execute();
+repository.Delete<User>()
+    .Where(new int[] { 1, 2 })
+    .Execute()
 	
 bool? isMale = true;
 var sql = repository.Delete<User>()
     .Where(f => f.Name.Contains("kevin"))
     .And(isMale.HasValue, f => f.Age > 25)
-    .ToSql(out _);
+    .Execute();
 //DELETE FROM [sys_user] WHERE [Name] LIKE '%kevin%' AND [Age]>25
+
+var orderNos = new string[] { "ON_001", "ON_002", "ON_003" };
+count = repository.Delete<Order>()
+    .Where(f => f.BuyerId == 1 && orderNos.Contains(f.OrderNo))
+    .Execute();
+//DELETE FROM `sys_order` WHERE `BuyerId`=1 AND `OrderNo` IN (@p0,@p1,@p2)
 ```
 
-	
-仓储对象IRepository，提交事务，设置超时时间
-------------------------------------------------------------
+#### 也支持对NULL和枚举类型
+```csharp
+var count = repository.Delete<Company>()
+     .Where(f => f.Nature == nature)
+     .Execute();
+//DELETE FROM `sys_company` WHERE `Nature`=@p0
+```
 
+
+
+### 事务处理
+`Trolley`的每个`IRepository`对象包含了一个连接，所有的操作都是在这个连接上操作的，所以，在`IRepository`对象上直接使用以下方法完成事务操作
+```csharp
+void BeginTransaction();
+Task BeginTransactionAsync(CancellationToken cancellationToken = default);
+void Commit();
+Task CommitAsync(CancellationToken cancellationToken = default);
+void Rollback();
+Task RollbackAsync(CancellationToken cancellationToken = default);
+```
+
+
+示例
 ```csharp
 using var repository = this.dbFactory.CreateRepository();
 bool? isMale = true;
@@ -2543,85 +2745,213 @@ repository.Delete<User>()
 repository.Commit();
 ```
 
-## 分库分表支持
-`Trolley`对分库分表的支持，非常灵活。依赖分库分表规则，可以租户、时间、租户+时间、任何自定义规则
-在配置数据库时，调用UseSharding方法，实现分库分表规则的配置
+### 多命令查询
+就是多个增删改语句，在一个command中执行，将所有命令的SQL拼接在一起去执行，适用于命令多查询少并发量大的消息队列消费者场景，可以通过下面两个方法完成
+```csharp
+int MultipleExecute(List<MultipleCommand> commands);
+Task<int> MultipleExecuteAsync(List<MultipleCommand> commands, CancellationToken cancellationToken = default);
+```
 
-分库规则，调用UseDatabase方法，实现分库规则配置
+示例：
+```csharp
+using var repository = dbFactory.CreateRepository();
+int[] productIds = new int[] { 2, 4, 5, 6 };
+int category = 1;
+var commands = new List<MultipleCommand>();
+var deleteCommand = repository.Delete<Product>()
+    .Where(f => productIds.Contains(f.Id))
+    .ToMultipleCommand();
+
+var insertCommand = repository.Create<Product>()
+   .WithBy(new
+   {
+       Id = 2,
+       ProductNo = "PN_111",
+       Name = "PName_111",
+       BrandId = 1,
+       CategoryId = category,
+       CompanyId = 1,
+       IsEnabled = true,
+       CreatedBy = 1,
+       CreatedAt = DateTime.Now,
+       UpdatedBy = 1,
+       UpdatedAt = DateTime.Now
+   })
+   .ToMultipleCommand();
+
+var insertCommand2 = repository.Create<Product>()
+    .WithBulk(new[]
+    {
+        new
+        {
+            Id = 4,
+            ProductNo="PN-004",
+            Name = "波司登羽绒服",
+            BrandId = 1,
+            CategoryId = 1,
+            IsEnabled = true,
+            CreatedAt = DateTime.Now,
+            CreatedBy = 1,
+            UpdatedAt = DateTime.Now,
+            UpdatedBy = 1
+        },
+        new
+        {
+            Id = 5,
+            ProductNo="PN-005",
+            Name = "雪中飞羽绒裤",
+            BrandId = 2,
+            CategoryId = 2,
+            IsEnabled = true,
+            CreatedAt = DateTime.Now,
+            CreatedBy = 1,
+            UpdatedAt = DateTime.Now,
+            UpdatedBy = 1
+        },
+        new
+        {
+            Id = 6,
+            ProductNo="PN-006",
+            Name = "优衣库保暖内衣",
+            BrandId = 3,
+            CategoryId = 3,
+            IsEnabled = true,
+            CreatedAt = DateTime.Now,
+            CreatedBy = 1,
+            UpdatedAt = DateTime.Now,
+            UpdatedBy = 1
+        }
+    })
+    .OnlyFields(f => new { f.Id, f.ProductNo, f.Name, f.IsEnabled, f.CreatedBy, f.CreatedAt, f.UpdatedAt, f.UpdatedBy })
+    .ToMultipleCommand();
+
+var updateCommand = repository.Update<Order>()
+   .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+   .Set(true, (x, y) => new
+   {
+       TotalAmount = 200.56,
+       OrderNo = x.OrderNo + "-111",
+       BuyerSource = y.SourceType
+   })
+   .Set(x => x.Products, new List<int> { 1, 2, 3 })
+   .Where((a, b) => a.Id == "1")
+   .ToMultipleCommand();
+
+var orderDetails = await repository.From<OrderDetail>().ToListAsync();
+var parameters = orderDetails.Select(f => new
+{
+    f.Id,
+    Amount = f.Amount + 50,
+    UpdatedAt = f.UpdatedAt.AddDays(1)
+})
+.ToList();
+var bulkUpdateCommand = repository.Update<OrderDetail>()
+    .SetBulk(parameters)
+    .Set(f => f.ProductId, 3)
+    .Set(new { Quantity = 5 })
+    .Set(f => new { Price = f.Price + 10 })
+    .ToMultipleCommand();
+
+commands.AddRange(new[] { deleteCommand, insertCommand, insertCommand2, updateCommand, bulkUpdateCommand });
+var count = repository.MultipleExecute(commands);
+生成的SQL:
+DELETE FROM `sys_product` WHERE `Id` IN (@p0_m0,@p1_m0,@p2_m0,@p3_m0);INSERT INTO `sys_product` (`Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`CompanyId`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) VALUES (@Id_m1,@ProductNo_m1,@Name_m1,@BrandId_m1,@CategoryId_m1,@CompanyId_m1,@IsEnabled_m1,@CreatedBy_m1,@CreatedAt_m1,@UpdatedBy_m1,@UpdatedAt_m1);INSERT INTO `sys_product` (`Id`,`ProductNo`,`Name`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id0,@ProductNo0,@Name0,@IsEnabled0,@CreatedAt0,@CreatedBy0,@UpdatedAt0,@UpdatedBy0),(@Id1,@ProductNo1,@Name1,@IsEnabled1,@CreatedAt1,@CreatedBy1,@UpdatedAt1,@UpdatedBy1),(@Id2,@ProductNo2,@Name2,@IsEnabled2,@CreatedAt2,@CreatedBy2,@UpdatedAt2,@UpdatedBy2);UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@p39_m3,a.`OrderNo`=CONCAT(a.`OrderNo`,'-111'),a.`BuyerSource`=b.`SourceType`,a.`Products`=@Products_m3 WHERE a.`Id`='1';UPDATE `sys_order_detail` SET `ProductId`=@ProductId_m4,`Quantity`=@Quantity_m4,`Price`=`Price`+10,`Amount`=@Amount_m40,`UpdatedAt`=@UpdatedAt_m40 WHERE `Id`=@kId_m40;UPDATE `sys_order_detail` SET `ProductId`=@ProductId_m4,`Quantity`=@Quantity_m4,`Price`=`Price`+10,`Amount`=@Amount_m41,`UpdatedAt`=@UpdatedAt_m41 WHERE `Id`=@kId_m41;UPDATE `sys_order_detail` SET `ProductId`=@ProductId_m4,`Quantity`=@Quantity_m4,`Price`=`Price`+10,`Amount`=@Amount_m42,`UpdatedAt`=@UpdatedAt_m42 WHERE `Id`=@kId_m42;UPDATE `sys_order_detail` SET `ProductId`=@ProductId_m4,`Quantity`=@Quantity_m4,`Price`=`Price`+10,`Amount`=@Amount_m43,`UpdatedAt`=@UpdatedAt_m43 WHERE `Id`=@kId_m43;UPDATE `sys_order_detail` SET `ProductId`=@ProductId_m4,`Quantity`=@Quantity_m4,`Price`=`Price`+10,`Amount`=@Amount_m44,`UpdatedAt`=@UpdatedAt_m44 WHERE `Id`=@kId_m44;UPDATE `sys_order_detail` SET `ProductId`=@ProductId_m4,`Quantity`=@Quantity_m4,`Price`=`Price`+10,`Amount`=@Amount_m45,`UpdatedAt`=@UpdatedAt_m45 WHERE `Id`=@kId_m45
+```
+
+
+
+
+
+### 命令超时时间
+`Timeout`方法设置超时时间，单位秒
+```csharp
+repository.Timeout(60);
+```
+### 参数化设置
+表达式解析中，所有变量都会参数化，常量不会参数化。如果设置为true，所有常量也将都会参数化
+```csharp
+repository.WithParameterized(true);
+```
+
+
+
+### 分库分表支持
+`Trolley`对分库分表的支持，非常灵活，完全依赖规则，可以按租户、时间、租户+时间、任何自定义规则来分库分表。  
+在配置数据库时，调用`UseSharding`方法，实现分库分表规则的配置
+
+使用`UseDatabase`方法实现分库规则配置，使用`UseTable`方法实现分表规则配置
 下面的示例，就是使用租户来做分库，根据当前登录用户的租户ID，生成dbKey
 
 ```csharp
 var services = new ServiceCollection();
 services.AddSingleton(f =>
 {
-	//添加一个默认数据库和两个租户数据库
     var builder = new OrmDbFactoryBuilder()
-    .Register<MySqlProvider>("fengling", "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true", true)
-    .Register<MySqlProvider>("fengling_tenant1", "Server=localhost;Database=fengling_tenant1;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true", false)
-    .Register<MySqlProvider>("fengling_tenant2", "Server=localhost;Database=fengling_tenant2;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true", false)
-    .UseSharding(s =>
-    {
-		//分库规则
-        s.UseDatabase(() =>
+        .Register(OrmProviderType.MySql, "fengling", "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true", true)
+        .Register(OrmProviderType.MySql, "fengling_tenant1", "Server=localhost;Database=fengling_tenant1;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true", false)
+        .Register(OrmProviderType.MySql, "fengling_tenant2", "Server=localhost;Database=fengling_tenant2;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true", false)
+        .UseSharding(s =>
         {
-            //可以硬编码分库，也可以使用redis，映射表 ...，其他方式等
-            var passport = f.GetService<IPassport>();
-            return passport.TenantId switch
+            s.UseDatabase(() =>
             {
-                "200" => "fengling_tenant1",
-                "300" => "fengling_tenant2",
-                _ => "fengling"
-            };
-        })
-        //按照租户+时间分表
-        .UseTable<Order>(t =>
-        {
-            t.DependOn(d => d.TenantId).DependOn(d => d.CreatedAt)
-            .UseRule((dbKey, origName, tenantId, createdAt) => $"{origName}_{tenantId}_{createdAt:yyyyMM}", "^sys_order_\\d{1,4}_[1,2]\\d{3}[0,1][0-9]$")
-            //时间分表，通常都是支持范围查询
-            .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =>
-            {
-                var tableNames = new List<string>();
-                var current = beginTime;
-                while (current <= endTime)
+                //可以硬编码分库，也可以使用redis，映射表 ...，其他方式等
+                var passport = f.GetService<IPassport>();
+                return passport.TenantId switch
                 {
-                    var tableName = $"{origName}_{tenantId}_{current:yyyyMM}";
-                    if (tableNames.Contains(tableName))
-                        continue;
-                    tableNames.Add(tableName);
-                }
-                return tableNames;
-            });
-        })
-        //按照租户+时间分表
-        .UseTable<OrderDetail>(t =>
-        {
-            t.DependOn(d => d.TenantId).DependOn(d => d.CreatedAt)
-            .UseRule((dbKey, origName, tenantId, createdAt) => $"{origName}_{tenantId}_{createdAt:yyyyMM}", "^sys_order_detail_\\d{1,4}_[1,2]\\d{3}[0,1][0-9]$")
-            //时间分表，通常都是支持范围查询
-            .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =>
+                    "200" => "fengling_tenant1",
+                    "300" => "fengling_tenant2",
+                    _ => "fengling"
+                };
+            })
+            //按照租户+时间分表
+            .UseTable<Order>(t =>
             {
-                var tableNames = new List<string>();
-                var current = beginTime;
-                while (current <= endTime)
+                t.DependOn(d => d.TenantId).DependOn(d => d.CreatedAt)
+                .UseRule((dbKey, origName, tenantId, createdAt) => $"{origName}_{tenantId}_{createdAt:yyyyMM}", "^sys_order_\\d{1,4}_[1,2]\\d{3}[0,1][0-9]$")
+                //时间分表，通常都是支持范围查询
+                .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =>
                 {
-                    var tableName = $"{origName}_{tenantId}_{current:yyyyMM}";
-                    if (tableNames.Contains(tableName))
-                        continue;
-                    tableNames.Add(tableName);
-                }
-                return tableNames;
-            });
+                    var tableNames = new List<string>();
+                    var current = beginTime;
+                    while (current <= endTime)
+                    {
+                        var tableName = $"{origName}_{tenantId}_{current:yyyyMM}";
+                        if (tableNames.Contains(tableName))
+                            continue;
+                        tableNames.Add(tableName);
+                    }
+                    return tableNames;
+                });
+            })
+            //按照租户+时间分表
+            .UseTable<OrderDetail>(t =>
+            {
+                t.DependOn(d => d.TenantId).DependOn(d => d.CreatedAt)
+                .UseRule((dbKey, origName, tenantId, createdAt) => $"{origName}_{tenantId}_{createdAt:yyyyMM}", "^sys_order_detail_\\d{1,4}_[1,2]\\d{3}[0,1][0-9]$")
+                //时间分表，通常都是支持范围查询
+                .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =>
+                {
+                    var tableNames = new List<string>();
+                    var current = beginTime;
+                    while (current <= endTime)
+                    {
+                        var tableName = $"{origName}_{tenantId}_{current:yyyyMM}";
+                        if (tableNames.Contains(tableName))
+                            continue;
+                        tableNames.Add(tableName);
+                    }
+                    return tableNames;
+                });
+            })
+            //按租户分表
+            //.UseTable<Order>(t => t.DependOn(d => d.TenantId).UseRule((dbKey, origName, tenantId) => $"{origName}_{tenantId}", "^sys_order_\\d{1,4}$"))
+            ////按照Id字段分表，Id字段是带有时间属性的ObjectId
+            //.UseTable<Order>(t => t.DependOn(d => d.Id).UseRule((dbKey, origName, id) => $"{origName}_{new DateTime(ObjectId.Parse(id).Timestamp):yyyyMM}", "^sys_order_\\S{24}$"))
+            ////按照Id字段哈希取模分表
+            //.UseTable<Order>(t => t.DependOn(d => d.Id).UseRule((dbKey, origName, id) => $"{origName}_{HashCode.Combine(id) % 5}", "^sys_order_\\S{24}$"))
+            .UseTable<User>(t => t.DependOn(d => d.TenantId).UseRule((dbKey, origName, tenantId) => $"{origName}_{tenantId}", "^sys_user_\\d{1,4}$"));
         })
-        //按租户分表
-        //.UseTable<Order>(t => t.DependOn(d => d.TenantId).UseRule((dbKey, origName, tenantId) => $"{origName}_{tenantId}", "^sys_order_\\d{1,4}$"))
-        ////按照Id字段分表，Id字段是带有时间属性的ObjectId
-        //.UseTable<Order>(t => t.DependOn(d => d.Id).UseRule((dbKey, origName, id) => $"{origName}_{new DateTime(ObjectId.Parse(id).Timestamp):yyyyMM}", "^sys_order_\\S{24}$"))
-        ////按照Id字段哈希取模分表
-        //.UseTable<Order>(t => t.DependOn(d => d.Id).UseRule((dbKey, origName, id) => $"{origName}_{HashCode.Combine(id) % 5}", "^sys_order_\\S{24}$"))
-        .UseTable<User>(t => t.DependOn(d => d.TenantId).UseRule((dbKey, origName, tenantId) => $"{origName}_{tenantId}", "^sys_user_\\d{1,4}$"));
-    })
-    .Configure<MySqlProvider, ModelConfiguration>();
+        .Configure<ModelConfiguration>(OrmProviderType.MySql);
     return builder.Build();
 });
 services.AddTransient<IPassport>(f => new Passport { TenantId = "104", UserId = "1" });
@@ -2629,87 +2959,226 @@ var serviceProvider = services.BuildServiceProvider();
 this.dbFactory = serviceProvider.GetService<IOrmDbFactory>();
 ```
 
-分表规则,调用UseTable方法，实现分表规则配置
-如上示例，
+配置了分库规则后，在执行查询时，会优先根据分库规则获取dbKey，确定连接串。
+
+### 分表支持
+`Trolley`的分表功能非常强大，支持`Join`操作，多分表Join操作，子查询分表，子查询多分表Join等操作。  
+提供以下几个方法实现分表选择，大多数操作都支持分表操作，不同的操作会稍有些不同，分表后，可以继续`Join`操作，如果有2个以上多分表的情况，第二个以后的分表需要指定分表名映射
+```csharp
+UseTable(params string[] tableNames);
+UseTable(Func<string, bool> tableNamePredicate);
+UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
+UseTableBy(object field1Value, object field2Value = null);
+UseTableByRange(object beginFieldValue, object endFieldValue);
+UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+```
+
+#### UseTable方法
+下面两个方法，在一个查询中，只能出现一次，执行后将确定多个分表，至少1个分表
+```csharp
+UseTable(params string[] tableNames);
+UseTable(Func<string, bool> tableNamePredicate);
+```
+示例：
+```csharp
+await repository.Delete<User>()
+    .UseTableBy("104")
+    .Where(101)
+    .ExecuteAsync();
+//DELETE FROM `sys_user_104` WHERE `Id`=@Id
+repository.Create<User>()
+    .UseTable("sys_user_104")
+    .WithBy(new
+    {
+        Id = 101,
+        TenantId = "104",
+        Name = "leafkevin",
+        Age = 25,
+        CompanyId = 1,
+        Gender = Gender.Male,
+        GuidField = Guid.NewGuid(),
+        SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
+        SourceType = UserSourceType.Douyin,
+        IsEnabled = true,
+        CreatedAt = DateTime.Parse("2024-05-10 06:07:08"),
+        CreatedBy = 1,
+        UpdatedAt = DateTime.Parse("2024-05-15 16:27:38"),
+        UpdatedBy = 1
+    })
+    .Execute();
+//INSERT INTO `sys_user_104` (`Id`,`TenantId`,`Name`,`Age`,`CompanyId`,`Gender`,`GuidField`,`SomeTimes`,`SourceType`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id,@TenantId,@Name,@Age,@CompanyId,@Gender,@GuidField,@SomeTimes,@SourceType,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)
+var result = repository.From<User>()
+    .UseTableBy("104")
+    .Where(f => f.Id == 101)
+    .First();
+//SELECT a.`Id`,a.`TenantId`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`SourceType`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_user_104` a WHERE a.`Id`=101
+```
+多分表情况
+`UseTable(Func<string, bool> tableNamePredicate) `
+
+```csharp
+await repository.Delete<User>()
+    .UseTable(f => f.Contains("104") || f.Contains("105"))
+    .Where(userIds)
+    .ExecuteAsync();
+DELETE FROM `sys_user_105` WHERE `Id` IN (@Id0,@Id1,@Id2);DELETE FROM `sys_user_104` WHERE `Id` IN (@Id0,@Id1,@Id2)
+
+var result = repository.From<Order>()
+    .UseTable("sys_order_104_202405", "sys_order_105_202405")
+    .Where(f => f.ProductCount > productCount)
+    .ToList();
+//SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_order_104_202405` a WHERE a.`ProductCount`>@p0 UNION ALL SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_order_105_202405` a WHERE a.`ProductCount`>@p0
+```
+#### 多个多分表关联Join查询
+当已存在一个或多个多分表的情况下，再Join一个与前面多分表的表有关联关系的表时，并且当前这个分表也是多分表，就需要此方法来指定与前面分表的表名映射关系。
+```csharp
+UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
+```
+下面的子查询中使用了多分表，还有`Join`操作  
+子查询中`OrderDetail`表，是个多份表，`Order`表也是多分表，使用了上面的方法与`OrderDetail`表做了表名映射来捞取与`OrderDetail`关联的分表
+最外层查询中，`User`表也是多分表，又与主分表做了表名映射，`InnserJoin`关联起来
+```csharp
+var result = repository
+    .From(f => f.From<OrderDetail>()
+        .UseTable("sys_order_detail_104_202405", "sys_order_detail_105_202405")
+        .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
+        .UseTable<OrderDetail>((dbKey, orderOrigName, userOrigName, orderTableName) => orderTableName.Replace(orderOrigName, userOrigName))
+        .GroupBy((a, b) => new { OrderId = b.Id, b.BuyerId })
+        .Select((x, a, b) => new { Group = x.Grouping, ProductCount = x.CountDistinct(a.ProductId) }))
+    .InnerJoin<User>((x, y) => x.Group.BuyerId == y.Id)
+    .UseTable<OrderDetail>((dbKey, orderOrigName, userOrigName, orderTableName) =>
+    {
+        var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+        return tableName.Substring(0, tableName.Length - 7);
+    })
+    .Where((a, b) => a.ProductCount > 1)
+    .Select((x, y) => new
+    {
+        x.Group,
+        y.TenantId,
+        Buyer = y,
+        x.ProductCount
+    })
+    .ToList();
+//SELECT a.`OrderId`,a.`BuyerId`,b.`TenantId`,b.`Id`,b.`TenantId`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,a.`ProductCount` FROM (SELECT b.`Id` AS `OrderId`,b.`BuyerId`,COUNT(DISTINCT a.`ProductId`) AS `ProductCount` FROM `sys_order_detail_104_202405` a INNER JOIN `sys_order_104_202405` b ON a.`OrderId`=b.`Id` GROUP BY b.`Id`,b.`BuyerId`) a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>1 UNION ALL SELECT a.`OrderId`,a.`BuyerId`,b.`TenantId`,b.`Id`,b.`TenantId`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,a.`ProductCount` FROM (SELECT b.`Id` AS `OrderId`,b.`BuyerId`,COUNT(DISTINCT a.`ProductId`) AS `ProductCount` FROM `sys_order_detail_105_202405` a INNER JOIN `sys_order_105_202405` b ON a.`OrderId`=b.`Id` GROUP BY b.`Id`,b.`BuyerId`) a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>1
+```
+又一个例子：
+
+```csharp
+var result = repository.From<Order>()
+    .UseTable("sys_order_104_202405", "sys_order_105_202405")
+    .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
+    .UseTable<Order>((dbKey, orderOrigName, userOrigName, orderTableName) =>
+    {
+        var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+        return tableName.Substring(0, tableName.Length - 7);
+    })
+    .Where((a, b) => a.ProductCount > productCount)
+    .Select((x, y) => new
+    {
+        Order = x,
+        Buyer = y
+    })
+    .ToList();
+//SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,b.`Id`,b.`TenantId`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy` FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>@p0 UNION ALL SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,b.`Id`,b.`TenantId`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy` FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>@p0
+
+表达式条件筛选的例子：
+```csharp
+var result = repository.From<Order>()
+    .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f.Substring(f.Length - 6)) > 202001)
+    .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
+    .UseTable<Order>((dbKey, orderOrigName, orderDetailOrigName, orderTableName) => orderTableName.Replace(orderOrigName, orderDetailOrigName))
+    .Where((a, b) => a.ProductCount > productCount)
+    .Select((x, y) => new
+    {
+        Order = x,
+        Detail = y
+    })
+    .ToList();
+//SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,b.`Id`,b.`TenantId`,b.`OrderId`,b.`ProductId`,b.`Price`,b.`Quantity`,b.`Amount`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy` FROM `sys_order_104_202405` a INNER JOIN `sys_order_detail_104_202405` b ON a.`Id`=b.`OrderId` WHERE a.`ProductCount`>@p0 UNION ALL SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,b.`Id`,b.`TenantId`,b.`OrderId`,b.`ProductId`,b.`Price`,b.`Quantity`,b.`Amount`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy` FROM `sys_order_105_202405` a INNER JOIN `sys_order_detail_105_202405` b ON a.`Id`=b.`OrderId` WHERE a.`ProductCount`>@p0
+```
+
+
+#### UseTableBy方法
+根据分表配置的字段值，捞取数据库中所有当前表的分表明，再进行匹配分表，再执行后面操作，本方法可以多次调用
+
+#### 租户Id分表
+用户表，是根据租户ID来进行分表的，UseTableBy方法的参数就是租户ID，匹配到2个分表
+```csharp
+using var repository = this.dbFactory.Create();
+await repository.Delete<User>()
+    .UseTableBy("104")
+    .UseTableBy("105")
+    .Where(new[] { 101, 102, 103 })
+    .ExecuteAsync();
+//DELETE FROM `sys_user_104` WHERE `Id` IN (@Id0,@Id1,@Id2);DELETE FROM `sys_user_105` WHERE `Id` IN (@Id0,@Id1,@Id2)
+```
 
 
 ```csharp
-var services = new ServiceCollection();
-services.AddSingleton(f =>
-{
-	//添加一个默认数据库和两个租户数据库
-    var builder = new OrmDbFactoryBuilder()
-    .Register<MySqlProvider>("fengling", "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true", true)
-    .Register<MySqlProvider>("fengling_tenant1", "Server=localhost;Database=fengling_tenant1;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true", false)
-    .Register<MySqlProvider>("fengling_tenant2", "Server=localhost;Database=fengling_tenant2;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true", false)
-    .UseSharding(s =>
+var result = await repository.From<User>()
+    .UseTableBy("104")
+    .Where(f => f.Id == 101)
+    .FirstAsync();
+//SELECT a.`Id`,a.`TenantId`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`SourceType`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_user_104` a WHERE a.`Id`=101
+```
+#### 租户Id+日期分表
+订单表，是根据租户ID+日期yyyyMM分表的，捞取到1个分表，并关联用户表，用户表是租户ID分表
+```csharp
+var sql = repository.From<Order>()
+    .UseTableBy("104", DateTime.Parse("2024-05-01"))
+    .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
+    .UseTableBy("104")
+    .Where((x, y) => x.Id == orderId)
+    .Select((x, y) => new { x.Id, x.OrderNo, x.TenantId, x.BuyerId, BuyerName = y.Name })
+    .ToSql(out _);
+//SELECT a.`Id`,a.`OrderNo`,a.`TenantId`,a.`BuyerId`,b.`Name` AS `BuyerName` FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` WHERE a.`Id`=@p0
+```
+
+#### UseTableByRange 指定范围区间筛选分表
+`Trolley`根据分表配置字段的顺序，进行筛选范围区间，通常是时间规则分表，如果指定了1个时间字段，就可以使用第一个方法，如果指定了2个字段，比如：租户ID+时间分表，就可以使用第二个方法来筛选，字段值的顺序与分表规则配置的字段顺序相同
+```csharp
+UseTableByRange(object beginFieldValue, object endFieldValue);
+UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+```
+订单表，是按照租户ID+日期yyyyMM来进行分表的，第1个字段是租户ID，第2个字段是时间，如下：
+```csharp
+var orders = repository.From<Order>()
+    .UseTableByRange("104", beginTime, endTime)
+    .Select(f => new
     {
-		//分库规则
-        s.UseDatabase(() =>
-        {
-            //可以硬编码分库，也可以使用redis，映射表 ...，其他方式等
-            var passport = f.GetService<IPassport>();
-            return passport.TenantId switch
-            {
-                "200" => "fengling_tenant1",
-                "300" => "fengling_tenant2",
-                _ => "fengling"
-            };
-        })
-        //按照租户+时间分表
-        .UseTable<Order>(t =>
-        {
-            t.DependOn(d => d.TenantId).DependOn(d => d.CreatedAt)
-            .UseRule((dbKey, origName, tenantId, createdAt) => $"{origName}_{tenantId}_{createdAt:yyyyMM}", "^sys_order_\\d{1,4}_[1,2]\\d{3}[0,1][0-9]$")
-            //时间分表，通常都是支持范围查询
-            .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =>
-            {
-                var tableNames = new List<string>();
-                var current = beginTime;
-                while (current <= endTime)
-                {
-                    var tableName = $"{origName}_{tenantId}_{current:yyyyMM}";
-                    if (tableNames.Contains(tableName))
-                        continue;
-                    tableNames.Add(tableName);
-                }
-                return tableNames;
-            });
-        })
-        //按照租户+时间分表
-        .UseTable<OrderDetail>(t =>
-        {
-            t.DependOn(d => d.TenantId).DependOn(d => d.CreatedAt)
-            .UseRule((dbKey, origName, tenantId, createdAt) => $"{origName}_{tenantId}_{createdAt:yyyyMM}", "^sys_order_detail_\\d{1,4}_[1,2]\\d{3}[0,1][0-9]$")
-            //时间分表，通常都是支持范围查询
-            .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =>
-            {
-                var tableNames = new List<string>();
-                var current = beginTime;
-                while (current <= endTime)
-                {
-                    var tableName = $"{origName}_{tenantId}_{current:yyyyMM}";
-                    if (tableNames.Contains(tableName))
-                        continue;
-                    tableNames.Add(tableName);
-                }
-                return tableNames;
-            });
-        })
-        //按租户分表
-        //.UseTable<Order>(t => t.DependOn(d => d.TenantId).UseRule((dbKey, origName, tenantId) => $"{origName}_{tenantId}", "^sys_order_\\d{1,4}$"))
-        ////按照Id字段分表，Id字段是带有时间属性的ObjectId
-        //.UseTable<Order>(t => t.DependOn(d => d.Id).UseRule((dbKey, origName, id) => $"{origName}_{new DateTime(ObjectId.Parse(id).Timestamp):yyyyMM}", "^sys_order_\\S{24}$"))
-        ////按照Id字段哈希取模分表
-        //.UseTable<Order>(t => t.DependOn(d => d.Id).UseRule((dbKey, origName, id) => $"{origName}_{HashCode.Combine(id) % 5}", "^sys_order_\\S{24}$"))
-        .UseTable<User>(t => t.DependOn(d => d.TenantId).UseRule((dbKey, origName, tenantId) => $"{origName}_{tenantId}", "^sys_user_\\d{1,4}$"));
+        f.Id,
+        f.TenantId,
+        f.OrderNo,
+        f.TotalAmount
     })
-    .Configure<MySqlProvider, ModelConfiguration>();
-    return builder.Build();
-});
-services.AddTransient<IPassport>(f => new Passport { TenantId = "104", UserId = "1" });
-var serviceProvider = services.BuildServiceProvider();
-this.dbFactory = serviceProvider.GetService<IOrmDbFactory>();
+    .OrderByDescending(f => f.Id)
+    .ToList();
+生成的SQL:
+SELECT * FROM (SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`TotalAmount` FROM `sys_order_104_202305` a ORDER BY a.`Id` DESC) a UNION ALL SELECT * FROM (SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`TotalAmount` FROM `sys_order_104_202205` a ORDER BY a.`Id` DESC) a UNION ALL SELECT * FROM (SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`TotalAmount` FROM `sys_order_104_202105` a ORDER BY a.`Id` DESC) a UNION ALL SELECT * FROM (SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`TotalAmount` FROM `sys_order_104_202005` a ORDER BY a.`Id` DESC) a UNION ALL SELECT * FROM (SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`TotalAmount` FROM `sys_order_105_202405` a ORDER BY a.`Id` DESC) a UNION ALL SELECT * FROM (SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`TotalAmount` FROM `sys_order_104_202405` a ORDER BY a.`Id` DESC) a
+```
+
+#### UseTableByRange 指定范围区间筛选分表 再Join关联表
+```csharp
+var orderInfos = repository.From<Order>()
+    .UseTableByRange("104", beginTime, endTime)
+    .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
+    .UseTable<Order>((dbKey, orderOrigName, userOrigName, orderTableName) =>
+    {
+        var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+        return tableName.Substring(0, tableName.Length - 7);
+    })
+    .Select((x, y) => new
+    {
+        x.Id,
+        x.TenantId,
+        BuyerName = y.Name,
+        x.TotalAmount
+    })
+    .OrderByDescending(f => f.Id)
+    .ToList();
+生成的SQL:
+SELECT * FROM (SELECT a.`Id`,a.`TenantId`,b.`Name` AS `BuyerName`,a.`TotalAmount` FROM `sys_order_104_202005` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ORDER BY a.`Id` DESC) a UNION ALL SELECT * FROM (SELECT a.`Id`,a.`TenantId`,b.`Name` AS `BuyerName`,a.`TotalAmount` FROM `sys_order_104_202105` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ORDER BY a.`Id` DESC) a UNION ALL SELECT * FROM (SELECT a.`Id`,a.`TenantId`,b.`Name` AS `BuyerName`,a.`TotalAmount` FROM `sys_order_104_202205` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ORDER BY a.`Id` DESC) a UNION ALL SELECT * FROM (SELECT a.`Id`,a.`TenantId`,b.`Name` AS `BuyerName`,a.`TotalAmount` FROM `sys_order_104_202305` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ORDER BY a.`Id` DESC) a UNION ALL SELECT * FROM (SELECT a.`Id`,a.`TenantId`,b.`Name` AS `BuyerName`,a.`TotalAmount` FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ORDER BY a.`Id` DESC) a
 ```
 
 

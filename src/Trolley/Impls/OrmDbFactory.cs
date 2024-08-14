@@ -112,7 +112,7 @@ public sealed class OrmDbFactory : IOrmDbFactory
             ShardingProvider = this.shardingProvider,
             CommandTimeout = this.options?.Timeout ?? 30,
             IsParameterized = this.options?.IsParameterized ?? false,
-            DbFilters = this.interceptors
+            DbInterceptors = this.interceptors
         };
         return ormProvider.CreateRepository(dbContext);
     }

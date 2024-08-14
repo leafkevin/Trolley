@@ -83,6 +83,8 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
 
         //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不对
         //SqlServer数据库，Union子句在SELECT * FROM包装后，每个列都需要有一个明确的列名，没有则需要增加as别名
+        if (isManySharding)
+            isManySharding = this.ShardingTables != null && this.ShardingTables[0].TableNames != null && this.ShardingTables[0].TableNames.Count > 1;
         bool isNeedWrap = (this.IsUnion || this.IsSecondUnion || isManySharding) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue);
         this.AddSelectFieldsSql(builder, this.ReaderFields, isNeedWrap);
 
@@ -231,6 +233,8 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
         if (this.ReaderFields == null)
             throw new Exception("缺少Select语句");
         //SqlServer数据库，Union子句在SELECT * FROM包装后，每个列都需要有一个明确的列名，没有则需要增加as别名
+        if (isManySharding)
+            isManySharding = this.ShardingTables != null && this.ShardingTables[0].TableNames != null && this.ShardingTables[0].TableNames.Count > 1;
         bool isNeedWrap = (this.IsUnion || this.IsSecondUnion || isManySharding) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue);
         this.AddSelectFieldsSql(builder, this.ReaderFields, isNeedWrap);
 
