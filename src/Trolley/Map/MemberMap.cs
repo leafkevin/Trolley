@@ -19,7 +19,7 @@ public class MemberMap
     public string DbColumnType { get; set; }
     public object NativeDbType { get; set; }
     public int Position { get; set; }
-    public int Length { get; set; }
+    public int MaxLength { get; set; }
     public bool IsIgnore { get; set; }
     public bool IsIgnoreInsert { get; set; }
     public bool IsIgnoreUpdate { get; set; }
@@ -49,7 +49,6 @@ public class MemberMap
     /// </summary>
     public ITypeHandler TypeHandler { get; set; }
     public Type TypeHandlerType { get; set; }
-
     public MemberMap(EntityMap parent, MemberInfo memberInfo)
     {
         this.Parent = parent;

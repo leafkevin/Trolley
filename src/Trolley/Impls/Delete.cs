@@ -28,32 +28,27 @@ public class Delete<TEntity> : IDelete<TEntity>
     #region Sharding
     public virtual IDelete<TEntity> UseTable(params string[] tableNames)
     {
-        var entityType = typeof(TEntity);
-        this.Visitor.UseTable(entityType, tableNames);
+        this.Visitor.UseTable(false, tableNames);
         return this;
     }
     public virtual IDelete<TEntity> UseTable(Func<string, bool> tableNamePredicate)
     {
-        var entityType = typeof(TEntity);
-        this.Visitor.UseTable(entityType, tableNamePredicate);
+        this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
     public virtual IDelete<TEntity> UseTableBy(object field1Value, object field2Value = null)
     {
-        var entityType = typeof(TEntity);
-        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(false, field1Value, field2Value);
         return this;
     }
     public virtual IDelete<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        var entityType = typeof(TEntity);
-        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
     public virtual IDelete<TEntity> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
-        var entityType = typeof(TEntity);
-        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion

@@ -34,39 +34,33 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
     #region Sharding
     public virtual IQuery<<#=tables#>> UseTable(params string[] tableNames)
     {
-        var entityType = typeof(<#=currentTable#>);
-        this.Visitor.UseTable(entityType, tableNames);
+        this.Visitor.UseTable(false, tableNames);
         return this;
     }
     public virtual IQuery<<#=tables#>> UseTable(Func<string, bool> tableNamePredicate)
     {
-        var entityType = typeof(<#=currentTable#>);
-        this.Visitor.UseTable(entityType, tableNamePredicate);
+        this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
     public virtual IQuery<<#=tables#>> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
-    {
-        var entityType = typeof(<#=currentTable#>);
+    {        
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(entityType, masterEntityType, tableNameGetter);
+        this.Visitor.UseTable(false, masterEntityType, tableNameGetter);
         return this;
     }
     public virtual IQuery<<#=tables#>> UseTableBy(object field1Value, object field2Value = null)
     {
-        var entityType = typeof(<#=currentTable#>);
-        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(false, field1Value, field2Value);
         return this;
     }
     public virtual IQuery<<#=tables#>> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        var entityType = typeof(<#=currentTable#>);
-        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
     public virtual IQuery<<#=tables#>> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
-        var entityType = typeof(<#=currentTable#>);
-        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion

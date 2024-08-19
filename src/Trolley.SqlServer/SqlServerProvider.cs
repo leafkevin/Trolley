@@ -2,7 +2,9 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Text;
 
 namespace Trolley.SqlServer;
@@ -126,11 +128,7 @@ public partial class SqlServerProvider : BaseOrmProvider
     public override IDbDataParameter CreateParameter(string parameterName, object value)
         => new SqlParameter(parameterName, value);
     public override IDbDataParameter CreateParameter(string parameterName, object nativeDbType, object value)
-    {
-        var parameter = new SqlParameter(parameterName, (SqlDbType)nativeDbType);
-        parameter.Value = value;
-        return parameter;
-    }
+        => new SqlParameter(parameterName, (SqlDbType)nativeDbType) { Value = value };
     public override void ChangeParameter(object dbParameter, Type targetType, object value)
     {
         var fieldValue = Convert.ChangeType(value, targetType);
@@ -208,6 +206,193 @@ public partial class SqlServerProvider : BaseOrmProvider
                     return sqlSegment.Body;
                 }
             default: return value.ToString();
+        }
+    }
+    public override object MapNativeDbType(DbColumnInfo columnInfo)
+    {
+        switch (columnInfo.DataType)
+        {
+            case "bit": return SqlDbType.Bit;
+
+            case "char": return SqlDbType.Char;
+            case "varchar": return SqlDbType.VarChar;
+            case "text": return SqlDbType.Text;
+            case "nchar": return SqlDbType.NChar;
+            case "nvarchar": return SqlDbType.NVarChar;
+            case "ntext": return SqlDbType.NText;
+
+            case "tinyint": return SqlDbType.TinyInt;
+            case "smallint": return SqlDbType.SmallInt;
+            case "int": return SqlDbType.Int;
+            case "bigint": return SqlDbType.NText;
+
+            case "smalldatetime": return SqlDbType.SmallDateTime;
+            case "datetime": return SqlDbType.DateTime;
+            case "datetime2": return SqlDbType.DateTime2;
+            case "date": return SqlDbType.Date;
+            case "time": return SqlDbType.Time;
+            case "datetimeoffset": return SqlDbType.DateTimeOffset;
+
+            case "real": return SqlDbType.Real;
+            case "float": return SqlDbType.Float;
+            case "numeric": return SqlDbType.Decimal;
+            case "smallmoney": return SqlDbType.SmallMoney;
+            case "decimal": return SqlDbType.Decimal;
+            case "money": return SqlDbType.Money;
+            case "image": return SqlDbType.Image;
+
+            case "binary": return SqlDbType.Binary;
+            case "varbinary": return SqlDbType.VarBinary;
+            case "timestamp": return SqlDbType.Timestamp;
+            case "uniqueidentifier": return SqlDbType.UniqueIdentifier;
+            default: return SqlDbType.Variant;
+        }
+    }
+    public override void MapTables(string connectionString, IEntityMapProvider mapProvider)
+    {
+        var tableNames = mapProvider.EntityMaps.Where(f => !f.IsMapped).Select(f => f.TableName).ToList();
+        if (tableNames == null || tableNames.Count == 0)
+            return;
+        var sql = @"select b.name,a.name,c.name,d.name,(d.name + case when d.name in ('char','varchar','nchar','nvarchar','binary','varbinary') then '('+ case when c.max_length = -1 then 'MAX' when d.name in ('nchar','nvarchar') then
+cast(c.max_length/2 as varchar) else cast(c.max_length as varchar) end+')' when d.name in ('numeric','decimal') then '('+cast(c.precision as varchar)+','+ cast(c.scale as varchar)+')' else '' end),case when d.name in ('nchar','nvarchar')
+then c.max_length/2 else c.max_length end,c.scale,c.precision,(select value from sys.extended_properties where major_id=c.object_id AND minor_id=c.column_id AND name = 'MS_Description'and class=1),e.text,g.is_primary_key,c.is_identity,
+c.is_nullable,c.column_id from sys.tables a inner join sys.schemas b on a.schema_id=b.schema_id inner join sys.columns c on a.object_id=c.object_id inner join sys.types d on d.user_type_id=c.user_type_id left join syscomments e
+on e.id = c.default_object_id left join sys.index_columns f on f.object_id=a.object_id and f.column_id=c.column_id left join sys.indexes g on g.object_id=a.object_id and g.index_id=f.index_id order by b.name,a.name,c.column_id";
+        var tableBuilders = new Dictionary<string, StringBuilder>();
+        foreach (var tableName in tableNames)
+        {
+            StringBuilder builder = null;
+            string myTableName = null;
+            if (tableName.Contains('.'))
+            {
+                var myTableNames = tableName.Split('.');
+                var tableSchema = myTableNames[0];
+                myTableName = myTableNames[1];
+                if (!tableBuilders.TryGetValue(tableSchema, out builder))
+                    tableBuilders.TryAdd(tableSchema, builder = new StringBuilder());
+            }
+            else
+            {
+                var tableSchema = this.DefaultTableSchema;
+                if (!tableBuilders.TryGetValue(tableSchema, out builder))
+                    tableBuilders.TryAdd(tableSchema, builder = new StringBuilder());
+                myTableName = tableName;
+            }
+            if (builder.Length > 0)
+                builder.Append(',');
+            builder.Append($"'{myTableName}'");
+        }
+        var sqlBuilder = new StringBuilder();
+        foreach (var tableBuilder in tableBuilders)
+        {
+            if (sqlBuilder.Length > 0)
+                sqlBuilder.Append(" OR ");
+
+            sqlBuilder.Append($"b.name='{tableBuilder.Key}' AND a.name IN ({tableBuilder.Value.ToString()})");
+        }
+        sql = string.Format(sql, sqlBuilder.ToString());
+        var entityMappers = mapProvider.EntityMaps.ToList();
+        var tableInfos = new List<DbTableInfo>();
+        using var connection = new SqlConnection(connectionString);
+        using var command = new SqlCommand(sql, connection);
+        connection.Open();
+        using var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
+
+        DbTableInfo tableInfo = null;
+        while (reader.Read())
+        {
+            var tableSchema = reader.ToValue<string>(0);
+            var tableName = reader.ToValue<string>(1);
+            if (tableInfo == null || tableInfo.TableSchema != tableSchema || tableInfo.TableName != tableName)
+            {
+                tableInfo = new DbTableInfo
+                {
+                    TableSchema = tableSchema,
+                    TableName = tableName,
+                    Columns = new List<DbColumnInfo>()
+                };
+                tableInfos.Add(tableInfo);
+            }
+            tableInfo.Columns.Add(new DbColumnInfo
+            {
+                FieldName = reader.GetString(2),
+                DataType = reader.GetString(3),
+                DbColumnType = reader.GetString(4),
+                MaxLength = (int)reader.ToValue<ulong>(5),
+                Scale = reader.ToValue<int>(6),
+                Precision = reader.ToValue<int>(7),
+                Description = reader.ToValue<string>(8),
+                DefaultValue = reader.ToValue<string>(9),
+                IsPrimaryKey = reader.ToValue<bool>(10),
+                IsAutoIncrement = reader.ToValue<bool>(11),
+                IsNullable = reader.ToValue<bool>(12),
+                Position = reader.ToValue<int>(13)
+            });
+        }
+        reader.Close();
+        connection.Close();
+        var fieldMapHandler = mapProvider.FieldMapHandler;
+        foreach (var entityMapper in entityMappers)
+        {
+            (var tableSchema, var tableName) = this.GetFullTableName(entityMapper.TableName);
+            tableInfo = tableInfos.Find(f => f.TableSchema == tableSchema && f.TableName == tableName);
+            if (tableInfo == null)
+                continue;
+
+            var memberInfos = entityMapper.EntityType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
+                .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
+
+            foreach (var columnInfo in tableInfo.Columns)
+            {
+                //数据库字段没有映射到实体成员,IsRowVersion
+                if (!fieldMapHandler.TryFindMember(columnInfo.FieldName, memberInfos, out var memberInfo))
+                    continue;
+
+                if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper))
+                {
+                    entityMapper.AddMemberMap(memberInfo.Name, memberMapper = new MemberMap(entityMapper, memberInfo)
+                    {
+                        FieldName = columnInfo.FieldName,
+                        DbColumnType = columnInfo.DbColumnType,
+                        IsKey = columnInfo.IsPrimaryKey,
+                        IsAutoIncrement = columnInfo.IsAutoIncrement,
+                        IsRequired = !columnInfo.IsNullable,
+                        MaxLength = columnInfo.MaxLength,
+                        NativeDbType = this.MapNativeDbType(columnInfo),
+                        Position = columnInfo.Position
+                    });
+                }
+                else
+                {
+                    memberMapper.DbColumnType = columnInfo.DbColumnType;
+                    memberMapper.IsKey = columnInfo.IsPrimaryKey;
+                    memberMapper.IsAutoIncrement = columnInfo.IsAutoIncrement;
+                    memberMapper.IsRequired = !columnInfo.IsNullable;
+                    memberMapper.MaxLength = columnInfo.MaxLength;
+                    memberMapper.NativeDbType = this.MapNativeDbType(columnInfo);
+                    memberMapper.Position = columnInfo.Position;
+                }
+                //实体类类型成员
+                if ((memberMapper.UnderlyingType.IsClass && memberMapper.UnderlyingType != typeof(string)
+                    || memberMapper.UnderlyingType.IsEntityType(out _))
+                    && this.MapDefaultType(memberMapper.NativeDbType) == typeof(string))
+                {
+                    memberMapper.TypeHandlerType = typeof(JsonTypeHandler);
+                    memberMapper.TypeHandler = this.GetTypeHandler(memberMapper.TypeHandlerType);
+                }
+                //object类型
+                if (memberMapper.MemberType == typeof(object) && this.MapDefaultType(memberMapper.NativeDbType) == typeof(string))
+                {
+                    memberMapper.TypeHandlerType = typeof(ToStringTypeHandler);
+                    memberMapper.TypeHandler = this.GetTypeHandler(memberMapper.TypeHandlerType);
+                }
+            }
+
+            //非默认TableSchema表名就不变更了
+            if (tableSchema != this.DefaultTableSchema)
+                entityMapper.TableSchema = tableSchema;
+            else entityMapper.TableName = tableName;
+            entityMapper.IsMapped = true;
         }
     }
     public override bool TryGetMyMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)

@@ -12,7 +12,7 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
 {
     public string LockName { get; set; }
     public List<string> OutputFieldNames { get; set; }
-    public SqlServerCreateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
+    public SqlServerCreateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, ITableShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
         : base(dbKey, ormProvider, mapProvider, shardingProvider, isParameterized, tableAsStart, parameterPrefix) { }
 
     public override string BuildCommand(IDbCommand command, bool isReturnIdentity, out List<SqlFieldSegment> readerFields)
@@ -45,7 +45,7 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
         var entityType = this.Tables[0].EntityType;
         var entityMapper = this.Tables[0].Mapper;
         var tableName = entityMapper.TableName;
-        if (this.ShardingProvider.TryGetShardingTable(entityType, out _))
+        if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out _))
         {
             if (string.IsNullOrEmpty(this.Tables[0].Body))
                 throw new Exception($"实体表{entityType.FullName}有配置分表，当前操作未指定分表，请调用UseTable或UseTableBy方法指定分表");
@@ -108,7 +108,7 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
         var tableName = this.Tables[0].Mapper.TableName;
         var entityType = this.Tables[0].EntityType;
 
-        if (this.ShardingProvider.TryGetShardingTable(entityType, out _))
+        if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out _))
         {
             //有设置分表，优先使用分表，没有设置分表，则根据数据的字段确定分表
             if (!string.IsNullOrEmpty(this.Tables[0].Body))

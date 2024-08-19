@@ -25,6 +25,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
     public virtual OrmProviderType OrmProviderType => OrmProviderType.Basic;
     public virtual string ParameterPrefix => "@";
     public abstract Type NativeDbTypeType { get; }
+    public virtual string DefaultTableSchema { get; set; }
     public virtual ICollection<ITypeHandler> TypeHandlers => typeHandlers.Values;
     public abstract IDbConnection CreateConnection(string connectionString);
     public abstract IDbDataParameter CreateParameter(string parameterName, object value);
@@ -1357,6 +1358,8 @@ public abstract partial class BaseOrmProvider : IOrmProvider
             typeHandlers.TryAdd(typeHandlerType, typeHandler = Activator.CreateInstance(typeHandlerType) as ITypeHandler);
         return typeHandler;
     }
+    public abstract object MapNativeDbType(DbColumnInfo columnInfo);
+    public abstract void MapTables(string connectionString, IEntityMapProvider mapProvider);
     public virtual bool TryGetMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter)
     {
         var memberInfo = memberExpr.Member;
@@ -1862,4 +1865,13 @@ public abstract partial class BaseOrmProvider : IOrmProvider
         return result;
     }
     public abstract bool TryGetMathMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);
+    protected (string, string) GetFullTableName(string tableName)
+    {
+        if (tableName.Contains('.'))
+        {
+            var myTableNames = tableName.Split('.');
+            return (myTableNames[0], myTableNames[1]);
+        }
+        return (this.DefaultTableSchema, tableName);
+    }
 }

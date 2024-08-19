@@ -2,15 +2,18 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
+using System.Text;
 
 namespace Trolley.MySqlConnector;
 
 public partial class MySqlProvider : BaseOrmProvider
 {
-    private static Dictionary<object, Type> defaultMapTypes = new();
-    private static Dictionary<Type, object> defaultDbTypes = new();
-    private static Dictionary<Type, string> castTos = new();
+    private readonly static Dictionary<object, Type> defaultMapTypes = new();
+    private readonly static Dictionary<Type, object> defaultDbTypes = new();
+    private readonly static Dictionary<Type, string> castTos = new();
 
     public override OrmProviderType OrmProviderType => OrmProviderType.MySql;
     public override Type NativeDbTypeType => typeof(MySqlDbType);
@@ -131,11 +134,7 @@ public partial class MySqlProvider : BaseOrmProvider
     public override IDbDataParameter CreateParameter(string parameterName, object value)
         => new MySqlParameter(parameterName, value);
     public override IDbDataParameter CreateParameter(string parameterName, object nativeDbType, object value)
-    {
-        var parameter = new MySqlParameter(parameterName, (MySqlDbType)nativeDbType);
-        parameter.Value = value;
-        return parameter;
-    }
+        => new MySqlParameter(parameterName, (MySqlDbType)nativeDbType) { Value = value };
     public override void ChangeParameter(object dbParameter, Type targetType, object value)
     {
         var fieldValue = Convert.ChangeType(value, targetType);
@@ -160,6 +159,205 @@ public partial class MySqlProvider : BaseOrmProvider
     }
     public override string CastTo(Type type, object value)
         => $"CAST({value} AS {castTos[type]})";
+    public override object MapNativeDbType(DbColumnInfo columnInfo)
+    {
+        bool isUnsigned = columnInfo.DbColumnType.Contains("unsigned");
+        switch (columnInfo.DataType)
+        {
+            case "bit": return MySqlDbType.Bit;
+            case "bool": return MySqlDbType.Bool;
+            case "tinyint":
+                if (columnInfo.DbColumnType == "tinyint(1)")
+                    return MySqlDbType.Bool;
+                else return isUnsigned ? MySqlDbType.UByte : MySqlDbType.Byte;
+            case "smallint": return isUnsigned ? MySqlDbType.UInt16 : MySqlDbType.Int16;
+            case "mediumint": return isUnsigned ? MySqlDbType.UInt24 : MySqlDbType.Int24;
+            case "int": return isUnsigned ? MySqlDbType.UInt32 : MySqlDbType.Int32;
+            case "bigint": return isUnsigned ? MySqlDbType.UInt64 : MySqlDbType.Int64;
+            case "float": return MySqlDbType.Float;
+            case "real":
+            case "double": return MySqlDbType.Double;
+            case "numeric":
+            case "decimal": return MySqlDbType.Decimal;
+            case "year": return MySqlDbType.Year;
+            case "time": return MySqlDbType.Time;
+            case "date": return MySqlDbType.Date;
+            case "timestamp": return MySqlDbType.Timestamp;
+            case "smalldatetime":
+            case "datetime": return MySqlDbType.DateTime;
+            case "tinyblob": return MySqlDbType.TinyBlob;
+            case "blob": return MySqlDbType.Blob;
+            case "mediumblob": return MySqlDbType.MediumBlob;
+            case "longblob": return MySqlDbType.LongBlob;
+            case "binary": return MySqlDbType.Binary;
+            case "varbinary": return MySqlDbType.VarBinary;
+            case "tinytext": return MySqlDbType.TinyText;
+            case "text": return MySqlDbType.Text;
+            case "mediumtext": return MySqlDbType.MediumText;
+            case "longtext": return MySqlDbType.LongText;
+            case "char": return columnInfo.MaxLength == 36 ? MySqlDbType.Guid : MySqlDbType.String;
+            case "varchar": return MySqlDbType.VarChar;
+            case "set": return MySqlDbType.Set;
+            case "enum": return MySqlDbType.Enum;
+            case "point":
+            case "linestring":
+            case "polygon":
+            case "geometry":
+            case "multipoint":
+            case "multilinestring":
+            case "multipolygon":
+            case "geometrycollection": return MySqlDbType.Geometry;
+            default: return MySqlDbType.String;
+        }
+    }
+    public override void MapTables(string connectionString, IEntityMapProvider mapProvider)
+    {
+        var tableNames = mapProvider.EntityMaps.Where(f => !f.IsMapped).Select(f => f.TableName).ToList();
+        if (tableNames == null || tableNames.Count == 0)
+            return;
+        var sql = @"SELECT a.TABLE_SCHEMA,a.TABLE_NAME,a.COLUMN_NAME,a.DATA_TYPE,a.COLUMN_TYPE,a.CHARACTER_MAXIMUM_LENGTH,a.NUMERIC_SCALE,a.NUMERIC_PRECISION,a.COLUMN_COMMENT,a.COLUMN_DEFAULT,
+		a.COLUMN_KEY='PRI',INSTR(IFNULL(a.EXTRA,''),'auto_increment'),a.IS_NULLABLE='YES',a.ORDINAL_POSITION FROM INFORMATION_SCHEMA.COLUMNS a WHERE {0} ORDER BY a.TABLE_SCHEMA,a.TABLE_NAME,a.ORDINAL_POSITION";
+
+        using var connection = new MySqlConnection(connectionString);
+        using var command = new MySqlCommand(sql, connection);
+        var tableBuilders = new Dictionary<string, StringBuilder>();
+        foreach (var tableName in tableNames)
+        {
+            StringBuilder builder = null;
+            string myTableName = null;
+            if (tableName.Contains('.'))
+            {
+                var myTableNames = tableName.Split('.');
+                var tableSchema = myTableNames[0];
+                myTableName = myTableNames[1];
+                if (!tableBuilders.TryGetValue(tableSchema, out builder))
+                    tableBuilders.TryAdd(tableSchema, builder = new StringBuilder());
+            }
+            else
+            {
+                var tableSchema = connection.Database;
+                if (!tableBuilders.TryGetValue(tableSchema, out builder))
+                    tableBuilders.TryAdd(tableSchema, builder = new StringBuilder());
+                myTableName = tableName;
+            }
+            if (builder.Length > 0)
+                builder.Append(',');
+            builder.Append($"'{myTableName}'");
+        }
+        var sqlBuilder = new StringBuilder();
+        foreach (var tableBuilder in tableBuilders)
+        {
+            if (sqlBuilder.Length > 0)
+                sqlBuilder.Append(" OR ");
+
+            sqlBuilder.Append($"a.TABLE_SCHEMA='{tableBuilder.Key}' AND a.TABLE_NAME IN ({tableBuilder.Value.ToString()})");
+        }
+        sql = string.Format(sql, sqlBuilder.ToString());
+        var entityMappers = mapProvider.EntityMaps.ToList();
+        var tableInfos = new List<DbTableInfo>();
+        command.CommandText = sql;
+        connection.Open();
+        using var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
+
+        DbTableInfo tableInfo = null;
+        while (reader.Read())
+        {
+            var tableSchema = reader.GetString(0);
+            var tableName = reader.GetString(1);
+            if (tableInfo == null || tableInfo.TableSchema != tableSchema || tableInfo.TableName != tableName)
+            {
+                tableInfo = new DbTableInfo
+                {
+                    TableSchema = tableSchema,
+                    TableName = tableName,
+                    Columns = new List<DbColumnInfo>()
+                };
+                tableInfos.Add(tableInfo);
+            }
+            tableInfo.Columns.Add(new DbColumnInfo
+            {
+                FieldName = reader.GetString(2),
+                DataType = reader.GetString(3),
+                DbColumnType = reader.GetString(4),
+                MaxLength = (int)reader.ToValue<ulong>(5),
+                Scale = reader.ToValue<int>(6),
+                Precision = reader.ToValue<int>(7),
+                Description = reader.ToValue<string>(8),
+                DefaultValue = reader.ToValue<string>(9),
+                IsPrimaryKey = reader.ToValue<bool>(10),
+                IsAutoIncrement = reader.ToValue<bool>(11),
+                IsNullable = reader.ToValue<bool>(12),
+                Position = reader.ToValue<int>(13)
+            });
+        }
+        reader.Close();
+        connection.Close();
+
+        var fieldMapHandler = mapProvider.FieldMapHandler;
+        foreach (var entityMapper in entityMappers)
+        {
+            (var tableSchema, var tableName) = this.GetFullTableName(entityMapper.TableName);
+            tableSchema ??= connection.Database;
+            tableInfo = tableInfos.Find(f => f.TableSchema == tableSchema && f.TableName == tableName);
+            if (tableInfo == null)
+                continue;
+
+            var memberInfos = entityMapper.EntityType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
+                .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
+
+            foreach (var columnInfo in tableInfo.Columns)
+            {
+                //数据库字段没有映射到实体成员,IsRowVersion
+                if (!fieldMapHandler.TryFindMember(columnInfo.FieldName, memberInfos, out var memberInfo))
+                    continue;
+
+                if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper))
+                {
+                    entityMapper.AddMemberMap(memberInfo.Name, memberMapper = new MemberMap(entityMapper, memberInfo)
+                    {
+                        FieldName = columnInfo.FieldName,
+                        DbColumnType = columnInfo.DbColumnType,
+                        IsKey = columnInfo.IsPrimaryKey,
+                        IsAutoIncrement = columnInfo.IsAutoIncrement,
+                        IsRequired = !columnInfo.IsNullable,
+                        MaxLength = columnInfo.MaxLength,
+                        NativeDbType = this.MapNativeDbType(columnInfo),
+                        Position = columnInfo.Position
+                    });
+                }
+                else
+                {
+                    memberMapper.DbColumnType = columnInfo.DbColumnType;
+                    memberMapper.IsKey = columnInfo.IsPrimaryKey;
+                    memberMapper.IsAutoIncrement = columnInfo.IsAutoIncrement;
+                    memberMapper.IsRequired = !columnInfo.IsNullable;
+                    memberMapper.MaxLength = columnInfo.MaxLength;
+                    memberMapper.NativeDbType = this.MapNativeDbType(columnInfo);
+                    memberMapper.Position = columnInfo.Position;
+                }
+                //实体类类型成员
+                if ((memberMapper.UnderlyingType.IsClass && memberMapper.UnderlyingType != typeof(string)
+                    || memberMapper.UnderlyingType.IsEntityType(out _))
+                    && this.MapDefaultType(memberMapper.NativeDbType) == typeof(string))
+                {
+                    memberMapper.TypeHandlerType = typeof(JsonTypeHandler);
+                    memberMapper.TypeHandler = this.GetTypeHandler(memberMapper.TypeHandlerType);
+                }
+                //object类型
+                if (memberMapper.MemberType == typeof(object) && this.MapDefaultType(memberMapper.NativeDbType) == typeof(string))
+                {
+                    memberMapper.TypeHandlerType = typeof(ToStringTypeHandler);
+                    memberMapper.TypeHandler = this.GetTypeHandler(memberMapper.TypeHandlerType);
+                }
+            }
+
+            //非默认TableSchema表名就不变更了
+            if (tableSchema != this.DefaultTableSchema)
+                entityMapper.TableSchema = tableSchema;
+            else entityMapper.TableName = tableName;
+            entityMapper.IsMapped = true;
+        }
+    }
     public override bool TryGetMyMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)
     {
         var methodInfo = methodCallExpr.Method;

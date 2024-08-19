@@ -49,7 +49,7 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                         insertObjType = insertObj.GetType();
                         break;
                     }
-                    if (this.DbContext.ShardingProvider.TryGetShardingTable(entityType, out var shardingTable))
+                    if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out var shardingTable))
                     {
                         isNeedSplit = this.Visitor.Tables[0].Body == null;
                         if (isNeedSplit)
@@ -189,7 +189,7 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                         insertObjType = insertObj.GetType();
                         break;
                     }
-                    if (this.DbContext.ShardingProvider.TryGetShardingTable(entityType, out _))
+                    if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out _))
                     {
                         isNeedSplit = this.Visitor.Tables[0].Body == null;
                         if (isNeedSplit)

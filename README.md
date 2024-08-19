@@ -15,6 +15,7 @@
 支持批量`Insert`，`Update`，`Delete`  
 支持`BulkCopy`插入，`BulkCopy`更新  
 支持`Include`导航属性，值对象导航属性(瘦身版模型)  
+支持`CTE`公共表达式，多语句查询`MultipleQuery`，多命令查询`MultipleExecute`
 支持模型映射，采用流畅API方式，目前不支持特性方式映射  
 支持分库，分表
 
@@ -3188,6 +3189,21 @@ var orderInfos = repository.From<Order>()
 生成的SQL:
 SELECT * FROM (SELECT a.`Id`,a.`TenantId`,b.`Name` AS `BuyerName`,a.`TotalAmount` FROM `sys_order_104_202005` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ORDER BY a.`Id` DESC) a UNION ALL SELECT * FROM (SELECT a.`Id`,a.`TenantId`,b.`Name` AS `BuyerName`,a.`TotalAmount` FROM `sys_order_104_202105` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ORDER BY a.`Id` DESC) a UNION ALL SELECT * FROM (SELECT a.`Id`,a.`TenantId`,b.`Name` AS `BuyerName`,a.`TotalAmount` FROM `sys_order_104_202205` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ORDER BY a.`Id` DESC) a UNION ALL SELECT * FROM (SELECT a.`Id`,a.`TenantId`,b.`Name` AS `BuyerName`,a.`TotalAmount` FROM `sys_order_104_202305` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ORDER BY a.`Id` DESC) a UNION ALL SELECT * FROM (SELECT a.`Id`,a.`TenantId`,b.`Name` AS `BuyerName`,a.`TotalAmount` FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ORDER BY a.`Id` DESC) a
 ```
+
+#### 拦截器
+`Trolley`支持以下几个拦截器
+```csharp
+public Action<ConectionEventArgs> OnConnectionCreated { get; set; }
+public Action<ConectionEventArgs> OnConnectionOpening { get; set; }
+public Action<ConectionEventArgs> OnConnectionOpened { get; set; }
+public Action<ConectionEventArgs> OnConnectionClosing { get; set; }
+public Action<ConectionEventArgs> OnConnectionClosed { get; set; }
+public Action<CommandEventArgs> OnCommandExecuting { get; set; }
+public Action<CommandCompletedEventArgs> OnCommandExecuted { get; set; }
+public Action<CommandCompletedEventArgs> OnCommandFailed { get; set; }
+```
+可以根据需要设置拦截处理程序，事件参数中的`ConnectionId`、`CommandId`是每次创建对象的的唯一ID，不一定是ADO.NET中真实的链接ID，命令ID
+
 
 
 欢迎大家使用

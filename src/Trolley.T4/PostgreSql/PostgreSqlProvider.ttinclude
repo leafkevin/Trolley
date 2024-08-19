@@ -74,7 +74,7 @@ class PostgreSqlProvider : DbHelper
         {
             var columnName = this.ToValue<string>(reader[0]);
             var arrayDimens = this.ToValue<int>(reader[1]);
-            var dataType = this.ToValue<string>(reader[2]);            
+            var dataType = this.ToValue<string>(reader[2]);
             var length = this.ToValue<int>(reader[3]);
             var scale = (length >> 16) & 0xFFFF;
             var precision = length & 0xFFFF;
@@ -84,7 +84,7 @@ class PostgreSqlProvider : DbHelper
             var needLengthTypes = new []{"char", "bpchar", "varchar", "bytea", "bit", "varbit"};
             if(dataType == "bpchar")
                 dataType = "char";
-            var columnType = dataType;           
+            var columnType = dataType;
             if(needLengthTypes.Contains(dataType))
                 columnType += $"({length})";
             if(arrayDimens > 0)

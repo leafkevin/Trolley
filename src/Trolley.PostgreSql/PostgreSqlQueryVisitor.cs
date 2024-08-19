@@ -9,7 +9,7 @@ namespace Trolley.PostgreSql;
 
 public class PostgreSqlQueryVisitor : QueryVisitor
 {
-    public PostgreSqlQueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", IDataParameterCollection dbParameters = null)
+    public PostgreSqlQueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, ITableShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", IDataParameterCollection dbParameters = null)
         : base(dbKey, ormProvider, mapProvider, shardingProvider, isParameterized, tableAsStart, parameterPrefix, dbParameters) { }
 
     public bool IsDistinctOn { get; set; }

@@ -13,7 +13,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
     private List<CommandSegment> deferredSegments = new();
 
     public bool HasWhere { get; protected set; }
-    public DeleteVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", List<IDbDataParameter> dbParameters = null)
+    public DeleteVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, ITableShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", List<IDbDataParameter> dbParameters = null)
     {
         this.DbKey = dbKey;
         this.OrmProvider = ormProvider;

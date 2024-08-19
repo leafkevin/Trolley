@@ -22,25 +22,29 @@ public class UnitTest6 : UnitTestBase
         var services = new ServiceCollection();
         services.AddSingleton(f =>
         {
+            var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
+            var connectionString1 = "Server=localhost;Database=fengling_tenant1;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
+            var connectionString2 = "Server=localhost;Database=fengling_tenant1;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
             var builder = new OrmDbFactoryBuilder()
-                .Register(OrmProviderType.MySql, "fengling", "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true", true)
-                .Register(OrmProviderType.MySql, "fengling_tenant1", "Server=localhost;Database=fengling_tenant1;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true", false)
-                .Register(OrmProviderType.MySql, "fengling_tenant2", "Server=localhost;Database=fengling_tenant2;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true", false)
-                .UseSharding(s =>
+                .Register(OrmProviderType.MySql, "fengling", connectionString, true)
+                .Register(OrmProviderType.MySql, "fengling_tenant1", connectionString1)
+                .Register(OrmProviderType.MySql, "fengling_tenant2", connectionString2)
+                .Configure<ModelConfiguration>(OrmProviderType.MySql)
+                .UseDatabaseSharding(() =>
                 {
-                    s.UseDatabase(() =>
+                    //可以硬编码分库，也可以使用redis，映射表 ...，其他方式等
+                    var passport = f.GetService<IPassport>();
+                    return passport.TenantId switch
                     {
-                        //可以硬编码分库，也可以使用redis，映射表 ...，其他方式等
-                        var passport = f.GetService<IPassport>();
-                        return passport.TenantId switch
-                        {
-                            "200" => "fengling_tenant1",
-                            "300" => "fengling_tenant2",
-                            _ => "fengling"
-                        };
-                    })
+                        "200" => "fengling_tenant1",
+                        "300" => "fengling_tenant2",
+                        _ => "fengling"
+                    };
+                })
+                .UseTableSharding(OrmProviderType.MySql, s =>
+                {
                     //按照租户+时间分表
-                    .UseTable<Order>(t =>
+                    s.Table<Order>(t =>
                     {
                         t.DependOn(d => d.TenantId).DependOn(d => d.CreatedAt)
                         .UseRule((dbKey, origName, tenantId, createdAt) => $"{origName}_{tenantId}_{createdAt:yyyyMM}", "^sys_order_\\d{1,4}_[1,2]\\d{3}[0,1][0-9]$")
@@ -64,7 +68,7 @@ public class UnitTest6 : UnitTestBase
                         });
                     })
                     //按照租户+时间分表
-                    .UseTable<OrderDetail>(t =>
+                    .Table<OrderDetail>(t =>
                     {
                         t.DependOn(d => d.TenantId).DependOn(d => d.CreatedAt)
                         .UseRule((dbKey, origName, tenantId, createdAt) => $"{origName}_{tenantId}_{createdAt:yyyyMM}", "^sys_order_detail_\\d{1,4}_[1,2]\\d{3}[0,1][0-9]$")
@@ -93,9 +97,8 @@ public class UnitTest6 : UnitTestBase
                     //.UseTable<Order>(t => t.DependOn(d => d.Id).UseRule((dbKey, origName, id) => $"{origName}_{new DateTime(ObjectId.Parse(id).Timestamp):yyyyMM}", "^sys_order_\\S{24}$"))
                     ////按照Id字段哈希取模分表
                     //.UseTable<Order>(t => t.DependOn(d => d.Id).UseRule((dbKey, origName, id) => $"{origName}_{HashCode.Combine(id) % 5}", "^sys_order_\\S{24}$"))
-                    .UseTable<User>(t => t.DependOn(d => d.TenantId).UseRule((dbKey, origName, tenantId) => $"{origName}_{tenantId}", "^sys_user_\\d{1,4}$"));
+                    .Table<User>(t => t.DependOn(d => d.TenantId).UseRule((dbKey, origName, tenantId) => $"{origName}_{tenantId}", "^sys_user_\\d{1,4}$"));
                 })
-                .Configure<ModelConfiguration>(OrmProviderType.MySql)
                 .UseInterceptors(df =>
                 {
                     df.OnConnectionCreated += evt =>
@@ -1022,7 +1025,7 @@ public class UnitTest6 : UnitTestBase
             .UseTable<OrderDetail>((dbKey, orderOrigName, userOrigName, orderTableName) =>
             {
                 var tableName = orderTableName.Replace(orderOrigName, userOrigName);
-                return tableName.Substring(0, tableName.Length - 7);
+                return tableName[..^7];
             })
             .Where((a, b) => a.ProductCount > 1)
             .Select((x, y) => new

@@ -38,28 +38,67 @@ public class FromCommand : QueryInternal, IFromCommand
     {
         if (this.Visitor.IsNeedFetchShardingTables)
             this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
-        var sql = this.Visitor.BuildCommandSql(out var dbParameters);
-        var result = this.DbContext.Execute(f =>
+        using var command = this.DbContext.CreateCommand();
+        int result = 0;
+        bool isNeedClose = this.DbContext.IsNeedClose;
+        Exception exception = null;
+        CommandEventArgs eventArgs = null;
+        try
         {
-            f.CommandText = sql;
-            dbParameters.CopyTo(f.Parameters);
-            return this.Visitor.IsNeedFetchShardingTables;
-        });
-        this.Dispose();
+            command.CommandText = this.Visitor.BuildCommandSql(out var dbParameters);
+            dbParameters.CopyTo(command.Parameters);
+            this.DbContext.Open();
+            eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.Insert);
+            result = command.ExecuteNonQuery();
+        }
+        catch (Exception ex)
+        {
+            isNeedClose = true;
+            exception = ex;
+            this.DbContext.AddCommandFailedFilter(command, CommandSqlType.Insert, eventArgs, exception);
+        }
+        finally
+        {
+            this.DbContext.AddCommandAfterFilter(command, CommandSqlType.Insert, eventArgs, exception == null, exception);
+            command.Parameters.Clear();
+            command.Dispose();
+            if (isNeedClose) this.DbContext.Close();
+        }
+        if (exception != null) throw exception;
         return result;
     }
     public virtual async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         if (this.Visitor.IsNeedFetchShardingTables)
             await this.DbContext.FetchShardingTablesAsync(this.Visitor as SqlVisitor, cancellationToken);
-        var sql = this.Visitor.BuildCommandSql(out var dbParameters);
-        var result = await this.DbContext.ExecuteAsync(f =>
+
+        using var command = this.DbContext.CreateDbCommand();
+        int result = 0;
+        bool isNeedClose = this.DbContext.IsNeedClose;
+        Exception exception = null;
+        CommandEventArgs eventArgs = null;
+        try
         {
-            f.CommandText = sql;
-            dbParameters.CopyTo(f.Parameters);
-            return this.Visitor.IsNeedFetchShardingTables;
-        }, cancellationToken);
-        this.Dispose();
+            command.CommandText = this.Visitor.BuildCommandSql(out var dbParameters);
+            dbParameters.CopyTo(command.Parameters);
+            await this.DbContext.OpenAsync(cancellationToken);
+            eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.Insert);
+            result = await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            isNeedClose = true;
+            exception = ex;
+            this.DbContext.AddCommandFailedFilter(command, CommandSqlType.Insert, eventArgs, exception);
+        }
+        finally
+        {
+            this.DbContext.AddCommandAfterFilter(command, CommandSqlType.Insert, eventArgs, exception == null, exception);
+            command.Parameters.Clear();
+            await command.DisposeAsync();
+            if (isNeedClose) await this.DbContext.CloseAsync();
+        }
+        if (exception != null) throw exception;
         return result;
     }
     #endregion
@@ -94,32 +133,27 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
     #region Sharding
     public virtual IFromCommand<T> UseTable(params string[] tableNames)
     {
-        var entityType = typeof(T);
-        this.Visitor.UseTable(entityType, tableNames);
+        this.Visitor.UseTable(false, tableNames);
         return this;
     }
     public virtual IFromCommand<T> UseTable(Func<string, bool> tableNamePredicate)
     {
-        var entityType = typeof(T);
-        this.Visitor.UseTable(entityType, tableNamePredicate);
+        this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
     public virtual IFromCommand<T> UseTableBy(object field1Value, object field2Value = null)
     {
-        var entityType = typeof(T);
-        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(false, field1Value, field2Value);
         return this;
     }
     public virtual IFromCommand<T> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        var entityType = typeof(T);
-        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
     public virtual IFromCommand<T> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
-        var entityType = typeof(T);
-        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -296,32 +330,27 @@ public class FromCommand<<#=tables#>> : FromCommand, IFromCommand<<#=tables#>>
     #region Sharding
     public virtual IFromCommand<<#=tables#>> UseTable(params string[] tableNames)
     {
-        var entityType = typeof(<#=currentTable#>);
-        this.Visitor.UseTable(entityType, tableNames);
+        this.Visitor.UseTable(false, tableNames);
         return this;
     }
     public virtual IFromCommand<<#=tables#>> UseTable(Func<string, bool> tableNamePredicate)
     {
-        var entityType = typeof(<#=currentTable#>);
-        this.Visitor.UseTable(entityType, tableNamePredicate);
+        this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
     public virtual IFromCommand<<#=tables#>> UseTableBy(object field1Value, object field2Value = null)
     {
-        var entityType = typeof(<#=currentTable#>);
-        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(false, field1Value, field2Value);
         return this;
     }
     public virtual IFromCommand<<#=tables#>> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        var entityType = typeof(<#=currentTable#>);
-        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
     public virtual IFromCommand<<#=tables#>> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
-        var entityType = typeof(<#=currentTable#>);
-        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion

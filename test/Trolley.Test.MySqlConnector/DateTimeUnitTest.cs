@@ -20,8 +20,9 @@ public class DateTimeUnitTest : UnitTestBase
         var services = new ServiceCollection();
         services.AddSingleton(f =>
         {
+            var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
             var builder = new OrmDbFactoryBuilder()
-                .Register(OrmProviderType.MySql, "fengling", "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;", true)
+                .Register(OrmProviderType.MySql, "fengling", connectionString, true)
                 .Configure<ModelConfiguration>(OrmProviderType.MySql)
                 .UseInterceptors(df =>
                 {
@@ -52,7 +53,7 @@ public class DateTimeUnitTest : UnitTestBase
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();
-        dbFactory = serviceProvider.GetService<IOrmDbFactory>();
+        this.dbFactory = serviceProvider.GetService<IOrmDbFactory>();
     }
     [Fact]
     public async Task MemberAccess()
@@ -77,12 +78,12 @@ public class DateTimeUnitTest : UnitTestBase
                 IsEquals1 = f.UpdatedAt.Equals(localDate)
             })
             .ToSql(out var dbParameters);
-        Assert.True(sql == "SELECT NOW() AS `Now`,'0001-01-01 00:00:00.000' AS `MinValue`,'9999-12-31 23:59:59.999' AS `MaxValue`,UTC_TIMESTAMP() AS `UtcNow`,CURDATE() AS `Today`,'1970-01-01 00:00:00.000' AS `UnixEpoch`,'2023-05-06 00:00:00.000' AS `Date`,CONVERT(NOW(),DATE) AS `CurrentDate`,@p0 AS `localDate`,(a.`UpdatedAt`='2023-03-25 00:00:00.000') AS `IsEquals`,(a.`UpdatedAt`=@p1) AS `IsEquals1` FROM `sys_user` a WHERE a.`Id`=1");
-        Assert.True(dbParameters.Count == 2);
-        Assert.True(dbParameters[0].Value.GetType() == typeof(DateTime));
-        Assert.True(dbParameters[1].Value.GetType() == typeof(DateTime));
-        Assert.True((DateTime)dbParameters[0].Value == localDate);
-        Assert.True((DateTime)dbParameters[1].Value == localDate);
+        Assert.Equal("SELECT NOW() AS `Now`,'0001-01-01 00:00:00.000' AS `MinValue`,'9999-12-31 23:59:59.999' AS `MaxValue`,UTC_TIMESTAMP() AS `UtcNow`,CURDATE() AS `Today`,'1970-01-01 00:00:00.000' AS `UnixEpoch`,'2023-05-06 00:00:00.000' AS `Date`,CONVERT(NOW(),DATE) AS `CurrentDate`,@p0 AS `localDate`,(a.`UpdatedAt`='2023-03-25 00:00:00.000') AS `IsEquals`,(a.`UpdatedAt`=@p1) AS `IsEquals1` FROM `sys_user` a WHERE a.`Id`=1", sql);
+        Assert.Equal(2, dbParameters.Count);
+        Assert.Equal(typeof(DateTime), dbParameters[0].Value.GetType());
+        Assert.Equal(typeof(DateTime), dbParameters[1].Value.GetType());
+        Assert.Equal(localDate, (DateTime)dbParameters[0].Value);
+        Assert.Equal(localDate, (DateTime)dbParameters[1].Value);
 
         var result = await repository.From<User>()
             .Where(f => f.Id == 1)
@@ -102,15 +103,15 @@ public class DateTimeUnitTest : UnitTestBase
                 IsEquals1 = f.UpdatedAt.Equals(localDate)
             })
             .FirstAsync();
-        Assert.True(result.MinValue == DateTime.MinValue);
+        Assert.Equal(DateTime.MinValue, result.MinValue);
         //由于精度不同，差一些微秒
         //Assert.True(result.MaxValue == DateTime.MaxValue);
         //取决于时区的设置
-        Assert.True(result.Today == DateTime.Now.Date);
-        Assert.True(result.UnixEpoch == DateTime.UnixEpoch);
-        Assert.True(result.Date == DateTime.Parse("2023-05-06").Date);
-        Assert.True(result.localDate == localDate);
-        Assert.True(result.IsEquals == result.UpdatedAt.Equals(DateTime.Parse("2023-03-25")));
+        Assert.Equal(DateTime.Now.Date, result.Today);
+        Assert.Equal(DateTime.UnixEpoch, result.UnixEpoch);
+        Assert.Equal(DateTime.Parse("2023-05-06").Date, result.Date);
+        Assert.Equal(localDate, result.localDate);
+        Assert.Equal(result.UpdatedAt.Equals(DateTime.Parse("2023-03-25")), result.IsEquals);
     }
     [Fact]
     public async Task AddSubtract()
@@ -135,7 +136,7 @@ public class DateTimeUnitTest : UnitTestBase
                 ParseExact = DateTime.ParseExact("05-07/2023 13-08-45", "MM-dd/yyyy HH-mm-ss", CultureInfo.InvariantCulture)
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT DATE_ADD(a.`CreatedAt`,INTERVAL 365 DAY) AS `Add`,DATE_ADD(a.`CreatedAt`,INTERVAL 30 DAY) AS `AddDays`,DATE_ADD(a.`CreatedAt`,INTERVAL 300*1000 MICROSECOND) AS `AddMilliseconds`,DATE_SUB(a.`CreatedAt`,INTERVAL 365 DAY) AS `Subtract1`,DATE_SUB(NOW(),INTERVAL 365 DAY) AS `Subtract2`,TIMEDIFF(a.`UpdatedAt`,a.`CreatedAt`) AS `Subtract3`,DAYOFMONTH(LAST_DAY(CONCAT(YEAR(NOW()),'-',MONTH(NOW()),'-01'))) AS `DayInMonth`,(YEAR(NOW())%4=0 AND YEAR(NOW())%100<>0 OR YEAR(NOW())%400=0) AS `IsLeapYear1`,1 AS `IsLeapYear2`,CAST(DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') AS DATETIME) AS `Parse`,'2023-05-07 13:08:45.000' AS `ParseExact` FROM `sys_user` a WHERE a.`UpdatedAt`>SUBTIME(DATE_SUB(NOW(),INTERVAL 365 DAY),'00:25:00.000000')");
+        Assert.Equal("SELECT DATE_ADD(a.`CreatedAt`,INTERVAL 365 DAY) AS `Add`,DATE_ADD(a.`CreatedAt`,INTERVAL 30 DAY) AS `AddDays`,DATE_ADD(a.`CreatedAt`,INTERVAL 300*1000 MICROSECOND) AS `AddMilliseconds`,DATE_SUB(a.`CreatedAt`,INTERVAL 365 DAY) AS `Subtract1`,DATE_SUB(NOW(),INTERVAL 365 DAY) AS `Subtract2`,TIMEDIFF(a.`UpdatedAt`,a.`CreatedAt`) AS `Subtract3`,DAYOFMONTH(LAST_DAY(CONCAT(YEAR(NOW()),'-',MONTH(NOW()),'-01'))) AS `DayInMonth`,(YEAR(NOW())%4=0 AND YEAR(NOW())%100<>0 OR YEAR(NOW())%400=0) AS `IsLeapYear1`,1 AS `IsLeapYear2`,CAST(DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') AS DATETIME) AS `Parse`,'2023-05-07 13:08:45.000' AS `ParseExact` FROM `sys_user` a WHERE a.`UpdatedAt`>SUBTIME(DATE_SUB(NOW(),INTERVAL 365 DAY),'00:25:00.000000')", sql);
 
         var now = DateTime.Now;
         var result = await repository.From<User>()
@@ -158,17 +159,17 @@ public class DateTimeUnitTest : UnitTestBase
                 ParseExact = DateTime.ParseExact("05-07/2023 13-08-45", "MM-dd/yyyy HH-mm-ss", CultureInfo.InvariantCulture)
             })
             .FirstAsync();
-        Assert.True(result.Add == result.CreatedAt.Add(TimeSpan.FromDays(365)));
-        Assert.True(result.AddDays == result.CreatedAt.AddDays(30));
-        Assert.True(result.AddMilliseconds == result.CreatedAt.AddMilliseconds(300));
-        Assert.True(result.Subtract1 == result.CreatedAt.Subtract(TimeSpan.FromDays(365)));
-        Assert.True(result.Subtract2 == result.Now - TimeSpan.FromDays(365));
-        Assert.True(result.Subtract3 == result.UpdatedAt - result.CreatedAt);
-        Assert.True(result.DayInMonth == DateTime.DaysInMonth(now.Year, now.Month));
-        Assert.True(result.IsLeapYear1 == DateTime.IsLeapYear(now.Year));
-        Assert.True(result.IsLeapYear2 == DateTime.IsLeapYear(2020));
-        Assert.True(result.Parse == DateTime.Parse(now.ToString("yyyy-MM-dd HH:mm:ss")));
-        Assert.True(result.ParseExact == DateTime.ParseExact("05-07/2023 13-08-45", "MM-dd/yyyy HH-mm-ss", CultureInfo.InvariantCulture));
+        Assert.Equal(result.CreatedAt.Add(TimeSpan.FromDays(365)), result.Add);
+        Assert.Equal(result.CreatedAt.AddDays(30), result.AddDays);
+        Assert.Equal(result.CreatedAt.AddMilliseconds(300), result.AddMilliseconds);
+        Assert.Equal(result.CreatedAt.Subtract(TimeSpan.FromDays(365)), result.Subtract1);
+        Assert.Equal(result.Now - TimeSpan.FromDays(365), result.Subtract2);
+        Assert.Equal(result.UpdatedAt - result.CreatedAt, result.Subtract3);
+        Assert.Equal(DateTime.DaysInMonth(now.Year, now.Month), result.DayInMonth);
+        Assert.Equal(DateTime.IsLeapYear(now.Year), result.IsLeapYear1);
+        Assert.Equal(DateTime.IsLeapYear(2020), result.IsLeapYear2);
+        Assert.Equal(DateTime.Parse(now.ToString("yyyy-MM-dd HH:mm:ss")), result.Parse);
+        Assert.Equal(DateTime.ParseExact("05-07/2023 13-08-45", "MM-dd/yyyy HH-mm-ss", CultureInfo.InvariantCulture), result.ParseExact);
     }
     [Fact]
     public async Task Compare()
@@ -189,9 +190,9 @@ public class DateTimeUnitTest : UnitTestBase
                 ParseExact = DateTime.ParseExact("05-07/2023 13-08-45", "MM-dd/yyyy HH-mm-ss", CultureInfo.InvariantCulture)
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT (CASE WHEN a.`CreatedAt`='2023-03-03 00:00:00.000' THEN 0 WHEN a.`CreatedAt`>'2023-03-03 00:00:00.000' THEN 1 ELSE -1 END) AS `CompareTo`,DATE_SUB(a.`CreatedAt`,INTERVAL 365 DAY) AS `OneYearsAgo1`,TIMEDIFF(NOW(),'2023-03-20 00:00:00.000') AS `OneYearsAgo2`,DAYOFMONTH(LAST_DAY(CONCAT(YEAR(NOW()),'-',MONTH(NOW()),'-01'))) AS `DayInMonth`,(YEAR(NOW())%4=0 AND YEAR(NOW())%100<>0 OR YEAR(NOW())%400=0) AS `IsLeapYear1`,1 AS `IsLeapYear2`,CAST(DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') AS DATETIME) AS `Parse`,'2023-05-07 13:08:45.000' AS `ParseExact` FROM `sys_user` a WHERE (CASE WHEN a.`UpdatedAt`='2023-03-20 00:00:00.000' THEN 0 WHEN a.`UpdatedAt`>'2023-03-20 00:00:00.000' THEN 1 ELSE -1 END)>0");
-		
-		var now = DateTime.Now;
+        Assert.Equal("SELECT (CASE WHEN a.`CreatedAt`='2023-03-03 00:00:00.000' THEN 0 WHEN a.`CreatedAt`>'2023-03-03 00:00:00.000' THEN 1 ELSE -1 END) AS `CompareTo`,DATE_SUB(a.`CreatedAt`,INTERVAL 365 DAY) AS `OneYearsAgo1`,TIMEDIFF(NOW(),'2023-03-20 00:00:00.000') AS `OneYearsAgo2`,DAYOFMONTH(LAST_DAY(CONCAT(YEAR(NOW()),'-',MONTH(NOW()),'-01'))) AS `DayInMonth`,(YEAR(NOW())%4=0 AND YEAR(NOW())%100<>0 OR YEAR(NOW())%400=0) AS `IsLeapYear1`,1 AS `IsLeapYear2`,CAST(DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:%s') AS DATETIME) AS `Parse`,'2023-05-07 13:08:45.000' AS `ParseExact` FROM `sys_user` a WHERE (CASE WHEN a.`UpdatedAt`='2023-03-20 00:00:00.000' THEN 0 WHEN a.`UpdatedAt`>'2023-03-20 00:00:00.000' THEN 1 ELSE -1 END)>0", sql);
+
+        var now = DateTime.Now;
         var result = await repository.From<User>()
             .Where(f => f.Id == 1)
             .Select(f => new
@@ -211,16 +212,16 @@ public class DateTimeUnitTest : UnitTestBase
                 ParseExact = DateTime.ParseExact("05-07/2023 13-08-45", "MM-dd/yyyy HH-mm-ss", CultureInfo.InvariantCulture)
             })
             .FirstAsync();
-        Assert.True(result.Compare == DateTime.Compare(result.UpdatedAt, DateTime.Parse("2023-03-20")));
-        Assert.True(result.CompareTo == result.CreatedAt.CompareTo(DateTime.Parse("2023-03-03")));
-        Assert.True(result.OneYearsAgo1 == result.CreatedAt.Subtract(TimeSpan.FromDays(365)));
-        Assert.True(result.OneYearsAgo2 == result.CreatedAt - DateTime.Parse("2023-03-20"));
-        Assert.True(result.Subtract == result.CreatedAt.Subtract(DateTime.Parse("2023-03-01")));
-        Assert.True(result.DayInMonth == DateTime.DaysInMonth(now.Year, now.Month));
-        Assert.True(result.IsLeapYear1 == DateTime.IsLeapYear(now.Year));
-        Assert.True(result.IsLeapYear2 == DateTime.IsLeapYear(2020));
-        Assert.True(result.Parse == DateTime.Parse(now.ToString("yyyy-MM-dd HH:mm:ss")));
-        Assert.True(result.ParseExact == DateTime.ParseExact("05-07/2023 13-08-45", "MM-dd/yyyy HH-mm-ss", CultureInfo.InvariantCulture));
+        Assert.Equal(result.Compare, DateTime.Compare(result.UpdatedAt, DateTime.Parse("2023-03-20")));
+        Assert.Equal(result.CompareTo, result.CreatedAt.CompareTo(DateTime.Parse("2023-03-03")));
+        Assert.Equal(result.OneYearsAgo1, result.CreatedAt.Subtract(TimeSpan.FromDays(365)));
+        Assert.Equal(result.OneYearsAgo2, result.CreatedAt - DateTime.Parse("2023-03-20"));
+        Assert.Equal(result.Subtract, result.CreatedAt.Subtract(DateTime.Parse("2023-03-01")));
+        Assert.Equal(result.DayInMonth, DateTime.DaysInMonth(now.Year, now.Month));
+        Assert.Equal(result.IsLeapYear1, DateTime.IsLeapYear(now.Year));
+        Assert.Equal(result.IsLeapYear2, DateTime.IsLeapYear(2020));
+        Assert.Equal(result.Parse, DateTime.Parse(now.ToString("yyyy-MM-dd HH:mm:ss")));
+        Assert.Equal(result.ParseExact, DateTime.ParseExact("05-07/2023 13-08-45", "MM-dd/yyyy HH-mm-ss", CultureInfo.InvariantCulture));
     }
     [Fact]
     public async Task Operation()
@@ -242,7 +243,7 @@ public class DateTimeUnitTest : UnitTestBase
                 DivOp2 = TimeSpan.FromHours(30) / TimeSpan.FromHours(3)
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT '05:06:07.000000' AS `DateSub`,ADDTIME(a.`CreatedAt`,'05:00:00.000000') AS `AddOp`,SUBTIME(a.`CreatedAt`,'10:00:00.000000') AS `SubOp`,ADDTIME(a.`SomeTimes`,'00:25:00.000000') AS `AddOp1`,'1.05:45:00.000000' AS `SubOp1`,TIMEDIFF(a.`UpdatedAt`,a.`CreatedAt`) AS `SubOp2`,'01:15:00.000000' AS `MulOp`,'06:00:00.000000' AS `DivOp1`,10 AS `DivOp2` FROM `sys_user` a WHERE (CASE WHEN a.`UpdatedAt`='2023-03-20 00:00:00.000' THEN 0 WHEN a.`UpdatedAt`>'2023-03-20 00:00:00.000' THEN 1 ELSE -1 END)>0");
+        Assert.Equal("SELECT '05:06:07.000000' AS `DateSub`,ADDTIME(a.`CreatedAt`,'05:00:00.000000') AS `AddOp`,SUBTIME(a.`CreatedAt`,'10:00:00.000000') AS `SubOp`,ADDTIME(a.`SomeTimes`,'00:25:00.000000') AS `AddOp1`,'1.05:45:00.000000' AS `SubOp1`,TIMEDIFF(a.`UpdatedAt`,a.`CreatedAt`) AS `SubOp2`,'01:15:00.000000' AS `MulOp`,'06:00:00.000000' AS `DivOp1`,10 AS `DivOp2` FROM `sys_user` a WHERE (CASE WHEN a.`UpdatedAt`='2023-03-20 00:00:00.000' THEN 0 WHEN a.`UpdatedAt`>'2023-03-20 00:00:00.000' THEN 1 ELSE -1 END)>0", sql);
         var result = await repository.From<User>()
             .Where(f => f.Id == 1)
             .Select(f => new
@@ -261,14 +262,14 @@ public class DateTimeUnitTest : UnitTestBase
                 DivOp2 = TimeSpan.FromHours(30) / TimeSpan.FromHours(3)
             })
             .FirstAsync();
-        Assert.True(result.DateSub == DateTime.Parse("2022-01-01 05:06:07") - DateTime.Parse("2022-01-01"));
-        Assert.True(result.AddOp == result.CreatedAt + TimeSpan.FromHours(5));
-        Assert.True(result.SubOp == result.CreatedAt - TimeSpan.FromHours(10));
-        Assert.True(result.AddOp1 == result.SomeTimes.Value.Add(TimeSpan.FromMinutes(25)));
-        Assert.True(result.SubOp1 == TimeSpan.FromHours(30) - TimeSpan.FromMinutes(15));
-        Assert.True(result.SubOp2 == result.UpdatedAt - result.CreatedAt);
-        Assert.True(result.MulOp == TimeSpan.FromMinutes(25) * 3);
-        Assert.True(result.DivOp1 == TimeSpan.FromHours(30) / 5);
-        Assert.True(result.DivOp2 == TimeSpan.FromHours(30) / TimeSpan.FromHours(3));
+        Assert.Equal(result.DateSub, DateTime.Parse("2022-01-01 05:06:07") - DateTime.Parse("2022-01-01"));
+        Assert.Equal(result.AddOp, result.CreatedAt + TimeSpan.FromHours(5));
+        Assert.Equal(result.SubOp, result.CreatedAt - TimeSpan.FromHours(10));
+        Assert.Equal(result.AddOp1, result.SomeTimes.Value.Add(TimeSpan.FromMinutes(25)));
+        Assert.Equal(result.SubOp1, TimeSpan.FromHours(30) - TimeSpan.FromMinutes(15));
+        Assert.Equal(result.SubOp2, result.UpdatedAt - result.CreatedAt);
+        Assert.Equal(result.MulOp, TimeSpan.FromMinutes(25) * 3);
+        Assert.Equal(result.DivOp1, TimeSpan.FromHours(30) / 5);
+        Assert.Equal(result.DivOp2, TimeSpan.FromHours(30) / TimeSpan.FromHours(3));
     }
 }

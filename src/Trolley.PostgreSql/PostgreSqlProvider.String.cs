@@ -452,14 +452,23 @@ partial class PostgreSqlProvider
                         {
                             var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = target });
                             var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
-                            string rightArgument = null;
-                            if (rightSegment.IsConstant)
-                                rightArgument = $"'%{rightSegment.Value}%'";
-                            else rightArgument = $"CONCAT('%',{visitor.GetQuotedValue(rightSegment)},'%')";
-
                             var targetArgument = visitor.GetQuotedValue(targetSegment);
-                            var notString = deferExprs.IsDeferredNot() ? "NOT " : "";
-                            return targetSegment.Merge(rightSegment, $"{targetArgument}{notString} LIKE {rightArgument}");
+                            string body = null;
+                            if (visitor.IsSelect)
+                            {
+                                var notString = deferExprs.IsDeferredNot() ? "<0" : ">0";
+                                if (rightSegment.IsConstant)
+                                    body = $"POSITION('{rightSegment.Value}' IN {targetArgument}){notString}";
+                                else body = $"POSITION({visitor.GetQuotedValue(rightSegment)} IN {targetArgument}){notString}";
+                            }
+                            else
+                            {
+                                var notString = deferExprs.IsDeferredNot() ? "NOT " : "";
+                                if (rightSegment.IsConstant)
+                                    body = $"{targetArgument}{notString} LIKE '%{rightSegment.Value}%'";
+                                else body = $"{targetArgument}{notString} LIKE CONCAT('%',{visitor.GetQuotedValue(rightSegment)},'%')";
+                            }
+                            return targetSegment.Merge(rightSegment, body);
                         });
                         result = true;
                     }

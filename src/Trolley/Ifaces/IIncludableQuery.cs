@@ -4,12 +4,21 @@ using System.Linq.Expressions;
 
 namespace Trolley;
 
+public interface IIncludableQueryBase
+{
+    #region Properties
+    /// <summary>
+    /// 是否一对多关系导航
+    /// </summary>
+    bool IsIncludeMany { get; }
+    #endregion
+}
 /// <summary>
 /// 导航属性查询
 /// </summary>
 /// <typeparam name="T">表T实体类型</typeparam>
 /// <typeparam name="TMember">表T导航属性实体类型</typeparam>
-public interface IIncludableQuery<T, TMember> : IQuery<T>
+public interface IIncludableQuery<T, TMember> : IIncludableQueryBase, IQuery<T>
 {
     #region Sharding
     /// <summary>
@@ -112,7 +121,7 @@ public interface IIncludableQuery<T, TMember> : IQuery<T>
 /// <typeparam name="T1">表T1实体类型</typeparam>
 /// <typeparam name="T2">表T2实体类型</typeparam>
 /// <typeparam name="TMember">表T2导航属性实体类型</typeparam>
-public interface IIncludableQuery<T1, T2, TMember> : IQuery<T1, T2>
+public interface IIncludableQuery<T1, T2, TMember> : IIncludableQueryBase, IQuery<T1, T2>
 {
     #region Sharding
     /// <summary>
@@ -216,7 +225,7 @@ public interface IIncludableQuery<T1, T2, TMember> : IQuery<T1, T2>
 /// <typeparam name="T2">表T2实体类型</typeparam>
 /// <typeparam name="T3">表T3实体类型</typeparam>
 /// <typeparam name="TMember">表T3导航属性实体类型</typeparam>
-public interface IIncludableQuery<T1, T2, T3, TMember> : IQuery<T1, T2, T3>
+public interface IIncludableQuery<T1, T2, T3, TMember> : IIncludableQueryBase, IQuery<T1, T2, T3>
 {
     #region Sharding
     /// <summary>
@@ -321,7 +330,7 @@ public interface IIncludableQuery<T1, T2, T3, TMember> : IQuery<T1, T2, T3>
 /// <typeparam name="T3">表T3实体类型</typeparam>
 /// <typeparam name="T4">表T4实体类型</typeparam>
 /// <typeparam name="TMember">表T4导航属性实体类型</typeparam>
-public interface IIncludableQuery<T1, T2, T3, T4, TMember> : IQuery<T1, T2, T3, T4>
+public interface IIncludableQuery<T1, T2, T3, T4, TMember> : IIncludableQueryBase, IQuery<T1, T2, T3, T4>
 {
     #region Sharding
     /// <summary>
@@ -427,7 +436,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, TMember> : IQuery<T1, T2, T3, 
 /// <typeparam name="T4">表T4实体类型</typeparam>
 /// <typeparam name="T5">表T5实体类型</typeparam>
 /// <typeparam name="TMember">表T5导航属性实体类型</typeparam>
-public interface IIncludableQuery<T1, T2, T3, T4, T5, TMember> : IQuery<T1, T2, T3, T4, T5>
+public interface IIncludableQuery<T1, T2, T3, T4, T5, TMember> : IIncludableQueryBase, IQuery<T1, T2, T3, T4, T5>
 {
     #region Sharding
     /// <summary>
@@ -534,7 +543,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, TMember> : IQuery<T1, T2, 
 /// <typeparam name="T5">表T5实体类型</typeparam>
 /// <typeparam name="T6">表T6实体类型</typeparam>
 /// <typeparam name="TMember">表T6导航属性实体类型</typeparam>
-public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : IQuery<T1, T2, T3, T4, T5, T6>
+public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : IIncludableQueryBase, IQuery<T1, T2, T3, T4, T5, T6>
 {
     #region Sharding
     /// <summary>
@@ -642,7 +651,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : IQuery<T1, 
 /// <typeparam name="T6">表T6实体类型</typeparam>
 /// <typeparam name="T7">表T7实体类型</typeparam>
 /// <typeparam name="TMember">表T7导航属性实体类型</typeparam>
-public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : IQuery<T1, T2, T3, T4, T5, T6, T7>
+public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : IIncludableQueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7>
 {
     #region Sharding
     /// <summary>
@@ -751,7 +760,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : IQuery<
 /// <typeparam name="T7">表T7实体类型</typeparam>
 /// <typeparam name="T8">表T8实体类型</typeparam>
 /// <typeparam name="TMember">表T8导航属性实体类型</typeparam>
-public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> : IQuery<T1, T2, T3, T4, T5, T6, T7, T8>
+public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> : IIncludableQueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8>
 {
     #region Sharding
     /// <summary>
@@ -861,7 +870,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> : IQu
 /// <typeparam name="T8">表T8实体类型</typeparam>
 /// <typeparam name="T9">表T9实体类型</typeparam>
 /// <typeparam name="TMember">表T9导航属性实体类型</typeparam>
-public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> : IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>
+public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> : IIncludableQueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>
 {
     #region Sharding
     /// <summary>
@@ -972,7 +981,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> :
 /// <typeparam name="T9">表T9实体类型</typeparam>
 /// <typeparam name="T10">表T10实体类型</typeparam>
 /// <typeparam name="TMember">表T10导航属性实体类型</typeparam>
-public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> : IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
+public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> : IIncludableQueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
 {
     #region Sharding
     /// <summary>
@@ -1084,7 +1093,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMemb
 /// <typeparam name="T10">表T10实体类型</typeparam>
 /// <typeparam name="T11">表T11实体类型</typeparam>
 /// <typeparam name="TMember">表T11导航属性实体类型</typeparam>
-public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> : IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
+public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> : IIncludableQueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
 {
     #region Sharding
     /// <summary>
@@ -1197,7 +1206,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
 /// <typeparam name="T11">表T11实体类型</typeparam>
 /// <typeparam name="T12">表T12实体类型</typeparam>
 /// <typeparam name="TMember">表T12导航属性实体类型</typeparam>
-public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> : IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>
+public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> : IIncludableQueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>
 {
     #region Sharding
     /// <summary>
@@ -1311,7 +1320,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
 /// <typeparam name="T12">表T12实体类型</typeparam>
 /// <typeparam name="T13">表T13实体类型</typeparam>
 /// <typeparam name="TMember">表T13导航属性实体类型</typeparam>
-public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> : IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>
+public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> : IIncludableQueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>
 {
     #region Sharding
     /// <summary>
@@ -1426,7 +1435,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
 /// <typeparam name="T13">表T13实体类型</typeparam>
 /// <typeparam name="T14">表T14实体类型</typeparam>
 /// <typeparam name="TMember">表T14导航属性实体类型</typeparam>
-public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> : IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>
+public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> : IIncludableQueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>
 {
     #region Sharding
     /// <summary>
@@ -1542,7 +1551,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
 /// <typeparam name="T14">表T14实体类型</typeparam>
 /// <typeparam name="T15">表T15实体类型</typeparam>
 /// <typeparam name="TMember">表T15导航属性实体类型</typeparam>
-public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> : IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>
+public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> : IIncludableQueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>
 {
     #region Sharding
     /// <summary>
@@ -1659,6 +1668,6 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
 /// <typeparam name="T15">表T15实体类型</typeparam>
 /// <typeparam name="T16">表T16实体类型</typeparam>
 /// <typeparam name="TMember">表T16导航属性实体类型</typeparam>
-public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember> : IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>
+public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember> : IIncludableQueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>
 {
 }

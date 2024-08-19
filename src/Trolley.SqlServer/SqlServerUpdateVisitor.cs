@@ -8,7 +8,7 @@ namespace Trolley.SqlServer;
 
 public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
 {
-    public SqlServerUpdateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
+    public SqlServerUpdateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, ITableShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
         : base(dbKey, ormProvider, mapProvider, shardingProvider, isParameterized, tableAsStart, parameterPrefix) { }
 
     public override void Initialize(Type entityType, bool isMultiple = false, bool isFirst = true)

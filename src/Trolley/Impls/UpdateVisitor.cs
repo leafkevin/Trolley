@@ -22,7 +22,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     public bool HasWhere { get; protected set; }
     public TheaDbParameterCollection FixedDbParameters { get; set; }
 
-    public UpdateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
+    public UpdateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, ITableShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
     {
         this.DbKey = dbKey;
         this.OrmProvider = ormProvider;

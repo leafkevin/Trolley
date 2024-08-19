@@ -62,7 +62,7 @@ public class TableSegment
     /// </summary>
     public List<string> TableNames { get; set; }
     /// <summary>
-    /// 实体表名或是子查询SQL，如：sys_user或是(select * from ...)
+    /// 实体表名或是特定TableSchema表或是子查询SQL，如：sys_user或是myschema.sys_user或是(select * from ...)
     /// </summary>
     public string Body { get; set; }
     /// <summary>

@@ -24,24 +24,24 @@ public class UnitTest6 : UnitTestBase
         services.AddSingleton(f =>
         {
             var builder = new OrmDbFactoryBuilder()
-                .Register(OrmProviderType.PostgreSql, "fengling", "Host=localhost;Database=fengling;Username=postgres;Password=123456;SearchPath=public", true, "public")
-                .Register(OrmProviderType.PostgreSql, "fengling_tenant1", "Host=localhost;Database=fengling_tenant1;Username=postgres;Password=123456;SearchPath=public", false, "public")
-                .Register(OrmProviderType.PostgreSql, "fengling_tenant2", "Host=localhost;Database=fengling_tenant2;Username=postgres;Password=123456;SearchPath=public", false, "public")
-                .UseSharding(s =>
+                .Register(OrmProviderType.PostgreSql, "fengling", "Host=localhost;Database=fengling;Username=postgres;Password=123456;SearchPath=public", true)
+                .Register(OrmProviderType.PostgreSql, "fengling_tenant1", "Host=localhost;Database=fengling_tenant1;Username=postgres;Password=123456;SearchPath=public", false)
+                .Register(OrmProviderType.PostgreSql, "fengling_tenant2", "Host=localhost;Database=fengling_tenant2;Username=postgres;Password=123456;SearchPath=public", false)
+                .Configure<ModelConfiguration>(OrmProviderType.PostgreSql)
+                .UseDatabaseSharding(() =>
                 {
-                    s.UseDatabase(() =>
+                    var passport = f.GetService<IPassport>();
+                    return passport.TenantId switch
                     {
-                        //可以硬编码分库，也可以使用redis，映射表 ...，其他方式等
-                        var passport = f.GetService<IPassport>();
-                        return passport.TenantId switch
-                        {
-                            "200" => "fengling_tenant1",
-                            "300" => "fengling_tenant2",
-                            _ => "fengling"
-                        };
-                    })
+                        "200" => "fengling_tenant1",
+                        "300" => "fengling_tenant2",
+                        _ => "fengling"
+                    };
+                })
+                .UseTableSharding(OrmProviderType.PostgreSql, s =>
+                {
                     //按照租户+时间分表
-                    .UseTable<Order>(t =>
+                    s.Table<Order>(t =>
                     {
                         t.DependOn(d => d.TenantId).DependOn(d => d.CreatedAt)
                         .UseRule((dbKey, origName, tenantId, createdAt) => $"{origName}_{tenantId}_{createdAt:yyyyMM}", "^sys_order_\\d{1,4}_[1,2]\\d{3}[0,1][0-9]$")
@@ -65,7 +65,7 @@ public class UnitTest6 : UnitTestBase
                         });
                     })
                     //按照租户+时间分表
-                    .UseTable<OrderDetail>(t =>
+                    .Table<OrderDetail>(t =>
                     {
                         t.DependOn(d => d.TenantId).DependOn(d => d.CreatedAt)
                         .UseRule((dbKey, origName, tenantId, createdAt) => $"{origName}_{tenantId}_{createdAt:yyyyMM}", "^sys_order_detail_\\d{1,4}_[1,2]\\d{3}[0,1][0-9]$")
@@ -94,9 +94,8 @@ public class UnitTest6 : UnitTestBase
                     //.UseTable<Order>(t => t.DependOn(d => d.Id).UseRule((dbKey, origName, id) => $"{origName}_{new DateTime(ObjectId.Parse(id).Timestamp):yyyyMM}", "^sys_order_\\S{24}$"))
                     ////按照Id字段哈希取模分表
                     //.UseTable<Order>(t => t.DependOn(d => d.Id).UseRule((dbKey, origName, id) => $"{origName}_{HashCode.Combine(id) % 5}", "^sys_order_\\S{24}$"))
-                    .UseTable<User>(t => t.DependOn(d => d.TenantId).UseRule((dbKey, origName, tenantId) => $"{origName}_{tenantId}", "^sys_user_\\d{1,4}$"));
+                    .Table<User>(t => t.DependOn(d => d.TenantId).UseRule((dbKey, origName, tenantId) => $"{origName}_{tenantId}", "^sys_user_\\d{1,4}$"));
                 })
-                .Configure<ModelConfiguration>(OrmProviderType.PostgreSql)
                 .UseInterceptors(df =>
                 {
                     df.OnConnectionCreated += evt =>
@@ -126,11 +125,11 @@ public class UnitTest6 : UnitTestBase
             return builder.Build();
         });
         services.AddTransient<IPassport>(f => new Passport { TenantId = "104", UserId = "1" });
-        var serviceProvider = services.BuildServiceProvider();
-        this.dbFactory = serviceProvider.GetService<IOrmDbFactory>();
 
         AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
         AppContext.SetSwitch("Npgsql.DisableDateTimeInfinityConversions", true);
+        var serviceProvider = services.BuildServiceProvider();
+        this.dbFactory = serviceProvider.GetService<IOrmDbFactory>();      
     }
     public interface IPassport
     {

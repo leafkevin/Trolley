@@ -18,7 +18,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     public ActionMode ActionMode { get; set; }
     public bool IsReturnIdentity { get; set; }
 
-    public CreateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
+    public CreateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, ITableShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
     {
         this.DbKey = dbKey;
         this.OrmProvider = ormProvider;
@@ -105,7 +105,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         var entityType = this.Tables[0].EntityType;
         var entityMapper = this.Tables[0].Mapper;
         var tableName = entityMapper.TableName;
-        if (this.ShardingProvider.TryGetShardingTable(entityType, out _))
+        if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out _))
         {
             if (!this.Tables[0].IsSharding)
                 throw new Exception($"实体表{entityType.FullName}有配置分表，当前操作未指定分表，请调用UseTable或UseTableBy方法指定分表");
@@ -238,7 +238,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         var tableName = this.Tables[0].Mapper.TableName;
         var entityType = this.Tables[0].EntityType;
 
-        if (this.ShardingProvider.TryGetShardingTable(entityType, out _))
+        if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out _))
         {
             //有设置分表，优先使用分表，没有设置分表，则根据数据的字段确定分表
             if (!string.IsNullOrEmpty(this.Tables[0].Body))
@@ -439,7 +439,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             Values = valuesBuilder.ToString()
         });
         //未明确指定分表，根据字段数据进行分表
-        if (this.ShardingProvider.TryGetShardingTable(entityType, out var shardingTable) && string.IsNullOrEmpty(this.Tables[0].Body))
+        if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out var shardingTable) && string.IsNullOrEmpty(this.Tables[0].Body))
             this.Tables[0].Body = RepositoryHelper.GetShardingTableName(this.DbKey, this.MapProvider, this.ShardingProvider, entityType, insertObjType, insertObj);
     }
     public virtual void VisitWithByField(object deferredSegmentValue)

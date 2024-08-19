@@ -8,8 +8,8 @@ namespace Trolley.PostgreSql;
 
 public class PostgreSqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
 {
-    public PostgreSqlUpdateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
-      : base(dbKey, ormProvider, mapProvider, shardingProvider, isParameterized, tableAsStart, parameterPrefix) { }
+    public PostgreSqlUpdateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, ITableShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
+        : base(dbKey, ormProvider, mapProvider, shardingProvider, isParameterized, tableAsStart, parameterPrefix) { }
     public override string BuildCommand(DbContext dbContext, IDbCommand command)
     {
         string sql = null;

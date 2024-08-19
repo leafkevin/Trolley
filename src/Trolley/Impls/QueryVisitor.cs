@@ -49,7 +49,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public int PageNumber { get; set; }
     public int PageSize { get; set; }
 
-    public QueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", IDataParameterCollection dbParameters = null)
+    public QueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, ITableShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", IDataParameterCollection dbParameters = null)
     {
         this.DbKey = dbKey;
         this.OrmProvider = ormProvider;

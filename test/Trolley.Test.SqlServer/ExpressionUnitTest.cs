@@ -21,7 +21,7 @@ public class ExpressionUnitTest : UnitTestBase
         services.AddSingleton(f =>
         {
             var builder = new OrmDbFactoryBuilder()
-                .Register(OrmProviderType.SqlServer, "fengling", "Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", true)
+                .Register(OrmProviderType.SqlServer, "fengling", "Server=172.16.30.190;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", true)
                 .Configure<ModelConfiguration>(OrmProviderType.SqlServer)
                 .UseInterceptors(df =>
                 {
@@ -109,7 +109,7 @@ public class ExpressionUnitTest : UnitTestBase
                 IsNeedParameter = f.Name.Contains("kevin") ? "Yes" : "No",
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT (CASE WHEN a.[IsEnabled]=1 THEN N'Enabled' ELSE N'Disabled' END) AS [IsEnabled],(CASE WHEN a.[GuidField] IS NOT NULL THEN N'HasValue' ELSE N'NoValue' END) AS [GuidField],(CASE WHEN a.[Age]>35 THEN 1 ELSE 0 END) AS [IsOld],(CASE WHEN a.[Name] LIKE N'%kevin%' THEN N'Yes' ELSE N'No' END) AS [IsNeedParameter] FROM [sys_user] a WHERE (CASE WHEN a.[IsEnabled]=1 THEN N'Enabled' ELSE N'Disabled' END)=N'Enabled' AND (CASE WHEN a.[GuidField] IS NOT NULL THEN N'HasValue' ELSE N'NoValue' END)=N'HasValue'");
+        Assert.True(sql == "SELECT (CASE WHEN a.[IsEnabled]=1 THEN N'Enabled' ELSE N'Disabled' END) AS [IsEnabled],(CASE WHEN a.[GuidField] IS NOT NULL THEN N'HasValue' ELSE N'NoValue' END) AS [GuidField],(CASE WHEN a.[Age]>35 THEN 1 ELSE 0 END) AS [IsOld],(CASE WHEN CHARINDEX('kevin',a.[Name])>0 THEN N'Yes' ELSE N'No' END) AS [IsNeedParameter] FROM [sys_user] a WHERE (CASE WHEN a.[IsEnabled]=1 THEN N'Enabled' ELSE N'Disabled' END)=N'Enabled' AND (CASE WHEN a.[GuidField] IS NOT NULL THEN N'HasValue' ELSE N'NoValue' END)=N'HasValue'");
 
         var enabled = "Enabled";
         var hasValue = "HasValue";
@@ -124,7 +124,7 @@ public class ExpressionUnitTest : UnitTestBase
                 IsNeedParameter = f.Name.Contains("kevin") ? "Yes" : "No",
             })
             .ToSql(out var dbParameters);
-        Assert.True(sql == "SELECT (CASE WHEN a.[IsEnabled]=1 THEN @p4 ELSE N'Disabled' END) AS [IsEnabled],(CASE WHEN a.[GuidField] IS NOT NULL THEN @p5 ELSE N'NoValue' END) AS [GuidField],(CASE WHEN a.[Age]>35 THEN 1 ELSE 0 END) AS [IsOld],(CASE WHEN a.[Name] LIKE N'%kevin%' THEN N'Yes' ELSE N'No' END) AS [IsNeedParameter] FROM [sys_user] a WHERE (CASE WHEN a.[IsEnabled]=1 THEN @p0 ELSE N'Disabled' END)=@p1 AND (CASE WHEN a.[GuidField] IS NOT NULL THEN @p2 ELSE N'NoValue' END)=@p3");
+        Assert.True(sql == "SELECT (CASE WHEN a.[IsEnabled]=1 THEN @p4 ELSE N'Disabled' END) AS [IsEnabled],(CASE WHEN a.[GuidField] IS NOT NULL THEN @p5 ELSE N'NoValue' END) AS [GuidField],(CASE WHEN a.[Age]>35 THEN 1 ELSE 0 END) AS [IsOld],(CASE WHEN CHARINDEX('kevin',a.[Name])>0 THEN N'Yes' ELSE N'No' END) AS [IsNeedParameter] FROM [sys_user] a WHERE (CASE WHEN a.[IsEnabled]=1 THEN @p0 ELSE N'Disabled' END)=@p1 AND (CASE WHEN a.[GuidField] IS NOT NULL THEN @p2 ELSE N'NoValue' END)=@p3");
         Assert.True(dbParameters.Count == 6);
         Assert.True(dbParameters[0].Value.ToString() == enabled);
         Assert.True(dbParameters[1].Value.ToString() == enabled);

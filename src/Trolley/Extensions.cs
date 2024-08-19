@@ -11,7 +11,7 @@ namespace Trolley;
 
 public static class Extensions
 {
-    private static Type[] valueTypes = new Type[] {typeof(byte),typeof(sbyte),typeof(short),typeof(ushort),
+    private static readonly Type[] valueTypes = new Type[] {typeof(byte),typeof(sbyte),typeof(short),typeof(ushort),
         typeof(int),typeof(uint),typeof(long),typeof(ulong),typeof(float),typeof(double),typeof(decimal),
         typeof(bool),typeof(string),typeof(char),typeof(Guid),typeof(DateTime),typeof(DateTimeOffset),
         typeof(TimeSpan),typeof(TimeOnly),typeof(DateOnly),typeof(DBNull)};
@@ -23,11 +23,19 @@ public static class Extensions
     public static void Configure(this IOrmDbFactory dbFactory, OrmProviderType ormProviderType, IModelConfiguration configuration)
     {
         if (!dbFactory.TryGetMapProvider(ormProviderType, out var mapProvider))
-            dbFactory.AddMapProvider(ormProviderType, mapProvider = new EntityMapProvider() { OrmProviderType = ormProviderType });
+            dbFactory.AddMapProvider(ormProviderType, mapProvider = new EntityMapProvider(dbFactory.FieldMapHandler));
         configuration.OnModelCreating(new ModelBuilder(mapProvider));
     }
     public static void Configure<TModelConfiguration>(this IOrmDbFactory dbFactory, OrmProviderType ormProviderType) where TModelConfiguration : class, IModelConfiguration, new()
        => dbFactory.Configure(ormProviderType, new TModelConfiguration());
+    public static void Configure(this IOrmDbFactory dbFactory, string dbKey, IModelConfiguration configuration)
+    {
+        if (!dbFactory.TryGetMapProvider(dbKey, out var mapProvider))
+            dbFactory.AddMapProvider(dbKey, mapProvider = new EntityMapProvider(dbFactory.FieldMapHandler));
+        configuration.OnModelCreating(new ModelBuilder(mapProvider));
+    }
+    public static void Configure<TModelConfiguration>(this IOrmDbFactory dbFactory, string dbKey) where TModelConfiguration : class, IModelConfiguration, new()
+       => dbFactory.Configure(dbKey, new TModelConfiguration());
     public static string GetQuotedValue(this IOrmProvider ormProvider, object value)
         => ormProvider.GetQuotedValue(value.GetType(), value);
     public static EntityMap GetEntityMap(this IEntityMapProvider mapProvider, Type entityType)
@@ -212,8 +220,8 @@ public static class Extensions
         var ormProviderType = ormProvider.GetType();
         var isValueTuple = entityType.FullName.StartsWith("System.ValueTuple`");
 
-        int cacheKey = 0;
-        ConcurrentDictionary<int, Delegate> deserializerCache = null;
+        int cacheKey;
+        ConcurrentDictionary<int, Delegate> deserializerCache;
         if (isValueTuple)
         {
             cacheKey = GetValueTupleReaderKey(entityType, ormProviderType, reader);
@@ -292,7 +300,13 @@ public static class Extensions
         if (subQuery.Visitor.DbParameters?.Count > 0)
             subQuery.Visitor.DbParameters.CopyTo(visitor.DbParameters);
     }
-
+    public static T ToValue<T>(this IDataReader reader, int index)
+    {
+        var readerValue = reader.GetValue(index);
+        if (readerValue == null || readerValue is DBNull)
+            return default;
+        return (T)Convert.ChangeType(readerValue, typeof(T));
+    }
     internal static void CopyTo(this IDataParameterCollection dbParameters, IDataParameterCollection other)
     {
         if (dbParameters == null || dbParameters.Count == 0)
@@ -330,7 +344,7 @@ public static class Extensions
             index++;
         }
         var resultLabelExpr = Expression.Label(entityType);
-        Expression returnExpr = null;
+        Expression returnExpr;
         if (target.IsDefault) returnExpr = Expression.MemberInit(Expression.New(target.Constructor), target.Bindings);
         else returnExpr = Expression.New(target.Constructor, target.Arguments);
 

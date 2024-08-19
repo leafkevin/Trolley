@@ -7,8 +7,8 @@ namespace Trolley.PostgreSql;
 public class PostgreSqlIncludableQuery<T, TMember> : IncludableQuery<T, TMember>, IPostgreSqlIncludableQuery<T, TMember>
 {
     #region Constructor
-    public PostgreSqlIncludableQuery(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public PostgreSqlIncludableQuery(DbContext dbContext, IQueryVisitor visitor, bool isIncludeMany)
+        : base(dbContext, visitor, isIncludeMany) { }
     #endregion
 
     #region Sharding
@@ -36,8 +36,8 @@ public class PostgreSqlIncludableQuery<T, TMember> : IncludableQuery<T, TMember>
 public class PostgreSqlIncludableQuery<T1, T2, TMember> : IncludableQuery<T1, T2, TMember>, IPostgreSqlIncludableQuery<T1, T2, TMember>
 {
     #region Constructor
-    public PostgreSqlIncludableQuery(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public PostgreSqlIncludableQuery(DbContext dbContext, IQueryVisitor visitor, bool isIncludeMany)
+        : base(dbContext, visitor, isIncludeMany) { }
     #endregion
 
     #region Sharding
@@ -65,8 +65,8 @@ public class PostgreSqlIncludableQuery<T1, T2, TMember> : IncludableQuery<T1, T2
 public class PostgreSqlIncludableQuery<T1, T2, T3, TMember> : IncludableQuery<T1, T2, T3, TMember>, IPostgreSqlIncludableQuery<T1, T2, T3, TMember>
 {
     #region Constructor
-    public PostgreSqlIncludableQuery(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public PostgreSqlIncludableQuery(DbContext dbContext, IQueryVisitor visitor, bool isIncludeMany)
+        : base(dbContext, visitor, isIncludeMany) { }
     #endregion
 
     #region Sharding
@@ -94,8 +94,8 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, TMember> : IncludableQuery<T1
 public class PostgreSqlIncludableQuery<T1, T2, T3, T4, TMember> : IncludableQuery<T1, T2, T3, T4, TMember>, IPostgreSqlIncludableQuery<T1, T2, T3, T4, TMember>
 {
     #region Constructor
-    public PostgreSqlIncludableQuery(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public PostgreSqlIncludableQuery(DbContext dbContext, IQueryVisitor visitor, bool isIncludeMany)
+        : base(dbContext, visitor, isIncludeMany) { }
     #endregion
 
     #region Sharding
@@ -123,8 +123,8 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, T4, TMember> : IncludableQuer
 public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, TMember> : IncludableQuery<T1, T2, T3, T4, T5, TMember>, IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, TMember>
 {
     #region Constructor
-    public PostgreSqlIncludableQuery(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public PostgreSqlIncludableQuery(DbContext dbContext, IQueryVisitor visitor, bool isIncludeMany)
+        : base(dbContext, visitor, isIncludeMany) { }
     #endregion
 
     #region Sharding
@@ -152,8 +152,8 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, TMember> : Includable
 public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : IncludableQuery<T1, T2, T3, T4, T5, T6, TMember>, IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, TMember>
 {
     #region Constructor
-    public PostgreSqlIncludableQuery(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public PostgreSqlIncludableQuery(DbContext dbContext, IQueryVisitor visitor, bool isIncludeMany)
+        : base(dbContext, visitor, isIncludeMany) { }
     #endregion
 
     #region Sharding
@@ -181,8 +181,8 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : Includ
 public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : IncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember>, IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember>
 {
     #region Constructor
-    public PostgreSqlIncludableQuery(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public PostgreSqlIncludableQuery(DbContext dbContext, IQueryVisitor visitor, bool isIncludeMany)
+        : base(dbContext, visitor, isIncludeMany) { }
     #endregion
 
     #region Sharding
@@ -210,8 +210,8 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : In
 public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> : IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember>, IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember>
 {
     #region Constructor
-    public PostgreSqlIncludableQuery(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public PostgreSqlIncludableQuery(DbContext dbContext, IQueryVisitor visitor, bool isIncludeMany)
+        : base(dbContext, visitor, isIncludeMany) { }
     #endregion
 
     #region Sharding
@@ -239,8 +239,8 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> 
 public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> : IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>, IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>
 {
     #region Constructor
-    public PostgreSqlIncludableQuery(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public PostgreSqlIncludableQuery(DbContext dbContext, IQueryVisitor visitor, bool isIncludeMany)
+        : base(dbContext, visitor, isIncludeMany) { }
     #endregion
 
     #region Sharding
@@ -268,8 +268,8 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMemb
 public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> : IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>, IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>
 {
     #region Constructor
-    public PostgreSqlIncludableQuery(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public PostgreSqlIncludableQuery(DbContext dbContext, IQueryVisitor visitor, bool isIncludeMany)
+        : base(dbContext, visitor, isIncludeMany) { }
     #endregion
 
     #region Sharding
@@ -297,8 +297,8 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
 public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> : IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>, IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>
 {
     #region Constructor
-    public PostgreSqlIncludableQuery(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public PostgreSqlIncludableQuery(DbContext dbContext, IQueryVisitor visitor, bool isIncludeMany)
+        : base(dbContext, visitor, isIncludeMany) { }
     #endregion
 
     #region Sharding
@@ -326,8 +326,8 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
 public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> : IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>, IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>
 {
     #region Constructor
-    public PostgreSqlIncludableQuery(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public PostgreSqlIncludableQuery(DbContext dbContext, IQueryVisitor visitor, bool isIncludeMany)
+        : base(dbContext, visitor, isIncludeMany) { }
     #endregion
 
     #region Sharding
@@ -355,8 +355,8 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
 public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> : IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>, IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>
 {
     #region Constructor
-    public PostgreSqlIncludableQuery(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public PostgreSqlIncludableQuery(DbContext dbContext, IQueryVisitor visitor, bool isIncludeMany)
+        : base(dbContext, visitor, isIncludeMany) { }
     #endregion
 
     #region Sharding
@@ -384,8 +384,8 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
 public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> : IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>, IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>
 {
     #region Constructor
-    public PostgreSqlIncludableQuery(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public PostgreSqlIncludableQuery(DbContext dbContext, IQueryVisitor visitor, bool isIncludeMany)
+        : base(dbContext, visitor, isIncludeMany) { }
     #endregion
 
     #region Sharding
@@ -413,8 +413,8 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
 public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> : IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>, IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>
 {
     #region Constructor
-    public PostgreSqlIncludableQuery(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public PostgreSqlIncludableQuery(DbContext dbContext, IQueryVisitor visitor, bool isIncludeMany)
+        : base(dbContext, visitor, isIncludeMany) { }
     #endregion
 
     #region Sharding
@@ -442,7 +442,7 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
 public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember> : IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember>, IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember>
 {
     #region Constructor
-    public PostgreSqlIncludableQuery(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public PostgreSqlIncludableQuery(DbContext dbContext, IQueryVisitor visitor, bool isIncludeMany)
+        : base(dbContext, visitor, isIncludeMany) { }
     #endregion
 }

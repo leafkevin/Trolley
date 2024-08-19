@@ -19,7 +19,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     public string TableSchema { get; set; }
     public IOrmProvider OrmProvider { get; set; }
     public IEntityMapProvider MapProvider { get; set; }
-    public IShardingProvider ShardingProvider { get; set; }
+    public ITableShardingProvider ShardingProvider { get; set; }
     public IDbTransaction Transaction { get; set; }
     public bool IsParameterized { get; set; }
     public int CommandTimeout { get; set; }
@@ -916,7 +916,6 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             builder.Append(") VALUES ");
             var firstHeadSql = builder.ToString();
             builder.Clear();
-            builder = null;
 
             firstSqlSetter = (dbParameters, builder, tableName) =>
             {
@@ -949,7 +948,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             };
         }
         var sqlBuilder = new StringBuilder();
-        if (this.ShardingProvider.TryGetShardingTable(entityType, out _))
+        if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out _))
             tableName = this.GetShardingTableName(entityType, insertObjType, insertObj);
         firstSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName);
         loopSqlSetter.Invoke(command.Parameters, sqlBuilder, insertObj);

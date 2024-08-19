@@ -13,7 +13,7 @@ public interface ICreateVisitor : IDisposable
     IDataParameterCollection DbParameters { get; set; }
     IOrmProvider OrmProvider { get; }
     IEntityMapProvider MapProvider { get; }
-    IShardingProvider ShardingProvider { get; }
+    ITableShardingProvider ShardingProvider { get; }
     ActionMode ActionMode { get; set; }
     List<TableSegment> Tables { get; }
 
@@ -24,12 +24,8 @@ public interface ICreateVisitor : IDisposable
     void Initialize(Type entityType, bool isMultiple = false, bool isFirst = true);
     string BuildSql(out List<SqlFieldSegment> readerFields);
 
-    void UseTable(Type entityType, params string[] tableNames);
-    void UseTable(Type entityType, Func<string, bool> tableNamePredicate);
-    void UseTable(Type entityType, Type masterEntityType, Func<string, string, string, string, string> tableNameGetter);
-    void UseTableBy(Type entityType, object field1Value, object field2Value = null);
-    void UseTableByRange(Type entityType, object beginFieldValue, object endFieldValue);
-    void UseTableByRange(Type entityType, object fieldValue1, object fieldValue2, object fieldValue3);
+    void UseTable(bool isIncludeMany, params string[] tableNames);
+    void UseTableBy(bool isIncludeMany, object field1Value, object field2Value = null);
 
     void WithBy(object insertObj);
     void WithByField(Expression fieldSelector, object fieldValue);

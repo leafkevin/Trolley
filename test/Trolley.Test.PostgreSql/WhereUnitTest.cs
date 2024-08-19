@@ -20,7 +20,7 @@ public class WhereUnitTest : UnitTestBase
         services.AddSingleton(f =>
         {
             var builder = new OrmDbFactoryBuilder()
-                .Register(OrmProviderType.PostgreSql, "fengling", "Host=localhost;Database=fengling;Username=postgres;Password=123456;SearchPath=public", true, "public")
+                .Register(OrmProviderType.PostgreSql, "fengling", "Host=localhost;Database=fengling;Username=postgres;Password=123456;SearchPath=public", true)
                 .Configure<ModelConfiguration>(OrmProviderType.PostgreSql)
                 .UseInterceptors(df =>
                 {
@@ -51,7 +51,7 @@ public class WhereUnitTest : UnitTestBase
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();
-        dbFactory = serviceProvider.GetService<IOrmDbFactory>();
+        this.dbFactory = serviceProvider.GetService<IOrmDbFactory>();
 
         AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
         AppContext.SetSwitch("Npgsql.DisableDateTimeInfinityConversions", true);

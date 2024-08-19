@@ -3,7 +3,10 @@ using NpgsqlTypes;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
+using System.Text;
 
 namespace Trolley.PostgreSql;
 
@@ -131,16 +134,14 @@ public partial class PostgreSqlProvider : BaseOrmProvider
         castTos[typeof(DateOnly?)] = "DATE";
         castTos[typeof(TimeOnly?)] = "TIME";
     }
+    public PostgreSqlProvider() => this.DefaultTableSchema = "public";
+
     public override IDbConnection CreateConnection(string connectionString)
         => new NpgsqlConnection(connectionString);
     public override IDbDataParameter CreateParameter(string parameterName, object value)
         => new NpgsqlParameter(parameterName, value);
     public override IDbDataParameter CreateParameter(string parameterName, object nativeDbType, object value)
-    {
-        var parameter = new NpgsqlParameter(parameterName, (NpgsqlDbType)nativeDbType);
-        parameter.Value = value;
-        return parameter;
-    }
+        => new NpgsqlParameter(parameterName, (NpgsqlDbType)nativeDbType) { Value = value };
     public override void ChangeParameter(object dbParameter, Type targetType, object value)
     {
         var fieldValue = Convert.ChangeType(value, targetType);
@@ -199,6 +200,250 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                     return sqlSegment.Body;
                 }
             default: return value.ToString();
+        }
+    }
+    public override object MapNativeDbType(DbColumnInfo columnInfo)
+    {
+        var dataType = columnInfo.DataType;
+        if (columnInfo.ArrayDimens > 0)
+            dataType = dataType.Substring(1);
+        NpgsqlDbType result = default;
+        switch (dataType)
+        {
+            case "bool": result = NpgsqlDbType.Boolean; break;
+
+            case "int2": result = NpgsqlDbType.Smallint; break;
+            case "int4": result = NpgsqlDbType.Integer; break;
+            case "int8": result = NpgsqlDbType.Bigint; break;
+            case "float4": result = NpgsqlDbType.Real; break;
+            case "float8": result = NpgsqlDbType.Double; break;
+
+            case "numeric": result = NpgsqlDbType.Numeric; break;
+            case "money": result = NpgsqlDbType.Money; break;
+
+            case "char":
+            case "bpchar": result = NpgsqlDbType.Char; break;
+            case "varchar": result = NpgsqlDbType.Varchar; break;
+            case "text": result = NpgsqlDbType.Text; break;
+
+            case "date": result = NpgsqlDbType.Date; break;
+            case "timestamp": result = NpgsqlDbType.Timestamp; break;
+            case "timestamptz": result = NpgsqlDbType.TimestampTz; break;
+
+            case "time": result = NpgsqlDbType.Time; break;
+            case "timetz":
+                result = NpgsqlDbType.TimeTz; break;
+            case "interval": result = NpgsqlDbType.Interval; break;
+
+            case "bit": result = NpgsqlDbType.Bit; break;
+            case "bytea":
+                result = NpgsqlDbType.Bytea; break;
+            case "varbit": result = NpgsqlDbType.Varbit; break;
+
+            case "point": result = NpgsqlDbType.Point; break;
+            case "line": result = NpgsqlDbType.Line; break;
+            case "lseg": result = NpgsqlDbType.LSeg; break;
+            case "box":
+                result = NpgsqlDbType.Box; break;
+            case "path": result = NpgsqlDbType.Path; break;
+            case "polygon": result = NpgsqlDbType.Polygon; break;
+            case "circle": result = NpgsqlDbType.Circle; break;
+
+            case "cidr": result = NpgsqlDbType.Cidr; break;
+            case "inet": result = NpgsqlDbType.Inet; break;
+            case "macaddr": result = NpgsqlDbType.MacAddr; break;
+
+            case "json": result = NpgsqlDbType.Json; break;
+            case "jsonb": result = NpgsqlDbType.Jsonb; break;
+
+            case "uuid": result = NpgsqlDbType.Uuid; break;
+
+            case "int4range": result = NpgsqlDbType.IntegerRange; break;
+            case "int8range": result = NpgsqlDbType.BigIntRange; break;
+            case "numrange": result = NpgsqlDbType.NumericRange; break;
+            case "tsrange": result = NpgsqlDbType.TimestampRange; break;
+            case "tstzrange": result = NpgsqlDbType.TimestampTzRange; break;
+            case "daterange": result = NpgsqlDbType.DateRange; break;
+
+            case "hstore": result = NpgsqlDbType.Hstore; break;
+
+            case "geometry": result = NpgsqlDbType.Geometry; break;
+        }
+        if (columnInfo.ArrayDimens > 0)
+            result = result | NpgsqlDbType.Range;
+        return result;
+    }
+    public override void MapTables(string connectionString, IEntityMapProvider mapProvider)
+    {
+        var tableNames = mapProvider.EntityMaps.Where(f => !f.IsMapped).Select(f => f.TableName).ToList();
+        if (tableNames == null || tableNames.Count == 0)
+            return;
+        var sql = @"SELECT b.nspname,a.relname,c.attname,c.attndims,d.typname,CASE WHEN c.atttypmod>0 AND c.atttypmod<32767 THEN c.atttypmod-4 ELSE c.attlen END,e.description,pg_get_expr(g.adbin,g.adrelid),
+f.conname IS NOT NULL,h.refobjid IS NOT NULL,c.attnotnull,c.attnum FROM pg_class a INNER JOIN pg_namespace b ON a.relnamespace = b.oid INNER JOIN pg_attribute c ON a.oid = c.attrelid AND c.attnum>0
+INNER JOIN pg_type d ON c.atttypid=d.oid LEFT JOIN pg_description e ON e.objoid=c.attrelid AND e.objsubid=c.attnum LEFT JOIN pg_constraint f ON a.oid=f.conrelid AND f.contype='p' and f.conkey @> array[c.attnum] 
+LEFT JOIN pg_attrdef g ON a.oid=g.adrelid AND c.attnum=g.adnum LEFT JOIN (select dp.refobjid,dp.refobjsubid FROM pg_depend dp,pg_class cs WHERE dp.objid=cs.oid AND cs.relkind='S') h ON a.oid=h.refobjid
+AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.relname,c.attnum asc";
+        var tableBuilders = new Dictionary<string, StringBuilder>();
+        foreach (var tableName in tableNames)
+        {
+            StringBuilder builder = null;
+            string myTableName = null;
+            if (tableName.Contains('.'))
+            {
+                var myTableNames = tableName.Split('.');
+                var tableSchema = myTableNames[0];
+                myTableName = myTableNames[1];
+                if (!tableBuilders.TryGetValue(tableSchema, out builder))
+                    tableBuilders.TryAdd(tableSchema, builder = new StringBuilder());
+            }
+            else
+            {
+                var tableSchema = this.DefaultTableSchema;
+                if (!tableBuilders.TryGetValue(tableSchema, out builder))
+                    tableBuilders.TryAdd(tableSchema, builder = new StringBuilder());
+                myTableName = tableName;
+            }
+            if (builder.Length > 0)
+                builder.Append(',');
+            builder.Append($"'{myTableName}'");
+        }
+        var sqlBuilder = new StringBuilder();
+        foreach (var tableBuilder in tableBuilders)
+        {
+            if (sqlBuilder.Length > 0)
+                sqlBuilder.Append(" OR ");
+
+            sqlBuilder.Append($"b.nspname='{tableBuilder.Key}' AND a.relname IN ({tableBuilder.Value.ToString()})");
+        }
+        sql = string.Format(sql, sqlBuilder.ToString());
+        var entityMappers = mapProvider.EntityMaps.ToList();
+        var tableInfos = new List<DbTableInfo>();
+        using var connection = new NpgsqlConnection(connectionString);
+        using var command = new NpgsqlCommand(sql, connection);
+        connection.Open();
+        using var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
+
+        DbTableInfo tableInfo = null;
+        while (reader.Read())
+        {
+            var tableSchema = reader.ToValue<string>(0);
+            var tableName = reader.ToValue<string>(1);
+            if (tableInfo == null || tableInfo.TableSchema != tableSchema || tableInfo.TableName != tableName)
+            {
+                tableInfo = new DbTableInfo
+                {
+                    TableSchema = tableSchema,
+                    TableName = tableName,
+                    Columns = new List<DbColumnInfo>()
+                };
+                tableInfos.Add(tableInfo);
+            }
+            var fieldName = reader.ToValue<string>(2);
+            var arrayDimens = reader.ToValue<int>(3);
+            var dataType = reader.ToValue<string>(4);
+            var length = reader.ToValue<int>(5);
+            var scale = (length >> 16) & 0xFFFF;
+            var precision = length & 0xFFFF;
+            var lengthTypes = new[] { "bool", "name", "bit", "varbit", "char", "bpchar", "varchar", "bytea", "text", "uuid" };
+            if (length > 0 && !lengthTypes.Contains(dataType))
+                length *= 8;
+            var needLengthTypes = new[] { "char", "bpchar", "varchar", "bytea", "bit", "varbit" };
+            if (dataType == "bpchar")
+                dataType = "char";
+            var columnType = dataType;
+            if (needLengthTypes.Contains(dataType))
+                columnType += $"({length})";
+            if (arrayDimens > 0)
+            {
+                sqlBuilder.Clear();
+                sqlBuilder.Append(dataType.Substring(1));
+                for (int i = 0; i < arrayDimens; i++)
+                    sqlBuilder.Append("[]");
+                columnType = sqlBuilder.ToString();
+            }
+            tableInfo.Columns.Add(new DbColumnInfo
+            {
+                FieldName = fieldName,
+                DataType = dataType,
+                DbColumnType = columnType,
+                MaxLength = length,
+                Scale = scale,
+                Precision = precision,
+                ArrayDimens = arrayDimens,
+                Description = reader.ToValue<string>(6),
+                DefaultValue = reader.ToValue<string>(7),
+                IsPrimaryKey = reader.ToValue<bool>(8),
+                IsAutoIncrement = reader.ToValue<bool>(9),
+                IsNullable = !reader.ToValue<bool>(10),
+                Position = reader.ToValue<int>(11)
+            });
+        }
+        reader.Close();
+        connection.Close();
+
+        var fieldMapHandler = mapProvider.FieldMapHandler;
+        foreach (var entityMapper in entityMappers)
+        {
+            (var tableSchema, var tableName) = this.GetFullTableName(entityMapper.TableName);
+            tableInfo = tableInfos.Find(f => f.TableSchema == tableSchema && f.TableName == tableName);
+            if (tableInfo == null)
+                continue;
+
+            var memberInfos = entityMapper.EntityType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
+                .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
+
+            foreach (var columnInfo in tableInfo.Columns)
+            {
+                //数据库字段没有映射到实体成员,IsRowVersion
+                if (!fieldMapHandler.TryFindMember(columnInfo.FieldName, memberInfos, out var memberInfo))
+                    continue;
+
+                if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper))
+                {
+                    entityMapper.AddMemberMap(memberInfo.Name, memberMapper = new MemberMap(entityMapper, memberInfo)
+                    {
+                        FieldName = columnInfo.FieldName,
+                        DbColumnType = columnInfo.DbColumnType,
+                        IsKey = columnInfo.IsPrimaryKey,
+                        IsAutoIncrement = columnInfo.IsAutoIncrement,
+                        IsRequired = !columnInfo.IsNullable,
+                        MaxLength = columnInfo.MaxLength,
+                        NativeDbType = this.MapNativeDbType(columnInfo),
+                        Position = columnInfo.Position
+                    });
+                }
+                else
+                {
+                    memberMapper.DbColumnType = columnInfo.DbColumnType;
+                    memberMapper.IsKey = columnInfo.IsPrimaryKey;
+                    memberMapper.IsAutoIncrement = columnInfo.IsAutoIncrement;
+                    memberMapper.IsRequired = !columnInfo.IsNullable;
+                    memberMapper.MaxLength = columnInfo.MaxLength;
+                    memberMapper.NativeDbType = this.MapNativeDbType(columnInfo);
+                    memberMapper.Position = columnInfo.Position;
+                }
+                //实体类类型成员
+                if ((memberMapper.UnderlyingType.IsClass && memberMapper.UnderlyingType != typeof(string)
+                    || memberMapper.UnderlyingType.IsEntityType(out _))
+                    && this.MapDefaultType(memberMapper.NativeDbType) == typeof(string))
+                {
+                    memberMapper.TypeHandlerType = typeof(JsonTypeHandler);
+                    memberMapper.TypeHandler = this.GetTypeHandler(memberMapper.TypeHandlerType);
+                }
+                //object类型
+                if (memberMapper.MemberType == typeof(object) && this.MapDefaultType(memberMapper.NativeDbType) == typeof(string))
+                {
+                    memberMapper.TypeHandlerType = typeof(ToStringTypeHandler);
+                    memberMapper.TypeHandler = this.GetTypeHandler(memberMapper.TypeHandlerType);
+                }
+                entityMapper.AddMemberMap(memberInfo.Name, memberMapper);
+            }
+
+            //非默认TableSchema表名就不变更了
+            if (tableSchema != this.DefaultTableSchema)
+                entityMapper.TableSchema = tableSchema;
+            else entityMapper.TableName = tableName;
+            entityMapper.IsMapped = true;
         }
     }
     public override bool TryGetMyMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)

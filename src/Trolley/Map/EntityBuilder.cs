@@ -43,15 +43,14 @@ public class EntityBuilder<TEntity> where TEntity : class
     }
     public virtual EntityBuilder<TEntity> AutoIncrement<TMember>(Expression<Func<TEntity, TMember>> memberExpr)
     {
-        if (memberExpr.Body is MemberExpression memberVisitExpr)
-            this.mapper.SetAutoIncrement(memberVisitExpr.Member);
-        else throw new Exception("不支持的表达式");
+        if (memberExpr.Body is not MemberExpression memberVisitExpr)
+            throw new Exception("不支持的表达式");
+        this.mapper.SetAutoIncrement(memberVisitExpr.Member);
         return this;
     }
     public virtual MemberBuilder<TMember> Member<TMember>(Expression<Func<TEntity, TMember>> memberSelector)
     {
-        var memberExpr = memberSelector.Body as MemberExpression;
-        if (memberExpr == null) throw new Exception("不支持的表达式");
+        if (memberSelector.Body is not MemberExpression memberExpr) throw new Exception("不支持的表达式");
 
         var memberName = memberExpr.Member.Name;
         if (!this.mapper.TryGetMemberMap(memberName, out var memberMapper))
@@ -64,8 +63,8 @@ public class EntityBuilder<TEntity> where TEntity : class
         => this.HasMany(memberSelector);
     public virtual Navigation<TEntity> HasOne<TMember>(Expression<Func<TEntity, TMember>> memberSelector) where TMember : class
     {
-        var memberExpr = memberSelector.Body as MemberExpression;
-        if (memberExpr == null) throw new Exception("不支持的表达式");
+        if (memberSelector.Body is not MemberExpression memberExpr)
+            throw new Exception("不支持的表达式");
 
         var memberName = memberExpr.Member.Name;
         if (!this.mapper.TryGetMemberMap(memberName, out var memberMapper))
@@ -79,8 +78,8 @@ public class EntityBuilder<TEntity> where TEntity : class
     }
     public virtual Navigation<TElement> HasMany<TElement>(Expression<Func<TEntity, IEnumerable<TElement>>> memberSelector) where TElement : class
     {
-        var memberExpr = memberSelector.Body as MemberExpression;
-        if (memberExpr == null) throw new Exception("不支持的表达式");
+        if (memberSelector.Body is not MemberExpression memberExpr)
+            throw new Exception("不支持的表达式");
 
         var memberName = memberExpr.Member.Name;
         if (!this.mapper.TryGetMemberMap(memberName, out var memberMapper))

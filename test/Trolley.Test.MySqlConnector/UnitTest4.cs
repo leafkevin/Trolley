@@ -22,8 +22,9 @@ public class UnitTest4 : UnitTestBase
         var services = new ServiceCollection();
         services.AddSingleton(f =>
         {
+            var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
             var builder = new OrmDbFactoryBuilder()
-                .Register(OrmProviderType.MySql, "fengling", "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;", true)
+                .Register(OrmProviderType.MySql, "fengling", connectionString, true)
                 .Configure<ModelConfiguration>(OrmProviderType.MySql)
                 .UseInterceptors(df =>
                 {
@@ -54,7 +55,7 @@ public class UnitTest4 : UnitTestBase
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();
-        dbFactory = serviceProvider.GetService<IOrmDbFactory>();
+        this.dbFactory = serviceProvider.GetService<IOrmDbFactory>();
     }
     [Fact]
     public void IsEntityType()

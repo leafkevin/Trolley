@@ -7,7 +7,7 @@ namespace Trolley.MySqlConnector;
 public class MySqlQueryVisitor : QueryVisitor
 {
     public bool IsUseIgnoreInto { get; set; }
-    public MySqlQueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, IShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", IDataParameterCollection dbParameters = null)
+    public MySqlQueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, ITableShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", IDataParameterCollection dbParameters = null)
         : base(dbKey, ormProvider, mapProvider, shardingProvider, isParameterized, tableAsStart, parameterPrefix, dbParameters) { }
 
     public override string BuildCommandSql(out IDataParameterCollection dbParameters)

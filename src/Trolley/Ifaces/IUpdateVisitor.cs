@@ -16,7 +16,7 @@ public interface IUpdateVisitor : IDisposable
     bool HasWhere { get; }
     bool IsMultiple { get; set; }
     int CommandIndex { get; set; }
-    IShardingProvider ShardingProvider { get; }
+    ITableShardingProvider ShardingProvider { get; }
     ActionMode ActionMode { get; set; }
     List<TableSegment> Tables { get; }
     bool IsNeedFetchShardingTables { get; }
@@ -28,12 +28,12 @@ public interface IUpdateVisitor : IDisposable
     void BuildMultiCommand(DbContext dbContext, IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex);
 
     #region Sharding
-    void UseTable(Type entityType, params string[] tableNames);
-    void UseTable(Type entityType, Func<string, bool> tableNamePredicate);
-    void UseTable(Type entityType, Type masterEntityType, Func<string, string, string, string, string> tableNameGetter);
-    void UseTableBy(Type entityType, object field1Value, object field2Value = null);
-    void UseTableByRange(Type entityType, object beginFieldValue, object endFieldValue);
-    void UseTableByRange(Type entityType, object fieldValue1, object fieldValue2, object fieldValue3);
+    void UseTable(bool isIncludeMany, params string[] tableNames);
+    void UseTable(bool isIncludeMany, Func<string, bool> tableNamePredicate);
+    void UseTable(bool isIncludeMany, Type masterEntityType, Func<string, string, string, string, string> tableNameGetter);
+    void UseTableBy(bool isIncludeMany, object field1Value, object field2Value = null);
+    void UseTableByRange(bool isIncludeMany, object beginFieldValue, object endFieldValue);
+    void UseTableByRange(bool isIncludeMany, object fieldValue1, object fieldValue2, object fieldValue3);
     #endregion
 
     void Join(string joinType, Type entityType, Expression joinOn);

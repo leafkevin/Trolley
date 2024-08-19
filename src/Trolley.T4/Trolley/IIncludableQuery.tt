@@ -11,12 +11,21 @@ using System.Linq.Expressions;
 
 namespace Trolley;
 
+public interface IIncludableQueryBase
+{
+    #region Properties
+    /// <summary>
+    /// 是否一对多关系导航
+    /// </summary>
+    bool IsIncludeMany { get; }
+    #endregion
+}
 /// <summary>
 /// 导航属性查询
 /// </summary>
 /// <typeparam name="T">表T实体类型</typeparam>
 /// <typeparam name="TMember">表T导航属性实体类型</typeparam>
-public interface IIncludableQuery<T, TMember> : IQuery<T>
+public interface IIncludableQuery<T, TMember> : IIncludableQueryBase, IQuery<T>
 {
     #region Sharding
     /// <summary>
@@ -133,7 +142,7 @@ public interface IIncludableQuery<T, TMember> : IQuery<T>
 /// <typeparam name="<#=currentTable#>">表<#=currentTable#>实体类型</typeparam>
 <#      }#>
 /// <typeparam name="TMember">表<#=currentTable#>导航属性实体类型</typeparam>
-public interface IIncludableQuery<<#=tables#>, TMember> : IQuery<<#=tables#>>
+public interface IIncludableQuery<<#=tables#>, TMember> : IIncludableQueryBase, IQuery<<#=tables#>>
 {
 <#
         if(i < count)

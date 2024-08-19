@@ -5,10 +5,10 @@ namespace Trolley;
 public class ModelBuilder
 {
     private readonly IEntityMapProvider mapProvider;
-
     public ModelBuilder(IEntityMapProvider mapProvider)
-        => this.mapProvider = mapProvider;
-
+    {
+        this.mapProvider = mapProvider;
+    }
     public virtual ModelBuilder Entity<TEntity>(Action<EntityBuilder<TEntity>> initializer) where TEntity : class
     {
         var entityType = typeof(TEntity);
@@ -21,4 +21,15 @@ public class ModelBuilder
         this.mapProvider.AddEntityMap(entityType, mapper);
         return this;
     }
+    public ModelBuilder UseDefaultFieldMapHandler()
+    {
+        this.mapProvider.UseDefaultFieldMapHandler();
+        return this;
+    }
+    public ModelBuilder UseFieldMapHandler(IFieldMapHandler fieldMapHandler)
+    {
+        this.mapProvider.UseFieldMapHandler(fieldMapHandler);
+        return this;
+    }
+    public void UseAutoMap() => this.mapProvider.UseAutoMap();
 }

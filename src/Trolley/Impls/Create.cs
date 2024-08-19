@@ -25,14 +25,12 @@ public class Create<TEntity> : CreateInternal, ICreate<TEntity>
     #region Sharding
     public virtual ICreate<TEntity> UseTable(string tableName)
     {
-        var entityType = typeof(TEntity);
-        this.Visitor.UseTable(entityType, tableName);
+        this.Visitor.UseTable(false, tableName);
         return this;
     }
     public virtual ICreate<TEntity> UseTableBy(object field1Value, object field2Value = null)
     {
-        var entityType = typeof(TEntity);
-        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(false, field1Value, field2Value);
         return this;
     }
     #endregion

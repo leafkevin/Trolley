@@ -126,32 +126,27 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
     #region Sharding
     public virtual IFromCommand<T> UseTable(params string[] tableNames)
     {
-        var entityType = typeof(T);
-        this.Visitor.UseTable(entityType, tableNames);
+        this.Visitor.UseTable(false, tableNames);
         return this;
     }
     public virtual IFromCommand<T> UseTable(Func<string, bool> tableNamePredicate)
     {
-        var entityType = typeof(T);
-        this.Visitor.UseTable(entityType, tableNamePredicate);
+        this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
     public virtual IFromCommand<T> UseTableBy(object field1Value, object field2Value = null)
     {
-        var entityType = typeof(T);
-        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(false, field1Value, field2Value);
         return this;
     }
     public virtual IFromCommand<T> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        var entityType = typeof(T);
-        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
     public virtual IFromCommand<T> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
-        var entityType = typeof(T);
-        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -319,32 +314,27 @@ public class FromCommand<T1, T2> : FromCommand, IFromCommand<T1, T2>
     #region Sharding
     public virtual IFromCommand<T1, T2> UseTable(params string[] tableNames)
     {
-        var entityType = typeof(T2);
-        this.Visitor.UseTable(entityType, tableNames);
+        this.Visitor.UseTable(false, tableNames);
         return this;
     }
     public virtual IFromCommand<T1, T2> UseTable(Func<string, bool> tableNamePredicate)
     {
-        var entityType = typeof(T2);
-        this.Visitor.UseTable(entityType, tableNamePredicate);
+        this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
     public virtual IFromCommand<T1, T2> UseTableBy(object field1Value, object field2Value = null)
     {
-        var entityType = typeof(T2);
-        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(false, field1Value, field2Value);
         return this;
     }
     public virtual IFromCommand<T1, T2> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        var entityType = typeof(T2);
-        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
     public virtual IFromCommand<T1, T2> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
-        var entityType = typeof(T2);
-        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -491,32 +481,27 @@ public class FromCommand<T1, T2, T3> : FromCommand, IFromCommand<T1, T2, T3>
     #region Sharding
     public virtual IFromCommand<T1, T2, T3> UseTable(params string[] tableNames)
     {
-        var entityType = typeof(T3);
-        this.Visitor.UseTable(entityType, tableNames);
+        this.Visitor.UseTable(false, tableNames);
         return this;
     }
     public virtual IFromCommand<T1, T2, T3> UseTable(Func<string, bool> tableNamePredicate)
     {
-        var entityType = typeof(T3);
-        this.Visitor.UseTable(entityType, tableNamePredicate);
+        this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
     public virtual IFromCommand<T1, T2, T3> UseTableBy(object field1Value, object field2Value = null)
     {
-        var entityType = typeof(T3);
-        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(false, field1Value, field2Value);
         return this;
     }
     public virtual IFromCommand<T1, T2, T3> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        var entityType = typeof(T3);
-        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
     public virtual IFromCommand<T1, T2, T3> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
-        var entityType = typeof(T3);
-        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -663,32 +648,27 @@ public class FromCommand<T1, T2, T3, T4> : FromCommand, IFromCommand<T1, T2, T3,
     #region Sharding
     public virtual IFromCommand<T1, T2, T3, T4> UseTable(params string[] tableNames)
     {
-        var entityType = typeof(T4);
-        this.Visitor.UseTable(entityType, tableNames);
+        this.Visitor.UseTable(false, tableNames);
         return this;
     }
     public virtual IFromCommand<T1, T2, T3, T4> UseTable(Func<string, bool> tableNamePredicate)
     {
-        var entityType = typeof(T4);
-        this.Visitor.UseTable(entityType, tableNamePredicate);
+        this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
     public virtual IFromCommand<T1, T2, T3, T4> UseTableBy(object field1Value, object field2Value = null)
     {
-        var entityType = typeof(T4);
-        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(false, field1Value, field2Value);
         return this;
     }
     public virtual IFromCommand<T1, T2, T3, T4> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        var entityType = typeof(T4);
-        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
     public virtual IFromCommand<T1, T2, T3, T4> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
-        var entityType = typeof(T4);
-        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -835,32 +815,27 @@ public class FromCommand<T1, T2, T3, T4, T5> : FromCommand, IFromCommand<T1, T2,
     #region Sharding
     public virtual IFromCommand<T1, T2, T3, T4, T5> UseTable(params string[] tableNames)
     {
-        var entityType = typeof(T5);
-        this.Visitor.UseTable(entityType, tableNames);
+        this.Visitor.UseTable(false, tableNames);
         return this;
     }
     public virtual IFromCommand<T1, T2, T3, T4, T5> UseTable(Func<string, bool> tableNamePredicate)
     {
-        var entityType = typeof(T5);
-        this.Visitor.UseTable(entityType, tableNamePredicate);
+        this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
     public virtual IFromCommand<T1, T2, T3, T4, T5> UseTableBy(object field1Value, object field2Value = null)
     {
-        var entityType = typeof(T5);
-        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(false, field1Value, field2Value);
         return this;
     }
     public virtual IFromCommand<T1, T2, T3, T4, T5> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        var entityType = typeof(T5);
-        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
     public virtual IFromCommand<T1, T2, T3, T4, T5> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
-        var entityType = typeof(T5);
-        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -1007,32 +982,27 @@ public class FromCommand<T1, T2, T3, T4, T5, T6> : FromCommand, IFromCommand<T1,
     #region Sharding
     public virtual IFromCommand<T1, T2, T3, T4, T5, T6> UseTable(params string[] tableNames)
     {
-        var entityType = typeof(T6);
-        this.Visitor.UseTable(entityType, tableNames);
+        this.Visitor.UseTable(false, tableNames);
         return this;
     }
     public virtual IFromCommand<T1, T2, T3, T4, T5, T6> UseTable(Func<string, bool> tableNamePredicate)
     {
-        var entityType = typeof(T6);
-        this.Visitor.UseTable(entityType, tableNamePredicate);
+        this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
     public virtual IFromCommand<T1, T2, T3, T4, T5, T6> UseTableBy(object field1Value, object field2Value = null)
     {
-        var entityType = typeof(T6);
-        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(false, field1Value, field2Value);
         return this;
     }
     public virtual IFromCommand<T1, T2, T3, T4, T5, T6> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        var entityType = typeof(T6);
-        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
     public virtual IFromCommand<T1, T2, T3, T4, T5, T6> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
-        var entityType = typeof(T6);
-        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion

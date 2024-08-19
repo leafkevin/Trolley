@@ -16,7 +16,7 @@ public class Repository : IRepository
     protected string dbKey => this.DbContext.DbKey;
     protected IOrmProvider ormProvider => this.DbContext.OrmProvider;
     protected IEntityMapProvider mapProvider => this.DbContext.MapProvider;
-    protected IShardingProvider shardingProvider => this.DbContext.ShardingProvider;
+    protected ITableShardingProvider shardingProvider => this.DbContext.ShardingProvider;
     protected bool isParameterized => this.DbContext.IsParameterized;
     #endregion
 
@@ -439,7 +439,7 @@ public class Repository : IRepository
                 };
 
                 this.DbContext.Open();
-                if (this.DbContext.ShardingProvider.TryGetShardingTable(entityType, out _))
+                if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out _))
                 {
                     var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, entities);
                     foreach (var tabledInsertObj in tabledInsertObjs)
@@ -593,7 +593,7 @@ public class Repository : IRepository
                     return count;
                 };
                 await this.DbContext.OpenAsync(cancellationToken);
-                if (this.DbContext.ShardingProvider.TryGetShardingTable(entityType, out _))
+                if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out _))
                 {
                     var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, entities);
                     foreach (var tabledInsertObj in tabledInsertObjs)
@@ -882,7 +882,7 @@ public class Repository : IRepository
         try
         {
             var entityType = typeof(TEntity);
-            if (this.shardingProvider.TryGetShardingTable(entityType, out _))
+            if (this.shardingProvider != null && this.shardingProvider.TryGetTableSharding(entityType, out _))
                 throw new NotSupportedException($"实体表{entityType.FullName}有配置分表，当前方法不支持分表，请使用repository.Delete<T>().UseTable或UseTableBy方法可指定分表");
 
             this.BuildDeleteCommand(command, entityType, whereKeys);
@@ -919,7 +919,7 @@ public class Repository : IRepository
         try
         {
             var entityType = typeof(TEntity);
-            if (this.shardingProvider.TryGetShardingTable(entityType, out _))
+            if (this.shardingProvider != null && this.shardingProvider.TryGetTableSharding(entityType, out _))
                 throw new NotSupportedException($"实体表{entityType.FullName}有配置分表，当前方法不支持分表，请使用repository.Delete<T>().UseTable或UseTableBy方法可指定分表");
 
             this.BuildDeleteCommand(command, entityType, whereKeys);

@@ -1161,7 +1161,7 @@ public class RepositoryHelper
         });
     }
 
-    public static Dictionary<string, List<object>> SplitShardingParameters(string dbKey, IEntityMapProvider mapProvider, IShardingProvider shardingProvider, Type entityType, IEnumerable parameters)
+    public static Dictionary<string, List<object>> SplitShardingParameters(string dbKey, IEntityMapProvider mapProvider, ITableShardingProvider shardingProvider, Type entityType, IEnumerable parameters)
     {
         var result = new Dictionary<string, List<object>>();
         Type parameterType = null;
@@ -1179,7 +1179,7 @@ public class RepositoryHelper
         }
         return result;
     }
-    public static string GetShardingTableName(string dbKey, IEntityMapProvider mapProvider, IShardingProvider shardingProvider, Type entityType, Type parameterType, object parameter)
+    public static string GetShardingTableName(string dbKey, IEntityMapProvider mapProvider, ITableShardingProvider shardingProvider, Type entityType, Type parameterType, object parameter)
     {
         var entityMapper = mapProvider.GetEntityMap(entityType);
         var tableName = entityMapper.TableName;
@@ -1187,9 +1187,9 @@ public class RepositoryHelper
             return tableNameGetter.Invoke(dbKey, tableName, parameter);
         return tableName;
     }
-    public static bool TryBuildShardingTableNameGetter(IShardingProvider shardingProvider, Type entityType, Type parameterType, out Func<string, string, object, string> tableNameGetter)
+    public static bool TryBuildShardingTableNameGetter(ITableShardingProvider shardingProvider, Type entityType, Type parameterType, out Func<string, string, object, string> tableNameGetter)
     {
-        if (!shardingProvider.TryGetShardingTable(entityType, out var shardingTable))
+        if (shardingProvider == null || !shardingProvider.TryGetTableSharding(entityType, out var shardingTable))
         {
             tableNameGetter = null;
             return false;

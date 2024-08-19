@@ -35,10 +35,7 @@ public class MemberBuilder<TMember>
 
     public virtual MemberBuilder<TMember> NativeDbType(object nativeDbType)
     {
-        if (nativeDbType == null)
-            throw new ArgumentNullException(nameof(nativeDbType));
-
-        this.mapper.NativeDbType = nativeDbType;
+        this.mapper.NativeDbType = nativeDbType ?? throw new ArgumentNullException(nameof(nativeDbType));
         return this;
     }
     public virtual MemberBuilder<TMember> AutoIncrement(bool isAutoIncrement = true)
@@ -46,9 +43,9 @@ public class MemberBuilder<TMember>
         this.mapper.IsAutoIncrement = isAutoIncrement;
         return this;
     }
-    public virtual MemberBuilder<TMember> Length(int length)
+    public virtual MemberBuilder<TMember> MaxLength(int length)
     {
-        this.mapper.Length = length;
+        this.mapper.MaxLength = length;
         return this;
     }
     public virtual MemberBuilder<TMember> Required(bool isRequired = true)
@@ -68,10 +65,7 @@ public class MemberBuilder<TMember>
     }
     public virtual MemberBuilder<TMember> TypeHandler(ITypeHandler typeHandler)
     {
-        if (typeHandler == null)
-            throw new ArgumentNullException(nameof(typeHandler));
-
-        this.mapper.TypeHandler = typeHandler;
+        this.mapper.TypeHandler = typeHandler ?? throw new ArgumentNullException(nameof(typeHandler));
         return this;
     }
     public virtual MemberBuilder<TMember> TypeHandler<TTypeHandler>() where TTypeHandler : class, ITypeHandler, new()
@@ -84,9 +78,13 @@ public class MemberBuilder<TMember>
         this.mapper.IsIgnore = true;
         return this;
     }
-    public virtual MemberBuilder<TMember> Ignore(bool isIgnoreInsert, bool isIgnoreUpdate)
+    public virtual MemberBuilder<TMember> IgnoreInsert(bool isIgnoreInsert = true)
     {
         this.mapper.IsIgnoreInsert = isIgnoreInsert;
+        return this;
+    }
+    public virtual MemberBuilder<TMember> IgnoreUpdate(bool isIgnoreUpdate = true)
+    {
         this.mapper.IsIgnoreUpdate = isIgnoreUpdate;
         return this;
     }

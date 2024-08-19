@@ -6,47 +6,48 @@ namespace Trolley;
 
 public class IncludableQuery<T, TMember> : Query<T>, IIncludableQuery<T, TMember>
 {
+    #region Properties
+    public bool IsIncludeMany { get; private set; }
+    #endregion
+
     #region Constructor
-    public IncludableQuery(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public IncludableQuery(DbContext dbContext, IQueryVisitor visitor, bool isIncludeMany)
+        : base(dbContext, visitor)
+    {
+        this.IsIncludeMany = isIncludeMany;
+    }
     #endregion
 
     #region Sharding
     public override IIncludableQuery<T, TMember> UseTable(params string[] tableNames)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTable(entityType, tableNames);
+        this.Visitor.UseTable(this.IsIncludeMany, tableNames);
         return this;
     }
     public override IIncludableQuery<T, TMember> UseTable(Func<string, bool> tableNamePredicate)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTable(entityType, tableNamePredicate);
+        this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
         return this;
     }
     public override IIncludableQuery<T, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
     {
-        var entityType = typeof(TMember);
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(entityType, masterEntityType, tableNameGetter);
+        this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
     public override IIncludableQuery<T, TMember> UseTableBy(object field1Value, object field2Value = null)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(this.IsIncludeMany, field1Value, field2Value);
         return this;
     }
     public override IIncludableQuery<T, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(this.IsIncludeMany, beginFieldValue, endFieldValue);
         return this;
     }
     public override IIncludableQuery<T, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(this.IsIncludeMany, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -66,47 +67,48 @@ public class IncludableQuery<T, TMember> : Query<T>, IIncludableQuery<T, TMember
 }
 public class IncludableQuery<T1, T2, TMember> : Query<T1, T2>, IIncludableQuery<T1, T2, TMember>
 {
+    #region Properties
+    public bool IsIncludeMany { get; private set; }
+    #endregion
+
     #region Constructor
-    public IncludableQuery(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public IncludableQuery(DbContext dbContext, IQueryVisitor visitor, bool isIncludeMany)
+        : base(dbContext, visitor)
+    {
+        this.IsIncludeMany = isIncludeMany;
+    }
     #endregion
 
     #region Sharding
     public override IIncludableQuery<T1, T2, TMember> UseTable(params string[] tableNames)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTable(entityType, tableNames);
+        this.Visitor.UseTable(this.IsIncludeMany, tableNames);
         return this;
     }
     public override IIncludableQuery<T1, T2, TMember> UseTable(Func<string, bool> tableNamePredicate)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTable(entityType, tableNamePredicate);
+        this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
         return this;
     }
     public override IIncludableQuery<T1, T2, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
     {
-        var entityType = typeof(TMember);
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(entityType, masterEntityType, tableNameGetter);
+        this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
     public override IIncludableQuery<T1, T2, TMember> UseTableBy(object field1Value, object field2Value = null)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(this.IsIncludeMany, field1Value, field2Value);
         return this;
     }
     public override IIncludableQuery<T1, T2, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(this.IsIncludeMany, beginFieldValue, endFieldValue);
         return this;
     }
     public override IIncludableQuery<T1, T2, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(this.IsIncludeMany, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -126,47 +128,48 @@ public class IncludableQuery<T1, T2, TMember> : Query<T1, T2>, IIncludableQuery<
 }
 public class IncludableQuery<T1, T2, T3, TMember> : Query<T1, T2, T3>, IIncludableQuery<T1, T2, T3, TMember>
 {
+    #region Properties
+    public bool IsIncludeMany { get; private set; }
+    #endregion
+
     #region Constructor
-    public IncludableQuery(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public IncludableQuery(DbContext dbContext, IQueryVisitor visitor, bool isIncludeMany)
+        : base(dbContext, visitor)
+    {
+        this.IsIncludeMany = isIncludeMany;
+    }
     #endregion
 
     #region Sharding
     public override IIncludableQuery<T1, T2, T3, TMember> UseTable(params string[] tableNames)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTable(entityType, tableNames);
+        this.Visitor.UseTable(this.IsIncludeMany, tableNames);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, TMember> UseTable(Func<string, bool> tableNamePredicate)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTable(entityType, tableNamePredicate);
+        this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
     {
-        var entityType = typeof(TMember);
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(entityType, masterEntityType, tableNameGetter);
+        this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, TMember> UseTableBy(object field1Value, object field2Value = null)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(this.IsIncludeMany, field1Value, field2Value);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(this.IsIncludeMany, beginFieldValue, endFieldValue);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(this.IsIncludeMany, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -186,47 +189,48 @@ public class IncludableQuery<T1, T2, T3, TMember> : Query<T1, T2, T3>, IIncludab
 }
 public class IncludableQuery<T1, T2, T3, T4, TMember> : Query<T1, T2, T3, T4>, IIncludableQuery<T1, T2, T3, T4, TMember>
 {
+    #region Properties
+    public bool IsIncludeMany { get; private set; }
+    #endregion
+
     #region Constructor
-    public IncludableQuery(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public IncludableQuery(DbContext dbContext, IQueryVisitor visitor, bool isIncludeMany)
+        : base(dbContext, visitor)
+    {
+        this.IsIncludeMany = isIncludeMany;
+    }
     #endregion
 
     #region Sharding
     public override IIncludableQuery<T1, T2, T3, T4, TMember> UseTable(params string[] tableNames)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTable(entityType, tableNames);
+        this.Visitor.UseTable(this.IsIncludeMany, tableNames);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, TMember> UseTable(Func<string, bool> tableNamePredicate)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTable(entityType, tableNamePredicate);
+        this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
     {
-        var entityType = typeof(TMember);
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(entityType, masterEntityType, tableNameGetter);
+        this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, TMember> UseTableBy(object field1Value, object field2Value = null)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(this.IsIncludeMany, field1Value, field2Value);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(this.IsIncludeMany, beginFieldValue, endFieldValue);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(this.IsIncludeMany, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -246,47 +250,48 @@ public class IncludableQuery<T1, T2, T3, T4, TMember> : Query<T1, T2, T3, T4>, I
 }
 public class IncludableQuery<T1, T2, T3, T4, T5, TMember> : Query<T1, T2, T3, T4, T5>, IIncludableQuery<T1, T2, T3, T4, T5, TMember>
 {
+    #region Properties
+    public bool IsIncludeMany { get; private set; }
+    #endregion
+
     #region Constructor
-    public IncludableQuery(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public IncludableQuery(DbContext dbContext, IQueryVisitor visitor, bool isIncludeMany)
+        : base(dbContext, visitor)
+    {
+        this.IsIncludeMany = isIncludeMany;
+    }
     #endregion
 
     #region Sharding
     public override IIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTable(params string[] tableNames)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTable(entityType, tableNames);
+        this.Visitor.UseTable(this.IsIncludeMany, tableNames);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTable(Func<string, bool> tableNamePredicate)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTable(entityType, tableNamePredicate);
+        this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
     {
-        var entityType = typeof(TMember);
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(entityType, masterEntityType, tableNameGetter);
+        this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableBy(object field1Value, object field2Value = null)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(this.IsIncludeMany, field1Value, field2Value);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(this.IsIncludeMany, beginFieldValue, endFieldValue);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(this.IsIncludeMany, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -306,47 +311,48 @@ public class IncludableQuery<T1, T2, T3, T4, T5, TMember> : Query<T1, T2, T3, T4
 }
 public class IncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : Query<T1, T2, T3, T4, T5, T6>, IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember>
 {
+    #region Properties
+    public bool IsIncludeMany { get; private set; }
+    #endregion
+
     #region Constructor
-    public IncludableQuery(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public IncludableQuery(DbContext dbContext, IQueryVisitor visitor, bool isIncludeMany)
+        : base(dbContext, visitor)
+    {
+        this.IsIncludeMany = isIncludeMany;
+    }
     #endregion
 
     #region Sharding
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTable(params string[] tableNames)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTable(entityType, tableNames);
+        this.Visitor.UseTable(this.IsIncludeMany, tableNames);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTable(Func<string, bool> tableNamePredicate)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTable(entityType, tableNamePredicate);
+        this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
     {
-        var entityType = typeof(TMember);
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(entityType, masterEntityType, tableNameGetter);
+        this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableBy(object field1Value, object field2Value = null)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(this.IsIncludeMany, field1Value, field2Value);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(this.IsIncludeMany, beginFieldValue, endFieldValue);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(this.IsIncludeMany, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -366,47 +372,48 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : Query<T1, T2, T3
 }
 public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : Query<T1, T2, T3, T4, T5, T6, T7>, IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember>
 {
+    #region Properties
+    public bool IsIncludeMany { get; private set; }
+    #endregion
+
     #region Constructor
-    public IncludableQuery(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public IncludableQuery(DbContext dbContext, IQueryVisitor visitor, bool isIncludeMany)
+        : base(dbContext, visitor)
+    {
+        this.IsIncludeMany = isIncludeMany;
+    }
     #endregion
 
     #region Sharding
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTable(params string[] tableNames)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTable(entityType, tableNames);
+        this.Visitor.UseTable(this.IsIncludeMany, tableNames);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTable(Func<string, bool> tableNamePredicate)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTable(entityType, tableNamePredicate);
+        this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
     {
-        var entityType = typeof(TMember);
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(entityType, masterEntityType, tableNameGetter);
+        this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableBy(object field1Value, object field2Value = null)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(this.IsIncludeMany, field1Value, field2Value);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(this.IsIncludeMany, beginFieldValue, endFieldValue);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(this.IsIncludeMany, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -426,47 +433,48 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : Query<T1, T2
 }
 public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> : Query<T1, T2, T3, T4, T5, T6, T7, T8>, IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember>
 {
+    #region Properties
+    public bool IsIncludeMany { get; private set; }
+    #endregion
+
     #region Constructor
-    public IncludableQuery(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public IncludableQuery(DbContext dbContext, IQueryVisitor visitor, bool isIncludeMany)
+        : base(dbContext, visitor)
+    {
+        this.IsIncludeMany = isIncludeMany;
+    }
     #endregion
 
     #region Sharding
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTable(params string[] tableNames)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTable(entityType, tableNames);
+        this.Visitor.UseTable(this.IsIncludeMany, tableNames);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTable(Func<string, bool> tableNamePredicate)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTable(entityType, tableNamePredicate);
+        this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
     {
-        var entityType = typeof(TMember);
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(entityType, masterEntityType, tableNameGetter);
+        this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableBy(object field1Value, object field2Value = null)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(this.IsIncludeMany, field1Value, field2Value);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(this.IsIncludeMany, beginFieldValue, endFieldValue);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(this.IsIncludeMany, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -486,47 +494,48 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> : Query<T1
 }
 public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> : Query<T1, T2, T3, T4, T5, T6, T7, T8, T9>, IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>
 {
+    #region Properties
+    public bool IsIncludeMany { get; private set; }
+    #endregion
+
     #region Constructor
-    public IncludableQuery(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public IncludableQuery(DbContext dbContext, IQueryVisitor visitor, bool isIncludeMany)
+        : base(dbContext, visitor)
+    {
+        this.IsIncludeMany = isIncludeMany;
+    }
     #endregion
 
     #region Sharding
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTable(params string[] tableNames)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTable(entityType, tableNames);
+        this.Visitor.UseTable(this.IsIncludeMany, tableNames);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTable(Func<string, bool> tableNamePredicate)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTable(entityType, tableNamePredicate);
+        this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
     {
-        var entityType = typeof(TMember);
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(entityType, masterEntityType, tableNameGetter);
+        this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableBy(object field1Value, object field2Value = null)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(this.IsIncludeMany, field1Value, field2Value);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(this.IsIncludeMany, beginFieldValue, endFieldValue);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(this.IsIncludeMany, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -546,47 +555,48 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> : Quer
 }
 public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> : Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>, IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>
 {
+    #region Properties
+    public bool IsIncludeMany { get; private set; }
+    #endregion
+
     #region Constructor
-    public IncludableQuery(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public IncludableQuery(DbContext dbContext, IQueryVisitor visitor, bool isIncludeMany)
+        : base(dbContext, visitor)
+    {
+        this.IsIncludeMany = isIncludeMany;
+    }
     #endregion
 
     #region Sharding
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTable(params string[] tableNames)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTable(entityType, tableNames);
+        this.Visitor.UseTable(this.IsIncludeMany, tableNames);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTable(Func<string, bool> tableNamePredicate)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTable(entityType, tableNamePredicate);
+        this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
     {
-        var entityType = typeof(TMember);
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(entityType, masterEntityType, tableNameGetter);
+        this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableBy(object field1Value, object field2Value = null)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(this.IsIncludeMany, field1Value, field2Value);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(this.IsIncludeMany, beginFieldValue, endFieldValue);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(this.IsIncludeMany, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -606,47 +616,48 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> :
 }
 public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> : Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>, IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>
 {
+    #region Properties
+    public bool IsIncludeMany { get; private set; }
+    #endregion
+
     #region Constructor
-    public IncludableQuery(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public IncludableQuery(DbContext dbContext, IQueryVisitor visitor, bool isIncludeMany)
+        : base(dbContext, visitor)
+    {
+        this.IsIncludeMany = isIncludeMany;
+    }
     #endregion
 
     #region Sharding
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTable(params string[] tableNames)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTable(entityType, tableNames);
+        this.Visitor.UseTable(this.IsIncludeMany, tableNames);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTable(Func<string, bool> tableNamePredicate)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTable(entityType, tableNamePredicate);
+        this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
     {
-        var entityType = typeof(TMember);
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(entityType, masterEntityType, tableNameGetter);
+        this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableBy(object field1Value, object field2Value = null)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(this.IsIncludeMany, field1Value, field2Value);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(this.IsIncludeMany, beginFieldValue, endFieldValue);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(this.IsIncludeMany, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -666,47 +677,48 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMemb
 }
 public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> : Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>, IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>
 {
+    #region Properties
+    public bool IsIncludeMany { get; private set; }
+    #endregion
+
     #region Constructor
-    public IncludableQuery(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public IncludableQuery(DbContext dbContext, IQueryVisitor visitor, bool isIncludeMany)
+        : base(dbContext, visitor)
+    {
+        this.IsIncludeMany = isIncludeMany;
+    }
     #endregion
 
     #region Sharding
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTable(params string[] tableNames)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTable(entityType, tableNames);
+        this.Visitor.UseTable(this.IsIncludeMany, tableNames);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTable(Func<string, bool> tableNamePredicate)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTable(entityType, tableNamePredicate);
+        this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
     {
-        var entityType = typeof(TMember);
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(entityType, masterEntityType, tableNameGetter);
+        this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableBy(object field1Value, object field2Value = null)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(this.IsIncludeMany, field1Value, field2Value);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(this.IsIncludeMany, beginFieldValue, endFieldValue);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(this.IsIncludeMany, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -726,47 +738,48 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 }
 public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> : Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>, IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>
 {
+    #region Properties
+    public bool IsIncludeMany { get; private set; }
+    #endregion
+
     #region Constructor
-    public IncludableQuery(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public IncludableQuery(DbContext dbContext, IQueryVisitor visitor, bool isIncludeMany)
+        : base(dbContext, visitor)
+    {
+        this.IsIncludeMany = isIncludeMany;
+    }
     #endregion
 
     #region Sharding
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTable(params string[] tableNames)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTable(entityType, tableNames);
+        this.Visitor.UseTable(this.IsIncludeMany, tableNames);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTable(Func<string, bool> tableNamePredicate)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTable(entityType, tableNamePredicate);
+        this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
     {
-        var entityType = typeof(TMember);
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(entityType, masterEntityType, tableNameGetter);
+        this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableBy(object field1Value, object field2Value = null)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(this.IsIncludeMany, field1Value, field2Value);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(this.IsIncludeMany, beginFieldValue, endFieldValue);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(this.IsIncludeMany, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -786,47 +799,48 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 }
 public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> : Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>, IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>
 {
+    #region Properties
+    public bool IsIncludeMany { get; private set; }
+    #endregion
+
     #region Constructor
-    public IncludableQuery(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public IncludableQuery(DbContext dbContext, IQueryVisitor visitor, bool isIncludeMany)
+        : base(dbContext, visitor)
+    {
+        this.IsIncludeMany = isIncludeMany;
+    }
     #endregion
 
     #region Sharding
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTable(params string[] tableNames)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTable(entityType, tableNames);
+        this.Visitor.UseTable(this.IsIncludeMany, tableNames);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTable(Func<string, bool> tableNamePredicate)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTable(entityType, tableNamePredicate);
+        this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
     {
-        var entityType = typeof(TMember);
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(entityType, masterEntityType, tableNameGetter);
+        this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableBy(object field1Value, object field2Value = null)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(this.IsIncludeMany, field1Value, field2Value);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(this.IsIncludeMany, beginFieldValue, endFieldValue);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(this.IsIncludeMany, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -846,47 +860,48 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 }
 public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> : Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>, IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>
 {
+    #region Properties
+    public bool IsIncludeMany { get; private set; }
+    #endregion
+
     #region Constructor
-    public IncludableQuery(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public IncludableQuery(DbContext dbContext, IQueryVisitor visitor, bool isIncludeMany)
+        : base(dbContext, visitor)
+    {
+        this.IsIncludeMany = isIncludeMany;
+    }
     #endregion
 
     #region Sharding
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTable(params string[] tableNames)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTable(entityType, tableNames);
+        this.Visitor.UseTable(this.IsIncludeMany, tableNames);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTable(Func<string, bool> tableNamePredicate)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTable(entityType, tableNamePredicate);
+        this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
     {
-        var entityType = typeof(TMember);
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(entityType, masterEntityType, tableNameGetter);
+        this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableBy(object field1Value, object field2Value = null)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableBy(entityType, field1Value, field2Value);
+        this.Visitor.UseTableBy(this.IsIncludeMany, field1Value, field2Value);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableByRange(entityType, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(this.IsIncludeMany, beginFieldValue, endFieldValue);
         return this;
     }
     public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
-        var entityType = typeof(TMember);
-        this.Visitor.UseTableByRange(entityType, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(this.IsIncludeMany, fieldValue1, fieldValue2, fieldValue3);
         return this;
     }
     #endregion
@@ -906,8 +921,15 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 }
 public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember> : Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>, IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember>
 {
+    #region Properties
+    public bool IsIncludeMany { get; private set; }
+    #endregion
+
     #region Constructor
-    public IncludableQuery(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public IncludableQuery(DbContext dbContext, IQueryVisitor visitor, bool isIncludeMany)
+        : base(dbContext, visitor)
+    {
+        this.IsIncludeMany = isIncludeMany;
+    }
     #endregion
 }

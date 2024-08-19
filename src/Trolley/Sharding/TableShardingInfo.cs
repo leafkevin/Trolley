@@ -2,7 +2,7 @@
 
 namespace Trolley;
 
-public class ShardingTable
+public class TableShardingInfo
 {
     /// <summary>
     /// 依赖的实体成员名称

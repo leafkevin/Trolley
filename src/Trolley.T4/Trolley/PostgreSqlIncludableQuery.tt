@@ -14,8 +14,8 @@ namespace Trolley.PostgreSql;
 public class PostgreSqlIncludableQuery<T, TMember> : IncludableQuery<T, TMember>, IPostgreSqlIncludableQuery<T, TMember>
 {
     #region Constructor
-    public PostgreSqlIncludableQuery(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public PostgreSqlIncludableQuery(DbContext dbContext, IQueryVisitor visitor, bool isIncludeMany)
+        : base(dbContext, visitor, isIncludeMany) { }
     #endregion
 
     #region Sharding
@@ -50,8 +50,8 @@ public class PostgreSqlIncludableQuery<T, TMember> : IncludableQuery<T, TMember>
 public class PostgreSqlIncludableQuery<<#=tables#>, TMember> : IncludableQuery<<#=tables#>, TMember>, IPostgreSqlIncludableQuery<<#=tables#>, TMember>
 {
     #region Constructor
-    public PostgreSqlIncludableQuery(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    public PostgreSqlIncludableQuery(DbContext dbContext, IQueryVisitor visitor, bool isIncludeMany)
+        : base(dbContext, visitor, isIncludeMany) { }
     #endregion
 <#
         if( i < count)

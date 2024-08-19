@@ -11,12 +11,12 @@ public class EntityMap
     private bool isBuild = false;
     private readonly ConcurrentDictionary<string, MemberMap> memberMaps = new();
     private readonly ConcurrentDictionary<string, MemberMap> fieldMaps = new();
-    private readonly ConcurrentDictionary<string, Func<string, object, string>> shardingStrategies = new();
-    private List<MemberMap> memberMappers = new();
+    private readonly List<MemberMap> memberMappers = new();
 
     public EntityMap(Type entityType) => this.EntityType = entityType;
 
     public Type EntityType { get; set; }
+    public string TableSchema { get; set; }
     public string TableName { get; set; }
     public bool IsNullable { get; set; }
     public Type UnderlyingType { get; set; }
@@ -25,6 +25,8 @@ public class EntityMap
     public List<MemberMap> KeyMembers { get; set; }
     public List<MemberMap> MemberMaps => this.memberMappers;
     public string AutoIncrementField { get; set; }
+
+    public bool IsMapped { get; set; }
 
     public void SetKeys(params MemberInfo[] memberInfos)
     {
@@ -129,7 +131,7 @@ public class EntityMap
                 memberMapper.TypeHandler = ormProvider.GetTypeHandler(memberMapper.TypeHandlerType);
             this.fieldMaps.TryAdd(memberMapper.FieldName, memberMapper);
         }
-        if (this.memberMaps.Count > 0)
+        if (!this.memberMaps.IsEmpty)
         {
             this.KeyMembers ??= new List<MemberMap>();
             //生成在配置代码的时候就尽力排好序，不排序也可以，此处排序反而还错了      
@@ -152,8 +154,7 @@ public class EntityMap
     }
     public static EntityMap CreateDefaultMap(Type entityType)
     {
-        var mapper = new EntityMap(entityType);
-        mapper.TableName = entityType.Name;
+        var mapper = new EntityMap(entityType) { TableName = entityType.Name };
 
         bool isValueTuple = false;
         if (entityType.IsValueType)
@@ -189,11 +190,13 @@ public class EntityMap
         if (entityType == mapTo.EntityType)
             return mapTo;
 
-        var mapper = new EntityMap(entityType);
-        mapper.TableName = mapTo.TableName;
-        mapper.IsAutoIncrement = mapTo.IsAutoIncrement;
-        mapper.KeyMembers = mapTo.KeyMembers;
-        mapper.AutoIncrementField = mapTo.AutoIncrementField;
+        var mapper = new EntityMap(entityType)
+        {
+            TableName = mapTo.TableName,
+            IsAutoIncrement = mapTo.IsAutoIncrement,
+            KeyMembers = mapTo.KeyMembers,
+            AutoIncrementField = mapTo.AutoIncrementField
+        };
 
         bool isValueTuple = false;
         if (entityType.IsValueType)

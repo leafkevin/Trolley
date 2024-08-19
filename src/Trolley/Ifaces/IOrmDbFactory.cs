@@ -7,18 +7,26 @@ public interface IOrmDbFactory
 {
     ICollection<TheaDatabase> Databases { get; }
     ICollection<IOrmProvider> OrmProviders { get; }
-    ICollection<IEntityMapProvider> MapProviders { get; }
+    IFieldMapHandler FieldMapHandler { get; }
     DbInterceptors Interceptors { get; }
 
-    void UseDatabase(Func<string> dbKeySelector);
-    bool TryGetShardingTable(Type entityType, out ShardingTable shardingTable);
-    void AddShardingTable(Type entityType, ShardingTable shardingTable);
+    void UseDefaultDatabase(string dbKey);
+    void UseDatabaseSharding(Func<string> dbKeySelector);
+    bool TryGetTableShardingProvider(string dbKey, out ITableShardingProvider tableShardingProvider);
+    void AddTableShardingProvider(string dbKey, ITableShardingProvider tableShardingProvider);
+    bool TryGetTableShardingProvider(OrmProviderType ormProviderType, out ITableShardingProvider tableShardingProvider);
+    void AddTableShardingProvider(OrmProviderType ormProviderType, ITableShardingProvider tableShardingProvider);
+    bool TryGetTableSharding(string dbKey, Type entityType, out TableShardingInfo tableShardingInfo);
+    bool TryGetTableSharding(OrmProviderType ormProviderType, Type entityType, out TableShardingInfo tableShardingInfo);
 
-    void Register(OrmProviderType ormProviderType, string dbKey, string connectionString, bool isDefault, string defaultTableSchema = null);
+    void Register(OrmProviderType ormProviderType, string dbKey, string connectionString, bool isDefaultDatabase);
     void AddOrmProvider(IOrmProvider ormProvider);
     bool TryGetOrmProvider(OrmProviderType ormProviderType, out IOrmProvider ormProvider);
+    void AddMapProvider(string dbKey, IEntityMapProvider mapProvider);
+    bool TryGetMapProvider(string dbKey, out IEntityMapProvider mapProvider);
     void AddMapProvider(OrmProviderType ormProviderType, IEntityMapProvider mapProvider);
     bool TryGetMapProvider(OrmProviderType ormProviderType, out IEntityMapProvider mapProvider);
+    void UseFieldMapHandler(IFieldMapHandler fieldMapHandler);
     TheaDatabase GetDatabase(string dbKey = null);
     /// <summary>
     /// 使用指定的dbKey，创建仓储对象。

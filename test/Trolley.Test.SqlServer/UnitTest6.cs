@@ -24,24 +24,24 @@ public class UnitTest6 : UnitTestBase
         services.AddSingleton(f =>
         {
             var builder = new OrmDbFactoryBuilder()
-                .Register(OrmProviderType.SqlServer, "fengling", "Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", true)
-                .Register(OrmProviderType.SqlServer, "fengling_tenant1", "Server=127.0.0.1;Database=fengling_tenant1;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", false)
-                .Register(OrmProviderType.SqlServer, "fengling_tenant2", "Server=127.0.0.1;Database=fengling_tenant2;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", false)
-                .UseSharding(s =>
+                .Register(OrmProviderType.SqlServer, "fengling", "Server=172.16.30.190;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", true)
+                .Register(OrmProviderType.SqlServer, "fengling_tenant1", "Server=172.16.30.190;Database=fengling_tenant1;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", false)
+                .Register(OrmProviderType.SqlServer, "fengling_tenant2", "Server=172.16.30.190;Database=fengling_tenant2;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", false)
+                .Configure<ModelConfiguration>(OrmProviderType.SqlServer)
+                .UseDatabaseSharding(() =>
                 {
-                    s.UseDatabase(() =>
+                    var passport = f.GetService<IPassport>();
+                    return passport.TenantId switch
                     {
-                        //可以硬编码分库，也可以使用redis，映射表 ...，其他方式等
-                        var passport = f.GetService<IPassport>();
-                        return passport.TenantId switch
-                        {
-                            "200" => "fengling_tenant1",
-                            "300" => "fengling_tenant2",
-                            _ => "fengling"
-                        };
-                    })
+                        "200" => "fengling_tenant1",
+                        "300" => "fengling_tenant2",
+                        _ => "fengling"
+                    };
+                })
+                .UseTableSharding(OrmProviderType.SqlServer, s =>
+                {
                     //按照租户+时间分表
-                    .UseTable<Order>(t =>
+                    s.Table<Order>(t =>
                     {
                         t.DependOn(d => d.TenantId).DependOn(d => d.CreatedAt)
                         .UseRule((dbKey, origName, tenantId, createdAt) => $"{origName}_{tenantId}_{createdAt:yyyyMM}", "^sys_order_\\d{1,4}_[1,2]\\d{3}[0,1][0-9]$")
@@ -65,7 +65,7 @@ public class UnitTest6 : UnitTestBase
                         });
                     })
                     //按照租户+时间分表
-                    .UseTable<OrderDetail>(t =>
+                    .Table<OrderDetail>(t =>
                     {
                         t.DependOn(d => d.TenantId).DependOn(d => d.CreatedAt)
                         .UseRule((dbKey, origName, tenantId, createdAt) => $"{origName}_{tenantId}_{createdAt:yyyyMM}", "^sys_order_detail_\\d{1,4}_[1,2]\\d{3}[0,1][0-9]$")
@@ -94,9 +94,8 @@ public class UnitTest6 : UnitTestBase
                     //.UseTable<Order>(t => t.DependOn(d => d.Id).UseRule((dbKey, origName, id) => $"{origName}_{new DateTime(ObjectId.Parse(id).Timestamp):yyyyMM}", "^sys_order_\\S{24}$"))
                     ////按照Id字段哈希取模分表
                     //.UseTable<Order>(t => t.DependOn(d => d.Id).UseRule((dbKey, origName, id) => $"{origName}_{HashCode.Combine(id) % 5}", "^sys_order_\\S{24}$"))
-                    .UseTable<User>(t => t.DependOn(d => d.TenantId).UseRule((dbKey, origName, tenantId) => $"{origName}_{tenantId}", "^sys_user_\\d{1,4}$"));
+                    .Table<User>(t => t.DependOn(d => d.TenantId).UseRule((dbKey, origName, tenantId) => $"{origName}_{tenantId}", "^sys_user_\\d{1,4}$"));
                 })
-                .Configure<ModelConfiguration>(OrmProviderType.SqlServer)
                 .UseInterceptors(df =>
                 {
                     df.OnConnectionCreated += evt =>

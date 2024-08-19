@@ -406,10 +406,10 @@ public class UnitTestBase
                 BooleanField = true,
                 DateOnlyField = DateOnly.FromDateTime(DateTime.Now),
                 DateTimeField = DateTime.Now,
-                DateTimeOffsetField = DateTimeOffset.Now,
+                DateTimeOffsetField = DateTimeOffset.UtcNow,
                 EnumField = Gender.Male,
                 GuidField = Guid.NewGuid(),
-                TimeOnlyField = TimeOnly.FromDateTime(DateTime.UtcNow),
+                TimeOnlyField = TimeOnly.FromDateTime(DateTime.Now),
                 TimeSpanField = TimeSpan.FromMinutes(350)
             },
             new UpdateEntity
@@ -418,10 +418,10 @@ public class UnitTestBase
                 BooleanField = false ,
                 DateOnlyField = DateOnly.Parse("2024-07-07"),
                 DateTimeField = DateTime.Now,
-                DateTimeOffsetField = DateTimeOffset.Now,
+                DateTimeOffsetField = DateTimeOffset.UtcNow,
                 EnumField = Gender.Male,
                 GuidField = Guid.NewGuid(),
-                TimeOnlyField = TimeOnly.FromDateTime(DateTime.UtcNow),
+                TimeOnlyField = TimeOnly.FromDateTime(DateTime.Now),
                 TimeSpanField = TimeSpan.FromMinutes(350)
             }
         });
