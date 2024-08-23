@@ -49,15 +49,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public int PageNumber { get; set; }
     public int PageSize { get; set; }
 
-    public QueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, ITableShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", IDataParameterCollection dbParameters = null)
+    public QueryVisitor(DbContext dbContext, char tableAsStart = 'a', IDataParameterCollection dbParameters = null)
     {
-        this.DbKey = dbKey;
-        this.OrmProvider = ormProvider;
-        this.MapProvider = mapProvider;
-        this.ShardingProvider = shardingProvider;
-        this.IsParameterized = isParameterized;
+        this.DbContext = dbContext;
         this.TableAsStart = tableAsStart;
-        this.ParameterPrefix = parameterPrefix;
         this.DbParameters = dbParameters ?? new TheaDbParameterCollection();
         this.IsNeedTableAlias = true;
     }
@@ -574,16 +569,14 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         joinTableSegment.OnExpr = this.VisitConditionExpr(lambdaExpr.Body, out _);
         this.IsWhere = false;
     }
-    public virtual void Include(Expression memberSelector, bool isIncludeMany = false, Expression filter = null)
-        => this.Include(memberSelector, (a, b) => this.InitTableAlias(a), isIncludeMany, filter);
-    public virtual void ThenInclude(Expression memberSelector, bool isIncludeMany = false, Expression filter = null)
+    public virtual bool Include(Expression memberSelector, Expression filter = null)
+        => this.Include(memberSelector, (a, b) => this.InitTableAlias(a), filter);
+    public virtual bool ThenInclude(Expression memberSelector, Expression filter = null)
+        => this.Include(memberSelector, (a, b) =>
     {
-        this.Include(memberSelector, (a, b) =>
-        {
-            this.TableAliases.Clear();
-            this.TableAliases.Add(b[0].Name, this.LastIncludeSegment);
-        }, isIncludeMany, filter);
-    }
+        this.TableAliases.Clear();
+        this.TableAliases.Add(b[0].Name, this.LastIncludeSegment);
+    }, filter);
     public virtual bool HasIncludeTables() => this.IncludeTables != null && this.IncludeTables.Count > 0;
     public virtual bool BuildIncludeSql<TTarget>(Type targetType, TTarget target, out string sql)
     {
@@ -639,10 +632,31 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             var firstMember = rootReaderField.TargetMember;
 
             (var headSql, Action<StringBuilder, IOrmProvider, object> sqlInitializer) = this.BuildIncludeSqlGetter(targetType, firstMember, includeTableSegment);
-            builder.Append(headSql);
-            sqlBuilderInitializer.Invoke(builder, sqlInitializer);
-            if (!string.IsNullOrEmpty(includeTableSegment.Filter))
-                builder.Append($" AND {includeTableSegment.Filter}");
+            if (includeTableSegment.IsSharding && includeTableSegment.TableNames.Count > 1)
+            {
+                var sqlBuilder = new StringBuilder();
+                sqlBuilderInitializer.Invoke(sqlBuilder, sqlInitializer);
+                if (!string.IsNullOrEmpty(includeTableSegment.Filter))
+                    builder.Append($" AND {includeTableSegment.Filter}");
+                var afterSql = sqlBuilder.ToString();
+                var origName = includeTableSegment.Mapper.TableName;
+                var formatName = $"__SHARDING_{includeTableSegment.ShardingId}_{origName}";
+                int index = 0;
+                foreach (var tableName in includeTableSegment.TableNames)
+                {
+                    if (index > 0) builder.Append(" UNION ALL ");
+                    builder.Append(headSql.Replace(formatName, tableName));
+                    builder.Append(afterSql);
+                    index++;
+                }
+            }
+            else
+            {
+                builder.Append(headSql);
+                sqlBuilderInitializer.Invoke(builder, sqlInitializer);
+                if (!string.IsNullOrEmpty(includeTableSegment.Filter))
+                    builder.Append($" AND {includeTableSegment.Filter}");
+            }
         }
         return builder.ToString();
     }
@@ -810,7 +824,21 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
             //order.Seller.Company.Products
             //var foreignKeyValue = target.Seller.Company.Id;
-            Expression parentExpr = Expression.PropertyOrField(typedTargetExpr, firstMember.Name);
+            //target.Order.Seller.Company.Products或是target.Details
+            Expression parentExpr = typedTargetExpr;
+            if (firstMember != null)
+            {
+                //target.Order.Seller.Company.Products
+                parentExpr = Expression.PropertyOrField(typedTargetExpr, firstMember.Name);
+                for (int i = 0; i < includeSegment.ParentMemberVisits.Count - 1; i++)
+                {
+                    //取父亲对象的完整访问路径：target.Order.Seller.Company
+                    var memberInfo = includeSegment.ParentMemberVisits[i];
+                    parentExpr = Expression.PropertyOrField(parentExpr, memberInfo.Name);
+                }
+            }
+            var foreignKeyMember = includeSegment.FromTable.Mapper.KeyMembers[0];
+            Expression foreignKeyValueExpr = Expression.PropertyOrField(parentExpr, foreignKeyMember.MemberName);
             var memberName = includeSegment.FromMember.MemberName;
             for (int i = 0; i < includeSegment.ParentMemberVisits.Count - 1; i++)
             {
@@ -818,7 +846,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 parentExpr = Expression.PropertyOrField(parentExpr, memberInfo.Name);
             }
             var keyMember = includeSegment.FromTable.Mapper.KeyMembers[0];
-            var foreignKeyValueExpr = Expression.PropertyOrField(parentExpr, keyMember.MemberName);
             var includeMemberExpr = Expression.PropertyOrField(parentExpr, memberName);
 
             //var myIncludeValues = includeValues.FindAll(f => f.CompanyId == target.Seller.Company.Id);
@@ -857,7 +884,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         });
         includeValuesSetter.Invoke(target, includeValues);
     }
-    protected void Include(Expression memberSelector, Action<LambdaExpression, List<ParameterExpression>> tableAliasInitializer, bool isIncludeMany = false, Expression filter = null)
+    protected bool Include(Expression memberSelector, Action<LambdaExpression, List<ParameterExpression>> tableAliasInitializer, Expression filter = null)
     {
         //if (!string.IsNullOrEmpty(this.WhereSql) || !string.IsNullOrEmpty(this.GroupBySql) || !string.IsNullOrEmpty(this.OrderBySql)
         //    || string.IsNullOrEmpty(this.UnionSql) && this.ReaderFields != null && this.ReaderFields.Count > 0)
@@ -866,7 +893,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var memberExpr = lambdaExpr.Body as MemberExpression;
         lambdaExpr.Body.GetParameters(out var parameters);
         tableAliasInitializer.Invoke(lambdaExpr, parameters);
-        var includeSegment = this.AddIncludeTables(memberExpr);
+        (var includeSegment, var isIncludeMany) = this.AddIncludeTables(memberExpr);
         if (filter != null)
         {
             this.IsIncludeMany = true;
@@ -879,10 +906,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             this.IsIncludeMany = false;
         }
         this.LastIncludeSegment = includeSegment;
+        return isIncludeMany;
     }
-    protected TableSegment AddIncludeTables(MemberExpression memberExpr)
+    protected (TableSegment, bool) AddIncludeTables(MemberExpression memberExpr)
     {
         TableSegment tableSegment = null;
+        bool isIncludeMany = false;
         var memberType = memberExpr.Member.GetMemberType();
         if (!memberType.IsEntityType(out _))
             throw new NotSupportedException($"Include方法只支持实体属性，{memberExpr.Member.DeclaringType.FullName}.{memberExpr.Member.Name}不是实体，Path:{memberExpr}");
@@ -948,11 +977,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     Path = builder.ToString(),
                     ParentMemberVisits = memberVisits
                 });
+                isIncludeMany = true;
             }
             fromSegment = tableSegment;
             fromType = memberMapper.NavigationType;
         }
-        return tableSegment;
+        return (tableSegment, isIncludeMany);
     }
     private (string, Action<StringBuilder, IOrmProvider, object>) BuildIncludeSqlGetter(Type targetType, MemberInfo firstMember, TableSegment includeSegment)
     {
@@ -969,18 +999,22 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             blockParameters.Add(typedTargetExpr);
             blockBodies.Add(Expression.Assign(typedTargetExpr, Expression.Convert(targetExpr, targetType)));
 
-            //target.Order.Seller.Company.Products
-            Expression parentExpr = Expression.PropertyOrField(typedTargetExpr, firstMember.Name);
-            for (int i = 0; i < includeSegment.ParentMemberVisits.Count - 1; i++)
+            //target.Order.Seller.Company.Products或是target.Details           
+            Expression parentExpr = typedTargetExpr;
+            if (firstMember != null)
             {
-                //取父亲对象的完整访问路径：target.Order.Seller.Company
-                var memberInfo = includeSegment.ParentMemberVisits[i];
-                parentExpr = Expression.PropertyOrField(parentExpr, memberInfo.Name);
+                //target.Order.Seller.Company.Products
+                parentExpr = Expression.PropertyOrField(typedTargetExpr, firstMember.Name);
+                for (int i = 0; i < includeSegment.ParentMemberVisits.Count - 1; i++)
+                {
+                    //取父亲对象的完整访问路径：target.Order.Seller.Company
+                    var memberInfo = includeSegment.ParentMemberVisits[i];
+                    parentExpr = Expression.PropertyOrField(parentExpr, memberInfo.Name);
+                }
             }
             var foreignKeyMember = includeSegment.FromTable.Mapper.KeyMembers[0];
             Expression foreignKeyValueExpr = Expression.PropertyOrField(parentExpr, foreignKeyMember.MemberName);
-
-            //TODO:includeMany需要支持分表，UNION SQL处理
+            //includeMany支持分表，UNION SQL处理
             foreignKeyValueExpr = Expression.Convert(foreignKeyValueExpr, typeof(object));
             var methedInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.GetQuotedValue));
             var fieldTypeExpr = Expression.Constant(foreignKeyMember.MemberType);
@@ -990,9 +1024,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
             var foreignKey = this.OrmProvider.GetFieldName(includeSegment.FromMember.ForeignKey);
             var fields = RepositoryHelper.BuildFieldsSqlPart(this.OrmProvider, includeSegment.Mapper, includeSegment.EntityType, true);
-            var tableName = this.OrmProvider.GetTableName(includeSegment.Mapper.TableName);
+            var tableName = this.GetTableName(includeSegment);
             var headSql = $"SELECT {fields} FROM {tableName} WHERE {foreignKey} IN (";
-
             var sqlInitializer = Expression.Lambda<Action<StringBuilder, IOrmProvider, object>>(Expression.Block(blockParameters, blockBodies), builderExpr, ormProviderExpr, targetExpr).Compile();
             return (headSql, sqlInitializer);
         });
@@ -2007,15 +2040,19 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var hashCode = new HashCode();
         hashCode.Add(this.OrmProvider);
         hashCode.Add(targetType);
-        hashCode.Add(includeSegment.ParentMemberVisits.Count + 1);
-        hashCode.Add(firstMember.GetMemberType());
-        hashCode.Add(firstMember.Name);
+        var builder = new StringBuilder();
+        if (firstMember != null)
+        {
+            hashCode.Add(includeSegment.ParentMemberVisits.Count + 1);
+            builder.Append($".{firstMember.Name}");
+        }
+        else hashCode.Add(includeSegment.ParentMemberVisits.Count);
         foreach (var memberInfo in includeSegment.ParentMemberVisits)
         {
-            hashCode.Add(memberInfo.GetMemberType());
-            hashCode.Add(memberInfo.Name);
+            builder.Append($".{memberInfo.Name}");
         }
-        hashCode.Add(includeSegment.FromMember.MemberName);
+        hashCode.Add(builder.ToString());
+        hashCode.Add(includeSegment.IsSharding);
         return hashCode.ToHashCode();
     }
     public int GetRefIncludeKey(Type targetType, string refPath)

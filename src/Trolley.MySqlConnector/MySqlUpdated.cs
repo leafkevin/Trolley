@@ -69,7 +69,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                         builder.AppendLine($"PRIMARY KEY({string.Join(',', pkColumns)})");
                         builder.AppendLine(");");
                         if (this.Visitor.IsNeedFetchShardingTables)
-                            builder.Append(this.Visitor.BuildShardingTablesSql(this.DbContext.TableSchema));
+                            builder.Append(this.Visitor.BuildTableShardingsSql());
                         var bulkCopySql = builder.ToString();
 
                         builder.Clear();
@@ -280,7 +280,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                         builder.AppendLine($"PRIMARY KEY({string.Join(',', pkColumns)})");
                         builder.AppendLine(");");
                         if (this.Visitor.IsNeedFetchShardingTables)
-                            builder.Append(this.Visitor.BuildShardingTablesSql(this.DbContext.TableSchema));
+                            builder.Append(this.Visitor.BuildTableShardingsSql());
                         var bulkCopySql = builder.ToString();
 
                         builder.Clear();
@@ -489,7 +489,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
             builder.AppendLine(");");
             if (this.Visitor.IsNeedFetchShardingTables)
             {
-                builder.Append(this.Visitor.BuildShardingTablesSql(this.DbContext.TableSchema));
+                builder.Append(this.Visitor.BuildTableShardingsSql());
                 builder.Append(';');
             }
 
@@ -530,7 +530,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
             if (this.Visitor.IsNeedFetchShardingTables)
             {
                 this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
-                builder.Append(this.Visitor.BuildShardingTablesSql(this.DbContext.TableSchema));
+                builder.Append(this.Visitor.BuildTableShardingsSql());
             }
             using var command = this.DbContext.CreateCommand();
             sql = this.Visitor.BuildCommand(this.DbContext, command);

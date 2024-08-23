@@ -25,7 +25,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
     public virtual OrmProviderType OrmProviderType => OrmProviderType.Basic;
     public virtual string ParameterPrefix => "@";
     public abstract Type NativeDbTypeType { get; }
-    public virtual string DefaultTableSchema { get; set; }
+    public virtual string DefaultTableSchema { get; }
     public virtual ICollection<ITypeHandler> TypeHandlers => typeHandlers.Values;
     public abstract IDbConnection CreateConnection(string connectionString);
     public abstract IDbDataParameter CreateParameter(string parameterName, object value);

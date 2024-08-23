@@ -27,14 +27,13 @@ public interface IUpdateVisitor : IDisposable
     string BuildCommand(DbContext dbContext, IDbCommand command);
     void BuildMultiCommand(DbContext dbContext, IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex);
 
-    #region Sharding
     void UseTable(bool isIncludeMany, params string[] tableNames);
     void UseTable(bool isIncludeMany, Func<string, bool> tableNamePredicate);
     void UseTable(bool isIncludeMany, Type masterEntityType, Func<string, string, string, string, string> tableNameGetter);
     void UseTableBy(bool isIncludeMany, object field1Value, object field2Value = null);
     void UseTableByRange(bool isIncludeMany, object beginFieldValue, object endFieldValue);
     void UseTableByRange(bool isIncludeMany, object fieldValue1, object fieldValue2, object fieldValue3);
-    #endregion
+    void UseTableSchema(bool isIncludeMany, string tableSchema);
 
     void Join(string joinType, Type entityType, Expression joinOn);
     void Set(Expression fieldsAssignment);
@@ -54,7 +53,7 @@ public interface IUpdateVisitor : IDisposable
     void And(Expression whereExpr);
     DataTable ToDataTable(Type updateObjType, IEnumerable entities, List<(MemberMap RefMemberMapper, Func<object, object> ValueGetter)> memberMappers, string tableName = null);
     List<(MemberMap RefMemberMapper, Func<object, object> ValueGetter)> GetRefMemberMappers(Type entityType, EntityMap refEntityMapper, bool isUpdate = false);
-    string BuildShardingTablesSql(string tableSchema);
+    string BuildTableShardingsSql();
     void SetShardingTables(List<string> shardingTables);
     string GetTableName(TableSegment tableSegment);
 }

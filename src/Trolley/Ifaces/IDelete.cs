@@ -52,6 +52,15 @@ public interface IDelete<TEntity>
     IDelete<TEntity> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
     #endregion
 
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回删除对象</returns>
+    IDelete<TEntity> UseTableSchema(string tableSchema);
+    #endregion
+
     /// <summary>
     /// 根据主键删除数据，可以删除一条也可以删除多条记录，keys可以是主键值也可以是包含主键值的匿名对象，用法：
     /// <code>

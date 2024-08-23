@@ -17,17 +17,19 @@ public class SqlVisitor : ISqlVisitor
     private static string[] calcOps = new string[] { ">", ">=", "<", "<=", "+", "-", "*", "/", "%", "&", "|", "^", "<<", ">>" };
     private bool isDisposed;
 
-    public string DbKey { get; set; }
-    public string DefaultTableSchema { get; set; }
+    public DbContext DbContext { get; set; }
+    public string DbKey => this.DbContext.DbKey;
+    public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
+    public IEntityMapProvider MapProvider => this.DbContext.MapProvider;
+    public ITableShardingProvider ShardingProvider => this.DbContext.ShardingProvider;
+    public string DefaultTableSchema => this.DbContext.DefaultTableSchema;
+    public bool IsParameterized => this.DbContext.IsParameterized;
+    public string ParameterPrefix => this.DbContext.ParameterPrefix;
     public IDataParameterCollection DbParameters { get; set; }
     public IDataParameterCollection NextDbParameters { get; set; }
-    public IOrmProvider OrmProvider { get; set; }
-    public IEntityMapProvider MapProvider { get; set; }
-    public ITableShardingProvider ShardingProvider { get; set; }
-    public bool IsParameterized { get; set; }
+    public char TableAsStart { get; set; }
     public bool IsMultiple { get; set; }
     public int CommandIndex { get; set; }
-    public string ParameterPrefix { get; set; } = "p";
 
     /// <summary>
     /// 所有表都是扁平化的，主表、1:1关系Include子表，也在这里
@@ -47,7 +49,7 @@ public class SqlVisitor : ISqlVisitor
     public bool IsFromQuery { get; set; }
     public string WhereSql { get; set; }
     public OperationType LastWhereOperationType { get; set; } = OperationType.None;
-    public char TableAsStart { get; set; }
+
     public List<SqlFieldSegment> GroupFields { get; set; }
     public List<TableSegment> IncludeTables { get; set; }
     public List<IQuery> RefQueries { get; set; } = new();
@@ -234,7 +236,14 @@ public class SqlVisitor : ISqlVisitor
         else tableSegment.Body = tableNames[0];
         this.IsNeedFetchShardingTables = true;
     }
-    public virtual string BuildShardingTablesSql(string tableSchema) => null;
+    public void UseTableSchema(bool isIncludeMany, string tableSchema)
+    {
+        if (tableSchema == this.DefaultTableSchema) return;
+
+        var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
+        tableSegment.TableSchema = tableSchema;
+    }
+    public virtual string BuildTableShardingsSql() => null;
     public void SetShardingTables(List<string> shardingTables)
     {
         List<string> tableNames = null;
@@ -1735,7 +1744,7 @@ public class SqlVisitor : ISqlVisitor
     }
     public virtual IQueryVisitor CreateQueryVisitor()
     {
-        var queryVisiter = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.ShardingProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
+        var queryVisiter = this.OrmProvider.NewQueryVisitor(this.DbContext, this.TableAsStart, this.DbParameters);
         queryVisiter.IsMultiple = this.IsMultiple;
         queryVisiter.CommandIndex = this.CommandIndex;
         queryVisiter.RefQueries = this.RefQueries;
@@ -2001,7 +2010,8 @@ public class SqlVisitor : ISqlVisitor
         {
             if (!tableSegment.IsSharding) throw new Exception($"实体表{tableSegment.EntityType.FullName}有配置分表，当前操作未指定分表，请调用UseTable/UseTableBy/UseTableByRange方法指定分表");
             //当单个ShardingTables时，只有一个分表的情况下，会移除ShardingTables中的表，存在多个分表的表时，不做移除
-            if (this.ShardingTables != null && this.ShardingTables.Count > 0 && tableSegment.ShardingType > ShardingTableType.SingleTable && tableSegment.TableType == TableType.Entity)
+            if (this.ShardingTables != null && this.ShardingTables.Count > 0 && tableSegment.ShardingType > ShardingTableType.SingleTable
+                && (tableSegment.TableType == TableType.Entity || tableSegment.TableType == TableType.Include))
             {
                 var shardingTable = this.ShardingTables.Find(f => f.EntityType == tableSegment.EntityType);
                 if (shardingTable == null)
@@ -2012,11 +2022,18 @@ public class SqlVisitor : ISqlVisitor
                 }
                 tableName = $"__SHARDING_{shardingTable.ShardingId}_{tableSegment.Mapper.TableName}";
             }
+            //单个明确分表
             else tableName = tableSegment.Body;
         }
+        //子查询场景，tableSegment.Body有值
         else tableName = tableSegment.Body ?? tableSegment.Mapper.TableName;
         if (tableSegment.TableType != TableType.FromQuery)
+        {
+            //支持TableSchema
+            if (!string.IsNullOrEmpty(tableSegment.TableSchema))
+                tableName = tableSegment.TableSchema + "." + tableName;
             tableName = this.OrmProvider.GetTableName(tableName);
+        }
         return tableName;
     }
     public virtual SqlFieldSegment BuildDeferredSqlSegment(MethodCallExpression methodCallExpr, SqlFieldSegment sqlSegment)
@@ -2105,7 +2122,6 @@ public class SqlVisitor : ISqlVisitor
             return;
         this.isDisposed = true;
 
-        this.ParameterPrefix = null;
         this.Tables = null;
         this.TableAliases = null;
         this.RefTableAliases = null;
@@ -2117,8 +2133,7 @@ public class SqlVisitor : ISqlVisitor
         //设置null，不能清空，以免给返回的参数丢失
         this.DbParameters = null;
         this.NextDbParameters = null;
-        this.OrmProvider = null;
-        this.MapProvider = null;
+        this.DbContext = null;
 
         //应用子查询表，只删除元素，不能dispose，后续操作可能还会用到子查询
         this.RefQueries.Clear();

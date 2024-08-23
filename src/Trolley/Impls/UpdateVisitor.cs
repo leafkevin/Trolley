@@ -22,15 +22,10 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     public bool HasWhere { get; protected set; }
     public TheaDbParameterCollection FixedDbParameters { get; set; }
 
-    public UpdateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, ITableShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
+    public UpdateVisitor(DbContext dbContext, char tableAsStart = 'a')
     {
-        this.DbKey = dbKey;
-        this.OrmProvider = ormProvider;
-        this.MapProvider = mapProvider;
-        this.ShardingProvider = shardingProvider;
-        this.IsParameterized = isParameterized;
+        this.DbContext = dbContext;
         this.TableAsStart = tableAsStart;
-        this.ParameterPrefix = parameterPrefix;
     }
     public virtual void Initialize(Type entityType, bool isMultiple = false, bool isFirst = true)
     {
@@ -180,7 +175,13 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     }
                     else
                     {
-                        Action<string> headSqlSetter = tableName => builder.Append($"UPDATE {this.OrmProvider.GetTableName(tableName)} ");
+                        Action<string> headSqlSetter = null;
+                        //处理有tableSchema的场景
+                        var tableSchema = this.Tables[0].TableSchema;
+                        if (!string.IsNullOrEmpty(tableSchema))
+                            headSqlSetter = tableName => builder.Append($"UPDATE {this.OrmProvider.GetTableName(tableSchema + "." + tableName)} ");
+                        else headSqlSetter = tableName => builder.Append($"UPDATE {this.OrmProvider.GetTableName(tableName)} ");
+
                         if (this.ShardingTables != null && this.ShardingTables.Count > 0)
                         {
                             var tableNames = this.ShardingTables[0].TableNames;
@@ -278,7 +279,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
 
         int index = 0;
         var builder = new StringBuilder();
-        var aliasName = this.Tables[0].AliasName;
+        var tableSegment = this.Tables[0];
+        var aliasName = tableSegment.AliasName;
         //sql server表别名就是表名，长度>1
         if (this.IsNeedTableAlias && aliasName.Length == 1)
             builder.Append($"{aliasName} ");
@@ -296,15 +298,20 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         }
         var fixedHeadUpdateSql = builder.ToString();
         builder.Clear();
-        var entityType = this.Tables[0].EntityType;
-        Action<StringBuilder, string> headSqlSetter = (builder, tableName) => builder.Append($"UPDATE {this.OrmProvider.GetTableName(tableName)} {fixedHeadUpdateSql}");
+        var entityType = tableSegment.EntityType;
+        Action<StringBuilder, string> headSqlSetter = null;
+        //处理有tableSchema的场景
+        if (!string.IsNullOrEmpty(tableSegment.TableSchema))
+            headSqlSetter = (builder, tableName) => builder.Append($"UPDATE {this.OrmProvider.GetTableName(tableSegment.TableSchema + "." + tableName)} {fixedHeadUpdateSql}");
+        else headSqlSetter = (builder, tableName) => builder.Append($"UPDATE {this.OrmProvider.GetTableName(tableName)} {fixedHeadUpdateSql}");
         (var origName, _, var firstSqlParametersSetter, var sqlSetter) = RepositoryHelper.BuildUpdateSqlParameters(this.OrmProvider, this.MapProvider, entityType, updateObjType, true, this.OnlyFieldNames, this.IgnoreFieldNames);
         Action<IDataParameterCollection> firstParametersSetter = null;
         if (this.FixedDbParameters != null && this.FixedDbParameters.Count > 0)
             firstParametersSetter = dbParameters => this.FixedDbParameters.ToList().ForEach(f => dbParameters.Add(f));
         var typedSqlSetter = sqlSetter as Action<StringBuilder, IOrmProvider, object, string>;
         var typedFirstSqlParametersSetter = firstSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
-        var tableName = this.Tables[0].Body ?? origName;
+        //有设置分表
+        var tableName = tableSegment.Body ?? origName;
         return (updateObjs, bulkCount, tableName, firstParametersSetter, typedFirstSqlParametersSetter, headSqlSetter, typedSqlSetter);
     }
     public virtual void Join(string joinType, Type entityType, Expression joinOn)

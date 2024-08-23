@@ -151,6 +151,14 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
     }
     #endregion
 
+    #region UseTableSchema
+    public virtual IFromCommand<T> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
+        return this;
+    }
+    #endregion
+
     #region Union/UnionAll
     public virtual IFromCommand<T> Union(IQuery<T> subQuery)
     {
@@ -339,6 +347,14 @@ public class FromCommand<T1, T2> : FromCommand, IFromCommand<T1, T2>
     }
     #endregion
 
+    #region UseTableSchema
+    public virtual IFromCommand<T1, T2> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
+        return this;
+    }
+    #endregion
+
     #region Join
     public virtual IFromCommand<T1, T2> InnerJoin(Expression<Func<T1, T2, bool>> joinOn)
     {
@@ -502,6 +518,14 @@ public class FromCommand<T1, T2, T3> : FromCommand, IFromCommand<T1, T2, T3>
     public virtual IFromCommand<T1, T2, T3> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        return this;
+    }
+    #endregion
+
+    #region UseTableSchema
+    public virtual IFromCommand<T1, T2, T3> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
         return this;
     }
     #endregion
@@ -673,6 +697,14 @@ public class FromCommand<T1, T2, T3, T4> : FromCommand, IFromCommand<T1, T2, T3,
     }
     #endregion
 
+    #region UseTableSchema
+    public virtual IFromCommand<T1, T2, T3, T4> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
+        return this;
+    }
+    #endregion
+
     #region Join
     public virtual IFromCommand<T1, T2, T3, T4> InnerJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn)
     {
@@ -840,6 +872,14 @@ public class FromCommand<T1, T2, T3, T4, T5> : FromCommand, IFromCommand<T1, T2,
     }
     #endregion
 
+    #region UseTableSchema
+    public virtual IFromCommand<T1, T2, T3, T4, T5> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
+        return this;
+    }
+    #endregion
+
     #region Join
     public virtual IFromCommand<T1, T2, T3, T4, T5> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn)
     {
@@ -1003,6 +1043,14 @@ public class FromCommand<T1, T2, T3, T4, T5, T6> : FromCommand, IFromCommand<T1,
     public virtual IFromCommand<T1, T2, T3, T4, T5, T6> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        return this;
+    }
+    #endregion
+
+    #region UseTableSchema
+    public virtual IFromCommand<T1, T2, T3, T4, T5, T6> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
         return this;
     }
     #endregion

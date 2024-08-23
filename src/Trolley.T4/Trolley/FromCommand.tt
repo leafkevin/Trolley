@@ -158,6 +158,14 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
     }
     #endregion
 
+    #region UseTableSchema
+    public virtual IFromCommand<T> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
+        return this;
+    }
+    #endregion
+
     #region Union/UnionAll
     public virtual IFromCommand<T> Union(IQuery<T> subQuery)
     {
@@ -351,6 +359,14 @@ public class FromCommand<<#=tables#>> : FromCommand, IFromCommand<<#=tables#>>
     public virtual IFromCommand<<#=tables#>> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        return this;
+    }
+    #endregion
+
+    #region UseTableSchema
+    public virtual IFromCommand<<#=tables#>> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
         return this;
     }
     #endregion

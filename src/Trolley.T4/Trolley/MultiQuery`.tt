@@ -61,6 +61,14 @@ public class MultiQuery<<#=tables#>> : MultiQueryBase, IMultiQuery<<#=tables#>>
     }
     #endregion
 
+    #region UseTableSchema
+    public virtual IMultiQuery<<#=tables#>> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
+        return this;
+    }
+    #endregion
+
 <#        
         if(i < count)
         {
@@ -207,16 +215,16 @@ public class MultiQuery<<#=tables#>> : MultiQueryBase, IMultiQuery<<#=tables#>>
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.Visitor.Include(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<<#=tables#>, TMember>(this.MultipleQuery, this.Visitor);
+        var isIncludeMany = this.Visitor.Include(memberSelector);
+        return this.OrmProvider.NewMultiIncludableQuery<<#=tables#>, TMember>(this.MultipleQuery, this.Visitor, isIncludeMany);
     }
     public IMultiIncludableQuery<<#=tables#>, TElment> IncludeMany<TElment>(Expression<Func<<#=tables#>, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.Visitor.Include(memberSelector, true, filter);
-        return this.OrmProvider.NewMultiIncludableQuery<<#=tables#>, TElment>(this.MultipleQuery, this.Visitor);
+        this.Visitor.Include(memberSelector, filter);
+        return this.OrmProvider.NewMultiIncludableQuery<<#=tables#>, TElment>(this.MultipleQuery, this.Visitor, true);
     }
     #endregion
 

@@ -21,7 +21,7 @@ public class Update<TEntity> : IUpdate<TEntity>
     public Update(DbContext dbContext)
     {
         this.DbContext = dbContext;
-        this.Visitor = this.DbContext.OrmProvider.NewUpdateVisitor(dbContext.DbKey, dbContext.MapProvider, dbContext.ShardingProvider, dbContext.IsParameterized);
+        this.Visitor = this.DbContext.OrmProvider.NewUpdateVisitor(dbContext);
         this.Visitor.Initialize(typeof(TEntity));
     }
     #endregion
@@ -50,6 +50,14 @@ public class Update<TEntity> : IUpdate<TEntity>
     public virtual IUpdate<TEntity> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        return this;
+    }
+    #endregion
+
+    #region UseTableSchema
+    public virtual IUpdate<TEntity> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
         return this;
     }
     #endregion
@@ -623,6 +631,14 @@ public class UpdateJoin<TEntity, T1> : Updated<TEntity>, IUpdateJoin<TEntity, T1
     }
     #endregion
 
+    #region UseTableSchema
+    public virtual IUpdateJoin<TEntity, T1> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
+        return this;
+    }
+    #endregion
+
     #region Join
     public virtual IUpdateJoin<TEntity, T1, T2> InnerJoin<T2>(Expression<Func<TEntity, T1, T2, bool>> joinOn)
     {
@@ -791,6 +807,14 @@ public class UpdateJoin<TEntity, T1, T2> : Updated<TEntity>, IUpdateJoin<TEntity
     public virtual IUpdateJoin<TEntity, T1, T2> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        return this;
+    }
+    #endregion
+
+    #region UseTableSchema
+    public virtual IUpdateJoin<TEntity, T1, T2> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
         return this;
     }
     #endregion
@@ -967,6 +991,14 @@ public class UpdateJoin<TEntity, T1, T2, T3> : Updated<TEntity>, IUpdateJoin<TEn
     }
     #endregion
 
+    #region UseTableSchema
+    public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
+        return this;
+    }
+    #endregion
+
     #region Join
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> InnerJoin<T4>(Expression<Func<TEntity, T1, T2, T3, T4, bool>> joinOn)
     {
@@ -1139,6 +1171,14 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4> : Updated<TEntity>, IUpdateJoin
     }
     #endregion
 
+    #region UseTableSchema
+    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
+        return this;
+    }
+    #endregion
+
     #region Join
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> InnerJoin<T5>(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> joinOn)
     {
@@ -1307,6 +1347,14 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : Updated<TEntity>, IUpdate
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        return this;
+    }
+    #endregion
+
+    #region UseTableSchema
+    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
         return this;
     }
     #endregion

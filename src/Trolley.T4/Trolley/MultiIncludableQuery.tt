@@ -13,21 +13,28 @@ namespace Trolley;
 
 public class MultiIncludableQuery<T, TMember> : MultiQuery<T>, IMultiIncludableQuery<T, TMember>
 {
+    #region Properties
+    public bool IsIncludeMany { get; private set; }
+    #endregion
+
     #region Constructor
-    public MultiIncludableQuery(MultipleQuery multiQuery, IQueryVisitor visitor)
-        : base(multiQuery, visitor) { }
+    public MultiIncludableQuery(MultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany)
+        : base(multiQuery, visitor)
+    {
+        this.IsIncludeMany = isIncludeMany;
+    }
     #endregion
 
     #region ThenInclude/ThenIncludeMany
     public IMultiIncludableQuery<T, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
     {
-        this.Visitor.ThenInclude(member);
-        return this.OrmProvider.NewMultiIncludableQuery<T, TNavigation>(this.MultipleQuery, this.Visitor);
+        var isIncludeMany = this.Visitor.ThenInclude(member);
+        return this.OrmProvider.NewMultiIncludableQuery<T, TNavigation>(this.MultipleQuery, this.Visitor, isIncludeMany);
     }
     public IMultiIncludableQuery<T, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null)
     {
-        this.Visitor.ThenInclude(member, true, filter);
-        return this.OrmProvider.NewMultiIncludableQuery<T, TElment>(this.MultipleQuery, this.Visitor);
+        this.Visitor.ThenInclude(member, filter);
+        return this.OrmProvider.NewMultiIncludableQuery<T, TElment>(this.MultipleQuery, this.Visitor, true);
     }
     #endregion
 }
@@ -40,9 +47,16 @@ public class MultiIncludableQuery<T, TMember> : MultiQuery<T>, IMultiIncludableQ
 #>
 public class MultiIncludableQuery<<#=tables#>, TMember> : MultiQuery<<#=tables#>>, IMultiIncludableQuery<<#=tables#>, TMember>
 {
+    #region Properties
+    public bool IsIncludeMany { get; private set; }
+    #endregion
+
     #region Constructor
-    public MultiIncludableQuery(MultipleQuery multiQuery, IQueryVisitor visitor)
-        : base(multiQuery, visitor) { }
+    public MultiIncludableQuery(MultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany)
+        : base(multiQuery, visitor)
+    {
+        this.IsIncludeMany = isIncludeMany;
+    }
     #endregion
 <#
         if( i < count)
@@ -52,13 +66,13 @@ public class MultiIncludableQuery<<#=tables#>, TMember> : MultiQuery<<#=tables#>
     #region ThenInclude/ThenIncludeMany
     public IMultiIncludableQuery<<#=tables#>, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
     {
-        this.Visitor.ThenInclude(member);
-        return this.OrmProvider.NewMultiIncludableQuery<<#=tables#>, TNavigation>(this.MultipleQuery, this.Visitor);
+        var isIncludeMany = this.Visitor.ThenInclude(member);
+        return this.OrmProvider.NewMultiIncludableQuery<<#=tables#>, TNavigation>(this.MultipleQuery, this.Visitor, isIncludeMany);
     }
     public IMultiIncludableQuery<<#=tables#>, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null)
     {
-        this.Visitor.ThenInclude(member, true, filter);
-        return this.OrmProvider.NewMultiIncludableQuery<<#=tables#>, TElment>(this.MultipleQuery, this.Visitor);
+        this.Visitor.ThenInclude(member, filter);
+        return this.OrmProvider.NewMultiIncludableQuery<<#=tables#>, TElment>(this.MultipleQuery, this.Visitor, true);
     }
     #endregion
 <#      }#>

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Text;
 
@@ -7,8 +8,8 @@ namespace Trolley.MySqlConnector;
 public class MySqlQueryVisitor : QueryVisitor
 {
     public bool IsUseIgnoreInto { get; set; }
-    public MySqlQueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, ITableShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", IDataParameterCollection dbParameters = null)
-        : base(dbKey, ormProvider, mapProvider, shardingProvider, isParameterized, tableAsStart, parameterPrefix, dbParameters) { }
+    public MySqlQueryVisitor(DbContext dbContext, char tableAsStart = 'a', IDataParameterCollection dbParameters = null)
+        : base(dbContext, tableAsStart, dbParameters) { }
 
     public override string BuildCommandSql(out IDataParameterCollection dbParameters)
     {
@@ -163,34 +164,33 @@ public class MySqlQueryVisitor : QueryVisitor
         builder = null;
         return sql;
     }
-    public override string BuildShardingTablesSql(string tableSchema)
+    public override string BuildTableShardingsSql()
     {
-        var count = this.ShardingTables.FindAll(f => f.ShardingType > ShardingTableType.MultiTable).Count;
-        var builder = new StringBuilder($"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_SCHEMA='{tableSchema}' AND ");
-        if (count > 1)
+        var builder = new StringBuilder($"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND ");
+        var schemaBuilders = new Dictionary<string, StringBuilder>();
+        foreach (var tableSegment in this.ShardingTables)
         {
+            if (tableSegment.ShardingType > ShardingTableType.MultiTable)
+            {
+                var tableSchema = tableSegment.TableSchema ?? this.DefaultTableSchema;
+                if (!schemaBuilders.TryGetValue(tableSchema, out var tableBuilder))
+                    schemaBuilders.TryAdd(tableSchema, tableBuilder = new StringBuilder());
+
+                if (tableBuilder.Length > 0) tableBuilder.Append(" OR ");
+                tableBuilder.Append($"TABLE_NAME LIKE '{tableSegment.Mapper.TableName}%'");
+            }
+        }
+        if (schemaBuilders.Count > 1)
             builder.Append('(');
-            int index = 0;
-            foreach (var tableSegment in this.ShardingTables)
-            {
-                if (tableSegment.ShardingType > ShardingTableType.MultiTable)
-                {
-                    if (index > 0) builder.Append(" OR ");
-                    builder.Append($"TABLE_NAME LIKE '{tableSegment.Mapper.TableName}%'");
-                    index++;
-                }
-            }
-            builder.Append(')');
-        }
-        else
+        int index = 0;
+        foreach (var schemaBuilder in schemaBuilders)
         {
-            if (this.ShardingTables.Count > 1)
-            {
-                var tableSegment = this.ShardingTables.Find(f => f.ShardingType > ShardingTableType.MultiTable);
-                builder.Append($"TABLE_NAME LIKE '{tableSegment.Mapper.TableName}%'");
-            }
-            else builder.Append($"TABLE_NAME LIKE '{this.ShardingTables[0].Mapper.TableName}%'");
+            if (index > 0) builder.Append(" OR ");
+            builder.Append($"TABLE_SCHEMA='{schemaBuilder.Key}' AND ({schemaBuilder.Value.ToString()})");
+            index++;
         }
+        if (schemaBuilders.Count > 1)
+            builder.Append(')');
         return builder.ToString();
     }
 }

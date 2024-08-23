@@ -221,8 +221,7 @@ public class Query<T> : QueryBase, IQuery<T>
     #region UseTableSchema
     public virtual IQuery<T> UseTableSchema(string tableSchema)
     {
-        var entityType = typeof(T);
-        //this.Visitor.UseTable(entityType, tableNames);
+        this.Visitor.UseTableSchema(false, tableSchema);
         return this;
     }
     #endregion
@@ -369,13 +368,13 @@ public class Query<T> : QueryBase, IQuery<T>
     #region Include
     public virtual IIncludableQuery<T, TMember> Include<TMember>(Expression<Func<T, TMember>> memberSelector)
     {
-        base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewIncludableQuery<T, TMember>(this.DbContext, this.Visitor);
+        var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
+        return this.OrmProvider.NewIncludableQuery<T, TMember>(this.DbContext, this.Visitor, isIncludeMany);
     }
     public virtual IIncludableQuery<T, TElment> IncludeMany<TElment>(Expression<Func<T, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         base.IncludeManyInternal<TElment>(memberSelector);
-        return this.OrmProvider.NewIncludableQuery<T, TElment>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewIncludableQuery<T, TElment>(this.DbContext, this.Visitor, true);
     }
     #endregion
 

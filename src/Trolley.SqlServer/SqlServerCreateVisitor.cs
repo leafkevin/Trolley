@@ -12,8 +12,8 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
 {
     public string LockName { get; set; }
     public List<string> OutputFieldNames { get; set; }
-    public SqlServerCreateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, ITableShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
-        : base(dbKey, ormProvider, mapProvider, shardingProvider, isParameterized, tableAsStart, parameterPrefix) { }
+    public SqlServerCreateVisitor(DbContext dbContext, char tableAsStart = 'a')
+        : base(dbContext, tableAsStart) { }
 
     public override string BuildCommand(IDbCommand command, bool isReturnIdentity, out List<SqlFieldSegment> readerFields)
     {
@@ -42,16 +42,20 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
     }
     public override string BuildSql(out List<SqlFieldSegment> readerFields)
     {
-        var entityType = this.Tables[0].EntityType;
-        var entityMapper = this.Tables[0].Mapper;
+        readerFields = null;
+        var tableSegment = this.Tables[0];
+        var entityType = tableSegment.EntityType;
+        var entityMapper = tableSegment.Mapper;
         var tableName = entityMapper.TableName;
         if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out _))
         {
-            if (string.IsNullOrEmpty(this.Tables[0].Body))
+            if (string.IsNullOrEmpty(tableSegment.Body))
                 throw new Exception($"实体表{entityType.FullName}有配置分表，当前操作未指定分表，请调用UseTable或UseTableBy方法指定分表");
-            tableName = this.Tables[0].Body;
+            tableName = tableSegment.Body;
         }
         tableName = this.OrmProvider.GetTableName(tableName);
+        if (!string.IsNullOrEmpty(tableSegment.TableSchema))
+            tableName = tableSegment.TableSchema + "." + tableName;
 
         var builder = new StringBuilder($"INSERT INTO {tableName} ");
         if (!string.IsNullOrEmpty(this.LockName))
@@ -66,7 +70,6 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
         }
         builder.Append(')');
         string outputSql = null;
-        readerFields = null;
         if (this.OutputFieldNames != null && this.OutputFieldNames.Count > 0)
         {
             (outputSql, readerFields) = this.BuildOutputSqlReaderFields();
@@ -105,14 +108,15 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
             break;
         }
         insertObjType = firstInsertObj.GetType();
-        var tableName = this.Tables[0].Mapper.TableName;
-        var entityType = this.Tables[0].EntityType;
+        var tableSegment = this.Tables[0];
+        var tableName = tableSegment.Mapper.TableName;
+        var entityType = tableSegment.EntityType;
 
         if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out _))
         {
             //有设置分表，优先使用分表，没有设置分表，则根据数据的字段确定分表
-            if (!string.IsNullOrEmpty(this.Tables[0].Body))
-                tableName = this.Tables[0].Body;
+            if (!string.IsNullOrEmpty(tableSegment.Body))
+                tableName = tableSegment.Body;
             //未指定分表，需要根据数据字段确定分表
             else isNeedSplit = true;
         }
@@ -168,13 +172,26 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
                 builder.Clear();
                 builder = null;
 
-                firstSqlSetter = (dbParameters, builder, tableName) =>
+                if (!string.IsNullOrEmpty(tableSegment.TableSchema))
                 {
-                    builder.Append($"INSERT INTO {this.OrmProvider.GetFieldName(tableName)} (");
-                    builder.Append(firstHeadSql);
-                    if (fixedDbParameters.Count > 0)
-                        fixedDbParameters.ForEach(f => dbParameters.Add(f));
-                };
+                    firstSqlSetter = (dbParameters, builder, tableName) =>
+                    {
+                        builder.Append($"INSERT INTO {this.OrmProvider.GetTableName(tableSegment + "." + tableName)} (");
+                        builder.Append(firstHeadSql);
+                        if (fixedDbParameters.Count > 0)
+                            fixedDbParameters.ForEach(f => dbParameters.Add(f));
+                    };
+                }
+                else
+                {
+                    firstSqlSetter = (dbParameters, builder, tableName) =>
+                    {
+                        builder.Append($"INSERT INTO {this.OrmProvider.GetTableName(tableName)} (");
+                        builder.Append(firstHeadSql);
+                        if (fixedDbParameters.Count > 0)
+                            fixedDbParameters.ForEach(f => dbParameters.Add(f));
+                    };
+                }
                 loopSqlSetter = (dbParameters, builder, insertObj, suffix) =>
                 {
                     builder.Append('(');
@@ -193,23 +210,46 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
                 var typedFieldsSqlPartSetter = fieldsSqlPartSetter as Action<StringBuilder>;
                 var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
 
-                firstSqlSetter = (dbParameters, builder, tableName) =>
+                if (!string.IsNullOrEmpty(tableSegment.TableSchema))
                 {
-                    builder.Append($"INSERT INTO {this.OrmProvider.GetFieldName(tableName)} (");
-                    for (int i = 0; i < this.InsertFields.Count; i++)
+                    firstSqlSetter = (dbParameters, builder, tableName) =>
                     {
-                        var insertField = this.InsertFields[i];
-                        if (i > 0) builder.Append(',');
-                        builder.Append(insertField.Fields);
-                    }
-                    typedFieldsSqlPartSetter.Invoke(builder);
-                    builder.Append(')');
-                    if (outputSql != null)
-                        builder.Append(outputSql);
-                    builder.Append(" VALUES ");
-                    if (fixedDbParameters.Count > 0)
-                        fixedDbParameters.ForEach(f => dbParameters.Add(f));
-                };
+                        builder.Append($"INSERT INTO {this.OrmProvider.GetTableName(tableSegment + "." + tableName)} (");
+                        for (int i = 0; i < this.InsertFields.Count; i++)
+                        {
+                            var insertField = this.InsertFields[i];
+                            if (i > 0) builder.Append(',');
+                            builder.Append(insertField.Fields);
+                        }
+                        typedFieldsSqlPartSetter.Invoke(builder);
+                        builder.Append(')');
+                        if (outputSql != null)
+                            builder.Append(outputSql);
+                        builder.Append(" VALUES ");
+                        if (fixedDbParameters.Count > 0)
+                            fixedDbParameters.ForEach(f => dbParameters.Add(f));
+                    };
+                }
+                else
+                {
+                    firstSqlSetter = (dbParameters, builder, tableName) =>
+                    {
+                        builder.Append($"INSERT INTO {this.OrmProvider.GetTableName(tableName)} (");
+                        for (int i = 0; i < this.InsertFields.Count; i++)
+                        {
+                            var insertField = this.InsertFields[i];
+                            if (i > 0) builder.Append(',');
+                            builder.Append(insertField.Fields);
+                        }
+                        typedFieldsSqlPartSetter.Invoke(builder);
+                        builder.Append(')');
+                        if (outputSql != null)
+                            builder.Append(outputSql);
+                        builder.Append(" VALUES ");
+                        if (fixedDbParameters.Count > 0)
+                            fixedDbParameters.ForEach(f => dbParameters.Add(f));
+                    };
+                }
                 loopSqlSetter = (dbParameters, builder, insertObj, suffix) =>
                 {
                     builder.Append('(');
@@ -242,11 +282,22 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
                 builder.Clear();
                 builder = null;
 
-                firstSqlSetter = (dbParameters, builder, tableName) =>
+                if (!string.IsNullOrEmpty(tableSegment.TableSchema))
                 {
-                    builder.Append($"INSERT INTO {this.OrmProvider.GetFieldName(tableName)} (");
-                    builder.Append(firstHeadSql);
-                };
+                    firstSqlSetter = (dbParameters, builder, tableName) =>
+                    {
+                        builder.Append($"INSERT INTO {this.OrmProvider.GetTableName(tableSegment + "." + tableName)} (");
+                        builder.Append(firstHeadSql);
+                    };
+                }
+                else
+                {
+                    firstSqlSetter = (dbParameters, builder, tableName) =>
+                    {
+                        builder.Append($"INSERT INTO {this.OrmProvider.GetTableName(tableName)} (");
+                        builder.Append(firstHeadSql);
+                    };
+                }
                 loopSqlSetter = (dbParameters, builder, insertObj, suffix) =>
                 {
                     builder.Append('(');
@@ -259,15 +310,30 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
                 var typedFieldsSqlPartSetter = fieldsSqlPartSetter as Action<StringBuilder>;
                 var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
 
-                firstSqlSetter = (dbParameters, builder, tableName) =>
+                if (!string.IsNullOrEmpty(tableSegment.TableSchema))
                 {
-                    builder.Append($"INSERT INTO {this.OrmProvider.GetFieldName(tableName)} (");
-                    typedFieldsSqlPartSetter.Invoke(builder);
-                    builder.Append(')');
-                    if (outputSql != null)
-                        builder.Append(outputSql);
-                    builder.Append(" VALUES ");
-                };
+                    firstSqlSetter = (dbParameters, builder, tableName) =>
+                    {
+                        builder.Append($"INSERT INTO {this.OrmProvider.GetTableName(tableSegment + "." + tableName)} (");
+                        typedFieldsSqlPartSetter.Invoke(builder);
+                        builder.Append(')');
+                        if (outputSql != null)
+                            builder.Append(outputSql);
+                        builder.Append(" VALUES ");
+                    };
+                }
+                else
+                {
+                    firstSqlSetter = (dbParameters, builder, tableName) =>
+                    {
+                        builder.Append($"INSERT INTO {this.OrmProvider.GetTableName(tableName)} (");
+                        typedFieldsSqlPartSetter.Invoke(builder);
+                        builder.Append(')');
+                        if (outputSql != null)
+                            builder.Append(outputSql);
+                        builder.Append(" VALUES ");
+                    };
+                }
                 loopSqlSetter = (dbParameters, builder, insertObj, suffix) =>
                 {
                     builder.Append('(');

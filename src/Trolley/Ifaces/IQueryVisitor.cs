@@ -45,7 +45,7 @@ public interface IQueryVisitor : IDisposable
     string BuildCommandSql(out IDataParameterCollection dbParameters);
     string BuildCteTableSql(string tableName, out List<SqlFieldSegment> readerFields, out bool isRecursive);
 
-    string BuildShardingTablesSql(string tableSchema);
+    string BuildTableShardingsSql();
     void SetShardingTables(List<string> shardingTables);
     void UseTable(bool isIncludeMany, params string[] tableNames);
     void UseTable(bool isIncludeMany, Func<string, bool> tableNamePredicate);
@@ -53,7 +53,7 @@ public interface IQueryVisitor : IDisposable
     void UseTableBy(bool isIncludeMany, object field1Value, object field2Value = null);
     void UseTableByRange(bool isIncludeMany, object beginFieldValue, object endFieldValue);
     void UseTableByRange(bool isIncludeMany, object fieldValue1, object fieldValue2, object fieldValue3);
-
+    void UseTableSchema(bool isIncludeMany, string tableSchema);
     void From(char tableAsStart = 'a', params Type[] entityTypes);
     void From(Type targetType, IQuery subQueryObj);
     void From(Type targetType, DbContext dbContext, Delegate subQueryGetter);
@@ -67,8 +67,8 @@ public interface IQueryVisitor : IDisposable
     void Join(string joinType, Type newEntityType, IQuery subQuery, Expression joinOn);
     void Join(string joinType, Type newEntityType, DbContext dbContext, Delegate subQueryGetter, Expression joinOn);
 
-    void Include(Expression memberSelector, bool isIncludeMany = false, Expression filter = null);
-    void ThenInclude(Expression memberSelector, bool isIncludeMany = false, Expression filter = null);
+    bool Include(Expression memberSelector, Expression filter = null);
+    bool ThenInclude(Expression memberSelector, Expression filter = null);
     bool HasIncludeTables();
     bool BuildIncludeSql<TTarget>(Type targetType, TTarget target, out string sql);
     bool BuildIncludeSql<TTarget>(Type targetType, List<TTarget> targets, out string sql);

@@ -35,6 +35,15 @@ public interface ICreate<TEntity>
     ICreate<TEntity> UseTableBy(object field1Value, object field2Value = null);
     #endregion
 
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回插入对象</returns>
+    ICreate<TEntity> UseTableSchema(string tableSchema);
+    #endregion
+
     #region WithBy
     /// <summary>
     /// 使用插入对象部分字段插入，单个对象插入，命名或匿名对象都可以

@@ -26,6 +26,11 @@ public class PostgreSqlQuery<T> : Query<T>, IPostgreSqlQuery<T>
         => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlQuery<T>;
     #endregion
 
+    #region UseTableSchema
+    public override IPostgreSqlQuery<T> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IPostgreSqlQuery<T>;
+    #endregion
+
     #region Union/UnionAll
     public override IPostgreSqlQuery<T> Union(IQuery<T> subQuery)
         => base.Union(subQuery) as IPostgreSqlQuery<T>;
@@ -159,6 +164,11 @@ public class PostgreSqlQuery<T1, T2> : Query<T1, T2>, IPostgreSqlQuery<T1, T2>
         => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlQuery<T1, T2>;
     #endregion
 
+    #region UseTableSchema
+    public override IPostgreSqlQuery<T1, T2> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IPostgreSqlQuery<T1, T2>;
+    #endregion
+
     #region WithTable
     public override IPostgreSqlQuery<T1, T2, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
         => base.WithTable(subQuery) as IPostgreSqlQuery<T1, T2, TOther>;
@@ -264,6 +274,11 @@ public class PostgreSqlQuery<T1, T2, T3> : Query<T1, T2, T3>, IPostgreSqlQuery<T
         => base.UseTableByRange(beginFieldValue, endFieldValue) as IPostgreSqlQuery<T1, T2, T3>;
     public override IPostgreSqlQuery<T1, T2, T3> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
         => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlQuery<T1, T2, T3>;
+    #endregion
+
+    #region UseTableSchema
+    public override IPostgreSqlQuery<T1, T2, T3> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IPostgreSqlQuery<T1, T2, T3>;
     #endregion
 
     #region WithTable
@@ -373,6 +388,11 @@ public class PostgreSqlQuery<T1, T2, T3, T4> : Query<T1, T2, T3, T4>, IPostgreSq
         => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlQuery<T1, T2, T3, T4>;
     #endregion
 
+    #region UseTableSchema
+    public override IPostgreSqlQuery<T1, T2, T3, T4> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IPostgreSqlQuery<T1, T2, T3, T4>;
+    #endregion
+
     #region WithTable
     public override IPostgreSqlQuery<T1, T2, T3, T4, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
         => base.WithTable(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, TOther>;
@@ -478,6 +498,11 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5> : Query<T1, T2, T3, T4, T5>, IP
         => base.UseTableByRange(beginFieldValue, endFieldValue) as IPostgreSqlQuery<T1, T2, T3, T4, T5>;
     public override IPostgreSqlQuery<T1, T2, T3, T4, T5> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
         => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlQuery<T1, T2, T3, T4, T5>;
+    #endregion
+
+    #region UseTableSchema
+    public override IPostgreSqlQuery<T1, T2, T3, T4, T5> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IPostgreSqlQuery<T1, T2, T3, T4, T5>;
     #endregion
 
     #region WithTable
@@ -587,6 +612,11 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6> : Query<T1, T2, T3, T4, T5,
         => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6>;
     #endregion
 
+    #region UseTableSchema
+    public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6>;
+    #endregion
+
     #region WithTable
     public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
         => base.WithTable(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther>;
@@ -692,6 +722,11 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> : Query<T1, T2, T3, T4,
         => base.UseTableByRange(beginFieldValue, endFieldValue) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7>;
     public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
         => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7>;
+    #endregion
+
+    #region UseTableSchema
+    public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7>;
     #endregion
 
     #region WithTable
@@ -801,6 +836,11 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> : Query<T1, T2, T3,
         => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8>;
     #endregion
 
+    #region UseTableSchema
+    public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8>;
+    #endregion
+
     #region WithTable
     public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
         => base.WithTable(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>;
@@ -906,6 +946,11 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : Query<T1, T2,
         => base.UseTableByRange(beginFieldValue, endFieldValue) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>;
     public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
         => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>;
+    #endregion
+
+    #region UseTableSchema
+    public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>;
     #endregion
 
     #region WithTable
@@ -1015,6 +1060,11 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : Query<T1
         => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>;
     #endregion
 
+    #region UseTableSchema
+    public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>;
+    #endregion
+
     #region WithTable
     public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
         => base.WithTable(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>;
@@ -1120,6 +1170,11 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : Que
         => base.UseTableByRange(beginFieldValue, endFieldValue) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>;
     public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
         => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>;
+    #endregion
+
+    #region UseTableSchema
+    public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>;
     #endregion
 
     #region WithTable
@@ -1229,6 +1284,11 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
         => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>;
     #endregion
 
+    #region UseTableSchema
+    public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>;
+    #endregion
+
     #region WithTable
     public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
         => base.WithTable(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>;
@@ -1334,6 +1394,11 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
         => base.UseTableByRange(beginFieldValue, endFieldValue) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>;
     public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
         => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>;
+    #endregion
+
+    #region UseTableSchema
+    public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>;
     #endregion
 
     #region WithTable
@@ -1443,6 +1508,11 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
         => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>;
     #endregion
 
+    #region UseTableSchema
+    public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>;
+    #endregion
+
     #region WithTable
     public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
         => base.WithTable(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>;
@@ -1550,6 +1620,11 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
         => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>;
     #endregion
 
+    #region UseTableSchema
+    public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>;
+    #endregion
+
     #region WithTable
     public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
         => base.WithTable(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>;
@@ -1655,6 +1730,11 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
         => base.UseTableByRange(beginFieldValue, endFieldValue) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>;
     public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
         => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>;
+    #endregion
+
+    #region UseTableSchema
+    public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>;
     #endregion
 
     #region Join

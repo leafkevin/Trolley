@@ -90,6 +90,15 @@ public interface IIncludableQuery<T, TMember> : IIncludableQueryBase, IQuery<T>
     new IIncludableQuery<T, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
     #endregion
 
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回导航属性查询对象</returns>
+    new IIncludableQuery<T, TMember> UseTableSchema(string tableSchema);
+    #endregion
+
     #region ThenInclude/ThenIncludeMany
     /// <summary>
     /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
@@ -209,6 +218,15 @@ public interface IIncludableQuery<<#=tables#>, TMember> : IIncludableQueryBase, 
     /// <param name="fieldValue3">第三个值</param>
     /// <returns>返回导航属性查询对象</returns>
     new IIncludableQuery<<#=tables#>, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    #endregion
+
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回导航属性查询对象</returns>
+    new IIncludableQuery<<#=tables#>, TMember> UseTableSchema(string tableSchema);
     #endregion
 
     #region ThenInclude/ThenIncludeMany

@@ -30,12 +30,13 @@ public interface IDeleteVisitor : IDisposable
     void UseTableBy(bool isIncludeMany, object field1Value, object field2Value = null);
     void UseTableByRange(bool isIncludeMany, object beginFieldValue, object endFieldValue);
     void UseTableByRange(bool isIncludeMany, object fieldValue1, object fieldValue2, object fieldValue3);
+    void UseTableSchema(bool isIncludeMany, string tableSchema);
 
     IDeleteVisitor WhereWith(object wherKeys);
     IDeleteVisitor Where(Expression whereExpr);
     IDeleteVisitor And(Expression whereExpr);
 
     string GetTableName(TableSegment tableSegment);
-    string BuildShardingTablesSql(string tableSchema);
+    string BuildTableShardingsSql();
     void SetShardingTables(List<string> shardingTables);
 }

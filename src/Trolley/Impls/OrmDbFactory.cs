@@ -180,7 +180,7 @@ public sealed class OrmDbFactory : IOrmDbFactory
             DbKey = localDbKey,
             ConnectionString = database.ConnectionString,
             Connection = new TheaConnection(connection),
-            TableSchema = database.OrmProvider.DefaultTableSchema ?? connection.Database,
+            DefaultTableSchema = database.OrmProvider.DefaultTableSchema ?? connection.Database,
             OrmProvider = database.OrmProvider,
             MapProvider = mapProvider,
             ShardingProvider = tableShardingProvider,

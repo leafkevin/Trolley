@@ -26,6 +26,11 @@ public class PostgreSqlIncludableQuery<T, TMember> : IncludableQuery<T, TMember>
         => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlIncludableQuery<T, TMember>;
     #endregion
 
+    #region UseTableSchema
+    public override IPostgreSqlIncludableQuery<T, TMember> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IPostgreSqlIncludableQuery<T, TMember>;
+    #endregion
+
     #region ThenInclude/ThenIncludeMany
     public override IPostgreSqlIncludableQuery<T, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
         => base.ThenInclude(member) as IPostgreSqlIncludableQuery<T, TNavigation>;
@@ -53,6 +58,11 @@ public class PostgreSqlIncludableQuery<T1, T2, TMember> : IncludableQuery<T1, T2
         => base.UseTableByRange(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T1, T2, TMember>;
     public override IPostgreSqlIncludableQuery<T1, T2, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
         => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlIncludableQuery<T1, T2, TMember>;
+    #endregion
+
+    #region UseTableSchema
+    public override IPostgreSqlIncludableQuery<T1, T2, TMember> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IPostgreSqlIncludableQuery<T1, T2, TMember>;
     #endregion
 
     #region ThenInclude/ThenIncludeMany
@@ -84,6 +94,11 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, TMember> : IncludableQuery<T1
         => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlIncludableQuery<T1, T2, T3, TMember>;
     #endregion
 
+    #region UseTableSchema
+    public override IPostgreSqlIncludableQuery<T1, T2, T3, TMember> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IPostgreSqlIncludableQuery<T1, T2, T3, TMember>;
+    #endregion
+
     #region ThenInclude/ThenIncludeMany
     public override IPostgreSqlIncludableQuery<T1, T2, T3, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
         => base.ThenInclude(member) as IPostgreSqlIncludableQuery<T1, T2, T3, TNavigation>;
@@ -111,6 +126,11 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, T4, TMember> : IncludableQuer
         => base.UseTableByRange(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, TMember>;
     public override IPostgreSqlIncludableQuery<T1, T2, T3, T4, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
         => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, TMember>;
+    #endregion
+
+    #region UseTableSchema
+    public override IPostgreSqlIncludableQuery<T1, T2, T3, T4, TMember> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, TMember>;
     #endregion
 
     #region ThenInclude/ThenIncludeMany
@@ -142,6 +162,11 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, TMember> : Includable
         => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, TMember>;
     #endregion
 
+    #region UseTableSchema
+    public override IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, TMember>;
+    #endregion
+
     #region ThenInclude/ThenIncludeMany
     public override IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
         => base.ThenInclude(member) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, TNavigation>;
@@ -169,6 +194,11 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : Includ
         => base.UseTableByRange(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, TMember>;
     public override IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
         => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, TMember>;
+    #endregion
+
+    #region UseTableSchema
+    public override IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, TMember>;
     #endregion
 
     #region ThenInclude/ThenIncludeMany
@@ -200,6 +230,11 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : In
         => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember>;
     #endregion
 
+    #region UseTableSchema
+    public override IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember>;
+    #endregion
+
     #region ThenInclude/ThenIncludeMany
     public override IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
         => base.ThenInclude(member) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TNavigation>;
@@ -227,6 +262,11 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> 
         => base.UseTableByRange(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember>;
     public override IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
         => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember>;
+    #endregion
+
+    #region UseTableSchema
+    public override IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember>;
     #endregion
 
     #region ThenInclude/ThenIncludeMany
@@ -258,6 +298,11 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMemb
         => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>;
     #endregion
 
+    #region UseTableSchema
+    public override IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>;
+    #endregion
+
     #region ThenInclude/ThenIncludeMany
     public override IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
         => base.ThenInclude(member) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TNavigation>;
@@ -285,6 +330,11 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
         => base.UseTableByRange(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>;
     public override IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
         => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>;
+    #endregion
+
+    #region UseTableSchema
+    public override IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>;
     #endregion
 
     #region ThenInclude/ThenIncludeMany
@@ -316,6 +366,11 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
         => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>;
     #endregion
 
+    #region UseTableSchema
+    public override IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>;
+    #endregion
+
     #region ThenInclude/ThenIncludeMany
     public override IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
         => base.ThenInclude(member) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TNavigation>;
@@ -343,6 +398,11 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
         => base.UseTableByRange(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>;
     public override IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
         => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>;
+    #endregion
+
+    #region UseTableSchema
+    public override IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>;
     #endregion
 
     #region ThenInclude/ThenIncludeMany
@@ -374,6 +434,11 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
         => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>;
     #endregion
 
+    #region UseTableSchema
+    public override IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>;
+    #endregion
+
     #region ThenInclude/ThenIncludeMany
     public override IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
         => base.ThenInclude(member) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TNavigation>;
@@ -403,6 +468,11 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
         => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>;
     #endregion
 
+    #region UseTableSchema
+    public override IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>;
+    #endregion
+
     #region ThenInclude/ThenIncludeMany
     public override IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
         => base.ThenInclude(member) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TNavigation>;
@@ -430,6 +500,11 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
         => base.UseTableByRange(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>;
     public override IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
         => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>;
+    #endregion
+
+    #region UseTableSchema
+    public override IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>;
     #endregion
 
     #region ThenInclude/ThenIncludeMany

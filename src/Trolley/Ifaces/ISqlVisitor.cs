@@ -8,11 +8,7 @@ namespace Trolley;
 
 public interface ISqlVisitor : IDisposable
 {
-    string DbKey { get; }
-    IOrmProvider OrmProvider { get; }
-    IEntityMapProvider MapProvider { get; }
-    ITableShardingProvider ShardingProvider { get; }
-    bool IsParameterized { get; set; }
+    DbContext DbContext { get; }
     bool IsSelect { get; }
     bool IsWhere { get; }
 
@@ -22,6 +18,7 @@ public interface ISqlVisitor : IDisposable
     void UseTableBy(bool isIncludeMany, object field1Value, object field2Value = null);
     void UseTableByRange(bool isIncludeMany, object beginFieldValue, object endFieldValue);
     void UseTableByRange(bool isIncludeMany, object fieldValue1, object fieldValue2, object fieldValue3);
+    void UseTableSchema(bool isIncludeMany, string tableSchema);
 
     SqlFieldSegment VisitAndDeferred(SqlFieldSegment sqlSegment);
     SqlFieldSegment Visit(SqlFieldSegment sqlSegment);

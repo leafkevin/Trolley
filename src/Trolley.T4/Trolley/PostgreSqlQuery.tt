@@ -33,6 +33,11 @@ public class PostgreSqlQuery<T> : Query<T>, IPostgreSqlQuery<T>
         => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlQuery<T>;
     #endregion
 
+    #region UseTableSchema
+    public override IPostgreSqlQuery<T> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IPostgreSqlQuery<T>;
+    #endregion
+
     #region Union/UnionAll
     public override IPostgreSqlQuery<T> Union(IQuery<T> subQuery)
         => base.Union(subQuery) as IPostgreSqlQuery<T>;
@@ -171,6 +176,11 @@ public class PostgreSqlQuery<<#=tables#>> : Query<<#=tables#>>, IPostgreSqlQuery
         => base.UseTableByRange(beginFieldValue, endFieldValue) as IPostgreSqlQuery<<#=tables#>>;
     public override IPostgreSqlQuery<<#=tables#>> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
         => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlQuery<<#=tables#>>;
+    #endregion
+
+    #region UseTableSchema
+    public override IPostgreSqlQuery<<#=tables#>> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as IPostgreSqlQuery<<#=tables#>>;
     #endregion
 
 <#        

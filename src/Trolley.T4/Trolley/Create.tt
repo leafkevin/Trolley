@@ -41,6 +41,14 @@ public class Create<TEntity> : CreateInternal, ICreate<TEntity>
     }
     #endregion
 
+    #region UseTableSchema
+    public virtual ICreate<TEntity> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
+        return this;
+    }
+    #endregion
+
     #region WithBy
     public virtual IContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj)
     {

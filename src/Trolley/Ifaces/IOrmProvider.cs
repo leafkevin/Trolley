@@ -109,22 +109,22 @@ public interface IOrmProvider
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> NewMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(MultipleQuery multiQuery, IQueryVisitor visitor);
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> NewMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>(MultipleQuery multiQuery, IQueryVisitor visitor);
 
-    IMultiIncludableQuery<T, TMember> NewMultiIncludableQuery<T, TMember>(MultipleQuery multiQuery, IQueryVisitor visitor);
-    IMultiIncludableQuery<T1, T2, TMember> NewMultiIncludableQuery<T1, T2, TMember>(MultipleQuery multiQuery, IQueryVisitor visitor);
-    IMultiIncludableQuery<T1, T2, T3, TMember> NewMultiIncludableQuery<T1, T2, T3, TMember>(MultipleQuery multiQuery, IQueryVisitor visitor);
-    IMultiIncludableQuery<T1, T2, T3, T4, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, TMember>(MultipleQuery multiQuery, IQueryVisitor visitor);
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, TMember>(MultipleQuery multiQuery, IQueryVisitor visitor);
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, TMember>(MultipleQuery multiQuery, IQueryVisitor visitor);
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember>(MultipleQuery multiQuery, IQueryVisitor visitor);
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember>(MultipleQuery multiQuery, IQueryVisitor visitor);
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>(MultipleQuery multiQuery, IQueryVisitor visitor);
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>(MultipleQuery multiQuery, IQueryVisitor visitor);
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>(MultipleQuery multiQuery, IQueryVisitor visitor);
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>(MultipleQuery multiQuery, IQueryVisitor visitor);
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>(MultipleQuery multiQuery, IQueryVisitor visitor);
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>(MultipleQuery multiQuery, IQueryVisitor visitor);
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>(MultipleQuery multiQuery, IQueryVisitor visitor);
-    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember>(MultipleQuery multiQuery, IQueryVisitor visitor);
+    IMultiIncludableQuery<T, TMember> NewMultiIncludableQuery<T, TMember>(MultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany);
+    IMultiIncludableQuery<T1, T2, TMember> NewMultiIncludableQuery<T1, T2, TMember>(MultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany);
+    IMultiIncludableQuery<T1, T2, T3, TMember> NewMultiIncludableQuery<T1, T2, T3, TMember>(MultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany);
+    IMultiIncludableQuery<T1, T2, T3, T4, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, TMember>(MultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany);
+    IMultiIncludableQuery<T1, T2, T3, T4, T5, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, TMember>(MultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany);
+    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, TMember>(MultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany);
+    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember>(MultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany);
+    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember>(MultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany);
+    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>(MultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany);
+    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>(MultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany);
+    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>(MultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany);
+    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>(MultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany);
+    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>(MultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany);
+    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>(MultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany);
+    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>(MultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany);
+    IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember> NewMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember>(MultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany);
 
     IMultiGroupingQuery<T, TGrouping> NewMultiGroupingQuery<T, TGrouping>(MultipleQuery multiQuery, IQueryVisitor visitor);
     IMultiGroupingQuery<T1, T2, TGrouping> NewMultiGroupingQuery<T1, T2, TGrouping>(MultipleQuery multiQuery, IQueryVisitor visitor);
@@ -160,10 +160,10 @@ public interface IOrmProvider
     IDeleted<TEntity> NewDeleted<TEntity>(DbContext dbContext, IDeleteVisitor visitor);
     IContinuedDelete<TEntity> NewContinuedDelete<TEntity>(DbContext dbContext, IDeleteVisitor visitor);
 
-    IQueryVisitor NewQueryVisitor(string dbKey, IEntityMapProvider mapProvider, ITableShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", IDataParameterCollection dbParameters = null);
-    ICreateVisitor NewCreateVisitor(string dbKey, IEntityMapProvider mapProvider, ITableShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p");
-    IUpdateVisitor NewUpdateVisitor(string dbKey, IEntityMapProvider mapProvider, ITableShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p");
-    IDeleteVisitor NewDeleteVisitor(string dbKey, IEntityMapProvider mapProvider, ITableShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p");
+    IQueryVisitor NewQueryVisitor(DbContext dbContext, char tableAsStart = 'a', IDataParameterCollection dbParameters = null);
+    ICreateVisitor NewCreateVisitor(DbContext dbContext, char tableAsStart = 'a');
+    IUpdateVisitor NewUpdateVisitor(DbContext dbContext, char tableAsStart = 'a');
+    IDeleteVisitor NewDeleteVisitor(DbContext dbContext, char tableAsStart = 'a');
 
     string GetTableName(string tableName);
     string GetFieldName(string fieldName);

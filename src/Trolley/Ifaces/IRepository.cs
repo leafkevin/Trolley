@@ -13,11 +13,7 @@ public interface IRepository : IDisposable, IAsyncDisposable
 {
     #region Properties
     DbContext DbContext { get; set; }
-    #endregion
-
-    #region Sharding
-    IRepository UseTableSchema(string tableSchema);
-    #endregion
+    #endregion   
 
     #region Sharding
     List<string> GetShardingTableNames(params Type[] entityTypes);

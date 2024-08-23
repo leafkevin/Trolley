@@ -147,25 +147,9 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>Create.cs</LastGenOutput>
     </Content>
-    <Content Include="Trolley\SqlServerGroupingCommand.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>SqlServerGroupingCommand.cs</LastGenOutput>
-    </Content>
-    <Content Include="Trolley\ISqlServerGroupingCommand.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>ISqlServerGroupingCommand.cs</LastGenOutput>
-    </Content>
     <Content Include="Trolley\IGroupingCommand.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>IGroupingCommand.cs</LastGenOutput>
-    </Content>
-    <Content Include="Trolley\ISqlServerFromCommand.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>ISqlServerFromCommand.cs</LastGenOutput>
-    </Content>
-    <Content Include="Trolley\SqlServerFromCommand.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>SqlServerFromCommand.cs</LastGenOutput>
     </Content>
     <Content Include="Trolley\FromCommand.tt">
       <Generator>TextTemplatingFileGenerator</Generator>

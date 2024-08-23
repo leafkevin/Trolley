@@ -61,6 +61,14 @@ public class Update<TEntity> : IUpdate<TEntity>
     }
     #endregion
 
+    #region UseTableSchema
+    public virtual IUpdate<TEntity> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
+        return this;
+    }
+    #endregion
+
     #region Set
     public virtual IContinuedUpdate<TEntity> Set<TFields>(TFields setObj)
         => this.Set(true, setObj);
@@ -634,6 +642,14 @@ public class UpdateJoin<<#=tables#>> : Updated<TEntity>, IUpdateJoin<<#=tables#>
     public virtual IUpdateJoin<<#=tables#>> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        return this;
+    }
+    #endregion
+
+    #region UseTableSchema
+    public virtual IUpdateJoin<<#=tables#>> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
         return this;
     }
     #endregion

@@ -244,16 +244,16 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.Visitor.Include(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<T, TMember>(this.MultipleQuery, this.Visitor);
+        var isIncludeMany = this.Visitor.Include(memberSelector);
+        return this.OrmProvider.NewMultiIncludableQuery<T, TMember>(this.MultipleQuery, this.Visitor, isIncludeMany);
     }
     public IMultiIncludableQuery<T, TElment> IncludeMany<TElment>(Expression<Func<T, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.Visitor.Include(memberSelector, true, filter);
-        return this.OrmProvider.NewMultiIncludableQuery<T, TElment>(this.MultipleQuery, this.Visitor);
+        this.Visitor.Include(memberSelector, filter);
+        return this.OrmProvider.NewMultiIncludableQuery<T, TElment>(this.MultipleQuery, this.Visitor, true);
     }
     #endregion
 

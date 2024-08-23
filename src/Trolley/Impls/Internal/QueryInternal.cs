@@ -175,19 +175,19 @@ public class QueryInternal
     #endregion
 
     #region Include/IncludeMany
-    protected void IncludeInternal<TMember>(Expression memberSelector)
+    protected bool IncludeInternal<TMember>(Expression memberSelector)
     {
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.Visitor.Include(memberSelector);
+        return this.Visitor.Include(memberSelector);
     }
     protected void IncludeManyInternal<TElment>(Expression memberSelector, Expression filter = null)
     {
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        this.Visitor.Include(memberSelector, true, filter);
+        this.Visitor.Include(memberSelector, filter);
     }
     #endregion
 

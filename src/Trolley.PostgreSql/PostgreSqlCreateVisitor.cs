@@ -14,8 +14,8 @@ public class PostgreSqlCreateVisitor : CreateVisitor
     public bool IsUseTableAlias { get; set; }
     public List<string> OutputFieldNames { get; set; }
 
-    public PostgreSqlCreateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, ITableShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
-        : base(dbKey, ormProvider, mapProvider, shardingProvider, isParameterized, tableAsStart, parameterPrefix) { }
+    public PostgreSqlCreateVisitor(DbContext dbContext, char tableAsStart = 'a')
+        : base(dbContext, tableAsStart) { }
 
     public override string BuildCommand(IDbCommand command, bool isReturnIdentity, out List<SqlFieldSegment> readerFields)
     {
@@ -53,20 +53,23 @@ public class PostgreSqlCreateVisitor : CreateVisitor
     public override string BuildSql(out List<SqlFieldSegment> readerFields)
     {
         readerFields = null;
-        var entityType = this.Tables[0].EntityType;
-        var entityMapper = this.Tables[0].Mapper;
+        var tableSegment = this.Tables[0];
+        var entityType = tableSegment.EntityType;
+        var entityMapper = tableSegment.Mapper;
         var tableName = entityMapper.TableName;
         if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out _))
         {
-            if (string.IsNullOrEmpty(this.Tables[0].Body))
+            if (string.IsNullOrEmpty(tableSegment.Body))
                 throw new Exception($"实体表{entityType.FullName}有配置分表，当前操作未指定分表，请调用UseTable或UseTableBy方法指定分表");
-            tableName = this.Tables[0].Body;
+            tableName = tableSegment.Body;
         }
         tableName = this.OrmProvider.GetTableName(tableName);
+        if (!string.IsNullOrEmpty(tableSegment.TableSchema))
+            tableName = tableSegment.TableSchema + "." + tableName;
 
         var fieldsBuilder = new StringBuilder($"INSERT INTO {tableName} ");
         //Set语句中，引用了原值，就需要使用别名
-        if (this.IsUseTableAlias) fieldsBuilder.Append($"AS {this.Tables[0].AliasName} ");
+        if (this.IsUseTableAlias) fieldsBuilder.Append($"AS {tableSegment.AliasName} ");
         fieldsBuilder.Append('(');
         var valuesBuilder = new StringBuilder(" VALUES (");
         for (int i = 0; i < this.InsertFields.Count; i++)
@@ -399,7 +402,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
     }
     public override IQueryVisitor CreateQueryVisitor()
     {
-        var queryVisiter = new PostgreSqlQueryVisitor(this.DbKey, this.OrmProvider, this.MapProvider, this.ShardingProvider, this.IsParameterized, this.TableAsStart, this.ParameterPrefix, this.DbParameters);
+        var queryVisiter = new PostgreSqlQueryVisitor(this.DbContext, this.TableAsStart, this.DbParameters);
         queryVisiter.IsMultiple = this.IsMultiple;
         queryVisiter.CommandIndex = this.CommandIndex;
         queryVisiter.RefQueries = this.RefQueries;

@@ -24,9 +24,9 @@ public class UnitTest6 : UnitTestBase
         services.AddSingleton(f =>
         {
             var builder = new OrmDbFactoryBuilder()
-                .Register(OrmProviderType.SqlServer, "fengling", "Server=172.16.30.190;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", true)
-                .Register(OrmProviderType.SqlServer, "fengling_tenant1", "Server=172.16.30.190;Database=fengling_tenant1;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", false)
-                .Register(OrmProviderType.SqlServer, "fengling_tenant2", "Server=172.16.30.190;Database=fengling_tenant2;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", false)
+                .Register(OrmProviderType.SqlServer, "fengling", "Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", true)
+                .Register(OrmProviderType.SqlServer, "fengling_tenant1", "Server=127.0.0.1;Database=fengling_tenant1;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", false)
+                .Register(OrmProviderType.SqlServer, "fengling_tenant2", "Server=127.0.0.1;Database=fengling_tenant2;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", false)
                 .Configure<ModelConfiguration>(OrmProviderType.SqlServer)
                 .UseDatabaseSharding(() =>
                 {

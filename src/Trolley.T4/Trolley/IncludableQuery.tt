@@ -59,6 +59,14 @@ public class IncludableQuery<T, TMember> : Query<T>, IIncludableQuery<T, TMember
     }
     #endregion
 
+    #region UseTableSchema
+    public override IIncludableQuery<T, TMember> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(this.IsIncludeMany, tableSchema);
+        return this;
+    }
+    #endregion
+
     #region ThenInclude/ThenIncludeMany
     public virtual IIncludableQuery<T, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
     {
@@ -67,7 +75,7 @@ public class IncludableQuery<T, TMember> : Query<T>, IIncludableQuery<T, TMember
     }
     public virtual IIncludableQuery<T, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null)
     {
-        this.Visitor.ThenInclude(member, true, filter);
+        this.Visitor.ThenInclude(member, filter);
         return this.OrmProvider.NewIncludableQuery<T, TElment>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -131,6 +139,14 @@ public class IncludableQuery<<#=tables#>, TMember> : Query<<#=tables#>>, IInclud
     }
     #endregion
 
+    #region UseTableSchema
+    public override IIncludableQuery<<#=tables#>, TMember> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(this.IsIncludeMany, tableSchema);
+        return this;
+    }
+    #endregion
+
     #region ThenInclude/ThenIncludeMany
     public virtual IIncludableQuery<<#=tables#>, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
     {
@@ -139,7 +155,7 @@ public class IncludableQuery<<#=tables#>, TMember> : Query<<#=tables#>>, IInclud
     }
     public virtual IIncludableQuery<<#=tables#>, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null)
     {
-        this.Visitor.ThenInclude(member, true, filter);
+        this.Visitor.ThenInclude(member, filter);
         return this.OrmProvider.NewIncludableQuery<<#=tables#>, TElment>(this.DbContext, this.Visitor);
     }
     #endregion

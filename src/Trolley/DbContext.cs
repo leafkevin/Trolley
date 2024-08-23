@@ -16,13 +16,14 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     public string DbKey { get; set; }
     public TheaConnection Connection { get; set; }
     public string ConnectionString { get; set; }
-    public string TableSchema { get; set; }
+    public string DefaultTableSchema { get; set; }
     public IOrmProvider OrmProvider { get; set; }
     public IEntityMapProvider MapProvider { get; set; }
     public ITableShardingProvider ShardingProvider { get; set; }
     public IDbTransaction Transaction { get; set; }
     public bool IsParameterized { get; set; }
     public int CommandTimeout { get; set; }
+    public string ParameterPrefix { get; set; } = "p";
     public DbInterceptors DbInterceptors { get; set; }
     public bool IsNeedClose => this.Transaction == null;
     #endregion
@@ -919,7 +920,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
 
             firstSqlSetter = (dbParameters, builder, tableName) =>
             {
-                builder.Append($"INSERT INTO {this.OrmProvider.GetFieldName(tableName)} (");
+                builder.Append($"INSERT INTO {this.OrmProvider.GetTableName(tableName)} (");
                 builder.Append(firstHeadSql);
             };
             loopSqlSetter = (dbParameters, builder, insertObj) =>
@@ -936,7 +937,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
 
             firstSqlSetter = (dbParameters, builder, tableName) =>
             {
-                builder.Append($"INSERT INTO {this.OrmProvider.GetFieldName(tableName)} (");
+                builder.Append($"INSERT INTO {this.OrmProvider.GetTableName(tableName)} (");
                 typedFieldsSqlPartSetter.Invoke(builder);
                 builder.Append(") VALUES ");
             };
@@ -1228,7 +1229,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     }
     public void FetchShardingTables(SqlVisitor visitor)
     {
-        var fetchSql = visitor.BuildShardingTablesSql(this.TableSchema);
+        var fetchSql = visitor.BuildTableShardingsSql();
         using var command = this.CreateCommand();
         IDataReader reader = null;
         bool isNeedClose = this.IsNeedClose;
@@ -1265,7 +1266,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     }
     public async Task FetchShardingTablesAsync(SqlVisitor visitor, CancellationToken cancellationToken = default)
     {
-        var fetchSql = visitor.BuildShardingTablesSql(this.TableSchema);
+        var fetchSql = visitor.BuildTableShardingsSql();
         using var command = this.CreateDbCommand();
         DbDataReader reader = null;
         bool isNeedClose = this.IsNeedClose;

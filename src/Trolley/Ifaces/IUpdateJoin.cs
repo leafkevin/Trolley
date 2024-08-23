@@ -49,6 +49,15 @@ public interface IUpdateJoin<TEntity, T1> : IUpdated<TEntity>
     IUpdateJoin<TEntity, T1> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
     #endregion
 
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回更新对象</returns>
+    IUpdateJoin<TEntity, T1> UseTableSchema(string tableSchema);
+    #endregion
+
     #region Join
     /// <summary>
     /// 追加表T2字段数据InnerJoin内连接更新表TEntity数据
@@ -305,6 +314,15 @@ public interface IUpdateJoin<TEntity, T1, T2> : IUpdated<TEntity>
     /// <param name="fieldValue3">第三个值</param>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    #endregion
+
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回更新对象</returns>
+    IUpdateJoin<TEntity, T1, T2> UseTableSchema(string tableSchema);
     #endregion
 
     #region Join
@@ -564,6 +582,15 @@ public interface IUpdateJoin<TEntity, T1, T2, T3> : IUpdated<TEntity>
     /// <param name="fieldValue3">第三个值</param>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    #endregion
+
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回更新对象</returns>
+    IUpdateJoin<TEntity, T1, T2, T3> UseTableSchema(string tableSchema);
     #endregion
 
     #region Join
@@ -826,6 +853,15 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4> : IUpdated<TEntity>
     IUpdateJoin<TEntity, T1, T2, T3, T4> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
     #endregion
 
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回更新对象</returns>
+    IUpdateJoin<TEntity, T1, T2, T3, T4> UseTableSchema(string tableSchema);
+    #endregion
+
     #region Join
     /// <summary>
     /// 追加表T5字段数据InnerJoin内连接更新表TEntity数据
@@ -1085,6 +1121,15 @@ public interface IUpdateJoin<TEntity, T1, T2, T3, T4, T5> : IUpdated<TEntity>
     /// <param name="fieldValue3">第三个值</param>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    #endregion
+
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回更新对象</returns>
+    IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableSchema(string tableSchema);
     #endregion
 
     #region Set

@@ -20,7 +20,7 @@ public class Delete<TEntity> : IDelete<TEntity>
     public Delete(DbContext dbContext)
     {
         this.DbContext = dbContext;
-        this.Visitor = dbContext.OrmProvider.NewDeleteVisitor(dbContext.DbKey, dbContext.MapProvider, dbContext.ShardingProvider, dbContext.IsParameterized);
+        this.Visitor = dbContext.OrmProvider.NewDeleteVisitor(dbContext);
         this.Visitor.Initialize(typeof(TEntity));
     }
     #endregion
@@ -49,6 +49,14 @@ public class Delete<TEntity> : IDelete<TEntity>
     public virtual IDelete<TEntity> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        return this;
+    }
+    #endregion
+
+    #region UseTableSchema
+    public virtual IDelete<TEntity> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
         return this;
     }
     #endregion

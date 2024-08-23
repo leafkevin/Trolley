@@ -11,6 +11,11 @@ namespace Trolley;
 /// <typeparam name="TMember">表T导航属性实体类型</typeparam>
 public interface IMultiIncludableQuery<T, TMember> : IMultiQuery<T>
 {
+    #region Properties
+    bool IsIncludeMany { get; }
+    #endregion
+
+    #region ThenInclude/ThenIncludeMany
     /// <summary>
     /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
     /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级。
@@ -40,6 +45,7 @@ public interface IMultiIncludableQuery<T, TMember> : IMultiQuery<T>
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
     /// <returns>返回导航属性查询对象</returns>
     IMultiIncludableQuery<T, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null);
+    #endregion
 }
 /// <summary>
 /// 导航属性查询
@@ -49,6 +55,11 @@ public interface IMultiIncludableQuery<T, TMember> : IMultiQuery<T>
 /// <typeparam name="TMember">表T2导航属性实体类型</typeparam>
 public interface IMultiIncludableQuery<T1, T2, TMember> : IMultiQuery<T1, T2>
 {
+    #region Properties
+    bool IsIncludeMany { get; }
+    #endregion
+
+    #region ThenInclude/ThenIncludeMany
     /// <summary>
     /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
     /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级。
@@ -78,6 +89,7 @@ public interface IMultiIncludableQuery<T1, T2, TMember> : IMultiQuery<T1, T2>
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
     /// <returns>返回导航属性查询对象</returns>
     IMultiIncludableQuery<T1, T2, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null);
+    #endregion
 }
 /// <summary>
 /// 导航属性查询
@@ -88,6 +100,11 @@ public interface IMultiIncludableQuery<T1, T2, TMember> : IMultiQuery<T1, T2>
 /// <typeparam name="TMember">表T3导航属性实体类型</typeparam>
 public interface IMultiIncludableQuery<T1, T2, T3, TMember> : IMultiQuery<T1, T2, T3>
 {
+    #region Properties
+    bool IsIncludeMany { get; }
+    #endregion
+
+    #region ThenInclude/ThenIncludeMany
     /// <summary>
     /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
     /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级。
@@ -117,6 +134,7 @@ public interface IMultiIncludableQuery<T1, T2, T3, TMember> : IMultiQuery<T1, T2
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
     /// <returns>返回导航属性查询对象</returns>
     IMultiIncludableQuery<T1, T2, T3, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null);
+    #endregion
 }
 /// <summary>
 /// 导航属性查询
@@ -128,6 +146,11 @@ public interface IMultiIncludableQuery<T1, T2, T3, TMember> : IMultiQuery<T1, T2
 /// <typeparam name="TMember">表T4导航属性实体类型</typeparam>
 public interface IMultiIncludableQuery<T1, T2, T3, T4, TMember> : IMultiQuery<T1, T2, T3, T4>
 {
+    #region Properties
+    bool IsIncludeMany { get; }
+    #endregion
+
+    #region ThenInclude/ThenIncludeMany
     /// <summary>
     /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
     /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级。
@@ -157,6 +180,7 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, TMember> : IMultiQuery<T1
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
     /// <returns>返回导航属性查询对象</returns>
     IMultiIncludableQuery<T1, T2, T3, T4, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null);
+    #endregion
 }
 /// <summary>
 /// 导航属性查询
@@ -169,6 +193,11 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, TMember> : IMultiQuery<T1
 /// <typeparam name="TMember">表T5导航属性实体类型</typeparam>
 public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, TMember> : IMultiQuery<T1, T2, T3, T4, T5>
 {
+    #region Properties
+    bool IsIncludeMany { get; }
+    #endregion
+
+    #region ThenInclude/ThenIncludeMany
     /// <summary>
     /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
     /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级。
@@ -198,6 +227,7 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, TMember> : IMultiQuer
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
     /// <returns>返回导航属性查询对象</returns>
     IMultiIncludableQuery<T1, T2, T3, T4, T5, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null);
+    #endregion
 }
 /// <summary>
 /// 导航属性查询
@@ -211,6 +241,11 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, TMember> : IMultiQuer
 /// <typeparam name="TMember">表T6导航属性实体类型</typeparam>
 public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : IMultiQuery<T1, T2, T3, T4, T5, T6>
 {
+    #region Properties
+    bool IsIncludeMany { get; }
+    #endregion
+
+    #region ThenInclude/ThenIncludeMany
     /// <summary>
     /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
     /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级。
@@ -240,6 +275,7 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : IMulti
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
     /// <returns>返回导航属性查询对象</returns>
     IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null);
+    #endregion
 }
 /// <summary>
 /// 导航属性查询
@@ -254,6 +290,11 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : IMulti
 /// <typeparam name="TMember">表T7导航属性实体类型</typeparam>
 public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : IMultiQuery<T1, T2, T3, T4, T5, T6, T7>
 {
+    #region Properties
+    bool IsIncludeMany { get; }
+    #endregion
+
+    #region ThenInclude/ThenIncludeMany
     /// <summary>
     /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
     /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级。
@@ -283,6 +324,7 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : IM
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
     /// <returns>返回导航属性查询对象</returns>
     IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null);
+    #endregion
 }
 /// <summary>
 /// 导航属性查询
@@ -298,6 +340,11 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : IM
 /// <typeparam name="TMember">表T8导航属性实体类型</typeparam>
 public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> : IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8>
 {
+    #region Properties
+    bool IsIncludeMany { get; }
+    #endregion
+
+    #region ThenInclude/ThenIncludeMany
     /// <summary>
     /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
     /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级。
@@ -327,6 +374,7 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> 
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
     /// <returns>返回导航属性查询对象</returns>
     IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null);
+    #endregion
 }
 /// <summary>
 /// 导航属性查询
@@ -343,6 +391,11 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> 
 /// <typeparam name="TMember">表T9导航属性实体类型</typeparam>
 public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> : IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>
 {
+    #region Properties
+    bool IsIncludeMany { get; }
+    #endregion
+
+    #region ThenInclude/ThenIncludeMany
     /// <summary>
     /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
     /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级。
@@ -372,6 +425,7 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMemb
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
     /// <returns>返回导航属性查询对象</returns>
     IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null);
+    #endregion
 }
 /// <summary>
 /// 导航属性查询
@@ -389,6 +443,11 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMemb
 /// <typeparam name="TMember">表T10导航属性实体类型</typeparam>
 public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> : IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
 {
+    #region Properties
+    bool IsIncludeMany { get; }
+    #endregion
+
+    #region ThenInclude/ThenIncludeMany
     /// <summary>
     /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
     /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级。
@@ -418,6 +477,7 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
     /// <returns>返回导航属性查询对象</returns>
     IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null);
+    #endregion
 }
 /// <summary>
 /// 导航属性查询
@@ -436,6 +496,11 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
 /// <typeparam name="TMember">表T11导航属性实体类型</typeparam>
 public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> : IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
 {
+    #region Properties
+    bool IsIncludeMany { get; }
+    #endregion
+
+    #region ThenInclude/ThenIncludeMany
     /// <summary>
     /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
     /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级。
@@ -465,6 +530,7 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
     /// <returns>返回导航属性查询对象</returns>
     IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null);
+    #endregion
 }
 /// <summary>
 /// 导航属性查询
@@ -484,6 +550,11 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
 /// <typeparam name="TMember">表T12导航属性实体类型</typeparam>
 public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> : IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>
 {
+    #region Properties
+    bool IsIncludeMany { get; }
+    #endregion
+
+    #region ThenInclude/ThenIncludeMany
     /// <summary>
     /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
     /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级。
@@ -513,6 +584,7 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
     /// <returns>返回导航属性查询对象</returns>
     IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null);
+    #endregion
 }
 /// <summary>
 /// 导航属性查询
@@ -533,6 +605,11 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
 /// <typeparam name="TMember">表T13导航属性实体类型</typeparam>
 public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> : IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>
 {
+    #region Properties
+    bool IsIncludeMany { get; }
+    #endregion
+
+    #region ThenInclude/ThenIncludeMany
     /// <summary>
     /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
     /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级。
@@ -562,6 +639,7 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
     /// <returns>返回导航属性查询对象</returns>
     IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null);
+    #endregion
 }
 /// <summary>
 /// 导航属性查询
@@ -583,6 +661,11 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
 /// <typeparam name="TMember">表T14导航属性实体类型</typeparam>
 public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> : IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>
 {
+    #region Properties
+    bool IsIncludeMany { get; }
+    #endregion
+
+    #region ThenInclude/ThenIncludeMany
     /// <summary>
     /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
     /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级。
@@ -612,6 +695,7 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
     /// <returns>返回导航属性查询对象</returns>
     IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null);
+    #endregion
 }
 /// <summary>
 /// 导航属性查询
@@ -634,6 +718,11 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
 /// <typeparam name="TMember">表T15导航属性实体类型</typeparam>
 public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> : IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>
 {
+    #region Properties
+    bool IsIncludeMany { get; }
+    #endregion
+
+    #region ThenInclude/ThenIncludeMany
     /// <summary>
     /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
     /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级。
@@ -663,6 +752,7 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
     /// <returns>返回导航属性查询对象</returns>
     IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null);
+    #endregion
 }
 /// <summary>
 /// 导航属性查询
@@ -686,4 +776,8 @@ public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
 /// <typeparam name="TMember">表T16导航属性实体类型</typeparam>
 public interface IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember> : IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>
 {
+    #region Properties
+    bool IsIncludeMany { get; }
+    #endregion
+
 }

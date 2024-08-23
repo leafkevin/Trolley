@@ -598,7 +598,7 @@ partial class PostgreSqlProvider
                             var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = target });
                             var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
-                                 && (rightSegment.IsConstant || rightSegment.IsVariable))
+                                && (rightSegment.IsConstant || rightSegment.IsVariable))
                                 return targetSegment.MergeValue(rightSegment, ((string)targetSegment.Value).TrimEnd((char)rightSegment.Value));
 
                             var targetArgument = visitor.GetQuotedValue(targetSegment);

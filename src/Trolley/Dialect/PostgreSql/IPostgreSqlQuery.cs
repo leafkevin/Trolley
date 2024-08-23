@@ -73,6 +73,15 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     new IPostgreSqlQuery<T> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
     #endregion
 
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回插入对象</returns>
+    new IPostgreSqlQuery<T> UseTableSchema(string tableSchema);
+    #endregion
+
     #region Union/UnionAll
     /// <summary>
     /// Union操作，去掉重复记录，用法：
@@ -653,6 +662,15 @@ public interface IPostgreSqlQuery<T1, T2> : IQuery<T1, T2>
     new IPostgreSqlQuery<T1, T2> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
     #endregion
 
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回插入对象</returns>
+    new IPostgreSqlQuery<T1, T2> UseTableSchema(string tableSchema);
+    #endregion
+
     #region WithTable
     /// <summary>
     /// 使用子查询作为临时表，方便后面做关联查询，用法：
@@ -1054,6 +1072,15 @@ public interface IPostgreSqlQuery<T1, T2, T3> : IQuery<T1, T2, T3>
     /// <param name="fieldValue3">第三个值</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    #endregion
+
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回插入对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3> UseTableSchema(string tableSchema);
     #endregion
 
     #region WithTable
@@ -1458,6 +1485,15 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
     /// <param name="fieldValue3">第三个值</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    #endregion
+
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回插入对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4> UseTableSchema(string tableSchema);
     #endregion
 
     #region WithTable
@@ -1865,6 +1901,15 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T
     new IPostgreSqlQuery<T1, T2, T3, T4, T5> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
     #endregion
 
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回插入对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5> UseTableSchema(string tableSchema);
+    #endregion
+
     #region WithTable
     /// <summary>
     /// 使用子查询作为临时表，方便后面做关联查询，用法：
@@ -2269,6 +2314,15 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T
     /// <param name="fieldValue3">第三个值</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    #endregion
+
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回插入对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> UseTableSchema(string tableSchema);
     #endregion
 
     #region WithTable
@@ -2678,6 +2732,15 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
     #endregion
 
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回插入对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> UseTableSchema(string tableSchema);
+    #endregion
+
     #region WithTable
     /// <summary>
     /// 使用子查询作为临时表，方便后面做关联查询，用法：
@@ -3084,6 +3147,15 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T
     /// <param name="fieldValue3">第三个值</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    #endregion
+
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回插入对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableSchema(string tableSchema);
     #endregion
 
     #region WithTable
@@ -3495,6 +3567,15 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
     #endregion
 
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回插入对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableSchema(string tableSchema);
+    #endregion
+
     #region WithTable
     /// <summary>
     /// 使用子查询作为临时表，方便后面做关联查询，用法：
@@ -3903,6 +3984,15 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQu
     /// <param name="fieldValue3">第三个值</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    #endregion
+
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回插入对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableSchema(string tableSchema);
     #endregion
 
     #region WithTable
@@ -4316,6 +4406,15 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> 
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
     #endregion
 
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回插入对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableSchema(string tableSchema);
+    #endregion
+
     #region WithTable
     /// <summary>
     /// 使用子查询作为临时表，方便后面做关联查询，用法：
@@ -4726,6 +4825,15 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <param name="fieldValue3">第三个值</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    #endregion
+
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回插入对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableSchema(string tableSchema);
     #endregion
 
     #region WithTable
@@ -5141,6 +5249,15 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
     #endregion
 
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回插入对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableSchema(string tableSchema);
+    #endregion
+
     #region WithTable
     /// <summary>
     /// 使用子查询作为临时表，方便后面做关联查询，用法：
@@ -5553,6 +5670,15 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <param name="fieldValue3">第三个值</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    #endregion
+
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回插入对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableSchema(string tableSchema);
     #endregion
 
     #region WithTable
@@ -5970,6 +6096,15 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
     #endregion
 
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回插入对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableSchema(string tableSchema);
+    #endregion
+
     #region WithTable
     /// <summary>
     /// 使用子查询作为临时表，方便后面做关联查询，用法：
@@ -6384,6 +6519,15 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <param name="fieldValue3">第三个值</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    #endregion
+
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回插入对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableSchema(string tableSchema);
     #endregion
 
     #region Include

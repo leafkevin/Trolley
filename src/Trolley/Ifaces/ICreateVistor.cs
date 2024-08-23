@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Text;
 
 namespace Trolley;
@@ -26,6 +25,7 @@ public interface ICreateVisitor : IDisposable
 
     void UseTable(bool isIncludeMany, params string[] tableNames);
     void UseTableBy(bool isIncludeMany, object field1Value, object field2Value = null);
+    void UseTableSchema(bool isIncludeMany, string tableSchema);
 
     void WithBy(object insertObj);
     void WithByField(Expression fieldSelector, object fieldValue);

@@ -75,6 +75,15 @@ public interface IUpdateJoin<<#=tables#>> : IUpdated<TEntity>
     IUpdateJoin<<#=tables#>> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
     #endregion
 
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回更新对象</returns>
+    IUpdateJoin<<#=tables#>> UseTableSchema(string tableSchema);
+    #endregion
+
 <#
         if( i < count - 1)
         {

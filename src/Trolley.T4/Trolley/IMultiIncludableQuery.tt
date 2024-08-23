@@ -18,6 +18,11 @@ namespace Trolley;
 /// <typeparam name="TMember">表T导航属性实体类型</typeparam>
 public interface IMultiIncludableQuery<T, TMember> : IMultiQuery<T>
 {
+    #region Properties
+    bool IsIncludeMany { get; }
+    #endregion
+
+    #region ThenInclude/ThenIncludeMany
     /// <summary>
     /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
     /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级。
@@ -47,6 +52,7 @@ public interface IMultiIncludableQuery<T, TMember> : IMultiQuery<T>
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
     /// <returns>返回导航属性查询对象</returns>
     IMultiIncludableQuery<T, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null);
+    #endregion
 }
 <#
     var count = 16;
@@ -70,10 +76,15 @@ public interface IMultiIncludableQuery<T, TMember> : IMultiQuery<T>
 /// <typeparam name="TMember">表<#=currentTable#>导航属性实体类型</typeparam>
 public interface IMultiIncludableQuery<<#=tables#>, TMember> : IMultiQuery<<#=tables#>>
 {
+    #region Properties
+    bool IsIncludeMany { get; }
+    #endregion
+
 <#
         if(i < count)
         {
 #>
+    #region ThenInclude/ThenIncludeMany
     /// <summary>
     /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
     /// 1:1关联关系，随主表一起查询,支持无限级，1:N关联关系，分两次查询，第二次查询返回结果，再赋值到主实体的属性上，只支持1级。
@@ -103,6 +114,7 @@ public interface IMultiIncludableQuery<<#=tables#>, TMember> : IMultiQuery<<#=ta
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
     /// <returns>返回导航属性查询对象</returns>
     IMultiIncludableQuery<<#=tables#>, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null);
+    #endregion
 <#      }#>
 }
 <#  }#>

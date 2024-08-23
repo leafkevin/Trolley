@@ -64,6 +64,15 @@ public interface IUpdate<TEntity>
     IUpdate<TEntity> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
     #endregion
 
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回更新对象</returns>
+    IUpdate<TEntity> UseTableSchema(string tableSchema);
+    #endregion
+
     #region Set
     /// <summary>
     /// 部分字段更新，updateObj对象中除主键、OnlyFields、IgnoreFields方法筛选后的剩下所有字段都将参与更新，匿名、命名对象都可以，需要配合where条件使用，用法：

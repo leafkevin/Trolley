@@ -9,8 +9,8 @@ namespace Trolley.PostgreSql;
 
 public class PostgreSqlQueryVisitor : QueryVisitor
 {
-    public PostgreSqlQueryVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, ITableShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", IDataParameterCollection dbParameters = null)
-        : base(dbKey, ormProvider, mapProvider, shardingProvider, isParameterized, tableAsStart, parameterPrefix, dbParameters) { }
+    public PostgreSqlQueryVisitor(DbContext dbContext, char tableAsStart = 'a', IDataParameterCollection dbParameters = null)
+        : base(dbContext, tableAsStart, dbParameters) { }
 
     public bool IsDistinctOn { get; set; }
     public List<SqlFieldSegment> DistinctOnFields { get; set; }
@@ -219,13 +219,11 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         bool isManySharding = false;
         if (this.Tables.Count > 0)
         {
-            int startIndex = 0;
-            if (this.IsFromCommand) startIndex = 1;
-            for (int i = startIndex; i < this.Tables.Count; i++)
+            for (int i = 1; i < this.Tables.Count; i++)
             {
                 var tableSegment = this.Tables[i];
                 string tableName = this.GetTableName(tableSegment);
-                if (i > startIndex)
+                if (i > 1)
                 {
                     if (!string.IsNullOrEmpty(tableSegment.JoinType))
                     {
@@ -311,34 +309,33 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         builder = null;
         return sql;
     }
-    public override string BuildShardingTablesSql(string tableSchema)
+    public override string BuildTableShardingsSql()
     {
-        var count = this.ShardingTables.FindAll(f => f.ShardingType > ShardingTableType.MultiTable).Count;
-        var builder = new StringBuilder($"SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND b.nspname='{tableSchema}' AND a.relkind='r' AND ");
-        if (count > 1)
+        var builder = new StringBuilder($"SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND ");
+        var schemaBuilders = new Dictionary<string, StringBuilder>();
+        foreach (var tableSegment in this.ShardingTables)
         {
+            if (tableSegment.ShardingType > ShardingTableType.MultiTable)
+            {
+                var tableSchema = tableSegment.TableSchema ?? this.DefaultTableSchema;
+                if (!schemaBuilders.TryGetValue(tableSchema, out var tableBuilder))
+                    schemaBuilders.TryAdd(tableSchema, tableBuilder = new StringBuilder());
+
+                if (tableBuilder.Length > 0) tableBuilder.Append(" OR ");
+                tableBuilder.Append($"a.relname LIKE '{tableSegment.Mapper.TableName}%'");
+            }
+        }
+        if (schemaBuilders.Count > 1)
             builder.Append('(');
-            int index = 0;
-            foreach (var tableSegment in this.ShardingTables)
-            {
-                if (tableSegment.ShardingType > ShardingTableType.MultiTable)
-                {
-                    if (index > 0) builder.Append(" OR ");
-                    builder.Append($"a.relname LIKE '{tableSegment.Mapper.TableName}%'");
-                    index++;
-                }
-            }
-            builder.Append(')');
-        }
-        else
+        int index = 0;
+        foreach (var schemaBuilder in schemaBuilders)
         {
-            if (this.ShardingTables.Count > 1)
-            {
-                var tableSegment = this.ShardingTables.Find(f => f.ShardingType > ShardingTableType.MultiTable);
-                builder.Append($"a.relname LIKE '{tableSegment.Mapper.TableName}%'");
-            }
-            else builder.Append($"a.relname LIKE '{this.ShardingTables[0].Mapper.TableName}%'");
+            if (index > 0) builder.Append(" OR ");
+            builder.Append($"b.nspname='{schemaBuilder.Key}' AND ({schemaBuilder.Value.ToString()})");
+            index++;
         }
+        if (schemaBuilders.Count > 1)
+            builder.Append(')');
         return builder.ToString();
     }
     public override void Distinct()

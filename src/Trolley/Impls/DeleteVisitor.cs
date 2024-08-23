@@ -13,15 +13,10 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
     private List<CommandSegment> deferredSegments = new();
 
     public bool HasWhere { get; protected set; }
-    public DeleteVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, ITableShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p", List<IDbDataParameter> dbParameters = null)
+    public DeleteVisitor(DbContext dbContext, char tableAsStart = 'a')
     {
-        this.DbKey = dbKey;
-        this.OrmProvider = ormProvider;
-        this.MapProvider = mapProvider;
-        this.ShardingProvider = shardingProvider;
-        this.IsParameterized = isParameterized;
+        this.DbContext = dbContext;
         this.TableAsStart = tableAsStart;
-        this.ParameterPrefix = parameterPrefix;
     }
     public virtual void Initialize(Type entityType, bool isMultiple = false, bool isFirst = true)
     {
@@ -87,6 +82,8 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
                 var typedWhereSqlSetter = whereSqlSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object>;
                 sqlExecuter = () => typedWhereSqlSetter.Invoke(command.Parameters, whereSqlBuilder, this.OrmProvider, whereKeys);
             }
+            if (!string.IsNullOrEmpty(this.Tables[0].TableSchema))
+                headSqlSetter = (builder, tableName) => headSqlSetter.Invoke(builder, this.Tables[0].TableSchema + "." + tableName);
             if (this.ShardingTables != null && this.ShardingTables.Count > 0)
             {
                 var tableNames = this.ShardingTables[0].TableNames;

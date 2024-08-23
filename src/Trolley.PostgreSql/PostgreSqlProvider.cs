@@ -12,12 +12,13 @@ namespace Trolley.PostgreSql;
 
 public partial class PostgreSqlProvider : BaseOrmProvider
 {
-    private static Dictionary<object, Type> defaultMapTypes = new();
-    private static Dictionary<Type, object> defaultDbTypes = new();
-    private static Dictionary<Type, string> castTos = new();
+    private readonly static Dictionary<object, Type> defaultMapTypes = new();
+    private readonly static Dictionary<Type, object> defaultDbTypes = new();
+    private readonly static Dictionary<Type, string> castTos = new();
 
     public override OrmProviderType OrmProviderType => OrmProviderType.PostgreSql;
     public override Type NativeDbTypeType => typeof(NpgsqlDbType);
+    public override string DefaultTableSchema => "public";
     static PostgreSqlProvider()
     {
         defaultMapTypes[NpgsqlDbType.Bit] = typeof(byte[]);
@@ -134,7 +135,6 @@ public partial class PostgreSqlProvider : BaseOrmProvider
         castTos[typeof(DateOnly?)] = "DATE";
         castTos[typeof(TimeOnly?)] = "TIME";
     }
-    public PostgreSqlProvider() => this.DefaultTableSchema = "public";
 
     public override IDbConnection CreateConnection(string connectionString)
         => new NpgsqlConnection(connectionString);
@@ -150,7 +150,19 @@ public partial class PostgreSqlProvider : BaseOrmProvider
         myDbParameter.NpgsqlDbType = nativeDbType;
         myDbParameter.Value = fieldValue;
     }
-    public override string GetTableName(string tableName) => "\"" + tableName + "\"";
+    public override string GetTableName(string tableName)
+    {
+        if (string.IsNullOrEmpty(tableName))
+            throw new ArgumentNullException(nameof(tableName));
+        if (tableName.Contains('.'))
+        {
+            var tableNames = tableName.Split('.');
+            if (tableNames[0] == this.DefaultTableSchema)
+                return "\"" + tableNames[1] + "\"";
+            return $"\"{tableNames[0]}\".\"{tableNames[1]}\"";
+        }
+        return "\"" + tableName + "\"";
+    }
     public override string GetFieldName(string fieldName) => "\"" + fieldName + "\"";
     public override object GetNativeDbType(Type fieldType)
     {
@@ -422,21 +434,19 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
                     memberMapper.NativeDbType = this.MapNativeDbType(columnInfo);
                     memberMapper.Position = columnInfo.Position;
                 }
-                //实体类类型成员
-                if ((memberMapper.UnderlyingType.IsClass && memberMapper.UnderlyingType != typeof(string)
-                    || memberMapper.UnderlyingType.IsEntityType(out _))
-                    && this.MapDefaultType(memberMapper.NativeDbType) == typeof(string))
-                {
+                //允许自定义TypeHandlerType设置，默认设置
+                if ((memberMapper.UnderlyingType.IsClass && memberMapper.UnderlyingType != typeof(string) || memberMapper.UnderlyingType.IsEntityType(out _))
+                    && this.MapDefaultType(memberMapper.NativeDbType) == typeof(string) && memberMapper.TypeHandlerType == null)
                     memberMapper.TypeHandlerType = typeof(JsonTypeHandler);
+
+                if (memberMapper.TypeHandlerType != null && memberMapper.TypeHandler == null)
                     memberMapper.TypeHandler = this.GetTypeHandler(memberMapper.TypeHandlerType);
-                }
                 //object类型
                 if (memberMapper.MemberType == typeof(object) && this.MapDefaultType(memberMapper.NativeDbType) == typeof(string))
                 {
                     memberMapper.TypeHandlerType = typeof(ToStringTypeHandler);
                     memberMapper.TypeHandler = this.GetTypeHandler(memberMapper.TypeHandlerType);
                 }
-                entityMapper.AddMemberMap(memberInfo.Name, memberMapper);
             }
 
             //非默认TableSchema表名就不变更了

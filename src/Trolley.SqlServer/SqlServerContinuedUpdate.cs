@@ -113,7 +113,7 @@ public class SqlServerContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqlS
             builder.AppendLine($"PRIMARY KEY({string.Join(',', pkColumns)})");
             builder.AppendLine(");");
             if (this.Visitor.IsNeedFetchShardingTables)
-                builder.Append(this.Visitor.BuildShardingTablesSql(this.DbContext.TableSchema));
+                builder.Append(this.Visitor.BuildTableShardingsSql());
 
             Action<StringBuilder, string> sqlExecutor = (builder, tableName) =>
             {
@@ -153,7 +153,7 @@ public class SqlServerContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqlS
             if (this.Visitor.IsNeedFetchShardingTables)
             {
                 this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
-                builder.Append(this.Visitor.BuildShardingTablesSql(this.DbContext.TableSchema));
+                builder.Append(this.Visitor.BuildTableShardingsSql());
                 builder.Append(';');
             }
             using var command = this.DbContext.CreateCommand();

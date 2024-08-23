@@ -16,7 +16,7 @@ public class Create<TEntity> : CreateInternal, ICreate<TEntity>
     public Create(DbContext dbContext)
     {
         this.DbContext = dbContext;
-        this.Visitor = this.DbContext.OrmProvider.NewCreateVisitor(dbContext.DbKey, dbContext.MapProvider, dbContext.ShardingProvider, dbContext.IsParameterized);
+        this.Visitor = this.DbContext.OrmProvider.NewCreateVisitor(dbContext);
         this.Visitor.Initialize(typeof(TEntity));
         this.DbContext = dbContext;
     }
@@ -31,6 +31,14 @@ public class Create<TEntity> : CreateInternal, ICreate<TEntity>
     public virtual ICreate<TEntity> UseTableBy(object field1Value, object field2Value = null)
     {
         this.Visitor.UseTableBy(false, field1Value, field2Value);
+        return this;
+    }
+    #endregion
+
+    #region UseTableSchema
+    public virtual ICreate<TEntity> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
         return this;
     }
     #endregion

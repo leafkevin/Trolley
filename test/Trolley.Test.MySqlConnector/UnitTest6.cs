@@ -23,12 +23,12 @@ public class UnitTest6 : UnitTestBase
         services.AddSingleton(f =>
         {
             var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
-            var connectionString1 = "Server=localhost;Database=fengling_tenant1;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
-            var connectionString2 = "Server=localhost;Database=fengling_tenant1;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
+            //var connectionString1 = "Server=localhost;Database=fengling_tenant1;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
+            //var connectionString2 = "Server=localhost;Database=fengling_tenant1;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
             var builder = new OrmDbFactoryBuilder()
                 .Register(OrmProviderType.MySql, "fengling", connectionString, true)
-                .Register(OrmProviderType.MySql, "fengling_tenant1", connectionString1)
-                .Register(OrmProviderType.MySql, "fengling_tenant2", connectionString2)
+                //.Register(OrmProviderType.MySql, "fengling_tenant1", connectionString1)
+                //.Register(OrmProviderType.MySql, "fengling_tenant2", connectionString2)
                 .Configure<ModelConfiguration>(OrmProviderType.MySql)
                 .UseDatabaseSharding(() =>
                 {
@@ -980,6 +980,42 @@ public class UnitTest6 : UnitTestBase
         {
             var tenantIds = result.Select(f => f.TenantId).ToList();
             Assert.True(tenantIds.Exists(f => "104,105".Contains(f)));
+        }
+    }
+    [Fact]
+    public async Task Query_ManySharding_SingleTable_Include()
+    {
+        await this.InitSharding();
+        var productCount = 1;
+        using var repository = dbFactory.Create();
+        var sql = repository.From<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .Include(f => f.Details)
+            .UseTable<Order>((dbKey, origOrderName, origOrderDetailName, orderName) =>
+                orderName.Replace(origOrderName, origOrderDetailName))
+            .Where(f => f.ProductCount > productCount)
+            .ToSql(out _);
+        Assert.True(sql == "SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_order_104_202405` a WHERE a.`ProductCount`>@p0 UNION ALL SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_order_105_202405` a WHERE a.`ProductCount`>@p0");
+
+        var result = repository.From<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .Include(f => f.Details)
+            .UseTable<Order>((dbKey, origOrderName, origOrderDetailName, orderName) =>
+                orderName.Replace(origOrderName, origOrderDetailName))
+            .Where(f => f.ProductCount > productCount)
+            .ToList();
+        if (result.Count > 0)
+        {
+            var tenantIds = result.Select(f => f.TenantId).ToList();
+            Assert.True(tenantIds.Exists(f => "104,105".Contains(f)));
+            foreach (var order in result)
+            {
+                Assert.NotNull(order.Details);
+                foreach (var orderDetail in order.Details)
+                {
+                    Assert.Contains(orderDetail.TenantId, "104,105");
+                }
+            }
         }
     }
     [Fact]

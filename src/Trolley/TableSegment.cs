@@ -65,6 +65,7 @@ public class TableSegment
     /// 实体表名或是特定TableSchema表或是子查询SQL，如：sys_user或是myschema.sys_user或是(select * from ...)
     /// </summary>
     public string Body { get; set; }
+    public string TableSchema { get; set; }
     /// <summary>
     /// 表后缀字符串，SqlServer在表名后，会接一个后缀字符串，如：select * from A WITH (UPDLOCK)
     /// </summary>
@@ -97,7 +98,6 @@ public class TableSegment
     /// Include 1:N关系表时，从最外层Select参数访问到Include成员的父亲路径所有成员访问列表，方便最后赋值
     /// </summary>
     public List<MemberInfo> ParentMemberVisits { get; set; }
-
     /// <summary>
     /// 是否已经指定分表，指定了分表此值为true
     /// </summary>

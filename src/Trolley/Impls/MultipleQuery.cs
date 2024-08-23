@@ -284,7 +284,8 @@ public class MultipleQuery : IMultipleQuery, IDisposable
 
     private IQueryVisitor CreateQueryVisitor(char tableAsStart)
     {
-        var visitor = this.OrmProvider.NewQueryVisitor(this.DbKey, this.MapProvider, this.DbContext.ShardingProvider, this.DbContext.IsParameterized, tableAsStart);
+        var visitor = this.OrmProvider.NewQueryVisitor(this.DbContext);
+        visitor.TableAsStart = tableAsStart;
         visitor.DbParameters = this.Command.Parameters;
         return visitor;
     }

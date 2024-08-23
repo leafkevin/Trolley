@@ -65,7 +65,15 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
     }
     #endregion
 
-<#        
+    #region UseTableSchema
+    public virtual IQuery<<#=tables#>> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
+        return this;
+    }
+    #endregion
+
+<#
         if(i < count)
         {
 #>
@@ -157,13 +165,13 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewIncludableQuery<<#=tables#>, TMember>(this.DbContext, this.Visitor);
+        var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
+        return this.OrmProvider.NewIncludableQuery<<#=tables#>, TMember>(this.DbContext, this.Visitor, isIncludeMany);
     }
     public virtual IIncludableQuery<<#=tables#>, TElment> IncludeMany<TElment>(Expression<Func<<#=tables#>, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         base.IncludeManyInternal<TElment>(memberSelector, filter);
-        return this.OrmProvider.NewIncludableQuery<<#=tables#>, TElment>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewIncludableQuery<<#=tables#>, TElment>(this.DbContext, this.Visitor, true);
     }
     #endregion
 
@@ -246,7 +254,7 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
     public virtual long LongCountDistinct<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr)
         => base.LongCountDistinctInternal<TField>(fieldExpr);
     public virtual async Task<long> LongCountDistinctAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await base.LongCountDistinctInternalAsync<TField>(fieldExpr);
+        => await base.LongCountDistinctInternalAsync<TField>(fieldExpr, cancellationToken);
     #endregion
 
     #region Aggregate

@@ -74,6 +74,15 @@ public interface IPostgreSqlIncludableQuery<T, TMember> : IIncludableQuery<T, TM
     new IPostgreSqlIncludableQuery<T, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
     #endregion
 
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回导航属性查询对象</returns>
+    new IPostgreSqlIncludableQuery<T, TMember> UseTableSchema(string tableSchema);
+    #endregion
+
     #region ThenInclude/ThenIncludeMany
     /// <summary>
     /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
@@ -175,6 +184,15 @@ public interface IPostgreSqlIncludableQuery<T1, T2, TMember> : IIncludableQuery<
     /// <param name="fieldValue3">第三个值</param>
     /// <returns>返回导航属性查询对象</returns>
     new IPostgreSqlIncludableQuery<T1, T2, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    #endregion
+
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回导航属性查询对象</returns>
+    new IPostgreSqlIncludableQuery<T1, T2, TMember> UseTableSchema(string tableSchema);
     #endregion
 
     #region ThenInclude/ThenIncludeMany
@@ -279,6 +297,15 @@ public interface IPostgreSqlIncludableQuery<T1, T2, T3, TMember> : IIncludableQu
     /// <param name="fieldValue3">第三个值</param>
     /// <returns>返回导航属性查询对象</returns>
     new IPostgreSqlIncludableQuery<T1, T2, T3, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    #endregion
+
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回导航属性查询对象</returns>
+    new IPostgreSqlIncludableQuery<T1, T2, T3, TMember> UseTableSchema(string tableSchema);
     #endregion
 
     #region ThenInclude/ThenIncludeMany
@@ -386,6 +413,15 @@ public interface IPostgreSqlIncludableQuery<T1, T2, T3, T4, TMember> : IIncludab
     new IPostgreSqlIncludableQuery<T1, T2, T3, T4, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
     #endregion
 
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回导航属性查询对象</returns>
+    new IPostgreSqlIncludableQuery<T1, T2, T3, T4, TMember> UseTableSchema(string tableSchema);
+    #endregion
+
     #region ThenInclude/ThenIncludeMany
     /// <summary>
     /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
@@ -490,6 +526,15 @@ public interface IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, TMember> : IIncl
     /// <param name="fieldValue3">第三个值</param>
     /// <returns>返回导航属性查询对象</returns>
     new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    #endregion
+
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回导航属性查询对象</returns>
+    new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableSchema(string tableSchema);
     #endregion
 
     #region ThenInclude/ThenIncludeMany
@@ -599,6 +644,15 @@ public interface IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : I
     new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
     #endregion
 
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回导航属性查询对象</returns>
+    new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableSchema(string tableSchema);
+    #endregion
+
     #region ThenInclude/ThenIncludeMany
     /// <summary>
     /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
@@ -705,6 +759,15 @@ public interface IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember>
     /// <param name="fieldValue3">第三个值</param>
     /// <returns>返回导航属性查询对象</returns>
     new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    #endregion
+
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回导航属性查询对象</returns>
+    new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableSchema(string tableSchema);
     #endregion
 
     #region ThenInclude/ThenIncludeMany
@@ -816,6 +879,15 @@ public interface IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMem
     new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
     #endregion
 
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回导航属性查询对象</returns>
+    new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableSchema(string tableSchema);
+    #endregion
+
     #region ThenInclude/ThenIncludeMany
     /// <summary>
     /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
@@ -924,6 +996,15 @@ public interface IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
     /// <param name="fieldValue3">第三个值</param>
     /// <returns>返回导航属性查询对象</returns>
     new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    #endregion
+
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回导航属性查询对象</returns>
+    new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableSchema(string tableSchema);
     #endregion
 
     #region ThenInclude/ThenIncludeMany
@@ -1037,6 +1118,15 @@ public interface IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
     new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
     #endregion
 
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回导航属性查询对象</returns>
+    new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableSchema(string tableSchema);
+    #endregion
+
     #region ThenInclude/ThenIncludeMany
     /// <summary>
     /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
@@ -1147,6 +1237,15 @@ public interface IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
     /// <param name="fieldValue3">第三个值</param>
     /// <returns>返回导航属性查询对象</returns>
     new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    #endregion
+
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回导航属性查询对象</returns>
+    new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableSchema(string tableSchema);
     #endregion
 
     #region ThenInclude/ThenIncludeMany
@@ -1262,6 +1361,15 @@ public interface IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
     new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
     #endregion
 
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回导航属性查询对象</returns>
+    new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableSchema(string tableSchema);
+    #endregion
+
     #region ThenInclude/ThenIncludeMany
     /// <summary>
     /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
@@ -1374,6 +1482,15 @@ public interface IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
     /// <param name="fieldValue3">第三个值</param>
     /// <returns>返回导航属性查询对象</returns>
     new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    #endregion
+
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回导航属性查询对象</returns>
+    new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableSchema(string tableSchema);
     #endregion
 
     #region ThenInclude/ThenIncludeMany
@@ -1491,6 +1608,15 @@ public interface IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
     new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
     #endregion
 
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回导航属性查询对象</returns>
+    new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableSchema(string tableSchema);
+    #endregion
+
     #region ThenInclude/ThenIncludeMany
     /// <summary>
     /// 贪婪加载导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
@@ -1605,6 +1731,15 @@ public interface IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, 
     /// <param name="fieldValue3">第三个值</param>
     /// <returns>返回导航属性查询对象</returns>
     new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    #endregion
+
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回导航属性查询对象</returns>
+    new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableSchema(string tableSchema);
     #endregion
 
     #region ThenInclude/ThenIncludeMany

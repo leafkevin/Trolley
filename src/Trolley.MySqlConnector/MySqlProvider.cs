@@ -143,7 +143,14 @@ public partial class MySqlProvider : BaseOrmProvider
         myDbParameter.MySqlDbType = nativeDbType;
         myDbParameter.Value = fieldValue;
     }
-    public override string GetTableName(string tableName) => "`" + tableName + "`";
+    public override string GetTableName(string tableName)
+    {
+        if (string.IsNullOrEmpty(tableName))
+            throw new ArgumentNullException(nameof(tableName));
+        if (tableName.Contains('.'))
+            tableName = tableName.Replace(".", "`.`");
+        return "`" + tableName + "`";
+    }
     public override string GetFieldName(string fieldName) => "`" + fieldName + "`";
     public override object GetNativeDbType(Type fieldType)
     {
@@ -218,8 +225,7 @@ public partial class MySqlProvider : BaseOrmProvider
         var sql = @"SELECT a.TABLE_SCHEMA,a.TABLE_NAME,a.COLUMN_NAME,a.DATA_TYPE,a.COLUMN_TYPE,a.CHARACTER_MAXIMUM_LENGTH,a.NUMERIC_SCALE,a.NUMERIC_PRECISION,a.COLUMN_COMMENT,a.COLUMN_DEFAULT,
 		a.COLUMN_KEY='PRI',INSTR(IFNULL(a.EXTRA,''),'auto_increment'),a.IS_NULLABLE='YES',a.ORDINAL_POSITION FROM INFORMATION_SCHEMA.COLUMNS a WHERE {0} ORDER BY a.TABLE_SCHEMA,a.TABLE_NAME,a.ORDINAL_POSITION";
 
-        using var connection = new MySqlConnection(connectionString);
-        using var command = new MySqlCommand(sql, connection);
+        using var connection = new MySqlConnection(connectionString);        
         var tableBuilders = new Dictionary<string, StringBuilder>();
         foreach (var tableName in tableNames)
         {
@@ -255,15 +261,15 @@ public partial class MySqlProvider : BaseOrmProvider
         sql = string.Format(sql, sqlBuilder.ToString());
         var entityMappers = mapProvider.EntityMaps.ToList();
         var tableInfos = new List<DbTableInfo>();
-        command.CommandText = sql;
+		using var command = new MySqlCommand(sql, connection);
         connection.Open();
         using var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
 
         DbTableInfo tableInfo = null;
         while (reader.Read())
         {
-            var tableSchema = reader.GetString(0);
-            var tableName = reader.GetString(1);
+            var tableSchema = reader.ToValue<string>(0);
+            var tableName = reader.ToValue<string>(1);
             if (tableInfo == null || tableInfo.TableSchema != tableSchema || tableInfo.TableName != tableName)
             {
                 tableInfo = new DbTableInfo
@@ -276,9 +282,9 @@ public partial class MySqlProvider : BaseOrmProvider
             }
             tableInfo.Columns.Add(new DbColumnInfo
             {
-                FieldName = reader.GetString(2),
-                DataType = reader.GetString(3),
-                DbColumnType = reader.GetString(4),
+                FieldName = reader.ToValue<string>(2),
+                DataType = reader.ToValue<string>(3),
+                DbColumnType = reader.ToValue<string>(4),
                 MaxLength = (int)reader.ToValue<ulong>(5),
                 Scale = reader.ToValue<int>(6),
                 Precision = reader.ToValue<int>(7),
@@ -335,14 +341,13 @@ public partial class MySqlProvider : BaseOrmProvider
                     memberMapper.NativeDbType = this.MapNativeDbType(columnInfo);
                     memberMapper.Position = columnInfo.Position;
                 }
-                //实体类类型成员
-                if ((memberMapper.UnderlyingType.IsClass && memberMapper.UnderlyingType != typeof(string)
-                    || memberMapper.UnderlyingType.IsEntityType(out _))
-                    && this.MapDefaultType(memberMapper.NativeDbType) == typeof(string))
-                {
+                //允许自定义TypeHandlerType设置，默认设置
+                if ((memberMapper.UnderlyingType.IsClass && memberMapper.UnderlyingType != typeof(string) || memberMapper.UnderlyingType.IsEntityType(out _))
+                    && this.MapDefaultType(memberMapper.NativeDbType) == typeof(string) && memberMapper.TypeHandlerType == null)
                     memberMapper.TypeHandlerType = typeof(JsonTypeHandler);
+
+                if (memberMapper.TypeHandlerType != null && memberMapper.TypeHandler == null)
                     memberMapper.TypeHandler = this.GetTypeHandler(memberMapper.TypeHandlerType);
-                }
                 //object类型
                 if (memberMapper.MemberType == typeof(object) && this.MapDefaultType(memberMapper.NativeDbType) == typeof(string))
                 {

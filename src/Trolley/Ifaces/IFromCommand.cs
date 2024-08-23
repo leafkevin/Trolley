@@ -14,7 +14,7 @@ public interface IFromCommand : IDisposable
     IQueryVisitor Visitor { get; }
     #endregion
 
-    #region Select
+    #region Select    
     /// <summary>
     /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
     /// </summary>
@@ -86,6 +86,15 @@ public interface IFromCommand<T> : IFromCommand
     /// <param name="fieldValue3">第三个值</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<T> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    #endregion
+
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T> UseTableSchema(string tableSchema);
     #endregion
 
     #region Union/UnionAll
@@ -377,6 +386,15 @@ public interface IFromCommand<T1, T2> : IFromCommand
     IFromCommand<T1, T2> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
     #endregion
 
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2> UseTableSchema(string tableSchema);
+    #endregion
+
     #region Join
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
@@ -662,6 +680,15 @@ public interface IFromCommand<T1, T2, T3> : IFromCommand
     /// <param name="fieldValue3">第三个值</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2, T3> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    #endregion
+
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2, T3> UseTableSchema(string tableSchema);
     #endregion
 
     #region Join
@@ -951,6 +978,15 @@ public interface IFromCommand<T1, T2, T3, T4> : IFromCommand
     IFromCommand<T1, T2, T3, T4> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
     #endregion
 
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2, T3, T4> UseTableSchema(string tableSchema);
+    #endregion
+
     #region Join
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
@@ -1238,6 +1274,15 @@ public interface IFromCommand<T1, T2, T3, T4, T5> : IFromCommand
     IFromCommand<T1, T2, T3, T4, T5> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
     #endregion
 
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2, T3, T4, T5> UseTableSchema(string tableSchema);
+    #endregion
+
     #region Join
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
@@ -1523,6 +1568,15 @@ public interface IFromCommand<T1, T2, T3, T4, T5, T6> : IFromCommand
     /// <param name="fieldValue3">第三个值</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2, T3, T4, T5, T6> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    #endregion
+
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2, T3, T4, T5, T6> UseTableSchema(string tableSchema);
     #endregion
 
     #region Join

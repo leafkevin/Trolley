@@ -11,12 +11,13 @@ namespace Trolley.SqlServer;
 
 public partial class SqlServerProvider : BaseOrmProvider
 {
-    private static Dictionary<object, Type> defaultMapTypes = new();
-    private static Dictionary<Type, object> defaultDbTypes = new();
-    private static Dictionary<Type, string> castTos = new();
+    private readonly static Dictionary<object, Type> defaultMapTypes = new();
+    private readonly static Dictionary<Type, object> defaultDbTypes = new();
+    private readonly static Dictionary<Type, string> castTos = new();
 
     public override OrmProviderType OrmProviderType => OrmProviderType.SqlServer;
     public override Type NativeDbTypeType => typeof(SqlDbType);
+    public override string DefaultTableSchema => "dbo";
 
     static SqlServerProvider()
     {
@@ -137,7 +138,19 @@ public partial class SqlServerProvider : BaseOrmProvider
         myDbParameter.SqlDbType = nativeDbType;
         myDbParameter.Value = fieldValue;
     }
-    public override string GetTableName(string tableName) => "[" + tableName + "]";
+    public override string GetTableName(string tableName)
+    {
+        if (string.IsNullOrEmpty(tableName))
+            throw new ArgumentNullException(nameof(tableName));
+        if (tableName.Contains('.'))
+        {
+            var tableNames = tableName.Split('.');
+            if (tableNames[0] == this.DefaultTableSchema)
+                return "[" + tableNames[1] + "]";
+            return $"[{tableNames[0]}].[{tableNames[1]}]";
+        }
+        return "[" + tableName + "]";
+    }
     public override string GetFieldName(string fieldName) => "[" + fieldName + "]";
     public override string GetPagingTemplate(int? skip, int? limit, string orderBy = null)
     {
@@ -253,7 +266,7 @@ public partial class SqlServerProvider : BaseOrmProvider
         var tableNames = mapProvider.EntityMaps.Where(f => !f.IsMapped).Select(f => f.TableName).ToList();
         if (tableNames == null || tableNames.Count == 0)
             return;
-        var sql = @"select b.name,a.name,c.name,d.name,(d.name + case when d.name in ('char','varchar','nchar','nvarchar','binary','varbinary') then '('+ case when c.max_length = -1 then 'MAX' when d.name in ('nchar','nvarchar') then
+        var sql = @"select b.name,a.name,c.name,d.name,(d.name+case when d.name in ('char','varchar','nchar','nvarchar','binary','varbinary') then '('+ case when c.max_length = -1 then 'MAX' when d.name in ('nchar','nvarchar') then
 cast(c.max_length/2 as varchar) else cast(c.max_length as varchar) end+')' when d.name in ('numeric','decimal') then '('+cast(c.precision as varchar)+','+ cast(c.scale as varchar)+')' else '' end),case when d.name in ('nchar','nvarchar')
 then c.max_length/2 else c.max_length end,c.scale,c.precision,(select value from sys.extended_properties where major_id=c.object_id AND minor_id=c.column_id AND name = 'MS_Description'and class=1),e.text,g.is_primary_key,c.is_identity,
 c.is_nullable,c.column_id from sys.tables a inner join sys.schemas b on a.schema_id=b.schema_id inner join sys.columns c on a.object_id=c.object_id inner join sys.types d on d.user_type_id=c.user_type_id left join syscomments e
@@ -315,9 +328,9 @@ on e.id = c.default_object_id left join sys.index_columns f on f.object_id=a.obj
             }
             tableInfo.Columns.Add(new DbColumnInfo
             {
-                FieldName = reader.GetString(2),
-                DataType = reader.GetString(3),
-                DbColumnType = reader.GetString(4),
+                FieldName = reader.ToValue<string>(2),
+                DataType = reader.ToValue<string>(3),
+                DbColumnType = reader.ToValue<string>(4),
                 MaxLength = (int)reader.ToValue<ulong>(5),
                 Scale = reader.ToValue<int>(6),
                 Precision = reader.ToValue<int>(7),
@@ -372,14 +385,13 @@ on e.id = c.default_object_id left join sys.index_columns f on f.object_id=a.obj
                     memberMapper.NativeDbType = this.MapNativeDbType(columnInfo);
                     memberMapper.Position = columnInfo.Position;
                 }
-                //实体类类型成员
-                if ((memberMapper.UnderlyingType.IsClass && memberMapper.UnderlyingType != typeof(string)
-                    || memberMapper.UnderlyingType.IsEntityType(out _))
-                    && this.MapDefaultType(memberMapper.NativeDbType) == typeof(string))
-                {
+                //允许自定义TypeHandlerType设置，默认设置
+                if ((memberMapper.UnderlyingType.IsClass && memberMapper.UnderlyingType != typeof(string) || memberMapper.UnderlyingType.IsEntityType(out _))
+                    && this.MapDefaultType(memberMapper.NativeDbType) == typeof(string) && memberMapper.TypeHandlerType == null)
                     memberMapper.TypeHandlerType = typeof(JsonTypeHandler);
+
+                if (memberMapper.TypeHandlerType != null && memberMapper.TypeHandler == null)
                     memberMapper.TypeHandler = this.GetTypeHandler(memberMapper.TypeHandlerType);
-                }
                 //object类型
                 if (memberMapper.MemberType == typeof(object) && this.MapDefaultType(memberMapper.NativeDbType) == typeof(string))
                 {

@@ -26,22 +26,14 @@ public class Repository : IRepository
 
     #region Constructor
     public Repository(DbContext dbContext) => this.DbContext = dbContext;
-    #endregion
-
-    #region Sharding
-    public IRepository UseTableSchema(string tableSchema)
-    {
-        this.DbContext.TableSchema = tableSchema;
-        return this;
-    }
-    #endregion
+    #endregion    
 
     #region GetShardingTableNames
     public virtual List<string> GetShardingTableNames(params Type[] entityTypes)
     {
         if (entityTypes == null)
             throw new ArgumentNullException(nameof(entityTypes));
-        var tableSchema = this.DbContext.TableSchema;
+        var tableSchema = this.DbContext.DefaultTableSchema;
         var builder = new StringBuilder($"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_SCHEMA='{tableSchema}' AND ");
 
         if (entityTypes.Length > 1)
@@ -69,7 +61,7 @@ public class Repository : IRepository
     {
         if (entityTypes == null)
             throw new ArgumentNullException(nameof(entityTypes));
-        var tableSchema = this.DbContext.TableSchema;
+        var tableSchema = this.DbContext.DefaultTableSchema;
         var builder = new StringBuilder($"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_SCHEMA='{tableSchema}' AND ");
 
         if (entityTypes.Length > 1)
@@ -381,7 +373,7 @@ public class Repository : IRepository
 
                     firstSqlSetter = (dbParameters, builder, tableName) =>
                     {
-                        builder.Append($"INSERT INTO {ormProvider.GetFieldName(tableName)} (");
+                        builder.Append($"INSERT INTO {ormProvider.GetTableName(tableName)} (");
                         builder.Append(firstHeadSql);
                     };
                     loopSqlSetter = (dbParameters, builder, insertObj, suffix) =>
@@ -398,7 +390,7 @@ public class Repository : IRepository
 
                     firstSqlSetter = (dbParameters, builder, tableName) =>
                     {
-                        builder.Append($"INSERT INTO {ormProvider.GetFieldName(tableName)} (");
+                        builder.Append($"INSERT INTO {ormProvider.GetTableName(tableName)} (");
                         typedFieldsSqlPartSetter.Invoke(builder);
                         builder.Append(") VALUES ");
                     };
@@ -536,7 +528,7 @@ public class Repository : IRepository
 
                     firstSqlSetter = (dbParameters, builder, tableName) =>
                     {
-                        builder.Append($"INSERT INTO {ormProvider.GetFieldName(tableName)} (");
+                        builder.Append($"INSERT INTO {ormProvider.GetTableName(tableName)} (");
                         builder.Append(firstHeadSql);
                     };
                     loopSqlSetter = (dbParameters, builder, insertObj, suffix) =>
@@ -553,7 +545,7 @@ public class Repository : IRepository
 
                     firstSqlSetter = (dbParameters, builder, tableName) =>
                     {
-                        builder.Append($"INSERT INTO {ormProvider.GetFieldName(tableName)} (");
+                        builder.Append($"INSERT INTO {ormProvider.GetTableName(tableName)} (");
                         typedFieldsSqlPartSetter.Invoke(builder);
                         builder.Append(") VALUES ");
                     };
@@ -1179,10 +1171,10 @@ public class Repository : IRepository
                 {
                     visitor = multiCcommand.CommandType switch
                     {
-                        MultipleCommandType.Insert => this.ormProvider.NewCreateVisitor(this.dbKey, this.mapProvider, this.shardingProvider, this.isParameterized),
-                        MultipleCommandType.Update => this.ormProvider.NewUpdateVisitor(this.dbKey, this.mapProvider, this.shardingProvider, this.isParameterized),
-                        MultipleCommandType.Delete => this.ormProvider.NewDeleteVisitor(this.dbKey, this.mapProvider, this.shardingProvider, this.isParameterized),
-                        _ => this.ormProvider.NewUpdateVisitor(this.dbKey, this.mapProvider, this.shardingProvider, this.isParameterized)
+                        MultipleCommandType.Insert => this.ormProvider.NewCreateVisitor(this.DbContext),
+                        MultipleCommandType.Update => this.ormProvider.NewUpdateVisitor(this.DbContext),
+                        MultipleCommandType.Delete => this.ormProvider.NewDeleteVisitor(this.DbContext),
+                        _ => this.ormProvider.NewUpdateVisitor(this.DbContext)
                     };
                     visitors.Add(multiCcommand.CommandType, visitor);
                     isFirst = true;
@@ -1250,10 +1242,10 @@ public class Repository : IRepository
                 {
                     visitor = multiCcommand.CommandType switch
                     {
-                        MultipleCommandType.Insert => this.ormProvider.NewCreateVisitor(this.dbKey, this.mapProvider, this.shardingProvider, this.isParameterized),
-                        MultipleCommandType.Update => this.ormProvider.NewUpdateVisitor(this.dbKey, this.mapProvider, this.shardingProvider, this.isParameterized),
-                        MultipleCommandType.Delete => this.ormProvider.NewDeleteVisitor(this.dbKey, this.mapProvider, this.shardingProvider, this.isParameterized),
-                        _ => this.ormProvider.NewUpdateVisitor(this.dbKey, this.mapProvider, this.shardingProvider, this.isParameterized)
+                        MultipleCommandType.Insert => this.ormProvider.NewCreateVisitor(this.DbContext),
+                        MultipleCommandType.Update => this.ormProvider.NewUpdateVisitor(this.DbContext),
+                        MultipleCommandType.Delete => this.ormProvider.NewDeleteVisitor(this.DbContext),
+                        _ => this.ormProvider.NewUpdateVisitor(this.DbContext)
                     };
                     visitors.Add(multiCcommand.CommandType, visitor);
                     isFirst = true;
@@ -1360,6 +1352,6 @@ public class Repository : IRepository
     }
     ~Repository() => this.Dispose();
     private IQueryVisitor CreateQueryVisitor(char tableAsStart = 'a')
-        => this.ormProvider.NewQueryVisitor(this.dbKey, this.mapProvider, this.DbContext.ShardingProvider, this.isParameterized, tableAsStart);
+        => this.ormProvider.NewQueryVisitor(this.DbContext, tableAsStart);
     #endregion
 }

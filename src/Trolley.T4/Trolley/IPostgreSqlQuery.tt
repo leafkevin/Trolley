@@ -80,6 +80,15 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     new IPostgreSqlQuery<T> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
     #endregion
 
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回插入对象</returns>
+    new IPostgreSqlQuery<T> UseTableSchema(string tableSchema);
+    #endregion
+
     #region Union/UnionAll
     /// <summary>
     /// Union操作，去掉重复记录，用法：
@@ -682,6 +691,15 @@ public interface IPostgreSqlQuery<<#=tables#>> : IQuery<<#=tables#>>
     /// <param name="fieldValue3">第三个值</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<<#=tables#>> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    #endregion
+
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回插入对象</returns>
+    new IPostgreSqlQuery<<#=tables#>> UseTableSchema(string tableSchema);
     #endregion
 
 <#

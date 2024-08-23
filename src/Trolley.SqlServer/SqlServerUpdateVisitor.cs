@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
 using System.Text;
@@ -8,8 +9,8 @@ namespace Trolley.SqlServer;
 
 public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
 {
-    public SqlServerUpdateVisitor(string dbKey, IOrmProvider ormProvider, IEntityMapProvider mapProvider, ITableShardingProvider shardingProvider, bool isParameterized = false, char tableAsStart = 'a', string parameterPrefix = "p")
-        : base(dbKey, ormProvider, mapProvider, shardingProvider, isParameterized, tableAsStart, parameterPrefix) { }
+    public SqlServerUpdateVisitor(DbContext dbContext, char tableAsStart = 'a')
+        : base(dbContext, tableAsStart) { }
 
     public override void Initialize(Type entityType, bool isMultiple = false, bool isFirst = true)
     {
@@ -116,8 +117,6 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
                                 break;
                         }
                     }
-                    Action<string> headSqlSetter = null;
-
                     var aliasName = this.Tables[0].AliasName;
                     if (this.IsJoin)
                     {
@@ -144,7 +143,6 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
                     }
                     else
                     {
-                        headSqlSetter = tableName => builder.Append($"UPDATE {this.OrmProvider.GetTableName(tableName)}");
                         if (this.IsNeedTableAlias)
                             builder.Append($" {aliasName}");
 
@@ -176,6 +174,11 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
                     }
                     else
                     {
+                        Action<string> headSqlSetter = null;
+                        var tableSegment = this.Tables[0];
+                        if (!string.IsNullOrEmpty(tableSegment.TableSchema))
+                            headSqlSetter = tableName => builder.Append($"UPDATE {this.OrmProvider.GetTableName(tableSegment.TableSchema + "." + tableName)}");
+                        else headSqlSetter = tableName => builder.Append($"UPDATE {this.OrmProvider.GetTableName(tableName)}");
                         if (this.ShardingTables != null && this.ShardingTables.Count > 0)
                         {
                             var tableNames = this.ShardingTables[0].TableNames;
@@ -201,34 +204,33 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
         builder = null;
         return sql;
     }
-    public override string BuildShardingTablesSql(string tableSchema)
+    public override string BuildTableShardingsSql()
     {
-        var count = this.ShardingTables.FindAll(f => f.ShardingType > ShardingTableType.MultiTable).Count;
-        var builder = new StringBuilder($"SELECT name FROM sys.sysobjects WHERE xtype='U' AND ");
-        if (count > 1)
+        var builder = new StringBuilder($"SELECT a.name FROM sys.objects a,sys.schemas b WHERE a.schema_id=b.schema_id AND A.type='U' AND ");
+        var schemaBuilders = new Dictionary<string, StringBuilder>();
+        foreach (var tableSegment in this.ShardingTables)
         {
+            if (tableSegment.ShardingType > ShardingTableType.MultiTable)
+            {
+                var tableSchema = tableSegment.TableSchema ?? this.DefaultTableSchema;
+                if (!schemaBuilders.TryGetValue(tableSchema, out var tableBuilder))
+                    schemaBuilders.TryAdd(tableSchema, tableBuilder = new StringBuilder());
+
+                if (tableBuilder.Length > 0) tableBuilder.Append(" OR ");
+                tableBuilder.Append($"a.name LIKE '{tableSegment.Mapper.TableName}%'");
+            }
+        }
+        if (schemaBuilders.Count > 1)
             builder.Append('(');
-            int index = 0;
-            foreach (var tableSegment in this.ShardingTables)
-            {
-                if (tableSegment.ShardingType > ShardingTableType.MultiTable)
-                {
-                    if (index > 0) builder.Append(" OR ");
-                    builder.Append($"name LIKE '{tableSegment.Mapper.TableName}%'");
-                    index++;
-                }
-            }
-            builder.Append(')');
-        }
-        else
+        int index = 0;
+        foreach (var schemaBuilder in schemaBuilders)
         {
-            if (this.ShardingTables.Count > 1)
-            {
-                var tableSegment = this.ShardingTables.Find(f => f.ShardingType > ShardingTableType.MultiTable);
-                builder.Append($"name LIKE '{tableSegment.Mapper.TableName}%'");
-            }
-            else builder.Append($"name LIKE '{this.ShardingTables[0].Mapper.TableName}%'");
+            if (index > 0) builder.Append(" OR ");
+            builder.Append($"b.name='{schemaBuilder.Key}' AND ({schemaBuilder.Value.ToString()})");
+            index++;
         }
+        if (schemaBuilders.Count > 1)
+            builder.Append(')');
         return builder.ToString();
     }
     public override void SetFrom(Expression fieldsAssignment)

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Threading;
@@ -43,6 +44,14 @@ public class Query<T1, T2> : QueryBase, IQuery<T1, T2>
     public virtual IQuery<T1, T2> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        return this;
+    }
+    #endregion
+
+    #region UseTableSchema
+    public virtual IQuery<T1, T2> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
         return this;
     }
     #endregion
@@ -129,13 +138,13 @@ public class Query<T1, T2> : QueryBase, IQuery<T1, T2>
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewIncludableQuery<T1, T2, TMember>(this.DbContext, this.Visitor);
+        var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
+        return this.OrmProvider.NewIncludableQuery<T1, T2, TMember>(this.DbContext, this.Visitor, isIncludeMany);
     }
     public virtual IIncludableQuery<T1, T2, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         base.IncludeManyInternal<TElment>(memberSelector, filter);
-        return this.OrmProvider.NewIncludableQuery<T1, T2, TElment>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewIncludableQuery<T1, T2, TElment>(this.DbContext, this.Visitor, true);
     }
     #endregion
 
@@ -218,7 +227,7 @@ public class Query<T1, T2> : QueryBase, IQuery<T1, T2>
     public virtual long LongCountDistinct<TField>(Expression<Func<T1, T2, TField>> fieldExpr)
         => base.LongCountDistinctInternal<TField>(fieldExpr);
     public virtual async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await base.LongCountDistinctInternalAsync<TField>(fieldExpr);
+        => await base.LongCountDistinctInternalAsync<TField>(fieldExpr, cancellationToken);
     #endregion
 
     #region Aggregate
@@ -283,6 +292,14 @@ public class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
     public virtual IQuery<T1, T2, T3> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        return this;
+    }
+    #endregion
+
+    #region UseTableSchema
+    public virtual IQuery<T1, T2, T3> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
         return this;
     }
     #endregion
@@ -369,13 +386,13 @@ public class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, TMember>(this.DbContext, this.Visitor);
+        var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
+        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, TMember>(this.DbContext, this.Visitor, isIncludeMany);
     }
     public virtual IIncludableQuery<T1, T2, T3, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         base.IncludeManyInternal<TElment>(memberSelector, filter);
-        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, TElment>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, TElment>(this.DbContext, this.Visitor, true);
     }
     #endregion
 
@@ -458,7 +475,7 @@ public class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
     public virtual long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr)
         => base.LongCountDistinctInternal<TField>(fieldExpr);
     public virtual async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await base.LongCountDistinctInternalAsync<TField>(fieldExpr);
+        => await base.LongCountDistinctInternalAsync<TField>(fieldExpr, cancellationToken);
     #endregion
 
     #region Aggregate
@@ -523,6 +540,14 @@ public class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
     public virtual IQuery<T1, T2, T3, T4> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        return this;
+    }
+    #endregion
+
+    #region UseTableSchema
+    public virtual IQuery<T1, T2, T3, T4> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
         return this;
     }
     #endregion
@@ -609,13 +634,13 @@ public class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, TMember>(this.DbContext, this.Visitor);
+        var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
+        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, TMember>(this.DbContext, this.Visitor, isIncludeMany);
     }
     public virtual IIncludableQuery<T1, T2, T3, T4, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         base.IncludeManyInternal<TElment>(memberSelector, filter);
-        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, TElment>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, TElment>(this.DbContext, this.Visitor, true);
     }
     #endregion
 
@@ -698,7 +723,7 @@ public class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
     public virtual long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr)
         => base.LongCountDistinctInternal<TField>(fieldExpr);
     public virtual async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await base.LongCountDistinctInternalAsync<TField>(fieldExpr);
+        => await base.LongCountDistinctInternalAsync<TField>(fieldExpr, cancellationToken);
     #endregion
 
     #region Aggregate
@@ -763,6 +788,14 @@ public class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
     public virtual IQuery<T1, T2, T3, T4, T5> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        return this;
+    }
+    #endregion
+
+    #region UseTableSchema
+    public virtual IQuery<T1, T2, T3, T4, T5> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
         return this;
     }
     #endregion
@@ -849,13 +882,13 @@ public class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, TMember>(this.DbContext, this.Visitor);
+        var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
+        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, TMember>(this.DbContext, this.Visitor, isIncludeMany);
     }
     public virtual IIncludableQuery<T1, T2, T3, T4, T5, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         base.IncludeManyInternal<TElment>(memberSelector, filter);
-        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, TElment>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, TElment>(this.DbContext, this.Visitor, true);
     }
     #endregion
 
@@ -938,7 +971,7 @@ public class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
     public virtual long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr)
         => base.LongCountDistinctInternal<TField>(fieldExpr);
     public virtual async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await base.LongCountDistinctInternalAsync<TField>(fieldExpr);
+        => await base.LongCountDistinctInternalAsync<TField>(fieldExpr, cancellationToken);
     #endregion
 
     #region Aggregate
@@ -1003,6 +1036,14 @@ public class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T
     public virtual IQuery<T1, T2, T3, T4, T5, T6> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        return this;
+    }
+    #endregion
+
+    #region UseTableSchema
+    public virtual IQuery<T1, T2, T3, T4, T5, T6> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
         return this;
     }
     #endregion
@@ -1089,13 +1130,13 @@ public class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, TMember>(this.DbContext, this.Visitor);
+        var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
+        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, TMember>(this.DbContext, this.Visitor, isIncludeMany);
     }
     public virtual IIncludableQuery<T1, T2, T3, T4, T5, T6, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         base.IncludeManyInternal<TElment>(memberSelector, filter);
-        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, TElment>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, TElment>(this.DbContext, this.Visitor, true);
     }
     #endregion
 
@@ -1178,7 +1219,7 @@ public class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T
     public virtual long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr)
         => base.LongCountDistinctInternal<TField>(fieldExpr);
     public virtual async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await base.LongCountDistinctInternalAsync<TField>(fieldExpr);
+        => await base.LongCountDistinctInternalAsync<TField>(fieldExpr, cancellationToken);
     #endregion
 
     #region Aggregate
@@ -1243,6 +1284,14 @@ public class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        return this;
+    }
+    #endregion
+
+    #region UseTableSchema
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
         return this;
     }
     #endregion
@@ -1329,13 +1378,13 @@ public class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember>(this.DbContext, this.Visitor);
+        var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
+        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember>(this.DbContext, this.Visitor, isIncludeMany);
     }
     public virtual IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         base.IncludeManyInternal<TElment>(memberSelector, filter);
-        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TElment>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TElment>(this.DbContext, this.Visitor, true);
     }
     #endregion
 
@@ -1418,7 +1467,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T
     public virtual long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr)
         => base.LongCountDistinctInternal<TField>(fieldExpr);
     public virtual async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await base.LongCountDistinctInternalAsync<TField>(fieldExpr);
+        => await base.LongCountDistinctInternalAsync<TField>(fieldExpr, cancellationToken);
     #endregion
 
     #region Aggregate
@@ -1483,6 +1532,14 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        return this;
+    }
+    #endregion
+
+    #region UseTableSchema
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
         return this;
     }
     #endregion
@@ -1569,13 +1626,13 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember>(this.DbContext, this.Visitor);
+        var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
+        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember>(this.DbContext, this.Visitor, isIncludeMany);
     }
     public virtual IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         base.IncludeManyInternal<TElment>(memberSelector, filter);
-        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TElment>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TElment>(this.DbContext, this.Visitor, true);
     }
     #endregion
 
@@ -1658,7 +1715,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T
     public virtual long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr)
         => base.LongCountDistinctInternal<TField>(fieldExpr);
     public virtual async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await base.LongCountDistinctInternalAsync<TField>(fieldExpr);
+        => await base.LongCountDistinctInternalAsync<TField>(fieldExpr, cancellationToken);
     #endregion
 
     #region Aggregate
@@ -1723,6 +1780,14 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        return this;
+    }
+    #endregion
+
+    #region UseTableSchema
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
         return this;
     }
     #endregion
@@ -1809,13 +1874,13 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>(this.DbContext, this.Visitor);
+        var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
+        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>(this.DbContext, this.Visitor, isIncludeMany);
     }
     public virtual IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         base.IncludeManyInternal<TElment>(memberSelector, filter);
-        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TElment>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TElment>(this.DbContext, this.Visitor, true);
     }
     #endregion
 
@@ -1898,7 +1963,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T
     public virtual long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr)
         => base.LongCountDistinctInternal<TField>(fieldExpr);
     public virtual async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await base.LongCountDistinctInternalAsync<TField>(fieldExpr);
+        => await base.LongCountDistinctInternalAsync<TField>(fieldExpr, cancellationToken);
     #endregion
 
     #region Aggregate
@@ -1963,6 +2028,14 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        return this;
+    }
+    #endregion
+
+    #region UseTableSchema
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
         return this;
     }
     #endregion
@@ -2049,13 +2122,13 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>(this.DbContext, this.Visitor);
+        var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
+        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>(this.DbContext, this.Visitor, isIncludeMany);
     }
     public virtual IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         base.IncludeManyInternal<TElment>(memberSelector, filter);
-        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TElment>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TElment>(this.DbContext, this.Visitor, true);
     }
     #endregion
 
@@ -2138,7 +2211,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<
     public virtual long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr)
         => base.LongCountDistinctInternal<TField>(fieldExpr);
     public virtual async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await base.LongCountDistinctInternalAsync<TField>(fieldExpr);
+        => await base.LongCountDistinctInternalAsync<TField>(fieldExpr, cancellationToken);
     #endregion
 
     #region Aggregate
@@ -2203,6 +2276,14 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQ
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        return this;
+    }
+    #endregion
+
+    #region UseTableSchema
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
         return this;
     }
     #endregion
@@ -2289,13 +2370,13 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQ
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>(this.DbContext, this.Visitor);
+        var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
+        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>(this.DbContext, this.Visitor, isIncludeMany);
     }
     public virtual IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         base.IncludeManyInternal<TElment>(memberSelector, filter);
-        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TElment>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TElment>(this.DbContext, this.Visitor, true);
     }
     #endregion
 
@@ -2378,7 +2459,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQ
     public virtual long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr)
         => base.LongCountDistinctInternal<TField>(fieldExpr);
     public virtual async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await base.LongCountDistinctInternalAsync<TField>(fieldExpr);
+        => await base.LongCountDistinctInternalAsync<TField>(fieldExpr, cancellationToken);
     #endregion
 
     #region Aggregate
@@ -2443,6 +2524,14 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBas
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        return this;
+    }
+    #endregion
+
+    #region UseTableSchema
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
         return this;
     }
     #endregion
@@ -2529,13 +2618,13 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBas
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>(this.DbContext, this.Visitor);
+        var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
+        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>(this.DbContext, this.Visitor, isIncludeMany);
     }
     public virtual IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         base.IncludeManyInternal<TElment>(memberSelector, filter);
-        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TElment>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TElment>(this.DbContext, this.Visitor, true);
     }
     #endregion
 
@@ -2618,7 +2707,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBas
     public virtual long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr)
         => base.LongCountDistinctInternal<TField>(fieldExpr);
     public virtual async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await base.LongCountDistinctInternalAsync<TField>(fieldExpr);
+        => await base.LongCountDistinctInternalAsync<TField>(fieldExpr, cancellationToken);
     #endregion
 
     #region Aggregate
@@ -2683,6 +2772,14 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Que
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        return this;
+    }
+    #endregion
+
+    #region UseTableSchema
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
         return this;
     }
     #endregion
@@ -2769,13 +2866,13 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Que
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>(this.DbContext, this.Visitor);
+        var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
+        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>(this.DbContext, this.Visitor, isIncludeMany);
     }
     public virtual IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         base.IncludeManyInternal<TElment>(memberSelector, filter);
-        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TElment>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TElment>(this.DbContext, this.Visitor, true);
     }
     #endregion
 
@@ -2858,7 +2955,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Que
     public virtual long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr)
         => base.LongCountDistinctInternal<TField>(fieldExpr);
     public virtual async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await base.LongCountDistinctInternalAsync<TField>(fieldExpr);
+        => await base.LongCountDistinctInternalAsync<TField>(fieldExpr, cancellationToken);
     #endregion
 
     #region Aggregate
@@ -2923,6 +3020,14 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> 
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        return this;
+    }
+    #endregion
+
+    #region UseTableSchema
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
         return this;
     }
     #endregion
@@ -3009,13 +3114,13 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> 
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>(this.DbContext, this.Visitor);
+        var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
+        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>(this.DbContext, this.Visitor, isIncludeMany);
     }
     public virtual IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         base.IncludeManyInternal<TElment>(memberSelector, filter);
-        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TElment>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TElment>(this.DbContext, this.Visitor, true);
     }
     #endregion
 
@@ -3098,7 +3203,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> 
     public virtual long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr)
         => base.LongCountDistinctInternal<TField>(fieldExpr);
     public virtual async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await base.LongCountDistinctInternalAsync<TField>(fieldExpr);
+        => await base.LongCountDistinctInternalAsync<TField>(fieldExpr, cancellationToken);
     #endregion
 
     #region Aggregate
@@ -3163,6 +3268,14 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        return this;
+    }
+    #endregion
+
+    #region UseTableSchema
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
         return this;
     }
     #endregion
@@ -3249,13 +3362,13 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>(this.DbContext, this.Visitor);
+        var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
+        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>(this.DbContext, this.Visitor, isIncludeMany);
     }
     public virtual IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         base.IncludeManyInternal<TElment>(memberSelector, filter);
-        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TElment>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TElment>(this.DbContext, this.Visitor, true);
     }
     #endregion
 
@@ -3338,7 +3451,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
     public virtual long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr)
         => base.LongCountDistinctInternal<TField>(fieldExpr);
     public virtual async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await base.LongCountDistinctInternalAsync<TField>(fieldExpr);
+        => await base.LongCountDistinctInternalAsync<TField>(fieldExpr, cancellationToken);
     #endregion
 
     #region Aggregate
@@ -3407,6 +3520,14 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
     }
     #endregion
 
+    #region UseTableSchema
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
+        return this;
+    }
+    #endregion
+
     #region Join
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> joinOn)
     {
@@ -3431,13 +3552,13 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));
 
-        base.IncludeInternal<TMember>(memberSelector);
-        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember>(this.DbContext, this.Visitor);
+        var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
+        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember>(this.DbContext, this.Visitor, isIncludeMany);
     }
     public virtual IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         base.IncludeManyInternal<TElment>(memberSelector, filter);
-        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TElment>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TElment>(this.DbContext, this.Visitor, true);
     }
     #endregion
 
@@ -3520,7 +3641,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
     public virtual long LongCountDistinct<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr)
         => base.LongCountDistinctInternal<TField>(fieldExpr);
     public virtual async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await base.LongCountDistinctInternalAsync<TField>(fieldExpr);
+        => await base.LongCountDistinctInternalAsync<TField>(fieldExpr, cancellationToken);
     #endregion
 
     #region Aggregate

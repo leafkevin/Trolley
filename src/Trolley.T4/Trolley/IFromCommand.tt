@@ -95,6 +95,15 @@ public interface IFromCommand<T> : IFromCommand
     IFromCommand<T> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
     #endregion
 
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T> UseTableSchema(string tableSchema);
+    #endregion
+
     #region Union/UnionAll
     IFromCommand<T> Union(IQuery<T> subQuery);
     IFromCommand<T> Union(Func<IFromQuery, IQuery<T>> subQuery);
@@ -321,7 +330,6 @@ public interface IFromCommand<T> : IFromCommand
     /// <param name="fieldsExpr">字段选择表达式</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr);
-
     /// <summary>
     /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
     /// <code>
@@ -394,6 +402,15 @@ public interface IFromCommand<<#=tables#>> : IFromCommand
     /// <param name="fieldValue3">第三个值</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<<#=tables#>> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    #endregion
+
+    #region UseTableSchema
+    /// <summary>
+    /// 切换TableSchema，非默认TableSchema才有效
+    /// </summary>
+    /// <param name="tableSchema">指定TableSchema</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<<#=tables#>> UseTableSchema(string tableSchema);
     #endregion
 
     #region Join
@@ -645,22 +662,6 @@ public interface IFromCommand<<#=tables#>> : IFromCommand
     /// <param name="fieldsExpr">字段选择表达式</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr);
-    /// <summary>
-    /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
-    /// <code>
-    /// .SelectAggregate((x, a, b, ...) =&gt; new
-    /// {
-    ///     OrderCount = x.Count(a.Id),
-    ///     TotalAmount = x.Sum(a.TotalAmount)
-    /// })
-    /// </code>
-    /// 生成的SQL:
-    /// <code>SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` ... </code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型，通常是一个匿名类</typeparam>
-    /// <param name="fieldsExpr">字段选择表达式，单个或多个聚合字段的匿名对象</param>
-    /// <returns>返回查询对象</returns>
-    IFromCommand<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, <#=tables#>, TTarget>> fieldsExpr);
     #endregion
 }
 <#  }#>
