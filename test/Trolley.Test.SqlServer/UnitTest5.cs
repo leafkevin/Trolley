@@ -53,7 +53,7 @@ public class UnitTest5 : UnitTestBase
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();
-        dbFactory = serviceProvider.GetService<IOrmDbFactory>();
+        this.dbFactory = serviceProvider.GetService<IOrmDbFactory>();
     }
     [Fact]
     public async Task MultipleQuery()
@@ -89,10 +89,10 @@ public class UnitTest5 : UnitTestBase
         var products = await reader.ReadAsync<Product>();
         var groupedOrderInfo = await reader.ReadFirstAsync<dynamic>();
         Assert.NotNull(userInfo);
-        Assert.True(userInfo.Id == 1);
-        Assert.True(orderInfo.Id == "1");
-        Assert.True(groupedOrderInfo.Id == "1");
-        Assert.True(groupedOrderInfo.Grouping.OrderId == "1");
+        Assert.Equal(1, userInfo.Id);
+        Assert.Equal("1", orderInfo.Id);
+        Assert.Equal("1", groupedOrderInfo.Id);
+        Assert.Equal("1", groupedOrderInfo.Grouping.OrderId);
     }
     [Fact]
     public async Task MultipleCommand()

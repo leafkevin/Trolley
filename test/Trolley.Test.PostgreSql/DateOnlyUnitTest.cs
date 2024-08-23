@@ -82,12 +82,12 @@ public class DateOnlyUnitTest : UnitTestBase
                 DateOnly.FromDateTime(DateTime.Now).DayOfWeek
             })
             .ToSql(out var dbParameters);
-        Assert.True(sql == "SELECT CURRENT_DATE AS \"Today\",(CURRENT_TIMESTAMP::DATE) AS \"Today1\",DATE '2024-07-15' AS \"FromDayNumber\",@p0 AS \"localDate\",DATE '0001-01-01' AS \"MinValue\",DATE '9999-12-31' AS \"MaxValue\",(a.\"UpdatedAt\"=DATE '2023-03-25') AS \"IsEquals\",(a.\"UpdatedAt\"=@p1) AS \"IsEquals1\",(CURRENT_TIMESTAMP::DATE-DATE '0001-01-01') AS \"DayNumber\",(EXTRACT(DAY FROM CURRENT_TIMESTAMP::DATE)::INT4) AS \"Day\",(EXTRACT(MONTH FROM CURRENT_TIMESTAMP::DATE)::INT4) AS \"Month\",(EXTRACT(YEAR FROM CURRENT_TIMESTAMP::DATE)::INT4) AS \"Year\",(EXTRACT(DOW FROM CURRENT_TIMESTAMP::DATE)::INT4) AS \"DayOfWeek\" FROM \"sys_user\" a WHERE a.\"Id\"=1");
-        Assert.True(dbParameters.Count == 2);
+        Assert.Equal("SELECT CURRENT_DATE AS \"Today\",(CURRENT_TIMESTAMP::DATE) AS \"Today1\",DATE '2024-07-15' AS \"FromDayNumber\",@p0 AS \"localDate\",DATE '0001-01-01' AS \"MinValue\",DATE '9999-12-31' AS \"MaxValue\",(a.\"UpdatedAt\"=DATE '2023-03-25') AS \"IsEquals\",(a.\"UpdatedAt\"=@p1) AS \"IsEquals1\",(CURRENT_TIMESTAMP::DATE-DATE '0001-01-01') AS \"DayNumber\",(EXTRACT(DAY FROM CURRENT_TIMESTAMP::DATE)::INT4) AS \"Day\",(EXTRACT(MONTH FROM CURRENT_TIMESTAMP::DATE)::INT4) AS \"Month\",(EXTRACT(YEAR FROM CURRENT_TIMESTAMP::DATE)::INT4) AS \"Year\",(EXTRACT(DOW FROM CURRENT_TIMESTAMP::DATE)::INT4) AS \"DayOfWeek\" FROM \"sys_user\" a WHERE a.\"Id\"=1", sql);
+        Assert.Equal(2, dbParameters.Count);
         Assert.True(dbParameters[0].Value.GetType() == typeof(DateOnly));
         Assert.True(dbParameters[1].Value.GetType() == typeof(DateOnly));
-        Assert.True((DateOnly)dbParameters[0].Value == localDate);
-        Assert.True((DateOnly)dbParameters[1].Value == localDate);
+        Assert.Equal(localDate, (DateOnly)dbParameters[0].Value);
+        Assert.Equal(localDate, (DateOnly)dbParameters[1].Value);
 
         var result = await repository.From<User>()
             .Where(f => f.Id == 1)
@@ -120,7 +120,7 @@ public class DateOnlyUnitTest : UnitTestBase
         Assert.True(result.Day == DateOnly.FromDateTime(DateTime.UtcNow).Day);
         Assert.True(result.Month == DateOnly.FromDateTime(DateTime.UtcNow).Month);
         Assert.True(result.Year == DateOnly.FromDateTime(DateTime.UtcNow).Year);
-        Assert.True(result.DayOfWeek == DateOnly.FromDateTime(DateTime.UtcNow).DayOfWeek);
+        Assert.Equal(result.DayOfWeek, DateOnly.FromDateTime(DateTime.UtcNow).DayOfWeek);
     }
     [Fact]
     public async Task AddCompareTo()
@@ -140,7 +140,7 @@ public class DateOnlyUnitTest : UnitTestBase
                 ParseExact = DateOnly.ParseExact("05-07/2023", "MM-dd/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None)
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT (a.\"DateOnlyField\"+30) AS \"AddDays\",((a.\"DateOnlyField\"+INTERVAL '1 MON'*5)::DATE) AS \"AddMonths\",((a.\"DateOnlyField\"+INTERVAL '1Y'*2)::DATE) AS \"AddYears\",(CASE WHEN a.\"DateOnlyField\"=@p0 THEN 0 WHEN a.\"DateOnlyField\">@p0 THEN 1 ELSE -1 END) AS \"CompareTo\",@p1 AS \"Parse\",DATE '2023-05-07' AS \"ParseExact\" FROM \"sys_update_entity\" a WHERE a.\"Id\"=1");
+        Assert.Equal("SELECT (a.\"DateOnlyField\"+30) AS \"AddDays\",((a.\"DateOnlyField\"+INTERVAL '1 MON'*5)::DATE) AS \"AddMonths\",((a.\"DateOnlyField\"+INTERVAL '1Y'*2)::DATE) AS \"AddYears\",(CASE WHEN a.\"DateOnlyField\"=@p0 THEN 0 WHEN a.\"DateOnlyField\">@p0 THEN 1 ELSE -1 END) AS \"CompareTo\",@p1 AS \"Parse\",DATE '2023-05-07' AS \"ParseExact\" FROM \"sys_update_entity\" a WHERE a.\"Id\"=1", sql);
 
         var now = DateTime.Now;
         var result = await repository.From<UpdateEntity>()

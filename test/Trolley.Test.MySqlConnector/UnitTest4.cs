@@ -132,7 +132,7 @@ public class UnitTest4 : UnitTestBase
         var sql = repository.Delete<User>()
             .Where(f => f.Id == 1)
             .ToSql(out var parameters);
-        Assert.True(sql == "DELETE FROM `sys_user` WHERE `Id`=1");
+        Assert.Equal("DELETE FROM `sys_user` WHERE `Id`=1", sql);
     }
     [Fact]
     public async Task Delete_Multi()
@@ -179,19 +179,19 @@ public class UnitTest4 : UnitTestBase
         var sql = repository.Delete<User>()
             .Where(new[] { new { Id = 1 }, new { Id = 2 } })
             .ToSql(out var parameters);
-        Assert.True(sql == "DELETE FROM `sys_user` WHERE `Id` IN (@Id0,@Id1)");
-        Assert.True((int)parameters[0].Value == 1);
-        Assert.True((int)parameters[1].Value == 2);
+        Assert.Equal("DELETE FROM `sys_user` WHERE `Id` IN (@Id0,@Id1)", sql);
+        Assert.Equal(1, (int)parameters[0].Value);
+        Assert.Equal(2, (int)parameters[1].Value);
 
         var sql1 = repository.Delete<Function>()
             .Where(new[] { new { MenuId = 1, PageId = 1 }, new { MenuId = 2, PageId = 2 } })
             .ToSql(out parameters);
-        Assert.True(sql1 == "DELETE FROM `sys_function` WHERE `MenuId`=@MenuId0 AND `PageId`=@PageId0 OR `MenuId`=@MenuId1 AND `PageId`=@PageId1");
-        Assert.True(parameters.Count == 4);
-        Assert.True((int)parameters[0].Value == 1);
-        Assert.True((int)parameters[1].Value == 1);
-        Assert.True((int)parameters[2].Value == 2);
-        Assert.True((int)parameters[3].Value == 2);
+        Assert.Equal("DELETE FROM `sys_function` WHERE `MenuId`=@MenuId0 AND `PageId`=@PageId0 OR `MenuId`=@MenuId1 AND `PageId`=@PageId1", sql1);
+        Assert.Equal(4, parameters.Count);
+        Assert.Equal(1, (int)parameters[0].Value);
+        Assert.Equal(1, (int)parameters[1].Value);
+        Assert.Equal(2, (int)parameters[2].Value);
+        Assert.Equal(2, (int)parameters[3].Value);
     }
     [Fact]
     public async Task Delete_Multi1()
@@ -238,18 +238,18 @@ public class UnitTest4 : UnitTestBase
         var sql = repository.Delete<User>()
             .Where(new int[] { 1, 2 })
             .ToSql(out var parameters);
-        Assert.True(sql == "DELETE FROM `sys_user` WHERE `Id` IN (@Id0,@Id1)");
-        Assert.True((int)parameters[0].Value == 1);
-        Assert.True((int)parameters[1].Value == 2);
+        Assert.Equal("DELETE FROM `sys_user` WHERE `Id` IN (@Id0,@Id1)", sql);
+        Assert.Equal(1, (int)parameters[0].Value);
+        Assert.Equal(2, (int)parameters[1].Value);
 
         var orderNos = new string[] { "ON_001", "ON_002", "ON_003" };
         sql = repository.Delete<Order>()
             .Where(f => f.BuyerId == 1 && orderNos.Contains(f.OrderNo))
             .ToSql(out parameters);
-        Assert.True(sql == "DELETE FROM `sys_order` WHERE `BuyerId`=1 AND `OrderNo` IN (@p0,@p1,@p2)");
-        Assert.True((string)parameters[0].Value == orderNos[0]);
-        Assert.True((string)parameters[1].Value == orderNos[1]);
-        Assert.True((string)parameters[2].Value == orderNos[2]);
+        Assert.Equal("DELETE FROM `sys_order` WHERE `BuyerId`=1 AND `OrderNo` IN (@p0,@p1,@p2)", sql);
+        Assert.Equal(orderNos[0], (string)parameters[0].Value);
+        Assert.Equal(orderNos[1], (string)parameters[1].Value);
+        Assert.Equal(orderNos[2], (string)parameters[2].Value);
     }
     [Fact]
     public async Task Delete_Multi_Where()
@@ -296,7 +296,7 @@ public class UnitTest4 : UnitTestBase
         var sql = repository.Delete<User>()
            .Where(f => new int[] { 1, 2 }.Contains(f.Id))
            .ToSql(out var parameters);
-        Assert.True(sql == "DELETE FROM `sys_user` WHERE `Id` IN (1,2)");
+        Assert.Equal("DELETE FROM `sys_user` WHERE `Id` IN (1,2)", sql);
         //Assert.True((int)parameters[0].Value == 1);
         //Assert.True((int)parameters[1].Value == 2);
     }
@@ -309,7 +309,7 @@ public class UnitTest4 : UnitTestBase
             .Where(f => f.Name.Contains("kevin"))
             .And(isMale.HasValue, f => f.Age > 25)
             .ToSql(out _);
-        Assert.True(sql == "DELETE FROM `sys_user` WHERE `Name` LIKE '%kevin%' AND `Age`>25");
+        Assert.Equal("DELETE FROM `sys_user` WHERE `Name` LIKE '%kevin%' AND `Age`>25", sql);
     }
     [Fact]
     public void Delete_Enum_Fields()
@@ -318,28 +318,28 @@ public class UnitTest4 : UnitTestBase
         var sql1 = repository.Delete<User>()
             .Where(f => f.Gender == Gender.Male)
             .ToSql(out _);
-        Assert.True(sql1 == "DELETE FROM `sys_user` WHERE `Gender`='Male'");
+        Assert.Equal("DELETE FROM `sys_user` WHERE `Gender`='Male'", sql1);
 
         var gender = Gender.Male;
         var sql2 = repository.Delete<User>()
             .Where(f => f.Gender == gender)
             .ToSql(out var parameters1);
-        Assert.True(sql2 == "DELETE FROM `sys_user` WHERE `Gender`=@p0");
-        Assert.True(parameters1[0].ParameterName == "@p0");
+        Assert.Equal("DELETE FROM `sys_user` WHERE `Gender`=@p0", sql2);
+        Assert.Equal("@p0", parameters1[0].ParameterName);
         Assert.True(parameters1[0].Value.GetType() == typeof(string));
         Assert.True((string)parameters1[0].Value == gender.ToString());
 
         var sql3 = repository.Delete<Company>()
              .Where(f => f.Nature == CompanyNature.Internet)
              .ToSql(out _);
-        Assert.True(sql3 == "DELETE FROM `sys_company` WHERE `Nature`='Internet'");
+        Assert.Equal("DELETE FROM `sys_company` WHERE `Nature`='Internet'", sql3);
 
         var nature = CompanyNature.Internet;
         var sql4 = repository.Delete<Company>()
              .Where(f => f.Nature == nature)
              .ToSql(out var parameters2);
-        Assert.True(sql4 == "DELETE FROM `sys_company` WHERE `Nature`=@p0");
-        Assert.True(parameters2[0].ParameterName == "@p0");
+        Assert.Equal("DELETE FROM `sys_company` WHERE `Nature`=@p0", sql4);
+        Assert.Equal("@p0", parameters2[0].ParameterName);
         Assert.True(parameters2[0].Value.GetType() == typeof(string));
         Assert.True((string)parameters2[0].Value == CompanyNature.Internet.ToString());
     }

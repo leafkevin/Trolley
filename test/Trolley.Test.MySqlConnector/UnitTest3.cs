@@ -164,12 +164,12 @@ public class UnitTest3 : UnitTestBase
             })
             .ToSql(out var dbParameters);
         Assert.Equal("UPDATE `sys_order_detail` SET `Price`=@Price0,`Quantity`=@Quantity0 WHERE `Id`=@kId0;UPDATE `sys_order_detail` SET `Price`=@Price1,`Quantity`=@Quantity1 WHERE `Id`=@kId1;UPDATE `sys_order_detail` SET `Price`=@Price2,`Quantity`=@Quantity2 WHERE `Id`=@kId2;UPDATE `sys_order_detail` SET `Price`=@Price3,`Quantity`=@Quantity3 WHERE `Id`=@kId3;UPDATE `sys_order_detail` SET `Price`=@Price4,`Quantity`=@Quantity4 WHERE `Id`=@kId4", sql);
-        Assert.True(dbParameters.Count == parameters.Count * 3);
+        Assert.Equal(parameters.Count * 3, dbParameters.Count);
         for (int i = 0; i < parameters.Count; i++)
         {
-            Assert.True(dbParameters[i * 3].ParameterName == $"@Price{i}");
-            Assert.True(dbParameters[i * 3 + 1].ParameterName == $"@Quantity{i}");
-            Assert.True(dbParameters[i * 3 + 2].ParameterName == $"@kId{i}");
+            Assert.Equal($"@Price{i}", dbParameters[i * 3].ParameterName);
+            Assert.Equal($"@Quantity{i}", dbParameters[i * 3 + 1].ParameterName);
+            Assert.Equal($"@kId{i}", dbParameters[i * 3 + 2].ParameterName);
         }
 
         var ids = parameters.Select(f => f.Id).ToList();

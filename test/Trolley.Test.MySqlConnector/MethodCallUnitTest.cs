@@ -88,7 +88,7 @@ public class MethodCallUnitTest : UnitTestBase
             .Where(f => new List<string> { "kevin", "cindy" }.Contains(f.Name))
             .Select(f => f.Id)
             .ToSql(out _);
-        Assert.True(sql == "SELECT a.`Id` FROM `sys_user` a WHERE a.`Name` IN ('kevin','cindy')");
+        Assert.Equal("SELECT a.`Id` FROM `sys_user` a WHERE a.`Name` IN ('kevin','cindy')", sql);
         result = await repository.From<User>()
             .Where(f => new List<string> { "kevin", "cindy" }.Contains(f.Name))
             .ToListAsync();
@@ -100,7 +100,7 @@ public class MethodCallUnitTest : UnitTestBase
             .Where(f => ids.Contains(f.Id))
             .Select(f => f.Id)
             .ToSql(out var dbParameters);
-        Assert.True(sql == "SELECT a.`Id` FROM `sys_user` a WHERE a.`Id` IN (@p0,@p1)");
+        Assert.Equal("SELECT a.`Id` FROM `sys_user` a WHERE a.`Id` IN (@p0,@p1)", sql);
 
         result = repository.From<User>()
             .Where(f => ids.Contains(f.Id))
@@ -129,7 +129,7 @@ public class MethodCallUnitTest : UnitTestBase
             .Where(f => f.Name.Contains("微软"))
             .ToListAsync();
         Assert.NotNull(result1);
-        Assert.True(result1.Count > 0);
+        Assert.Single(result);
     }
     [Fact]
     public async Task Concat()
@@ -156,7 +156,7 @@ public class MethodCallUnitTest : UnitTestBase
             .Select(f => string.Concat(f.Name + "_1_" + isMale, f.Age + 5, isMale) + "_2_" + f.Age + "_3_" + isMale + "_4_" + count)
             .FirstAsync();
         Assert.NotNull(result);
-        Assert.True(result == "leafkevin_1_False30False_2_25_3_False_4_10");
+        Assert.Equal("leafkevin_1_False30False_2_25_3_False_4_10", result);
     }
     [Fact]
     public async Task Format()
@@ -179,7 +179,7 @@ public class MethodCallUnitTest : UnitTestBase
             .Where(f => f.Name.Contains("cindy"))
             .Select(f => $"{f.Name + "222"}_111_{f.Age + isMale.ToString()}_{isMale}_{count}")
             .FirstAsync();
-        Assert.True(result == "cindy222_111_21False_False_5");
+        Assert.Equal("cindy222_111_21False_False_5", result);
     }
     [Fact]
     public void Compare()
@@ -674,5 +674,20 @@ public class MethodCallUnitTest : UnitTestBase
             })
             .FirstAsync();
         Assert.Equal(result2.NewField, $"{result2.EnumField}");
+    }
+    [Fact]
+    public void ContainsEquals()
+    {
+        using var repository = dbFactory.Create();
+        var sql = repository.From<User>()
+            .Where(f => f.Name == string.Concat("千", "11"))
+            .Select(f => f.Id)
+            .ToSql(out _);
+        Assert.Equal("SELECT a.`Id` FROM `sys_user` a WHERE a.`Name`='千11'", sql);
+        sql = repository.From<User>()
+            .Where(f => f.Name.Equals("千11"))
+            .Select(f => f.Id)
+            .ToSql(out _);
+        Assert.Equal("SELECT a.`Id` FROM `sys_user` a WHERE a.`Name`='千11'", sql);
     }
 }

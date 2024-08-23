@@ -52,7 +52,7 @@ public class DateOnlyUnitTest : UnitTestBase
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();
-        dbFactory = serviceProvider.GetService<IOrmDbFactory>();
+        this.dbFactory = serviceProvider.GetService<IOrmDbFactory>();
     }
     [Fact]
     public async Task MemberAccess()
@@ -79,12 +79,12 @@ public class DateOnlyUnitTest : UnitTestBase
                 DateOnly.FromDateTime(DateTime.Now).DayOfWeek
             })
             .ToSql(out var dbParameters);
-        Assert.True(sql == "SELECT CONVERT(DATE,GETDATE()) AS [Today],CAST(GETDATE() AS DATE) AS [Today1],'2024-07-15' AS [FromDayNumber],@p0 AS [localDate],'0001-01-01' AS [MinValue],'9999-12-31' AS [MaxValue],(CASE WHEN a.[UpdatedAt]='2023-03-25' THEN 1 ELSE 0 END) AS [IsEquals],(CASE WHEN a.[UpdatedAt]=@p1 THEN 1 ELSE 0 END) AS [IsEquals1],DATEDIFF(DAY,'0001-01-01',CAST(GETDATE() AS DATE)) AS [DayNumber],DATEPART(DAY,CAST(GETDATE() AS DATE)) AS [Day],DATEPART(MONTH,CAST(GETDATE() AS DATE)) AS [Month],DATEPART(YEAR,CAST(GETDATE() AS DATE)) AS [Year],(DATEPART(WEEKDAY,CAST(GETDATE() AS DATE))-1) AS [DayOfWeek] FROM [sys_user] a WHERE a.[Id]=1");
-        Assert.True(dbParameters.Count == 2);
+        Assert.Equal("SELECT CONVERT(DATE,GETDATE()) AS [Today],CAST(GETDATE() AS DATE) AS [Today1],'2024-07-15' AS [FromDayNumber],@p0 AS [localDate],'0001-01-01' AS [MinValue],'9999-12-31' AS [MaxValue],(CASE WHEN a.[UpdatedAt]='2023-03-25' THEN 1 ELSE 0 END) AS [IsEquals],(CASE WHEN a.[UpdatedAt]=@p1 THEN 1 ELSE 0 END) AS [IsEquals1],DATEDIFF(DAY,'0001-01-01',CAST(GETDATE() AS DATE)) AS [DayNumber],DATEPART(DAY,CAST(GETDATE() AS DATE)) AS [Day],DATEPART(MONTH,CAST(GETDATE() AS DATE)) AS [Month],DATEPART(YEAR,CAST(GETDATE() AS DATE)) AS [Year],(DATEPART(WEEKDAY,CAST(GETDATE() AS DATE))-1) AS [DayOfWeek] FROM [sys_user] a WHERE a.[Id]=1", sql);
+        Assert.Equal(2, dbParameters.Count);
         Assert.True(dbParameters[0].Value.GetType() == typeof(DateOnly));
         Assert.True(dbParameters[1].Value.GetType() == typeof(DateOnly));
-        Assert.True((DateOnly)dbParameters[0].Value == localDate);
-        Assert.True((DateOnly)dbParameters[1].Value == localDate);
+        Assert.Equal(localDate, (DateOnly)dbParameters[0].Value);
+        Assert.Equal(localDate, (DateOnly)dbParameters[1].Value);
 
         var result = await repository.From<User>()
             .Where(f => f.Id == 1)
@@ -106,18 +106,18 @@ public class DateOnlyUnitTest : UnitTestBase
                 DateOnly.FromDateTime(DateTime.Now).DayOfWeek
             })
             .FirstAsync();
-        Assert.True(result.MinValue == DateOnly.MinValue);
-        Assert.True(result.MaxValue == DateOnly.MaxValue);
-        Assert.True(result.Today == DateTime.UtcNow.Date);
-        Assert.True(result.Today1 == DateOnly.FromDateTime(DateTime.UtcNow));
-        Assert.True(result.localDate == localDate);
-        Assert.True(result.IsEquals == result.UpdatedAt.Equals(DateTime.Parse("2023-03-25")));
-        Assert.True(result.IsEquals1 == result.UpdatedAt.Equals(localDate));
-        Assert.True(result.DayNumber == DateOnly.FromDateTime(DateTime.UtcNow).DayNumber);
-        Assert.True(result.Day == DateOnly.FromDateTime(DateTime.UtcNow).Day);
-        Assert.True(result.Month == DateOnly.FromDateTime(DateTime.UtcNow).Month);
-        Assert.True(result.Year == DateOnly.FromDateTime(DateTime.UtcNow).Year);
-        Assert.True(result.DayOfWeek == DateOnly.FromDateTime(DateTime.UtcNow).DayOfWeek);
+        Assert.Equal(DateOnly.MinValue, result.MinValue);
+        Assert.Equal(DateOnly.MaxValue, result.MaxValue);
+        Assert.Equal(DateTime.Now.Date, result.Today);
+        Assert.Equal(DateOnly.FromDateTime(DateTime.Now), result.Today1);
+        Assert.Equal(localDate, result.localDate);
+        Assert.Equal(result.UpdatedAt.Equals(DateTime.Parse("2023-03-25")), result.IsEquals);
+        Assert.Equal(result.UpdatedAt.Equals(localDate), result.IsEquals1);
+        Assert.Equal(DateOnly.FromDateTime(DateTime.Now).DayNumber, result.DayNumber);
+        Assert.Equal(DateOnly.FromDateTime(DateTime.Now).Day, result.Day);
+        Assert.Equal(DateOnly.FromDateTime(DateTime.Now).Month, result.Month);
+        Assert.Equal(DateOnly.FromDateTime(DateTime.Now).Year, result.Year);
+        Assert.Equal(result.DayOfWeek, DateOnly.FromDateTime(DateTime.Now).DayOfWeek);
     }
     [Fact]
     public async Task AddCompareTo()
@@ -137,7 +137,7 @@ public class DateOnlyUnitTest : UnitTestBase
                 ParseExact = DateOnly.ParseExact("05-07/2023", "MM-dd/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None)
             })
             .ToSql(out _);
-        Assert.True(sql == "SELECT DATEADD(DAY,30,a.[DateOnlyField]) AS [AddDays],DATEADD(MONTH,5,a.[DateOnlyField]) AS [AddMonths],DATEADD(YEAR,2,a.[DateOnlyField]) AS [AddYears],(CASE WHEN a.[DateOnlyField]=@p0 THEN 0 WHEN a.[DateOnlyField]>@p0 THEN 1 ELSE -1 END) AS [CompareTo],@p1 AS [Parse],'2023-05-07' AS [ParseExact] FROM [sys_update_entity] a WHERE a.[Id]=1");
+         Assert.Equal("SELECT DATEADD(DAY,30,a.[DateOnlyField]) AS [AddDays],DATEADD(MONTH,5,a.[DateOnlyField]) AS [AddMonths],DATEADD(YEAR,2,a.[DateOnlyField]) AS [AddYears],(CASE WHEN a.[DateOnlyField]=@p0 THEN 0 WHEN a.[DateOnlyField]>@p0 THEN 1 ELSE -1 END) AS [CompareTo],@p1 AS [Parse],'2023-05-07' AS [ParseExact] FROM [sys_update_entity] a WHERE a.[Id]=1", sql);
 
         var now = DateTime.Now;
         var result = await repository.From<UpdateEntity>()
@@ -153,11 +153,11 @@ public class DateOnlyUnitTest : UnitTestBase
                 ParseExact = DateOnly.ParseExact("05-07/2023", "MM-dd/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None)
             })
             .FirstAsync();
-        Assert.True(result.AddDays == result.DateOnlyField.AddDays(30));
-        Assert.True(result.AddMonths == result.DateOnlyField.AddMonths(5));
-        Assert.True(result.AddYears == result.DateOnlyField.AddYears(2));
-        Assert.True(result.CompareTo == result.DateOnlyField.CompareTo(localDate));
-        Assert.True(result.Parse == DateOnly.Parse(localDate.ToString("yyyy-MM-dd")));
-        Assert.True(result.ParseExact == DateOnly.ParseExact("05-07/2023", "MM-dd/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None));
+        Assert.Equal(result.DateOnlyField.AddDays(30), result.AddDays);
+        Assert.Equal(result.DateOnlyField.AddMonths(5), result.AddMonths);
+        Assert.Equal(result.DateOnlyField.AddYears(2), result.AddYears);
+        Assert.Equal(result.DateOnlyField.CompareTo(localDate), result.CompareTo);
+        Assert.Equal(DateOnly.Parse(localDate.ToString("yyyy-MM-dd")), result.Parse);
+        Assert.Equal(DateOnly.ParseExact("05-07/2023", "MM-dd/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None), result.ParseExact);
     }
 }
