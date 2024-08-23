@@ -631,8 +631,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 throw new NotSupportedException("Include导航属性成员，一定要Select对应的实体表，如：\r\nrepository.From<Order>()\r\n    .InnerJoin<User>((x, y) => x.SellerId == y.Id)\r\n    .Include((x, y) => x.Buyer)\r\n    .Include((x, y) => y.Company)\r\n    .Select((x, y) => new { Order = x, Seller = y, ... })");
             var firstMember = rootReaderField.TargetMember;
 
-            (var headSql, Action<StringBuilder, IOrmProvider, object> sqlInitializer) = this.BuildIncludeSqlGetter(targetType, firstMember, includeTableSegment);
-            if (includeTableSegment.IsSharding && includeTableSegment.TableNames.Count > 1)
+            (var headSql, var sqlInitializer) = this.BuildIncludeSqlGetter(targetType, firstMember, includeTableSegment);
+            headSql = string.Format(headSql, this.GetTableName(includeTableSegment));
+
+            if (includeTableSegment.IsSharding && includeTableSegment.TableNames.Count > 0)
             {
                 var sqlBuilder = new StringBuilder();
                 sqlBuilderInitializer.Invoke(sqlBuilder, sqlInitializer);
@@ -1024,8 +1026,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
             var foreignKey = this.OrmProvider.GetFieldName(includeSegment.FromMember.ForeignKey);
             var fields = RepositoryHelper.BuildFieldsSqlPart(this.OrmProvider, includeSegment.Mapper, includeSegment.EntityType, true);
-            var tableName = this.GetTableName(includeSegment);
-            var headSql = $"SELECT {fields} FROM {tableName} WHERE {foreignKey} IN (";
+            var headSql = $"SELECT {fields} FROM {{0}} WHERE {foreignKey} IN (";
             var sqlInitializer = Expression.Lambda<Action<StringBuilder, IOrmProvider, object>>(Expression.Block(blockParameters, blockBodies), builderExpr, ormProviderExpr, targetExpr).Compile();
             return (headSql, sqlInitializer);
         });

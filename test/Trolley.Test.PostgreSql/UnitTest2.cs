@@ -618,6 +618,29 @@ SELECT a.""MenuId"",a.""ParentId"",a.""Url"" FROM ""menuPageList"" a WHERE a.""P
         using var repository = dbFactory.Create();
         var result = repository.From<Order>()
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .Include((x, y) => x.Details)
+            .Where((a, b) => a.TotalAmount > 300 && Sql.In(a.Id, new string[] { "1", "2", "3" }))
+            .Select((x, y) => new { Order = x, Buyer = y })
+            .ToList();
+        Assert.Equal(2, result.Count);
+        Assert.NotNull(result[0].Order);
+        Assert.NotNull(result[0].Order.Details);
+        Assert.NotEmpty(result[0].Order.Details);
+        Assert.Equal(3, result[0].Order.Details.Count);
+        result = repository.From<Order>()
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .Include((x, y) => x.Details)
+            .Where((a, b) => a.TotalAmount > 300 && Sql.In(a.Id, "1", "2", "3"))
+            .Select((x, y) => new { Order = x, Buyer = y })
+            .ToList();
+        Assert.Equal(2, result.Count);
+        Assert.NotNull(result[0].Order);
+        Assert.NotNull(result[0].Order.Details);
+        Assert.NotEmpty(result[0].Order.Details);
+        Assert.Equal(3, result[0].Order.Details.Count);
+		
+		result = repository.From<Order>()
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
             .IncludeMany((x, y) => x.Details)
             .Where((a, b) => a.TotalAmount > 300 && Sql.In(a.Id, new string[] { "1", "2", "3" }))
             .Select((x, y) => new { Order = x, Buyer = y })

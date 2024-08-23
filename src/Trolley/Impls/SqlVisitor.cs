@@ -69,7 +69,7 @@ public class SqlVisitor : ISqlVisitor
             tableSegment.TableNames = new List<string>(tableNames);
             this.ShardingTables ??= new();
             if (this.ShardingTables.Exists(f => f.ShardingType < ShardingTableType.SubordinateMap))
-                throw new NotSupportedException("一个查询语句中仅支持一个主表多个分表，其他表多个分表只能调用方法UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)构造与主表表名称映射实现多个分表");
+                throw new NotSupportedException("一个查询语句中仅支持一个主表多个分表，其他表多个分表只能调用方法UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)构造与主表表名称映射实现多个分表");
             if (!this.ShardingTables.Exists(f => f.EntityType == tableSegment.EntityType))
             {
                 tableSegment.ShardingId = Guid.NewGuid().ToString("N");
@@ -106,7 +106,7 @@ public class SqlVisitor : ISqlVisitor
             this.IsNeedFetchShardingTables = true;
         }
     }
-    public void UseTable(bool isIncludeMany, Type masterEntityType, Func<string, string, string, string, string> tableNameGetter)
+    public void UseTable(bool isIncludeMany, Type masterEntityType, Func<string, string, string, string> tableNameGetter)
     {
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
         if (this.ShardingProvider == null || !this.ShardingProvider.TryGetTableSharding(tableSegment.EntityType, out var shardingTable))
@@ -116,6 +116,8 @@ public class SqlVisitor : ISqlVisitor
 
         tableSegment.IsSharding = true;
         tableSegment.ShardingType = ShardingTableType.SubordinateMap;
+        if (this.ShardingTables == null)
+            throw new NotSupportedException("当主表有多个分表时，才能使用此方法UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)");
         tableSegment.ShardingDependent = this.ShardingTables.Find(f => f.EntityType == masterEntityType);
         tableSegment.ShardingMapGetter = tableNameGetter;
 
@@ -194,7 +196,7 @@ public class SqlVisitor : ISqlVisitor
             tableSegment.TableNames = new List<string>(tableNames);
             this.ShardingTables ??= new();
             if (this.ShardingTables.Exists(f => f.ShardingType < ShardingTableType.SubordinateMap))
-                throw new NotSupportedException("一个查询语句中仅支持一个主表多个分表，其他表多个分表只能调用方法UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)构造与主表表名称映射实现多个分表");
+                throw new NotSupportedException("一个查询语句中仅支持一个主表多个分表，其他表多个分表只能调用方法UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)构造与主表表名称映射实现多个分表");
             if (!this.ShardingTables.Exists(f => f.EntityType == tableSegment.EntityType))
             {
                 tableSegment.ShardingId = Guid.NewGuid().ToString("N");
@@ -225,7 +227,7 @@ public class SqlVisitor : ISqlVisitor
             tableSegment.TableNames = new List<string>(tableNames);
             this.ShardingTables ??= new();
             if (this.ShardingTables.Exists(f => f.ShardingType < ShardingTableType.SubordinateMap))
-                throw new NotSupportedException("一个查询语句中仅支持一个主表多个分表，其他表多个分表只能调用方法UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)构造与主表表名称映射实现多个分表");
+                throw new NotSupportedException("一个查询语句中仅支持一个主表多个分表，其他表多个分表只能调用方法UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)构造与主表表名称映射实现多个分表");
             if (!this.ShardingTables.Exists(f => f.EntityType == tableSegment.EntityType))
             {
                 tableSegment.ShardingId = Guid.NewGuid().ToString("N");
@@ -250,7 +252,6 @@ public class SqlVisitor : ISqlVisitor
         if (this.ShardingTables.Count > 1)
         {
             var needQueryTables = this.ShardingTables.FindAll(f => f.ShardingType > ShardingTableType.MultiTable);
-
             foreach (var tableSegment in needQueryTables)
             {
                 var entityType = tableSegment.EntityType;
@@ -265,10 +266,10 @@ public class SqlVisitor : ISqlVisitor
                         tableSegment.TableNames = shardingTables.FindAll(f => oldTableNames.Contains(f) && Regex.IsMatch(f, shardingTable.ValidateRegex));
                         break;
                     case ShardingTableType.MasterFilter:
-                        tableSegment.TableNames = shardingTables.FindAll(f => f.Contains(tableName) && Regex.IsMatch(f, shardingTable.ValidateRegex));
+                        tableSegment.TableNames = shardingTables.FindAll(f => f.Contains(tableName) && Regex.IsMatch(f, shardingTable.ValidateRegex) && tableSegment.ShardingFilter.Invoke(f));
                         break;
                     case ShardingTableType.SubordinateMap:
-                        //此处只是把所有可能的分表名称设置一下，在执行前，再做过滤
+                        //此处只是把所有可能的分表名称设置一下，在执行前，再做过滤                      
                         tableSegment.TableNames = shardingTables.FindAll(f => Regex.IsMatch(f, shardingTable.ValidateRegex));
                         break;
                 }

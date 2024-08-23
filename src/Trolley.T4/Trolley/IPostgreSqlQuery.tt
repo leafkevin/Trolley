@@ -37,7 +37,7 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// repository.From&lt;Order&gt;()
     ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTable&lt;Order&gt;((dbKey, orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     .UseTable&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
     ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -53,7 +53,7 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前表分表名获取委托</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
+    new IPostgreSqlQuery<T> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
@@ -650,7 +650,7 @@ public interface IPostgreSqlQuery<<#=tables#>> : IQuery<<#=tables#>>
     /// repository.From&lt;Order&gt;()
     ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTable&lt;Order&gt;((dbKey, orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     .UseTable&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
     ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -666,7 +666,7 @@ public interface IPostgreSqlQuery<<#=tables#>> : IQuery<<#=tables#>>
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前表分表名获取委托</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<<#=tables#>> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
+    new IPostgreSqlQuery<<#=tables#>> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值确定<#=currentTable#>表分表名执行查询，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>

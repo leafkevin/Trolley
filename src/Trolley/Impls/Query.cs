@@ -195,7 +195,7 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
-    public virtual IQuery<T> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public virtual IQuery<T> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTable(false, masterEntityType, tableNameGetter);

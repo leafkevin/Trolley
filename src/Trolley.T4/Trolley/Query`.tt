@@ -42,7 +42,7 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
-    public virtual IQuery<<#=tables#>> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public virtual IQuery<<#=tables#>> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {        
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTable(false, masterEntityType, tableNameGetter);

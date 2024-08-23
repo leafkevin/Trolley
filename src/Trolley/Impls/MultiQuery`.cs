@@ -22,7 +22,7 @@ public class MultiQuery<T1, T2> : MultiQueryBase, IMultiQuery<T1, T2>
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
-    public virtual IMultiQuery<T1, T2> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public virtual IMultiQuery<T1, T2> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTable(false, masterEntityType, tableNameGetter);
@@ -382,7 +382,7 @@ public class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
-    public virtual IMultiQuery<T1, T2, T3> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public virtual IMultiQuery<T1, T2, T3> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTable(false, masterEntityType, tableNameGetter);
@@ -742,7 +742,7 @@ public class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
-    public virtual IMultiQuery<T1, T2, T3, T4> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public virtual IMultiQuery<T1, T2, T3, T4> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTable(false, masterEntityType, tableNameGetter);
@@ -1102,7 +1102,7 @@ public class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
-    public virtual IMultiQuery<T1, T2, T3, T4, T5> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTable(false, masterEntityType, tableNameGetter);
@@ -1462,7 +1462,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTable(false, masterEntityType, tableNameGetter);
@@ -1822,7 +1822,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7> : MultiQueryBase, IMultiQuer
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTable(false, masterEntityType, tableNameGetter);
@@ -2182,7 +2182,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : MultiQueryBase, IMulti
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTable(false, masterEntityType, tableNameGetter);
@@ -2542,7 +2542,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : MultiQueryBase, IM
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTable(false, masterEntityType, tableNameGetter);
@@ -2902,7 +2902,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : MultiQueryBas
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTable(false, masterEntityType, tableNameGetter);
@@ -3262,7 +3262,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : MultiQue
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTable(false, masterEntityType, tableNameGetter);
@@ -3622,7 +3622,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : Mul
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTable(false, masterEntityType, tableNameGetter);
@@ -3982,7 +3982,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTable(false, masterEntityType, tableNameGetter);
@@ -4342,7 +4342,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTable(false, masterEntityType, tableNameGetter);
@@ -4702,7 +4702,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTable(false, masterEntityType, tableNameGetter);
@@ -5062,7 +5062,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
-    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public virtual IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTable(false, masterEntityType, tableNameGetter);

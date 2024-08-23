@@ -121,7 +121,7 @@ public class TableSegment
     /// <summary>
     /// 当前表分表与主表的表名映射委托
     /// </summary>
-    public Func<string, string, string, string, string> ShardingMapGetter { get; set; }
+    public Func<string, string, string, string> ShardingMapGetter { get; set; }
 
     /// <summary>
     /// 生成一个自身引用的副本，主要用在cte表的自身引用

@@ -1316,14 +1316,22 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             var loopCount = masterTableSegment.TableNames.Count;
             if (loopCount > 1) masterTableSegment.TableNames.Sort((x, y) => x.CompareTo(y));
             var origMasterName = masterTableSegment.Mapper.TableName;
+            Dictionary<TableSegment, List<string>> tableShardings = new();
             for (int i = 0; i < loopCount; i++)
             {
                 if (builder.Length > 0) builder.Append(jointMark);
                 var masterTableName = masterTableSegment.TableNames[i];
                 var sql = formatSql.Replace($"__SHARDING_{masterTableSegment.ShardingId}_{origMasterName}", masterTableName);
 
-                if (this.GetdShardingMapTableName(visitor, origMasterName, masterTableName, sql, out sql))
+                if (this.GetdShardingMapTableName(visitor, origMasterName, masterTableName, sql, tableShardings, out sql))
                     builder.Append(sql);
+            }
+            if (tableShardings.Count > 0)
+            {
+                foreach (var tableSharding in tableShardings)
+                {
+                    tableSharding.Key.TableNames = tableSharding.Value;
+                }
             }
         }
         else
@@ -1344,7 +1352,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         builder = null;
         return result;
     }
-    private bool GetdShardingMapTableName(SqlVisitor visitor, string origMasterName, string masterTableName, string formatSql, out string sql)
+    private bool GetdShardingMapTableName(SqlVisitor visitor, string origMasterName, string masterTableName, string formatSql, Dictionary<TableSegment, List<string>> tableShardingNames, out string sql)
     {
         sql = formatSql;
         for (int j = 1; j < visitor.ShardingTables.Count; j++)
@@ -1353,12 +1361,19 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             var origName = tableSegment.Mapper.TableName;
 
             //如果主表分表名不存在，直接忽略本次关联
-            var tableName = tableSegment.ShardingMapGetter.Invoke(this.DbKey, origMasterName, origName, masterTableName);
+            var tableName = tableSegment.ShardingMapGetter.Invoke(origMasterName, origName, masterTableName);
             //主表存在分表，但从表不存在分表，直接忽略本次关联
             //TOTO:此处需要记录日志
             if (!tableSegment.TableNames.Exists(f => f == tableName))
                 return false;
             sql = sql.Replace($"__SHARDING_{tableSegment.ShardingId}_{origName}", tableName);
+            //1:N include表，需要统计一下表名，后续会用到
+            if (visitor.IncludeTables != null && visitor.IncludeTables.Contains(tableSegment))
+            {
+                if (!tableShardingNames.TryGetValue(tableSegment, out var tableNames))
+                    tableShardingNames.TryAdd(tableSegment, tableNames = new List<string>());
+                tableNames.Add(tableName);
+            }
         }
         return true;
     }

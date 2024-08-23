@@ -16,7 +16,7 @@ public class PostgreSqlQuery<T> : Query<T>, IPostgreSqlQuery<T>
         => base.UseTable(tableNames) as IPostgreSqlQuery<T>;
     public override IPostgreSqlQuery<T> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlQuery<T>;
-    public override IPostgreSqlQuery<T> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public override IPostgreSqlQuery<T> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTable<TMasterSharding>(tableNameGetter) as IPostgreSqlQuery<T>;
     public override IPostgreSqlQuery<T> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as IPostgreSqlQuery<T>;
@@ -154,7 +154,7 @@ public class PostgreSqlQuery<T1, T2> : Query<T1, T2>, IPostgreSqlQuery<T1, T2>
         => base.UseTable(tableNames) as IPostgreSqlQuery<T1, T2>;
     public override IPostgreSqlQuery<T1, T2> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlQuery<T1, T2>;
-    public override IPostgreSqlQuery<T1, T2> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public override IPostgreSqlQuery<T1, T2> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTable<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2>;
     public override IPostgreSqlQuery<T1, T2> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as IPostgreSqlQuery<T1, T2>;
@@ -266,7 +266,7 @@ public class PostgreSqlQuery<T1, T2, T3> : Query<T1, T2, T3>, IPostgreSqlQuery<T
         => base.UseTable(tableNames) as IPostgreSqlQuery<T1, T2, T3>;
     public override IPostgreSqlQuery<T1, T2, T3> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlQuery<T1, T2, T3>;
-    public override IPostgreSqlQuery<T1, T2, T3> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public override IPostgreSqlQuery<T1, T2, T3> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTable<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3>;
     public override IPostgreSqlQuery<T1, T2, T3> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as IPostgreSqlQuery<T1, T2, T3>;
@@ -378,7 +378,7 @@ public class PostgreSqlQuery<T1, T2, T3, T4> : Query<T1, T2, T3, T4>, IPostgreSq
         => base.UseTable(tableNames) as IPostgreSqlQuery<T1, T2, T3, T4>;
     public override IPostgreSqlQuery<T1, T2, T3, T4> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlQuery<T1, T2, T3, T4>;
-    public override IPostgreSqlQuery<T1, T2, T3, T4> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public override IPostgreSqlQuery<T1, T2, T3, T4> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTable<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4>;
     public override IPostgreSqlQuery<T1, T2, T3, T4> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as IPostgreSqlQuery<T1, T2, T3, T4>;
@@ -490,7 +490,7 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5> : Query<T1, T2, T3, T4, T5>, IP
         => base.UseTable(tableNames) as IPostgreSqlQuery<T1, T2, T3, T4, T5>;
     public override IPostgreSqlQuery<T1, T2, T3, T4, T5> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5>;
-    public override IPostgreSqlQuery<T1, T2, T3, T4, T5> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public override IPostgreSqlQuery<T1, T2, T3, T4, T5> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTable<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4, T5>;
     public override IPostgreSqlQuery<T1, T2, T3, T4, T5> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as IPostgreSqlQuery<T1, T2, T3, T4, T5>;
@@ -602,7 +602,7 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6> : Query<T1, T2, T3, T4, T5,
         => base.UseTable(tableNames) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6>;
     public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6>;
-    public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTable<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4, T5, T6>;
     public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6>;
@@ -714,7 +714,7 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> : Query<T1, T2, T3, T4,
         => base.UseTable(tableNames) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7>;
     public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7>;
-    public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTable<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7>;
     public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7>;
@@ -826,7 +826,7 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> : Query<T1, T2, T3,
         => base.UseTable(tableNames) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8>;
     public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8>;
-    public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTable<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8>;
     public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8>;
@@ -938,7 +938,7 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : Query<T1, T2,
         => base.UseTable(tableNames) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>;
     public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>;
-    public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTable<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>;
     public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>;
@@ -1050,7 +1050,7 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : Query<T1
         => base.UseTable(tableNames) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>;
     public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>;
-    public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTable<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>;
     public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>;
@@ -1162,7 +1162,7 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : Que
         => base.UseTable(tableNames) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>;
     public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>;
-    public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTable<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>;
     public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>;
@@ -1274,7 +1274,7 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
         => base.UseTable(tableNames) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>;
     public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>;
-    public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTable<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>;
     public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>;
@@ -1386,7 +1386,7 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
         => base.UseTable(tableNames) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>;
     public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>;
-    public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTable<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>;
     public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>;
@@ -1498,7 +1498,7 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
         => base.UseTable(tableNames) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>;
     public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>;
-    public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTable<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>;
     public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>;
@@ -1610,7 +1610,7 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
         => base.UseTable(tableNames) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>;
     public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>;
-    public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTable<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>;
     public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>;
@@ -1722,7 +1722,7 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
         => base.UseTable(tableNames) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>;
     public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>;
-    public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTable<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>;
     public override IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>;

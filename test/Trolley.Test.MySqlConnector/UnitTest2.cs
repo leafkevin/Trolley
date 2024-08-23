@@ -637,6 +637,29 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
         Assert.NotNull(result[0].Order.Details);
         Assert.NotEmpty(result[0].Order.Details);
         Assert.Equal(3, result[0].Order.Details.Count);
+		
+		result = repository.From<Order>()
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .IncludeMany((x, y) => x.Details)
+            .Where((a, b) => a.TotalAmount > 300 && Sql.In(a.Id, new string[] { "1", "2", "3" }))
+            .Select((x, y) => new { Order = x, Buyer = y })
+            .ToList();
+        Assert.Equal(2, result.Count);
+        Assert.NotNull(result[0].Order);
+        Assert.NotNull(result[0].Order.Details);
+        Assert.NotEmpty(result[0].Order.Details);
+        Assert.Equal(3, result[0].Order.Details.Count);
+        result = repository.From<Order>()
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .IncludeMany((x, y) => x.Details)
+            .Where((a, b) => a.TotalAmount > 300 && Sql.In(a.Id, "1", "2", "3"))
+            .Select((x, y) => new { Order = x, Buyer = y })
+            .ToList();
+        Assert.Equal(2, result.Count);
+        Assert.NotNull(result[0].Order);
+        Assert.NotNull(result[0].Order.Details);
+        Assert.NotEmpty(result[0].Order.Details);
+        Assert.Equal(3, result[0].Order.Details.Count);
     }
     [Fact]
     public void FromQuery_IncludeMany_Filter()
@@ -833,7 +856,7 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
                 TotalAmount = x.Sum(b.TotalAmount)
             })
            .ToSql(out _);
-        Assert.True(sql == "SELECT a.`Id` AS `UserId1`,a.`Name` AS `UserName`,CONVERT(b.`CreatedAt`,DATE) AS `CreatedDate1`,COUNT(b.`Id`) AS `OrderCount`,SUM(b.`TotalAmount`) AS `TotalAmount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) ORDER BY a.`Id`");
+        Assert.Equal("SELECT a.`Id` AS `UserId1`,a.`Name` AS `UserName`,CONVERT(b.`CreatedAt`,DATE) AS `CreatedDate1`,COUNT(b.`Id`) AS `OrderCount`,SUM(b.`TotalAmount`) AS `TotalAmount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` GROUP BY a.`Id`,a.`Name`,CONVERT(b.`CreatedAt`,DATE) ORDER BY a.`Id`", sql);
         var result = repository.From<User>()
             .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
             .GroupBy((a, b) => new { UserId = a.Id, a.Name, CreatedDate = b.CreatedAt.Date })

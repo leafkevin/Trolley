@@ -40,7 +40,7 @@ public interface IIncludableQuery<T, TMember> : IIncludableQueryBase, IQuery<T>
     /// repository.From&lt;Order&gt;()
     ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTable&lt;Order&gt;((dbKey, orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     .UseTable&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
     ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -56,7 +56,7 @@ public interface IIncludableQuery<T, TMember> : IIncludableQueryBase, IQuery<T>
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前表分表名获取委托</param>
     /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
+    new IIncludableQuery<T, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值确定TMember表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
@@ -152,7 +152,7 @@ public interface IIncludableQuery<T1, T2, TMember> : IIncludableQueryBase, IQuer
     /// repository.From&lt;Order&gt;()
     ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTable&lt;Order&gt;((dbKey, orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     .UseTable&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
     ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -168,7 +168,7 @@ public interface IIncludableQuery<T1, T2, TMember> : IIncludableQueryBase, IQuer
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前表分表名获取委托</param>
     /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
+    new IIncludableQuery<T1, T2, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
@@ -265,7 +265,7 @@ public interface IIncludableQuery<T1, T2, T3, TMember> : IIncludableQueryBase, I
     /// repository.From&lt;Order&gt;()
     ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTable&lt;Order&gt;((dbKey, orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     .UseTable&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
     ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -281,7 +281,7 @@ public interface IIncludableQuery<T1, T2, T3, TMember> : IIncludableQueryBase, I
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前表分表名获取委托</param>
     /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
+    new IIncludableQuery<T1, T2, T3, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
@@ -379,7 +379,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, TMember> : IIncludableQueryBas
     /// repository.From&lt;Order&gt;()
     ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTable&lt;Order&gt;((dbKey, orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     .UseTable&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
     ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -395,7 +395,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, TMember> : IIncludableQueryBas
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前表分表名获取委托</param>
     /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
+    new IIncludableQuery<T1, T2, T3, T4, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
@@ -494,7 +494,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, TMember> : IIncludableQuer
     /// repository.From&lt;Order&gt;()
     ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTable&lt;Order&gt;((dbKey, orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     .UseTable&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
     ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -510,7 +510,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, TMember> : IIncludableQuer
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前表分表名获取委托</param>
     /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
+    new IIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
@@ -610,7 +610,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : IIncludable
     /// repository.From&lt;Order&gt;()
     ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTable&lt;Order&gt;((dbKey, orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     .UseTable&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
     ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -626,7 +626,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : IIncludable
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前表分表名获取委托</param>
     /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
+    new IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
@@ -727,7 +727,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : IInclud
     /// repository.From&lt;Order&gt;()
     ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTable&lt;Order&gt;((dbKey, orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     .UseTable&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
     ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -743,7 +743,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : IInclud
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前表分表名获取委托</param>
     /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
+    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
@@ -845,7 +845,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> : IIn
     /// repository.From&lt;Order&gt;()
     ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTable&lt;Order&gt;((dbKey, orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     .UseTable&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
     ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -861,7 +861,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> : IIn
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前表分表名获取委托</param>
     /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
+    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
@@ -964,7 +964,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> :
     /// repository.From&lt;Order&gt;()
     ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTable&lt;Order&gt;((dbKey, orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     .UseTable&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
     ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -980,7 +980,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> :
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前表分表名获取委托</param>
     /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
+    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
@@ -1084,7 +1084,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMemb
     /// repository.From&lt;Order&gt;()
     ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTable&lt;Order&gt;((dbKey, orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     .UseTable&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
     ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -1100,7 +1100,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMemb
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前表分表名获取委托</param>
     /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
+    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
@@ -1205,7 +1205,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// repository.From&lt;Order&gt;()
     ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTable&lt;Order&gt;((dbKey, orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     .UseTable&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
     ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -1221,7 +1221,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前表分表名获取委托</param>
     /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
+    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
@@ -1327,7 +1327,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// repository.From&lt;Order&gt;()
     ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTable&lt;Order&gt;((dbKey, orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     .UseTable&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
     ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -1343,7 +1343,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前表分表名获取委托</param>
     /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
+    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
@@ -1450,7 +1450,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// repository.From&lt;Order&gt;()
     ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTable&lt;Order&gt;((dbKey, orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     .UseTable&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
     ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -1466,7 +1466,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前表分表名获取委托</param>
     /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
+    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
@@ -1574,7 +1574,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// repository.From&lt;Order&gt;()
     ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTable&lt;Order&gt;((dbKey, orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     .UseTable&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
     ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -1590,7 +1590,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前表分表名获取委托</param>
     /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
+    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
@@ -1699,7 +1699,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// repository.From&lt;Order&gt;()
     ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTable&lt;Order&gt;((dbKey, orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     .UseTable&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
     ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -1715,7 +1715,7 @@ public interface IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前表分表名获取委托</param>
     /// <returns>返回导航属性查询对象</returns>
-    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter);
+    new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>

@@ -82,7 +82,7 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
-    public virtual IMultiQuery<T> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public virtual IMultiQuery<T> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTable(false, masterEntityType, tableNameGetter);

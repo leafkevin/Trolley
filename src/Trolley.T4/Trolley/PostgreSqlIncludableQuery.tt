@@ -23,7 +23,7 @@ public class PostgreSqlIncludableQuery<T, TMember> : IncludableQuery<T, TMember>
         => base.UseTable(tableNames) as IPostgreSqlIncludableQuery<T, TMember>;
     public override IPostgreSqlIncludableQuery<T, TMember> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlIncludableQuery<T, TMember>;
-    public override IPostgreSqlIncludableQuery<T, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public override IPostgreSqlIncludableQuery<T, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTable<TMasterSharding>(tableNameGetter) as IPostgreSqlIncludableQuery<T, TMember>;
     public override IPostgreSqlIncludableQuery<T, TMember> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as IPostgreSqlIncludableQuery<T, TMember>;
@@ -68,7 +68,7 @@ public class PostgreSqlIncludableQuery<<#=tables#>, TMember> : IncludableQuery<<
         => base.UseTable(tableNames) as IPostgreSqlIncludableQuery<<#=tables#>, TMember>;
     public override IPostgreSqlIncludableQuery<<#=tables#>, TMember> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlIncludableQuery<<#=tables#>, TMember>;
-    public override IPostgreSqlIncludableQuery<<#=tables#>, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public override IPostgreSqlIncludableQuery<<#=tables#>, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTable<TMasterSharding>(tableNameGetter) as IPostgreSqlIncludableQuery<<#=tables#>, TMember>;
     public override IPostgreSqlIncludableQuery<<#=tables#>, TMember> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as IPostgreSqlIncludableQuery<<#=tables#>, TMember>;

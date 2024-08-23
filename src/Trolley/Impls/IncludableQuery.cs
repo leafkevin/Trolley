@@ -29,7 +29,7 @@ public class IncludableQuery<T, TMember> : Query<T>, IIncludableQuery<T, TMember
         this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
         return this;
     }
-    public override IIncludableQuery<T, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public override IIncludableQuery<T, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
@@ -98,7 +98,7 @@ public class IncludableQuery<T1, T2, TMember> : Query<T1, T2>, IIncludableQuery<
         this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
         return this;
     }
-    public override IIncludableQuery<T1, T2, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public override IIncludableQuery<T1, T2, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
@@ -167,7 +167,7 @@ public class IncludableQuery<T1, T2, T3, TMember> : Query<T1, T2, T3>, IIncludab
         this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
         return this;
     }
-    public override IIncludableQuery<T1, T2, T3, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public override IIncludableQuery<T1, T2, T3, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
@@ -236,7 +236,7 @@ public class IncludableQuery<T1, T2, T3, T4, TMember> : Query<T1, T2, T3, T4>, I
         this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
         return this;
     }
-    public override IIncludableQuery<T1, T2, T3, T4, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public override IIncludableQuery<T1, T2, T3, T4, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
@@ -305,7 +305,7 @@ public class IncludableQuery<T1, T2, T3, T4, T5, TMember> : Query<T1, T2, T3, T4
         this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
         return this;
     }
-    public override IIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public override IIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
@@ -374,7 +374,7 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : Query<T1, T2, T3
         this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
         return this;
     }
-    public override IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public override IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
@@ -443,7 +443,7 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : Query<T1, T2
         this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
         return this;
     }
-    public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
@@ -512,7 +512,7 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> : Query<T1
         this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
         return this;
     }
-    public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
@@ -581,7 +581,7 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> : Quer
         this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
         return this;
     }
-    public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
@@ -650,7 +650,7 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> :
         this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
         return this;
     }
-    public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
@@ -719,7 +719,7 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMemb
         this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
         return this;
     }
-    public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
@@ -788,7 +788,7 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
         this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
         return this;
     }
-    public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
@@ -857,7 +857,7 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
         this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
         return this;
     }
-    public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
@@ -926,7 +926,7 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
         this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
         return this;
     }
-    public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
@@ -995,7 +995,7 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
         this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
         return this;
     }
-    public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTable<TMasterSharding>(Func<string, string, string, string, string> tableNameGetter)
+    public override IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);

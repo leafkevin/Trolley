@@ -23,10 +23,13 @@ public class UnitTest6 : UnitTestBase
         var services = new ServiceCollection();
         services.AddSingleton(f =>
         {
+            var connectionString = "Host=localhost;Database=fengling;Username=postgres;Password=123456;SearchPath=public";
+            //var connectionString1 ="Host=localhost;Database=fengling_tenant1;Username=postgres;Password=123456;SearchPath=public";
+            //var connectionString2 = "Host=localhost;Database=fengling_tenant2;Username=postgres;Password=123456;SearchPath=public";
             var builder = new OrmDbFactoryBuilder()
-                .Register(OrmProviderType.PostgreSql, "fengling", "Host=localhost;Database=fengling;Username=postgres;Password=123456;SearchPath=public", true)
-                .Register(OrmProviderType.PostgreSql, "fengling_tenant1", "Host=localhost;Database=fengling_tenant1;Username=postgres;Password=123456;SearchPath=public", false)
-                .Register(OrmProviderType.PostgreSql, "fengling_tenant2", "Host=localhost;Database=fengling_tenant2;Username=postgres;Password=123456;SearchPath=public", false)
+                .Register(OrmProviderType.PostgreSql, "fengling", connectionString, true)
+                //.Register(OrmProviderType.PostgreSql, "fengling_tenant1", connectionString1)
+                //.Register(OrmProviderType.PostgreSql, "fengling_tenant2", connectionString2)
                 .Configure<ModelConfiguration>(OrmProviderType.PostgreSql)
                 .UseDatabaseSharding(() =>
                 {
@@ -129,7 +132,7 @@ public class UnitTest6 : UnitTestBase
         AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
         AppContext.SetSwitch("Npgsql.DisableDateTimeInfinityConversions", true);
         var serviceProvider = services.BuildServiceProvider();
-        this.dbFactory = serviceProvider.GetService<IOrmDbFactory>();      
+        this.dbFactory = serviceProvider.GetService<IOrmDbFactory>();
     }
     public interface IPassport
     {
@@ -983,6 +986,72 @@ public class UnitTest6 : UnitTestBase
         }
     }
     [Fact]
+    public async Task Query_ManySharding_SingleTable_Include()
+    {
+        await this.InitSharding();
+        var productCount = 1;
+        using var repository = dbFactory.Create();
+        var sql = repository.From<Order>()
+            .UseTable(f => f.Contains("_104_") && int.Parse(f[^6..]) > 202001)
+            .Include(f => f.Details)
+            .UseTable<Order>((origOrderName, origOrderDetailName, orderName) =>
+                orderName.Replace(origOrderName, origOrderDetailName))
+            .Where(f => f.ProductCount > productCount)
+            .ToSql(out _);
+        Assert.True(sql == "SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\" FROM \"sys_order_104_202405\" a WHERE a.\"ProductCount\">@p0");
+
+        var result = repository.From<Order>()
+            .UseTable(f => f.Contains("_104_") && int.Parse(f[^6..]) > 202001)
+            .Include(f => f.Details)
+            .UseTable<Order>((origOrderName, origOrderDetailName, orderName) =>
+                orderName.Replace(origOrderName, origOrderDetailName))
+            .Where(f => f.ProductCount > productCount)
+            .ToList();
+        if (result.Count > 0)
+        {
+            var tenantIds = result.Select(f => f.TenantId).Distinct().ToList();
+            Assert.False(tenantIds.Exists(f => f != "104"));
+            foreach (var order in result)
+            {
+                Assert.NotNull(order.Details);
+                foreach (var orderDetail in order.Details)
+                {
+                    Assert.Equal("104", orderDetail.TenantId);
+                }
+            }
+        }
+
+        sql = repository.From<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .Include(f => f.Details)
+            .UseTable<Order>((origOrderName, origOrderDetailName, orderName) =>
+                orderName.Replace(origOrderName, origOrderDetailName))
+            .Where(f => f.ProductCount > productCount)
+            .ToSql(out _);
+        Assert.True(sql == "SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\" FROM \"sys_order_104_202405\" a WHERE a.\"ProductCount\">@p0 UNION ALL SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\" FROM \"sys_order_105_202405\" a WHERE a.\"ProductCount\">@p0");
+
+        result = repository.From<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .Include(f => f.Details)
+            .UseTable<Order>((origOrderName, origOrderDetailName, orderName) =>
+                orderName.Replace(origOrderName, origOrderDetailName))
+            .Where(f => f.ProductCount > productCount)
+            .ToList();
+        if (result.Count > 0)
+        {
+            var tenantIds = result.Select(f => f.TenantId).ToList();
+            Assert.True(tenantIds.Exists(f => "104,105".Contains(f)));
+            foreach (var order in result)
+            {
+                Assert.NotNull(order.Details);
+                foreach (var orderDetail in order.Details)
+                {
+                    Assert.Contains(orderDetail.TenantId, "104,105");
+                }
+            }
+        }
+    }
+    [Fact]
     public async Task Query_SingleSharding_Value()
     {
         await this.InitSharding();
@@ -1018,14 +1087,14 @@ public class UnitTest6 : UnitTestBase
             .From(f => f.From<OrderDetail>()
                 .UseTable("sys_order_detail_104_202405", "sys_order_detail_105_202405")
                 .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
-                .UseTable<OrderDetail>((dbKey, orderOrigName, userOrigName, orderTableName) => orderTableName.Replace(orderOrigName, userOrigName))
+                .UseTable<OrderDetail>((orderOrigName, userOrigName, orderTableName) => orderTableName.Replace(orderOrigName, userOrigName))
                 .GroupBy((a, b) => new { OrderId = b.Id, b.BuyerId })
                 .Select((x, a, b) => new { Group = x.Grouping, ProductCount = x.CountDistinct(a.ProductId) }))
             .InnerJoin<User>((x, y) => x.Group.BuyerId == y.Id)
-            .UseTable<OrderDetail>((dbKey, orderOrigName, userOrigName, orderTableName) =>
+            .UseTable<OrderDetail>((orderOrigName, userOrigName, orderTableName) =>
             {
                 var tableName = orderTableName.Replace(orderOrigName, userOrigName);
-                return tableName.Substring(0, tableName.Length - 7);
+                return tableName[..^7];
             })
             .Where((a, b) => a.ProductCount > 1)
             .Select((x, y) => new
@@ -1042,11 +1111,11 @@ public class UnitTest6 : UnitTestBase
             .From(f => f.From<OrderDetail>()
                 .UseTable("sys_order_detail_104_202405", "sys_order_detail_105_202405")
                 .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
-                .UseTable<OrderDetail>((dbKey, orderOrigName, userOrigName, orderTableName) => orderTableName.Replace(orderOrigName, userOrigName))
+                .UseTable<OrderDetail>((orderOrigName, userOrigName, orderTableName) => orderTableName.Replace(orderOrigName, userOrigName))
                 .GroupBy((a, b) => new { OrderId = b.Id, b.BuyerId })
                 .Select((x, a, b) => new { Group = x.Grouping, ProductCount = x.CountDistinct(a.ProductId) }))
             .InnerJoin<User>((x, y) => x.Group.BuyerId == y.Id)
-            .UseTable<OrderDetail>((dbKey, orderOrigName, userOrigName, orderTableName) =>
+            .UseTable<OrderDetail>((orderOrigName, userOrigName, orderTableName) =>
             {
                 var tableName = orderTableName.Replace(orderOrigName, userOrigName);
                 return tableName.Substring(0, tableName.Length - 7);
@@ -1079,7 +1148,7 @@ public class UnitTest6 : UnitTestBase
         var sql = repository.From<Order>()
             .UseTable("sys_order_104_202405", "sys_order_105_202405")
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
-            .UseTable<Order>((dbKey, orderOrigName, userOrigName, orderTableName) =>
+            .UseTable<Order>((orderOrigName, userOrigName, orderTableName) =>
             {
                 var tableName = orderTableName.Replace(orderOrigName, userOrigName);
                 return tableName.Substring(0, tableName.Length - 7);
@@ -1096,7 +1165,7 @@ public class UnitTest6 : UnitTestBase
         var result = repository.From<Order>()
             .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f.Substring(f.Length - 6)) > 202001)
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
-            .UseTable<Order>((dbKey, orderOrigName, userOrigName, orderTableName) =>
+            .UseTable<Order>((orderOrigName, userOrigName, orderTableName) =>
             {
                 var tableName = orderTableName.Replace(orderOrigName, userOrigName);
                 return tableName.Substring(0, tableName.Length - 7);
@@ -1123,7 +1192,7 @@ public class UnitTest6 : UnitTestBase
         var sql = repository.From<Order>()
             .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f.Substring(f.Length - 6)) > 202001)
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
-            .UseTable<Order>((dbKey, orderOrigName, userOrigName, orderTableName) =>
+            .UseTable<Order>((orderOrigName, userOrigName, orderTableName) =>
             {
                 var tableName = orderTableName.Replace(orderOrigName, userOrigName);
                 return tableName.Substring(0, tableName.Length - 7);
@@ -1140,7 +1209,7 @@ public class UnitTest6 : UnitTestBase
         var result = repository.From<Order>()
             .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f.Substring(f.Length - 6)) > 202001)
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
-            .UseTable<Order>((dbKey, orderOrigName, userOrigName, orderTableName) =>
+            .UseTable<Order>((orderOrigName, userOrigName, orderTableName) =>
             {
                 var tableName = orderTableName.Replace(orderOrigName, userOrigName);
                 return tableName.Substring(0, tableName.Length - 7);
@@ -1167,7 +1236,7 @@ public class UnitTest6 : UnitTestBase
         var sql = repository.From<Order>()
             .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f.Substring(f.Length - 6)) > 202001)
             .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
-            .UseTable<Order>((dbKey, orderOrigName, orderDetailOrigName, orderTableName) => orderTableName.Replace(orderOrigName, orderDetailOrigName))
+            .UseTable<Order>((orderOrigName, orderDetailOrigName, orderTableName) => orderTableName.Replace(orderOrigName, orderDetailOrigName))
             .Where((a, b) => a.ProductCount > productCount)
             .Select((x, y) => new
             {
@@ -1180,7 +1249,7 @@ public class UnitTest6 : UnitTestBase
         var result = repository.From<Order>()
             .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f.Substring(f.Length - 6)) > 202001)
             .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
-            .UseTable<Order>((dbKey, orderOrigName, orderDetailOrigName, orderTableName) => orderTableName.Replace(orderOrigName, orderDetailOrigName))
+            .UseTable<Order>((orderOrigName, orderDetailOrigName, orderTableName) => orderTableName.Replace(orderOrigName, orderDetailOrigName))
             .Where((a, b) => a.ProductCount > productCount)
             .Select((x, y) => new
             {
@@ -1501,7 +1570,7 @@ public class UnitTest6 : UnitTestBase
         sql = repository.From<Order>()
            .UseTableByRange("104", beginTime, endTime)
            .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
-           .UseTable<Order>((dbKey, orderOrigName, userOrigName, orderTableName) =>
+           .UseTable<Order>((orderOrigName, userOrigName, orderTableName) =>
            {
                var tableName = orderTableName.Replace(orderOrigName, userOrigName);
                return tableName.Substring(0, tableName.Length - 7);
@@ -1519,7 +1588,7 @@ public class UnitTest6 : UnitTestBase
         var orderInfos = repository.From<Order>()
             .UseTableByRange("104", beginTime, endTime)
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
-            .UseTable<Order>((dbKey, orderOrigName, userOrigName, orderTableName) =>
+            .UseTable<Order>((orderOrigName, userOrigName, orderTableName) =>
             {
                 var tableName = orderTableName.Replace(orderOrigName, userOrigName);
                 return tableName[..^7];
