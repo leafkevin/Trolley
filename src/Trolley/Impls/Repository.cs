@@ -1001,16 +1001,17 @@ public class Repository : IRepository
         IDataReader reader;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand();
+        using var multiQuery = new MultipleQuery(this.DbContext);
+        subQueries.Invoke(multiQuery);
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(multiQuery.isUseMaster, multiQuery.Command);
         try
         {
-            using var multiQuery = new MultipleQuery(this.DbContext, command);
-            subQueries.Invoke(multiQuery);
+            multiQuery.Command.Connection = connection.BaseConnection;
             command.CommandText = multiQuery.BuildSql(out var readerAfters);
             this.DbContext.Open(connection);
             eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.MultiQuery);
             reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
-            result = new MultiQueryReader(this.OrmProvider, command, reader, readerAfters, isNeedClose);
+            result = new MultiQueryReader(this.DbContext, connection, command, reader, readerAfters, isNeedClose);
         }
         catch (Exception ex)
         {
@@ -1035,16 +1036,17 @@ public class Repository : IRepository
         DbDataReader reader;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveDbCommand();
+        using var multiQuery = new MultipleQuery(this.DbContext);
+        subQueries.Invoke(multiQuery);
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveDbCommand(multiQuery.isUseMaster, multiQuery.Command);
         try
         {
-            using var multiQuery = new MultipleQuery(this.DbContext, command);
-            subQueries.Invoke(multiQuery);
+            multiQuery.Command.Connection = connection.BaseConnection;
             command.CommandText = multiQuery.BuildSql(out var readerAfters);
             await this.DbContext.OpenAsync(connection, cancellationToken);
             eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.MultiQuery);
             reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
-            result = new MultiQueryReader(this.OrmProvider, command, reader, readerAfters, isNeedClose);
+            result = new MultiQueryReader(this.DbContext, connection, command, reader, readerAfters, isNeedClose);
         }
         catch (Exception ex)
         {

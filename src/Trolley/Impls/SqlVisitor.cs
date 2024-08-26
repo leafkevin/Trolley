@@ -30,6 +30,7 @@ public class SqlVisitor : ISqlVisitor
     public char TableAsStart { get; set; }
     public bool IsMultiple { get; set; }
     public int CommandIndex { get; set; }
+    public bool IsUseMaster { get; set; }
 
     /// <summary>
     /// 所有表都是扁平化的，主表、1:1关系Include子表，也在这里
@@ -245,6 +246,7 @@ public class SqlVisitor : ISqlVisitor
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
         tableSegment.TableSchema = tableSchema;
     }
+    public void UseMaster(bool isUseMaster = true) => this.IsUseMaster = isUseMaster;
     public virtual string BuildTableShardingsSql() => null;
     public void SetShardingTables(List<string> shardingTables)
     {
@@ -2138,6 +2140,7 @@ public class SqlVisitor : ISqlVisitor
 
         //应用子查询表，只删除元素，不能dispose，后续操作可能还会用到子查询
         this.RefQueries.Clear();
+        this.IsUseMaster = false;
     }
     private List<ConditionExpression> VisitLogicBinaryExpr(Expression conditionExpr)
     {

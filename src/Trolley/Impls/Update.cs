@@ -152,14 +152,17 @@ public class Update<TEntity> : IUpdate<TEntity>
     {
         if (updateObjs == null)
             throw new ArgumentNullException(nameof(updateObjs));
-
+        bool isEmpty = true;
         foreach (var updateObj in updateObjs)
         {
             var updateObjType = updateObj.GetType();
             if (!updateObjType.IsEntityType(out _))
                 throw new NotSupportedException("批量更新，单个对象类型只支持匿名对象、命名对象或是字典对象");
+            isEmpty = false;
             break;
         }
+        if (isEmpty) throw new Exception("批量更新，updateObjs参数至少要有一条数据");
+
         this.Visitor.SetBulk(updateObjs, bulkCount);
         return this.OrmProvider.NewContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
     }

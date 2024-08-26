@@ -43,7 +43,7 @@ public sealed class DbContext
             connection = new TheaConnection(connString, conn);
             this.DbInterceptors.OnConnectionCreated?.Invoke(new ConectionEventArgs
             {
-                ConnectionId = Guid.NewGuid().ToString("N"),
+                ConnectionId = connection.ConnectionId,
                 DbKey = this.DbKey,
                 ConnectionString = connString,
                 OrmProvider = this.OrmProvider,
@@ -70,7 +70,7 @@ public sealed class DbContext
             connection = new TheaConnection(connString, conn);
             this.DbInterceptors.OnConnectionCreated?.Invoke(new ConectionEventArgs
             {
-                ConnectionId = Guid.NewGuid().ToString("N"),
+                ConnectionId = connection.ConnectionId,
                 DbKey = this.DbKey,
                 ConnectionString = connString,
                 OrmProvider = this.OrmProvider,
@@ -88,7 +88,7 @@ public sealed class DbContext
     #endregion
 
     #region UseSlaveCommand
-    public (bool, TheaConnection, IDbCommand) UseSlaveCommand()
+    public (bool, TheaConnection, IDbCommand) UseSlaveCommand(bool isUseMaster, IDbCommand command = null)
     {
         bool isNeedClose = false;
         TheaConnection connection;
@@ -97,25 +97,28 @@ public sealed class DbContext
         else
         {
             isNeedClose = true;
-            var connString = this.Database.UseSlave();
+            var connString = isUseMaster ? this.Database.ConnectionString : this.Database.UseSlave();
             var conn = this.OrmProvider.CreateConnection(connString);
             connection = new TheaConnection(connString, conn);
             this.DbInterceptors.OnConnectionCreated?.Invoke(new ConectionEventArgs
             {
-                ConnectionId = Guid.NewGuid().ToString("N"),
+                ConnectionId = connection.ConnectionId,
                 DbKey = this.DbKey,
                 ConnectionString = connString,
                 OrmProvider = this.OrmProvider,
                 CreatedAt = DateTime.UtcNow
             });
         }
-        var command = connection.CreateCommand();
-        command.CommandType = CommandType.Text;
-        command.CommandTimeout = this.CommandTimeout;
-        command.Transaction = this.Transaction;
+        if (command == null)
+        {
+            command = connection.CreateCommand();
+            command.CommandType = CommandType.Text;
+            command.CommandTimeout = this.CommandTimeout;
+            command.Transaction = this.Transaction;
+        }
         return (isNeedClose, connection, command);
     }
-    public (bool, TheaConnection, DbCommand) UseSlaveDbCommand()
+    public (bool, TheaConnection, DbCommand) UseSlaveDbCommand(bool isUseMaster, IDbCommand command = null)
     {
         bool isNeedClose = false;
         TheaConnection connection;
@@ -124,25 +127,28 @@ public sealed class DbContext
         else
         {
             isNeedClose = true;
-            var connString = this.Database.UseSlave();
+            var connString = isUseMaster ? this.Database.ConnectionString : this.Database.UseSlave();
             var conn = this.OrmProvider.CreateConnection(connString);
             connection = new TheaConnection(connString, conn);
             this.DbInterceptors.OnConnectionCreated?.Invoke(new ConectionEventArgs
             {
-                ConnectionId = Guid.NewGuid().ToString("N"),
+                ConnectionId = connection.ConnectionId,
                 DbKey = this.DbKey,
                 ConnectionString = connString,
                 OrmProvider = this.OrmProvider,
                 CreatedAt = DateTime.UtcNow
             });
         }
-        var cmd = connection.CreateCommand();
-        if (cmd is not DbCommand command)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-        cmd.CommandType = CommandType.Text;
-        cmd.CommandTimeout = this.CommandTimeout;
-        cmd.Transaction = this.Transaction;
-        return (isNeedClose, connection, command);
+        if (command == null)
+        {
+            command = connection.CreateCommand();
+            if (command is not DbCommand)
+                throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
+            command.CommandType = CommandType.Text;
+            command.CommandTimeout = this.CommandTimeout;
+            command.Transaction = this.Transaction;
+        }
+        return (isNeedClose, connection, command as DbCommand);
     }
     #endregion
 
@@ -153,7 +159,7 @@ public sealed class DbContext
         IDataReader reader = null;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(false);
         try
         {
             var entityType = typeof(TResult);
@@ -192,7 +198,7 @@ public sealed class DbContext
         DbDataReader reader = null;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
-        (var isNeedClose, var connection, var command) = this.UseSlaveDbCommand();
+        (var isNeedClose, var connection, var command) = this.UseSlaveDbCommand(false);
         try
         {
             var entityType = typeof(TResult);
@@ -233,7 +239,7 @@ public sealed class DbContext
         IDataReader reader = null;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.IsUseMaster);
         try
         {
             if (visitor.IsNeedFetchShardingTables)
@@ -291,7 +297,7 @@ public sealed class DbContext
         DbDataReader reader = null;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
-        (var isNeedClose, var connection, var command) = this.UseSlaveDbCommand();
+        (var isNeedClose, var connection, var command) = this.UseSlaveDbCommand(visitor.IsUseMaster);
         try
         {
             if (visitor.IsNeedFetchShardingTables)
@@ -352,7 +358,7 @@ public sealed class DbContext
         IDataReader reader = null;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(false);
         try
         {
             var entityType = typeof(TResult);
@@ -401,7 +407,7 @@ public sealed class DbContext
         DbDataReader reader = null;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
-        (var isNeedClose, var connection, var command) = this.UseSlaveDbCommand();
+        (var isNeedClose, var connection, var command) = this.UseSlaveDbCommand(false);
         try
         {
             var entityType = typeof(TResult);
@@ -449,7 +455,7 @@ public sealed class DbContext
         IDataReader reader = null;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.IsUseMaster);
         try
         {
             if (visitor.IsNeedFetchShardingTables)
@@ -516,7 +522,7 @@ public sealed class DbContext
         DbDataReader reader = null;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
-        (var isNeedClose, var connection, var command) = this.UseSlaveDbCommand();
+        (var isNeedClose, var connection, var command) = this.UseSlaveDbCommand(visitor.IsUseMaster);
         try
         {
             if (visitor.IsNeedFetchShardingTables)
@@ -588,7 +594,7 @@ public sealed class DbContext
         Exception exception = null;
         CommandEventArgs eventArgs = null;
         var result = new PagedList<TResult> { Data = new List<TResult>() };
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.IsUseMaster);
         try
         {
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
@@ -656,7 +662,7 @@ public sealed class DbContext
         Exception exception = null;
         CommandEventArgs eventArgs = null;
         var result = new PagedList<TResult> { Data = new List<TResult>() };
-        (var isNeedClose, var connection, var command) = this.UseSlaveDbCommand();
+        (var isNeedClose, var connection, var command) = this.UseSlaveDbCommand(visitor.IsUseMaster);
         try
         {
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
@@ -731,7 +737,7 @@ public sealed class DbContext
         IDataReader reader = null;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(false);
         try
         {
             var entityType = typeof(TEntity);
@@ -773,7 +779,7 @@ public sealed class DbContext
         DbDataReader reader = null;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
-        (var isNeedClose, var connection, var command) = this.UseSlaveDbCommand();
+        (var isNeedClose, var connection, var command) = this.UseSlaveDbCommand(false);
         try
         {
             var entityType = typeof(TEntity);
@@ -1289,7 +1295,7 @@ public sealed class DbContext
         this.Connection = new TheaConnection(this.ConnectionString, connection);
         this.DbInterceptors.OnConnectionCreated?.Invoke(new ConectionEventArgs
         {
-            ConnectionId = Guid.NewGuid().ToString("N"),
+            ConnectionId = this.Connection.ConnectionId,
             DbKey = this.DbKey,
             ConnectionString = this.ConnectionString,
             OrmProvider = this.OrmProvider,
@@ -1311,7 +1317,7 @@ public sealed class DbContext
         IDataReader reader = null;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.IsUseMaster);
         try
         {
             command.CommandText = fetchSql;
@@ -1347,7 +1353,7 @@ public sealed class DbContext
         DbDataReader reader = null;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
-        (var isNeedClose, var connection, var command) = this.UseSlaveDbCommand();
+        (var isNeedClose, var connection, var command) = this.UseSlaveDbCommand(visitor.IsUseMaster);
         try
         {
             command.CommandText = fetchSql;

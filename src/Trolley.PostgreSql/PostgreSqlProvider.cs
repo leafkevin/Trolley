@@ -138,6 +138,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
 
     public override IDbConnection CreateConnection(string connectionString)
         => new NpgsqlConnection(connectionString);
+    public override IDbCommand CreateCommand() => new NpgsqlCommand();
     public override IDbDataParameter CreateParameter(string parameterName, object value)
         => new NpgsqlParameter(parameterName, value);
     public override IDbDataParameter CreateParameter(string parameterName, object nativeDbType, object value)

@@ -9,21 +9,11 @@ namespace Trolley;
 public interface IMultiQueryReader : IDisposable, IAsyncDisposable
 {
     /// <summary>
-    /// 读取单个动态类型对象或值，记录不存在时返回动态类型的默认值
-    /// </summary>
-    /// <returns>返回动态类型对象或值，记录不存在时返回动态类型的默认值</returns>
-    //dynamic ReadFirst();
-    /// <summary>
     /// 读取单个T类型对象或值，记录不存在时返回T类型的默认值
     /// </summary>
     /// <typeparam name="T">实体类型或是值类型</typeparam>
     /// <returns>返回T类型对象或值，记录不存在时返回T类型的默认值</returns>
     T ReadFirst<T>();
-    /// <summary>
-    /// 读取动态类型对象列表或值列表，记录不存在时返回没有任何元素的空列表
-    /// </summary>
-    /// <returns>返回动态类型对象列表或值列表，记录不存在时返回没有任何元素的空列表</returns>
-    //List<dynamic> Read();
     /// <summary>
     /// 读取T类型对象列表或值列表，记录不存在时返回没有任何元素的空列表
     /// </summary>

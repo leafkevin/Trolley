@@ -226,6 +226,14 @@ public class Query<T> : QueryBase, IQuery<T>
     }
     #endregion
 
+    #region UseMaster
+    public virtual IQuery<T> UseMaster(bool isUseMaster = true)
+    {
+        this.Visitor.UseMaster(isUseMaster);
+        return this;
+    }
+    #endregion
+
     #region Union/UnionAll
     public virtual IQuery<T> Union(IQuery<T> subQuery)
     {

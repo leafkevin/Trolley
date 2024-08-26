@@ -40,6 +40,7 @@ public interface IQueryVisitor : IDisposable
     List<TableSegment> ShardingTables { get; set; }
     bool IsFromQuery { get; set; }
     bool IsFromCommand { get; set; }
+    bool IsUseMaster { get; }
 
     string BuildSql(out List<SqlFieldSegment> readerFields);
     string BuildCommandSql(out IDataParameterCollection dbParameters);
@@ -54,6 +55,8 @@ public interface IQueryVisitor : IDisposable
     void UseTableByRange(bool isIncludeMany, object beginFieldValue, object endFieldValue);
     void UseTableByRange(bool isIncludeMany, object fieldValue1, object fieldValue2, object fieldValue3);
     void UseTableSchema(bool isIncludeMany, string tableSchema);
+    void UseMaster(bool isUseMaster = true);
+
     void From(char tableAsStart = 'a', params Type[] entityTypes);
     void From(Type targetType, IQuery subQueryObj);
     void From(Type targetType, DbContext dbContext, Delegate subQueryGetter);

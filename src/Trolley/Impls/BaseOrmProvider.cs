@@ -28,6 +28,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
     public virtual string DefaultTableSchema { get; }
     public virtual ICollection<ITypeHandler> TypeHandlers => typeHandlers.Values;
     public abstract IDbConnection CreateConnection(string connectionString);
+    public abstract IDbCommand CreateCommand();
     public abstract IDbDataParameter CreateParameter(string parameterName, object value);
     public abstract IDbDataParameter CreateParameter(string parameterName, object nativeDbType, object value);
     public abstract void ChangeParameter(object dbParameter, Type targetType, object value);

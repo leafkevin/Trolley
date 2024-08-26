@@ -23,6 +23,7 @@ public interface IOrmProvider
     string DefaultTableSchema { get; }
     ICollection<ITypeHandler> TypeHandlers { get; }
     IDbConnection CreateConnection(string connectionString);
+    IDbCommand CreateCommand();
     IDbDataParameter CreateParameter(string parameterName, object value);
     IDbDataParameter CreateParameter(string parameterName, object nativeDbType, object value);
     void ChangeParameter(object dbParameter, Type targetType, object value);

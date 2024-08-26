@@ -164,6 +164,15 @@ public interface IQuery<T> : IQueryBase
     IQuery<T> UseTableSchema(string tableSchema);
     #endregion
 
+    #region UseMaster
+    /// <summary>
+    /// 使用主库查询
+    /// </summary>
+    /// <param name="isUseMaster">使用主库为true，默认值为true</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T> UseMaster(bool isUseMaster = true);
+    #endregion
+
     #region Union/UnionAll
     /// <summary>
     /// Union操作，去掉重复记录，用法：

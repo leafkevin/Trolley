@@ -12,16 +12,20 @@ namespace Trolley;
 class MultiQueryReader : IMultiQueryReader
 {
     private readonly bool isNeedClose;
+    private readonly DbContext dbContext;
     private readonly IOrmProvider ormProvider;
+    private TheaConnection connection;
     private IDbCommand command;
     private IDataReader reader;
     private List<ReaderAfter> readerAfters;
 
     private int readerIndex = 0;
     private List<NextReaderAfter> nextAfters;
-    public MultiQueryReader(IOrmProvider ormProvider, IDbCommand command, IDataReader reader, List<ReaderAfter> readerAfters, bool isNeedClose)
+    public MultiQueryReader(DbContext dbContext, TheaConnection connection, IDbCommand command, IDataReader reader, List<ReaderAfter> readerAfters, bool isNeedClose)
     {
-        this.ormProvider = ormProvider;
+        this.dbContext = dbContext;
+        this.connection = connection;
+        this.ormProvider = dbContext.OrmProvider;
         this.command = command;
         this.reader = reader;
         this.readerAfters = readerAfters;
@@ -36,6 +40,7 @@ class MultiQueryReader : IMultiQueryReader
             result = (T)readerAfter.ReaderGetter.Invoke(this.reader);
             this.NextReader(readerAfter, result);
         }
+        else this.NextReader();
         return result;
     }
     public List<T> Read<T>()
@@ -96,6 +101,7 @@ class MultiQueryReader : IMultiQueryReader
             result = (T)readerAfter.ReaderGetter.Invoke(this.reader);
             await this.NextReaderAsync(readerAfter, result, cancellationToken);
         }
+        else await this.NextReaderAsync(cancellationToken);
         return result;
     }
     public async Task<List<T>> ReadAsync<T>(CancellationToken cancellationToken = default)
@@ -189,13 +195,12 @@ class MultiQueryReader : IMultiQueryReader
             this.nextAfters.Clear();
             this.nextAfters = null;
         }
-        var connection = this.command?.Connection;
         this.reader?.Dispose();
         this.reader = null;
         this.command?.Dispose();
         this.command = null;
-        if (this.isNeedClose && connection != null)
-            connection?.Dispose();
+        if (this.isNeedClose && this.connection != null)
+            this.dbContext.Close(this.connection);
     }
     public async ValueTask DisposeAsync()
     {
@@ -214,7 +219,6 @@ class MultiQueryReader : IMultiQueryReader
             this.nextAfters.Clear();
             this.nextAfters = null;
         }
-        var connection = dbCommand?.Connection;
         if (dbReader != null)
         {
             await dbReader.DisposeAsync();
@@ -226,8 +230,15 @@ class MultiQueryReader : IMultiQueryReader
             await dbCommand.DisposeAsync();
             this.command = null;
         }
-        if (this.isNeedClose && connection != null)
-            await connection.DisposeAsync();
+        if (this.isNeedClose && this.connection != null)
+            await this.dbContext.CloseAsync(this.connection);
+    }
+    private void NextReader()
+    {
+        this.reader.NextResult();
+        this.readerIndex++;
+        if (this.readerIndex == this.readerAfters.Count)
+            this.Dispose();
     }
     private void NextReader(ReaderAfter readerAfter, object target)
     {
@@ -243,29 +254,40 @@ class MultiQueryReader : IMultiQueryReader
                 Target = target
             });
         }
-        if (this.reader.NextResult())
-            this.readerIndex++;
-        else if (this.readerIndex == this.readerAfters.Count - 1
-            && this.nextAfters != null && this.nextAfters.Count > 0)
+        this.reader.NextResult();
+        this.readerIndex++;
+
+        if (this.readerIndex >= this.readerAfters.Count)
         {
-            var builder = new StringBuilder();
-            foreach (var nextAfter in this.nextAfters)
+            if (this.nextAfters != null && this.nextAfters.Count > 0)
             {
-                if (builder.Length > 0) builder.Append(';');
-                builder.Append(nextAfter.Sql);
+                var builder = new StringBuilder();
+                foreach (var nextAfter in this.nextAfters)
+                {
+                    if (builder.Length > 0) builder.Append(';');
+                    builder.Append(nextAfter.Sql);
+                }
+                this.command.CommandText = builder.ToString();
+                this.command.Parameters.Clear();
+                visitor.NextDbParameters.CopyTo(this.command.Parameters);
+                using var includeReader = command.ExecuteReader(CommandBehavior.SequentialAccess);
+                foreach (var nextAfter in this.nextAfters)
+                {
+                    nextAfter.Visitor.SetIncludeValues(nextAfter.TargetType, nextAfter.Target, includeReader);
+                }
+                includeReader.NextResult();
             }
-            this.command.CommandText = builder.ToString();
-            this.command.Parameters.Clear();
-            visitor.NextDbParameters.CopyTo(this.command.Parameters);
-            using var includeReader = command.ExecuteReader(CommandBehavior.SequentialAccess);
-            foreach (var nextAfter in this.nextAfters)
-            {
-                nextAfter.Visitor.SetIncludeValues(nextAfter.TargetType, nextAfter.Target, includeReader);
-            }
-            if (!includeReader.NextResult())
-                this.Dispose();
+            this.Dispose();
         }
-        else this.Dispose();
+    }
+    private async Task NextReaderAsync(CancellationToken cancellationToken = default)
+    {
+        if (this.reader is not DbDataReader dbReader)
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
+        await dbReader.NextResultAsync(cancellationToken);
+        this.readerIndex++;
+        if (this.readerIndex >= this.readerAfters.Count)
+            await this.DisposeAsync();
     }
     private async Task NextReaderAsync(ReaderAfter readerAfter, object target, CancellationToken cancellationToken = default)
     {
@@ -284,32 +306,34 @@ class MultiQueryReader : IMultiQueryReader
         if (this.reader is not DbDataReader dbReader)
             throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
-        if (await dbReader.NextResultAsync(cancellationToken))
-            this.readerIndex++;
-        else if (this.readerIndex == this.readerAfters.Count - 1
-            && this.nextAfters != null && this.nextAfters.Count > 0)
-        {
-            var builder = new StringBuilder();
-            foreach (var nextAfter in this.nextAfters)
-            {
-                if (builder.Length > 0) builder.Append(';');
-                builder.Append(nextAfter.Sql);
-            }
-            this.command.CommandText = builder.ToString();
-            this.command.Parameters.Clear();
-            visitor.NextDbParameters.CopyTo(this.command.Parameters);
-            if (this.command is not DbCommand dbCommand)
-                throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
+        await dbReader.NextResultAsync(cancellationToken);
+        this.readerIndex++;
 
-            using var includeReader = await dbCommand.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
-            foreach (var nextAfter in this.nextAfters)
+        if (this.readerIndex >= this.readerAfters.Count)
+        {
+            if (this.nextAfters != null && this.nextAfters.Count > 0)
             {
-                nextAfter.Visitor.SetIncludeValues(nextAfter.TargetType, nextAfter.Target, includeReader);
+                var builder = new StringBuilder();
+                foreach (var nextAfter in this.nextAfters)
+                {
+                    if (builder.Length > 0) builder.Append(';');
+                    builder.Append(nextAfter.Sql);
+                }
+                this.command.CommandText = builder.ToString();
+                this.command.Parameters.Clear();
+                visitor.NextDbParameters.CopyTo(this.command.Parameters);
+                if (this.command is not DbCommand dbCommand)
+                    throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
+
+                using var includeReader = await dbCommand.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
+                foreach (var nextAfter in this.nextAfters)
+                {
+                    nextAfter.Visitor.SetIncludeValues(nextAfter.TargetType, nextAfter.Target, includeReader);
+                }
+                await includeReader.NextResultAsync(cancellationToken);
             }
-            if (!await includeReader.NextResultAsync(cancellationToken))
-                await this.DisposeAsync();
+            await this.DisposeAsync();
         }
-        else await this.DisposeAsync();
     }
     struct NextReaderAfter
     {

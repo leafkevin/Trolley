@@ -131,6 +131,7 @@ public partial class MySqlProvider : BaseOrmProvider
     }
     public override IDbConnection CreateConnection(string connectionString)
         => new MySqlConnection(connectionString);
+    public override IDbCommand CreateCommand() => new MySqlCommand();
     public override IDbDataParameter CreateParameter(string parameterName, object value)
         => new MySqlParameter(parameterName, value);
     public override IDbDataParameter CreateParameter(string parameterName, object nativeDbType, object value)
@@ -225,7 +226,7 @@ public partial class MySqlProvider : BaseOrmProvider
         var sql = @"SELECT a.TABLE_SCHEMA,a.TABLE_NAME,a.COLUMN_NAME,a.DATA_TYPE,a.COLUMN_TYPE,a.CHARACTER_MAXIMUM_LENGTH,a.NUMERIC_SCALE,a.NUMERIC_PRECISION,a.COLUMN_COMMENT,a.COLUMN_DEFAULT,
 		a.COLUMN_KEY='PRI',INSTR(IFNULL(a.EXTRA,''),'auto_increment'),a.IS_NULLABLE='YES',a.ORDINAL_POSITION FROM INFORMATION_SCHEMA.COLUMNS a WHERE {0} ORDER BY a.TABLE_SCHEMA,a.TABLE_NAME,a.ORDINAL_POSITION";
 
-        using var connection = new MySqlConnection(connectionString);        
+        using var connection = new MySqlConnection(connectionString);
         var tableBuilders = new Dictionary<string, StringBuilder>();
         foreach (var tableName in tableNames)
         {
@@ -261,7 +262,7 @@ public partial class MySqlProvider : BaseOrmProvider
         sql = string.Format(sql, sqlBuilder.ToString());
         var entityMappers = mapProvider.EntityMaps.ToList();
         var tableInfos = new List<DbTableInfo>();
-		using var command = new MySqlCommand(sql, connection);
+        using var command = new MySqlCommand(sql, connection);
         connection.Open();
         using var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
 

@@ -5,6 +5,15 @@ namespace Trolley;
 
 public interface IMultipleQuery
 {
+    #region UseMaster
+    /// <summary>
+    /// 使用主库查询
+    /// </summary>
+    /// <param name="isUseMaster">使用主库为true，默认值为true</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery UseMaster(bool isUseMaster = true);
+    #endregion
+
     #region From
     /// <summary>
     /// 查询数据，用法：

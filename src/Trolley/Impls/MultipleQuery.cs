@@ -9,6 +9,7 @@ namespace Trolley;
 public class MultipleQuery : IMultipleQuery, IDisposable
 {
     #region Fields
+    protected internal bool isUseMaster = false;
     protected StringBuilder sqlBuilder = new();
     #endregion
 
@@ -22,11 +23,19 @@ public class MultipleQuery : IMultipleQuery, IDisposable
     #endregion
 
     #region Constructor
-    public MultipleQuery(DbContext dbContext, IDbCommand command)
+    public MultipleQuery(DbContext dbContext)
     {
         this.DbContext = dbContext;
-        this.Command = command;
         this.ReaderAfters = new();
+        this.Command = this.OrmProvider.CreateCommand();
+    }
+    #endregion
+
+    #region UseMaster
+    public IMultipleQuery UseMaster(bool isUseMaster = true)
+    {
+        this.isUseMaster = isUseMaster;
+        return this;
     }
     #endregion
 

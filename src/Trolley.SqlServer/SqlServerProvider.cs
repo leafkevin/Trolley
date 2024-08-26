@@ -126,6 +126,7 @@ public partial class SqlServerProvider : BaseOrmProvider
     }
     public override IDbConnection CreateConnection(string connectionString)
         => new SqlConnection(connectionString);
+    public override IDbCommand CreateCommand() => new SqlCommand();
     public override IDbDataParameter CreateParameter(string parameterName, object value)
         => new SqlParameter(parameterName, value);
     public override IDbDataParameter CreateParameter(string parameterName, object nativeDbType, object value)
