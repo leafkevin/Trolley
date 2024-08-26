@@ -24,6 +24,28 @@ public sealed class OrmDbFactory : IOrmDbFactory
     public IFieldMapHandler FieldMapHandler => this.fieldMapHandler;
     public DbInterceptors Interceptors => this.interceptors;
 
+    public TheaDatabase Register(OrmProviderType ormProviderType, string dbKey, string connectionString)
+    {
+        if (string.IsNullOrEmpty(dbKey)) throw new ArgumentNullException(nameof(dbKey));
+        if (string.IsNullOrEmpty(connectionString)) throw new ArgumentNullException(nameof(connectionString));
+
+        if (!this.ormProviders.TryGetValue(ormProviderType, out var ormProvider))
+        {
+            var type = this.GetOrmProviderType(ormProviderType);
+            ormProvider = Activator.CreateInstance(type) as IOrmProvider;
+            this.ormProviders.TryAdd(ormProviderType, ormProvider);
+        }
+
+        TheaDatabase database;
+        if (!this.databases.TryAdd(dbKey, database = new TheaDatabase
+        {
+            DbKey = dbKey,
+            ConnectionString = connectionString,
+            OrmProviderType = ormProviderType,
+            OrmProvider = ormProvider
+        })) throw new Exception($"dbKey:{database.DbKey}数据库已经添加");
+        return database;
+    }
     public void Register(OrmProviderType ormProviderType, string dbKey, string connectionString, bool isDefault)
     {
         if (string.IsNullOrEmpty(dbKey)) throw new ArgumentNullException(nameof(dbKey));
@@ -55,10 +77,11 @@ public sealed class OrmDbFactory : IOrmDbFactory
     /// <exception cref="Exception"></exception>
     public void UseDefaultDatabase(string dbKey)
     {
-        if (!this.databases.TryGetValue(dbKey, out var database))
+        foreach (var database in this.databases.Values)
+            database.IsDefault = database.DbKey == dbKey;
+        if (!this.databases.TryGetValue(dbKey, out var defaultDatabase))
             throw new Exception($"未配置dbKey:{dbKey}的数据库");
-        database.IsDefault = true;
-        this.defaultDatabase = database;
+        this.defaultDatabase = defaultDatabase;
     }
     /// <summary>
     /// 配置分库dbKey获取委托，配置此委托后，使用未指定dbKey的IOrmDbFactory.CreateRepository方法创建每个Repository对象，都将调用此委托。如：
@@ -161,26 +184,21 @@ public sealed class OrmDbFactory : IOrmDbFactory
             throw new ArgumentNullException(nameof(dbKey), "请配置dbKey，既没有设置分库规则来获取dbKey，也没有设置默认的dbKey");
 
         var database = this.GetDatabase(localDbKey);
-        var connection = database.OrmProvider.CreateConnection(database.ConnectionString);
-        this.interceptors.OnConnectionCreated?.Invoke(new ConectionEventArgs
-        {
-            ConnectionId = Guid.NewGuid().ToString("N"),
-            DbKey = localDbKey,
-            ConnectionString = database.ConnectionString,
-            OrmProvider = database.OrmProvider,
-            CreatedAt = DateTime.UtcNow
-        });
         if (!this.TryGetMapProvider(localDbKey, out var mapProvider)
             && !this.TryGetMapProvider(database.OrmProviderType, out mapProvider))
             throw new Exception($"没有注册dbKey：{localDbKey}的IEntityMapProvider对象，也没有注册OrmProviderType：{database.OrmProviderType}的IEntityMapProvider对象");
         if (!this.TryGetTableShardingProvider(localDbKey, out var tableShardingProvider))
             this.TryGetTableShardingProvider(database.OrmProviderType, out tableShardingProvider);
+
+        //只是为了获取默认TableSchema
+        var connection = database.OrmProvider.CreateConnection(database.ConnectionString);
+        var defaultSchema = database.OrmProvider.DefaultTableSchema ?? connection.Database;
+        connection.Dispose();
         var dbContext = new DbContext
         {
             DbKey = localDbKey,
-            ConnectionString = database.ConnectionString,
-            Connection = new TheaConnection(connection),
-            DefaultTableSchema = database.OrmProvider.DefaultTableSchema ?? connection.Database,
+            Database = database,
+            DefaultTableSchema = defaultSchema,
             OrmProvider = database.OrmProvider,
             MapProvider = mapProvider,
             ShardingProvider = tableShardingProvider,
@@ -222,6 +240,7 @@ public sealed class OrmDbFactory : IOrmDbFactory
             throw new DllNotFoundException($"没有找到[{fileName}]文件，或是没有引入[{packageName}]nuget包");
         return type;
     }
+
     public void Build()
     {
         if (this.mapProviders.Count > 0)
@@ -232,7 +251,7 @@ public sealed class OrmDbFactory : IOrmDbFactory
                 mapProvider.Value.Build(database);
             }
         }
-        if (this.globalMapProviders.Count > 0)
+        else if (this.globalMapProviders.Count > 0)
         {
             foreach (var mapProvider in this.globalMapProviders)
             {

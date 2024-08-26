@@ -108,30 +108,29 @@ public class Deleted<TEntity> : IDeleted<TEntity>
         if (this.Visitor.IsNeedFetchShardingTables)
             this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
 
-        using var command = this.DbContext.CreateCommand();
         int result = 0;
-        bool isNeedClose = this.DbContext.IsNeedClose;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         try
         {
             command.CommandText = this.Visitor.BuildCommand(this.DbContext, command);
-            this.DbContext.Open();
-            eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.Delete);
+            this.DbContext.Open(connection);
+            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Delete);
             result = command.ExecuteNonQuery();
         }
         catch (Exception ex)
         {
             isNeedClose = true;
             exception = ex;
-            this.DbContext.AddCommandFailedFilter(command, CommandSqlType.Delete, eventArgs, exception);
+            this.DbContext.AddCommandFailedFilter(connection, command, CommandSqlType.Delete, eventArgs, exception);
         }
         finally
         {
-            this.DbContext.AddCommandAfterFilter(command, CommandSqlType.Delete, eventArgs, exception == null, exception);
+            this.DbContext.AddCommandAfterFilter(connection, command, CommandSqlType.Delete, eventArgs, exception == null, exception);
             command.Parameters.Clear();
             command.Dispose();
-            if (isNeedClose) this.DbContext.Close();
+            if (isNeedClose) this.DbContext.Close(connection);
         }
         if (exception != null) throw exception;
         return result;
@@ -143,30 +142,29 @@ public class Deleted<TEntity> : IDeleted<TEntity>
         if (this.Visitor.IsNeedFetchShardingTables)
             await this.DbContext.FetchShardingTablesAsync(this.Visitor as SqlVisitor, cancellationToken);
 
-        using var command = this.DbContext.CreateDbCommand();
         int result = 0;
-        bool isNeedClose = this.DbContext.IsNeedClose;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterDbCommand();
         try
         {
             command.CommandText = this.Visitor.BuildCommand(this.DbContext, command);
-            await this.DbContext.OpenAsync(cancellationToken);
-            eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.Delete);
+            await this.DbContext.OpenAsync(connection, cancellationToken);
+            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Delete);
             result = await command.ExecuteNonQueryAsync(cancellationToken);
         }
         catch (Exception ex)
         {
             isNeedClose = true;
             exception = ex;
-            this.DbContext.AddCommandFailedFilter(command, CommandSqlType.Delete, eventArgs, exception);
+            this.DbContext.AddCommandFailedFilter(connection, command, CommandSqlType.Delete, eventArgs, exception);
         }
         finally
         {
-            this.DbContext.AddCommandAfterFilter(command, CommandSqlType.Delete, eventArgs, exception == null, exception);
+            this.DbContext.AddCommandAfterFilter(connection, command, CommandSqlType.Delete, eventArgs, exception == null, exception);
             command.Parameters.Clear();
             await command.DisposeAsync();
-            if (isNeedClose) await this.DbContext.CloseAsync();
+            if (isNeedClose) await this.DbContext.CloseAsync(connection);
         }
         if (exception != null) throw exception;
         return result;
@@ -180,10 +178,11 @@ public class Deleted<TEntity> : IDeleted<TEntity>
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        using var command = this.DbContext.CreateCommand();
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         var sql = this.Visitor.BuildCommand(this.DbContext, command);
         dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
+        if (isNeedClose) connection.Close();
         return sql;
     }
     #endregion   

@@ -59,7 +59,7 @@ public class UnitTest5 : UnitTestBase
     public async Task MultipleQuery()
     {
         Initialize();
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var reader = await repository.QueryMultipleAsync(f => f
             .Get<User>(new { Id = 1 })
             .Exists<Order>(f => f.BuyerId.IsNull())
@@ -97,7 +97,7 @@ public class UnitTest5 : UnitTestBase
     [Fact]
     public async Task MultipleCommand()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         int[] productIds = new int[] { 2, 4, 5, 6 };
         int category = 1;
         var commands = new List<MultipleCommand>();

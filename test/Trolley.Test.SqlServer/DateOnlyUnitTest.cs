@@ -59,7 +59,7 @@ public class DateOnlyUnitTest : UnitTestBase
     {
         this.Initialize();
         var localDate = DateOnly.FromDateTime(DateTime.Parse("2023-05-06"));
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql = repository.From<User>()
             .Where(f => f.Id == 1)
             .Select(f => new
@@ -124,7 +124,7 @@ public class DateOnlyUnitTest : UnitTestBase
     {
         this.Initialize();
         var localDate = DateOnly.FromDateTime(DateTime.Parse("2023-05-06"));
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql = repository.From<UpdateEntity>()
             .Where(f => f.Id == 1)
             .Select(f => new

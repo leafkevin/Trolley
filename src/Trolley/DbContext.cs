@@ -10,12 +10,13 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-public sealed class DbContext : IDisposable, IAsyncDisposable
+public sealed class DbContext
 {
     #region Properties
     public string DbKey { get; set; }
     public TheaConnection Connection { get; set; }
     public string ConnectionString { get; set; }
+    public TheaDatabase Database { get; set; }
     public string DefaultTableSchema { get; set; }
     public IOrmProvider OrmProvider { get; set; }
     public IEntityMapProvider MapProvider { get; set; }
@@ -25,61 +26,141 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     public int CommandTimeout { get; set; }
     public string ParameterPrefix { get; set; } = "p";
     public DbInterceptors DbInterceptors { get; set; }
-    public bool IsNeedClose => this.Transaction == null;
-    #endregion
+    #endregion   
 
-    #region CreateConnection
-    public void CreateConnection()
+    #region UseMasterCommand
+    public (bool, TheaConnection, IDbCommand) UseMasterCommand()
     {
-        var connection = this.OrmProvider.CreateConnection(this.ConnectionString);
-        this.Connection = new TheaConnection(connection);
-        this.DbInterceptors.OnConnectionCreated?.Invoke(new ConectionEventArgs
+        bool isNeedClose = false;
+        TheaConnection connection;
+        if (this.Transaction != null)
+            connection = this.Connection;
+        else
         {
-            ConnectionId = this.Connection.ConnectionId,
-            ConnectionString = this.ConnectionString,
-            DbKey = this.DbKey,
-            OrmProvider = this.OrmProvider,
-            CreatedAt = DateTime.Now
-        });
-    }
-    #endregion
-
-    #region CreateCommand
-    public IDbCommand CreateCommand()
-    {
-        var command = this.Connection.CreateCommand();
+            isNeedClose = true;
+            var connString = this.Database.ConnectionString;
+            var conn = this.OrmProvider.CreateConnection(connString);
+            connection = new TheaConnection(connString, conn);
+            this.DbInterceptors.OnConnectionCreated?.Invoke(new ConectionEventArgs
+            {
+                ConnectionId = Guid.NewGuid().ToString("N"),
+                DbKey = this.DbKey,
+                ConnectionString = connString,
+                OrmProvider = this.OrmProvider,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+        var command = connection.CreateCommand();
         command.CommandType = CommandType.Text;
         command.CommandTimeout = this.CommandTimeout;
         command.Transaction = this.Transaction;
-        return command;
+        return (isNeedClose, connection, command);
     }
-    public DbCommand CreateDbCommand()
+    public (bool, TheaConnection, DbCommand) UseMasterDbCommand()
     {
-        var cmd = this.Connection.CreateCommand();
-        cmd.CommandType = CommandType.Text;
-        cmd.Transaction = this.Transaction;
+        bool isNeedClose = false;
+        TheaConnection connection;
+        if (this.Transaction != null)
+            connection = this.Connection;
+        else
+        {
+            isNeedClose = true;
+            var connString = this.Database.ConnectionString;
+            var conn = this.OrmProvider.CreateConnection(connString);
+            connection = new TheaConnection(connString, conn);
+            this.DbInterceptors.OnConnectionCreated?.Invoke(new ConectionEventArgs
+            {
+                ConnectionId = Guid.NewGuid().ToString("N"),
+                DbKey = this.DbKey,
+                ConnectionString = connString,
+                OrmProvider = this.OrmProvider,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+        var cmd = connection.CreateCommand();
         if (cmd is not DbCommand command)
             throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-        return command;
+        cmd.CommandType = CommandType.Text;
+        cmd.CommandTimeout = this.CommandTimeout;
+        cmd.Transaction = this.Transaction;
+        return (isNeedClose, connection, command);
+    }
+    #endregion
+
+    #region UseSlaveCommand
+    public (bool, TheaConnection, IDbCommand) UseSlaveCommand()
+    {
+        bool isNeedClose = false;
+        TheaConnection connection;
+        if (this.Transaction != null)
+            connection = this.Connection;
+        else
+        {
+            isNeedClose = true;
+            var connString = this.Database.UseSlave();
+            var conn = this.OrmProvider.CreateConnection(connString);
+            connection = new TheaConnection(connString, conn);
+            this.DbInterceptors.OnConnectionCreated?.Invoke(new ConectionEventArgs
+            {
+                ConnectionId = Guid.NewGuid().ToString("N"),
+                DbKey = this.DbKey,
+                ConnectionString = connString,
+                OrmProvider = this.OrmProvider,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+        var command = connection.CreateCommand();
+        command.CommandType = CommandType.Text;
+        command.CommandTimeout = this.CommandTimeout;
+        command.Transaction = this.Transaction;
+        return (isNeedClose, connection, command);
+    }
+    public (bool, TheaConnection, DbCommand) UseSlaveDbCommand()
+    {
+        bool isNeedClose = false;
+        TheaConnection connection;
+        if (this.Transaction != null)
+            connection = this.Connection;
+        else
+        {
+            isNeedClose = true;
+            var connString = this.Database.UseSlave();
+            var conn = this.OrmProvider.CreateConnection(connString);
+            connection = new TheaConnection(connString, conn);
+            this.DbInterceptors.OnConnectionCreated?.Invoke(new ConectionEventArgs
+            {
+                ConnectionId = Guid.NewGuid().ToString("N"),
+                DbKey = this.DbKey,
+                ConnectionString = connString,
+                OrmProvider = this.OrmProvider,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+        var cmd = connection.CreateCommand();
+        if (cmd is not DbCommand command)
+            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
+        cmd.CommandType = CommandType.Text;
+        cmd.CommandTimeout = this.CommandTimeout;
+        cmd.Transaction = this.Transaction;
+        return (isNeedClose, connection, command);
     }
     #endregion
 
     #region QueryFirst
     public TResult QueryFirst<TResult>(Action<IDbCommand> commandInitializer)
     {
-        using var command = this.CreateCommand();
         TResult result = default;
         IDataReader reader = null;
-        bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
         try
         {
             var entityType = typeof(TResult);
             commandInitializer.Invoke(command);
-            this.Open();
+            this.Open(connection);
             var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Select);
+            eventArgs = this.AddCommandBeforeFilter(connection, command, CommandSqlType.Select);
             reader = command.ExecuteReader(behavior);
             if (reader.Read())
             {
@@ -92,35 +173,34 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             isNeedClose = true;
             exception = ex;
-            this.AddCommandFailedFilter(command, CommandSqlType.Select, eventArgs, exception);
+            this.AddCommandFailedFilter(connection, command, CommandSqlType.Select, eventArgs, exception);
         }
         finally
         {
-            this.AddCommandAfterFilter(command, CommandSqlType.Select, eventArgs, exception == null, exception);
+            this.AddCommandAfterFilter(connection, command, CommandSqlType.Select, eventArgs, exception == null, exception);
             reader?.Dispose();
             command.Parameters.Clear();
             command.Dispose();
-            if (isNeedClose) this.Close();
+            if (isNeedClose) this.Close(connection);
         }
         if (exception != null) throw exception;
         return result;
     }
     public async Task<TResult> QueryFirstAsync<TResult>(Action<IDbCommand> commandInitializer, CancellationToken cancellationToken = default)
     {
-        using var command = this.CreateDbCommand();
         TResult result = default;
         DbDataReader reader = null;
-        bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
+        (var isNeedClose, var connection, var command) = this.UseSlaveDbCommand();
         try
         {
             var entityType = typeof(TResult);
             commandInitializer.Invoke(command);
 
-            await this.OpenAsync(cancellationToken);
+            await this.OpenAsync(connection, cancellationToken);
             var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Select);
+            eventArgs = this.AddCommandBeforeFilter(connection, command, CommandSqlType.Select);
             reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
             if (await reader.ReadAsync(cancellationToken))
             {
@@ -133,28 +213,27 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             isNeedClose = true;
             exception = ex;
-            this.AddCommandFailedFilter(command, CommandSqlType.Select, eventArgs, exception);
+            this.AddCommandFailedFilter(connection, command, CommandSqlType.Select, eventArgs, exception);
         }
         finally
         {
-            this.AddCommandAfterFilter(command, CommandSqlType.Select, eventArgs, exception == null, exception);
+            this.AddCommandAfterFilter(connection, command, CommandSqlType.Select, eventArgs, exception == null, exception);
             if (reader != null)
                 await reader.DisposeAsync();
             command.Parameters.Clear();
             await command.DisposeAsync();
-            if (isNeedClose) await this.CloseAsync();
+            if (isNeedClose) await this.CloseAsync(connection);
         }
         if (exception != null) throw exception;
         return result;
     }
     public TResult QueryFirst<TResult>(IQueryVisitor visitor)
     {
-        using var command = this.CreateCommand();
         TResult result = default;
         IDataReader reader = null;
-        bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
         try
         {
             if (visitor.IsNeedFetchShardingTables)
@@ -166,9 +245,9 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             command.CommandText = sql;
             visitor.DbParameters.CopyTo(command.Parameters);
 
-            this.Open();
+            this.Open(connection);
             var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Select);
+            eventArgs = this.AddCommandBeforeFilter(connection, command, CommandSqlType.Select);
             reader = command.ExecuteReader(behavior);
             var entityType = typeof(TResult);
             if (reader.Read())
@@ -192,15 +271,15 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             isNeedClose = true;
             exception = ex;
-            this.AddCommandFailedFilter(command, CommandSqlType.Select, eventArgs, exception);
+            this.AddCommandFailedFilter(connection, command, CommandSqlType.Select, eventArgs, exception);
         }
         finally
         {
-            this.AddCommandAfterFilter(command, CommandSqlType.Select, eventArgs, exception == null, exception);
+            this.AddCommandAfterFilter(connection, command, CommandSqlType.Select, eventArgs, exception == null, exception);
             reader?.Close();
             command.Parameters.Clear();
             command.Dispose();
-            if (isNeedClose) this.Close();
+            if (isNeedClose) this.Close(connection);
             visitor.Dispose();
         }
         if (exception != null) throw exception;
@@ -208,12 +287,11 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     }
     public async Task<TResult> QueryFirstAsync<TResult>(IQueryVisitor visitor, CancellationToken cancellationToken = default)
     {
-        using var command = this.CreateDbCommand();
         TResult result = default;
         DbDataReader reader = null;
-        bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
+        (var isNeedClose, var connection, var command) = this.UseSlaveDbCommand();
         try
         {
             if (visitor.IsNeedFetchShardingTables)
@@ -225,9 +303,9 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             command.CommandText = sql;
             visitor.DbParameters.CopyTo(command.Parameters);
 
-            await this.OpenAsync(cancellationToken);
+            await this.OpenAsync(connection, cancellationToken);
             var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Select);
+            eventArgs = this.AddCommandBeforeFilter(connection, command, CommandSqlType.Select);
             reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
             var entityType = typeof(TResult);
             if (await reader.ReadAsync(cancellationToken))
@@ -251,15 +329,15 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             isNeedClose = true;
             exception = ex;
-            this.AddCommandFailedFilter(command, CommandSqlType.Select, eventArgs, exception);
+            this.AddCommandFailedFilter(connection, command, CommandSqlType.Select, eventArgs, exception);
         }
         finally
         {
-            this.AddCommandAfterFilter(command, CommandSqlType.Select, eventArgs, exception == null, exception);
+            this.AddCommandAfterFilter(connection, command, CommandSqlType.Select, eventArgs, exception == null, exception);
             reader?.Close();
             command.Parameters.Clear();
             await command.DisposeAsync();
-            if (isNeedClose) await this.CloseAsync();
+            if (isNeedClose) await this.CloseAsync(connection);
             visitor.Dispose();
         }
         if (exception != null) throw exception;
@@ -270,20 +348,19 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     #region Query
     public List<TResult> Query<TResult>(Action<IDbCommand> commandInitializer)
     {
-        using var command = this.CreateCommand();
         var result = new List<TResult>();
         IDataReader reader = null;
-        bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
         try
         {
             var entityType = typeof(TResult);
             commandInitializer.Invoke(command);
 
-            this.Open();
+            this.Open(connection);
             var behavior = CommandBehavior.SequentialAccess;
-            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Select);
+            eventArgs = this.AddCommandBeforeFilter(connection, command, CommandSqlType.Select);
             reader = command.ExecuteReader(behavior);
 
             if (entityType.IsEntityType(out _))
@@ -305,34 +382,33 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             isNeedClose = true;
             exception = ex;
-            this.AddCommandFailedFilter(command, CommandSqlType.Select, eventArgs, exception);
+            this.AddCommandFailedFilter(connection, command, CommandSqlType.Select, eventArgs, exception);
         }
         finally
         {
-            this.AddCommandAfterFilter(command, CommandSqlType.Select, eventArgs, exception == null, exception);
+            this.AddCommandAfterFilter(connection, command, CommandSqlType.Select, eventArgs, exception == null, exception);
             reader?.Dispose();
             command.Parameters.Clear();
             command.Dispose();
-            if (isNeedClose) this.Close();
+            if (isNeedClose) this.Close(connection);
         }
         if (exception != null) throw exception;
         return result;
     }
     public async Task<List<TResult>> QueryAsync<TResult>(Action<IDbCommand> commandInitializer, CancellationToken cancellationToken = default)
     {
-        using var command = this.CreateDbCommand();
         var result = new List<TResult>();
         DbDataReader reader = null;
-        bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
+        (var isNeedClose, var connection, var command) = this.UseSlaveDbCommand();
         try
         {
             var entityType = typeof(TResult);
             commandInitializer.Invoke(command);
-            await this.OpenAsync(cancellationToken);
+            await this.OpenAsync(connection, cancellationToken);
             var behavior = CommandBehavior.SequentialAccess;
-            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Select);
+            eventArgs = this.AddCommandBeforeFilter(connection, command, CommandSqlType.Select);
             reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
             if (entityType.IsEntityType(out _))
             {
@@ -353,28 +429,27 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             isNeedClose = true;
             exception = ex;
-            this.AddCommandFailedFilter(command, CommandSqlType.Select, eventArgs, exception);
+            this.AddCommandFailedFilter(connection, command, CommandSqlType.Select, eventArgs, exception);
         }
         finally
         {
-            this.AddCommandAfterFilter(command, CommandSqlType.Select, eventArgs, exception == null, exception);
+            this.AddCommandAfterFilter(connection, command, CommandSqlType.Select, eventArgs, exception == null, exception);
             if (reader != null)
                 await reader.DisposeAsync();
             command.Parameters.Clear();
             await command.DisposeAsync();
-            if (isNeedClose) await this.CloseAsync();
+            if (isNeedClose) await this.CloseAsync(connection);
         }
         if (exception != null) throw exception;
         return result;
     }
     public List<TResult> Query<TResult>(IQueryVisitor visitor)
     {
-        using var command = this.CreateCommand();
         var result = new List<TResult>();
         IDataReader reader = null;
-        bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
         try
         {
             if (visitor.IsNeedFetchShardingTables)
@@ -386,9 +461,9 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             command.CommandText = sql;
             visitor.DbParameters.CopyTo(command.Parameters);
 
-            this.Open();
+            this.Open(connection);
             var behavior = CommandBehavior.SequentialAccess;
-            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Select);
+            eventArgs = this.AddCommandBeforeFilter(connection, command, CommandSqlType.Select);
             reader = command.ExecuteReader(behavior);
 
             var entityType = typeof(TResult);
@@ -421,15 +496,15 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             isNeedClose = true;
             exception = ex;
-            this.AddCommandFailedFilter(command, CommandSqlType.Select, eventArgs, exception);
+            this.AddCommandFailedFilter(connection, command, CommandSqlType.Select, eventArgs, exception);
         }
         finally
         {
-            this.AddCommandAfterFilter(command, CommandSqlType.Select, eventArgs, exception == null, exception);
+            this.AddCommandAfterFilter(connection, command, CommandSqlType.Select, eventArgs, exception == null, exception);
             reader?.Dispose();
             command.Parameters.Clear();
             command.Dispose();
-            if (isNeedClose) this.Close();
+            if (isNeedClose) this.Close(connection);
             visitor.Dispose();
         }
         if (exception != null) throw exception;
@@ -437,12 +512,11 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     }
     public async Task<List<TResult>> QueryAsync<TResult>(IQueryVisitor visitor, CancellationToken cancellationToken = default)
     {
-        using var command = this.CreateDbCommand();
         var result = new List<TResult>();
         DbDataReader reader = null;
-        bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
+        (var isNeedClose, var connection, var command) = this.UseSlaveDbCommand();
         try
         {
             if (visitor.IsNeedFetchShardingTables)
@@ -455,9 +529,9 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             command.CommandText = sql;
             visitor.DbParameters.CopyTo(command.Parameters);
 
-            await this.OpenAsync(cancellationToken);
+            await this.OpenAsync(connection, cancellationToken);
             var behavior = CommandBehavior.SequentialAccess;
-            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Select);
+            eventArgs = this.AddCommandBeforeFilter(connection, command, CommandSqlType.Select);
             reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
 
             var entityType = typeof(TResult);
@@ -490,16 +564,16 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             isNeedClose = true;
             exception = ex;
-            this.AddCommandFailedFilter(command, CommandSqlType.Select, eventArgs, exception);
+            this.AddCommandFailedFilter(connection, command, CommandSqlType.Select, eventArgs, exception);
         }
         finally
         {
-            this.AddCommandAfterFilter(command, CommandSqlType.Select, eventArgs, exception == null, exception);
+            this.AddCommandAfterFilter(connection, command, CommandSqlType.Select, eventArgs, exception == null, exception);
             if (reader != null)
                 await reader.DisposeAsync();
             command.Parameters.Clear();
             await command.DisposeAsync();
-            if (isNeedClose) await this.CloseAsync();
+            if (isNeedClose) await this.CloseAsync(connection);
             visitor.Dispose();
         }
         if (exception != null) throw exception;
@@ -510,12 +584,11 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     #region QueryPage
     public IPagedList<TResult> QueryPage<TResult>(IQueryVisitor visitor)
     {
-        using var command = this.CreateCommand();
-        var result = new PagedList<TResult> { Data = new List<TResult>() };
         IDataReader reader = null;
-        bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
+        var result = new PagedList<TResult> { Data = new List<TResult>() };
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
         try
         {
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
@@ -523,9 +596,9 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             command.CommandText = visitor.BuildSql(out var readerFields);
             visitor.DbParameters.CopyTo(command.Parameters);
 
-            this.Open();
+            this.Open(connection);
             var behavior = CommandBehavior.SequentialAccess;
-            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Select);
+            eventArgs = this.AddCommandBeforeFilter(connection, command, CommandSqlType.Select);
             reader = command.ExecuteReader(behavior);
             if (reader.Read()) result.TotalCount = reader.To<int>(this.OrmProvider);
             result.PageNumber = visitor.PageNumber;
@@ -563,15 +636,15 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             isNeedClose = true;
             exception = ex;
-            this.AddCommandFailedFilter(command, CommandSqlType.Select, eventArgs, exception);
+            this.AddCommandFailedFilter(connection, command, CommandSqlType.Select, eventArgs, exception);
         }
         finally
         {
-            this.AddCommandAfterFilter(command, CommandSqlType.Select, eventArgs, exception == null, exception);
+            this.AddCommandAfterFilter(connection, command, CommandSqlType.Select, eventArgs, exception == null, exception);
             reader?.Dispose();
             command.Parameters.Clear();
             command.Dispose();
-            if (isNeedClose) this.Close();
+            if (isNeedClose) this.Close(connection);
             visitor.Dispose();
         }
         if (exception != null) throw exception;
@@ -579,12 +652,11 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     }
     public async Task<IPagedList<TResult>> QueryPageAsync<TResult>(IQueryVisitor visitor, CancellationToken cancellationToken = default)
     {
-        using var command = this.CreateDbCommand();
-        var result = new PagedList<TResult> { Data = new List<TResult>() };
         DbDataReader reader = null;
-        bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
+        var result = new PagedList<TResult> { Data = new List<TResult>() };
+        (var isNeedClose, var connection, var command) = this.UseSlaveDbCommand();
         try
         {
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
@@ -592,9 +664,9 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             command.CommandText = visitor.BuildSql(out var readerFields);
             visitor.DbParameters.CopyTo(command.Parameters);
 
-            await this.OpenAsync(cancellationToken);
+            await this.OpenAsync(connection, cancellationToken);
             var behavior = CommandBehavior.SequentialAccess;
-            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Select);
+            eventArgs = this.AddCommandBeforeFilter(connection, command, CommandSqlType.Select);
             reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
             if (await reader.ReadAsync(cancellationToken)) result.TotalCount = reader.To<int>(this.OrmProvider);
             result.PageNumber = visitor.PageNumber;
@@ -632,16 +704,16 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             isNeedClose = true;
             exception = ex;
-            this.AddCommandFailedFilter(command, CommandSqlType.Select, eventArgs, exception);
+            this.AddCommandFailedFilter(connection, command, CommandSqlType.Select, eventArgs, exception);
         }
         finally
         {
-            this.AddCommandAfterFilter(command, CommandSqlType.Select, eventArgs, exception == null, exception);
+            this.AddCommandAfterFilter(connection, command, CommandSqlType.Select, eventArgs, exception == null, exception);
             if (reader != null)
                 await reader.DisposeAsync();
             command.Parameters.Clear();
             await command.DisposeAsync();
-            if (isNeedClose) await this.CloseAsync();
+            if (isNeedClose) await this.CloseAsync(connection);
             visitor.Dispose();
         }
         if (exception != null) throw exception;
@@ -655,12 +727,11 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
 
-        using var command = this.CreateCommand();
         TEntity result = default;
         IDataReader reader = null;
-        bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
         try
         {
             var entityType = typeof(TEntity);
@@ -669,9 +740,9 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
             command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this.OrmProvider, whereObj);
 
-            this.Open();
+            this.Open(connection);
             var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Select);
+            eventArgs = this.AddCommandBeforeFilter(connection, command, CommandSqlType.Select);
             reader = command.ExecuteReader(behavior);
             if (reader.Read())
                 result = reader.To<TEntity>(this.OrmProvider, this.MapProvider);
@@ -680,15 +751,15 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             isNeedClose = true;
             exception = ex;
-            this.AddCommandFailedFilter(command, CommandSqlType.Select, eventArgs, exception);
+            this.AddCommandFailedFilter(connection, command, CommandSqlType.Select, eventArgs, exception);
         }
         finally
         {
-            this.AddCommandAfterFilter(command, CommandSqlType.Select, eventArgs, exception == null, exception);
+            this.AddCommandAfterFilter(connection, command, CommandSqlType.Select, eventArgs, exception == null, exception);
             reader?.Dispose();
             command.Parameters.Clear();
             command.Dispose();
-            if (isNeedClose) this.Close();
+            if (isNeedClose) this.Close(connection);
         }
         if (exception != null) throw exception;
         return result;
@@ -698,12 +769,11 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
 
-        using var command = this.CreateDbCommand();
         TEntity result = default;
         DbDataReader reader = null;
-        bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
+        (var isNeedClose, var connection, var command) = this.UseSlaveDbCommand();
         try
         {
             var entityType = typeof(TEntity);
@@ -712,9 +782,9 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
             command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this.OrmProvider, whereObj);
 
-            await this.OpenAsync(cancellationToken);
+            await this.OpenAsync(connection, cancellationToken);
             var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Select);
+            eventArgs = this.AddCommandBeforeFilter(connection, command, CommandSqlType.Select);
             reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
 
             if (await reader.ReadAsync(cancellationToken))
@@ -724,16 +794,16 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             isNeedClose = true;
             exception = ex;
-            this.AddCommandFailedFilter(command, CommandSqlType.Select, eventArgs, exception);
+            this.AddCommandFailedFilter(connection, command, CommandSqlType.Select, eventArgs, exception);
         }
         finally
         {
-            this.AddCommandAfterFilter(command, CommandSqlType.Select, eventArgs, exception == null, exception);
+            this.AddCommandAfterFilter(connection, command, CommandSqlType.Select, eventArgs, exception == null, exception);
             if (reader != null)
                 await reader.DisposeAsync();
             command.Parameters.Clear();
             await command.DisposeAsync();
-            if (isNeedClose) await this.CloseAsync();
+            if (isNeedClose) await this.CloseAsync(connection);
         }
         if (exception != null) throw exception;
         return result;
@@ -745,16 +815,15 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     {
         TResult result = default;
         IDataReader reader = null;
-        bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
-        using var command = this.CreateCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         try
         {
             var readerFields = commandInitializer.Invoke(command, this);
-            this.Open();
+            this.Open(connection);
             var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Insert);
+            eventArgs = this.AddCommandBeforeFilter(connection, command, CommandSqlType.Insert);
             reader = command.ExecuteReader(behavior);
             if (reader.Read())
             {
@@ -767,15 +836,15 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             isNeedClose = true;
             exception = ex;
-            this.AddCommandFailedFilter(command, CommandSqlType.Insert, eventArgs, exception);
+            this.AddCommandFailedFilter(connection, command, CommandSqlType.Insert, eventArgs, exception);
         }
         finally
         {
-            this.AddCommandAfterFilter(command, CommandSqlType.Insert, eventArgs, exception == null, exception);
+            this.AddCommandAfterFilter(connection, command, CommandSqlType.Insert, eventArgs, exception == null, exception);
             reader?.Dispose();
             command.Parameters.Clear();
             command.Dispose();
-            if (isNeedClose) this.Close();
+            if (isNeedClose) this.Close(connection);
         }
         if (exception != null) throw exception;
         return result;
@@ -784,16 +853,15 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     {
         TResult result = default;
         DbDataReader reader = null;
-        bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
-        using var command = this.CreateDbCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterDbCommand();
         try
         {
             var readerFields = commandInitializer.Invoke(command, this);
-            await this.OpenAsync(cancellationToken);
+            await this.OpenAsync(connection, cancellationToken);
             var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Insert);
+            eventArgs = this.AddCommandBeforeFilter(connection, command, CommandSqlType.Insert);
             reader = await command.ExecuteReaderAsync(behavior, cancellationToken);
             if (await reader.ReadAsync(cancellationToken))
             {
@@ -806,16 +874,16 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             isNeedClose = true;
             exception = ex;
-            this.AddCommandFailedFilter(command, CommandSqlType.Insert, eventArgs, exception);
+            this.AddCommandFailedFilter(connection, command, CommandSqlType.Insert, eventArgs, exception);
         }
         finally
         {
-            this.AddCommandAfterFilter(command, CommandSqlType.Insert, eventArgs, exception == null, exception);
+            this.AddCommandAfterFilter(connection, command, CommandSqlType.Insert, eventArgs, exception == null, exception);
             if (reader != null)
                 await reader.DisposeAsync();
             command.Parameters.Clear();
             await command.DisposeAsync();
-            if (isNeedClose) await this.CloseAsync();
+            if (isNeedClose) await this.CloseAsync(connection);
         }
         if (exception != null) throw exception;
         return result;
@@ -824,15 +892,14 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     {
         var result = new List<TResult>();
         IDataReader reader = null;
-        bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
-        using var command = this.CreateCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         try
         {
             command.CommandText = visitor.BuildCommand(command, false, out var readerFields);
-            this.Open();
-            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Insert);
+            this.Open(connection);
+            eventArgs = this.AddCommandBeforeFilter(connection, command, CommandSqlType.Insert);
             reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
             while (reader.Read())
             {
@@ -843,15 +910,15 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             isNeedClose = true;
             exception = ex;
-            this.AddCommandFailedFilter(command, CommandSqlType.Insert, eventArgs, exception);
+            this.AddCommandFailedFilter(connection, command, CommandSqlType.Insert, eventArgs, exception);
         }
         finally
         {
-            this.AddCommandAfterFilter(command, CommandSqlType.Insert, eventArgs, exception == null, exception);
+            this.AddCommandAfterFilter(connection, command, CommandSqlType.Insert, eventArgs, exception == null, exception);
             reader?.Dispose();
             command.Parameters.Clear();
             command.Dispose();
-            if (isNeedClose) this.Close();
+            if (isNeedClose) this.Close(connection);
         }
         if (exception != null) throw exception;
         return result;
@@ -860,15 +927,14 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     {
         var result = new List<TResult>();
         DbDataReader reader = null;
-        bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
-        using var command = this.CreateDbCommand();
+        (var isNeedClose, var connection, var command) = this.UseMasterDbCommand();
         try
         {
             command.CommandText = visitor.BuildCommand(command, false, out var readerFields);
-            await this.OpenAsync(cancellationToken);
-            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Insert);
+            await this.OpenAsync(connection, cancellationToken);
+            eventArgs = this.AddCommandBeforeFilter(connection, command, CommandSqlType.Insert);
             reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
             while (await reader.ReadAsync(cancellationToken))
             {
@@ -879,16 +945,16 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             isNeedClose = true;
             exception = ex;
-            this.AddCommandFailedFilter(command, CommandSqlType.Insert, eventArgs, exception);
+            this.AddCommandFailedFilter(connection, command, CommandSqlType.Insert, eventArgs, exception);
         }
         finally
         {
-            this.AddCommandAfterFilter(command, CommandSqlType.Insert, eventArgs, exception == null, exception);
+            this.AddCommandAfterFilter(connection, command, CommandSqlType.Insert, eventArgs, exception == null, exception);
             if (reader != null)
                 await reader.DisposeAsync();
             command.Parameters.Clear();
             await command.DisposeAsync();
-            if (isNeedClose) await this.CloseAsync();
+            if (isNeedClose) await this.CloseAsync(connection);
             visitor.Dispose();
         }
         if (exception != null) throw exception;
@@ -966,60 +1032,58 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     #region Execute
     public int Execute(Func<IDbCommand, bool> commandInitializer)
     {
-        using var command = this.CreateCommand();
         int result = 0;
-        bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         try
         {
             if (!commandInitializer.Invoke(command))
-                this.Open();
-            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Execute);
+                this.Open(connection);
+            eventArgs = this.AddCommandBeforeFilter(connection, command, CommandSqlType.Execute);
             result = command.ExecuteNonQuery();
         }
         catch (Exception ex)
         {
             isNeedClose = true;
             exception = ex;
-            this.AddCommandFailedFilter(command, CommandSqlType.Execute, eventArgs, exception);
+            this.AddCommandFailedFilter(connection, command, CommandSqlType.Execute, eventArgs, exception);
         }
         finally
         {
-            this.AddCommandAfterFilter(command, CommandSqlType.Execute, eventArgs, exception == null, exception);
+            this.AddCommandAfterFilter(connection, command, CommandSqlType.Execute, eventArgs, exception == null, exception);
             command.Parameters.Clear();
             command.Dispose();
-            if (isNeedClose) this.Close();
+            if (isNeedClose) this.Close(connection);
         }
         if (exception != null) throw exception;
         return result;
     }
     public async Task<int> ExecuteAsync(Func<IDbCommand, bool> commandInitializer, CancellationToken cancellationToken = default)
     {
-        using var command = this.CreateDbCommand();
         int result = 0;
-        bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
+        (var isNeedClose, var connection, var command) = this.UseMasterDbCommand();
         try
         {
             if (!commandInitializer.Invoke(command))
-                await this.OpenAsync(cancellationToken);
-            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Execute);
+                await this.OpenAsync(connection, cancellationToken);
+            eventArgs = this.AddCommandBeforeFilter(connection, command, CommandSqlType.Execute);
             result = await command.ExecuteNonQueryAsync(cancellationToken);
         }
         catch (Exception ex)
         {
             isNeedClose = true;
             exception = ex;
-            this.AddCommandFailedFilter(command, CommandSqlType.Execute, eventArgs, exception);
+            this.AddCommandFailedFilter(connection, command, CommandSqlType.Execute, eventArgs, exception);
         }
         finally
         {
-            this.AddCommandAfterFilter(command, CommandSqlType.Execute, eventArgs, exception == null, exception);
+            this.AddCommandAfterFilter(connection, command, CommandSqlType.Execute, eventArgs, exception == null, exception);
             command.Parameters.Clear();
             await command.DisposeAsync();
-            if (isNeedClose) await this.CloseAsync();
+            if (isNeedClose) await this.CloseAsync(connection);
         }
         if (exception != null) throw exception;
         return result;
@@ -1027,62 +1091,15 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     #endregion   
 
     #region Others
-    public void Open()
+    public void Open(TheaConnection connection)
     {
-        if (this.Connection.State == ConnectionState.Broken)
-        {
-            this.Connection.Close();
-            this.DbInterceptors.OnConnectionClosed?.Invoke(new ConectionEventArgs
-            {
-                ConnectionId = this.Connection.ConnectionId,
-                ConnectionString = this.ConnectionString,
-                DbKey = this.DbKey,
-                OrmProvider = this.OrmProvider,
-                CreatedAt = DateTime.Now
-            });
-        }
-        if (this.Connection.State == ConnectionState.Closed)
-        {
-            //关闭后，连接串被重置，需要重新设置
-            this.Connection.ConnectionString = this.ConnectionString;
-            this.DbInterceptors.OnConnectionOpening?.Invoke(new ConectionEventArgs
-            {
-                ConnectionId = this.Connection.ConnectionId,
-                ConnectionString = this.ConnectionString,
-                DbKey = this.DbKey,
-                OrmProvider = this.OrmProvider,
-                CreatedAt = DateTime.Now
-            });
-            this.Connection.Open();
-            this.DbInterceptors.OnConnectionOpened?.Invoke(new ConectionEventArgs
-            {
-                ConnectionId = this.Connection.ConnectionId,
-                ConnectionString = this.ConnectionString,
-                DbKey = this.DbKey,
-                OrmProvider = this.OrmProvider,
-                CreatedAt = DateTime.Now
-            });
-        }
-    }
-    public async Task OpenAsync(CancellationToken cancellationToken = default)
-    {
-        if (this.Connection.BaseConnection is not DbConnection connection)
-            throw new NotSupportedException("当前数据库驱动不支持异步操作");
         if (connection.State == ConnectionState.Broken)
         {
-            this.DbInterceptors.OnConnectionClosing?.Invoke(new ConectionEventArgs
-            {
-                ConnectionId = this.Connection.ConnectionId,
-                ConnectionString = this.ConnectionString,
-                DbKey = this.DbKey,
-                OrmProvider = this.OrmProvider,
-                CreatedAt = DateTime.Now
-            });
-            await connection.CloseAsync();
+            connection.Close();
             this.DbInterceptors.OnConnectionClosed?.Invoke(new ConectionEventArgs
             {
-                ConnectionId = this.Connection.ConnectionId,
-                ConnectionString = this.ConnectionString,
+                ConnectionId = connection.ConnectionId,
+                ConnectionString = connection.ConnectionString,
                 DbKey = this.DbKey,
                 OrmProvider = this.OrmProvider,
                 CreatedAt = DateTime.Now
@@ -1091,11 +1108,58 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         if (connection.State == ConnectionState.Closed)
         {
             //关闭后，连接串被重置，需要重新设置
-            connection.ConnectionString = this.ConnectionString;
+            connection.BaseConnection.ConnectionString = connection.ConnectionString;
             this.DbInterceptors.OnConnectionOpening?.Invoke(new ConectionEventArgs
             {
-                ConnectionId = this.Connection.ConnectionId,
-                ConnectionString = this.ConnectionString,
+                ConnectionId = connection.ConnectionId,
+                ConnectionString = connection.ConnectionString,
+                DbKey = this.DbKey,
+                OrmProvider = this.OrmProvider,
+                CreatedAt = DateTime.Now
+            });
+            connection.Open();
+            this.DbInterceptors.OnConnectionOpened?.Invoke(new ConectionEventArgs
+            {
+                ConnectionId = connection.ConnectionId,
+                ConnectionString = connection.ConnectionString,
+                DbKey = this.DbKey,
+                OrmProvider = this.OrmProvider,
+                CreatedAt = DateTime.Now
+            });
+        }
+    }
+    public async Task OpenAsync(TheaConnection connection, CancellationToken cancellationToken = default)
+    {
+        if (connection.BaseConnection is not DbConnection)
+            throw new NotSupportedException("当前数据库驱动不支持异步操作");
+        if (connection.State == ConnectionState.Broken)
+        {
+            this.DbInterceptors.OnConnectionClosing?.Invoke(new ConectionEventArgs
+            {
+                ConnectionId = connection.ConnectionId,
+                ConnectionString = connection.ConnectionString,
+                DbKey = this.DbKey,
+                OrmProvider = this.OrmProvider,
+                CreatedAt = DateTime.Now
+            });
+            await connection.CloseAsync();
+            this.DbInterceptors.OnConnectionClosed?.Invoke(new ConectionEventArgs
+            {
+                ConnectionId = connection.ConnectionId,
+                ConnectionString = connection.ConnectionString,
+                DbKey = this.DbKey,
+                OrmProvider = this.OrmProvider,
+                CreatedAt = DateTime.Now
+            });
+        }
+        if (connection.State == ConnectionState.Closed)
+        {
+            //关闭后，连接串被重置，需要重新设置
+            connection.BaseConnection.ConnectionString = connection.ConnectionString;
+            this.DbInterceptors.OnConnectionOpening?.Invoke(new ConectionEventArgs
+            {
+                ConnectionId = connection.ConnectionId,
+                ConnectionString = connection.ConnectionString,
                 DbKey = this.DbKey,
                 OrmProvider = this.OrmProvider,
                 CreatedAt = DateTime.Now
@@ -1103,8 +1167,8 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             await connection.OpenAsync(cancellationToken);
             this.DbInterceptors.OnConnectionOpened?.Invoke(new ConectionEventArgs
             {
-                ConnectionId = this.Connection.ConnectionId,
-                ConnectionString = this.ConnectionString,
+                ConnectionId = connection.ConnectionId,
+                ConnectionString = connection.ConnectionString,
                 DbKey = this.DbKey,
                 OrmProvider = this.OrmProvider,
                 CreatedAt = DateTime.Now
@@ -1113,13 +1177,19 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     }
     public IDbTransaction BeginTransaction()
     {
-        this.Open();
+        if (this.Transaction != null)
+            throw new Exception("上一个事务还没有完成，无法开启新事务");
+        this.UseMaster();
+        this.Open(this.Connection);
         this.Transaction = this.Connection.BeginTransaction();
         return this.Transaction;
     }
     public async ValueTask<IDbTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
     {
-        await this.OpenAsync(cancellationToken);
+        if (this.Transaction != null)
+            throw new Exception("上一个事务还没有完成，无法开启新事务");
+        this.UseMaster();
+        await this.OpenAsync(this.Connection, cancellationToken);
         if (this.Connection.BaseConnection is DbConnection connection)
             this.Transaction = await connection.BeginTransactionAsync(cancellationToken);
         else throw new NotSupportedException("当前数据库驱动不支持异步操作");
@@ -1128,8 +1198,9 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     public void Commit()
     {
         this.Transaction?.Commit();
-        this.Close();
+        this.Close(this.Connection);
         this.Transaction = null;
+        this.Connection = null;
     }
     public async Task CommitAsync(CancellationToken cancellationToken = default)
     {
@@ -1139,14 +1210,16 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                 throw new NotSupportedException("当前数据库驱动不支持异步操作");
             await dbTransaction.CommitAsync(cancellationToken);
         }
-        await this.CloseAsync();
+        await this.CloseAsync(this.Connection);
         this.Transaction = null;
+        this.Connection = null;
     }
     public void Rollback()
     {
         this.Transaction?.Rollback();
-        this.Close();
+        this.Close(this.Connection);
         this.Transaction = null;
+        this.Connection = null;
     }
     public async Task RollbackAsync(CancellationToken cancellationToken = default)
     {
@@ -1156,44 +1229,45 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                 throw new NotSupportedException("当前数据库驱动不支持异步操作");
             await dbTransaction.RollbackAsync(cancellationToken);
         }
-        await this.CloseAsync();
+        await this.CloseAsync(this.Connection);
         this.Transaction = null;
+        this.Connection = null;
     }
-    public void Close()
+    public void Close(TheaConnection connection)
     {
-        if (this.Connection == null) return;
-        if (this.Connection.State == ConnectionState.Closed)
+        if (connection == null) return;
+        if (connection.State == ConnectionState.Closed)
             return;
         this.DbInterceptors.OnConnectionClosing?.Invoke(new ConectionEventArgs
         {
-            ConnectionId = this.Connection.ConnectionId,
-            ConnectionString = this.ConnectionString,
+            ConnectionId = connection.ConnectionId,
+            ConnectionString = connection.ConnectionString,
             DbKey = this.DbKey,
             OrmProvider = this.OrmProvider,
             CreatedAt = DateTime.Now
         });
-        this.Connection.Close();
+        connection.Close();
         this.DbInterceptors.OnConnectionClosed?.Invoke(new ConectionEventArgs
         {
-            ConnectionId = this.Connection.ConnectionId,
-            ConnectionString = this.ConnectionString,
+            ConnectionId = connection.ConnectionId,
+            ConnectionString = connection.ConnectionString,
             DbKey = this.DbKey,
             OrmProvider = this.OrmProvider,
             CreatedAt = DateTime.Now
         });
     }
-    public async Task CloseAsync()
+    public async Task CloseAsync(TheaConnection connection)
     {
-        if (this.Connection == null) return;
-        if (this.Connection.State == ConnectionState.Closed)
+        if (connection == null) return;
+        if (connection.State == ConnectionState.Closed)
             return;
-        if (this.Connection.BaseConnection is not DbConnection connection)
+        if (connection.BaseConnection is not DbConnection)
             throw new NotSupportedException("当前数据库驱动不支持异步操作");
 
         this.DbInterceptors.OnConnectionClosing?.Invoke(new ConectionEventArgs
         {
-            ConnectionId = this.Connection.ConnectionId,
-            ConnectionString = this.ConnectionString,
+            ConnectionId = connection.ConnectionId,
+            ConnectionString = connection.ConnectionString,
             DbKey = this.DbKey,
             OrmProvider = this.OrmProvider,
             CreatedAt = DateTime.Now
@@ -1201,22 +1275,26 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         await connection.CloseAsync();
         this.DbInterceptors.OnConnectionClosed?.Invoke(new ConectionEventArgs
         {
-            ConnectionId = this.Connection.ConnectionId,
-            ConnectionString = this.ConnectionString,
+            ConnectionId = connection.ConnectionId,
+            ConnectionString = connection.ConnectionString,
             DbKey = this.DbKey,
             OrmProvider = this.OrmProvider,
             CreatedAt = DateTime.Now
         });
     }
-    public void Dispose()
+    private void UseMaster()
     {
-        this.Close();
-        this.Connection = null;
-    }
-    public async ValueTask DisposeAsync()
-    {
-        await this.CloseAsync();
-        this.Connection = null;
+        this.ConnectionString = this.Database.ConnectionString;
+        var connection = this.OrmProvider.CreateConnection(this.ConnectionString);
+        this.Connection = new TheaConnection(this.ConnectionString, connection);
+        this.DbInterceptors.OnConnectionCreated?.Invoke(new ConectionEventArgs
+        {
+            ConnectionId = Guid.NewGuid().ToString("N"),
+            DbKey = this.DbKey,
+            ConnectionString = this.ConnectionString,
+            OrmProvider = this.OrmProvider,
+            CreatedAt = DateTime.UtcNow
+        });
     }
     #endregion
 
@@ -1230,16 +1308,15 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
     public void FetchShardingTables(SqlVisitor visitor)
     {
         var fetchSql = visitor.BuildTableShardingsSql();
-        using var command = this.CreateCommand();
         IDataReader reader = null;
-        bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
         try
         {
             command.CommandText = fetchSql;
-            this.Open();
-            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Select);
+            this.Open(connection);
+            eventArgs = this.AddCommandBeforeFilter(connection, command, CommandSqlType.Select);
             reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
             var shardingTables = new List<string>();
             while (reader.Read())
@@ -1252,32 +1329,31 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             isNeedClose = true;
             exception = ex;
-            this.AddCommandFailedFilter(command, CommandSqlType.Select, eventArgs, exception);
+            this.AddCommandFailedFilter(connection, command, CommandSqlType.Select, eventArgs, exception);
         }
         finally
         {
-            this.AddCommandAfterFilter(command, CommandSqlType.Select, eventArgs, exception == null, exception);
+            this.AddCommandAfterFilter(connection, command, CommandSqlType.Select, eventArgs, exception == null, exception);
             reader.Dispose();
             command.Parameters.Clear();
             command.Dispose();
-            if (isNeedClose) this.Close();
+            if (isNeedClose) this.Close(connection);
         }
         if (exception != null) throw exception;
     }
     public async Task FetchShardingTablesAsync(SqlVisitor visitor, CancellationToken cancellationToken = default)
     {
         var fetchSql = visitor.BuildTableShardingsSql();
-        using var command = this.CreateDbCommand();
         DbDataReader reader = null;
-        bool isNeedClose = this.IsNeedClose;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
+        (var isNeedClose, var connection, var command) = this.UseSlaveDbCommand();
         try
         {
             command.CommandText = fetchSql;
             command.Parameters.Clear();
-            await this.OpenAsync(cancellationToken);
-            eventArgs = this.AddCommandBeforeFilter(command, CommandSqlType.Select);
+            await this.OpenAsync(connection, cancellationToken);
+            eventArgs = this.AddCommandBeforeFilter(connection, command, CommandSqlType.Select);
             reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
             var shardingTables = new List<string>();
             while (await reader.ReadAsync(cancellationToken))
@@ -1290,15 +1366,15 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         {
             isNeedClose = true;
             exception = ex;
-            this.AddCommandFailedFilter(command, CommandSqlType.Select, eventArgs, exception);
+            this.AddCommandFailedFilter(connection, command, CommandSqlType.Select, eventArgs, exception);
         }
         finally
         {
-            this.AddCommandAfterFilter(command, CommandSqlType.Select, eventArgs, exception == null, exception);
+            this.AddCommandAfterFilter(connection, command, CommandSqlType.Select, eventArgs, exception == null, exception);
             await reader.DisposeAsync();
             command.Parameters.Clear();
             await command.DisposeAsync();
-            if (isNeedClose) this.Close();
+            if (isNeedClose) this.Close(connection);
         }
         if (exception != null) throw exception;
     }
@@ -1377,12 +1453,12 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         }
         return true;
     }
-    public CommandEventArgs AddCommandBeforeFilter(IDbCommand command, CommandSqlType sqlType)
+    public CommandEventArgs AddCommandBeforeFilter(TheaConnection connection, IDbCommand command, CommandSqlType sqlType)
     {
         var eventArgs = new CommandEventArgs
         {
             DbKey = this.DbKey,
-            ConnectionString = this.ConnectionString,
+            ConnectionString = connection.ConnectionString,
             SqlType = sqlType,
             Sql = command.CommandText,
             DbParameters = command.Parameters,
@@ -1399,14 +1475,14 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         this.DbInterceptors.OnCommandExecuting?.Invoke(eventArgs);
         return eventArgs;
     }
-    public CommandEventArgs AddCommandBeforeFilter(CommandSqlType sqlType, CommandEventArgs eventArgs)
+    public CommandEventArgs AddCommandBeforeFilter(TheaConnection connection, CommandSqlType sqlType, CommandEventArgs eventArgs)
     {
         if (eventArgs == null)
         {
             eventArgs = new CommandEventArgs
             {
                 DbKey = this.DbKey,
-                ConnectionString = this.ConnectionString,
+                ConnectionString = connection.ConnectionString,
                 SqlType = sqlType,
                 OrmProvider = this.OrmProvider,
                 CreatedAt = DateTime.Now
@@ -1416,14 +1492,14 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         this.DbInterceptors.OnCommandExecuting?.Invoke(eventArgs);
         return eventArgs;
     }
-    public CommandEventArgs AddCommandBeforeFilter(IDbCommand command, CommandSqlType sqlType, CommandEventArgs eventArgs)
+    public CommandEventArgs AddCommandBeforeFilter(TheaConnection connection, IDbCommand command, CommandSqlType sqlType, CommandEventArgs eventArgs)
     {
         if (eventArgs == null)
         {
             eventArgs = new CommandEventArgs
             {
                 DbKey = this.DbKey,
-                ConnectionString = this.ConnectionString,
+                ConnectionString = connection.ConnectionString,
                 SqlType = sqlType,
                 Sql = command.CommandText,
                 DbParameters = command.Parameters,
@@ -1440,7 +1516,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
         this.DbInterceptors.OnCommandExecuting?.Invoke(eventArgs);
         return eventArgs;
     }
-    public void AddCommandAfterFilter(IDbCommand command, CommandSqlType sqlType, CommandEventArgs eventArgs, bool isSuccess = true, Exception exception = null)
+    public void AddCommandAfterFilter(TheaConnection connection, IDbCommand command, CommandSqlType sqlType, CommandEventArgs eventArgs, bool isSuccess = true, Exception exception = null)
     {
         if (eventArgs == null)
         {
@@ -1449,7 +1525,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                 IsSuccess = isSuccess,
                 CommandId = Guid.NewGuid().ToString("N"),
                 DbKey = this.DbKey,
-                ConnectionString = this.ConnectionString,
+                ConnectionString = connection.ConnectionString,
                 SqlType = sqlType,
                 Sql = command.CommandText,
                 DbParameters = command.Parameters,
@@ -1467,7 +1543,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
             });
         }
     }
-    public void AddCommandFailedFilter(IDbCommand command, CommandSqlType sqlType, CommandEventArgs eventArgs, Exception exception)
+    public void AddCommandFailedFilter(TheaConnection connection, IDbCommand command, CommandSqlType sqlType, CommandEventArgs eventArgs, Exception exception)
     {
         if (eventArgs == null)
         {
@@ -1476,7 +1552,7 @@ public sealed class DbContext : IDisposable, IAsyncDisposable
                 IsSuccess = false,
                 CommandId = Guid.NewGuid().ToString("N"),
                 DbKey = this.DbKey,
-                ConnectionString = this.ConnectionString,
+                ConnectionString = connection.ConnectionString,
                 SqlType = sqlType,
                 Sql = command.CommandText,
                 DbParameters = command.Parameters,

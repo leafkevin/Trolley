@@ -60,7 +60,7 @@ public class UnitTest1 : UnitTestBase
     [Fact]
     public async Task Insert_Parameter()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         repository.Query<User>(f => f.Id == 4);
         repository.BeginTransaction();
         var count = repository.Delete<User>().Where(f => f.Id == 4).Execute();
@@ -86,7 +86,7 @@ public class UnitTest1 : UnitTestBase
     [Fact]
     public async Task Insert_RawSql()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         repository.BeginTransaction();
         repository.Delete<Brand>().Where(new { Id = 1 }).Execute();
         var rawSql = "INSERT INTO sys_brand(Id,BrandNo,Name,IsEnabled,CreatedAt,CreatedBy,UpdatedAt,UpdatedBy) VALUES (@Id,@BrandNo,@Name,1,GETDATE(),@User,GETDATE(),@User)";
@@ -103,7 +103,7 @@ public class UnitTest1 : UnitTestBase
     [Fact]
     public async Task Insert_Parameters()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         repository.BeginTransaction();
         await repository.Delete<Product>().Where(new int[] { 1, 2, 3 }).ExecuteAsync();
         var count = repository.Create<Product>(new[]
@@ -154,7 +154,7 @@ public class UnitTest1 : UnitTestBase
     [Fact]
     public void Insert_WithBy()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var now = DateTime.Now;
         var sql = repository.Create<User>()
             .WithBy(new
@@ -267,7 +267,7 @@ public class UnitTest1 : UnitTestBase
     [Fact]
     public void Insert_WithBy_IgnoreFields()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var now = DateTime.Now;
         var sql = repository.Create<User>()
            .WithBy(new
@@ -364,7 +364,7 @@ public class UnitTest1 : UnitTestBase
     {
         this.Initialize();
         Guid? guidField = Guid.NewGuid();
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         repository.BeginTransaction();
         var user = repository.Get<User>(1);
         var count = repository.Delete<User>().Where(f => f.Id == 1).Execute();
@@ -415,7 +415,7 @@ public class UnitTest1 : UnitTestBase
     {
         this.Initialize();
         Guid? guidField = Guid.NewGuid();
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var user = repository.Get<User>(1);
         var sql = repository.Create<User>()
             .WithBy(new
@@ -459,7 +459,7 @@ public class UnitTest1 : UnitTestBase
     [Fact]
     public async Task Insert_WithBy_AutoIncrement()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         repository.BeginTransaction();
         var id = repository.CreateIdentity<Company>(new
         {
@@ -494,7 +494,7 @@ public class UnitTest1 : UnitTestBase
     [Fact]
     public async Task Insert_WithBulk()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql = repository.Create<Product>()
             .WithBulk(new[]
             {
@@ -593,7 +593,7 @@ public class UnitTest1 : UnitTestBase
     [Fact]
     public async Task Insert_WithBulk_Dictionaries()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         repository.BeginTransaction();
         await repository.Delete<Product>().Where(new[] { new { Id = 1 }, new { Id = 2 }, new { Id = 3 } }).ExecuteAsync();
         var count = repository.Create<Product>()
@@ -646,7 +646,7 @@ public class UnitTest1 : UnitTestBase
     [Fact]
     public async Task Insert_WithBulk_OnlyFields()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql = repository.Create<Product>()
             .WithBulk(new[]
             {
@@ -753,7 +753,7 @@ public class UnitTest1 : UnitTestBase
     [Fact]
     public void Insert_Select_From_Table1()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var id = 2;
         var brandId = 1;
         var name = "雪中飞羽绒裤";
@@ -812,7 +812,7 @@ public class UnitTest1 : UnitTestBase
     [Fact]
     public async Task Insert_Select_From_Table2()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql = repository.Create<OrderDetail>()
             .From<Order, Product>()
             .Where((a, b) => a.Id == "3" && b.Id == 1)
@@ -866,7 +866,7 @@ public class UnitTest1 : UnitTestBase
     [Fact]
     public async Task Insert_Select_From_SubQuery()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var ordersQuery = repository.From<OrderDetail>()
             .GroupBy(f => f.OrderId)
             .Select((x, f) => new
@@ -931,7 +931,7 @@ public class UnitTest1 : UnitTestBase
     [Fact]
     public void Insert_Null_Field()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         repository.BeginTransaction();
         repository.Delete<Order>("1");
         var count = repository.Create<Order>(new Order
@@ -961,7 +961,7 @@ public class UnitTest1 : UnitTestBase
     [Fact]
     public void Insert_Json_Field()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var dispute = new Dispute
         {
             Id = 2,
@@ -1026,7 +1026,7 @@ public class UnitTest1 : UnitTestBase
     [Fact]
     public void Insert_Enum_Fields()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql1 = repository.Create<User>()
             .WithBy(new
             {
@@ -1069,7 +1069,7 @@ public class UnitTest1 : UnitTestBase
     public async Task Insert_OnlyFields()
     {
         this.Initialize();
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql = repository.Create<User>()
             .WithBy(new
             {
@@ -1117,7 +1117,7 @@ public class UnitTest1 : UnitTestBase
     [Fact]
     public async Task Insert_Output()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql1 = repository.Create<User>()
             .WithBy(new
             {
@@ -1203,7 +1203,7 @@ public class UnitTest1 : UnitTestBase
     [Fact]
     public async Task Insert_Outputs()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var products = new[]
         {
             new
@@ -1289,7 +1289,7 @@ public class UnitTest1 : UnitTestBase
     [Fact]
     public async Task Insert_BulkCopy()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var orders = new List<dynamic>();
         for (int i = 1000; i < 2000; i++)
         {

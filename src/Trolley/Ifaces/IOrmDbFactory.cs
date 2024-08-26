@@ -19,6 +19,7 @@ public interface IOrmDbFactory
     bool TryGetTableSharding(string dbKey, Type entityType, out TableShardingInfo tableShardingInfo);
     bool TryGetTableSharding(OrmProviderType ormProviderType, Type entityType, out TableShardingInfo tableShardingInfo);
 
+    TheaDatabase Register(OrmProviderType ormProviderType, string dbKey, string connectionString);
     void Register(OrmProviderType ormProviderType, string dbKey, string connectionString, bool isDefaultDatabase);
     void AddOrmProvider(IOrmProvider ormProvider);
     bool TryGetOrmProvider(OrmProviderType ormProviderType, out IOrmProvider ormProvider);

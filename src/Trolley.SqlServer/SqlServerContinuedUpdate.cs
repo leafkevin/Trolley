@@ -80,7 +80,7 @@ public class SqlServerContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqlS
     #region ToSql
     public override string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        string sql = null;
+        string sql;
         dbParameters = null;
         var builder = new StringBuilder();
         if (this.Visitor.ActionMode == ActionMode.BulkCopy)
@@ -98,9 +98,8 @@ public class SqlServerContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqlS
             //添加临时表           
             builder.AppendLine($"CREATE TEMPORARY TABLE {tableName}(");
             var pkColumns = new List<string>();
-            foreach (var memberMapper in memberMappers)
+            foreach (var (refMemberMapper, _) in memberMappers)
             {
-                var refMemberMapper = memberMapper.RefMemberMapper;
                 var fieldName = this.Visitor.OrmProvider.GetFieldName(refMemberMapper.FieldName);
                 builder.Append($"{fieldName} {refMemberMapper.DbColumnType}");
                 if (refMemberMapper.IsKey)
@@ -115,7 +114,7 @@ public class SqlServerContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqlS
             if (this.Visitor.IsNeedFetchShardingTables)
                 builder.Append(this.Visitor.BuildTableShardingsSql());
 
-            Action<StringBuilder, string> sqlExecutor = (builder, tableName) =>
+            void sqlExecutor(StringBuilder builder, string tableName)
             {
                 builder.Append($"UPDATE {this.DbContext.OrmProvider.GetTableName(tableName)} a INNER JOIN {tableName} b ON ");
                 for (int i = 0; i < pkColumns.Count; i++)
@@ -133,7 +132,7 @@ public class SqlServerContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqlS
                     builder.Append($"a.{fieldName}=b.{fieldName}");
                     setIndex++;
                 }
-            };
+            }
             if (this.Visitor.ShardingTables != null && this.Visitor.ShardingTables.Count > 0)
             {
                 int index = 0;
@@ -141,10 +140,10 @@ public class SqlServerContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqlS
                 foreach (var shardingTableName in tableNames)
                 {
                     if (index > 0) builder.Append(';');
-                    sqlExecutor.Invoke(builder, shardingTableName);
+                    sqlExecutor(builder, shardingTableName);
                 }
             }
-            else sqlExecutor.Invoke(builder, this.Visitor.Tables[0].Body ?? fromMapper.TableName);
+            else sqlExecutor(builder, this.Visitor.Tables[0].Body ?? fromMapper.TableName);
             builder.Append($";DROP TABLE {tableName}");
             sql = builder.ToString();
         }
@@ -156,7 +155,7 @@ public class SqlServerContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqlS
                 builder.Append(this.Visitor.BuildTableShardingsSql());
                 builder.Append(';');
             }
-            using var command = this.DbContext.CreateCommand();
+            (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
             sql = this.Visitor.BuildCommand(this.DbContext, command);
             if (this.Visitor.IsNeedFetchShardingTables)
             {
@@ -164,9 +163,10 @@ public class SqlServerContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqlS
                 sql = builder.ToString();
             }
             dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
+            command.Dispose();
+            if (isNeedClose) connection.Dispose();
         }
         builder.Clear();
-        builder = null;
         return sql;
     }
     #endregion

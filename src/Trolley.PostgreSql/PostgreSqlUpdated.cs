@@ -30,9 +30,8 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
     {
         int result = 0;
         Exception exception = null;
-        bool isNeedClose = this.DbContext.IsNeedClose;
         CommandEventArgs eventArgs = null;
-        using var command = this.DbContext.CreateCommand();
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         try
         {
             switch (this.Visitor.ActionMode)
@@ -73,8 +72,8 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                             builder.Append(this.Visitor.BuildTableShardingsSql());
 
                         command.CommandText = builder.ToString();
-                        this.DbContext.Open();
-                        eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkCopyUpdate, eventArgs);
+                        this.DbContext.Open(connection);
+                        eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkCopyUpdate, eventArgs);
                         command.ExecuteNonQuery();
 
                         builder.Clear();
@@ -121,8 +120,8 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                         builder.Append($";DROP TABLE {tableName}");
                         var updateSql = builder.ToString();
 
-                        var connection = this.DbContext.Connection.BaseConnection as NpgsqlConnection;
-                        using (var writer = connection.BeginBinaryImport(bulkCopySql))
+                        var dbConnection = connection.BaseConnection as NpgsqlConnection;
+                        using (var writer = dbConnection.BeginBinaryImport(bulkCopySql))
                         {
                             foreach (var updateObj in updateObjs)
                             {
@@ -138,7 +137,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                             writer.Complete();
                         }
                         command.CommandText = updateSql;
-                        eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkCopyUpdate, eventArgs);
+                        eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkCopyUpdate, eventArgs);
                         result = command.ExecuteNonQuery();
                     }
                     break;
@@ -180,15 +179,14 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                             this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
                         int index = 0;
                         firstParametersSetter?.Invoke(command.Parameters);
-                        this.DbContext.Open();
+                        this.DbContext.Open(connection);
                         foreach (var updateObj in updateObjs)
                         {
                             sqlExecuter.Invoke(updateObj, index);
                             if (index >= bulkCount)
                             {
                                 command.CommandText = builder.ToString();
-                                this.DbContext.Open();
-                                eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkUpdate, eventArgs);
+                                eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkUpdate, eventArgs);
                                 result += command.ExecuteNonQuery();
                                 command.Parameters.Clear();
                                 firstParametersSetter?.Invoke(command.Parameters);
@@ -201,7 +199,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                         if (index > 0)
                         {
                             command.CommandText = builder.ToString();
-                            eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkUpdate, eventArgs);
+                            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkUpdate, eventArgs);
                             result += command.ExecuteNonQuery();
                         }
                         builder.Clear();
@@ -217,8 +215,8 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                             this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
 
                         command.CommandText = this.Visitor.BuildCommand(this.DbContext, command);
-                        this.DbContext.Open();
-                        eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.Update);
+                        this.DbContext.Open(connection);
+                        eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Update);
                         result = command.ExecuteNonQuery();
                     }
                     break;
@@ -234,7 +232,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                 ActionMode.Bulk => CommandSqlType.BulkUpdate,
                 _ => CommandSqlType.Update
             };
-            this.DbContext.AddCommandFailedFilter(command, sqlType, eventArgs, exception);
+            this.DbContext.AddCommandFailedFilter(connection, command, sqlType, eventArgs, exception);
         }
         finally
         {
@@ -244,10 +242,10 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                 ActionMode.Bulk => CommandSqlType.BulkUpdate,
                 _ => CommandSqlType.Update
             };
-            this.DbContext.AddCommandAfterFilter(command, sqlType, eventArgs, exception == null, exception);
+            this.DbContext.AddCommandAfterFilter(connection, command, sqlType, eventArgs, exception == null, exception);
             command.Parameters.Clear();
             command.Dispose();
-            if (isNeedClose) this.Close();
+            if (isNeedClose) this.Close(connection);
         }
         if (exception != null) throw exception;
         return result;
@@ -256,9 +254,8 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
     {
         int result = 0;
         Exception exception = null;
-        bool isNeedClose = this.DbContext.IsNeedClose;
         CommandEventArgs eventArgs = null;
-        using var command = this.DbContext.CreateDbCommand();
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterDbCommand();
         try
         {
             switch (this.Visitor.ActionMode)
@@ -299,8 +296,8 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                             builder.Append(this.Visitor.BuildTableShardingsSql());
 
                         command.CommandText = builder.ToString();
-                        await this.DbContext.OpenAsync(cancellationToken);
-                        eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkCopyUpdate, eventArgs);
+                        await this.DbContext.OpenAsync(connection, cancellationToken);
+                        eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkCopyUpdate, eventArgs);
                         await command.ExecuteNonQueryAsync(cancellationToken);
 
                         builder.Clear();
@@ -347,8 +344,8 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                         builder.Append($";DROP TABLE {tableName}");
                         var updateSql = builder.ToString();
 
-                        var connection = this.DbContext.Connection.BaseConnection as NpgsqlConnection;
-                        using (var writer = await connection.BeginBinaryImportAsync(bulkCopySql, cancellationToken))
+                        var dbConnection = connection.BaseConnection as NpgsqlConnection;
+                        using (var writer = await dbConnection.BeginBinaryImportAsync(bulkCopySql, cancellationToken))
                         {
                             foreach (var updateObj in updateObjs)
                             {
@@ -364,7 +361,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                             await writer.CompleteAsync(cancellationToken);
                         }
                         command.CommandText = updateSql;
-                        eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkCopyUpdate, eventArgs);
+                        eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkCopyUpdate, eventArgs);
                         result = await command.ExecuteNonQueryAsync(cancellationToken);
                     }
                     break;
@@ -406,14 +403,14 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                             await this.DbContext.FetchShardingTablesAsync(this.Visitor as SqlVisitor, cancellationToken);
                         int index = 0;
                         firstParametersSetter?.Invoke(command.Parameters);
-                        await this.DbContext.OpenAsync(cancellationToken);
+                        await this.DbContext.OpenAsync(connection, cancellationToken);
                         foreach (var updateObj in updateObjs)
                         {
                             sqlExecuter.Invoke(updateObj, index);
                             if (index >= bulkCount)
                             {
                                 command.CommandText = builder.ToString();
-                                eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkUpdate, eventArgs);
+                                eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkUpdate, eventArgs);
                                 result += await command.ExecuteNonQueryAsync(cancellationToken);
                                 command.Parameters.Clear();
                                 firstParametersSetter?.Invoke(command.Parameters);
@@ -426,7 +423,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                         if (index > 0)
                         {
                             command.CommandText = builder.ToString();
-                            eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkUpdate, eventArgs);
+                            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkUpdate, eventArgs);
                             result += await command.ExecuteNonQueryAsync(cancellationToken);
                         }
                         builder.Clear();
@@ -442,8 +439,8 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                             this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
 
                         command.CommandText = this.Visitor.BuildCommand(this.DbContext, command);
-                        await this.DbContext.OpenAsync(cancellationToken);
-                        eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.Update);
+                        await this.DbContext.OpenAsync(connection, cancellationToken);
+                        eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Update);
                         result = await command.ExecuteNonQueryAsync(cancellationToken);
                     }
                     break;
@@ -459,7 +456,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                 ActionMode.Bulk => CommandSqlType.BulkUpdate,
                 _ => CommandSqlType.Update
             };
-            this.DbContext.AddCommandFailedFilter(command, sqlType, eventArgs, exception);
+            this.DbContext.AddCommandFailedFilter(connection, command, sqlType, eventArgs, exception);
         }
         finally
         {
@@ -469,10 +466,10 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                 ActionMode.Bulk => CommandSqlType.BulkUpdate,
                 _ => CommandSqlType.Update
             };
-            this.DbContext.AddCommandAfterFilter(command, sqlType, eventArgs, exception == null, exception);
+            this.DbContext.AddCommandAfterFilter(connection, command, sqlType, eventArgs, exception == null, exception);
             command.Parameters.Clear();
             await command.DisposeAsync();
-            if (isNeedClose) await this.CloseAsync();
+            if (isNeedClose) await this.CloseAsync(connection);
         }
         if (exception != null) throw exception;
         return result;
@@ -562,7 +559,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                 this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
                 builder.Append(this.Visitor.BuildTableShardingsSql());
             }
-            using var command = this.DbContext.CreateCommand();
+            (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
             sql = this.Visitor.BuildCommand(this.DbContext, command);
             if (this.Visitor.IsNeedFetchShardingTables)
             {
@@ -570,6 +567,8 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                 sql = builder.ToString();
             }
             dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
+            command.Dispose();
+            if (isNeedClose) connection.Dispose();
         }
         builder.Clear();
         builder = null;

@@ -10,11 +10,7 @@ public sealed class TheaConnection : IDbConnection
 {
     public string ConnectionId { get; set; }
     public IDbConnection BaseConnection { get; set; }
-    public string ConnectionString
-    {
-        get => this.BaseConnection.ConnectionString;
-        set => this.BaseConnection.ConnectionString = value;
-    }
+    public string ConnectionString { get; set; }
     public int ConnectionTimeout => this.BaseConnection.ConnectionTimeout;
     public string Database => this.BaseConnection.Database;
     public string DataSource
@@ -46,9 +42,10 @@ public sealed class TheaConnection : IDbConnection
     }
     public ConnectionState State => this.BaseConnection.State;
 
-    public TheaConnection(IDbConnection connection)
+    public TheaConnection(string connectionString, IDbConnection connection)
     {
         this.ConnectionId = Guid.NewGuid().ToString("N");
+        this.ConnectionString = connectionString;
         this.BaseConnection = connection;
     }
 

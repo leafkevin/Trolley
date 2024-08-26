@@ -60,7 +60,7 @@ public class WhereUnitTest : UnitTestBase
     public async Task WhereBoolean()
     {
         this.Initialize();
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var result1 = await repository.QueryAsync<User>(f => f.IsEnabled);
         Assert.True(result1.Count > 0);
         var result2 = await repository.QueryAsync<User>(f => f.IsEnabled == true);
@@ -71,7 +71,7 @@ public class WhereUnitTest : UnitTestBase
     public async Task WhereMemberVisit()
     {
         this.Initialize();
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var result1 = await repository.QueryAsync<User>(f => !(f.IsEnabled == false) && f.Id > 0);
         Assert.True(result1.Count > 0);
         var result2 = await repository.QueryAsync<User>(f => f.IsEnabled == true);
@@ -82,7 +82,7 @@ public class WhereUnitTest : UnitTestBase
     public async Task WhereStringEnum()
     {
         this.Initialize();
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql1 = repository.From<Company>()
             .Where(f => f.Nature == CompanyNature.Internet)
             .ToSql(out _);
@@ -110,7 +110,7 @@ public class WhereUnitTest : UnitTestBase
     [Fact]
     public async Task WhereCoalesceConditional()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql1 = repository.From<Company>()
             .Where(f => (f.Nature ?? CompanyNature.Internet) == CompanyNature.Internet)
             .ToSql(out _);
@@ -153,7 +153,7 @@ public class WhereUnitTest : UnitTestBase
     public async Task WhereIsNull()
     {
         this.Initialize();
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql1 = repository.From<Order>()
            .Where(f => f.BuyerId.IsNull())
            .ToSql(out _);
@@ -172,7 +172,7 @@ public class WhereUnitTest : UnitTestBase
     [Fact]
     public void WhereAndOr()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql = repository.From<Order, User>()
             .Where((a, b) => a.BuyerId == b.Id)
             .And(true, (a, b) => a.SellerId.IsNull() || !a.ProductCount.HasValue)
@@ -199,7 +199,7 @@ public class WhereUnitTest : UnitTestBase
     [Fact]
     public void Where()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql1 = repository.From<Order>()
             .Where(f => Sql.Exists<User>(t => t.Id == f.BuyerId && t.IsEnabled) && (f.BuyerId.IsNull() || f.BuyerId == 2)
                 && (f.OrderNo.Contains("ON_") || string.IsNullOrEmpty(f.OrderNo)))

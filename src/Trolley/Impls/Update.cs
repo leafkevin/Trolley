@@ -185,9 +185,8 @@ public class Updated<TEntity> : IUpdated<TEntity>
     {
         int result = 0;
         Exception exception = null;
-        bool isNeedClose = this.DbContext.IsNeedClose;
-        using var command = this.DbContext.CreateCommand();
         CommandEventArgs eventArgs = null;
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         try
         {
             if (this.Visitor.IsNeedFetchShardingTables)
@@ -230,14 +229,14 @@ public class Updated<TEntity> : IUpdated<TEntity>
 
                     int index = 0;
                     firstParametersSetter?.Invoke(command.Parameters);
-                    this.DbContext.Open();
+                    this.DbContext.Open(connection);
                     foreach (var updateObj in updateObjs)
                     {
                         sqlExecuter.Invoke(updateObj, index);
                         if (index >= bulkCount)
                         {
                             command.CommandText = builder.ToString();
-                            eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkUpdate, eventArgs);
+                            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkUpdate, eventArgs);
                             result += command.ExecuteNonQuery();
                             command.Parameters.Clear();
                             firstParametersSetter?.Invoke(command.Parameters);
@@ -250,7 +249,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
                     if (index > 0)
                     {
                         command.CommandText = builder.ToString();
-                        eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkUpdate, eventArgs);
+                        eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkUpdate, eventArgs);
                         result += command.ExecuteNonQuery();
                     }
                     builder.Clear();
@@ -260,8 +259,8 @@ public class Updated<TEntity> : IUpdated<TEntity>
                     if (!this.Visitor.HasWhere)
                         throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
                     command.CommandText = this.Visitor.BuildCommand(this.DbContext, command);
-                    this.DbContext.Open();
-                    eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.Update);
+                    this.DbContext.Open(connection);
+                    eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Update);
                     result = command.ExecuteNonQuery();
                     break;
             }
@@ -271,15 +270,15 @@ public class Updated<TEntity> : IUpdated<TEntity>
             isNeedClose = true;
             exception = ex;
             var sqlType = this.Visitor.ActionMode == ActionMode.Bulk ? CommandSqlType.BulkUpdate : CommandSqlType.Update;
-            this.DbContext.AddCommandFailedFilter(command, sqlType, eventArgs, exception);
+            this.DbContext.AddCommandFailedFilter(connection, command, sqlType, eventArgs, exception);
         }
         finally
         {
             var sqlType = this.Visitor.ActionMode == ActionMode.Bulk ? CommandSqlType.BulkUpdate : CommandSqlType.Update;
-            this.DbContext.AddCommandAfterFilter(command, sqlType, eventArgs, exception == null, exception);
+            this.DbContext.AddCommandAfterFilter(connection, command, sqlType, eventArgs, exception == null, exception);
             command.Parameters.Clear();
             command.Dispose();
-            if (isNeedClose) this.Close();
+            if (isNeedClose) this.Close(connection);
         }
         if (exception != null) throw exception;
         return result;
@@ -288,9 +287,8 @@ public class Updated<TEntity> : IUpdated<TEntity>
     {
         int result = 0;
         Exception exception = null;
-        bool isNeedClose = this.DbContext.IsNeedClose;
-        using var command = this.DbContext.CreateDbCommand();
         CommandEventArgs eventArgs = null;
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterDbCommand();
         try
         {
             bool isOpened = false;
@@ -337,14 +335,14 @@ public class Updated<TEntity> : IUpdated<TEntity>
 
                     int index = 0;
                     firstParametersSetter?.Invoke(command.Parameters);
-                    await this.DbContext.OpenAsync(cancellationToken);
+                    await this.DbContext.OpenAsync(connection, cancellationToken);
                     foreach (var updateObj in updateObjs)
                     {
                         sqlExecuter.Invoke(updateObj, index);
                         if (index >= bulkCount)
                         {
                             command.CommandText = builder.ToString();
-                            eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkUpdate, eventArgs);
+                            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkUpdate, eventArgs);
                             result += await command.ExecuteNonQueryAsync(cancellationToken);
                             command.Parameters.Clear();
                             firstParametersSetter?.Invoke(command.Parameters);
@@ -357,7 +355,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
                     if (index > 0)
                     {
                         command.CommandText = builder.ToString();
-                        eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkUpdate, eventArgs);
+                        eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkUpdate, eventArgs);
                         result += await command.ExecuteNonQueryAsync(cancellationToken);
                     }
                     builder.Clear();
@@ -367,8 +365,8 @@ public class Updated<TEntity> : IUpdated<TEntity>
                     if (!this.Visitor.HasWhere)
                         throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
                     command.CommandText = this.Visitor.BuildCommand(this.DbContext, command);
-                    if (!isOpened) await this.DbContext.OpenAsync(cancellationToken);
-                    eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.Update);
+                    if (!isOpened) await this.DbContext.OpenAsync(connection, cancellationToken);
+                    eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Update);
                     result = await command.ExecuteNonQueryAsync(cancellationToken);
                     break;
             }
@@ -378,15 +376,15 @@ public class Updated<TEntity> : IUpdated<TEntity>
             isNeedClose = true;
             exception = ex;
             var sqlType = this.Visitor.ActionMode == ActionMode.Bulk ? CommandSqlType.BulkUpdate : CommandSqlType.Update;
-            this.DbContext.AddCommandFailedFilter(command, sqlType, eventArgs, exception);
+            this.DbContext.AddCommandFailedFilter(connection, command, sqlType, eventArgs, exception);
         }
         finally
         {
             var sqlType = this.Visitor.ActionMode == ActionMode.Bulk ? CommandSqlType.BulkUpdate : CommandSqlType.Update;
-            this.DbContext.AddCommandAfterFilter(command, sqlType, eventArgs, exception == null, exception);
+            this.DbContext.AddCommandAfterFilter(connection, command, sqlType, eventArgs, exception == null, exception);
             command.Parameters.Clear();
             await command.DisposeAsync();
-            if (isNeedClose) await this.CloseAsync();
+            if (isNeedClose) await this.CloseAsync(connection);
         }
         if (exception != null) throw exception;
         return result;
@@ -400,26 +398,27 @@ public class Updated<TEntity> : IUpdated<TEntity>
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        using var command = this.DbContext.CreateCommand();
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         if (this.Visitor.IsNeedFetchShardingTables)
             this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
         var sql = this.Visitor.BuildCommand(this.DbContext, command);
         dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
+        if (isNeedClose) connection.Close();
         return sql;
     }
     #endregion
 
     #region Close
-    public virtual void Close()
+    public virtual void Close(TheaConnection connection)
     {
-        this.DbContext.Close();
+        this.DbContext.Close(connection);
         this.Visitor.Dispose();
         this.Visitor = null;
     }
-    public virtual async ValueTask CloseAsync()
+    public virtual async ValueTask CloseAsync(TheaConnection connection)
     {
-        await this.DbContext.CloseAsync();
+        await this.DbContext.CloseAsync(connection);
         this.Visitor.Dispose();
         this.Visitor = null;
     }

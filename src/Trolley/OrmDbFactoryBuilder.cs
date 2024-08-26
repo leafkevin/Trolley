@@ -11,7 +11,15 @@ public sealed class OrmDbFactoryBuilder
         this.dbFactory.Register(ormProviderType, dbKey, connectionString, isDefault);
         return this;
     }
-
+    public OrmDbFactoryBuilder Register(OrmProviderType ormProviderType, string dbKey, string connectionString, Action<OrmDatabaseBuilder> databaseInitializer)
+    {
+        if (databaseInitializer == null)
+            throw new ArgumentNullException(nameof(databaseInitializer));
+        var database = this.dbFactory.Register(ormProviderType, dbKey, connectionString);
+        var builder = new OrmDatabaseBuilder(this.dbFactory, database);
+        databaseInitializer.Invoke(builder);
+        return this;
+    }
     public OrmDbFactoryBuilder Configure(string dbKey, IModelConfiguration configuration)
     {
         this.dbFactory.Configure(dbKey, configuration);
@@ -78,5 +86,50 @@ public sealed class OrmDbFactoryBuilder
     {
         this.dbFactory.Build();
         return this.dbFactory;
+    }
+}
+public sealed class OrmDatabaseBuilder
+{
+    private readonly IOrmDbFactory dbFactory;
+    private readonly TheaDatabase database;
+    private readonly string dbKey;
+    public OrmDatabaseBuilder(IOrmDbFactory dbFactory, TheaDatabase database)
+    {
+        this.dbFactory = dbFactory;
+        this.database = database;
+        this.dbKey = database.DbKey;
+    }
+    public OrmDatabaseBuilder UseConnectonString(string connectionStrings)
+    {
+        database.ConnectionString = connectionStrings;
+        return this;
+    }
+    public OrmDatabaseBuilder UseSlave(params string[] connectionStrings)
+    {
+        database.SlaveConnectionStrings ??= new();
+        database.SlaveConnectionStrings.AddRange(connectionStrings);
+        return this;
+    }
+    public OrmDatabaseBuilder Configure<TModelConfiguration>() where TModelConfiguration : class, IModelConfiguration, new()
+    {
+        this.dbFactory.Configure(this.dbKey, new TModelConfiguration());
+        return this;
+    }
+    public OrmDatabaseBuilder UseTableSharding(Action<TableShardingBuilder> shardingInitializer)
+    {
+        if (shardingInitializer == null)
+            throw new ArgumentNullException(nameof(shardingInitializer));
+
+        if (!this.dbFactory.TryGetTableShardingProvider(this.dbKey, out var tableShardingProvider))
+            this.dbFactory.AddTableShardingProvider(this.dbKey, tableShardingProvider = new TableShardingProvider());
+
+        var builder = new TableShardingBuilder(tableShardingProvider);
+        shardingInitializer.Invoke(builder);
+        return this;
+    }
+    public OrmDatabaseBuilder UseDefaultDatabase()
+    {
+        this.dbFactory.UseDefaultDatabase(this.dbKey);
+        return this;
     }
 }

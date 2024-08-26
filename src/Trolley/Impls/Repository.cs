@@ -21,70 +21,11 @@ public class Repository : IRepository
     #endregion
 
     #region Properties
-    public virtual DbContext DbContext { get; set; }
+    public DbContext DbContext { get; set; }
     #endregion
 
     #region Constructor
     public Repository(DbContext dbContext) => this.DbContext = dbContext;
-    #endregion    
-
-    #region GetShardingTableNames
-    public virtual List<string> GetShardingTableNames(params Type[] entityTypes)
-    {
-        if (entityTypes == null)
-            throw new ArgumentNullException(nameof(entityTypes));
-        var tableSchema = this.DbContext.DefaultTableSchema;
-        var builder = new StringBuilder($"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_SCHEMA='{tableSchema}' AND ");
-
-        if (entityTypes.Length > 1)
-        {
-            builder.Append('(');
-            int index = 0;
-            Array.ForEach(entityTypes, f =>
-            {
-                var entityMapper = this.mapProvider.GetEntityMap(f);
-                if (index > 0) builder.Append(" OR ");
-                builder.Append($"TABLE_NAME LIKE '{entityMapper.TableName}%'");
-                index++;
-            });
-            builder.Append(')');
-        }
-        else
-        {
-            var entityMapper = this.mapProvider.GetEntityMap(entityTypes[0]);
-            builder.Append($"TABLE_NAME LIKE '{entityMapper.TableName}%'");
-        }
-        var sql = builder.ToString();
-        return this.DbContext.Query<string>(f => f.CommandText = sql);
-    }
-    public virtual async Task<List<string>> GetShardingTableNamesAsync(params Type[] entityTypes)
-    {
-        if (entityTypes == null)
-            throw new ArgumentNullException(nameof(entityTypes));
-        var tableSchema = this.DbContext.DefaultTableSchema;
-        var builder = new StringBuilder($"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_SCHEMA='{tableSchema}' AND ");
-
-        if (entityTypes.Length > 1)
-        {
-            builder.Append('(');
-            int index = 0;
-            Array.ForEach(entityTypes, f =>
-            {
-                var entityMapper = this.mapProvider.GetEntityMap(f);
-                if (index > 0) builder.Append(" OR ");
-                builder.Append($"TABLE_NAME LIKE '{entityMapper.TableName}%'");
-                index++;
-            });
-            builder.Append(')');
-        }
-        else
-        {
-            var entityMapper = this.mapProvider.GetEntityMap(entityTypes[0]);
-            builder.Append($"TABLE_NAME LIKE '{entityMapper.TableName}%'");
-        }
-        var sql = builder.ToString();
-        return await this.DbContext.QueryAsync<string>(f => f.CommandText = sql);
-    }
     #endregion
 
     #region From
@@ -329,11 +270,10 @@ public class Repository : IRepository
         if (insertObjs == null)
             throw new ArgumentNullException(nameof(insertObjs));
 
-        using var command = this.DbContext.CreateCommand();
         int result = 0;
-        bool isNeedClose = this.DbContext.IsNeedClose;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         bool isBulk = insertObjs is IEnumerable && insertObjs is not string && insertObjs is not IDictionary<string, object>;
         try
         {
@@ -411,7 +351,7 @@ public class Repository : IRepository
                         if (index >= bulkCount)
                         {
                             command.CommandText = builder.ToString();
-                            eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkInsert, eventArgs);
+                            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
                             count += command.ExecuteNonQuery();
                             builder.Clear();
                             command.Parameters.Clear();
@@ -424,13 +364,13 @@ public class Repository : IRepository
                     if (index > 0)
                     {
                         command.CommandText = builder.ToString();
-                        eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkInsert, eventArgs);
+                        eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
                         count += command.ExecuteNonQuery();
                     }
                     return count;
                 };
 
-                this.DbContext.Open();
+                this.DbContext.Open(connection);
                 if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out _))
                 {
                     var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, entities);
@@ -455,8 +395,8 @@ public class Repository : IRepository
             else
             {
                 this.DbContext.BuildCreateCommand(command, entityType, insertObjs, false);
-                this.DbContext.Open();
-                eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.Insert);
+                this.DbContext.Open(connection);
+                eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Insert);
                 result = command.ExecuteNonQuery();
             }
         }
@@ -465,15 +405,15 @@ public class Repository : IRepository
             isNeedClose = true;
             exception = ex;
             var sqlType = isBulk ? CommandSqlType.BulkInsert : CommandSqlType.Insert;
-            this.DbContext.AddCommandFailedFilter(command, sqlType, eventArgs, exception);
+            this.DbContext.AddCommandFailedFilter(connection, command, sqlType, eventArgs, exception);
         }
         finally
         {
             var sqlType = isBulk ? CommandSqlType.BulkInsert : CommandSqlType.Insert;
-            this.DbContext.AddCommandAfterFilter(command, sqlType, eventArgs, exception == null, exception);
+            this.DbContext.AddCommandAfterFilter(connection, command, sqlType, eventArgs, exception == null, exception);
             command.Parameters.Clear();
             command.Dispose();
-            if (isNeedClose) this.Dispose();
+            if (isNeedClose) this.Dispose(connection);
         }
         if (exception != null) throw exception;
         return result;
@@ -483,16 +423,15 @@ public class Repository : IRepository
         if (insertObjs == null)
             throw new ArgumentNullException(nameof(insertObjs));
 
-        using var command = this.DbContext.CreateDbCommand();
         int result = 0;
-        bool isNeedClose = this.DbContext.IsNeedClose;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterDbCommand();
         bool isBulk = insertObjs is IEnumerable && insertObjs is not string && insertObjs is not IDictionary<string, object>;
         try
         {
             var entityType = typeof(TEntity);
-            eventArgs = this.DbContext.AddCommandBeforeFilter(command, isBulk ? CommandSqlType.BulkInsert : CommandSqlType.Insert);
+            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, isBulk ? CommandSqlType.BulkInsert : CommandSqlType.Insert);
             if (isBulk)
             {
                 var builder = new StringBuilder();
@@ -566,7 +505,7 @@ public class Repository : IRepository
                         if (index >= bulkCount)
                         {
                             command.CommandText = builder.ToString();
-                            eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkInsert, eventArgs);
+                            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
                             count += await command.ExecuteNonQueryAsync(cancellationToken);
                             builder.Clear();
                             command.Parameters.Clear();
@@ -579,12 +518,12 @@ public class Repository : IRepository
                     if (index > 0)
                     {
                         command.CommandText = builder.ToString();
-                        eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkInsert, eventArgs);
+                        eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
                         count += await command.ExecuteNonQueryAsync(cancellationToken);
                     }
                     return count;
                 };
-                await this.DbContext.OpenAsync(cancellationToken);
+                await this.DbContext.OpenAsync(connection, cancellationToken);
                 if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out _))
                 {
                     var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, entities);
@@ -609,8 +548,8 @@ public class Repository : IRepository
             else
             {
                 this.DbContext.BuildCreateCommand(command, entityType, insertObjs, false);
-                await this.DbContext.OpenAsync(cancellationToken);
-                eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.Insert);
+                await this.DbContext.OpenAsync(connection, cancellationToken);
+                eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Insert);
                 result = await command.ExecuteNonQueryAsync(cancellationToken);
             }
         }
@@ -619,15 +558,15 @@ public class Repository : IRepository
             isNeedClose = true;
             exception = ex;
             var sqlType = isBulk ? CommandSqlType.BulkInsert : CommandSqlType.Insert;
-            this.DbContext.AddCommandFailedFilter(command, sqlType, eventArgs, exception);
+            this.DbContext.AddCommandFailedFilter(connection, command, sqlType, eventArgs, exception);
         }
         finally
         {
             var sqlType = isBulk ? CommandSqlType.BulkInsert : CommandSqlType.Insert;
-            this.DbContext.AddCommandAfterFilter(command, sqlType, eventArgs, exception == null, exception);
+            this.DbContext.AddCommandAfterFilter(connection, command, sqlType, eventArgs, exception == null, exception);
             command.Parameters.Clear();
             await command.DisposeAsync();
-            if (isNeedClose) await this.DisposeAsync();
+            if (isNeedClose) await this.DisposeAsync(connection);
         }
         if (exception != null) throw exception;
         return result;
@@ -691,11 +630,10 @@ public class Repository : IRepository
         if (updateObjs == null)
             throw new ArgumentNullException(nameof(updateObjs));
 
-        using var command = this.DbContext.CreateCommand();
         int result = 0;
-        bool isNeedClose = this.DbContext.IsNeedClose;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         bool isBulk = updateObjs is IEnumerable && updateObjs is not string && updateObjs is not IDictionary<string, object>;
         try
         {
@@ -714,7 +652,7 @@ public class Repository : IRepository
                 (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.ormProvider, this.mapProvider, entityType, updateObjType, true, null, null);
                 var typedSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
 
-                this.DbContext.Open();
+                this.DbContext.Open(connection);
                 foreach (var updateObj in entities)
                 {
                     if (index > 0) builder.Append(';');
@@ -723,7 +661,7 @@ public class Repository : IRepository
                     if (index >= bulkCount)
                     {
                         command.CommandText = builder.ToString();
-                        eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkUpdate, eventArgs);
+                        eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkUpdate, eventArgs);
                         result += command.ExecuteNonQuery();
                         command.Parameters.Clear();
                         builder.Clear();
@@ -735,7 +673,7 @@ public class Repository : IRepository
                 if (index > 0)
                 {
                     command.CommandText = builder.ToString();
-                    eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkUpdate, eventArgs);
+                    eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkUpdate, eventArgs);
                     result += command.ExecuteNonQuery();
                 }
             }
@@ -747,8 +685,8 @@ public class Repository : IRepository
                 var typedSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object>;
                 typedSqlSetter.Invoke(command.Parameters, builder, this.ormProvider, updateObjs);
                 command.CommandText = builder.ToString();
-                this.DbContext.Open();
-                eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.Update);
+                this.DbContext.Open(connection);
+                eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Update);
                 result = command.ExecuteNonQuery();
             }
             builder.Clear();
@@ -759,15 +697,15 @@ public class Repository : IRepository
             isNeedClose = true;
             exception = ex;
             var sqlType = isBulk ? CommandSqlType.BulkUpdate : CommandSqlType.Update;
-            this.DbContext.AddCommandFailedFilter(command, sqlType, eventArgs, exception);
+            this.DbContext.AddCommandFailedFilter(connection, command, sqlType, eventArgs, exception);
         }
         finally
         {
             var sqlType = isBulk ? CommandSqlType.BulkUpdate : CommandSqlType.Update;
-            this.DbContext.AddCommandAfterFilter(command, sqlType, eventArgs, exception == null, exception);
+            this.DbContext.AddCommandAfterFilter(connection, command, sqlType, eventArgs, exception == null, exception);
             command.Parameters.Clear();
             command.Dispose();
-            if (isNeedClose) this.Dispose();
+            if (isNeedClose) this.Dispose(connection);
         }
         if (exception != null) throw exception;
         return result;
@@ -777,11 +715,10 @@ public class Repository : IRepository
         if (updateObjs == null)
             throw new ArgumentNullException(nameof(updateObjs));
 
-        using var command = this.DbContext.CreateDbCommand();
         int result = 0;
-        bool isNeedClose = this.DbContext.IsNeedClose;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterDbCommand();
         bool isBulk = updateObjs is IEnumerable && updateObjs is not string && updateObjs is not IDictionary<string, object>;
         try
         {
@@ -799,7 +736,7 @@ public class Repository : IRepository
                 }
                 (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.ormProvider, this.mapProvider, entityType, updateObjType, true, null, null);
                 var typedSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
-                await this.DbContext.OpenAsync(cancellationToken);
+                await this.DbContext.OpenAsync(connection, cancellationToken);
                 foreach (var updateObj in entities)
                 {
                     if (index > 0) builder.Append(';');
@@ -808,7 +745,7 @@ public class Repository : IRepository
                     if (index >= bulkCount)
                     {
                         command.CommandText = builder.ToString();
-                        eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkUpdate, eventArgs);
+                        eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkUpdate, eventArgs);
                         result += await command.ExecuteNonQueryAsync(cancellationToken);
                         command.Parameters.Clear();
                         builder.Clear();
@@ -820,7 +757,7 @@ public class Repository : IRepository
                 if (index > 0)
                 {
                     command.CommandText = builder.ToString();
-                    eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkUpdate, eventArgs);
+                    eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkUpdate, eventArgs);
                     result += await command.ExecuteNonQueryAsync(cancellationToken);
                 }
             }
@@ -832,8 +769,8 @@ public class Repository : IRepository
                 var typedSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object>;
                 typedSqlSetter.Invoke(command.Parameters, builder, this.ormProvider, updateObjs);
                 command.CommandText = builder.ToString();
-                await this.DbContext.OpenAsync(cancellationToken);
-                eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.Update);
+                await this.DbContext.OpenAsync(connection, cancellationToken);
+                eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Update);
                 result = await command.ExecuteNonQueryAsync(cancellationToken);
             }
             builder.Clear();
@@ -844,15 +781,15 @@ public class Repository : IRepository
             isNeedClose = true;
             exception = ex;
             var sqlType = isBulk ? CommandSqlType.BulkUpdate : CommandSqlType.Update;
-            this.DbContext.AddCommandFailedFilter(command, sqlType, eventArgs, exception);
+            this.DbContext.AddCommandFailedFilter(connection, command, sqlType, eventArgs, exception);
         }
         finally
         {
             var sqlType = isBulk ? CommandSqlType.BulkUpdate : CommandSqlType.Update;
-            this.DbContext.AddCommandAfterFilter(command, sqlType, eventArgs, exception == null, exception);
+            this.DbContext.AddCommandAfterFilter(connection, command, sqlType, eventArgs, exception == null, exception);
             command.Parameters.Clear();
             await command.DisposeAsync();
-            if (isNeedClose) await this.DisposeAsync();
+            if (isNeedClose) await this.DisposeAsync(connection);
         }
         if (exception != null) throw exception;
         return result;
@@ -866,11 +803,10 @@ public class Repository : IRepository
         if (whereKeys == null)
             throw new ArgumentNullException(nameof(whereKeys));
 
-        using var command = this.DbContext.CreateCommand();
         int result = 0;
-        bool isNeedClose = this.DbContext.IsNeedClose;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         try
         {
             var entityType = typeof(TEntity);
@@ -878,22 +814,22 @@ public class Repository : IRepository
                 throw new NotSupportedException($"实体表{entityType.FullName}有配置分表，当前方法不支持分表，请使用repository.Delete<T>().UseTable或UseTableBy方法可指定分表");
 
             this.BuildDeleteCommand(command, entityType, whereKeys);
-            this.DbContext.Open();
-            eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.Delete);
+            this.DbContext.Open(connection);
+            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Delete);
             result = command.ExecuteNonQuery();
         }
         catch (Exception ex)
         {
             isNeedClose = true;
             exception = ex;
-            this.DbContext.AddCommandFailedFilter(command, CommandSqlType.Delete, eventArgs, exception);
+            this.DbContext.AddCommandFailedFilter(connection, command, CommandSqlType.Delete, eventArgs, exception);
         }
         finally
         {
-            this.DbContext.AddCommandAfterFilter(command, CommandSqlType.Delete, eventArgs, exception == null, exception);
+            this.DbContext.AddCommandAfterFilter(connection, command, CommandSqlType.Delete, eventArgs, exception == null, exception);
             command.Parameters.Clear();
             command.Dispose();
-            if (isNeedClose) this.Dispose();
+            if (isNeedClose) this.Dispose(connection);
         }
         if (exception != null) throw exception;
         return result;
@@ -903,11 +839,10 @@ public class Repository : IRepository
         if (whereKeys == null)
             throw new ArgumentNullException(nameof(whereKeys));
 
-        using var command = this.DbContext.CreateDbCommand();
         int result = 0;
-        bool isNeedClose = this.DbContext.IsNeedClose;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterDbCommand();
         try
         {
             var entityType = typeof(TEntity);
@@ -915,22 +850,22 @@ public class Repository : IRepository
                 throw new NotSupportedException($"实体表{entityType.FullName}有配置分表，当前方法不支持分表，请使用repository.Delete<T>().UseTable或UseTableBy方法可指定分表");
 
             this.BuildDeleteCommand(command, entityType, whereKeys);
-            await this.DbContext.OpenAsync(cancellationToken);
-            eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.Delete);
+            await this.DbContext.OpenAsync(connection, cancellationToken);
+            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Delete);
             result = await command.ExecuteNonQueryAsync(cancellationToken);
         }
         catch (Exception ex)
         {
             isNeedClose = true;
             exception = ex;
-            this.DbContext.AddCommandFailedFilter(command, CommandSqlType.Delete, eventArgs, exception);
+            this.DbContext.AddCommandFailedFilter(connection, command, CommandSqlType.Delete, eventArgs, exception);
         }
         finally
         {
-            this.DbContext.AddCommandAfterFilter(command, CommandSqlType.Delete, eventArgs, exception == null, exception);
+            this.DbContext.AddCommandAfterFilter(connection, command, CommandSqlType.Delete, eventArgs, exception == null, exception);
             command.Parameters.Clear();
             await command.DisposeAsync();
-            if (isNeedClose) await this.DisposeAsync();
+            if (isNeedClose) await this.DisposeAsync(connection);
         }
         if (exception != null) throw exception;
         return result;
@@ -1068,19 +1003,18 @@ public class Repository : IRepository
         if (subQueries == null)
             throw new ArgumentNullException(nameof(subQueries));
 
-        using var command = this.DbContext.CreateCommand();
         IMultiQueryReader result = null;
         IDataReader reader = null;
-        bool isNeedClose = false;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand();
         try
         {
             using var multiQuery = new MultipleQuery(this.DbContext, command);
             subQueries.Invoke(multiQuery);
             command.CommandText = multiQuery.BuildSql(out var readerAfters);
-            this.DbContext.Open();
-            eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.MultiQuery);
+            this.DbContext.Open(connection);
+            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.MultiQuery);
             reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
             result = new MultiQueryReader(this.ormProvider, command, reader, readerAfters, isNeedClose);
         }
@@ -1088,18 +1022,12 @@ public class Repository : IRepository
         {
             isNeedClose = true;
             exception = ex;
-            this.DbContext.AddCommandFailedFilter(command, CommandSqlType.MultiQuery, eventArgs, exception);
+            this.DbContext.AddCommandFailedFilter(connection, command, CommandSqlType.MultiQuery, eventArgs, exception);
         }
         finally
         {
-            this.DbContext.AddCommandAfterFilter(command, CommandSqlType.MultiQuery, eventArgs, exception == null, exception);
-            if (isNeedClose)
-            {
-                reader?.Dispose();
-                command.Parameters.Clear();
-                command.Dispose();
-                this.Dispose();
-            }
+            this.DbContext.AddCommandAfterFilter(connection, command, CommandSqlType.MultiQuery, eventArgs, exception == null, exception);
+            //多语句查询，在最后reader读取后，自动关闭
         }
         if (exception != null) throw exception;
         return result;
@@ -1109,19 +1037,18 @@ public class Repository : IRepository
         if (subQueries == null)
             throw new ArgumentNullException(nameof(subQueries));
 
-        using var command = this.DbContext.CreateDbCommand();
         IMultiQueryReader result = null;
         DbDataReader reader = null;
-        bool isNeedClose = false;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveDbCommand();
         try
         {
             using var multiQuery = new MultipleQuery(this.DbContext, command);
             subQueries.Invoke(multiQuery);
             command.CommandText = multiQuery.BuildSql(out var readerAfters);
-            await this.DbContext.OpenAsync(cancellationToken);
-            eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.MultiQuery);
+            await this.DbContext.OpenAsync(connection, cancellationToken);
+            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.MultiQuery);
             reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
             result = new MultiQueryReader(this.ormProvider, command, reader, readerAfters, isNeedClose);
         }
@@ -1129,19 +1056,12 @@ public class Repository : IRepository
         {
             isNeedClose = true;
             exception = ex;
-            this.DbContext.AddCommandFailedFilter(command, CommandSqlType.MultiQuery, eventArgs, exception);
+            this.DbContext.AddCommandFailedFilter(connection, command, CommandSqlType.MultiQuery, eventArgs, exception);
         }
         finally
         {
-            this.DbContext.AddCommandAfterFilter(command, CommandSqlType.MultiQuery, eventArgs, exception == null, exception);
-            if (isNeedClose)
-            {
-                if (reader != null)
-                    await reader.DisposeAsync();
-                command.Parameters.Clear();
-                await command.DisposeAsync();
-                await this.DisposeAsync();
-            }
+            this.DbContext.AddCommandAfterFilter(connection, command, CommandSqlType.MultiQuery, eventArgs, exception == null, exception);
+            //多语句查询，在最后reader读取后，自动关闭
         }
         if (exception != null) throw exception;
         return result;
@@ -1154,11 +1074,10 @@ public class Repository : IRepository
         if (commands == null || commands.Count == 0)
             throw new ArgumentNullException(nameof(commands));
 
-        using var command = this.DbContext.CreateCommand();
-        bool isNeedClose = this.DbContext.IsNeedClose;
         int result = 0;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         try
         {
             int commandIndex = 0;
@@ -1200,22 +1119,22 @@ public class Repository : IRepository
                 commandIndex++;
             }
             command.CommandText = sqlBuilder.ToString();
-            this.DbContext.Open();
-            eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.MultiCommand);
+            this.DbContext.Open(connection);
+            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.MultiCommand);
             result = command.ExecuteNonQuery();
         }
         catch (Exception ex)
         {
             isNeedClose = true;
             exception = ex;
-            this.DbContext.AddCommandFailedFilter(command, CommandSqlType.MultiCommand, eventArgs, exception);
+            this.DbContext.AddCommandFailedFilter(connection, command, CommandSqlType.MultiCommand, eventArgs, exception);
         }
         finally
         {
-            this.DbContext.AddCommandAfterFilter(command, CommandSqlType.MultiCommand, eventArgs, exception == null, exception);
+            this.DbContext.AddCommandAfterFilter(connection, command, CommandSqlType.MultiCommand, eventArgs, exception == null, exception);
             command.Parameters.Clear();
             command.Dispose();
-            if (isNeedClose) this.Dispose();
+            if (isNeedClose) this.Dispose(connection);
         }
         if (exception != null) throw exception;
         return result;
@@ -1225,11 +1144,10 @@ public class Repository : IRepository
         if (commands == null || commands.Count == 0)
             throw new ArgumentNullException(nameof(commands));
 
-        using var command = this.DbContext.CreateDbCommand();
-        bool isNeedClose = this.DbContext.IsNeedClose;
         int result = 0;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterDbCommand();
         try
         {
             int commandIndex = 0;
@@ -1271,22 +1189,22 @@ public class Repository : IRepository
                 commandIndex++;
             }
             command.CommandText = sqlBuilder.ToString();
-            await this.DbContext.OpenAsync(cancellationToken);
-            eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.MultiCommand);
+            await this.DbContext.OpenAsync(connection, cancellationToken);
+            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.MultiCommand);
             result = await command.ExecuteNonQueryAsync(cancellationToken);
         }
         catch (Exception ex)
         {
             isNeedClose = true;
             exception = ex;
-            this.DbContext.AddCommandFailedFilter(command, CommandSqlType.MultiCommand, eventArgs, exception);
+            this.DbContext.AddCommandFailedFilter(connection, command, CommandSqlType.MultiCommand, eventArgs, exception);
         }
         finally
         {
-            this.DbContext.AddCommandAfterFilter(command, CommandSqlType.MultiCommand, eventArgs, exception == null, exception);
+            this.DbContext.AddCommandAfterFilter(connection, command, CommandSqlType.MultiCommand, eventArgs, exception == null, exception);
             command.Parameters.Clear();
             await command.DisposeAsync();
-            if (isNeedClose) await this.DisposeAsync();
+            if (isNeedClose) await this.DisposeAsync(connection);
         }
         if (exception != null) throw exception;
         return result;
@@ -1294,8 +1212,8 @@ public class Repository : IRepository
     #endregion
 
     #region Others
-    public virtual void Close() => this.Dispose();
-    public virtual async Task CloseAsync() => await this.DisposeAsync();
+    //public virtual void Close() => this.Dispose(connection);
+    //public virtual async Task CloseAsync() => await this.DisposeAsync(connection);
     public virtual IRepository Timeout(int timeout)
     {
         this.DbContext.CommandTimeout = timeout;
@@ -1316,41 +1234,20 @@ public class Repository : IRepository
     public virtual void BeginTransaction() => this.DbContext.BeginTransaction();
     public virtual async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
         => await this.DbContext.BeginTransactionAsync(cancellationToken);
-    public virtual void Commit()
-    {
-        this.DbContext.Commit();
-        this.DbContext.Close();
-        this.DbContext.Transaction = null;
-    }
+    public virtual void Commit() => this.DbContext.Commit();
     public virtual async Task CommitAsync(CancellationToken cancellationToken = default)
-    {
-        await this.DbContext.CommitAsync(cancellationToken);
-        await this.DbContext.CloseAsync();
-        this.DbContext.Transaction = null;
-    }
-    public virtual void Rollback()
-    {
-        this.DbContext.Rollback();
-        this.DbContext.Close();
-        this.DbContext.Transaction = null;
-    }
+        => await this.DbContext.CommitAsync(cancellationToken);
+    public virtual void Rollback() => this.DbContext.Rollback();
     public virtual async Task RollbackAsync(CancellationToken cancellationToken = default)
+        => await this.DbContext.RollbackAsync(cancellationToken);
+    public virtual void Dispose(TheaConnection connection) => this.DbContext.Close(connection);
+    public virtual async ValueTask DisposeAsync(TheaConnection connection)
+        => await this.DbContext.CloseAsync(connection);
+    ~Repository()
     {
-        await this.DbContext.RollbackAsync(cancellationToken);
-        await this.DbContext.CloseAsync();
-        this.DbContext.Transaction = null;
+        if (this.DbContext != null && this.DbContext.Transaction != null)
+            throw new Exception("有事务还没有完成，请检查代码，是否遗漏了Commit或是Rollback操作");
     }
-    public virtual void Dispose()
-    {
-        this.DbContext.Close();
-        GC.SuppressFinalize(this);
-    }
-    public virtual async ValueTask DisposeAsync()
-    {
-        await this.DbContext.CloseAsync();
-        GC.SuppressFinalize(this);
-    }
-    ~Repository() => this.Dispose();
     private IQueryVisitor CreateQueryVisitor(char tableAsStart = 'a')
         => this.ormProvider.NewQueryVisitor(this.DbContext, tableAsStart);
     #endregion

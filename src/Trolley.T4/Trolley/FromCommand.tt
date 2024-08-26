@@ -38,31 +38,30 @@ public class FromCommand : QueryInternal, IFromCommand
     {
         if (this.Visitor.IsNeedFetchShardingTables)
             this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
-        using var command = this.DbContext.CreateCommand();
         int result = 0;
-        bool isNeedClose = this.DbContext.IsNeedClose;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         try
         {
             command.CommandText = this.Visitor.BuildCommandSql(out var dbParameters);
             dbParameters.CopyTo(command.Parameters);
-            this.DbContext.Open();
-            eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.Insert);
+            this.DbContext.Open(connection);
+            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Insert);
             result = command.ExecuteNonQuery();
         }
         catch (Exception ex)
         {
             isNeedClose = true;
             exception = ex;
-            this.DbContext.AddCommandFailedFilter(command, CommandSqlType.Insert, eventArgs, exception);
+            this.DbContext.AddCommandFailedFilter(connection, command, CommandSqlType.Insert, eventArgs, exception);
         }
         finally
         {
-            this.DbContext.AddCommandAfterFilter(command, CommandSqlType.Insert, eventArgs, exception == null, exception);
+            this.DbContext.AddCommandAfterFilter(connection, command, CommandSqlType.Insert, eventArgs, exception == null, exception);
             command.Parameters.Clear();
             command.Dispose();
-            if (isNeedClose) this.DbContext.Close();
+            if (isNeedClose) this.DbContext.Close(connection);
         }
         if (exception != null) throw exception;
         return result;
@@ -72,31 +71,30 @@ public class FromCommand : QueryInternal, IFromCommand
         if (this.Visitor.IsNeedFetchShardingTables)
             await this.DbContext.FetchShardingTablesAsync(this.Visitor as SqlVisitor, cancellationToken);
 
-        using var command = this.DbContext.CreateDbCommand();
         int result = 0;
-        bool isNeedClose = this.DbContext.IsNeedClose;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterDbCommand();
         try
         {
             command.CommandText = this.Visitor.BuildCommandSql(out var dbParameters);
             dbParameters.CopyTo(command.Parameters);
-            await this.DbContext.OpenAsync(cancellationToken);
-            eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.Insert);
+            await this.DbContext.OpenAsync(connection, cancellationToken);
+            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Insert);
             result = await command.ExecuteNonQueryAsync(cancellationToken);
         }
         catch (Exception ex)
         {
             isNeedClose = true;
             exception = ex;
-            this.DbContext.AddCommandFailedFilter(command, CommandSqlType.Insert, eventArgs, exception);
+            this.DbContext.AddCommandFailedFilter(connection, command, CommandSqlType.Insert, eventArgs, exception);
         }
         finally
         {
-            this.DbContext.AddCommandAfterFilter(command, CommandSqlType.Insert, eventArgs, exception == null, exception);
+            this.DbContext.AddCommandAfterFilter(connection, command, CommandSqlType.Insert, eventArgs, exception == null, exception);
             command.Parameters.Clear();
             await command.DisposeAsync();
-            if (isNeedClose) await this.DbContext.CloseAsync();
+            if (isNeedClose) await this.DbContext.CloseAsync(connection);
         }
         if (exception != null) throw exception;
         return result;

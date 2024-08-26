@@ -59,7 +59,7 @@ public class MethodCallUnitTest : UnitTestBase
     public async Task Contains()
     {
         this.Initialize();
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql = repository.From<User>()
             .Where(f => new int[] { 1, 2 }.Contains(f.Id))
             .Select(f => f.Id)
@@ -132,7 +132,7 @@ public class MethodCallUnitTest : UnitTestBase
     [Fact]
     public async Task Concat()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         bool isMale = false;
         int count = 10;
         var sql = repository.From<User>()
@@ -159,7 +159,7 @@ public class MethodCallUnitTest : UnitTestBase
     [Fact]
     public async Task Format()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         bool isMale = false;
         int count = 5;
         var sql = repository.From<User>()
@@ -182,7 +182,7 @@ public class MethodCallUnitTest : UnitTestBase
     [Fact]
     public void Compare()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql1 = repository.From<User>()
             .Where(f => f.Id == 1)
             .Select(f => new
@@ -242,7 +242,7 @@ public class MethodCallUnitTest : UnitTestBase
     [Fact]
     public void CompareTo()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql = repository.From<Order>()
             .Select(f => new
             {
@@ -278,7 +278,7 @@ public class MethodCallUnitTest : UnitTestBase
     [Fact]
     public void Trims()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql = repository.From<Order>()
             .Select(f => new
             {
@@ -383,7 +383,7 @@ public class MethodCallUnitTest : UnitTestBase
     [Fact]
     public void ToUpper_ToLower()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql = repository.From<Order>()
             .Select(f => new
             {
@@ -429,7 +429,7 @@ public class MethodCallUnitTest : UnitTestBase
     [Fact]
     public void Test_ToString()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql = repository.From<Order>()
             .Select(f => new
             {
@@ -487,7 +487,7 @@ public class MethodCallUnitTest : UnitTestBase
     public void Update_Contains()
     {
         this.Initialize();
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         int id = 1;
         var orderNos = new string[] { "ON_001", "ON_002", "ON_003" };
         var sql = repository.Update<Order>()
@@ -505,7 +505,7 @@ public class MethodCallUnitTest : UnitTestBase
     public void Method_Convert1()
     {
         Initialize();
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         int age = 23;
         var sql = repository.From<User>()
             .Where(f => f.Id == 1)
@@ -563,7 +563,7 @@ public class MethodCallUnitTest : UnitTestBase
     public async Task Method_Convert2()
     {
         this.Initialize();
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         byte id = 1;
         await repository.From<User>()
             .Where(f => f.Id == id)
@@ -574,7 +574,7 @@ public class MethodCallUnitTest : UnitTestBase
     public void SqlIn()
     {
         Initialize();
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql = repository.From<User>()
             .Where(f => Sql.In(f.Id, new int[] { 1, 2, 3 }))
             .Select(f => f.Id)
@@ -590,7 +590,7 @@ public class MethodCallUnitTest : UnitTestBase
     [Fact]
     public async Task ComplexDeferredCall()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql = repository.From<User>()
             .Where(f => f.Id == 1)
             .Select(f => new
@@ -676,7 +676,7 @@ public class MethodCallUnitTest : UnitTestBase
     [Fact]
     public void ContainsEquals()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql = repository.From<User>()
             .Where(f => f.Name == string.Concat("千", "11"))
             .Select(f => f.Id)

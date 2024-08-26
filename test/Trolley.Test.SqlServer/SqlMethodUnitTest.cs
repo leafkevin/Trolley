@@ -25,7 +25,7 @@
 //    public void SqlIn()
 //    {
 //        Initialize();
-//        using var repository = dbFactory.Create();
+//        var repository = this.dbFactory.Create();
 //        var sql = repository.From<User>()
 //          .Where(f => Sql.In(f.Id, new int[] { 1, 2, 3 }))
 //          .Select(f => f.Id)
@@ -41,7 +41,7 @@
 //    [Fact]
 //    public void ToFlatten()
 //    {
-//        using var repository = dbFactory.Create();
+//        var repository = this.dbFactory.Create();
 //        var sql = repository.From<Order>()
 //            .Select(f => new
 //            {

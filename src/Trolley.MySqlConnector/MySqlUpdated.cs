@@ -29,9 +29,8 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
     {
         int result = 0;
         Exception exception = null;
-        bool isNeedClose = this.DbContext.IsNeedClose;
         CommandEventArgs eventArgs = null;
-        using var command = this.DbContext.CreateCommand();
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         try
         {
             switch (this.Visitor.ActionMode)
@@ -107,13 +106,13 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                         var dataTable = this.Visitor.ToDataTable(updateObjType, updateObjs, memberMappers, tableName ?? fromMapper.TableName);
 
                         command.CommandText = bulkCopySql;
-                        this.DbContext.Open();
-                        eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkCopyUpdate, eventArgs);
+                        this.DbContext.Open(connection);
+                        eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkCopyUpdate, eventArgs);
                         command.ExecuteNonQuery();
 
-                        var connection = this.DbContext.Connection.BaseConnection as MySqlConnection;
+                        var dbConnection = connection.BaseConnection as MySqlConnection;
                         var transaction = this.DbContext.Transaction as MySqlTransaction;
-                        var bulkCopy = new MySqlBulkCopy(connection, transaction);
+                        var bulkCopy = new MySqlBulkCopy(dbConnection, transaction);
                         if (timeoutSeconds.HasValue) bulkCopy.BulkCopyTimeout = timeoutSeconds.Value;
                         bulkCopy.DestinationTableName = dataTable.TableName;
                         for (int i = 0; i < dataTable.Columns.Count; i++)
@@ -124,7 +123,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                         result = bulkCopyResult.RowsInserted;
 
                         command.CommandText = updateSql;
-                        eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkCopyUpdate, eventArgs);
+                        eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkCopyUpdate, eventArgs);
                         result = command.ExecuteNonQuery();
                     }
                     break;
@@ -166,14 +165,14 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                             this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
                         int index = 0;
                         firstParametersSetter?.Invoke(command.Parameters);
-                        this.DbContext.Open();
+                        this.DbContext.Open(connection);
                         foreach (var updateObj in updateObjs)
                         {
                             sqlExecuter.Invoke(updateObj, index);
                             if (index >= bulkCount)
                             {
                                 command.CommandText = builder.ToString();
-                                eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkUpdate, eventArgs);
+                                eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkUpdate, eventArgs);
                                 result += command.ExecuteNonQuery();
                                 command.Parameters.Clear();
                                 firstParametersSetter?.Invoke(command.Parameters);
@@ -186,7 +185,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                         if (index > 0)
                         {
                             command.CommandText = builder.ToString();
-                            eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkUpdate, eventArgs);
+                            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkUpdate, eventArgs);
                             result += command.ExecuteNonQuery();
                         }
                         builder.Clear();
@@ -201,8 +200,8 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                         if (this.Visitor.IsNeedFetchShardingTables)
                             this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
                         command.CommandText = this.Visitor.BuildCommand(this.DbContext, command);
-                        this.DbContext.Open();
-                        eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.Update);
+                        this.DbContext.Open(connection);
+                        eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Update);
                         result = command.ExecuteNonQuery();
                     }
                     break;
@@ -218,7 +217,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                 ActionMode.Bulk => CommandSqlType.BulkUpdate,
                 _ => CommandSqlType.Update
             };
-            this.DbContext.AddCommandFailedFilter(command, sqlType, eventArgs, exception);
+            this.DbContext.AddCommandFailedFilter(connection, command, sqlType, eventArgs, exception);
         }
         finally
         {
@@ -228,10 +227,10 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                 ActionMode.Bulk => CommandSqlType.BulkUpdate,
                 _ => CommandSqlType.Update
             };
-            this.DbContext.AddCommandAfterFilter(command, sqlType, eventArgs, exception == null, exception);
+            this.DbContext.AddCommandAfterFilter(connection, command, sqlType, eventArgs, exception == null, exception);
             command.Parameters.Clear();
             command.Dispose();
-            if (isNeedClose) this.Close();
+            if (isNeedClose) this.Close(connection);
         }
         if (exception != null) throw exception;
         return result;
@@ -240,9 +239,8 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
     {
         int result = 0;
         Exception exception = null;
-        bool isNeedClose = this.DbContext.IsNeedClose;
         CommandEventArgs eventArgs = null;
-        using var command = this.DbContext.CreateDbCommand();
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterDbCommand();
         try
         {
             switch (this.Visitor.ActionMode)
@@ -318,13 +316,13 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                         var dataTable = this.Visitor.ToDataTable(updateObjType, updateObjs, memberMappers, tableName ?? fromMapper.TableName);
 
                         command.CommandText = bulkCopySql;
-                        await this.DbContext.OpenAsync(cancellationToken);
-                        eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkCopyUpdate, eventArgs);
+                        await this.DbContext.OpenAsync(connection, cancellationToken);
+                        eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkCopyUpdate, eventArgs);
                         await command.ExecuteNonQueryAsync(cancellationToken);
 
-                        var connection = this.DbContext.Connection.BaseConnection as MySqlConnection;
+                        var dbConnection = connection.BaseConnection as MySqlConnection;
                         var transaction = this.DbContext.Transaction as MySqlTransaction;
-                        var bulkCopy = new MySqlBulkCopy(connection, transaction);
+                        var bulkCopy = new MySqlBulkCopy(dbConnection, transaction);
                         if (timeoutSeconds.HasValue) bulkCopy.BulkCopyTimeout = timeoutSeconds.Value;
                         bulkCopy.DestinationTableName = dataTable.TableName;
                         for (int i = 0; i < dataTable.Columns.Count; i++)
@@ -335,7 +333,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                         result = bulkCopyResult.RowsInserted;
 
                         command.CommandText = updateSql;
-                        eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkCopyUpdate, eventArgs);
+                        eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkCopyUpdate, eventArgs);
                         result = await command.ExecuteNonQueryAsync(cancellationToken);
                     }
                     break;
@@ -377,14 +375,14 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                             await this.DbContext.FetchShardingTablesAsync(this.Visitor as SqlVisitor, cancellationToken);
                         int index = 0;
                         firstParametersSetter?.Invoke(command.Parameters);
-                        await this.DbContext.OpenAsync(cancellationToken);
+                        await this.DbContext.OpenAsync(connection, cancellationToken);
                         foreach (var updateObj in updateObjs)
                         {
                             sqlExecuter.Invoke(updateObj, index);
                             if (index >= bulkCount)
                             {
                                 command.CommandText = builder.ToString();
-                                eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkUpdate, eventArgs);
+                                eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkUpdate, eventArgs);
                                 result += await command.ExecuteNonQueryAsync(cancellationToken);
                                 command.Parameters.Clear();
                                 firstParametersSetter?.Invoke(command.Parameters);
@@ -397,7 +395,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                         if (index > 0)
                         {
                             command.CommandText = builder.ToString();
-                            eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkUpdate, eventArgs);
+                            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkUpdate, eventArgs);
                             result += await command.ExecuteNonQueryAsync(cancellationToken);
                         }
                         builder.Clear();
@@ -412,8 +410,8 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                         if (this.Visitor.IsNeedFetchShardingTables)
                             this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
                         command.CommandText = this.Visitor.BuildCommand(this.DbContext, command);
-                        await this.DbContext.OpenAsync(cancellationToken);
-                        eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.Update);
+                        await this.DbContext.OpenAsync(connection, cancellationToken);
+                        eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Update);
                         result = await command.ExecuteNonQueryAsync(cancellationToken);
                     }
                     break;
@@ -429,7 +427,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                 ActionMode.Bulk => CommandSqlType.BulkUpdate,
                 _ => CommandSqlType.Update
             };
-            this.DbContext.AddCommandFailedFilter(command, sqlType, eventArgs, exception);
+            this.DbContext.AddCommandFailedFilter(connection, command, sqlType, eventArgs, exception);
         }
         finally
         {
@@ -439,10 +437,10 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                 ActionMode.Bulk => CommandSqlType.BulkUpdate,
                 _ => CommandSqlType.Update
             };
-            this.DbContext.AddCommandAfterFilter(command, sqlType, eventArgs, exception == null, exception);
+            this.DbContext.AddCommandAfterFilter(connection, command, sqlType, eventArgs, exception == null, exception);
             command.Parameters.Clear();
             await command.DisposeAsync();
-            if (isNeedClose) await this.CloseAsync();
+            if (isNeedClose) await this.CloseAsync(connection);
         }
         if (exception != null) throw exception;
         return result;
@@ -532,7 +530,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                 this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
                 builder.Append(this.Visitor.BuildTableShardingsSql());
             }
-            using var command = this.DbContext.CreateCommand();
+            (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
             sql = this.Visitor.BuildCommand(this.DbContext, command);
             if (this.Visitor.IsNeedFetchShardingTables)
             {
@@ -540,6 +538,8 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                 sql = builder.ToString();
             }
             dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
+            command.Dispose();
+            if (isNeedClose) connection.Close();
         }
         builder.Clear();
         builder = null;

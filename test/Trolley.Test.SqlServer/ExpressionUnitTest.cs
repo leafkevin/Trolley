@@ -58,7 +58,7 @@ public class ExpressionUnitTest : UnitTestBase
     public void Coalesce()
     {
         this.Initialize();
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         string firstName = "千", lastName = null;
         var sql = repository.From<User>()
             .Where(f => f.Name.Contains(lastName ?? firstName))
@@ -97,7 +97,7 @@ public class ExpressionUnitTest : UnitTestBase
     public void Conditional()
     {
         this.Initialize();
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql = repository.From<User>()
             .Where(f => (f.IsEnabled ? "Enabled" : "Disabled") == "Enabled"
                 && (f.GuidField.HasValue ? "HasValue" : "NoValue") == "HasValue")
@@ -150,7 +150,7 @@ public class ExpressionUnitTest : UnitTestBase
     public async Task WhereCoalesceConditional()
     {
         this.Initialize();
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql1 = repository.From<Company>()
             .Where(f => (f.Nature ?? CompanyNature.Internet) == CompanyNature.Internet)
             .ToSql(out _);
@@ -192,7 +192,7 @@ public class ExpressionUnitTest : UnitTestBase
             {"2","cindy" },
             {"3","xiyuan" }
         };
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql = repository.From<User>()
             .Where(f => (f.Name.Contains(dict["1"]) || f.IsEnabled.ToString() == strCollection[0]))
             .Select(f => new

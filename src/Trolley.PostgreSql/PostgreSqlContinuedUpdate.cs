@@ -156,7 +156,7 @@ public class PostgreSqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IPos
                 builder.Append(this.Visitor.BuildTableShardingsSql());
                 builder.Append(';');
             }
-            using var command = this.DbContext.CreateCommand();
+            (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
             sql = this.Visitor.BuildCommand(this.DbContext, command);
             if (this.Visitor.IsNeedFetchShardingTables)
             {
@@ -164,6 +164,8 @@ public class PostgreSqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IPos
                 sql = builder.ToString();
             }
             dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
+            command.Dispose();
+            if (isNeedClose) connection.Dispose();
         }
         builder.Clear();
         builder = null;

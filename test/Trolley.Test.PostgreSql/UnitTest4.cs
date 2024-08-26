@@ -109,7 +109,7 @@ public class UnitTest4 : UnitTestBase
     [Fact]
     public async Task Delete()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         repository.BeginTransaction();
         repository.Delete<User>(f => f.Id == 1);
         var count = repository.Create<User>(new User
@@ -139,7 +139,7 @@ public class UnitTest4 : UnitTestBase
     [Fact]
     public async Task Delete_Multi()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         repository.BeginTransaction();
         repository.Delete<User>(new[] { new { Id = 1 }, new { Id = 2 } });
         var count = repository.Create<User>(new[]
@@ -198,7 +198,7 @@ public class UnitTest4 : UnitTestBase
     [Fact]
     public async Task Delete_Multi1()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         repository.BeginTransaction();
         repository.Delete<User>(new[] { 1, 2 });
         var count = repository.Create<User>(new[]
@@ -256,7 +256,7 @@ public class UnitTest4 : UnitTestBase
     [Fact]
     public async Task Delete_Multi_Where()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         repository.BeginTransaction();
         repository.Delete<User>(f => new int[] { 1, 2 }.Contains(f.Id));
         var count = repository.Create<User>(new[]
@@ -305,7 +305,7 @@ public class UnitTest4 : UnitTestBase
     [Fact]
     public void Delete_Where_And()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         bool? isMale = true;
         var sql = repository.Delete<User>()
             .Where(f => f.Name.Contains("kevin"))
@@ -316,7 +316,7 @@ public class UnitTest4 : UnitTestBase
     [Fact]
     public void Delete_Enum_Fields()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql1 = repository.Delete<User>()
             .Where(f => f.Gender == Gender.Male)
             .ToSql(out _);
@@ -348,7 +348,7 @@ public class UnitTest4 : UnitTestBase
     [Fact]
     public void Transation()
     {
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         bool? isMale = true;
         repository.Timeout(60);
         repository.BeginTransaction();

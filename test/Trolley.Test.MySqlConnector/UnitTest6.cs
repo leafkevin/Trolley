@@ -144,7 +144,7 @@ public class UnitTest6 : UnitTestBase
     }
     private async Task InitSharding()
     {
-        using var repository = this.dbFactory.Create();
+        var repository = this.dbFactory.Create();
         await repository.Delete<User>()
             .UseTableBy("104")
             .UseTableBy("105")
@@ -349,7 +349,7 @@ public class UnitTest6 : UnitTestBase
     [Fact]
     public async Task Create_WithBy_UseTable()
     {
-        using var repository = this.dbFactory.Create();
+        var repository = this.dbFactory.Create();
         await repository.Delete<User>()
             .UseTableBy("104")
             .Where(101)
@@ -390,7 +390,7 @@ public class UnitTest6 : UnitTestBase
     [Fact]
     public async Task Create_WithBy_WithoutUseTable()
     {
-        using var repository = this.dbFactory.Create();
+        var repository = this.dbFactory.Create();
         await repository.Delete<User>()
             .UseTableBy("104")
             .Where(101)
@@ -430,7 +430,7 @@ public class UnitTest6 : UnitTestBase
     [Fact]
     public async Task Create_WithBulk_UseTable()
     {
-        using var repository = this.dbFactory.Create();
+        var repository = this.dbFactory.Create();
         await repository.Delete<User>()
             .UseTableBy("104")
             .Where(101)
@@ -471,7 +471,7 @@ public class UnitTest6 : UnitTestBase
     [Fact]
     public async Task Create_WithoutUseTable()
     {
-        using var repository = this.dbFactory.Create();
+        var repository = this.dbFactory.Create();
         await repository.Delete<User>()
             .UseTableBy("104")
             .UseTableBy("105")
@@ -556,7 +556,7 @@ public class UnitTest6 : UnitTestBase
     [Fact]
     public async Task Create_WithBulk_WithoutUseTable()
     {
-        using var repository = this.dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var userIds = new[] { 101, 102, 103 };
         await repository.Delete<User>()
             .UseTable(f => f.Contains("104") || f.Contains("105"))
@@ -695,7 +695,7 @@ public class UnitTest6 : UnitTestBase
                 UpdatedBy = 1
             });
         }
-        using var repository = this.dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var removeIds = orders.Select(f => f.Id).ToList();
 
         await repository.BeginTransactionAsync();
@@ -931,7 +931,7 @@ public class UnitTest6 : UnitTestBase
         }
         var removeIds = orders.Select(f => f.Id).ToList();
 
-        using var repository = this.dbFactory.Create();
+        var repository = this.dbFactory.Create();
         await repository.BeginTransactionAsync();
         await repository.Delete<Order>()
             .UseTableBy("104", createdAt)
@@ -965,7 +965,7 @@ public class UnitTest6 : UnitTestBase
     {
         await this.InitSharding();
         var productCount = 1;
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql = repository.From<Order>()
             .UseTable("sys_order_104_202405", "sys_order_105_202405")
             .Where(f => f.ProductCount > productCount)
@@ -987,7 +987,7 @@ public class UnitTest6 : UnitTestBase
     {
         await this.InitSharding();
         var productCount = 1;
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql = repository.From<Order>()
             .UseTable(f => f.Contains("_104_") && int.Parse(f[^6..]) > 202001)
             .Include(f => f.Details)
@@ -1053,7 +1053,7 @@ public class UnitTest6 : UnitTestBase
     {
         await this.InitSharding();
         var orderId = "ON_1015";
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql = repository.From<Order>()
             .UseTableBy("104", DateTime.Parse("2024-05-01"))
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
@@ -1079,7 +1079,7 @@ public class UnitTest6 : UnitTestBase
     public async Task Query_ManySharding_SingleTable_SubQuery()
     {
         await this.InitSharding();
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql = repository
             .From(f => f.From<OrderDetail>()
                 .UseTable("sys_order_detail_104_202405", "sys_order_detail_105_202405")
@@ -1141,7 +1141,7 @@ public class UnitTest6 : UnitTestBase
     {
         await this.InitSharding();
         var productCount = 1;
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql = repository.From<Order>()
             .UseTable("sys_order_104_202405", "sys_order_105_202405")
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
@@ -1185,7 +1185,7 @@ public class UnitTest6 : UnitTestBase
     {
         await this.InitSharding();
         var productCount = 1;
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql = repository.From<Order>()
             .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
@@ -1229,7 +1229,7 @@ public class UnitTest6 : UnitTestBase
     {
         await this.InitSharding();
         var productCount = 1;
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql = repository.From<Order>()
             .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
             .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
@@ -1264,7 +1264,7 @@ public class UnitTest6 : UnitTestBase
     public async Task Query_SingleSharding_Exists1()
     {
         await this.InitSharding();
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql = repository.From<Order>()
             .UseTableBy("104", DateTime.Parse("2024-05-24"))
             .Where(f => repository.From<User>('b')
@@ -1289,7 +1289,7 @@ public class UnitTest6 : UnitTestBase
     public async Task Query_SingleSharding_Exists2()
     {
         await this.InitSharding();
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql = repository.From<Order>()
             .UseTableBy("104", DateTime.Parse("2024-05-24"))
             .Where(f => repository.From<User>('b')
@@ -1328,7 +1328,7 @@ public class UnitTest6 : UnitTestBase
     public async Task Update_SingleSharding()
     {
         await this.InitSharding();
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var orderIds = new string[] { "ON_1001", "ON_1002", "ON_1003", "ON_1004" };
         var sql = repository.Update<Order>()
             .UseTableBy("104", DateTime.Parse("2024-05-24"))
@@ -1354,7 +1354,7 @@ public class UnitTest6 : UnitTestBase
     public async Task Update_ManySharding1()
     {
         await this.InitSharding();
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var orderIds = new string[] { "ON_1001", "ON_1002", "ON_2003", "ON_2004" };
         var sql = repository.Update<Order>()
             .UseTable("sys_order_104_202405", "sys_order_105_202405")
@@ -1393,7 +1393,7 @@ public class UnitTest6 : UnitTestBase
     public async Task Update_ManySharding2()
     {
         await this.InitSharding();
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var orderIds = new string[] { "ON_1001", "ON_1002", "ON_2003", "ON_2004" };
         var sql = repository.Update<Order>()
             .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
@@ -1433,7 +1433,7 @@ public class UnitTest6 : UnitTestBase
     {
         await this.InitSharding();
         var createdAt = DateTime.Parse("2024-05-24");
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var orders = repository.From<Order>()
             .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
             .Select(f => new
@@ -1491,7 +1491,7 @@ public class UnitTest6 : UnitTestBase
     {
         await this.InitSharding();
         var createdAt = DateTime.Parse("2024-05-24");
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var orders = repository.From<Order>()
             .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
             .Select(f => new
@@ -1539,7 +1539,7 @@ public class UnitTest6 : UnitTestBase
         await this.InitSharding();
         var beginTime = DateTime.Parse("2020-01-01");
         var endTime = DateTime.Parse("2024-12-31");
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql = repository.From<Order>()
             .UseTableByRange("104", beginTime, endTime)
             .Select(f => new

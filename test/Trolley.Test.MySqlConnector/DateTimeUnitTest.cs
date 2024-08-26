@@ -60,7 +60,7 @@ public class DateTimeUnitTest : UnitTestBase
     {
         this.Initialize();
         var localDate = DateTime.Parse("2023-05-06").Date;
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql = repository.From<User>()
             .Where(f => f.Id == 1)
             .Select(f => new
@@ -118,7 +118,7 @@ public class DateTimeUnitTest : UnitTestBase
     {
         this.Initialize();
         var days = 365;
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql = repository.From<User>()
             .Where(f => f.UpdatedAt > DateTime.Now - TimeSpan.FromDays(days) - TimeSpan.FromMinutes(25))
             .Select(f => new
@@ -175,7 +175,7 @@ public class DateTimeUnitTest : UnitTestBase
     public async Task Compare()
     {
         this.Initialize();
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql = repository.From<User>()
             .Where(f => DateTime.Compare(f.UpdatedAt, DateTime.Parse("2023-03-20")) > 0)
             .Select(f => new
@@ -227,7 +227,7 @@ public class DateTimeUnitTest : UnitTestBase
     public async Task Operation()
     {
         this.Initialize();
-        using var repository = dbFactory.Create();
+        var repository = this.dbFactory.Create();
         var sql = repository.From<User>()
             .Where(f => DateTime.Compare(f.UpdatedAt, DateTime.Parse("2023-03-20")) > 0)
             .Select(f => new

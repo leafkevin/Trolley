@@ -9,7 +9,7 @@ public class UnitTestBase
 
     public void Initialize()
     {
-        using var repository = this.dbFactory.CreateRepository();
+        var repository = this.dbFactory.CreateRepository();
         repository.BeginTransaction();
         repository.Delete<User>(new[] { 1, 2 });
         repository.Create<User>(new[]

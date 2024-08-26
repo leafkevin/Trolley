@@ -116,9 +116,8 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
     {
         int result = 0;
         Exception exception = null;
-        bool isNeedClose = this.DbContext.IsNeedClose;
         CommandEventArgs eventArgs = null;
-        using var command = this.DbContext.CreateCommand();
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         try
         {
             switch (this.Visitor.ActionMode)
@@ -145,7 +144,7 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                                 if (index >= bulkCount)
                                 {
                                     command.CommandText = builder.ToString();
-                                    eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkInsert, eventArgs);
+                                    eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
                                     count += command.ExecuteNonQuery();
                                     clearCommand.Invoke(tableName);
                                     index = 0;
@@ -156,12 +155,12 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                             if (index > 0)
                             {
                                 command.CommandText = builder.ToString();
-                                eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkInsert, eventArgs);
+                                eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
                                 count += command.ExecuteNonQuery();
                             }
                             return count;
                         };
-                        this.DbContext.Open();
+                        this.DbContext.Open(connection);
                         if (isNeedSplit)
                         {
                             var entityType = this.Visitor.Tables[0].EntityType;
@@ -185,8 +184,8 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                     {
                         //默认单条
                         command.CommandText = this.Visitor.BuildCommand(command, false, out _);
-                        this.DbContext.Open();
-                        eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.Insert);
+                        this.DbContext.Open(connection);
+                        eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Insert);
                         result = command.ExecuteNonQuery();
                     }
                     break;
@@ -197,15 +196,15 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
             isNeedClose = true;
             exception = ex;
             var sqlType = this.Visitor.ActionMode == ActionMode.Bulk ? CommandSqlType.BulkInsert : CommandSqlType.Insert;
-            this.DbContext.AddCommandFailedFilter(command, sqlType, eventArgs, exception);
+            this.DbContext.AddCommandFailedFilter(connection, command, sqlType, eventArgs, exception);
         }
         finally
         {
             var sqlType = this.Visitor.ActionMode == ActionMode.Bulk ? CommandSqlType.BulkInsert : CommandSqlType.Insert;
-            this.DbContext.AddCommandAfterFilter(command, sqlType, eventArgs, exception == null, exception);
+            this.DbContext.AddCommandAfterFilter(connection, command, sqlType, eventArgs, exception == null, exception);
             command.Parameters.Clear();
             command.Dispose();
-            if (isNeedClose) this.Close();
+            if (isNeedClose) this.Close(connection);
         }
         if (exception != null) throw exception;
         return result;
@@ -214,9 +213,8 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
     {
         int result = 0;
         Exception exception = null;
-        bool isNeedClose = this.DbContext.IsNeedClose;
         CommandEventArgs eventArgs = null;
-        using var command = this.DbContext.CreateDbCommand();
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterDbCommand();
         try
         {
             switch (this.Visitor.ActionMode)
@@ -243,7 +241,7 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                                 if (index >= bulkCount)
                                 {
                                     command.CommandText = builder.ToString();
-                                    eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkInsert, eventArgs);
+                                    eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
                                     count += await command.ExecuteNonQueryAsync(cancellationToken);
                                     clearCommand.Invoke(tableName);
                                     index = 0;
@@ -254,12 +252,12 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                             if (index > 0)
                             {
                                 command.CommandText = builder.ToString();
-                                eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkInsert, eventArgs);
+                                eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
                                 count += await command.ExecuteNonQueryAsync(cancellationToken);
                             }
                             return count;
                         };
-                        await this.DbContext.OpenAsync(cancellationToken);
+                        await this.DbContext.OpenAsync(connection, cancellationToken);
                         if (isNeedSplit)
                         {
                             var entityType = this.Visitor.Tables[0].EntityType;
@@ -283,8 +281,8 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                     {
                         //默认单条
                         command.CommandText = this.Visitor.BuildCommand(command, false, out _);
-                        await this.DbContext.OpenAsync(cancellationToken);
-                        eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.Insert);
+                        await this.DbContext.OpenAsync(connection, cancellationToken);
+                        eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Insert);
                         result = await command.ExecuteNonQueryAsync(cancellationToken);
                     }
                     break;
@@ -295,15 +293,15 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
             isNeedClose = true;
             exception = ex;
             var sqlType = this.Visitor.ActionMode == ActionMode.Bulk ? CommandSqlType.BulkInsert : CommandSqlType.Insert;
-            this.DbContext.AddCommandFailedFilter(command, sqlType, eventArgs, exception);
+            this.DbContext.AddCommandFailedFilter(connection, command, sqlType, eventArgs, exception);
         }
         finally
         {
             var sqlType = this.Visitor.ActionMode == ActionMode.Bulk ? CommandSqlType.BulkInsert : CommandSqlType.Insert;
-            this.DbContext.AddCommandAfterFilter(command, sqlType, eventArgs, exception == null, exception);
+            this.DbContext.AddCommandAfterFilter(connection, command, sqlType, eventArgs, exception == null, exception);
             command.Parameters.Clear();
             await command.DisposeAsync();
-            if (isNeedClose) await this.CloseAsync();
+            if (isNeedClose) await this.CloseAsync(connection);
         }
         if (exception != null) throw exception;
         return result;
@@ -348,23 +346,25 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        using var command = this.DbContext.CreateCommand();
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         var sql = this.Visitor.BuildCommand(command, false, out _);
         dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
+        command.Dispose();
+        if (isNeedClose) connection.Close();
         return sql;
     }
     #endregion
 
     #region Close
-    public virtual void Close()
+    public virtual void Close(TheaConnection connection)
     {
-        this.DbContext.Close();
+        this.DbContext.Close(connection);
         this.Visitor.Dispose();
         this.Visitor = null;
     }
-    public virtual async ValueTask CloseAsync()
+    public virtual async ValueTask CloseAsync(TheaConnection connection)
     {
-        await this.DbContext.CloseAsync();
+        await this.DbContext.CloseAsync(connection);
         this.Visitor.Dispose();
         this.Visitor = null;
     }

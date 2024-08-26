@@ -2,8 +2,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Data;
-using System.Data.Common;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -28,10 +26,9 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
     public override int Execute()
     {
         int result = 0;
-        IDbCommand command = null;
         Exception exception = null;
         IEnumerable insertObjs = null;
-        bool isNeedClose = this.DbContext.IsNeedClose;
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         CommandEventArgs eventArgs = null;
         try
         {
@@ -56,24 +53,23 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
                             var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
                             foreach (var tabledInsertObj in tabledInsertObjs)
                             {
-                                eventArgs = this.DbContext.AddCommandBeforeFilter(CommandSqlType.BulkCopyInsert, eventArgs);
-                                result += this.ExecuteBulkCopy(insertObjType, tabledInsertObj.Value, timeoutSeconds, tabledInsertObj.Key);
+                                eventArgs = this.DbContext.AddCommandBeforeFilter(connection, CommandSqlType.BulkCopyInsert, eventArgs);
+                                result += this.ExecuteBulkCopy(connection, insertObjType, tabledInsertObj.Value, timeoutSeconds, tabledInsertObj.Key);
                             }
                         }
                         else
                         {
-                            eventArgs = this.DbContext.AddCommandBeforeFilter(CommandSqlType.BulkCopyInsert, eventArgs);
-                            result = this.ExecuteBulkCopy(insertObjType, insertObjs, timeoutSeconds, this.Visitor.Tables[0].Body);
+                            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, CommandSqlType.BulkCopyInsert, eventArgs);
+                            result = this.ExecuteBulkCopy(connection, insertObjType, insertObjs, timeoutSeconds, this.Visitor.Tables[0].Body);
                         }
                     }
                     else
                     {
-                        eventArgs = this.DbContext.AddCommandBeforeFilter(CommandSqlType.BulkCopyInsert, eventArgs);
-                        result = this.ExecuteBulkCopy(insertObjType, insertObjs, timeoutSeconds);
+                        eventArgs = this.DbContext.AddCommandBeforeFilter(connection, CommandSqlType.BulkCopyInsert, eventArgs);
+                        result = this.ExecuteBulkCopy(connection, insertObjType, insertObjs, timeoutSeconds);
                     }
                     break;
                 case ActionMode.Bulk:
-                    command = this.DbContext.CreateCommand();
                     var builder = new StringBuilder();
                     (isNeedSplit, var tableName, insertObjs, var bulkCount,
                         var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
@@ -94,7 +90,7 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
                             if (index >= bulkCount)
                             {
                                 command.CommandText = builder.ToString();
-                                eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkInsert, eventArgs);
+                                eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
                                 count += command.ExecuteNonQuery();
                                 clearCommand.Invoke(tableName);
                                 index = 0;
@@ -105,12 +101,12 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
                         if (index > 0)
                         {
                             command.CommandText = builder.ToString();
-                            eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkInsert, eventArgs);
+                            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
                             count += command.ExecuteNonQuery();
                         }
                         return count;
                     };
-                    this.DbContext.Open();
+                    this.DbContext.Open(connection);
                     if (isNeedSplit)
                     {
                         var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
@@ -130,10 +126,9 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
                     break;
                 default:
                     //默认单条
-                    command = this.DbContext.CreateCommand();
                     command.CommandText = this.Visitor.BuildCommand(command, false, out _);
-                    this.DbContext.Open();
-                    eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.Insert);
+                    this.DbContext.Open(connection);
+                    eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Insert);
                     result = command.ExecuteNonQuery();
                     break;
             }
@@ -148,7 +143,7 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
                 ActionMode.Bulk => CommandSqlType.BulkInsert,
                 _ => CommandSqlType.Insert
             };
-            this.DbContext.AddCommandFailedFilter(command, sqlType, eventArgs, exception);
+            this.DbContext.AddCommandFailedFilter(connection, command, sqlType, eventArgs, exception);
         }
         finally
         {
@@ -158,9 +153,9 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
                 ActionMode.Bulk => CommandSqlType.BulkInsert,
                 _ => CommandSqlType.Insert
             };
-            this.DbContext.AddCommandAfterFilter(command, sqlType, eventArgs, exception == null, exception);
+            this.DbContext.AddCommandAfterFilter(connection, command, sqlType, eventArgs, exception == null, exception);
             command?.Dispose();
-            if (isNeedClose) this.Close();
+            if (isNeedClose) this.Close(connection);
         }
         if (exception != null) throw exception;
         return result;
@@ -168,11 +163,10 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        DbCommand command = null;
         Exception exception = null;
         IEnumerable insertObjs = null;
-        bool isNeedClose = this.DbContext.IsNeedClose;
         CommandEventArgs eventArgs = null;
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterDbCommand();
         try
         {
             bool isNeedSplit = false;
@@ -196,25 +190,24 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
                             var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
                             foreach (var tabledInsertObj in tabledInsertObjs)
                             {
-                                eventArgs = this.DbContext.AddCommandBeforeFilter(CommandSqlType.BulkCopyInsert, eventArgs);
-                                result += await this.ExecuteBulkCopyAsync(insertObjType, tabledInsertObj.Value, timeoutSeconds, cancellationToken, tabledInsertObj.Key);
+                                eventArgs = this.DbContext.AddCommandBeforeFilter(connection, CommandSqlType.BulkCopyInsert, eventArgs);
+                                result += await this.ExecuteBulkCopyAsync(connection, insertObjType, tabledInsertObj.Value, timeoutSeconds, cancellationToken, tabledInsertObj.Key);
                                 if (!isOpened) isOpened = true;
                             }
                         }
                         else
                         {
-                            eventArgs = this.DbContext.AddCommandBeforeFilter(CommandSqlType.BulkCopyInsert, eventArgs);
-                            result = await this.ExecuteBulkCopyAsync(insertObjType, insertObjs, timeoutSeconds, cancellationToken, this.Visitor.Tables[0].Body);
+                            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, CommandSqlType.BulkCopyInsert, eventArgs);
+                            result = await this.ExecuteBulkCopyAsync(connection, insertObjType, insertObjs, timeoutSeconds, cancellationToken, this.Visitor.Tables[0].Body);
                         }
                     }
                     else
                     {
-                        eventArgs = this.DbContext.AddCommandBeforeFilter(CommandSqlType.BulkCopyInsert, eventArgs);
-                        result = await this.ExecuteBulkCopyAsync(insertObjType, insertObjs, timeoutSeconds, cancellationToken);
+                        eventArgs = this.DbContext.AddCommandBeforeFilter(connection, CommandSqlType.BulkCopyInsert, eventArgs);
+                        result = await this.ExecuteBulkCopyAsync(connection, insertObjType, insertObjs, timeoutSeconds, cancellationToken);
                     }
                     break;
                 case ActionMode.Bulk:
-                    command = this.DbContext.CreateDbCommand();
                     var sqlBuilder = new StringBuilder();
                     (isNeedSplit, var tableName, insertObjs, var bulkCount,
                         var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
@@ -235,7 +228,7 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
                             if (index >= bulkCount)
                             {
                                 command.CommandText = sqlBuilder.ToString();
-                                eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkInsert, eventArgs);
+                                eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
                                 count += await command.ExecuteNonQueryAsync(cancellationToken);
                                 clearCommand.Invoke(tableName);
                                 index = 0;
@@ -246,12 +239,12 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
                         if (index > 0)
                         {
                             command.CommandText = sqlBuilder.ToString();
-                            eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.BulkInsert, eventArgs);
+                            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
                             count += await command.ExecuteNonQueryAsync(cancellationToken);
                         }
                         return count;
                     };
-                    await this.DbContext.OpenAsync(cancellationToken);
+                    await this.DbContext.OpenAsync(connection, cancellationToken);
                     if (isNeedSplit)
                     {
                         var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
@@ -271,10 +264,9 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
                     break;
                 default:
                     //默认单条
-                    command = this.DbContext.CreateDbCommand();
                     command.CommandText = this.Visitor.BuildCommand(command, false, out _);
-                    await this.DbContext.OpenAsync(cancellationToken);
-                    eventArgs = this.DbContext.AddCommandBeforeFilter(command, CommandSqlType.Insert);
+                    await this.DbContext.OpenAsync(connection, cancellationToken);
+                    eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Insert);
                     result = await command.ExecuteNonQueryAsync(cancellationToken);
                     break;
             }
@@ -289,7 +281,7 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
                 ActionMode.Bulk => CommandSqlType.BulkInsert,
                 _ => CommandSqlType.Insert
             };
-            this.DbContext.AddCommandFailedFilter(command, sqlType, eventArgs, exception);
+            this.DbContext.AddCommandFailedFilter(connection, command, sqlType, eventArgs, exception);
         }
         finally
         {
@@ -299,28 +291,28 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
                 ActionMode.Bulk => CommandSqlType.BulkInsert,
                 _ => CommandSqlType.Insert
             };
-            this.DbContext.AddCommandAfterFilter(command, sqlType, eventArgs, exception == null, exception);
+            this.DbContext.AddCommandAfterFilter(connection, command, sqlType, eventArgs, exception == null, exception);
             if (command != null)
             {
                 command.Parameters.Clear();
                 await command.DisposeAsync();
             }
-            if (isNeedClose) await this.CloseAsync();
+            if (isNeedClose) await this.CloseAsync(connection);
         }
         if (exception != null) throw exception;
         return result;
     }
-    private int ExecuteBulkCopy(Type insertObjType, IEnumerable insertObjs, int? timeoutSeconds, string tableName = null)
+    private int ExecuteBulkCopy(TheaConnection connection, Type insertObjType, IEnumerable insertObjs, int? timeoutSeconds, string tableName = null)
     {
         var entityMapper = this.Visitor.Tables[0].Mapper;
         var memberMappers = this.Visitor.GetRefMemberMappers(insertObjType, entityMapper);
         var dataTable = this.Visitor.ToDataTable(insertObjType, insertObjs, memberMappers, tableName ?? entityMapper.TableName);
         if (dataTable.Rows.Count == 0) return 0;
 
-        this.DbContext.Open();
-        var connection = this.DbContext.Connection.BaseConnection as SqlConnection;
+        this.DbContext.Open(connection);
+        var dbConnection = connection.BaseConnection as SqlConnection;
         var transaction = this.DbContext.Transaction as SqlTransaction;
-        var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, transaction);
+        var bulkCopy = new SqlBulkCopy(dbConnection, SqlBulkCopyOptions.Default, transaction);
         if (timeoutSeconds.HasValue) bulkCopy.BulkCopyTimeout = timeoutSeconds.Value;
         bulkCopy.DestinationTableName = dataTable.TableName;
         for (int i = 0; i < dataTable.Columns.Count; i++)
@@ -330,17 +322,17 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
         bulkCopy.WriteToServer(dataTable);
         return dataTable.Rows.Count;
     }
-    private async Task<int> ExecuteBulkCopyAsync(Type insertObjType, IEnumerable insertObjs, int? timeoutSeconds, CancellationToken cancellationToken = default, string tableName = null)
+    private async Task<int> ExecuteBulkCopyAsync(TheaConnection connection, Type insertObjType, IEnumerable insertObjs, int? timeoutSeconds, CancellationToken cancellationToken = default, string tableName = null)
     {
         var entityMapper = this.Visitor.Tables[0].Mapper;
         var memberMappers = this.Visitor.GetRefMemberMappers(insertObjType, entityMapper);
         var dataTable = this.Visitor.ToDataTable(insertObjType, insertObjs, memberMappers, tableName ?? entityMapper.TableName);
         if (dataTable.Rows.Count == 0) return 0;
 
-        await this.DbContext.OpenAsync(cancellationToken);
-        var connection = this.DbContext.Connection.BaseConnection as SqlConnection;
+        await this.DbContext.OpenAsync(connection, cancellationToken);
+        var dbConnection = connection.BaseConnection as SqlConnection;
         var transaction = this.DbContext.Transaction as SqlTransaction;
-        var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, transaction);
+        var bulkCopy = new SqlBulkCopy(dbConnection, SqlBulkCopyOptions.Default, transaction);
         if (timeoutSeconds.HasValue) bulkCopy.BulkCopyTimeout = timeoutSeconds.Value;
         bulkCopy.DestinationTableName = dataTable.TableName;
         for (int i = 0; i < dataTable.Columns.Count; i++)

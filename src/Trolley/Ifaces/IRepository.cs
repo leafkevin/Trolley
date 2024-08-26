@@ -9,15 +9,10 @@ namespace Trolley;
 /// <summary>
 /// 仓储对象
 /// </summary>
-public interface IRepository : IDisposable, IAsyncDisposable
+public interface IRepository
 {
     #region Properties
     DbContext DbContext { get; set; }
-    #endregion   
-
-    #region Sharding
-    List<string> GetShardingTableNames(params Type[] entityTypes);
-    Task<List<string>> GetShardingTableNamesAsync(params Type[] entityTypes);
     #endregion
 
     #region From
@@ -544,15 +539,6 @@ public interface IRepository : IDisposable, IAsyncDisposable
     #endregion
 
     #region Others
-    /// <summary>
-    /// 关闭连接
-    /// </summary>
-    void Close();
-    /// <summary>
-    /// 异步关闭连接
-    /// </summary>
-    /// <returns>返回异步Task对象</returns>
-    Task CloseAsync();
     /// <summary>
     /// 设置命令超时时间，本次命令执行有效，单位是秒
     /// </summary>
