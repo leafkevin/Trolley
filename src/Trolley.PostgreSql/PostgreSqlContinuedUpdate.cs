@@ -85,16 +85,16 @@ public class PostgreSqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IPos
         var builder = new StringBuilder();
         if (this.Visitor.ActionMode == ActionMode.BulkCopy)
         {
-            (var insertObjs, _) = this.DialectVisitor.BuildWithBulkCopy();
-            Type insertObjType = null;
-            foreach (var insertObj in insertObjs)
+            var updateObjs = this.DialectVisitor.BuildWithBulkCopy();
+            Type updateObjType = null;
+            foreach (var updateObj in updateObjs)
             {
-                insertObjType = insertObj.GetType();
+                updateObjType = updateObj.GetType();
                 break;
             }
             var fromMapper = this.Visitor.Tables[0].Mapper;
             var tableName = this.Visitor.OrmProvider.GetTableName($"{fromMapper.TableName}_{Guid.NewGuid():N}");
-            var memberMappers = this.Visitor.GetRefMemberMappers(insertObjType, fromMapper);
+            var memberMappers = this.Visitor.GetRefMemberMappers(updateObjType, fromMapper);
             //添加临时表           
             builder.AppendLine($"CREATE TEMPORARY TABLE {tableName}(");
             var pkColumns = new List<string>();

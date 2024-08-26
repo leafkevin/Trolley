@@ -78,7 +78,7 @@ public class PostgreSqlUpdate<TEntity> : Update<TEntity>, IPostgreSqlUpdate<TEnt
     #endregion
 
     #region WithBulkCopy
-    public IPostgreSqlUpdated<TEntity> SetBulkCopy(IEnumerable updateObjs, int? timeoutSeconds = null)
+    public IPostgreSqlUpdated<TEntity> SetBulkCopy(IEnumerable updateObjs)
     {
         if (updateObjs == null)
             throw new ArgumentNullException(nameof(updateObjs));
@@ -93,7 +93,7 @@ public class PostgreSqlUpdate<TEntity> : Update<TEntity>, IPostgreSqlUpdate<TEnt
             break;
         }
         if (isEmpty) throw new Exception("批量更新，updateObjs参数至少要有一条数据");
-        this.DialectVisitor.WithBulkCopy(updateObjs, timeoutSeconds);
+        this.DialectVisitor.WithBulkCopy(updateObjs);
         return this.OrmProvider.NewUpdated<TEntity>(this.DbContext, this.Visitor) as IPostgreSqlUpdated<TEntity>;
     }
     #endregion

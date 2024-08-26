@@ -3,8 +3,6 @@ using NpgsqlTypes;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Data;
-using System.Data.Common;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -40,7 +38,7 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
             switch (this.Visitor.ActionMode)
             {
                 case ActionMode.BulkCopy:
-                    (insertObjs, var timeoutSeconds) = this.DialectVisitor.BuildWithBulkCopy();
+                    insertObjs = this.DialectVisitor.BuildWithBulkCopy();
 
                     Type insertObjType = null;
                     foreach (var insertObj in insertObjs)
@@ -57,19 +55,19 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                             foreach (var tabledInsertObj in tabledInsertObjs)
                             {
                                 eventArgs = this.DbContext.AddCommandBeforeFilter(connection, CommandSqlType.BulkCopyInsert, eventArgs);
-                                result += this.ExecuteBulkCopy(connection, insertObjType, tabledInsertObj.Value, timeoutSeconds, tabledInsertObj.Key);
+                                result += this.ExecuteBulkCopy(connection, insertObjType, tabledInsertObj.Value, tabledInsertObj.Key);
                             }
                         }
                         else
                         {
                             eventArgs = this.DbContext.AddCommandBeforeFilter(connection, CommandSqlType.BulkCopyInsert, eventArgs);
-                            result = this.ExecuteBulkCopy(connection, insertObjType, insertObjs, timeoutSeconds, this.Visitor.Tables[0].Body);
+                            result = this.ExecuteBulkCopy(connection, insertObjType, insertObjs, this.Visitor.Tables[0].Body);
                         }
                     }
                     else
                     {
                         eventArgs = this.DbContext.AddCommandBeforeFilter(connection, CommandSqlType.BulkCopyInsert, eventArgs);
-                        result = this.ExecuteBulkCopy(connection, insertObjType, insertObjs, timeoutSeconds);
+                        result = this.ExecuteBulkCopy(connection, insertObjType, insertObjs);
                     }
                     break;
                 case ActionMode.Bulk:
@@ -177,7 +175,7 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
             switch (this.Visitor.ActionMode)
             {
                 case ActionMode.BulkCopy:
-                    (insertObjs, var timeoutSeconds) = this.DialectVisitor.BuildWithBulkCopy();
+                    insertObjs = this.DialectVisitor.BuildWithBulkCopy();
                     bool isOpened = false;
                     Type insertObjType = null;
                     foreach (var insertObj in insertObjs)
@@ -194,20 +192,20 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                             foreach (var tabledInsertObj in tabledInsertObjs)
                             {
                                 eventArgs = this.DbContext.AddCommandBeforeFilter(connection, CommandSqlType.BulkCopyInsert, eventArgs);
-                                result += await this.ExecuteBulkCopyAsync(connection, insertObjType, tabledInsertObj.Value, timeoutSeconds, cancellationToken, tabledInsertObj.Key);
+                                result += await this.ExecuteBulkCopyAsync(connection, insertObjType, tabledInsertObj.Value, cancellationToken, tabledInsertObj.Key);
                                 if (!isOpened) isOpened = true;
                             }
                         }
                         else
                         {
                             eventArgs = this.DbContext.AddCommandBeforeFilter(connection, CommandSqlType.BulkCopyInsert, eventArgs);
-                            result = await this.ExecuteBulkCopyAsync(connection, insertObjType, insertObjs, timeoutSeconds, cancellationToken, this.Visitor.Tables[0].Body);
+                            result = await this.ExecuteBulkCopyAsync(connection, insertObjType, insertObjs, cancellationToken, this.Visitor.Tables[0].Body);
                         }
                     }
                     else
                     {
                         eventArgs = this.DbContext.AddCommandBeforeFilter(connection, CommandSqlType.BulkCopyInsert, eventArgs);
-                        result = await this.ExecuteBulkCopyAsync(connection, insertObjType, insertObjs, timeoutSeconds, cancellationToken);
+                        result = await this.ExecuteBulkCopyAsync(connection, insertObjType, insertObjs, cancellationToken);
                     }
                     break;
                 case ActionMode.Bulk:
@@ -305,7 +303,7 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
         if (exception != null) throw exception;
         return result;
     }
-    private int ExecuteBulkCopy(TheaConnection connection, Type insertObjType, IEnumerable insertObjs, int? timeoutSeconds, string tableName = null)
+    private int ExecuteBulkCopy(TheaConnection connection, Type insertObjType, IEnumerable insertObjs, string tableName = null)
     {
         var entityMapper = this.Visitor.Tables[0].Mapper;
         var memberMappers = this.Visitor.GetRefMemberMappers(insertObjType, entityMapper);
@@ -342,7 +340,7 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
         builder = null;
         return result;
     }
-    private async Task<int> ExecuteBulkCopyAsync(TheaConnection connection, Type insertObjType, IEnumerable insertObjs, int? timeoutSeconds, CancellationToken cancellationToken = default, string tableName = null)
+    private async Task<int> ExecuteBulkCopyAsync(TheaConnection connection, Type insertObjType, IEnumerable insertObjs, CancellationToken cancellationToken = default, string tableName = null)
     {
         var entityMapper = this.Visitor.Tables[0].Mapper;
         var memberMappers = this.Visitor.GetRefMemberMappers(insertObjType, entityMapper);

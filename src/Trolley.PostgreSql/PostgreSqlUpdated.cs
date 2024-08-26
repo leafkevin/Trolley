@@ -38,7 +38,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
             {
                 case ActionMode.BulkCopy:
                     {
-                        (var updateObjs, var timeoutSeconds) = this.DialectVisitor.BuildWithBulkCopy();
+                        var updateObjs = this.DialectVisitor.BuildWithBulkCopy();
                         Type updateObjType = null;
                         foreach (var updateObj in updateObjs)
                         {
@@ -262,7 +262,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
             {
                 case ActionMode.BulkCopy:
                     {
-                        (var updateObjs, var timeoutSeconds) = this.DialectVisitor.BuildWithBulkCopy();
+                        var updateObjs = this.DialectVisitor.BuildWithBulkCopy();
                         Type updateObjType = null;
                         foreach (var updateObj in updateObjs)
                         {
@@ -484,7 +484,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
         var builder = new StringBuilder();
         if (this.Visitor.ActionMode == ActionMode.BulkCopy)
         {
-            (var updateObjs, var timeoutSeconds) = this.DialectVisitor.BuildWithBulkCopy();
+            var updateObjs = this.DialectVisitor.BuildWithBulkCopy();
             Type updateObjType = null;
             foreach (var updateObj in updateObjs)
             {

@@ -222,8 +222,7 @@ public interface IPostgreSqlUpdate<TEntity> : IUpdate<TEntity>
     /// 批量更新，采用SqlBulkCopy方式先插入数据到临时表，再Join临时表数据更新，不生成SQL，updateObjs可以不是TEntity类型，只要包含更新字段和主键栏位即可
     /// </summary>
     /// <param name="updateObjs">更新的对象集合，可以不是TEntity类型，包含更新字段和主键栏位即可</param>
-    /// <param name="timeoutSeconds">超时时间，单位秒</param>
     /// <returns>返更新对象</returns>
-    IPostgreSqlUpdated<TEntity> SetBulkCopy(IEnumerable updateObjs, int? timeoutSeconds = null);
+    IPostgreSqlUpdated<TEntity> SetBulkCopy(IEnumerable updateObjs);
     #endregion
 }

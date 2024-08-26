@@ -60,8 +60,7 @@ public interface IPostgreSqlCreate<TEntity> : ICreate<TEntity>
     /// 批量插入，采用SqlBulkCopy方式，不生成SQL
     /// </summary>
     /// <param name="insertObjs">插入的对象集合</param>
-    /// <param name="timeoutSeconds">超时时间，单位秒</param>
     /// <returns>返回插入对象</returns>
-    IPostgreSqlCreated<TEntity> WithBulkCopy(IEnumerable insertObjs, int? timeoutSeconds = null);
+    IPostgreSqlCreated<TEntity> WithBulkCopy(IEnumerable insertObjs);
     #endregion
 }

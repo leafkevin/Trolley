@@ -166,16 +166,16 @@ public class PostgreSqlCreateVisitor : CreateVisitor
     }
     public virtual void Returning(Expression fieldsSelector)
         => this.OutputFieldNames = this.VisitFields(fieldsSelector);
-    public void WithBulkCopy(IEnumerable insertObjs, int? timeoutSeconds)
+    public void WithBulkCopy(IEnumerable insertObjs)
     {
         this.ActionMode = ActionMode.BulkCopy;
         this.deferredSegments.Add(new CommandSegment
         {
             Type = "WithBulkCopy",
-            Value = (insertObjs, timeoutSeconds)
+            Value = insertObjs
         });
     }
-    public (IEnumerable, int?) BuildWithBulkCopy() => ((IEnumerable, int?))this.deferredSegments[0].Value;
+    public IEnumerable BuildWithBulkCopy() => (IEnumerable)this.deferredSegments[0].Value;
     public void OnConflict(Expression updateExpr)
     {
         this.deferredSegments.Add(new CommandSegment

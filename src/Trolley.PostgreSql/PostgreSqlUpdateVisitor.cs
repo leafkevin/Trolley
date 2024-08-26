@@ -215,14 +215,14 @@ public class PostgreSqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
             builder.Append(')');
         return builder.ToString();
     }
-    public void WithBulkCopy(IEnumerable updateObjs, int? timeoutSeconds)
+    public void WithBulkCopy(IEnumerable updateObjs)
     {
         this.ActionMode = ActionMode.BulkCopy;
         this.deferredSegments.Add(new CommandSegment
         {
             Type = "WithBulkCopy",
-            Value = (updateObjs, timeoutSeconds)
+            Value = updateObjs
         });
     }
-    public (IEnumerable, int?) BuildWithBulkCopy() => ((IEnumerable, int?))this.deferredSegments[0].Value;
+    public IEnumerable BuildWithBulkCopy() => (IEnumerable)this.deferredSegments[0].Value;
 }

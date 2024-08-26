@@ -35,7 +35,7 @@ public class PostgreSqlCreate<TEntity> : Create<TEntity>, IPostgreSqlCreate<TEnt
     #endregion
 
     #region WithBulkCopy
-    public IPostgreSqlCreated<TEntity> WithBulkCopy(IEnumerable insertObjs, int? timeoutSeconds = null)
+    public IPostgreSqlCreated<TEntity> WithBulkCopy(IEnumerable insertObjs )
     {
         if (insertObjs == null)
             throw new ArgumentNullException(nameof(insertObjs));
@@ -51,7 +51,7 @@ public class PostgreSqlCreate<TEntity> : Create<TEntity>, IPostgreSqlCreate<TEnt
         }
         if (isEmpty) throw new Exception("批量更新，insertObjs参数至少要有一条数据");
 
-        this.DialectVisitor.WithBulkCopy(insertObjs, timeoutSeconds);
+        this.DialectVisitor.WithBulkCopy(insertObjs);
         return this.OrmProvider.NewCreated<TEntity>(this.DbContext, this.Visitor) as IPostgreSqlCreated<TEntity>;
     }
     #endregion
