@@ -7,10 +7,10 @@ public class SqlServerRepository : Repository, ISqlServerRepository
     #endregion
 
     #region Create
-    public override ISqlServerCreate<TEntity> Create<TEntity>() => this.ormProvider.NewCreate<TEntity>(this.DbContext) as ISqlServerCreate<TEntity>;
+    public override ISqlServerCreate<TEntity> Create<TEntity>() => this.OrmProvider.NewCreate<TEntity>(this.DbContext) as ISqlServerCreate<TEntity>;
     #endregion
 
     #region Update
-    public override ISqlServerUpdate<TEntity> Update<TEntity>() => this.ormProvider.NewUpdate<TEntity>(this.DbContext) as ISqlServerUpdate<TEntity>;
+    public override ISqlServerUpdate<TEntity> Update<TEntity>() => this.OrmProvider.NewUpdate<TEntity>(this.DbContext) as ISqlServerUpdate<TEntity>;
     #endregion
 }

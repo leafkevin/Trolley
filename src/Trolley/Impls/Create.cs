@@ -128,13 +128,13 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                         (var isNeedSplit, var tableName, var insertObjs, var bulkCount,
                             var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
 
-                        Action<string> clearCommand = tableName =>
+                        void clearCommand(string tableName)
                         {
                             builder.Clear();
                             command.Parameters.Clear();
                             firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                        };
-                        Func<string, IEnumerable, int> executor = (tableName, insertObjs) =>
+                        }
+                        int executor(string tableName, IEnumerable insertObjs)
                         {
                             int count = 0, index = 0;
                             foreach (var insertObj in insertObjs)
@@ -146,7 +146,7 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                                     command.CommandText = builder.ToString();
                                     eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
                                     count += command.ExecuteNonQuery();
-                                    clearCommand.Invoke(tableName);
+                                    clearCommand(tableName);
                                     index = 0;
                                     continue;
                                 }
@@ -159,7 +159,7 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                                 count += command.ExecuteNonQuery();
                             }
                             return count;
-                        };
+                        }
                         this.DbContext.Open(connection);
                         if (isNeedSplit)
                         {
@@ -168,13 +168,13 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                             foreach (var tabledInsertObj in tabledInsertObjs)
                             {
                                 firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
-                                result += executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
+                                result += executor(tabledInsertObj.Key, tabledInsertObj.Value);
                             }
                         }
                         else
                         {
                             firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                            result = executor.Invoke(tableName, insertObjs);
+                            result = executor(tableName, insertObjs);
                         }
                         builder.Clear();
                         builder = null;
@@ -225,13 +225,13 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                         (var isNeedSplit, var tableName, var insertObjs, var bulkCount,
                             var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
 
-                        Action<string> clearCommand = tableName =>
+                        void clearCommand(string tableName)
                         {
                             builder.Clear();
                             command.Parameters.Clear();
                             firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                        };
-                        Func<string, IEnumerable, Task<int>> executor = async (tableName, insertObjs) =>
+                        }
+                        async Task<int> executor(string tableName, IEnumerable insertObjs)
                         {
                             int count = 0, index = 0;
                             foreach (var insertObj in insertObjs)
@@ -243,7 +243,7 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                                     command.CommandText = builder.ToString();
                                     eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
                                     count += await command.ExecuteNonQueryAsync(cancellationToken);
-                                    clearCommand.Invoke(tableName);
+                                    clearCommand(tableName);
                                     index = 0;
                                     continue;
                                 }
@@ -256,7 +256,7 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                                 count += await command.ExecuteNonQueryAsync(cancellationToken);
                             }
                             return count;
-                        };
+                        }
                         await this.DbContext.OpenAsync(connection, cancellationToken);
                         if (isNeedSplit)
                         {
@@ -265,13 +265,13 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                             foreach (var tabledInsertObj in tabledInsertObjs)
                             {
                                 firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
-                                result += await executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
+                                result += await executor(tabledInsertObj.Key, tabledInsertObj.Value);
                             }
                         }
                         else
                         {
                             firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                            result = await executor.Invoke(tableName, insertObjs);
+                            result = await executor(tableName, insertObjs);
                         }
                         builder.Clear();
                         builder = null;

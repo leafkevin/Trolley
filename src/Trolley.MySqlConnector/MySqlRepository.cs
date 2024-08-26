@@ -7,10 +7,10 @@ public class MySqlRepository : Repository, IMySqlRepository
     #endregion
 
     #region Create
-    public override IMySqlCreate<TEntity> Create<TEntity>() => this.ormProvider.NewCreate<TEntity>(this.DbContext) as IMySqlCreate<TEntity>;
+    public override IMySqlCreate<TEntity> Create<TEntity>() => this.OrmProvider.NewCreate<TEntity>(this.DbContext) as IMySqlCreate<TEntity>;
     #endregion
 
     #region Update
-    public override IMySqlUpdate<TEntity> Update<TEntity>() => this.ormProvider.NewUpdate<TEntity>(this.DbContext) as IMySqlUpdate<TEntity>;
+    public override IMySqlUpdate<TEntity> Update<TEntity>() => this.OrmProvider.NewUpdate<TEntity>(this.DbContext) as IMySqlUpdate<TEntity>;
     #endregion
 }

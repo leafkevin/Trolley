@@ -54,9 +54,8 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                         var builder = new StringBuilder();
                         builder.AppendLine($"CREATE TEMPORARY TABLE {tableName}(");
                         var pkColumns = new List<string>();
-                        foreach (var memberMapper in memberMappers)
+                        foreach (var (refMemberMapper, _) in memberMappers)
                         {
-                            var refMemberMapper = memberMapper.RefMemberMapper;
                             var fieldName = this.OrmProvider.GetFieldName(refMemberMapper.FieldName);
                             builder.Append($"{fieldName} {refMemberMapper.DbColumnType}");
                             if (refMemberMapper.IsKey)
@@ -88,7 +87,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                         var bulkCopySql = builder.ToString();
 
                         builder.Clear();
-                        Action<string, string> sqlExecutor = (target, source) =>
+                        void sqlExecutor(string target, string source)
                         {
                             builder.Append($"UPDATE {this.OrmProvider.GetTableName(target)} a SET ");
                             int setIndex = 0;
@@ -106,17 +105,17 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                                 if (i > 0) builder.Append(" AND ");
                                 builder.Append($"a.{pkColumns[i]}=b.{pkColumns[i]}");
                             }
-                        };
+                        }
                         if (this.Visitor.ShardingTables != null && this.Visitor.ShardingTables.Count > 0)
                         {
                             var tableNames = this.Visitor.ShardingTables[0].TableNames;
                             for (int i = 0; i < tableNames.Count; i++)
                             {
                                 if (i > 0) builder.Append(';');
-                                sqlExecutor.Invoke(this.Visitor.Tables[0].Body ?? tableNames[i], tableName);
+                                sqlExecutor(this.Visitor.Tables[0].Body ?? tableNames[i], tableName);
                             }
                         }
-                        else sqlExecutor.Invoke(fromMapper.TableName, tableName);
+                        else sqlExecutor(fromMapper.TableName, tableName);
                         builder.Append($";DROP TABLE {tableName}");
                         var updateSql = builder.ToString();
 
@@ -126,10 +125,9 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                             foreach (var updateObj in updateObjs)
                             {
                                 writer.StartRow();
-                                foreach (var memberMapper in memberMappers)
+                                foreach (var (refMemberMapper, valueGetter) in memberMappers)
                                 {
-                                    var refMemberMapper = memberMapper.RefMemberMapper;
-                                    var fieldValue = memberMapper.ValueGetter.Invoke(updateObj);
+                                    var fieldValue = valueGetter.Invoke(updateObj);
                                     writer.Write(fieldValue, (NpgsqlDbType)refMemberMapper.NativeDbType);
                                 }
                                 result++;
@@ -146,7 +144,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                         var builder = new StringBuilder();
                         (var updateObjs, var bulkCount, var tableName, var firstParametersSetter,
                             var firstSqlParametersSetter, var headSqlSetter, var sqlSetter) = this.Visitor.BuildWithBulk(command);
-                        Func<int, string> suffixGetter = index => this.Visitor.IsMultiple ? $"_m{this.Visitor.CommandIndex}{index}" : $"{index}";
+                        string suffixGetter(int index) => this.Visitor.IsMultiple ? $"_m{this.Visitor.CommandIndex}{index}" : $"{index}";
 
                         Action<object, int> sqlExecuter = null;
                         if (this.Visitor.ShardingTables != null && this.Visitor.ShardingTables.Count > 0)
@@ -156,13 +154,13 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                                 if (index > 0) builder.Append(';');
                                 var tableNames = this.Visitor.ShardingTables[0].TableNames;
                                 headSqlSetter.Invoke(builder, tableNames[0]);
-                                firstSqlParametersSetter.Invoke(command.Parameters, builder, this.DbContext.OrmProvider, updateObj, suffixGetter.Invoke(index));
+                                firstSqlParametersSetter.Invoke(command.Parameters, builder, this.DbContext.OrmProvider, updateObj, suffixGetter(index));
 
                                 for (int i = 1; i < tableNames.Count; i++)
                                 {
                                     builder.Append(';');
                                     headSqlSetter.Invoke(builder, tableNames[i]);
-                                    sqlSetter.Invoke(builder, this.DbContext.OrmProvider, updateObj, suffixGetter.Invoke(index));
+                                    sqlSetter.Invoke(builder, this.DbContext.OrmProvider, updateObj, suffixGetter(index));
                                 }
                             };
                         }
@@ -172,7 +170,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                             {
                                 if (index > 0) builder.Append(';');
                                 headSqlSetter.Invoke(builder, tableName);
-                                firstSqlParametersSetter.Invoke(command.Parameters, builder, this.DbContext.OrmProvider, updateObj, suffixGetter.Invoke(index));
+                                firstSqlParametersSetter.Invoke(command.Parameters, builder, this.DbContext.OrmProvider, updateObj, suffixGetter(index));
                             };
                         }
                         if (this.Visitor.IsNeedFetchShardingTables)
@@ -278,9 +276,8 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                         var builder = new StringBuilder();
                         builder.AppendLine($"CREATE TEMPORARY TABLE {tableName}(");
                         var pkColumns = new List<string>();
-                        foreach (var memberMapper in memberMappers)
+                        foreach (var (refMemberMapper, _) in memberMappers)
                         {
-                            var refMemberMapper = memberMapper.RefMemberMapper;
                             var fieldName = this.OrmProvider.GetFieldName(refMemberMapper.FieldName);
                             builder.Append($"{fieldName} {refMemberMapper.DbColumnType}");
                             if (refMemberMapper.IsKey)
@@ -312,7 +309,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                         var bulkCopySql = builder.ToString();
 
                         builder.Clear();
-                        Action<string, string> sqlExecutor = (target, source) =>
+                        void sqlExecutor(string target, string source)
                         {
                             builder.Append($"UPDATE {this.DbContext.OrmProvider.GetTableName(target)} a SET ");
                             int setIndex = 0;
@@ -330,17 +327,17 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                                 if (i > 0) builder.Append(" AND ");
                                 builder.Append($"a.{pkColumns[i]}=b.{pkColumns[i]}");
                             }
-                        };
+                        }
                         if (this.Visitor.ShardingTables != null && this.Visitor.ShardingTables.Count > 0)
                         {
                             var tableNames = this.Visitor.ShardingTables[0].TableNames;
                             for (int i = 0; i < tableNames.Count; i++)
                             {
                                 if (i > 0) builder.Append(';');
-                                sqlExecutor.Invoke(this.Visitor.Tables[0].Body ?? tableNames[i], tableName);
+                                sqlExecutor(this.Visitor.Tables[0].Body ?? tableNames[i], tableName);
                             }
                         }
-                        else sqlExecutor.Invoke(fromMapper.TableName, tableName);
+                        else sqlExecutor(fromMapper.TableName, tableName);
                         builder.Append($";DROP TABLE {tableName}");
                         var updateSql = builder.ToString();
 
@@ -350,10 +347,9 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                             foreach (var updateObj in updateObjs)
                             {
                                 await writer.StartRowAsync(cancellationToken);
-                                foreach (var memberMapper in memberMappers)
+                                foreach (var (refMemberMapper, valueGetter) in memberMappers)
                                 {
-                                    var refMemberMapper = memberMapper.RefMemberMapper;
-                                    var fieldValue = memberMapper.ValueGetter.Invoke(updateObj);
+                                    var fieldValue = valueGetter.Invoke(updateObj);
                                     await writer.WriteAsync(fieldValue, (NpgsqlDbType)refMemberMapper.NativeDbType, cancellationToken);
                                 }
                                 result++;
@@ -370,7 +366,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                         var builder = new StringBuilder();
                         (var updateObjs, var bulkCount, var tableName, var firstParametersSetter,
                             var firstSqlParametersSetter, var headSqlSetter, var sqlSetter) = this.Visitor.BuildWithBulk(command);
-                        Func<int, string> suffixGetter = index => this.Visitor.IsMultiple ? $"_m{this.Visitor.CommandIndex}{index}" : $"{index}";
+                        string suffixGetter(int index) => this.Visitor.IsMultiple ? $"_m{this.Visitor.CommandIndex}{index}" : $"{index}";
 
                         Action<object, int> sqlExecuter = null;
                         if (this.Visitor.ShardingTables != null && this.Visitor.ShardingTables.Count > 0)
@@ -380,13 +376,13 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                                 if (index > 0) builder.Append(';');
                                 var tableNames = this.Visitor.ShardingTables[0].TableNames;
                                 headSqlSetter.Invoke(builder, tableNames[0]);
-                                firstSqlParametersSetter.Invoke(command.Parameters, builder, this.DbContext.OrmProvider, updateObj, suffixGetter.Invoke(index));
+                                firstSqlParametersSetter.Invoke(command.Parameters, builder, this.DbContext.OrmProvider, updateObj, suffixGetter(index));
 
                                 for (int i = 1; i < tableNames.Count; i++)
                                 {
                                     builder.Append(';');
                                     headSqlSetter.Invoke(builder, tableNames[i]);
-                                    sqlSetter.Invoke(builder, this.DbContext.OrmProvider, updateObj, suffixGetter.Invoke(index));
+                                    sqlSetter.Invoke(builder, this.DbContext.OrmProvider, updateObj, suffixGetter(index));
                                 }
                             };
                         }
@@ -396,7 +392,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                             {
                                 if (index > 0) builder.Append(';');
                                 headSqlSetter.Invoke(builder, tableName);
-                                firstSqlParametersSetter.Invoke(command.Parameters, builder, this.DbContext.OrmProvider, updateObj, suffixGetter.Invoke(index));
+                                firstSqlParametersSetter.Invoke(command.Parameters, builder, this.DbContext.OrmProvider, updateObj, suffixGetter(index));
                             };
                         }
                         if (this.Visitor.IsNeedFetchShardingTables)
@@ -479,7 +475,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
     #region ToSql
     public override string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        string sql = null;
+        string sql;
         dbParameters = null;
         var builder = new StringBuilder();
         if (this.Visitor.ActionMode == ActionMode.BulkCopy)
@@ -500,9 +496,8 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
             //添加临时表
             builder.AppendLine($"CREATE TEMPORARY TABLE {tableName}(");
             var pkColumns = new List<string>();
-            foreach (var memberMapper in memberMappers)
+            foreach (var (refMemberMapper, _) in memberMappers)
             {
-                var refMemberMapper = memberMapper.RefMemberMapper;
                 var fieldName = ormProvider.GetFieldName(refMemberMapper.FieldName);
                 builder.Append($"{fieldName} {refMemberMapper.DbColumnType}");
                 if (refMemberMapper.IsKey)
@@ -520,7 +515,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                 builder.Append(';');
             }
 
-            Action<string, string> sqlExecutor = (target, source) =>
+            void sqlExecutor(string target, string source)
             {
                 builder.Append($"UPDATE {this.DbContext.OrmProvider.GetTableName(target)} a INNER JOIN {source} b ON ");
                 for (int i = 0; i < pkColumns.Count; i++)
@@ -538,17 +533,17 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                     builder.Append($"a.{fieldName}=b.{fieldName}");
                     setIndex++;
                 }
-            };
+            }
             if (this.Visitor.ShardingTables != null && this.Visitor.ShardingTables.Count > 0)
             {
                 var tableNames = this.Visitor.ShardingTables[0].TableNames;
                 for (int i = 0; i < tableNames.Count; i++)
                 {
                     if (i > 0) builder.Append(';');
-                    sqlExecutor.Invoke(this.Visitor.Tables[0].Body ?? tableNames[i], tableName);
+                    sqlExecutor(this.Visitor.Tables[0].Body ?? tableNames[i], tableName);
                 }
             }
-            else sqlExecutor.Invoke(fromMapper.TableName, tableName);
+            else sqlExecutor(fromMapper.TableName, tableName);
             builder.Append($";DROP TABLE {tableName}");
             sql = builder.ToString();
         }
@@ -571,7 +566,6 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
             if (isNeedClose) connection.Dispose();
         }
         builder.Clear();
-        builder = null;
         return sql;
     }
     #endregion

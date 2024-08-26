@@ -40,11 +40,11 @@ public class PostgreSqlRepository : Repository, IPostgreSqlRepository
 
     #region Create
     public override IPostgreSqlCreate<TEntity> Create<TEntity>()
-        => this.ormProvider.NewCreate<TEntity>(this.DbContext) as IPostgreSqlCreate<TEntity>;
+        => this.OrmProvider.NewCreate<TEntity>(this.DbContext) as IPostgreSqlCreate<TEntity>;
     #endregion
 
     #region Update
     public override IPostgreSqlUpdate<TEntity> Update<TEntity>()
-        => this.ormProvider.NewUpdate<TEntity>(this.DbContext) as IPostgreSqlUpdate<TEntity>;
+        => this.OrmProvider.NewUpdate<TEntity>(this.DbContext) as IPostgreSqlUpdate<TEntity>;
     #endregion
 }

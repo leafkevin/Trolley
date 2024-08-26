@@ -243,7 +243,7 @@ public sealed class OrmDbFactory : IOrmDbFactory
 
     public void Build()
     {
-        if (this.mapProviders.Count > 0)
+        if (!this.mapProviders.IsEmpty)
         {
             foreach (var mapProvider in this.mapProviders)
             {
@@ -251,7 +251,7 @@ public sealed class OrmDbFactory : IOrmDbFactory
                 mapProvider.Value.Build(database);
             }
         }
-        else if (this.globalMapProviders.Count > 0)
+        else if (!this.globalMapProviders.IsEmpty)
         {
             foreach (var mapProvider in this.globalMapProviders)
             {

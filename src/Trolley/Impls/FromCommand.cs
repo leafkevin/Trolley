@@ -105,14 +105,8 @@ public class FromCommand : QueryInternal, IFromCommand
     #endregion
 
     #region Dispose
-    public virtual void Dispose()
-    {
-        //DbContext自己会处理释放，此处什么也不做
-        this.DbContext = null;
-        this.Visitor.Dispose();
-        this.Visitor = null;
-    }
-    #endregion   
+    public void Dispose() => this.Visitor.Dispose();
+    #endregion
 }
 public class FromCommand<T> : FromCommand, IFromCommand<T>
 {

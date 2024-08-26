@@ -12,16 +12,12 @@ namespace Trolley;
 
 public class Repository : IRepository
 {
-    #region Fields
-    protected string dbKey => this.DbContext.DbKey;
-    protected IOrmProvider ormProvider => this.DbContext.OrmProvider;
-    protected IEntityMapProvider mapProvider => this.DbContext.MapProvider;
-    protected ITableShardingProvider shardingProvider => this.DbContext.ShardingProvider;
-    protected bool isParameterized => this.DbContext.IsParameterized;
-    #endregion
-
     #region Properties
     public DbContext DbContext { get; set; }
+    public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
+    public IEntityMapProvider MapProvider => this.DbContext.MapProvider;
+    public ITableShardingProvider ShardingProvider => this.DbContext.ShardingProvider;
+    public bool IsParameterized => this.DbContext.IsParameterized;
     #endregion
 
     #region Constructor
@@ -33,61 +29,61 @@ public class Repository : IRepository
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T));
-        return this.ormProvider.NewQuery<T>(this.DbContext, visitor);
+        return this.OrmProvider.NewQuery<T>(this.DbContext, visitor);
     }
     public virtual IQuery<T1, T2> From<T1, T2>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2));
-        return this.ormProvider.NewQuery<T1, T2>(this.DbContext, visitor);
+        return this.OrmProvider.NewQuery<T1, T2>(this.DbContext, visitor);
     }
     public virtual IQuery<T1, T2, T3> From<T1, T2, T3>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3));
-        return this.ormProvider.NewQuery<T1, T2, T3>(this.DbContext, visitor);
+        return this.OrmProvider.NewQuery<T1, T2, T3>(this.DbContext, visitor);
     }
     public virtual IQuery<T1, T2, T3, T4> From<T1, T2, T3, T4>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4));
-        return this.ormProvider.NewQuery<T1, T2, T3, T4>(this.DbContext, visitor);
+        return this.OrmProvider.NewQuery<T1, T2, T3, T4>(this.DbContext, visitor);
     }
     public virtual IQuery<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5));
-        return this.ormProvider.NewQuery<T1, T2, T3, T4, T5>(this.DbContext, visitor);
+        return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5>(this.DbContext, visitor);
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6));
-        return this.ormProvider.NewQuery<T1, T2, T3, T4, T5, T6>(this.DbContext, visitor);
+        return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6>(this.DbContext, visitor);
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> From<T1, T2, T3, T4, T5, T6, T7>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7));
-        return this.ormProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7>(this.DbContext, visitor);
+        return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7>(this.DbContext, visitor);
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> From<T1, T2, T3, T4, T5, T6, T7, T8>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8));
-        return this.ormProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8>(this.DbContext, visitor);
+        return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8>(this.DbContext, visitor);
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> From<T1, T2, T3, T4, T5, T6, T7, T8, T9>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9));
-        return this.ormProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this.DbContext, visitor);
+        return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this.DbContext, visitor);
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6), typeof(T7), typeof(T8), typeof(T9), typeof(T10));
-        return this.ormProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this.DbContext, visitor);
+        return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this.DbContext, visitor);
     }
     #endregion
 
@@ -96,13 +92,13 @@ public class Repository : IRepository
     {
         var visitor = this.CreateQueryVisitor();
         visitor.From(typeof(T), subQuery);
-        return this.ormProvider.NewQuery<T>(this.DbContext, visitor);
+        return this.OrmProvider.NewQuery<T>(this.DbContext, visitor);
     }
     public virtual IQuery<T> From<T>(Func<IFromQuery, IQuery<T>> subQuery)
     {
         var visitor = this.CreateQueryVisitor();
         visitor.From(typeof(T), this.DbContext, subQuery);
-        return this.ormProvider.NewQuery<T>(this.DbContext, visitor);
+        return this.OrmProvider.NewQuery<T>(this.DbContext, visitor);
     }
     #endregion
 
@@ -123,8 +119,8 @@ public class Repository : IRepository
             f.CommandText = rawSql;
             if (parameters != null)
             {
-                var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.ormProvider, rawSql, parameters);
-                commandInitializer.Invoke(f.Parameters, this.ormProvider, parameters);
+                var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.OrmProvider, rawSql, parameters);
+                commandInitializer.Invoke(f.Parameters, this.OrmProvider, parameters);
             }
         });
     }
@@ -144,8 +140,8 @@ public class Repository : IRepository
             f.CommandText = rawSql;
             if (parameters != null)
             {
-                var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.ormProvider, rawSql, parameters);
-                commandInitializer.Invoke(f.Parameters, this.ormProvider, parameters);
+                var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.OrmProvider, rawSql, parameters);
+                commandInitializer.Invoke(f.Parameters, this.OrmProvider, parameters);
             }
         }, cancellationToken);
     }
@@ -160,9 +156,9 @@ public class Repository : IRepository
         return this.DbContext.QueryFirst<TEntity>(f =>
         {
             var entityType = typeof(TEntity);
-            var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.ormProvider, this.mapProvider, entityType, whereObjType, false);
+            var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.OrmProvider, this.MapProvider, entityType, whereObjType, false);
             var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
-            f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.ormProvider, whereObj);
+            f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.OrmProvider, whereObj);
         });
     }
     public virtual async Task<TEntity> QueryFirstAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default)
@@ -176,9 +172,9 @@ public class Repository : IRepository
         return await this.DbContext.QueryFirstAsync<TEntity>(f =>
         {
             var entityType = typeof(TEntity);
-            var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.ormProvider, this.mapProvider, entityType, whereObjType, false);
+            var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.OrmProvider, this.MapProvider, entityType, whereObjType, false);
             var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
-            f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.ormProvider, whereObj);
+            f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.OrmProvider, whereObj);
         }, cancellationToken);
     }
     public virtual List<TEntity> Query<TEntity>(string rawSql, object parameters = null)
@@ -197,8 +193,8 @@ public class Repository : IRepository
             f.CommandText = rawSql;
             if (parameters != null)
             {
-                var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.ormProvider, rawSql, parameters);
-                commandInitializer.Invoke(f.Parameters, this.ormProvider, parameters);
+                var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.OrmProvider, rawSql, parameters);
+                commandInitializer.Invoke(f.Parameters, this.OrmProvider, parameters);
             }
         });
     }
@@ -218,8 +214,8 @@ public class Repository : IRepository
             f.CommandText = rawSql;
             if (parameters != null)
             {
-                var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.ormProvider, rawSql, parameters);
-                commandInitializer.Invoke(f.Parameters, this.ormProvider, parameters);
+                var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.OrmProvider, rawSql, parameters);
+                commandInitializer.Invoke(f.Parameters, this.OrmProvider, parameters);
             }
         }, cancellationToken);
     }
@@ -234,9 +230,9 @@ public class Repository : IRepository
         return this.DbContext.Query<TEntity>(f =>
         {
             var entityType = typeof(TEntity);
-            var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.ormProvider, this.mapProvider, entityType, whereObjType, false);
+            var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.OrmProvider, this.MapProvider, entityType, whereObjType, false);
             var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
-            f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.ormProvider, whereObj);
+            f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.OrmProvider, whereObj);
         });
     }
     public virtual async Task<List<TEntity>> QueryAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default)
@@ -250,9 +246,9 @@ public class Repository : IRepository
         return await this.DbContext.QueryAsync<TEntity>(f =>
         {
             var entityType = typeof(TEntity);
-            var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.ormProvider, this.mapProvider, entityType, whereObjType, false);
+            var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.OrmProvider, this.MapProvider, entityType, whereObjType, false);
             var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
-            f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.ormProvider, whereObj);
+            f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.OrmProvider, whereObj);
         }, cancellationToken);
     }
     #endregion
@@ -264,7 +260,7 @@ public class Repository : IRepository
     #endregion
 
     #region Create
-    public virtual ICreate<TEntity> Create<TEntity>() => this.ormProvider.NewCreate<TEntity>(this.DbContext);
+    public virtual ICreate<TEntity> Create<TEntity>() => this.OrmProvider.NewCreate<TEntity>(this.DbContext);
     public virtual int Create<TEntity>(object insertObjs, int bulkCount = 500)
     {
         if (insertObjs == null)
@@ -341,7 +337,7 @@ public class Repository : IRepository
                         builder.Append(')');
                     };
                 }
-                Func<string, IEnumerable, int> executor = (tableName, insertObjs) =>
+                int executor(string tableName, IEnumerable insertObjs)
                 {
                     int count = 0, index = 0;
                     foreach (var insertObj in insertObjs)
@@ -368,7 +364,7 @@ public class Repository : IRepository
                         count += command.ExecuteNonQuery();
                     }
                     return count;
-                };
+                }
 
                 this.DbContext.Open(connection);
                 if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out _))
@@ -377,7 +373,7 @@ public class Repository : IRepository
                     foreach (var tabledInsertObj in tabledInsertObjs)
                     {
                         firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
-                        result += executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
+                        result += executor(tabledInsertObj.Key, tabledInsertObj.Value);
                         builder.Clear();
                         command.Parameters.Clear();
                     }
@@ -387,7 +383,7 @@ public class Repository : IRepository
                     var entityMapper = mapProvider.GetEntityMap(entityType);
                     var tableName = entityMapper.TableName;
                     firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                    result = executor.Invoke(tableName, entities);
+                    result = executor(tableName, entities);
                 }
                 builder.Clear();
                 builder = null;
@@ -495,7 +491,7 @@ public class Repository : IRepository
                         builder.Append(')');
                     };
                 }
-                Func<string, IEnumerable, Task<int>> executor = async (tableName, insertObjs) =>
+                async Task<int> executor(string tableName, IEnumerable insertObjs)
                 {
                     int count = 0, index = 0;
                     foreach (var insertObj in insertObjs)
@@ -522,7 +518,7 @@ public class Repository : IRepository
                         count += await command.ExecuteNonQueryAsync(cancellationToken);
                     }
                     return count;
-                };
+                }
                 await this.DbContext.OpenAsync(connection, cancellationToken);
                 if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out _))
                 {
@@ -530,7 +526,7 @@ public class Repository : IRepository
                     foreach (var tabledInsertObj in tabledInsertObjs)
                     {
                         firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
-                        result += await executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
+                        result += await executor(tabledInsertObj.Key, tabledInsertObj.Value);
                         builder.Clear();
                         command.Parameters.Clear();
                     }
@@ -540,7 +536,7 @@ public class Repository : IRepository
                     var entityMapper = mapProvider.GetEntityMap(entityType);
                     var tableName = entityMapper.TableName;
                     firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                    result = await executor.Invoke(tableName, entities);
+                    result = await executor(tableName, entities);
                 }
                 builder.Clear();
                 builder = null;
@@ -624,7 +620,7 @@ public class Repository : IRepository
     #endregion
 
     #region Update
-    public virtual IUpdate<TEntity> Update<TEntity>() => this.ormProvider.NewUpdate<TEntity>(this.DbContext);
+    public virtual IUpdate<TEntity> Update<TEntity>() => this.OrmProvider.NewUpdate<TEntity>(this.DbContext);
     public virtual int Update<TEntity>(object updateObjs, int bulkCount = 500)
     {
         if (updateObjs == null)
@@ -649,7 +645,7 @@ public class Repository : IRepository
                     updateObjType = updateObj.GetType();
                     break;
                 }
-                (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.ormProvider, this.mapProvider, entityType, updateObjType, true, null, null);
+                (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.OrmProvider, this.MapProvider, entityType, updateObjType, true, null, null);
                 var typedSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
 
                 this.DbContext.Open(connection);
@@ -657,7 +653,7 @@ public class Repository : IRepository
                 {
                     if (index > 0) builder.Append(';');
                     headSqlSetter.Invoke(builder, tableName);
-                    typedSqlSetter.Invoke(command.Parameters, builder, this.ormProvider, updateObj, index.ToString());
+                    typedSqlSetter.Invoke(command.Parameters, builder, this.OrmProvider, updateObj, index.ToString());
                     if (index >= bulkCount)
                     {
                         command.CommandText = builder.ToString();
@@ -680,10 +676,10 @@ public class Repository : IRepository
             else
             {
                 var updateObjType = updateObjs.GetType();
-                (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.ormProvider, this.mapProvider, entityType, updateObjType, false, null, null);
+                (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.OrmProvider, this.MapProvider, entityType, updateObjType, false, null, null);
                 headSqlSetter.Invoke(builder, tableName);
                 var typedSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object>;
-                typedSqlSetter.Invoke(command.Parameters, builder, this.ormProvider, updateObjs);
+                typedSqlSetter.Invoke(command.Parameters, builder, this.OrmProvider, updateObjs);
                 command.CommandText = builder.ToString();
                 this.DbContext.Open(connection);
                 eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Update);
@@ -734,14 +730,14 @@ public class Repository : IRepository
                     updateObjType = updateObj.GetType();
                     break;
                 }
-                (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.ormProvider, this.mapProvider, entityType, updateObjType, true, null, null);
+                (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.OrmProvider, this.MapProvider, entityType, updateObjType, true, null, null);
                 var typedSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
                 await this.DbContext.OpenAsync(connection, cancellationToken);
                 foreach (var updateObj in entities)
                 {
                     if (index > 0) builder.Append(';');
                     headSqlSetter.Invoke(builder, tableName);
-                    typedSqlSetter.Invoke(command.Parameters, builder, this.ormProvider, updateObj, index.ToString());
+                    typedSqlSetter.Invoke(command.Parameters, builder, this.OrmProvider, updateObj, index.ToString());
                     if (index >= bulkCount)
                     {
                         command.CommandText = builder.ToString();
@@ -764,10 +760,10 @@ public class Repository : IRepository
             else
             {
                 var updateObjType = updateObjs.GetType();
-                (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.ormProvider, this.mapProvider, entityType, updateObjType, false, null, null);
+                (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.OrmProvider, this.MapProvider, entityType, updateObjType, false, null, null);
                 headSqlSetter.Invoke(builder, tableName);
                 var typedSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object>;
-                typedSqlSetter.Invoke(command.Parameters, builder, this.ormProvider, updateObjs);
+                typedSqlSetter.Invoke(command.Parameters, builder, this.OrmProvider, updateObjs);
                 command.CommandText = builder.ToString();
                 await this.DbContext.OpenAsync(connection, cancellationToken);
                 eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Update);
@@ -797,7 +793,7 @@ public class Repository : IRepository
     #endregion
 
     #region Delete
-    public virtual IDelete<TEntity> Delete<TEntity>() => this.ormProvider.NewDelete<TEntity>(this.DbContext);
+    public virtual IDelete<TEntity> Delete<TEntity>() => this.OrmProvider.NewDelete<TEntity>(this.DbContext);
     public virtual int Delete<TEntity>(object whereKeys)
     {
         if (whereKeys == null)
@@ -810,7 +806,7 @@ public class Repository : IRepository
         try
         {
             var entityType = typeof(TEntity);
-            if (this.shardingProvider != null && this.shardingProvider.TryGetTableSharding(entityType, out _))
+            if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out _))
                 throw new NotSupportedException($"实体表{entityType.FullName}有配置分表，当前方法不支持分表，请使用repository.Delete<T>().UseTable或UseTableBy方法可指定分表");
 
             this.BuildDeleteCommand(command, entityType, whereKeys);
@@ -846,7 +842,7 @@ public class Repository : IRepository
         try
         {
             var entityType = typeof(TEntity);
-            if (this.shardingProvider != null && this.shardingProvider.TryGetTableSharding(entityType, out _))
+            if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out _))
                 throw new NotSupportedException($"实体表{entityType.FullName}有配置分表，当前方法不支持分表，请使用repository.Delete<T>().UseTable或UseTableBy方法可指定分表");
 
             this.BuildDeleteCommand(command, entityType, whereKeys);
@@ -884,7 +880,7 @@ public class Repository : IRepository
             }
         }
         else whereObjType = whereKeys.GetType();
-        (var isMultiKeys, var tableName, var whereSqlParametersSetter, var sqlSetter) = RepositoryHelper.BuildDeleteCommandInitializer(this.ormProvider, this.mapProvider, entityType, whereObjType, isBulk, isBulk);
+        (var isMultiKeys, var tableName, var whereSqlParametersSetter, var sqlSetter) = RepositoryHelper.BuildDeleteCommandInitializer(this.OrmProvider, this.MapProvider, entityType, whereObjType, isBulk, isBulk);
 
         int index = 0;
         var builder = new StringBuilder();
@@ -897,7 +893,7 @@ public class Repository : IRepository
             foreach (var entity in entities)
             {
                 if (index > 0) whereSqlBuilder.Append(jointMark);
-                typedWhereSqlParametersSetter.Invoke(command.Parameters, whereSqlBuilder, this.ormProvider, entity, $"{index}");
+                typedWhereSqlParametersSetter.Invoke(command.Parameters, whereSqlBuilder, this.OrmProvider, entity, $"{index}");
                 index++;
             }
             if (!isMultiKeys) whereSqlBuilder.Append(')');
@@ -905,15 +901,13 @@ public class Repository : IRepository
         else
         {
             var typedWhereSqlParametersSetter = whereSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object>;
-            typedWhereSqlParametersSetter.Invoke(command.Parameters, whereSqlBuilder, this.ormProvider, whereKeys);
+            typedWhereSqlParametersSetter.Invoke(command.Parameters, whereSqlBuilder, this.OrmProvider, whereKeys);
         }
         sqlSetter.Invoke(builder, tableName);
         builder.Append(whereSqlBuilder);
         command.CommandText = builder.ToString();
         builder.Clear();
-        builder = null;
         whereSqlBuilder.Clear();
-        whereSqlBuilder = null;
     }
     #endregion
 
@@ -927,9 +921,9 @@ public class Repository : IRepository
         {
             var entityType = typeof(TEntity);
             var whereObjType = whereObj.GetType();
-            var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.ormProvider, this.mapProvider, entityType, whereObjType, false);
+            var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.OrmProvider, this.MapProvider, entityType, whereObjType, false);
             var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
-            f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.ormProvider, whereObj);
+            f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.OrmProvider, whereObj);
         });
         return result > 0;
     }
@@ -942,9 +936,9 @@ public class Repository : IRepository
         {
             var entityType = typeof(TEntity);
             var whereObjType = whereObj.GetType();
-            var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.ormProvider, this.mapProvider, entityType, whereObjType, false);
+            var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.OrmProvider, this.MapProvider, entityType, whereObjType, false);
             var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
-            f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.ormProvider, whereObj);
+            f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.OrmProvider, whereObj);
         }, cancellationToken);
         return result > 0;
     }
@@ -973,8 +967,8 @@ public class Repository : IRepository
             f.CommandText = rawSql;
             if (parameters != null)
             {
-                var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.ormProvider, rawSql, parameters);
-                commandInitializer.Invoke(f.Parameters, this.ormProvider, parameters);
+                var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.OrmProvider, rawSql, parameters);
+                commandInitializer.Invoke(f.Parameters, this.OrmProvider, parameters);
             }
             return false;
         });
@@ -989,8 +983,8 @@ public class Repository : IRepository
             f.CommandText = rawSql;
             if (parameters != null)
             {
-                var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.ormProvider, rawSql, parameters);
-                commandInitializer.Invoke(f.Parameters, this.ormProvider, parameters);
+                var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.OrmProvider, rawSql, parameters);
+                commandInitializer.Invoke(f.Parameters, this.OrmProvider, parameters);
             }
             return false;
         }, cancellationToken);
@@ -1004,7 +998,7 @@ public class Repository : IRepository
             throw new ArgumentNullException(nameof(subQueries));
 
         IMultiQueryReader result = null;
-        IDataReader reader = null;
+        IDataReader reader;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
         (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand();
@@ -1016,7 +1010,7 @@ public class Repository : IRepository
             this.DbContext.Open(connection);
             eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.MultiQuery);
             reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
-            result = new MultiQueryReader(this.ormProvider, command, reader, readerAfters, isNeedClose);
+            result = new MultiQueryReader(this.OrmProvider, command, reader, readerAfters, isNeedClose);
         }
         catch (Exception ex)
         {
@@ -1038,7 +1032,7 @@ public class Repository : IRepository
             throw new ArgumentNullException(nameof(subQueries));
 
         IMultiQueryReader result = null;
-        DbDataReader reader = null;
+        DbDataReader reader;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
         (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveDbCommand();
@@ -1050,7 +1044,7 @@ public class Repository : IRepository
             await this.DbContext.OpenAsync(connection, cancellationToken);
             eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.MultiQuery);
             reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
-            result = new MultiQueryReader(this.ormProvider, command, reader, readerAfters, isNeedClose);
+            result = new MultiQueryReader(this.OrmProvider, command, reader, readerAfters, isNeedClose);
         }
         catch (Exception ex)
         {
@@ -1090,10 +1084,10 @@ public class Repository : IRepository
                 {
                     visitor = multiCcommand.CommandType switch
                     {
-                        MultipleCommandType.Insert => this.ormProvider.NewCreateVisitor(this.DbContext),
-                        MultipleCommandType.Update => this.ormProvider.NewUpdateVisitor(this.DbContext),
-                        MultipleCommandType.Delete => this.ormProvider.NewDeleteVisitor(this.DbContext),
-                        _ => this.ormProvider.NewUpdateVisitor(this.DbContext)
+                        MultipleCommandType.Insert => this.OrmProvider.NewCreateVisitor(this.DbContext),
+                        MultipleCommandType.Update => this.OrmProvider.NewUpdateVisitor(this.DbContext),
+                        MultipleCommandType.Delete => this.OrmProvider.NewDeleteVisitor(this.DbContext),
+                        _ => this.OrmProvider.NewUpdateVisitor(this.DbContext)
                     };
                     visitors.Add(multiCcommand.CommandType, visitor);
                     isFirst = true;
@@ -1160,10 +1154,10 @@ public class Repository : IRepository
                 {
                     visitor = multiCcommand.CommandType switch
                     {
-                        MultipleCommandType.Insert => this.ormProvider.NewCreateVisitor(this.DbContext),
-                        MultipleCommandType.Update => this.ormProvider.NewUpdateVisitor(this.DbContext),
-                        MultipleCommandType.Delete => this.ormProvider.NewDeleteVisitor(this.DbContext),
-                        _ => this.ormProvider.NewUpdateVisitor(this.DbContext)
+                        MultipleCommandType.Insert => this.OrmProvider.NewCreateVisitor(this.DbContext),
+                        MultipleCommandType.Update => this.OrmProvider.NewUpdateVisitor(this.DbContext),
+                        MultipleCommandType.Delete => this.OrmProvider.NewDeleteVisitor(this.DbContext),
+                        _ => this.OrmProvider.NewUpdateVisitor(this.DbContext)
                     };
                     visitors.Add(multiCcommand.CommandType, visitor);
                     isFirst = true;
@@ -1249,6 +1243,6 @@ public class Repository : IRepository
             throw new Exception("有事务还没有完成，请检查代码，是否遗漏了Commit或是Rollback操作");
     }
     private IQueryVisitor CreateQueryVisitor(char tableAsStart = 'a')
-        => this.ormProvider.NewQueryVisitor(this.DbContext, tableAsStart);
+        => this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart);
     #endregion
 }

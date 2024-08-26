@@ -19,7 +19,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
 
     public override string BuildCommand(IDbCommand command, bool isReturnIdentity, out List<SqlFieldSegment> readerFields)
     {
-        string sql = null;
+        string sql;
         this.IsReturnIdentity = isReturnIdentity;
         if (this.ActionMode == ActionMode.Bulk)
             sql = this.BuildWithBulkSql(command, out readerFields);
@@ -93,7 +93,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
             this.UpdateFields = null;
             hasUpdateFields = true;
         }
-        string outputSql = null;
+        string outputSql;
         if (this.OutputFieldNames != null && this.OutputFieldNames.Count > 0)
         {
             (outputSql, readerFields) = this.BuildOutputSqlReaderFields();
@@ -112,8 +112,6 @@ public class PostgreSqlCreateVisitor : CreateVisitor
         valuesBuilder.Clear();
         var sql = fieldsBuilder.ToString();
         fieldsBuilder.Clear();
-        fieldsBuilder = null;
-        valuesBuilder = null;
         return sql;
     }
     public override string BuildWithBulkSql(IDbCommand command, out List<SqlFieldSegment> readerFields)
@@ -128,7 +126,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
         if (this.OutputFieldNames != null && this.OutputFieldNames.Count > 0)
             (outputSql, readerFields) = this.BuildOutputSqlReaderFields();
 
-        Action<string, IEnumerable> executor = (tableName, insertObjs) =>
+        void executor(string tableName, IEnumerable insertObjs)
         {
             firstSqlSetter.Invoke(command.Parameters, builder, tableName);
             int index = 0;
@@ -140,7 +138,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
             }
             if (outputSql != null)
                 builder.Append(outputSql);
-        };
+        }
         if (isNeedSplit)
         {
             var entityType = this.Tables[0].EntityType;
@@ -149,14 +147,13 @@ public class PostgreSqlCreateVisitor : CreateVisitor
             foreach (var tabledInsertObj in tabledInsertObjs)
             {
                 if (index > 0) builder.Append(';');
-                executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
+                executor(tabledInsertObj.Key, tabledInsertObj.Value);
                 index++;
             }
         }
-        else executor.Invoke(tableName, insertObjs);
+        else executor(tableName, insertObjs);
         var sql = builder.ToString();
         builder.Clear();
-        builder = null;
         return sql;
     }
     public void Returning(params string[] fieldNames)
@@ -220,7 +217,6 @@ public class PostgreSqlCreateVisitor : CreateVisitor
     public void VisitSetExpression(LambdaExpression lambdaExpr)
     {
         var currentExpr = lambdaExpr.Body;
-        var entityType = this.Tables[0].EntityType;
         var callStack = new Stack<MethodCallExpression>();
         while (true)
         {
@@ -237,7 +233,6 @@ public class PostgreSqlCreateVisitor : CreateVisitor
         var builder = new StringBuilder(" ON CONFLICT ");
         while (callStack.TryPop(out var callExpr))
         {
-            var genericArguments = callExpr.Method.GetGenericArguments();
             switch (callExpr.Method.Name)
             {
                 case "DoNothing":
@@ -265,7 +260,6 @@ public class PostgreSqlCreateVisitor : CreateVisitor
                         //Set<TFields>(Expression<Func<TEntity, TFields>> fieldsAssignment)
                         if (callExpr.Arguments[0].Type.BaseType == typeof(LambdaExpression))
                         {
-                            var argumentExpr = callExpr.Arguments[0];
                             this.VisitAndDeferred(new SqlFieldSegment { Expression = callExpr.Arguments[0] });
                         }
                         //Set<TUpdateObj>(TUpdateObj updateObj), 走参数
@@ -277,9 +271,6 @@ public class PostgreSqlCreateVisitor : CreateVisitor
                         //Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment)
                         if (callExpr.Arguments[1].Type.BaseType == typeof(LambdaExpression))
                         {
-                            var argumentExpr = callExpr.Arguments[1];
-                            //if (argumentExpr.NodeType != ExpressionType.New && argumentExpr.NodeType != ExpressionType.MemberAccess)
-                            //    throw new NotSupportedException($"不支持的表达式访问，类型{callExpr.Method.DeclaringType.FullName}.Set方法，只支持MemberAccess/New访问，如：.Set(true, f =&gt; f.TotalAmount) 或 .Set(true, f =&gt; new {{TotalAmount = f.TotalAmount + x.Values(f.TotalAmount)}})");
                             if (callExpr.Arguments[0].Type == typeof(bool))
                             {
                                 var condition = this.Evaluate<bool>(callExpr.Arguments[0]);
@@ -319,7 +310,6 @@ public class PostgreSqlCreateVisitor : CreateVisitor
                                 this.VisitSetFieldExpression(callExpr.Arguments[1], callExpr.Arguments[2]);
                             else
                             {
-                                var leftSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = callExpr.Arguments[0] });
                                 this.VisitWithSetField(callExpr.Arguments[1], this.Evaluate(callExpr.Arguments[2]));
                             }
                         }
@@ -329,7 +319,6 @@ public class PostgreSqlCreateVisitor : CreateVisitor
         }
         this.UpdateFields.Insert(0, builder.ToString());
         builder.Clear();
-        builder = null;
         this.IsUpdate = false;
     }
     public override SqlFieldSegment VisitMemberAccess(SqlFieldSegment sqlSegment)
@@ -402,11 +391,13 @@ public class PostgreSqlCreateVisitor : CreateVisitor
     }
     public override IQueryVisitor CreateQueryVisitor()
     {
-        var queryVisiter = new PostgreSqlQueryVisitor(this.DbContext, this.TableAsStart, this.DbParameters);
-        queryVisiter.IsMultiple = this.IsMultiple;
-        queryVisiter.CommandIndex = this.CommandIndex;
-        queryVisiter.RefQueries = this.RefQueries;
-        queryVisiter.ShardingTables = this.ShardingTables;
+        var queryVisiter = new PostgreSqlQueryVisitor(this.DbContext, this.TableAsStart, this.DbParameters)
+        {
+            IsMultiple = this.IsMultiple,
+            CommandIndex = this.CommandIndex,
+            RefQueries = this.RefQueries,
+            ShardingTables = this.ShardingTables
+        };
         return queryVisiter;
     }
     public void InitTableAlias(LambdaExpression lambdaExpr)
@@ -490,7 +481,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
         var readerFields = new List<SqlFieldSegment>();
         var entityMapper = this.Tables[0].Mapper;
         var builder = new StringBuilder();
-        Action<MemberMap> addReaderField = memberMapper =>
+        void addReaderField(MemberMap memberMapper)
         {
             readerFields.Add(new SqlFieldSegment
             {
@@ -502,7 +493,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
                 TypeHandler = memberMapper.TypeHandler,
                 Body = memberMapper.FieldName
             });
-        };
+        }
         builder.Append(" RETURNING ");
         for (int i = 0; i < this.OutputFieldNames.Count; i++)
         {
@@ -516,19 +507,18 @@ public class PostgreSqlCreateVisitor : CreateVisitor
                     if (memberMapper.IsIgnore || memberMapper.IsNavigation
                         || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
                         continue;
-                    addReaderField.Invoke(memberMapper);
+                    addReaderField(memberMapper);
                 }
             }
             else
             {
                 builder.Append(this.OrmProvider.GetFieldName(fieldName));
                 var memberMapper = entityMapper.GetMemberMapByFieldName(fieldName);
-                addReaderField.Invoke(memberMapper);
+                addReaderField(memberMapper);
             }
         }
         var sql = builder.ToString();
         builder.Clear();
-        builder = null;
         return (sql, readerFields);
     }
 }
