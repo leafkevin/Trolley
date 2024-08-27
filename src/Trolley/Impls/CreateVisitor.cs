@@ -99,10 +99,6 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         readerFields = null;
         var entityType = this.Tables[0].EntityType;
         var entityMapper = this.Tables[0].Mapper;
-
-        if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out _) && !this.Tables[0].IsSharding)
-            throw new Exception($"实体表{entityType.FullName}有配置分表，当前操作未指定分表，请调用UseTable或UseTableBy方法指定分表");
-
         var tableName = this.Tables[0].Body ?? entityMapper.TableName;
         var tableSchema = this.Tables[0].TableSchema;
         if (!string.IsNullOrEmpty(tableSchema))

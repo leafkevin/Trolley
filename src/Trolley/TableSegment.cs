@@ -150,13 +150,4 @@ public class TableSegment
             Fields = this.Fields
         };
     }
-
-    public override bool Equals(object obj)
-    {
-        if (obj == null) return false;
-        var right = (TableSegment)obj;
-        return this.Path == right.Path;
-    }
-    public override int GetHashCode()
-        => HashCode.Combine(this.EntityType, this.Path);
 }

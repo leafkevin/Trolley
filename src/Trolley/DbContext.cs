@@ -247,7 +247,7 @@ public sealed class DbContext
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
             visitor.SelectDefault(defaultExpr);
             var sql = visitor.BuildSql(out var readerFields);
-            sql = this.BuildSql(visitor, sql, " UNOIN ALL ");
+            sql = this.BuildSql(visitor, sql, " UNION ALL ");
             command.CommandText = sql;
             visitor.DbParameters.CopyTo(command.Parameters);
 
@@ -1418,14 +1418,21 @@ public sealed class DbContext
         }
         else
         {
-            var tableNames = visitor.ShardingTables[0].TableNames;
             var tableSegment = visitor.ShardingTables[0];
             var origName = tableSegment.Mapper.TableName;
-            for (int i = 0; i < tableNames.Count; i++)
+            if (tableSegment.TableNames != null)
             {
-                if (i > 0) builder.Append(jointMark);
-                var tableName = tableSegment.TableNames[i];
-                var sql = formatSql.Replace($"__SHARDING_{tableSegment.ShardingId}_{origName}", tableName);
+                for (int i = 0; i < tableSegment.TableNames.Count; i++)
+                {
+                    if (i > 0) builder.Append(jointMark);
+                    var tableName = tableSegment.TableNames[i];
+                    var sql = formatSql.Replace($"__SHARDING_{tableSegment.ShardingId}_{origName}", tableName);
+                    builder.Append(sql);
+                }
+            }
+            else
+            {
+                var sql = formatSql.Replace($"__SHARDING_{tableSegment.ShardingId}_{origName}", tableSegment.Body);
                 builder.Append(sql);
             }
         }

@@ -639,7 +639,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 var sqlBuilder = new StringBuilder();
                 sqlBuilderInitializer.Invoke(sqlBuilder, sqlInitializer);
                 if (!string.IsNullOrEmpty(includeTableSegment.Filter))
-                    builder.Append($" AND {includeTableSegment.Filter}");
+                    sqlBuilder.Append($" AND {includeTableSegment.Filter}");
                 var afterSql = sqlBuilder.ToString();
                 var origName = includeTableSegment.Mapper.TableName;
                 var formatName = $"__SHARDING_{includeTableSegment.ShardingId}_{origName}";
@@ -1820,13 +1820,14 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (subQuery.Visitor.ShardingTables != null && subQuery.Visitor.ShardingTables.Count > 0)
         {
             tableSegment.IsSharding = true;
+            this.IsNeedFetchShardingTables = subQuery.Visitor.IsNeedFetchShardingTables;
             if (this.ShardingTables == null)
                 this.ShardingTables = subQuery.Visitor.ShardingTables;
             else
             {
                 foreach (var shardingTable in subQuery.Visitor.ShardingTables)
                 {
-                    if (!this.ShardingTables.Exists(f => f.EntityType == shardingTable.EntityType))
+                    if (!this.ShardingTables.Contains(shardingTable))
                         this.ShardingTables.Add(shardingTable);
                 }
             }
@@ -2053,7 +2054,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             builder.Append($".{memberInfo.Name}");
         }
         hashCode.Add(builder.ToString());
-        hashCode.Add(includeSegment.IsSharding);
         return hashCode.ToHashCode();
     }
     public int GetRefIncludeKey(Type targetType, string refPath)

@@ -1605,4 +1605,60 @@ public class UnitTest6 : UnitTestBase
 
         Assert.Equal(orders.Count, orderInfos.Count);
     }
+    [Fact]
+    public async Task ManySharding_FromQuery_SubQuery()
+    {
+        await this.InitSharding();
+        var repository = this.dbFactory.Create();
+        var count = 1;
+        var amount = 50;
+        var sql = repository
+            .From(f => f.From<Order>()
+                .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
+                .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+                .UseTable<Order>((orderOrigName, userOrigName, orderTableName)
+                    => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+                .LeftJoin<OrderDetail>((a, b, c) => a.Id == c.OrderId)
+                .UseTable<Order>((orderOrigName, orderDetailOrigName, orderTableName)
+                    => orderTableName.Replace(orderOrigName, orderDetailOrigName))
+                .GroupBy((a, b, c) => new { a.BuyerId, OrderId = a.Id, a.OrderNo })
+                .Having((x, a, b, c) => Sql.CountDistinct(c.ProductId) > count)
+                .Select((a, b, c, d) => new { a.Grouping.BuyerId, a.Grouping.OrderId, a.Grouping.OrderNo, ProductTotal = Sql.CountDistinct(d.ProductId) }))
+            .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
+            .IncludeMany((a, b) => b.Details, f => f.Amount > amount)
+            .UseTable<Order>((orderOrigName, orderDetailOrigName, orderTableName)
+                => orderTableName.Replace(orderOrigName, orderDetailOrigName))
+            .Select((x, y) => new { y.Disputes, x.BuyerId, x.OrderId, x.OrderNo, x.ProductTotal, Order = y })
+            .ToSql(out var dbParameters);
+        Assert.Equal("SELECT b.\"Disputes\",a.\"BuyerId\",a.\"OrderId\",a.\"OrderNo\",a.\"ProductTotal\",b.\"Id\",b.\"TenantId\",b.\"OrderNo\",b.\"ProductCount\",b.\"TotalAmount\",b.\"BuyerId\",b.\"BuyerSource\",b.\"SellerId\",b.\"Products\",b.\"Disputes\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\" FROM (SELECT a.\"BuyerId\",a.\"Id\" AS \"OrderId\",a.\"OrderNo\",COUNT(DISTINCT c.\"ProductId\") AS \"ProductTotal\" FROM \"sys_order_104_202405\" a INNER JOIN \"sys_user_104\" b ON a.\"BuyerId\"=b.\"Id\" LEFT JOIN \"sys_order_detail_104_202405\" c ON a.\"Id\"=c.\"OrderId\" GROUP BY a.\"BuyerId\",a.\"Id\",a.\"OrderNo\" HAVING COUNT(DISTINCT c.\"ProductId\")>@p0) a INNER JOIN \"sys_order\" b ON a.\"OrderId\"=b.\"Id\" UNION ALL SELECT b.\"Disputes\",a.\"BuyerId\",a.\"OrderId\",a.\"OrderNo\",a.\"ProductTotal\",b.\"Id\",b.\"TenantId\",b.\"OrderNo\",b.\"ProductCount\",b.\"TotalAmount\",b.\"BuyerId\",b.\"BuyerSource\",b.\"SellerId\",b.\"Products\",b.\"Disputes\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\" FROM (SELECT a.\"BuyerId\",a.\"Id\" AS \"OrderId\",a.\"OrderNo\",COUNT(DISTINCT c.\"ProductId\") AS \"ProductTotal\" FROM \"sys_order_105_202405\" a INNER JOIN \"sys_user_105\" b ON a.\"BuyerId\"=b.\"Id\" LEFT JOIN \"sys_order_detail_105_202405\" c ON a.\"Id\"=c.\"OrderId\" GROUP BY a.\"BuyerId\",a.\"Id\",a.\"OrderNo\" HAVING COUNT(DISTINCT c.\"ProductId\")>@p0) a INNER JOIN \"sys_order\" b ON a.\"OrderId\"=b.\"Id\"", sql);
+        Assert.Single(dbParameters);
+        Assert.Equal((int)dbParameters[0].Value, count);
+
+        var result = repository
+            .From(f => f.From<Order>()
+                .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
+                .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+                .UseTable<Order>((orderOrigName, userOrigName, orderTableName)
+                    => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+                .LeftJoin<OrderDetail>((a, b, c) => a.Id == c.OrderId)
+                .UseTable<Order>((orderOrigName, orderDetailOrigName, orderTableName)
+                    => orderTableName.Replace(orderOrigName, orderDetailOrigName))
+                .GroupBy((a, b, c) => new { a.BuyerId, OrderId = a.Id, a.OrderNo })
+                .Having((x, a, b, c) => Sql.CountDistinct(c.ProductId) > count)
+                .Select((a, b, c, d) => new { a.Grouping.BuyerId, a.Grouping.OrderId, a.Grouping.OrderNo, ProductTotal = Sql.CountDistinct(d.ProductId) }))
+            .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
+            .IncludeMany((a, b) => b.Details, f => f.Amount > amount)
+            .UseTable<Order>((orderOrigName, orderDetailOrigName, orderTableName)
+                => orderTableName.Replace(orderOrigName, orderDetailOrigName))
+            .Select((x, y) => new { y.Disputes, x.BuyerId, x.OrderId, x.OrderNo, x.ProductTotal, Order = y })
+            .First();
+        if (result != null)
+        {
+            Assert.NotNull(result.Disputes);
+            Assert.NotNull(result.Order);
+            Assert.NotNull(result.Order.Details);
+            Assert.True(result.Order.Details.Count > 0);
+            Assert.True(result.Order.Details[0].Amount > 0);
+        }
+    }
 }
