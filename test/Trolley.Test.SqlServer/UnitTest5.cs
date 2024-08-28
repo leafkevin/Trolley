@@ -39,6 +39,7 @@ public class UnitTest5 : UnitTestBase
                     df.OnConnectionClosed += evt =>
                     {
                         Interlocked.Decrement(ref connOpenTotal);
+                        Interlocked.Decrement(ref connTotal);
                         this.output.WriteLine($"{evt.ConnectionId} Closed, Total:{Volatile.Read(ref connOpenTotal)}");
                     };
                     df.OnCommandExecuting += evt =>

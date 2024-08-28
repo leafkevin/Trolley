@@ -156,7 +156,7 @@ public partial class SqlServerProvider : BaseOrmProvider
     public override string GetPagingTemplate(int? skip, int? limit, string orderBy = null)
     {
         var builder = new StringBuilder("SELECT ");
-        if (skip.HasValue && limit.HasValue)
+        if (skip.HasValue && skip.Value > 0 && limit.HasValue)
         {
             if (string.IsNullOrEmpty(orderBy)) throw new ArgumentNullException("orderBy");
             builder.Append("/**fields**/ FROM /**tables**/ /**others**/");
@@ -164,7 +164,7 @@ public partial class SqlServerProvider : BaseOrmProvider
             builder.Append($" OFFSET {skip} ROWS");
             builder.AppendFormat($" FETCH NEXT {limit} ROWS ONLY", limit);
         }
-        else if (!skip.HasValue && limit.HasValue)
+        else if (limit.HasValue)
         {
             builder.Append($"TOP {limit} ");
             builder.Append("/**fields**/ FROM /**tables**/ /**others**/");
@@ -271,7 +271,7 @@ public partial class SqlServerProvider : BaseOrmProvider
 cast(c.max_length/2 as varchar) else cast(c.max_length as varchar) end+')' when d.name in ('numeric','decimal') then '('+cast(c.precision as varchar)+','+ cast(c.scale as varchar)+')' else '' end),case when d.name in ('nchar','nvarchar')
 then c.max_length/2 else c.max_length end,c.scale,c.precision,(select value from sys.extended_properties where major_id=c.object_id AND minor_id=c.column_id AND name = 'MS_Description'and class=1),e.text,g.is_primary_key,c.is_identity,
 c.is_nullable,c.column_id from sys.tables a inner join sys.schemas b on a.schema_id=b.schema_id inner join sys.columns c on a.object_id=c.object_id inner join sys.types d on d.user_type_id=c.user_type_id left join syscomments e
-on e.id = c.default_object_id left join sys.index_columns f on f.object_id=a.object_id and f.column_id=c.column_id left join sys.indexes g on g.object_id=a.object_id and g.index_id=f.index_id order by b.name,a.name,c.column_id";
+on e.id = c.default_object_id left join sys.index_columns f on f.object_id=a.object_id and f.column_id=c.column_id left join sys.indexes g on g.object_id=a.object_id and g.index_id=f.index_id WHERE {0} order by b.name,a.name,c.column_id";
         var tableBuilders = new Dictionary<string, StringBuilder>();
         foreach (var tableName in tableNames)
         {
@@ -358,12 +358,21 @@ on e.id = c.default_object_id left join sys.index_columns f on f.object_id=a.obj
 
             foreach (var columnInfo in tableInfo.Columns)
             {
-                //数据库字段没有映射到实体成员,IsRowVersion
-                if (!fieldMapHandler.TryFindMember(columnInfo.FieldName, memberInfos, out var memberInfo))
-                    continue;
-
-                if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper))
+                if (fieldMapHandler.TryFindMember(columnInfo.FieldName, entityMapper.MemberMaps, out var memberMapper))
                 {
+                    memberMapper.DbColumnType = columnInfo.DbColumnType;
+                    memberMapper.IsKey = columnInfo.IsPrimaryKey;
+                    memberMapper.IsAutoIncrement = columnInfo.IsAutoIncrement;
+                    memberMapper.IsRequired = !columnInfo.IsNullable;
+                    memberMapper.MaxLength = columnInfo.MaxLength;
+                    memberMapper.NativeDbType = this.MapNativeDbType(columnInfo);
+                    memberMapper.Position = columnInfo.Position;
+                }
+                else
+                {
+                    if (!fieldMapHandler.TryFindMember(columnInfo.FieldName, memberInfos, out var memberInfo))
+                        continue;
+
                     entityMapper.AddMemberMap(memberInfo.Name, memberMapper = new MemberMap(entityMapper, memberInfo)
                     {
                         FieldName = columnInfo.FieldName,
@@ -376,16 +385,7 @@ on e.id = c.default_object_id left join sys.index_columns f on f.object_id=a.obj
                         Position = columnInfo.Position
                     });
                 }
-                else
-                {
-                    memberMapper.DbColumnType = columnInfo.DbColumnType;
-                    memberMapper.IsKey = columnInfo.IsPrimaryKey;
-                    memberMapper.IsAutoIncrement = columnInfo.IsAutoIncrement;
-                    memberMapper.IsRequired = !columnInfo.IsNullable;
-                    memberMapper.MaxLength = columnInfo.MaxLength;
-                    memberMapper.NativeDbType = this.MapNativeDbType(columnInfo);
-                    memberMapper.Position = columnInfo.Position;
-                }
+
                 //允许自定义TypeHandlerType设置，默认设置
                 if ((memberMapper.UnderlyingType.IsClass && memberMapper.UnderlyingType != typeof(string) || memberMapper.UnderlyingType.IsEntityType(out _))
                     && this.MapDefaultType(memberMapper.NativeDbType) == typeof(string) && memberMapper.TypeHandlerType == null)
@@ -399,6 +399,8 @@ on e.id = c.default_object_id left join sys.index_columns f on f.object_id=a.obj
                     memberMapper.TypeHandlerType = typeof(ToStringTypeHandler);
                     memberMapper.TypeHandler = this.GetTypeHandler(memberMapper.TypeHandlerType);
                 }
+                if (memberMapper.DbColumnType.ToLower() == "timestamp")
+                    memberMapper.IsRowVersion = true;
             }
 
             //非默认TableSchema表名就不变更了

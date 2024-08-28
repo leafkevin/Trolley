@@ -407,12 +407,21 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
 
             foreach (var columnInfo in tableInfo.Columns)
             {
-                //数据库字段没有映射到实体成员,IsRowVersion
-                if (!fieldMapHandler.TryFindMember(columnInfo.FieldName, memberInfos, out var memberInfo))
-                    continue;
-
-                if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper))
+                if (fieldMapHandler.TryFindMember(columnInfo.FieldName, entityMapper.MemberMaps, out var memberMapper))
                 {
+                    memberMapper.DbColumnType = columnInfo.DbColumnType;
+                    memberMapper.IsKey = columnInfo.IsPrimaryKey;
+                    memberMapper.IsAutoIncrement = columnInfo.IsAutoIncrement;
+                    memberMapper.IsRequired = !columnInfo.IsNullable;
+                    memberMapper.MaxLength = columnInfo.MaxLength;
+                    memberMapper.NativeDbType = this.MapNativeDbType(columnInfo);
+                    memberMapper.Position = columnInfo.Position;
+                }
+                else
+                {
+                    if (!fieldMapHandler.TryFindMember(columnInfo.FieldName, memberInfos, out var memberInfo))
+                        continue;
+
                     entityMapper.AddMemberMap(memberInfo.Name, memberMapper = new MemberMap(entityMapper, memberInfo)
                     {
                         FieldName = columnInfo.FieldName,
@@ -425,16 +434,7 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
                         Position = columnInfo.Position
                     });
                 }
-                else
-                {
-                    memberMapper.DbColumnType = columnInfo.DbColumnType;
-                    memberMapper.IsKey = columnInfo.IsPrimaryKey;
-                    memberMapper.IsAutoIncrement = columnInfo.IsAutoIncrement;
-                    memberMapper.IsRequired = !columnInfo.IsNullable;
-                    memberMapper.MaxLength = columnInfo.MaxLength;
-                    memberMapper.NativeDbType = this.MapNativeDbType(columnInfo);
-                    memberMapper.Position = columnInfo.Position;
-                }
+
                 //允许自定义TypeHandlerType设置，默认设置
                 if ((memberMapper.UnderlyingType.IsClass && memberMapper.UnderlyingType != typeof(string) || memberMapper.UnderlyingType.IsEntityType(out _))
                     && this.MapDefaultType(memberMapper.NativeDbType) == typeof(string) && memberMapper.TypeHandlerType == null)

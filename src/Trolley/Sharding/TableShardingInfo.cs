@@ -1,9 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Trolley;
 
 public class TableShardingInfo
 {
+    public Type EntityType { get; set; }
     /// <summary>
     /// 依赖的实体成员名称
     /// </summary>

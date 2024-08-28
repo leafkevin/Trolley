@@ -29,6 +29,26 @@ public class DbColumnInfo
 }
 public class DefaultFieldMapHandler : IFieldMapHandler
 {
+    public bool TryFindMember(string fieldName, List<MemberMap> memberMappers, out MemberMap memberMapper)
+    {
+        if (string.IsNullOrEmpty(fieldName))
+            throw new ArgumentNullException(nameof(fieldName));
+
+        memberMapper = memberMappers.Find(f => f.FieldName == fieldName);
+        if (memberMapper != null)
+            return true;
+        memberMapper = memberMappers.Find(f => f.FieldName.Equals(fieldName, StringComparison.OrdinalIgnoreCase));
+        if (memberMapper != null)
+            return true;
+        fieldName = fieldName.Replace("_", string.Empty);
+        memberMapper = memberMappers.Find(f => f.FieldName == fieldName);
+        if (memberMapper != null)
+            return true;
+        memberMapper = memberMappers.Find(f => f.FieldName.Equals(fieldName, StringComparison.OrdinalIgnoreCase));
+        if (memberMapper != null)
+            return true;
+        return false;
+    }
     public bool TryFindMember(string fieldName, List<MemberInfo> memberInfos, out MemberInfo memberInfo)
     {
         if (string.IsNullOrEmpty(fieldName))
@@ -46,6 +66,26 @@ public class DefaultFieldMapHandler : IFieldMapHandler
             return true;
         memberInfo = memberInfos.Find(f => f.Name.Equals(fieldName, StringComparison.OrdinalIgnoreCase));
         if (memberInfo != null)
+            return true;
+        return false;
+    }
+    public bool TryFindField(string memberName, List<MemberMap> memberMappers, out MemberMap memberMapper)
+    {
+        if (string.IsNullOrEmpty(memberName))
+            throw new ArgumentNullException(nameof(memberName));
+
+        memberMapper = memberMappers.Find(f => f.MemberName == memberName);
+        if (memberMapper != null)
+            return true;
+        memberMapper = memberMappers.Find(f => f.MemberName.Equals(memberName, StringComparison.OrdinalIgnoreCase));
+        if (memberMapper != null)
+            return true;
+        memberName = memberName.Replace("_", string.Empty);
+        memberMapper = memberMappers.Find(f => f.MemberName == memberName);
+        if (memberMapper != null)
+            return true;
+        memberMapper = memberMappers.Find(f => f.MemberName.Equals(memberName, StringComparison.OrdinalIgnoreCase));
+        if (memberMapper != null)
             return true;
         return false;
     }

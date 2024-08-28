@@ -41,7 +41,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
         var builder = new StringBuilder("SELECT /**fields**/ FROM /**tables**/ /**others**/");
         if (!String.IsNullOrEmpty(orderBy)) builder.Append($" {orderBy}");
         if (limit.HasValue) builder.Append($" LIMIT {limit}");
-        if (skip.HasValue) builder.Append($" OFFSET {skip}");
+        if (skip.HasValue && skip.Value > 0) builder.Append($" OFFSET {skip}");
         return builder.ToString();
     }
     public abstract object GetNativeDbType(Type type);

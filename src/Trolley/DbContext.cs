@@ -599,7 +599,9 @@ public sealed class DbContext
         {
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
             visitor.SelectDefault(defaultExpr);
-            command.CommandText = visitor.BuildSql(out var readerFields);
+            var sql = visitor.BuildSql(out var readerFields);
+            sql = this.BuildSql(visitor, sql, " UNION ALL ");
+            command.CommandText = sql;
             visitor.DbParameters.CopyTo(command.Parameters);
 
             this.Open(connection);
@@ -627,7 +629,7 @@ public sealed class DbContext
                 }
             }
             result.Count = result.Data.Count;
-            if (visitor.BuildIncludeSql(entityType, result.Data, out var sql))
+            if (visitor.BuildIncludeSql(entityType, result.Data, out sql))
             {
                 reader.Dispose();
                 command.CommandText = sql;
@@ -667,7 +669,9 @@ public sealed class DbContext
         {
             Expression<Func<TResult, TResult>> defaultExpr = f => f;
             visitor.SelectDefault(defaultExpr);
-            command.CommandText = visitor.BuildSql(out var readerFields);
+            var sql = visitor.BuildSql(out var readerFields);
+            sql = this.BuildSql(visitor, sql, " UNION ALL ");
+            command.CommandText = sql;
             visitor.DbParameters.CopyTo(command.Parameters);
 
             await this.OpenAsync(connection, cancellationToken);
@@ -695,7 +699,7 @@ public sealed class DbContext
                 }
             }
             result.Count = result.Data.Count;
-            if (visitor.BuildIncludeSql(entityType, result.Data, out var sql))
+            if (visitor.BuildIncludeSql(entityType, result.Data, out sql))
             {
                 await reader.DisposeAsync();
                 command.CommandText = sql;

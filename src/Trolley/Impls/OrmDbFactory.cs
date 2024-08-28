@@ -10,9 +10,12 @@ public sealed class OrmDbFactory : IOrmDbFactory
     private readonly ConcurrentDictionary<string, TheaDatabase> databases = new();
     private readonly ConcurrentDictionary<string, IEntityMapProvider> mapProviders = new();
     private readonly ConcurrentDictionary<OrmProviderType, IEntityMapProvider> globalMapProviders = new();
+
     private readonly ConcurrentDictionary<string, ITableShardingProvider> tableShardingProviders = new();
     private readonly ConcurrentDictionary<OrmProviderType, ITableShardingProvider> globalTableShardingProviders = new();
     private readonly DbInterceptors interceptors = new();
+    private ConcurrentDictionary<string, IEntityMapProvider> complexMapProviders;
+    private ConcurrentDictionary<string, ITableShardingProvider> complexTableShardingProviders;
 
     private IFieldMapHandler fieldMapHandler = new DefaultFieldMapHandler();
     private Func<string> dbKeySelector;
@@ -184,11 +187,9 @@ public sealed class OrmDbFactory : IOrmDbFactory
             throw new ArgumentNullException(nameof(dbKey), "请配置dbKey，既没有设置分库规则来获取dbKey，也没有设置默认的dbKey");
 
         var database = this.GetDatabase(localDbKey);
-        if (!this.TryGetMapProvider(localDbKey, out var mapProvider)
-            && !this.TryGetMapProvider(database.OrmProviderType, out mapProvider))
+        if (!this.complexMapProviders.TryGetValue(localDbKey, out var mapProvider))
             throw new Exception($"没有注册dbKey：{localDbKey}的IEntityMapProvider对象，也没有注册OrmProviderType：{database.OrmProviderType}的IEntityMapProvider对象");
-        if (!this.TryGetTableShardingProvider(localDbKey, out var tableShardingProvider))
-            this.TryGetTableShardingProvider(database.OrmProviderType, out tableShardingProvider);
+        this.complexTableShardingProviders.TryGetValue(localDbKey, out var tableShardingProvider);
 
         //只是为了获取默认TableSchema
         var connection = database.OrmProvider.CreateConnection(database.ConnectionString);
@@ -235,7 +236,7 @@ public sealed class OrmDbFactory : IOrmDbFactory
                 break;
         }
         var type = Type.GetType(strOrmProviderType);
-        var packageName = fileName.Replace(".dll", "");
+        var packageName = fileName.Replace(".dll", string.Empty);
         if (type == null)
             throw new DllNotFoundException($"没有找到[{fileName}]文件，或是没有引入[{packageName}]nuget包");
         return type;
@@ -251,7 +252,7 @@ public sealed class OrmDbFactory : IOrmDbFactory
                 mapProvider.Value.Build(database);
             }
         }
-        else if (!this.globalMapProviders.IsEmpty)
+        if (!this.globalMapProviders.IsEmpty)
         {
             foreach (var mapProvider in this.globalMapProviders)
             {
@@ -263,6 +264,35 @@ public sealed class OrmDbFactory : IOrmDbFactory
                         break;
                     }
                 }
+            }
+        }
+        if (this.globalMapProviders.IsEmpty)
+            this.complexMapProviders = this.mapProviders;
+        else
+        {
+            this.complexMapProviders = new();
+            foreach (var database in this.databases.Values)
+            {
+                var ormProviderType = database.OrmProviderType;
+                this.TryGetMapProvider(database.DbKey, out var mapProvider);
+                this.TryGetMapProvider(ormProviderType, out var globalMapProvider);
+                var entityMapProvider = new ComplexEntityMapProvider(mapProvider, globalMapProvider, this.fieldMapHandler);
+                entityMapProvider.Build(database);
+                this.complexMapProviders.TryAdd(database.DbKey, entityMapProvider);
+            }
+        }
+        if (this.globalTableShardingProviders.IsEmpty)
+            this.complexTableShardingProviders = this.tableShardingProviders;
+        else
+        {
+            this.complexTableShardingProviders = new();
+            foreach (var database in this.databases.Values)
+            {
+                var ormProviderType = database.OrmProviderType;
+                this.TryGetTableShardingProvider(database.DbKey, out var tbleShardingProvider);
+                this.TryGetTableShardingProvider(ormProviderType, out var globalTbleShardingProvider);
+                var complexTableShardingProvider = new ComplexTableShardingProvider(tbleShardingProvider, globalTbleShardingProvider);
+                this.complexTableShardingProviders.TryAdd(database.DbKey, complexTableShardingProvider);
             }
         }
     }
