@@ -6,11 +6,10 @@ namespace Trolley;
 
 public class ComplexEntityMapProvider : IEntityMapProvider
 {
-    private bool isUseAutoMap = false;
     private readonly IFieldMapHandler defaultFieldMapHandler;
-    private readonly IEntityMapProvider mapProvider;
     private readonly IEntityMapProvider globalMapProvider;
     private readonly ConcurrentDictionary<Type, EntityMap> entityMappers = new();
+    private readonly IEntityMapProvider mapProvider;
     private IFieldMapHandler fieldMapHandler;
 
     public ICollection<EntityMap> EntityMaps => this.entityMappers.Values;
@@ -25,21 +24,9 @@ public class ComplexEntityMapProvider : IEntityMapProvider
     }
 
     public void AddEntityMap(Type entityType, EntityMap entityMapper)
-    {
-        if (this.mapProvider != null && this.mapProvider.TryGetEntityMap(entityType, out _))
-            return;
-        if (this.globalMapProvider.TryGetEntityMap(entityType, out _))
-            return;
-        this.mapProvider.AddEntityMap(entityType, entityMapper);
-    }
+        => this.entityMappers.TryAdd(entityType, entityMapper);
     public bool TryGetEntityMap(Type entityType, out EntityMap entityMapper)
-    {
-        if (this.mapProvider != null && this.mapProvider.TryGetEntityMap(entityType, out entityMapper))
-            return true;
-        if (this.globalMapProvider.TryGetEntityMap(entityType, out entityMapper))
-            return true;
-        return false;
-    }
+        => this.entityMappers.TryGetValue(entityType, out entityMapper);
     public void UseDefaultFieldMapHandler() => this.fieldMapHandler = this.defaultFieldMapHandler;
     public void UseFieldMapHandler(IFieldMapHandler fieldMapHandler) => this.fieldMapHandler = fieldMapHandler;
     public void UseAutoMap() { }

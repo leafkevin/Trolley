@@ -25,16 +25,11 @@ public sealed class OrmDbFactoryBuilder
         this.dbFactory.Configure(dbKey, configuration);
         return this;
     }
-    public OrmDbFactoryBuilder Configure<TModelConfiguration>(string dbKey) where TModelConfiguration : class, IModelConfiguration, new()
-        => this.Configure(dbKey, new TModelConfiguration());
     public OrmDbFactoryBuilder Configure(OrmProviderType ormProviderType, IModelConfiguration configuration)
     {
         this.dbFactory.Configure(ormProviderType, configuration);
         return this;
     }
-    public OrmDbFactoryBuilder Configure<TModelConfiguration>(OrmProviderType ormProviderType) where TModelConfiguration : class, IModelConfiguration, new()
-        => this.Configure(ormProviderType, new TModelConfiguration());
-
     public OrmDbFactoryBuilder UseDatabaseSharding(Func<string> dbKeySelector)
     {
         this.dbFactory.UseDatabaseSharding(dbKeySelector);
@@ -52,6 +47,17 @@ public sealed class OrmDbFactoryBuilder
         shardingInitializer.Invoke(builder);
         return this;
     }
+    public OrmDbFactoryBuilder UseTableSharding(string dbKey, ITableShardingConfiguration configuration)
+    {
+        if (configuration == null)
+            throw new ArgumentNullException(nameof(configuration));
+
+        if (!this.dbFactory.TryGetTableShardingProvider(dbKey, out var tableShardingProvider))
+            this.dbFactory.AddTableShardingProvider(dbKey, tableShardingProvider = new TableShardingProvider());
+        var builder = new TableShardingBuilder(tableShardingProvider);
+        configuration.OnModelCreating(builder);
+        return this;
+    }
     public OrmDbFactoryBuilder UseTableSharding(OrmProviderType ormProviderType, Action<TableShardingBuilder> shardingInitializer)
     {
         if (shardingInitializer == null)
@@ -62,6 +68,18 @@ public sealed class OrmDbFactoryBuilder
 
         var builder = new TableShardingBuilder(tableShardingProvider);
         shardingInitializer.Invoke(builder);
+        return this;
+    }
+    public OrmDbFactoryBuilder UseTableSharding(OrmProviderType ormProviderType, ITableShardingConfiguration configuration)
+    {
+        if (configuration == null)
+            throw new ArgumentNullException(nameof(configuration));
+
+        if (!this.dbFactory.TryGetTableShardingProvider(ormProviderType, out var tableShardingProvider))
+            this.dbFactory.AddTableShardingProvider(ormProviderType, tableShardingProvider = new TableShardingProvider());
+
+        var builder = new TableShardingBuilder(tableShardingProvider);
+        configuration.OnModelCreating(builder);
         return this;
     }
     public OrmDbFactoryBuilder UseFieldMapHandler(IFieldMapHandler fieldMapHandler)

@@ -25,8 +25,8 @@ public class UnitTest6 : UnitTestBase
         {
             var builder = new OrmDbFactoryBuilder()
                 .Register(OrmProviderType.SqlServer, "fengling", "Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", true)
-                .Register(OrmProviderType.SqlServer, "fengling_tenant1", "Server=127.0.0.1;Database=fengling_tenant1;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", false)
-                .Register(OrmProviderType.SqlServer, "fengling_tenant2", "Server=127.0.0.1;Database=fengling_tenant2;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", false)
+                //.Register(OrmProviderType.SqlServer, "fengling_tenant1", "Server=127.0.0.1;Database=fengling_tenant1;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", false)
+                //.Register(OrmProviderType.SqlServer, "fengling_tenant2", "Server=127.0.0.1;Database=fengling_tenant2;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true", false)
                 .Configure<ModelConfiguration>(OrmProviderType.SqlServer)
                 .UseDatabaseSharding(() =>
                 {
@@ -38,64 +38,7 @@ public class UnitTest6 : UnitTestBase
                         _ => "fengling"
                     };
                 })
-                .UseTableSharding(OrmProviderType.SqlServer, s =>
-                {
-                    //按照租户+时间分表
-                    s.Table<Order>(t =>
-                    {
-                        t.DependOn(d => d.TenantId).DependOn(d => d.CreatedAt)
-                        .UseRule((dbKey, origName, tenantId, createdAt) => $"{origName}_{tenantId}_{createdAt:yyyyMM}", "^sys_order_\\d{1,4}_[1,2]\\d{3}[0,1][0-9]$")
-                        //时间分表，通常都是支持范围查询
-                        .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =>
-                        {
-                            var tableNames = new List<string>();
-                            var current = beginTime.AddDays(1 - beginTime.Day);
-                            while (current <= endTime)
-                            {
-                                var tableName = $"{origName}_{tenantId}_{current:yyyyMM}";
-                                if (tableNames.Contains(tableName))
-                                {
-                                    current = current.AddMonths(1);
-                                    continue;
-                                }
-                                tableNames.Add(tableName);
-                                current = current.AddMonths(1);
-                            }
-                            return tableNames;
-                        });
-                    })
-                    //按照租户+时间分表
-                    .Table<OrderDetail>(t =>
-                    {
-                        t.DependOn(d => d.TenantId).DependOn(d => d.CreatedAt)
-                        .UseRule((dbKey, origName, tenantId, createdAt) => $"{origName}_{tenantId}_{createdAt:yyyyMM}", "^sys_order_detail_\\d{1,4}_[1,2]\\d{3}[0,1][0-9]$")
-                        //时间分表，通常都是支持范围查询
-                        .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =>
-                        {
-                            var tableNames = new List<string>();
-                            var current = beginTime.AddDays(1 - beginTime.Day);
-                            while (current <= endTime)
-                            {
-                                var tableName = $"{origName}_{tenantId}_{current:yyyyMM}";
-                                if (tableNames.Contains(tableName))
-                                {
-                                    current = current.AddMonths(1);
-                                    continue;
-                                }
-                                tableNames.Add(tableName);
-                                current = current.AddMonths(1);
-                            }
-                            return tableNames;
-                        });
-                    })
-                    //按租户分表
-                    //.UseTable<Order>(t => t.DependOn(d => d.TenantId).UseRule((dbKey, origName, tenantId) => $"{origName}_{tenantId}", "^sys_order_\\d{1,4}$"))
-                    ////按照Id字段分表，Id字段是带有时间属性的ObjectId
-                    //.UseTable<Order>(t => t.DependOn(d => d.Id).UseRule((dbKey, origName, id) => $"{origName}_{new DateTime(ObjectId.Parse(id).Timestamp):yyyyMM}", "^sys_order_\\S{24}$"))
-                    ////按照Id字段哈希取模分表
-                    //.UseTable<Order>(t => t.DependOn(d => d.Id).UseRule((dbKey, origName, id) => $"{origName}_{HashCode.Combine(id) % 5}", "^sys_order_\\S{24}$"))
-                    .Table<User>(t => t.DependOn(d => d.TenantId).UseRule((dbKey, origName, tenantId) => $"{origName}_{tenantId}", "^sys_user_\\d{1,4}$"));
-                })
+                .UseTableSharding<TableShardingConfiguration>(OrmProviderType.SqlServer)
                 .UseInterceptors(df =>
                 {
                     df.OnConnectionCreated += evt =>

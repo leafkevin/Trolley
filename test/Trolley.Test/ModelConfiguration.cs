@@ -1,8 +1,6 @@
-﻿using NpgsqlTypes;
+﻿namespace Trolley.Test;
 
-namespace Trolley.Test.PostgreSql;
-
-class ModelConfiguration : IModelConfiguration
+public class ModelConfiguration : IModelConfiguration
 {
     public void OnModelCreating(ModelBuilder builder)
     {
