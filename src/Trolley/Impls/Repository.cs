@@ -1239,11 +1239,7 @@ public class Repository : IRepository
     public virtual void Dispose(TheaConnection connection) => this.DbContext.Close(connection);
     public virtual async ValueTask DisposeAsync(TheaConnection connection)
         => await this.DbContext.CloseAsync(connection);
-    ~Repository()
-    {
-        if (this.DbContext != null && this.DbContext.Transaction != null)
-            throw new Exception("有事务还没有完成，请检查代码，是否遗漏了Commit或是Rollback操作");
-    }
+    //抛异常的时候，会走到析构函数，但是Transaction，没有提交也没有回滚
     private IQueryVisitor CreateQueryVisitor(char tableAsStart = 'a')
         => this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart);
     #endregion

@@ -1600,4 +1600,126 @@ public class UnitTest6 : UnitTestBase
             Assert.True(result.Order.Details[0].Amount > 0);
         }
     }
+    [Fact]
+    public void TableSchema()
+    {
+        var repository = this.dbFactory.Create();
+        var sql = repository
+            .From(f => f.From<OrderDetail>()
+                .UseTableSchema("myschema")
+                .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
+                .UseTableSchema("myschema")
+                .GroupBy((a, b) => new { OrderId = b.Id, b.BuyerId })
+                .Select((x, a, b) => new { Group = x.Grouping, ProductCount = x.CountDistinct(a.ProductId) }))
+            .InnerJoin<User>((x, y) => x.Group.BuyerId == y.Id)
+            .UseTableSchema("myschema")
+            .Where((a, b) => a.ProductCount > 1)
+            .Select((x, y) => new
+            {
+                x.Group,
+                Buyer = y,
+                x.ProductCount
+            })
+            .ToSql(out _);
+        Assert.Equal("SELECT a.`OrderId`,a.`BuyerId`,b.`Id`,b.`TenantId`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,a.`ProductCount` FROM (SELECT b.`Id` AS `OrderId`,b.`BuyerId`,COUNT(DISTINCT a.`ProductId`) AS `ProductCount` FROM `myschema`.`sys_order_detail` a INNER JOIN `myschema`.`sys_order` b ON a.`OrderId`=b.`Id` GROUP BY b.`Id`,b.`BuyerId`) a INNER JOIN `myschema`.`sys_user` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>1", sql);
+
+        var result = repository
+            .From(f => f.From<OrderDetail>()
+                .UseTableSchema("fengling")
+                .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
+                .UseTableSchema("fengling")
+                .GroupBy((a, b) => new { OrderId = b.Id, b.BuyerId })
+                .Select((x, a, b) => new { Group = x.Grouping, ProductCount = x.CountDistinct(a.ProductId) }))
+            .InnerJoin<User>((x, y) => x.Group.BuyerId == y.Id)
+            .UseTableSchema("fengling")
+            .Where((a, b) => a.ProductCount > 1)
+            .Select((x, y) => new
+            {
+                x.Group,
+                Buyer = y,
+                x.ProductCount
+            })
+            .ToList();
+        if (result.Count > 0)
+        {
+            Assert.NotNull(result[0]);
+            Assert.NotNull(result[0].Group);
+            Assert.NotNull(result[0].Buyer);
+            Assert.True(result[0].ProductCount > 1);
+        }
+    }
+    [Fact]
+    public async Task Query_ManySharding_SingleTable_Include_TableSchema()
+    {
+        await this.InitSharding();
+        var productCount = 1;
+        var repository = this.dbFactory.Create();
+        var sql = repository.From<Order>()
+            .UseTable(f => f.Contains("_104_") && int.Parse(f[^6..]) > 202001)
+            .UseTableSchema("fengling")
+            .Include(f => f.Details)
+            .UseTableSchema("fengling")
+            .UseTable<Order>((origOrderName, origOrderDetailName, orderName) =>
+                orderName.Replace(origOrderName, origOrderDetailName))
+            .Where(f => f.ProductCount > productCount)
+            .ToSql(out _);
+        Assert.Equal("SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_order_104_202405` a WHERE a.`ProductCount`>@p0", sql);
+
+        var result = repository.From<Order>()
+            .UseTable(f => f.Contains("_104_") && int.Parse(f[^6..]) > 202001)
+            .UseTableSchema("fengling")
+            .Include(f => f.Details)
+            .UseTableSchema("fengling")
+            .UseTable<Order>((origOrderName, origOrderDetailName, orderName) =>
+                orderName.Replace(origOrderName, origOrderDetailName))
+            .Where(f => f.ProductCount > productCount)
+            .ToList();
+        if (result.Count > 0)
+        {
+            var tenantIds = result.Select(f => f.TenantId).Distinct().ToList();
+            Assert.False(tenantIds.Exists(f => f != "104"));
+            foreach (var order in result)
+            {
+                Assert.NotNull(order.Details);
+                foreach (var orderDetail in order.Details)
+                {
+                    Assert.Equal("104", orderDetail.TenantId);
+                }
+            }
+        }
+
+        sql = repository.From<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .UseTableSchema("fengling")
+            .Include(f => f.Details)
+            .UseTableSchema("fengling")
+            .UseTable<Order>((origOrderName, origOrderDetailName, orderName) =>
+                orderName.Replace(origOrderName, origOrderDetailName))
+            .Where(f => f.ProductCount > productCount)
+            .ToSql(out _);
+        Assert.Equal("SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_order_104_202405` a WHERE a.`ProductCount`>@p0 UNION ALL SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_order_105_202405` a WHERE a.`ProductCount`>@p0", sql);
+
+        result = repository.From<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .UseTableSchema("fengling")
+            .Include(f => f.Details)
+            .UseTableSchema("fengling")
+            .UseTable<Order>((origOrderName, origOrderDetailName, orderName) =>
+                orderName.Replace(origOrderName, origOrderDetailName))
+            .Where(f => f.ProductCount > productCount)
+            .ToList();
+        if (result.Count > 0)
+        {
+            var tenantIds = result.Select(f => f.TenantId).ToList();
+            Assert.True(tenantIds.Exists(f => "104,105".Contains(f)));
+            foreach (var order in result)
+            {
+                Assert.NotNull(order.Details);
+                foreach (var orderDetail in order.Details)
+                {
+                    Assert.Contains(orderDetail.TenantId, "104,105");
+                }
+            }
+        }
+    }
 }

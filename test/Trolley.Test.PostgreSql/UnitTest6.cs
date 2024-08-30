@@ -1605,4 +1605,78 @@ public class UnitTest6 : UnitTestBase
             Assert.True(result.Order.Details[0].Amount > 0);
         }
     }
+    [Fact]
+    public async Task Query_ManySharding_SingleTable_Include_TableSchema()
+    {
+        await this.InitSharding();
+        var productCount = 1;
+        var repository = this.dbFactory.Create();
+        var sql = repository.From<Order>()
+            .UseTable(f => f.Contains("_104_") && int.Parse(f[^6..]) > 202001)
+            .UseTableSchema("myschema")
+            .Include(f => f.Details)
+            .UseTableSchema("myschema")
+            .UseTable<Order>((origOrderName, origOrderDetailName, orderName) =>
+                orderName.Replace(origOrderName, origOrderDetailName))
+            .Where(f => f.ProductCount > productCount)
+            .ToSql(out _);
+        Assert.Equal("SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\" FROM \"myschema\".\"sys_order_104_202405\" a WHERE a.\"ProductCount\">@p0", sql);
+
+        var result = repository.From<Order>()
+            .UseTable(f => f.Contains("_104_") && int.Parse(f[^6..]) > 202001)
+            .UseTableSchema("myschema")
+            .Include(f => f.Details)
+            .UseTableSchema("myschema")
+            .UseTable<Order>((origOrderName, origOrderDetailName, orderName) =>
+                orderName.Replace(origOrderName, origOrderDetailName))
+            .Where(f => f.ProductCount > productCount)
+            .ToList();
+        if (result.Count > 0)
+        {
+            var tenantIds = result.Select(f => f.TenantId).Distinct().ToList();
+            Assert.False(tenantIds.Exists(f => f != "104"));
+            foreach (var order in result)
+            {
+                Assert.NotNull(order.Details);
+                foreach (var orderDetail in order.Details)
+                {
+                    Assert.Equal("104", orderDetail.TenantId);
+                }
+            }
+        }
+
+        sql = repository.From<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .UseTableSchema("myschema")
+            .Include(f => f.Details)
+            .UseTableSchema("myschema")
+            .UseTable<Order>((origOrderName, origOrderDetailName, orderName) =>
+                orderName.Replace(origOrderName, origOrderDetailName))
+            .Where(f => f.ProductCount > productCount)
+            .ToSql(out _);
+        Assert.Equal("SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\" FROM \"myschema\".\"sys_order_104_202405\" a WHERE a.\"ProductCount\">@p0 UNION ALL SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\" FROM \"myschema\".\"sys_order_105_202405\" a WHERE a.\"ProductCount\">@p0", sql);
+
+        result = repository.From<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .UseTableSchema("myschema")
+            .Include(f => f.Details)
+            .UseTableSchema("myschema")
+            .UseTable<Order>((origOrderName, origOrderDetailName, orderName) =>
+                orderName.Replace(origOrderName, origOrderDetailName))
+            .Where(f => f.ProductCount > productCount)
+            .ToList();
+        if (result.Count > 0)
+        {
+            var tenantIds = result.Select(f => f.TenantId).ToList();
+            Assert.True(tenantIds.Exists(f => "104,105".Contains(f)));
+            foreach (var order in result)
+            {
+                Assert.NotNull(order.Details);
+                foreach (var orderDetail in order.Details)
+                {
+                    Assert.Contains(orderDetail.TenantId, "104,105");
+                }
+            }
+        }
+    }
 }

@@ -28,6 +28,8 @@ public static class Extensions
         => builder.UseTableSharding(ormProviderType, new TTableShardingConfiguration());
     public static OrmDbFactoryBuilder UseTableSharding<TTableShardingConfiguration>(this OrmDbFactoryBuilder builder, string dbKey) where TTableShardingConfiguration : class, ITableShardingConfiguration, new()
         => builder.UseTableSharding(dbKey, new TTableShardingConfiguration());
+    public static OrmDbFactoryBuilder UseFieldMapHandler<TFieldMapHandler>(this OrmDbFactoryBuilder builder) where TFieldMapHandler : class, IFieldMapHandler, new()
+        => builder.UseFieldMapHandler(new TFieldMapHandler());
     public static void Configure(this IOrmDbFactory dbFactory, OrmProviderType ormProviderType, IModelConfiguration configuration)
     {
         if (!dbFactory.TryGetMapProvider(ormProviderType, out var mapProvider))

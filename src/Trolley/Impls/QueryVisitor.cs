@@ -598,7 +598,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual bool BuildIncludeSql<TTarget>(Type targetType, List<TTarget> targets, out string sql)
     {
         sql = null;
-        if (targets == null) return false;
+        if (targets == null || targets.Count == 0) return false;
         if (this.IncludeTables == null)
         {
             if (this.deferredRefIncludeValuesSetters == null) return false;

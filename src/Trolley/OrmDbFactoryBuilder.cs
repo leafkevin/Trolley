@@ -117,11 +117,6 @@ public sealed class OrmDatabaseBuilder
         this.database = database;
         this.dbKey = database.DbKey;
     }
-    public OrmDatabaseBuilder UseConnectonString(string connectionStrings)
-    {
-        database.ConnectionString = connectionStrings;
-        return this;
-    }
     public OrmDatabaseBuilder UseSlave(params string[] connectionStrings)
     {
         database.SlaveConnectionStrings ??= new();
@@ -145,7 +140,7 @@ public sealed class OrmDatabaseBuilder
         shardingInitializer.Invoke(builder);
         return this;
     }
-    public OrmDatabaseBuilder UseDefaultDatabase()
+    public OrmDatabaseBuilder AsDefaultDatabase()
     {
         this.dbFactory.UseDefaultDatabase(this.dbKey);
         return this;
