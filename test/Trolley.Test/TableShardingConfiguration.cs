@@ -14,6 +14,8 @@ public class TableShardingConfiguration : ITableShardingConfiguration
                 //时间分表，通常都是支持范围查询
                 .UseRangeRule((origName, tenantId, beginTime, endTime) =>
                 {
+                    if (tenantId.Length < 3)
+                        return new List<string> { origName };
                     var tableNames = new List<string>();
                     var current = beginTime.AddDays(1 - beginTime.Day);
                     while (current <= endTime)
@@ -36,6 +38,8 @@ public class TableShardingConfiguration : ITableShardingConfiguration
                 //时间分表，通常都是支持范围查询
                 .UseRangeRule((origName, tenantId, beginTime, endTime) =>
                 {
+                    if (tenantId.Length < 3)
+                        return new List<string> { origName };
                     var tableNames = new List<string>();
                     var current = beginTime.AddDays(1 - beginTime.Day);
                     while (current <= endTime)

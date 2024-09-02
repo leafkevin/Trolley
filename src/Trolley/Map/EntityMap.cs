@@ -121,7 +121,7 @@ public class EntityMap
                     memberMapper.NativeDbType = ormProvider.GetNativeDbType(memberMapper.MemberType);
             }
             if (!memberMapper.IsNavigation && string.IsNullOrEmpty(memberMapper.DbColumnType))
-                throw new ArgumentNullException($"实体{this.EntityType.FullName}的成员{memberMapper.MemberName}的映射DbColumnType栏位不能为空，必须配置");
+                throw new Exception($"实体{this.EntityType.FullName}的成员{memberMapper.MemberName}的映射DbColumnType栏位不能为空，必须配置");
             if (memberMapper.NativeDbType is int nativeDbType)
                 memberMapper.NativeDbType = Enum.ToObject(ormProvider.NativeDbTypeType, nativeDbType);
 
