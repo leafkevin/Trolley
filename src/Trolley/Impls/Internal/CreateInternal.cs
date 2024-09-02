@@ -14,7 +14,7 @@ public class CreateInternal
     #endregion
 
     #region WithBy
-    protected virtual void WithByInternal<TInsertObject>(bool condition, TInsertObject insertObj)
+    protected virtual void WithByInternal<TInsertObject>(bool condition, TInsertObject insertObj, ActionMode? actionMode = null)
     {
         if (!condition) return;
         if (insertObj == null)
@@ -25,7 +25,7 @@ public class CreateInternal
         if (!insertObjType.IsEntityType(out _))
             throw new NotSupportedException($"方法WithBy只支持类对象参数，不支持基础类型参数, insertObj类型: {insertObjType.FullName}");
 
-        this.Visitor.WithBy(insertObj);
+        this.Visitor.WithBy(insertObj, actionMode);
     }
     protected virtual void WithByInternal<TField>(bool condition, Expression fieldSelector, TField fieldValue)
     {

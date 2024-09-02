@@ -47,10 +47,10 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
         var entityType = tableSegment.EntityType;
         var entityMapper = tableSegment.Mapper;
         var tableName = entityMapper.TableName;
-        if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out _))
+        if (tableSegment.IsSharding)
         {
             if (string.IsNullOrEmpty(tableSegment.Body))
-                throw new Exception($"实体表{entityType.FullName}有配置分表，当前操作未指定分表，请调用UseTable或UseTableBy方法指定分表");
+                throw new Exception($"实体表{entityType.FullName}有配置分表，需要调用UseTable或UseTableBy方法明确指定分表");
             tableName = tableSegment.Body;
         }
         tableName = this.OrmProvider.GetTableName(tableName);
@@ -112,7 +112,7 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
         var tableName = tableSegment.Mapper.TableName;
         var entityType = tableSegment.EntityType;
 
-        if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out _))
+        if (tableSegment.IsSharding)
         {
             //有设置分表，优先使用分表，没有设置分表，则根据数据的字段确定分表
             if (!string.IsNullOrEmpty(tableSegment.Body))

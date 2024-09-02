@@ -46,7 +46,7 @@ public class Create<TEntity> : CreateInternal, ICreate<TEntity>
     #region WithBy
     public virtual IContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj)
     {
-        base.WithByInternal(true, insertObj);
+        base.WithByInternal(true, insertObj, ActionMode.Single);
         return this.OrmProvider.NewContinuedCreate<TEntity>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -128,12 +128,6 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                         (var isNeedSplit, var tableName, var insertObjs, var bulkCount,
                             var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
 
-                        void clearCommand(string tableName)
-                        {
-                            builder.Clear();
-                            command.Parameters.Clear();
-                            firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                        }
                         int executor(string tableName, IEnumerable insertObjs)
                         {
                             int count = 0, index = 0;
@@ -146,7 +140,9 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                                     command.CommandText = builder.ToString();
                                     eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
                                     count += command.ExecuteNonQuery();
-                                    clearCommand(tableName);
+                                    builder.Clear();
+                                    command.Parameters.Clear();
+                                    firstSqlSetter.Invoke(command.Parameters, builder, tableName);
                                     index = 0;
                                     continue;
                                 }
@@ -157,6 +153,8 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                                 command.CommandText = builder.ToString();
                                 eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
                                 count += command.ExecuteNonQuery();
+                                builder.Clear();
+                                command.Parameters.Clear();
                             }
                             return count;
                         }
@@ -225,12 +223,6 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                         (var isNeedSplit, var tableName, var insertObjs, var bulkCount,
                             var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
 
-                        void clearCommand(string tableName)
-                        {
-                            builder.Clear();
-                            command.Parameters.Clear();
-                            firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                        }
                         async Task<int> executor(string tableName, IEnumerable insertObjs)
                         {
                             int count = 0, index = 0;
@@ -243,7 +235,9 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                                     command.CommandText = builder.ToString();
                                     eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
                                     count += await command.ExecuteNonQueryAsync(cancellationToken);
-                                    clearCommand(tableName);
+                                    builder.Clear();
+                                    command.Parameters.Clear();
+                                    firstSqlSetter.Invoke(command.Parameters, builder, tableName);
                                     index = 0;
                                     continue;
                                 }
@@ -254,6 +248,8 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                                 command.CommandText = builder.ToString();
                                 eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
                                 count += await command.ExecuteNonQueryAsync(cancellationToken);
+                                builder.Clear();
+                                command.Parameters.Clear();
                             }
                             return count;
                         }

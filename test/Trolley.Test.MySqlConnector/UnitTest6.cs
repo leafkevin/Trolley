@@ -1722,4 +1722,34 @@ public class UnitTest6 : UnitTestBase
             }
         }
     }
+    [Fact]
+    public async Task Create_Without_Sharding()
+    {
+        var repository = this.dbFactory.Create();
+        await repository.DeleteAsync<User>(11);
+        repository.Create<User>()
+            .WithBy(new
+            {
+                Id = 11,
+                TenantId = "104",
+                Name = "leafkevin",
+                Age = 25,
+                CompanyId = 1,
+                Gender = Gender.Male,
+                GuidField = Guid.NewGuid(),
+                SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
+                SourceType = UserSourceType.Douyin,
+                IsEnabled = true,
+                CreatedAt = DateTime.Parse("2024-05-10 06:07:08"),
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Parse("2024-05-15 16:27:38"),
+                UpdatedBy = 1
+            })
+            .Execute();
+        var result = repository.From<User>()
+            .Where(f => f.Id == 11)
+            .First();
+        Assert.NotNull(result);
+        Assert.Equal("104", result.TenantId);
+    }
 }

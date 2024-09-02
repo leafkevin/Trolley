@@ -75,13 +75,7 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                     (isNeedSplit, var tableName, insertObjs, var bulkCount,
                         var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
 
-                    Action<string> clearCommand = tableName =>
-                    {
-                        builder.Clear();
-                        command.Parameters.Clear();
-                        firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                    };
-                    Func<string, IEnumerable, int> executor = (tableName, insertObjs) =>
+                    int executor(string tableName, IEnumerable insertObjs)
                     {
                         int count = 0, index = 0;
                         foreach (var insertObj in insertObjs)
@@ -93,7 +87,9 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                                 command.CommandText = builder.ToString();
                                 eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
                                 count += command.ExecuteNonQuery();
-                                clearCommand.Invoke(tableName);
+                                builder.Clear();
+                                command.Parameters.Clear();
+                                firstSqlSetter.Invoke(command.Parameters, builder, tableName);
                                 index = 0;
                                 continue;
                             }
@@ -104,6 +100,8 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                             command.CommandText = builder.ToString();
                             eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
                             count += command.ExecuteNonQuery();
+                            builder.Clear();
+                            command.Parameters.Clear();
                         }
                         return count;
                     };
@@ -114,13 +112,13 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                         foreach (var tabledInsertObj in tabledInsertObjs)
                         {
                             firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
-                            result += executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
+                            result += executor(tabledInsertObj.Key, tabledInsertObj.Value);
                         }
                     }
                     else
                     {
                         firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                        result = executor.Invoke(tableName, insertObjs);
+                        result = executor(tableName, insertObjs);
                     }
                     builder.Clear();
                     builder = null;
@@ -213,13 +211,7 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                     (isNeedSplit, var tableName, insertObjs, var bulkCount,
                         var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
 
-                    Action<string> clearCommand = tableName =>
-                    {
-                        sqlBuilder.Clear();
-                        command.Parameters.Clear();
-                        firstSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName);
-                    };
-                    Func<string, IEnumerable, Task<int>> executor = async (tableName, insertObjs) =>
+                    async Task<int> executor(string tableName, IEnumerable insertObjs)
                     {
                         int count = 0, index = 0;
                         foreach (var insertObj in insertObjs)
@@ -231,7 +223,9 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                                 command.CommandText = sqlBuilder.ToString();
                                 eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
                                 count += await command.ExecuteNonQueryAsync(cancellationToken);
-                                clearCommand.Invoke(tableName);
+                                sqlBuilder.Clear();
+                                command.Parameters.Clear();
+                                firstSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName);
                                 index = 0;
                                 continue;
                             }
@@ -242,6 +236,8 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                             command.CommandText = sqlBuilder.ToString();
                             eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
                             count += await command.ExecuteNonQueryAsync(cancellationToken);
+                            sqlBuilder.Clear();
+                            command.Parameters.Clear();
                         }
                         return count;
                     };
@@ -252,13 +248,13 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                         foreach (var tabledInsertObj in tabledInsertObjs)
                         {
                             firstSqlSetter.Invoke(command.Parameters, sqlBuilder, tabledInsertObj.Key);
-                            result += await executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
+                            result += await executor(tabledInsertObj.Key, tabledInsertObj.Value);
                         }
                     }
                     else
                     {
                         firstSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName);
-                        result = await executor.Invoke(tableName, insertObjs);
+                        result = await executor(tableName, insertObjs);
                     }
                     sqlBuilder.Clear();
                     sqlBuilder = null;

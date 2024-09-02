@@ -59,7 +59,7 @@ public class FieldShardingBuilder<TEntity, TField>
 
         return new FieldShardingBuilder<TEntity, TField, TField2>(this.shardingProvider);
     }
-    public FieldShardingBuilder<TEntity, TField> UseRule(Func<string, string, TField, string> tableNameGetter, string validateRegex)
+    public FieldShardingBuilder<TEntity, TField> UseRule(Func<string, TField, string> tableNameGetter, string validateRegex)
     {
         if (tableNameGetter == null)
             throw new ArgumentNullException(nameof(tableNameGetter));
@@ -69,11 +69,11 @@ public class FieldShardingBuilder<TEntity, TField>
         var entityType = typeof(TEntity);
         if (!this.shardingProvider.TryGetTableSharding(entityType, out var shardingTable))
             this.shardingProvider.AddTableSharding(entityType, shardingTable = new TableShardingInfo { EntityType = entityType });
-        shardingTable.Rule = (string dbKey, string origName, object fieldValue) => tableNameGetter(dbKey, origName, (TField)fieldValue);
+        shardingTable.Rule = (string origName, object fieldValue) => tableNameGetter(origName, (TField)fieldValue);
         shardingTable.ValidateRegex = validateRegex;
         return this;
     }
-    public FieldShardingBuilder<TEntity, TField> UseRangeRule(Func<string, string, TField, TField, List<string>> tableNamesGetter)
+    public FieldShardingBuilder<TEntity, TField> UseRangeRule(Func<string, TField, TField, List<string>> tableNamesGetter)
     {
         if (tableNamesGetter == null)
             throw new ArgumentNullException(nameof(tableNamesGetter));
@@ -81,8 +81,8 @@ public class FieldShardingBuilder<TEntity, TField>
         var entityType = typeof(TEntity);
         if (!this.shardingProvider.TryGetTableSharding(entityType, out var shardingTable))
             this.shardingProvider.AddTableSharding(entityType, shardingTable = new TableShardingInfo { EntityType = entityType });
-        shardingTable.Rule = (string dbKey, string origName, object beginFieldValue, object endFieldValue)
-            => tableNamesGetter(dbKey, origName, (TField)beginFieldValue, (TField)endFieldValue);
+        shardingTable.Rule = (string origName, object beginFieldValue, object endFieldValue)
+            => tableNamesGetter(origName, (TField)beginFieldValue, (TField)endFieldValue);
         return this;
     }
 }
@@ -97,7 +97,7 @@ public class FieldShardingBuilder<TEntity, TField1, TField2>
     /// <param name="tableNameGetter">分表名称获取委托</param>
     /// <param name="validateRegex"> 分表名称验证正则表达式，用于筛选分表名称</param>
     /// <returns></returns>
-    public FieldShardingBuilder<TEntity, TField1, TField2> UseRule(Func<string, string, TField1, TField2, string> tableNameGetter, string validateRegex)
+    public FieldShardingBuilder<TEntity, TField1, TField2> UseRule(Func<string, TField1, TField2, string> tableNameGetter, string validateRegex)
     {
         if (tableNameGetter == null)
             throw new ArgumentNullException(nameof(tableNameGetter));
@@ -107,11 +107,11 @@ public class FieldShardingBuilder<TEntity, TField1, TField2>
         var entityType = typeof(TEntity);
         if (!this.shardingProvider.TryGetTableSharding(entityType, out var shardingTable))
             this.shardingProvider.AddTableSharding(entityType, shardingTable = new TableShardingInfo { EntityType = entityType });
-        shardingTable.Rule = (string dbKey, string origName, object field1Value, object field2Value) => tableNameGetter(dbKey, origName, (TField1)field1Value, (TField2)field2Value);
+        shardingTable.Rule = (string origName, object field1Value, object field2Value) => tableNameGetter(origName, (TField1)field1Value, (TField2)field2Value);
         shardingTable.ValidateRegex = validateRegex;
         return this;
     }
-    public FieldShardingBuilder<TEntity, TField1, TField2> UseRangeRule(Func<string, string, TField1, TField2, TField2, List<string>> tableNamesGetter)
+    public FieldShardingBuilder<TEntity, TField1, TField2> UseRangeRule(Func<string, TField1, TField2, TField2, List<string>> tableNamesGetter)
     {
         if (tableNamesGetter == null)
             throw new ArgumentNullException(nameof(tableNamesGetter));
@@ -119,10 +119,11 @@ public class FieldShardingBuilder<TEntity, TField1, TField2>
         var entityType = typeof(TEntity);
         if (!this.shardingProvider.TryGetTableSharding(entityType, out var shardingTable))
             this.shardingProvider.AddTableSharding(entityType, shardingTable = new TableShardingInfo { EntityType = entityType });
-        shardingTable.RangleRule = (string dbKey, string origName, object beginField1Value, object beginField2Value, object endField2Value) => tableNamesGetter(dbKey, origName, (TField1)beginField1Value, (TField2)beginField2Value, (TField2)endField2Value);
+        shardingTable.RangleRule = (string origName, object beginField1Value, object beginField2Value, object endField2Value)
+            => tableNamesGetter(origName, (TField1)beginField1Value, (TField2)beginField2Value, (TField2)endField2Value);
         return this;
     }
-    public FieldShardingBuilder<TEntity, TField1, TField2> UseRangeRule(Func<string, string, TField1, TField1, TField2, List<string>> tableNamesGetter)
+    public FieldShardingBuilder<TEntity, TField1, TField2> UseRangeRule(Func<string, TField1, TField1, TField2, List<string>> tableNamesGetter)
     {
         if (tableNamesGetter == null)
             throw new ArgumentNullException(nameof(tableNamesGetter));
@@ -130,7 +131,8 @@ public class FieldShardingBuilder<TEntity, TField1, TField2>
         var entityType = typeof(TEntity);
         if (!this.shardingProvider.TryGetTableSharding(entityType, out var shardingTable))
             this.shardingProvider.AddTableSharding(entityType, shardingTable = new TableShardingInfo { EntityType = entityType });
-        shardingTable.RangleRule = (string dbKey, string origName, object beginField1Value, object endField1Value, object beginField2Value) => tableNamesGetter(dbKey, origName, (TField1)beginField1Value, (TField1)endField1Value, (TField2)beginField2Value);
+        shardingTable.RangleRule = (string origName, object beginField1Value, object endField1Value, object beginField2Value)
+            => tableNamesGetter(origName, (TField1)beginField1Value, (TField1)endField1Value, (TField2)beginField2Value);
         return this;
     }
 }

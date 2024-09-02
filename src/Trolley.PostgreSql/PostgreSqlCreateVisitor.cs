@@ -57,10 +57,10 @@ public class PostgreSqlCreateVisitor : CreateVisitor
         var entityType = tableSegment.EntityType;
         var entityMapper = tableSegment.Mapper;
         var tableName = entityMapper.TableName;
-        if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out _))
+        if (tableSegment.IsSharding)
         {
             if (string.IsNullOrEmpty(tableSegment.Body))
-                throw new Exception($"实体表{entityType.FullName}有配置分表，当前操作未指定分表，请调用UseTable或UseTableBy方法指定分表");
+                throw new Exception($"实体表{entityType.FullName}有配置分表，需要调用UseTable或UseTableBy方法明确指定分表");
             tableName = tableSegment.Body;
         }
         tableName = this.OrmProvider.GetTableName(tableName);
@@ -142,7 +142,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
         if (isNeedSplit)
         {
             var entityType = this.Tables[0].EntityType;
-            var tabledInsertObjs = RepositoryHelper.SplitShardingParameters(this.DbKey, this.MapProvider, this.ShardingProvider, entityType, insertObjs);
+            var tabledInsertObjs = RepositoryHelper.SplitShardingParameters(this.MapProvider, this.ShardingProvider, entityType, insertObjs);
             int index = 0;
             foreach (var tabledInsertObj in tabledInsertObjs)
             {

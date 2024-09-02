@@ -1389,9 +1389,9 @@ public sealed class DbContext
         if (exception != null) throw exception;
     }
     public Dictionary<string, List<object>> SplitShardingParameters(Type entityType, IEnumerable parameters)
-        => RepositoryHelper.SplitShardingParameters(this.DbKey, this.MapProvider, this.ShardingProvider, entityType, parameters);
+        => RepositoryHelper.SplitShardingParameters(this.MapProvider, this.ShardingProvider, entityType, parameters);
     public string GetShardingTableName(Type entityType, Type parameterType, object parameter)
-        => RepositoryHelper.GetShardingTableName(this.DbKey, this.MapProvider, this.ShardingProvider, entityType, parameterType, parameter);
+        => RepositoryHelper.GetShardingTableName(this.MapProvider, this.ShardingProvider, entityType, parameterType, parameter);
     public string BuildShardingTablesSqlByFormat(SqlVisitor visitor, string formatSql, string jointMark)
     {
         //查询，分表多个表时，都使用表名替换生成分表sql

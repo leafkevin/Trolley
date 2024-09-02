@@ -97,13 +97,12 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     public virtual string BuildSql(out List<SqlFieldSegment> readerFields)
     {
         readerFields = null;
-        var entityType = this.Tables[0].EntityType;
-        var entityMapper = this.Tables[0].Mapper;
-        var tableName = this.Tables[0].Body ?? entityMapper.TableName;
-        var tableSchema = this.Tables[0].TableSchema;
+        var tableSegment = this.Tables[0];
+        var entityMapper = tableSegment.Mapper;
+        var tableName = tableSegment.Body ?? entityMapper.TableName;
+        var tableSchema = tableSegment.TableSchema;
         if (!string.IsNullOrEmpty(tableSchema))
             tableName = tableSchema + "." + tableName;
-
         tableName = this.OrmProvider.GetTableName(tableName);
         var fieldsBuilder = new StringBuilder($"INSERT INTO {tableName} (");
         var valuesBuilder = new StringBuilder(" VALUES (");
@@ -132,13 +131,12 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         valuesBuilder.Clear();
         var sql = fieldsBuilder.ToString();
         fieldsBuilder.Clear();
-        fieldsBuilder = null;
-        valuesBuilder = null;
         return sql;
     }
-    public virtual void WithBy(object insertObj)
+    public virtual void WithBy(object insertObj, ActionMode? actionMode = null)
     {
-        this.ActionMode = ActionMode.Single;
+        if (actionMode.HasValue)
+            this.ActionMode = actionMode.Value;
         this.deferredSegments.Add(new CommandSegment
         {
             Type = "WithBy",
@@ -199,7 +197,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         if (isNeedSplit)
         {
             var entityType = this.Tables[0].EntityType;
-            var tabledInsertObjs = RepositoryHelper.SplitShardingParameters(this.DbKey, this.MapProvider, this.ShardingProvider, entityType, insertObjs);
+            var tabledInsertObjs = RepositoryHelper.SplitShardingParameters(this.MapProvider, this.ShardingProvider, entityType, insertObjs);
             int index = 0;
             foreach (var tabledInsertObj in tabledInsertObjs)
             {
@@ -232,12 +230,12 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         var tableName = tableSegment.Mapper.TableName;
         var entityType = tableSegment.EntityType;
 
-        if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out _))
+        if (tableSegment.IsSharding)
         {
             //有设置分表，优先使用分表，没有设置分表，则根据数据的字段确定分表
             if (!string.IsNullOrEmpty(tableSegment.Body))
                 tableName = tableSegment.Body;
-            //未指定分表，需要根据数据字段确定分表
+            //未指定分表，或是需要根据数据字段确定分表
             else isNeedSplit = true;
         }
         var fieldsSqlPartSetter = RepositoryHelper.BuildCreateFieldsSqlPart(this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames);
@@ -488,9 +486,6 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             Fields = fieldsBuilder.ToString(),
             Values = valuesBuilder.ToString()
         });
-        //未明确指定分表，根据字段数据进行分表
-        if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out var tableSharding) && string.IsNullOrEmpty(this.Tables[0].Body))
-            this.Tables[0].Body = RepositoryHelper.GetShardingTableName(this.DbKey, this.MapProvider, this.ShardingProvider, entityType, insertObjType, insertObj);
     }
     public virtual void VisitWithByField(object deferredSegmentValue)
     {

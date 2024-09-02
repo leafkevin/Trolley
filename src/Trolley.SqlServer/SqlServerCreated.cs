@@ -74,13 +74,7 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
                     (isNeedSplit, var tableName, insertObjs, var bulkCount,
                         var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
 
-                    Action<string> clearCommand = tableName =>
-                    {
-                        builder.Clear();
-                        command.Parameters.Clear();
-                        firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                    };
-                    Func<string, IEnumerable, int> executor = (tableName, insertObjs) =>
+                    int executor(string tableName, IEnumerable insertObjs)
                     {
                         int count = 0, index = 0;
                         foreach (var insertObj in insertObjs)
@@ -92,7 +86,9 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
                                 command.CommandText = builder.ToString();
                                 eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
                                 count += command.ExecuteNonQuery();
-                                clearCommand.Invoke(tableName);
+                                builder.Clear();
+                                command.Parameters.Clear();
+                                firstSqlSetter.Invoke(command.Parameters, builder, tableName);
                                 index = 0;
                                 continue;
                             }
@@ -103,6 +99,8 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
                             command.CommandText = builder.ToString();
                             eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
                             count += command.ExecuteNonQuery();
+                            builder.Clear();
+                            command.Parameters.Clear();
                         }
                         return count;
                     };
@@ -113,13 +111,13 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
                         foreach (var tabledInsertObj in tabledInsertObjs)
                         {
                             firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
-                            result += executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
+                            result += executor(tabledInsertObj.Key, tabledInsertObj.Value);
                         }
                     }
                     else
                     {
                         firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                        result = executor.Invoke(tableName, insertObjs);
+                        result = executor(tableName, insertObjs);
                     }
                     builder.Clear();
                     builder = null;
@@ -208,29 +206,25 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
                     }
                     break;
                 case ActionMode.Bulk:
-                    var sqlBuilder = new StringBuilder();
+                    var builder = new StringBuilder();
                     (isNeedSplit, var tableName, insertObjs, var bulkCount,
                         var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
 
-                    Action<string> clearCommand = tableName =>
-                    {
-                        sqlBuilder.Clear();
-                        command.Parameters.Clear();
-                        firstSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName);
-                    };
-                    Func<string, IEnumerable, Task<int>> executor = async (tableName, insertObjs) =>
+                    async Task<int> executor(string tableName, IEnumerable insertObjs)
                     {
                         int count = 0, index = 0;
                         foreach (var insertObj in insertObjs)
                         {
-                            if (index > 0) sqlBuilder.Append(',');
-                            loopSqlSetter.Invoke(command.Parameters, sqlBuilder, insertObj, index.ToString());
+                            if (index > 0) builder.Append(',');
+                            loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
                             if (index >= bulkCount)
                             {
-                                command.CommandText = sqlBuilder.ToString();
+                                command.CommandText = builder.ToString();
                                 eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
                                 count += await command.ExecuteNonQueryAsync(cancellationToken);
-                                clearCommand.Invoke(tableName);
+                                builder.Clear();
+                                command.Parameters.Clear();
+                                firstSqlSetter.Invoke(command.Parameters, builder, tableName);
                                 index = 0;
                                 continue;
                             }
@@ -238,9 +232,11 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
                         }
                         if (index > 0)
                         {
-                            command.CommandText = sqlBuilder.ToString();
+                            command.CommandText = builder.ToString();
                             eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
                             count += await command.ExecuteNonQueryAsync(cancellationToken);
+                            builder.Clear();
+                            command.Parameters.Clear();
                         }
                         return count;
                     };
@@ -250,17 +246,16 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
                         var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
                         foreach (var tabledInsertObj in tabledInsertObjs)
                         {
-                            firstSqlSetter.Invoke(command.Parameters, sqlBuilder, tabledInsertObj.Key);
-                            result += await executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
+                            firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
+                            result += await executor(tabledInsertObj.Key, tabledInsertObj.Value);
                         }
                     }
                     else
                     {
-                        firstSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName);
-                        result = await executor.Invoke(tableName, insertObjs);
+                        firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                        result = await executor(tableName, insertObjs);
                     }
-                    sqlBuilder.Clear();
-                    sqlBuilder = null;
+                    builder.Clear();
                     break;
                 default:
                     //默认单条

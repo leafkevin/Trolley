@@ -152,13 +152,13 @@ public class SqlVisitor : ISqlVisitor
         {
             if (field2Value == null)
                 throw new ArgumentNullException($"实体{tableSegment.EntityType.FullName}的分表规则依赖2个字段，字段值field2Value不能为null");
-            var shardingRule = shardingTable.Rule as Func<string, string, object, object, string>;
-            tableName = shardingRule.Invoke(this.DbKey, origTableName, field1Value, field2Value);
+            var shardingRule = shardingTable.Rule as Func<string, object, object, string>;
+            tableName = shardingRule.Invoke(origTableName, field1Value, field2Value);
         }
         else
         {
-            var shardingRule = shardingTable.Rule as Func<string, string, object, string>;
-            tableName = shardingRule.Invoke(this.DbKey, origTableName, field1Value);
+            var shardingRule = shardingTable.Rule as Func<string, object, string>;
+            tableName = shardingRule.Invoke(origTableName, field1Value);
         }
         //单个分表，直接设置body表名，当作不分表处理
         if (tableSegment.TableNames == null)
@@ -189,8 +189,8 @@ public class SqlVisitor : ISqlVisitor
 
         tableSegment.IsSharding = true;
         var origTableName = tableSegment.Mapper.TableName;
-        var shardingRule = shardingTable.RangleRule as Func<string, string, object, object, List<string>>;
-        var tableNames = shardingRule.Invoke(this.DbKey, origTableName, beginFieldValue, endFieldValue);
+        var shardingRule = shardingTable.RangleRule as Func<string, object, object, List<string>>;
+        var tableNames = shardingRule.Invoke(origTableName, beginFieldValue, endFieldValue);
         if (tableNames.Count > 1)
         {
             tableSegment.ShardingType = ShardingTableType.TableRange;
@@ -220,8 +220,8 @@ public class SqlVisitor : ISqlVisitor
 
         tableSegment.IsSharding = true;
         var origTableName = tableSegment.Mapper.TableName;
-        var shardingRule = shardingTable.RangleRule as Func<string, string, object, object, object, List<string>>;
-        var tableNames = shardingRule.Invoke(this.DbKey, origTableName, fieldValue1, fieldValue2, fieldValue3);
+        var shardingRule = shardingTable.RangleRule as Func<string, object, object, object, List<string>>;
+        var tableNames = shardingRule.Invoke(origTableName, fieldValue1, fieldValue2, fieldValue3);
         if (tableNames.Count > 1)
         {
             tableSegment.ShardingType = ShardingTableType.TableRange;

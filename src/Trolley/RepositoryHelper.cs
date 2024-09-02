@@ -35,7 +35,7 @@ public class RepositoryHelper
     private static ConcurrentDictionary<int, object> updateWithCommandInitializerCache = new();
     private static ConcurrentDictionary<int, object> updateMultiWithCommandInitializerCache = new();
 
-    private static ConcurrentDictionary<int, Func<string, string, object, string>> shardingTableNameGetters = new();
+    private static ConcurrentDictionary<int, Func<string, object, string>> shardingTableNameGetters = new();
 
     public static void AddValueParameter(IOrmProvider ormProvider, Expression dbParametersExpr, Expression ormProviderExpr, Expression parameterNameExpr,
         Type fieldValueType, Expression parameterValueExpr, MemberMap memberMapper, List<ParameterExpression> blockParameters, List<Expression> blockBodies)
@@ -1161,7 +1161,7 @@ public class RepositoryHelper
         });
     }
 
-    public static Dictionary<string, List<object>> SplitShardingParameters(string dbKey, IEntityMapProvider mapProvider, ITableShardingProvider shardingProvider, Type entityType, IEnumerable parameters)
+    public static Dictionary<string, List<object>> SplitShardingParameters(IEntityMapProvider mapProvider, ITableShardingProvider shardingProvider, Type entityType, IEnumerable parameters)
     {
         var result = new Dictionary<string, List<object>>();
         Type parameterType = null;
@@ -1172,22 +1172,22 @@ public class RepositoryHelper
         }
         foreach (var parameter in parameters)
         {
-            var tableName = RepositoryHelper.GetShardingTableName(dbKey, mapProvider, shardingProvider, entityType, parameterType, parameter);
+            var tableName = RepositoryHelper.GetShardingTableName(mapProvider, shardingProvider, entityType, parameterType, parameter);
             if (!result.TryGetValue(tableName, out var myParameters))
                 result.Add(tableName, myParameters = new List<object>());
             myParameters.Add(parameter);
         }
         return result;
     }
-    public static string GetShardingTableName(string dbKey, IEntityMapProvider mapProvider, ITableShardingProvider shardingProvider, Type entityType, Type parameterType, object parameter)
+    public static string GetShardingTableName(IEntityMapProvider mapProvider, ITableShardingProvider shardingProvider, Type entityType, Type parameterType, object parameter)
     {
         var entityMapper = mapProvider.GetEntityMap(entityType);
         var tableName = entityMapper.TableName;
         if (TryBuildShardingTableNameGetter(shardingProvider, entityType, parameterType, out var tableNameGetter))
-            return tableNameGetter.Invoke(dbKey, tableName, parameter);
+            return tableNameGetter.Invoke(tableName, parameter);
         return tableName;
     }
-    public static bool TryBuildShardingTableNameGetter(ITableShardingProvider shardingProvider, Type entityType, Type parameterType, out Func<string, string, object, string> tableNameGetter)
+    public static bool TryBuildShardingTableNameGetter(ITableShardingProvider shardingProvider, Type entityType, Type parameterType, out Func<string, object, string> tableNameGetter)
     {
         if (shardingProvider == null || !shardingProvider.TryGetTableSharding(entityType, out var shardingTable))
         {
@@ -1204,7 +1204,7 @@ public class RepositoryHelper
             {
                 tableNameGetter = shardingTableNameGetters.GetOrAdd(cacheKey, f =>
                 {
-                    return (string dbKey, string origName, object parameter) =>
+                    return (string origName, object parameter) =>
                     {
                         var dict = parameter as IDictionary<string, object>;
                         if (!dict.TryGetValue(shardingTable.DependOnMembers[0], out var field1Value))
@@ -1212,8 +1212,8 @@ public class RepositoryHelper
                         if (!dict.TryGetValue(shardingTable.DependOnMembers[1], out var field2Value))
                             throw new MissingMemberException($"实体表{entityType.FullName}已设置分表并依赖成员{shardingTable.DependOnMembers[1]}映射的字段，但当前字典中不包含key:{shardingTable.DependOnMembers[1]}的键值");
 
-                        var tableNameRuleGetter = shardingTable.Rule as Func<string, string, object, object, string>;
-                        return tableNameRuleGetter.Invoke(dbKey, origName, field1Value, field2Value);
+                        var tableNameRuleGetter = shardingTable.Rule as Func<string, object, object, string>;
+                        return tableNameRuleGetter.Invoke(origName, field1Value, field2Value);
                     };
                 });
             }
@@ -1221,10 +1221,9 @@ public class RepositoryHelper
             {
                 tableNameGetter = shardingTableNameGetters.GetOrAdd(cacheKey, f =>
                 {
-                    var dbKeyExpr = Expression.Parameter(typeof(string), "dbKey");
                     var origNameExpr = Expression.Parameter(typeof(string), "origName");
                     var parameterObjExpr = Expression.Parameter(typeof(object), "parameterObj");
-                    var tableNameRuleGetter = shardingTable.Rule as Func<string, string, object, object, string>;
+                    var tableNameRuleGetter = shardingTable.Rule as Func<string, object, object, string>;
 
                     var members = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
                         .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
@@ -1240,9 +1239,9 @@ public class RepositoryHelper
                     Expression field2Expr = Expression.PropertyOrField(typedParameterObjExpr, shardingTable.DependOnMembers[1]);
                     if (field2Expr.Type != typeof(object))
                         field2Expr = Expression.Convert(field2Expr, typeof(object));
-                    var getterExpr = Expression.Constant(tableNameRuleGetter, typeof(Func<string, string, object, object, string>));
-                    var bodyExpr = Expression.Invoke(getterExpr, dbKeyExpr, origNameExpr, field1Expr, field2Expr);
-                    return Expression.Lambda<Func<string, string, object, string>>(bodyExpr, dbKeyExpr, origNameExpr, parameterObjExpr).Compile();
+                    var getterExpr = Expression.Constant(tableNameRuleGetter, typeof(Func<string, object, object, string>));
+                    var bodyExpr = Expression.Invoke(getterExpr, origNameExpr, field1Expr, field2Expr);
+                    return Expression.Lambda<Func<string, object, string>>(bodyExpr, origNameExpr, parameterObjExpr).Compile();
                 });
             }
         }
@@ -1252,14 +1251,14 @@ public class RepositoryHelper
             {
                 tableNameGetter = shardingTableNameGetters.GetOrAdd(cacheKey, f =>
                 {
-                    return (string dbKey, string origName, object parameter) =>
+                    return (string origName, object parameter) =>
                     {
                         var dict = parameter as IDictionary<string, object>;
                         if (!dict.TryGetValue(shardingTable.DependOnMembers[0], out var fieldValue))
                             throw new MissingMemberException($"实体表{entityType.FullName}已设置分表并依赖成员{shardingTable.DependOnMembers[0]}映射的字段，但当前字典中并不包含key:{shardingTable.DependOnMembers[0]}的键值");
 
-                        var tableNameRuleGetter = shardingTable.Rule as Func<string, string, object, string>;
-                        return tableNameRuleGetter.Invoke(dbKey, origName, fieldValue);
+                        var tableNameRuleGetter = shardingTable.Rule as Func<string, object, string>;
+                        return tableNameRuleGetter.Invoke(origName, fieldValue);
                     };
                 });
             }
@@ -1267,10 +1266,9 @@ public class RepositoryHelper
             {
                 tableNameGetter = shardingTableNameGetters.GetOrAdd(cacheKey, f =>
                 {
-                    var dbKeyExpr = Expression.Parameter(typeof(string), "dbKey");
                     var origNameExpr = Expression.Parameter(typeof(string), "origName");
                     var parameterObjExpr = Expression.Parameter(typeof(object), "parameterObj");
-                    var tableNameRuleGetter = shardingTable.Rule as Func<string, string, object, string>;
+                    var tableNameRuleGetter = shardingTable.Rule as Func<string, object, string>;
 
                     var members = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
                         .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
@@ -1281,9 +1279,9 @@ public class RepositoryHelper
                     Expression fieldExpr = Expression.PropertyOrField(typedParameterObjExpr, shardingTable.DependOnMembers[0]);
                     if (fieldExpr.Type != typeof(object))
                         fieldExpr = Expression.Convert(fieldExpr, typeof(object));
-                    var getterExpr = Expression.Constant(tableNameRuleGetter, typeof(Func<string, string, object, string>));
-                    var bodyExpr = Expression.Invoke(getterExpr, dbKeyExpr, origNameExpr, fieldExpr);
-                    return Expression.Lambda<Func<string, string, object, string>>(bodyExpr, dbKeyExpr, origNameExpr, parameterObjExpr).Compile();
+                    var getterExpr = Expression.Constant(tableNameRuleGetter, typeof(Func<string, object, string>));
+                    var bodyExpr = Expression.Invoke(getterExpr, origNameExpr, fieldExpr);
+                    return Expression.Lambda<Func<string, object, string>>(bodyExpr, origNameExpr, parameterObjExpr).Compile();
                 });
             }
         }
