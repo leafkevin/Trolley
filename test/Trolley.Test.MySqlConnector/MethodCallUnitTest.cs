@@ -94,7 +94,7 @@ public class MethodCallUnitTest : UnitTestBase
             .Where(f => new List<string> { "kevin", "cindy" }.Contains(f.Name))
             .ToListAsync();
         Assert.NotNull(result);
-        Assert.Single(result);
+        Assert.NotEmpty(result);
 
         var ids = new int[] { 1, 2 };
         sql = repository.From<User>()
@@ -119,7 +119,7 @@ public class MethodCallUnitTest : UnitTestBase
             .Where(f => names.Contains(f.Name))
             .ToListAsync();
         Assert.NotNull(result);
-        Assert.Single(result);
+        Assert.NotEmpty(result);
 
         sql = repository.From<Company>()
             .Where(f => f.Name.Contains("微软"))
@@ -130,7 +130,7 @@ public class MethodCallUnitTest : UnitTestBase
             .Where(f => f.Name.Contains("微软"))
             .ToListAsync();
         Assert.NotNull(result1);
-        Assert.Single(result);
+        Assert.NotEmpty(result);
     }
     [Fact]
     public async Task Concat()

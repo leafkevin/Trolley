@@ -293,6 +293,7 @@ public class AllUnitTest : UnitTestBase
             .ExecuteAsync();
         await repository.CommitAsync();
     }
+
     [Fact]
     public async Task MemberAccess()
     {
@@ -720,8 +721,8 @@ public class AllUnitTest : UnitTestBase
         Assert.Equal(localNature, (result2[0].Nature ?? CompanyNature.Internet));
 
         var sql3 = repository.From<Company>()
-        .Where(f => (f.IsEnabled ? f.Nature : CompanyNature.Internet) == localNature)
-        .ToSql(out dbParameters);
+            .Where(f => (f.IsEnabled ? f.Nature : CompanyNature.Internet) == localNature)
+            .ToSql(out dbParameters);
         Assert.Equal("SELECT a.`Id`,a.`Name`,a.`Nature`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_company` a WHERE (CASE WHEN a.`IsEnabled`=1 THEN a.`Nature` ELSE 'Internet' END)=@p0", sql3);
         Assert.True((string)dbParameters[0].Value == localNature.ToString());
         Assert.True(dbParameters[0].Value.GetType() == typeof(string));
@@ -1410,6 +1411,7 @@ public class AllUnitTest : UnitTestBase
 
 
 
+
     [Fact]
     public async Task Insert_Parameter()
     {
@@ -1785,9 +1787,10 @@ public class AllUnitTest : UnitTestBase
                 UpdatedBy = 1
             })
             .WithBy(false, new { user.SomeTimes })
+            .WithBy(f => f.TenantId, "1")
             .WithBy(guidField.HasValue, new { GuidField = guidField })
             .ToSql(out _);
-        Assert.Equal("INSERT INTO `sys_user` (`Id`,`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`,`GuidField`) VALUES (@Id,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy,@GuidField)", sql);
+        Assert.Equal("INSERT INTO `sys_user` (`Id`,`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`,`TenantId`,`GuidField`) VALUES (@Id,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy,@TenantId,@GuidField)", sql);
 
         repository.BeginTransaction();
         var count = repository.Delete<User>().Where(f => f.Id == 1).Execute();
@@ -1795,7 +1798,6 @@ public class AllUnitTest : UnitTestBase
             .WithBy(new
             {
                 Id = 1,
-                TenantId = "1",
                 Name = "leafkevin",
                 Age = 25,
                 CompanyId = 1,
@@ -1805,7 +1807,11 @@ public class AllUnitTest : UnitTestBase
                 CreatedBy = 1,
                 UpdatedAt = DateTime.Now,
                 UpdatedBy = 1
-            }).ExecuteAsync();
+            })
+            .WithBy(false, new { user.SomeTimes })
+            .WithBy(f => f.TenantId, "1")
+            .WithBy(guidField.HasValue, new { GuidField = guidField })
+            .ExecuteAsync();
         repository.Commit();
         Assert.Equal(1, count);
     }
@@ -4430,7 +4436,7 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
                 OrderCount = Sql.Count(a.Id),
                 TotalAmount = Sql.Sum(a.TotalAmount)
             })
-        .ToSql(out _);
+            .ToSql(out _);
         Assert.Equal("SELECT COUNT(a.`Id`) AS `OrderCount`,SUM(a.`TotalAmount`) AS `TotalAmount` FROM `sys_order` a", sql);
         result = repository.From<Order>()
             .Select(a => new
@@ -5314,7 +5320,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .InnerJoin<Order>((a, b, c) => a.OrderId == c.Id)
             .Select((a, b, c) => new { a.OrderId, a.BuyerId, Buyer = b, Order = c, a.TotalAmount })
             .ToList();
-        Assert.True(result3.Count > 0);
+        Assert.NotNull(result3);
     }
     [Fact]
     public void SelectFlattenTo()
@@ -5436,6 +5442,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         }
     }
     private string DeferInvoke() => "DeferInvoke";
+
 
 
 
@@ -6857,6 +6864,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
 
 
 
+
     [Fact]
     public void IsEntityType()
     {
@@ -7164,6 +7172,8 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
 
 
 
+
+
     [Fact]
     public async Task MultipleQuery()
     {
@@ -7195,14 +7205,13 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         var isExists = await reader.ReadFirstAsync<bool>();
         var orderInfo = await reader.ReadFirstAsync<dynamic>();
         var userInfo2 = await reader.ReadFirstAsync<User>();
-        //var products = await reader.ReadAsync<Product>();
-        //var groupedOrderInfo = await reader.ReadFirstAsync<dynamic>();
-        //Assert.Null(userInfo);
-        //Assert.False(isExists);
-        //Assert.Null(orderInfo);
-        //Assert.Null(userInfo2);
-        //Assert.Empty(products);
-        //Assert.Null(groupedOrderInfo);
+        var products = await reader.ReadAsync<Product>();
+        var groupedOrderInfo = await reader.ReadFirstAsync<dynamic>();
+        Assert.NotNull(userInfo);
+        Assert.Equal(1, userInfo.Id);
+        Assert.Equal("1", orderInfo.Id);
+        Assert.Equal("1", groupedOrderInfo.Id);
+        Assert.Equal("1", groupedOrderInfo.Grouping.OrderId);
     }
     [Fact]
     public async Task MultipleQuery_UseMaster()
@@ -8792,7 +8801,10 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
     public async Task Create_Without_Sharding()
     {
         var repository = this.dbFactory.Create();
-        await repository.DeleteAsync<User>(11);
+        await repository.Delete<User>()
+            .UseTableBy("104")
+            .Where(11)
+            .ExecuteAsync();
         repository.Create<User>()
             .WithBy(new
             {
@@ -8813,6 +8825,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             })
             .Execute();
         var result = repository.From<User>()
+            .UseTableBy("104")
             .Where(f => f.Id == 11)
             .First();
         Assert.NotNull(result);

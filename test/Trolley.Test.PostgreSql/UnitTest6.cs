@@ -24,12 +24,12 @@ public class UnitTest6 : UnitTestBase
         services.AddSingleton(f =>
         {
             var connectionString = "Host=localhost;Database=fengling;Username=postgres;Password=123456;SearchPath=public";
-            //var connectionString1 ="Host=localhost;Database=fengling_tenant1;Username=postgres;Password=123456;SearchPath=public";
-            //var connectionString2 = "Host=localhost;Database=fengling_tenant2;Username=postgres;Password=123456;SearchPath=public";
+            var connectionString1 = "Host=localhost;Database=fengling1;Username=postgres;Password=123456;SearchPath=public";
+            var connectionString2 = "Host=localhost;Database=fengling2;Username=postgres;Password=123456;SearchPath=public";
             var builder = new OrmDbFactoryBuilder()
                 .Register(OrmProviderType.PostgreSql, "fengling", connectionString, true)
-                //.Register(OrmProviderType.PostgreSql, "fengling_tenant1", connectionString1)
-                //.Register(OrmProviderType.PostgreSql, "fengling_tenant2", connectionString2)
+                .Register(OrmProviderType.PostgreSql, "fengling1", connectionString1)
+                .Register(OrmProviderType.PostgreSql, "fengling2", connectionString2)
                 .Configure<ModelConfiguration>(OrmProviderType.PostgreSql)
                 .UseDatabaseSharding(() =>
                 {

@@ -6894,6 +6894,9 @@ SELECT a.[Id],a.[Name],a.[ParentId],b.[Url] FROM [myCteTable1] a INNER JOIN [myC
 
 
 
+
+
+
     [Fact]
     public async Task WhereBoolean()
     {

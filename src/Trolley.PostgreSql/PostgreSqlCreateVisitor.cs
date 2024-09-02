@@ -56,16 +56,19 @@ public class PostgreSqlCreateVisitor : CreateVisitor
         var tableSegment = this.Tables[0];
         var entityType = tableSegment.EntityType;
         var entityMapper = tableSegment.Mapper;
-        var tableName = entityMapper.TableName;
+        string tableName;
         if (tableSegment.IsSharding)
-        {
-            if (string.IsNullOrEmpty(tableSegment.Body))
-                throw new Exception($"实体表{entityType.FullName}有配置分表，需要调用UseTable或UseTableBy方法明确指定分表");
             tableName = tableSegment.Body;
+        else
+        {
+            if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
+                tableName = this.GetShardingTableName();
+            else tableName = entityMapper.TableName;
         }
-        tableName = this.OrmProvider.GetTableName(tableName);
+        var tableSchema = tableSegment.TableSchema;      
         if (!string.IsNullOrEmpty(tableSegment.TableSchema))
             tableName = tableSegment.TableSchema + "." + tableName;
+        tableName = this.OrmProvider.GetTableName(tableName);
 
         var fieldsBuilder = new StringBuilder($"INSERT INTO {tableName} ");
         //Set语句中，引用了原值，就需要使用别名

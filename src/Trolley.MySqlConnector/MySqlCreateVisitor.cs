@@ -61,15 +61,17 @@ public class MySqlCreateVisitor : CreateVisitor
         var entityMapper = tableSegment.Mapper;
         string tableName;
         if (tableSegment.IsSharding)
-        {
-            if (string.IsNullOrEmpty(tableSegment.Body))
-                throw new Exception($"实体表{entityType.FullName}有配置分表，需要调用UseTable或UseTableBy方法明确指定分表");
             tableName = tableSegment.Body;
+        else
+        {
+            if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
+                tableName = this.GetShardingTableName();
+            else tableName = entityMapper.TableName;
         }
-        else tableName = entityMapper.TableName;
-        tableName = this.OrmProvider.GetTableName(tableName);
+        var tableSchema = tableSegment.TableSchema;
         if (!string.IsNullOrEmpty(tableSegment.TableSchema))
             tableName = tableSegment.TableSchema + "." + tableName;
+        tableName = this.OrmProvider.GetTableName(tableName);
 
         var fieldsBuilder = new StringBuilder($"{this.BuildHeadSql()} {tableName} (");
         var valuesBuilder = new StringBuilder(" VALUES (");
@@ -174,17 +176,12 @@ public class MySqlCreateVisitor : CreateVisitor
         }
         insertObjType = firstInsertObj.GetType();
         var tableSegment = this.Tables[0];
-        var tableName = tableSegment.Mapper.TableName;
         var entityType = tableSegment.EntityType;
-
+        string tableName = tableSegment.Mapper.TableName;
         if (tableSegment.IsSharding)
-        {
-            //有设置分表，优先使用分表，没有设置分表，则根据数据的字段确定分表
-            if (!string.IsNullOrEmpty(tableSegment.Body))
-                tableName = tableSegment.Body;
-            //未指定分表，需要根据数据字段确定分表
-            else isNeedSplit = true;
-        }
+            tableName = tableSegment.Body;
+        else isNeedSplit = this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out _);
+
         var fieldsSqlPartSetter = RepositoryHelper.BuildCreateFieldsSqlPart(this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames);
         var valuesSqlPartSetter = RepositoryHelper.BuildCreateValuesSqlParametes(this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames, true);
         bool isDictionary = typeof(IDictionary<string, object>).IsAssignableFrom(insertObjType);

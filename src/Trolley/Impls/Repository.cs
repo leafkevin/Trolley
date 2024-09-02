@@ -367,24 +367,24 @@ public class Repository : IRepository
                 }
 
                 this.DbContext.Open(connection);
-                //if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out _))
-                //{
-                //    var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, entities);
-                //    foreach (var tabledInsertObj in tabledInsertObjs)
-                //    {
-                //        firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
-                //        result += executor(tabledInsertObj.Key, tabledInsertObj.Value);
-                //        builder.Clear();
-                //        command.Parameters.Clear();
-                //    }
-                //}
-                //else
-                //{
-                var entityMapper = mapProvider.GetEntityMap(entityType);
-                var tableName = entityMapper.TableName;
-                firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                result = executor(tableName, entities);
-                //}
+                if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out _))
+                {
+                    var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, entities);
+                    foreach (var tabledInsertObj in tabledInsertObjs)
+                    {
+                        firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
+                        result += executor(tabledInsertObj.Key, tabledInsertObj.Value);
+                        builder.Clear();
+                        command.Parameters.Clear();
+                    }
+                }
+                else
+                {
+                    var entityMapper = mapProvider.GetEntityMap(entityType);
+                    var tableName = entityMapper.TableName;
+                    firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                    result = executor(tableName, entities);
+                }
                 builder.Clear();
                 builder = null;
             }
@@ -520,24 +520,24 @@ public class Repository : IRepository
                     return count;
                 }
                 await this.DbContext.OpenAsync(connection, cancellationToken);
-                //if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out _))
-                //{
-                //    var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, entities);
-                //    foreach (var tabledInsertObj in tabledInsertObjs)
-                //    {
-                //        firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
-                //        result += await executor(tabledInsertObj.Key, tabledInsertObj.Value);
-                //        builder.Clear();
-                //        command.Parameters.Clear();
-                //    }
-                //}
-                //else
-                //{
-                var entityMapper = mapProvider.GetEntityMap(entityType);
-                var tableName = entityMapper.TableName;
-                firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                result = await executor(tableName, entities);
-                //}
+                if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out _))
+                {
+                    var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, entities);
+                    foreach (var tabledInsertObj in tabledInsertObjs)
+                    {
+                        firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
+                        result += await executor(tabledInsertObj.Key, tabledInsertObj.Value);
+                        builder.Clear();
+                        command.Parameters.Clear();
+                    }
+                }
+                else
+                {
+                    var entityMapper = mapProvider.GetEntityMap(entityType);
+                    var tableName = entityMapper.TableName;
+                    firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                    result = await executor(tableName, entities);
+                }
                 builder.Clear();
                 builder = null;
             }

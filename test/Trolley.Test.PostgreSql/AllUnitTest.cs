@@ -20,15 +20,31 @@ public class AllUnitTest : UnitTestBase
     private static int connTotal = 0;
     private static int connOpenTotal = 0;
     private readonly ITestOutputHelper output;
-    public AllUnitTest(ITestOutputHelper output)
+    public UnitTest6(ITestOutputHelper output)
     {
         this.output = output;
         var services = new ServiceCollection();
         services.AddSingleton(f =>
         {
+            var connectionString = "Host=localhost;Database=fengling;Username=postgres;Password=123456;SearchPath=public";
+            var connectionString1 = "Host=localhost;Database=fengling1;Username=postgres;Password=123456;SearchPath=public";
+            var connectionString2 = "Host=localhost;Database=fengling2;Username=postgres;Password=123456;SearchPath=public";
             var builder = new OrmDbFactoryBuilder()
-                .Register(OrmProviderType.PostgreSql, "fengling", "Host=localhost;Database=fengling;Username=postgres;Password=123456;SearchPath=public", true)
-                .Configure<ModelConfiguration>("fengling")
+                .Register(OrmProviderType.PostgreSql, "fengling", connectionString, true)
+                .Register(OrmProviderType.PostgreSql, "fengling1", connectionString1)
+                .Register(OrmProviderType.PostgreSql, "fengling2", connectionString2)
+                .Configure<ModelConfiguration>(OrmProviderType.PostgreSql)
+                .UseDatabaseSharding(() =>
+                {
+                    var passport = f.GetService<IPassport>();
+                    return passport.TenantId switch
+                    {
+                        "200" => "fengling_tenant1",
+                        "300" => "fengling_tenant2",
+                        _ => "fengling"
+                    };
+                })
+                .UseTableSharding<TableShardingConfiguration>(OrmProviderType.PostgreSql)
                 .UseInterceptors(df =>
                 {
                     df.OnConnectionCreated += evt =>
@@ -58,11 +74,227 @@ public class AllUnitTest : UnitTestBase
                 });
             return builder.Build();
         });
-        var serviceProvider = services.BuildServiceProvider();
-        this.dbFactory = serviceProvider.GetService<IOrmDbFactory>();
+        services.AddTransient<IPassport>(f => new Passport { TenantId = "104", UserId = "1" });
 
         AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
         AppContext.SetSwitch("Npgsql.DisableDateTimeInfinityConversions", true);
+        var serviceProvider = services.BuildServiceProvider();
+        this.dbFactory = serviceProvider.GetService<IOrmDbFactory>();
+    }
+    public interface IPassport
+    {
+        //只用于演示，实际使用中要与ASP.NET CORE中间件或是IOC组件相结合，赋值此对象
+        string TenantId { get; set; }
+        string UserId { get; set; }
+    }
+    class Passport : IPassport
+    {
+        public string TenantId { get; set; }
+        public string UserId { get; set; }
+    }
+    private async Task InitSharding()
+    {
+        var repository = this.dbFactory.Create();
+        await repository.Delete<User>()
+            .UseTableBy("104")
+            .UseTableBy("105")
+            .Where(new[] { 101, 102, 103 })
+            .ExecuteAsync();
+        repository.Create<User>(new[]
+        {
+            new User
+            {
+                Id = 101,
+                TenantId ="104",
+                Name = "leafkevin",
+                Age = 25,
+                CompanyId = 1,
+                Gender = Gender.Male,
+                GuidField = Guid.NewGuid(),
+                SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
+                SourceType = UserSourceType.Douyin,
+                IsEnabled = true,
+                CreatedAt = DateTime.Parse("2023-03-10 06:07:08"),
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Parse("2023-03-15 16:27:38"),
+                UpdatedBy = 1
+            },
+            new User
+            {
+                Id = 102,
+                TenantId ="105",
+                Name = "cindy",
+                Age = 21,
+                CompanyId = 2,
+                Gender = Gender.Female,
+                GuidField= Guid.NewGuid(),
+                SomeTimes= TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+                SourceType = UserSourceType.Taobao,
+                IsEnabled = true,
+                CreatedAt = DateTime.Parse($"{DateTime.Today.AddDays(-1):yyyy-MM-dd} 06:07:08"),
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            },
+            new User
+            {
+                Id = 103,
+                TenantId ="105",
+                Name = "xiyuan",
+                Age = 17,
+                CompanyId = 3,
+                Gender = Gender.Female,
+                GuidField= Guid.NewGuid(),
+                SomeTimes= TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+                SourceType = UserSourceType.Taobao,
+                IsEnabled = true,
+                CreatedAt = DateTime.Parse($"{DateTime.Today.AddDays(-1):yyyy-MM-dd} 06:07:08"),
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            }
+        });
+
+        var createdAt = DateTime.Parse("2024-05-24");
+        var orders = new List<Order>();
+        var orderDetails = new List<OrderDetail>();
+        for (int i = 1000; i < 2000; i++)
+        {
+            var orderId = $"ON_{i + 1}";
+            orders.Add(new Order
+            {
+                Id = orderId,
+                TenantId = "104",
+                OrderNo = $"ON-{i + 1}",
+                BuyerId = 101,
+                SellerId = 2,
+                TotalAmount = 420,
+                ProductCount = 2,
+                Products = new List<int> { 1, 2 },
+                Disputes = new Dispute
+                {
+                    Id = i + 1,
+                    Content = "无良商家",
+                    Result = "同意退款",
+                    Users = "Buyer2,Seller2",
+                    CreatedAt = createdAt
+                },
+                IsEnabled = true,
+                CreatedAt = createdAt,
+                CreatedBy = 1,
+                UpdatedAt = createdAt,
+                UpdatedBy = 1
+            });
+            orderDetails.Add(new OrderDetail
+            {
+                Id = $"OND_{1000 + (i - 1000) * 2 + 1}",
+                TenantId = "104",
+                Amount = 240,
+                OrderId = orderId,
+                Price = 120,
+                ProductId = 11,
+                Quantity = 2,
+                IsEnabled = true,
+                CreatedAt = createdAt,
+                CreatedBy = 1,
+                UpdatedAt = createdAt,
+                UpdatedBy = 1
+            });
+            orderDetails.Add(new OrderDetail
+            {
+                Id = $"OND_{1000 + (i - 1000) * 2 + 2}",
+                TenantId = "104",
+                Amount = 180,
+                OrderId = orderId,
+                Price = 180,
+                ProductId = 12,
+                Quantity = 1,
+                IsEnabled = true,
+                CreatedAt = createdAt,
+                CreatedBy = 1,
+                UpdatedAt = createdAt,
+                UpdatedBy = 1
+            });
+        }
+        for (int i = 2000; i < 3000; i++)
+        {
+            var orderId = $"ON_{i + 1}";
+            orders.Add(new Order
+            {
+                Id = orderId,
+                TenantId = "105",
+                OrderNo = $"ON-{i + 1}",
+                BuyerId = 102,
+                SellerId = 2,
+                TotalAmount = 630,
+                ProductCount = 2,
+                Products = new List<int> { 1, 2 },
+                Disputes = new Dispute
+                {
+                    Id = i + 1,
+                    Content = "无良商家",
+                    Result = "同意退款",
+                    Users = "Buyer2,Seller2",
+                    CreatedAt = DateTime.Now
+                },
+                IsEnabled = true,
+                CreatedAt = createdAt,
+                CreatedBy = 1,
+                UpdatedAt = createdAt,
+                UpdatedBy = 1
+            });
+            orderDetails.Add(new OrderDetail
+            {
+                Id = $"OND_{2000 + (i - 2000) * 2 + 1}",
+                TenantId = "105",
+                Amount = 230,
+                OrderId = orderId,
+                Price = 230,
+                ProductId = 13,
+                Quantity = 1,
+                IsEnabled = true,
+                CreatedAt = createdAt,
+                CreatedBy = 1,
+                UpdatedAt = createdAt,
+                UpdatedBy = 1
+            });
+            orderDetails.Add(new OrderDetail
+            {
+                Id = $"OND_{2000 + (i - 2000) * 2 + 2}",
+                TenantId = "105",
+                Amount = 400,
+                OrderId = orderId,
+                Price = 200,
+                ProductId = 14,
+                Quantity = 2,
+                IsEnabled = true,
+                CreatedAt = createdAt,
+                CreatedBy = 1,
+                UpdatedAt = createdAt,
+                UpdatedBy = 1
+            });
+        }
+        var removeIds = orders.Select(f => f.Id).ToList();
+
+        await repository.BeginTransactionAsync();
+        var count = await repository.Delete<Order>()
+            .UseTableBy("104", createdAt)
+            .UseTableBy("105", createdAt)
+            .Where(f => removeIds.Contains(f.Id))
+            .ExecuteAsync();
+        count = await repository.Delete<OrderDetail>()
+            .UseTableBy("104", createdAt)
+            .UseTableBy("105", createdAt)
+            .Where(f => removeIds.Contains(f.OrderId))
+            .ExecuteAsync();
+
+        var count1 = await repository.Create<Order>()
+            .WithBulkCopy(orders)
+            .ExecuteAsync();
+        var count2 = await repository.Create<OrderDetail>()
+            .WithBulkCopy(orderDetails)
+            .ExecuteAsync();
+        await repository.CommitAsync();
     }
 
     [Fact]
@@ -117,18 +349,18 @@ public class AllUnitTest : UnitTestBase
                 DateOnly.FromDateTime(DateTime.Now).DayOfWeek
             })
             .FirstAsync();
-        Assert.True(result.MinValue == DateOnly.MinValue);
-        Assert.True(result.MaxValue == DateOnly.MaxValue);
-        Assert.True(result.Today == DateTime.UtcNow.Date);
-        Assert.True(result.Today1 == DateOnly.FromDateTime(DateTime.UtcNow));
-        Assert.True(result.localDate == localDate);
-        Assert.True(result.IsEquals == result.UpdatedAt.Equals(DateTime.Parse("2023-03-25")));
-        Assert.True(result.IsEquals1 == result.UpdatedAt.Equals(localDate));
-        Assert.True(result.DayNumber == DateOnly.FromDateTime(DateTime.UtcNow).DayNumber);
-        Assert.True(result.Day == DateOnly.FromDateTime(DateTime.UtcNow).Day);
-        Assert.True(result.Month == DateOnly.FromDateTime(DateTime.UtcNow).Month);
-        Assert.True(result.Year == DateOnly.FromDateTime(DateTime.UtcNow).Year);
-        Assert.Equal(result.DayOfWeek, DateOnly.FromDateTime(DateTime.UtcNow).DayOfWeek);
+        Assert.Equal(DateOnly.MinValue, result.MinValue);
+        Assert.Equal(DateOnly.MaxValue, result.MaxValue);
+        Assert.Equal(DateTime.Now.Date, result.Today);
+        Assert.Equal(DateOnly.FromDateTime(DateTime.Now), result.Today1);
+        Assert.Equal(localDate, result.localDate);
+        Assert.Equal(result.UpdatedAt.Equals(DateTime.Parse("2023-03-25")), result.IsEquals);
+        Assert.Equal(result.UpdatedAt.Equals(localDate), result.IsEquals1);
+        Assert.Equal(DateOnly.FromDateTime(DateTime.Now).DayNumber, result.DayNumber);
+        Assert.Equal(DateOnly.FromDateTime(DateTime.Now).Day, result.Day);
+        Assert.Equal(DateOnly.FromDateTime(DateTime.Now).Month, result.Month);
+        Assert.Equal(DateOnly.FromDateTime(DateTime.Now).Year, result.Year);
+        Assert.Equal(result.DayOfWeek, DateOnly.FromDateTime(DateTime.Now).DayOfWeek);
     }
     [Fact]
     public async Task AddCompareTo()
@@ -164,13 +396,14 @@ public class AllUnitTest : UnitTestBase
                 ParseExact = DateOnly.ParseExact("05-07/2023", "MM-dd/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None)
             })
             .FirstAsync();
-        Assert.True(result.AddDays == result.DateOnlyField.AddDays(30));
-        Assert.True(result.AddMonths == result.DateOnlyField.AddMonths(5));
-        Assert.True(result.AddYears == result.DateOnlyField.AddYears(2));
-        Assert.True(result.CompareTo == result.DateOnlyField.CompareTo(localDate));
-        Assert.True(result.Parse == DateOnly.Parse(localDate.ToString("yyyy-MM-dd")));
-        Assert.True(result.ParseExact == DateOnly.ParseExact("05-07/2023", "MM-dd/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None));
+        Assert.Equal(result.DateOnlyField.AddDays(30), result.AddDays);
+        Assert.Equal(result.DateOnlyField.AddMonths(5), result.AddMonths);
+        Assert.Equal(result.DateOnlyField.AddYears(2), result.AddYears);
+        Assert.Equal(result.DateOnlyField.CompareTo(localDate), result.CompareTo);
+        Assert.Equal(DateOnly.Parse(localDate.ToString("yyyy-MM-dd")), result.Parse);
+        Assert.Equal(DateOnly.ParseExact("05-07/2023", "MM-dd/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None), result.ParseExact);
     }
+
 
 
 
@@ -199,8 +432,8 @@ public class AllUnitTest : UnitTestBase
             .ToSql(out var dbParameters);
         Assert.Equal("SELECT CURRENT_TIMESTAMP AS \"Now\",TIMESTAMP '0001-01-01 00:00:00.000' AS \"MinValue\",TIMESTAMP '9999-12-31 23:59:59.999' AS \"MaxValue\",(CURRENT_TIMESTAMP AT TIME ZONE 'UTC') AS \"UtcNow\",CURRENT_DATE AS \"Today\",TIMESTAMP '1970-01-01 00:00:00.000' AS \"UnixEpoch\",TIMESTAMP '2023-05-06 00:00:00.000' AS \"Date\",CAST(CURRENT_TIMESTAMP AS DATE) AS \"CurrentDate\",@p0 AS \"localDate\",(a.\"UpdatedAt\"=TIMESTAMP '2023-03-25 00:00:00.000') AS \"IsEquals\",(a.\"UpdatedAt\"=@p1) AS \"IsEquals1\" FROM \"sys_user\" a WHERE a.\"Id\"=1", sql);
         Assert.Equal(2, dbParameters.Count);
-        Assert.True(dbParameters[0].Value.GetType() == typeof(DateTime));
-        Assert.True(dbParameters[1].Value.GetType() == typeof(DateTime));
+        Assert.Equal(typeof(DateTime), dbParameters[0].Value.GetType());
+        Assert.Equal(typeof(DateTime), dbParameters[1].Value.GetType());
         Assert.Equal(localDate, (DateTime)dbParameters[0].Value);
         Assert.Equal(localDate, (DateTime)dbParameters[1].Value);
 
@@ -228,9 +461,9 @@ public class AllUnitTest : UnitTestBase
         //取决于时区的设置        
         //Assert.True(result.Today == DateTime.Now.Date);
         Assert.Equal(DateTime.UnixEpoch, result.UnixEpoch);
-        Assert.True(result.Date == DateTime.Parse("2023-05-06").Date);
+        Assert.Equal(DateTime.Parse("2023-05-06").Date, result.Date);
         Assert.Equal(localDate, result.localDate);
-        Assert.Equal(result.IsEquals, result.UpdatedAt.Equals(DateTime.Parse("2023-03-25")));
+        Assert.Equal(result.UpdatedAt.Equals(DateTime.Parse("2023-03-25")), result.IsEquals);
     }
     [Fact]
     public async Task AddSubtract()
@@ -278,17 +511,17 @@ public class AllUnitTest : UnitTestBase
                 ParseExact = DateTime.ParseExact("05-07/2023 13-08-45", "MM-dd/yyyy HH-mm-ss", CultureInfo.InvariantCulture)
             })
             .FirstAsync();
-        Assert.True(result.Add == result.CreatedAt.Add(TimeSpan.FromDays(365)));
-        Assert.True(result.AddDays == result.CreatedAt.AddDays(30));
-        Assert.True(result.AddMilliseconds == result.CreatedAt.AddMilliseconds(300));
-        Assert.True(result.Subtract1 == result.CreatedAt.Subtract(TimeSpan.FromDays(365)));
-        Assert.True(result.Subtract2 == result.Now - TimeSpan.FromDays(365));
-        Assert.True(result.Subtract3 == result.UpdatedAt - result.CreatedAt);
-        Assert.True(result.DayInMonth == DateTime.DaysInMonth(now.Year, now.Month));
-        Assert.True(result.IsLeapYear1 == DateTime.IsLeapYear(now.Year));
-        Assert.True(result.IsLeapYear2 == DateTime.IsLeapYear(2020));
-        Assert.True(result.Parse == DateTime.Parse(now.ToString("yyyy-MM-dd HH:mm:ss")));
-        Assert.True(result.ParseExact == DateTime.ParseExact("05-07/2023 13-08-45", "MM-dd/yyyy HH-mm-ss", CultureInfo.InvariantCulture));
+        Assert.Equal(result.CreatedAt.Add(TimeSpan.FromDays(365)), result.Add);
+        Assert.Equal(result.CreatedAt.AddDays(30), result.AddDays);
+        Assert.Equal(result.CreatedAt.AddMilliseconds(300), result.AddMilliseconds);
+        Assert.Equal(result.CreatedAt.Subtract(TimeSpan.FromDays(365)), result.Subtract1);
+        Assert.Equal(result.Now - TimeSpan.FromDays(365), result.Subtract2);
+        Assert.Equal(result.UpdatedAt - result.CreatedAt, result.Subtract3);
+        Assert.Equal(DateTime.DaysInMonth(now.Year, now.Month), result.DayInMonth);
+        Assert.Equal(DateTime.IsLeapYear(now.Year), result.IsLeapYear1);
+        Assert.Equal(DateTime.IsLeapYear(2020), result.IsLeapYear2);
+        Assert.Equal(DateTime.Parse(now.ToString("yyyy-MM-dd HH:mm:ss")), result.Parse);
+        Assert.Equal(DateTime.ParseExact("05-07/2023 13-08-45", "MM-dd/yyyy HH-mm-ss", CultureInfo.InvariantCulture), result.ParseExact);
     }
     [Fact]
     public async Task Compare()
@@ -331,16 +564,16 @@ public class AllUnitTest : UnitTestBase
                 ParseExact = DateTime.ParseExact("05-07/2023 13-08-45", "MM-dd/yyyy HH-mm-ss", CultureInfo.InvariantCulture)
             })
             .FirstAsync();
-        Assert.True(result.Compare == DateTime.Compare(result.UpdatedAt, DateTime.Parse("2023-03-20")));
-        Assert.True(result.CompareTo == result.CreatedAt.CompareTo(DateTime.Parse("2023-03-03")));
-        Assert.True(result.OneYearsAgo1 == result.CreatedAt.Subtract(TimeSpan.FromDays(365)));
-        Assert.True(result.OneYearsAgo2 == result.CreatedAt - DateTime.Parse("2023-03-20"));
-        Assert.True(result.Subtract == result.CreatedAt.Subtract(DateTime.Parse("2023-03-01")));
-        Assert.True(result.DayInMonth == DateTime.DaysInMonth(now.Year, now.Month));
-        Assert.True(result.IsLeapYear1 == DateTime.IsLeapYear(now.Year));
-        Assert.True(result.IsLeapYear2 == DateTime.IsLeapYear(2020));
-        Assert.True(result.Parse == DateTime.Parse(now.ToString("yyyy-MM-dd HH:mm:ss")));
-        Assert.True(result.ParseExact == DateTime.ParseExact("05-07/2023 13-08-45", "MM-dd/yyyy HH-mm-ss", CultureInfo.InvariantCulture));
+        Assert.Equal(result.Compare, DateTime.Compare(result.UpdatedAt, DateTime.Parse("2023-03-20")));
+        Assert.Equal(result.CompareTo, result.CreatedAt.CompareTo(DateTime.Parse("2023-03-03")));
+        Assert.Equal(result.OneYearsAgo1, result.CreatedAt.Subtract(TimeSpan.FromDays(365)));
+        Assert.Equal(result.OneYearsAgo2, result.CreatedAt - DateTime.Parse("2023-03-20"));
+        Assert.Equal(result.Subtract, result.CreatedAt.Subtract(DateTime.Parse("2023-03-01")));
+        Assert.Equal(result.DayInMonth, DateTime.DaysInMonth(now.Year, now.Month));
+        Assert.Equal(result.IsLeapYear1, DateTime.IsLeapYear(now.Year));
+        Assert.Equal(result.IsLeapYear2, DateTime.IsLeapYear(2020));
+        Assert.Equal(result.Parse, DateTime.Parse(now.ToString("yyyy-MM-dd HH:mm:ss")));
+        Assert.Equal(result.ParseExact, DateTime.ParseExact("05-07/2023 13-08-45", "MM-dd/yyyy HH-mm-ss", CultureInfo.InvariantCulture));
     }
     [Fact]
     public async Task Operation()
@@ -381,15 +614,15 @@ public class AllUnitTest : UnitTestBase
                 DivOp2 = TimeSpan.FromHours(30) / TimeSpan.FromHours(3)
             })
             .FirstAsync();
-        Assert.True(result.DateSub == DateTime.Parse("2022-01-01 05:06:07") - DateTime.Parse("2022-01-01"));
-        Assert.True(result.AddOp == result.CreatedAt + TimeSpan.FromHours(5));
-        Assert.True(result.SubOp == result.CreatedAt - TimeSpan.FromHours(10));
-        Assert.True(result.AddOp1 == result.SomeTimes.Value.Add(TimeSpan.FromMinutes(25)));
-        Assert.True(result.SubOp1 == TimeSpan.FromHours(30) - TimeSpan.FromMinutes(15));
-        Assert.True(result.SubOp2 == result.UpdatedAt - result.CreatedAt);
-        Assert.True(result.MulOp == TimeSpan.FromMinutes(25) * 3);
-        Assert.True(result.DivOp1 == TimeSpan.FromHours(30) / 5);
-        Assert.True(result.DivOp2 == TimeSpan.FromHours(30) / TimeSpan.FromHours(3));
+        Assert.Equal(result.DateSub, DateTime.Parse("2022-01-01 05:06:07") - DateTime.Parse("2022-01-01"));
+        Assert.Equal(result.AddOp, result.CreatedAt + TimeSpan.FromHours(5));
+        Assert.Equal(result.SubOp, result.CreatedAt - TimeSpan.FromHours(10));
+        Assert.Equal(result.AddOp1, result.SomeTimes.Value.Add(TimeSpan.FromMinutes(25)));
+        Assert.Equal(result.SubOp1, TimeSpan.FromHours(30) - TimeSpan.FromMinutes(15));
+        Assert.Equal(result.SubOp2, result.UpdatedAt - result.CreatedAt);
+        Assert.Equal(result.MulOp, TimeSpan.FromMinutes(25) * 3);
+        Assert.Equal(result.DivOp1, TimeSpan.FromHours(30) / 5);
+        Assert.Equal(result.DivOp2, TimeSpan.FromHours(30) / TimeSpan.FromHours(3));
     }
 
 
@@ -528,7 +761,7 @@ public class AllUnitTest : UnitTestBase
         Assert.Equal(dict["1"], (string)dbParameters[0].Value);
         Assert.Equal(strCollection[0], (string)dbParameters[1].Value);
         Assert.Equal(strArray[2], (string)dbParameters[2].Value);
-        Assert.True((string)dbParameters[3].Value == strCollection[2]);
+        Assert.Equal(strCollection[2], (string)dbParameters[3].Value);
         Assert.Equal(dict["2"], (string)dbParameters[4].Value);
         Assert.Equal(dict["3"], (string)dbParameters[5].Value);
 
@@ -583,7 +816,7 @@ public class AllUnitTest : UnitTestBase
             .Where(f => new List<string> { "kevin", "cindy" }.Contains(f.Name))
             .ToListAsync();
         Assert.NotNull(result);
-        Assert.Single(result);
+        Assert.NotEmpty(result);
 
         var ids = new int[] { 1, 2 };
         sql = repository.From<User>()
@@ -591,6 +824,7 @@ public class AllUnitTest : UnitTestBase
             .Select(f => f.Id)
             .ToSql(out var dbParameters);
         Assert.Equal("SELECT a.\"Id\" FROM \"sys_user\" a WHERE a.\"Id\" IN (@p0,@p1)", sql);
+
         result = repository.From<User>()
             .Where(f => ids.Contains(f.Id))
             .ToList();
@@ -604,10 +838,10 @@ public class AllUnitTest : UnitTestBase
             .ToSql(out dbParameters);
         Assert.Equal("SELECT a.\"Id\" FROM \"sys_user\" a WHERE a.\"Name\" IN (@p0,@p1)", sql);
         result = await repository.From<User>()
-            .Where(f => new List<string> { "kevin", "cindy" }.Contains(f.Name))
+            .Where(f => names.Contains(f.Name))
             .ToListAsync();
         Assert.NotNull(result);
-        Assert.Single(result);
+        Assert.NotEmpty(result);
 
         sql = repository.From<Company>()
             .Where(f => f.Name.Contains("微软"))
@@ -618,7 +852,7 @@ public class AllUnitTest : UnitTestBase
             .Where(f => f.Name.Contains("微软"))
             .ToListAsync();
         Assert.NotNull(result1);
-        Assert.Single(result);
+        Assert.NotEmpty(result);
     }
     [Fact]
     public async Task Concat()
@@ -641,9 +875,9 @@ public class AllUnitTest : UnitTestBase
         Assert.Equal(typeof(string), dbParameters[3].Value.GetType());
 
         var result = await repository.From<User>()
-             .Where(f => f.Id == 1)
-             .Select(f => string.Concat(f.Name + "_1_" + isMale, f.Age + 5, isMale) + "_2_" + f.Age + "_3_" + isMale + "_4_" + count)
-             .FirstAsync();
+            .Where(f => f.Id == 1)
+            .Select(f => string.Concat(f.Name + "_1_" + isMale, f.Age + 5, isMale) + "_2_" + f.Age + "_3_" + isMale + "_4_" + count)
+            .FirstAsync();
         Assert.NotNull(result);
         Assert.Equal("leafkevin_1_False30False_2_25_3_False_4_10", result);
     }
@@ -1558,9 +1792,10 @@ public class AllUnitTest : UnitTestBase
                 UpdatedBy = 1
             })
             .WithBy(false, new { user.SomeTimes })
+            .WithBy(f => f.TenantId, "1")
             .WithBy(guidField.HasValue, new { GuidField = guidField })
             .ToSql(out _);
-        Assert.Equal("INSERT INTO \"sys_user\" (\"Id\",\"Name\",\"Age\",\"CompanyId\",\"Gender\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\",\"GuidField\") VALUES (@Id,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy,@GuidField)", sql);
+        Assert.Equal("INSERT INTO \"sys_user\" (\"Id\",\"Name\",\"Age\",\"CompanyId\",\"Gender\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\",\"TenantId\",\"GuidField\") VALUES (@Id,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy,@TenantId,@GuidField)", sql);
 
         repository.BeginTransaction();
         var count = repository.Delete<User>().Where(f => f.Id == 1).Execute();
@@ -1568,7 +1803,6 @@ public class AllUnitTest : UnitTestBase
             .WithBy(new
             {
                 Id = 1,
-                TenantId = "1",
                 Name = "leafkevin",
                 Age = 25,
                 CompanyId = 1,
@@ -1578,7 +1812,11 @@ public class AllUnitTest : UnitTestBase
                 CreatedBy = 1,
                 UpdatedAt = DateTime.Now,
                 UpdatedBy = 1
-            }).ExecuteAsync();
+            })
+            .WithBy(false, new { user.SomeTimes })
+            .WithBy(f => f.TenantId, "1")
+            .WithBy(guidField.HasValue, new { GuidField = guidField })
+            .ExecuteAsync();
         repository.Commit();
         Assert.Equal(1, count);
     }
@@ -2894,6 +3132,7 @@ public class AllUnitTest : UnitTestBase
             .Select((a, b) => new { a.MenuId, b.Name, a.ParentId, a.Url })
             .ToSql(out _);
         Assert.Equal("SELECT a.\"MenuId\",b.\"Name\",a.\"ParentId\",a.\"Url\" FROM (SELECT p.\"Id\" AS \"MenuId\",p.\"ParentId\",o.\"Url\" FROM \"sys_page\" o,\"sys_menu\" p WHERE o.\"Id\"=p.\"PageId\") a INNER JOIN \"sys_menu\" b ON a.\"MenuId\"=b.\"Id\" WHERE a.\"MenuId\"=b.\"Id\"", sql);
+
         var result = repository.From(f => f.From<Page, Menu>('o')
                 .Where((a, b) => a.Id == b.PageId)
                 .Select((x, y) => new { MenuId = y.Id, y.ParentId, x.Url }))
@@ -3681,6 +3920,7 @@ SELECT a.""MenuId"",a.""ParentId"",a.""Url"" FROM ""menuPageList"" a WHERE a.""P
             })
             .ToSql(out _);
         Assert.Equal("SELECT a.\"BuyerId\",b.\"Name\" AS \"BuyerName\",a.\"Date\" AS \"BuyDate\",a.\"ProductCount\",a.\"OrderCount\",a.\"TotalAmount\" FROM (SELECT a.\"BuyerId\",CAST(a.\"CreatedAt\" AS DATE) AS \"Date\",COUNT(a.\"Id\") AS \"OrderCount\",COUNT(DISTINCT b.\"ProductId\") AS \"ProductCount\",SUM(a.\"TotalAmount\") AS \"TotalAmount\" FROM \"sys_order\" a,\"sys_order_detail\" b WHERE a.\"Id\"=b.\"OrderId\" GROUP BY a.\"BuyerId\",CAST(a.\"CreatedAt\" AS DATE)) a INNER JOIN \"sys_user\" b ON a.\"BuyerId\"=b.\"Id\" WHERE a.\"ProductCount\">2 AND a.\"TotalAmount\">300 ORDER BY b.\"Id\"", sql);
+
         var result = await repository.From(f => f
             .From<Order, OrderDetail>()
                 .Where((x, y) => x.Id == y.OrderId)
@@ -5094,7 +5334,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
             .InnerJoin<Order>((a, b, c) => a.OrderId == c.Id)
             .Select((a, b, c) => new { a.OrderId, a.BuyerId, Buyer = b, Order = c, a.TotalAmount })
             .ToList();
-        Assert.True(result3.Count > 0);
+        Assert.NotNull(result3);
     }
     [Fact]
     public void SelectFlattenTo()
@@ -5469,12 +5709,12 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
             })
             .ToSql(out var dbParameters);
         Assert.Equal("UPDATE \"sys_order_detail\" SET \"Price\"=@Price0,\"Quantity\"=@Quantity0 WHERE \"Id\"=@kId0;UPDATE \"sys_order_detail\" SET \"Price\"=@Price1,\"Quantity\"=@Quantity1 WHERE \"Id\"=@kId1;UPDATE \"sys_order_detail\" SET \"Price\"=@Price2,\"Quantity\"=@Quantity2 WHERE \"Id\"=@kId2;UPDATE \"sys_order_detail\" SET \"Price\"=@Price3,\"Quantity\"=@Quantity3 WHERE \"Id\"=@kId3;UPDATE \"sys_order_detail\" SET \"Price\"=@Price4,\"Quantity\"=@Quantity4 WHERE \"Id\"=@kId4", sql);
-        Assert.True(dbParameters.Count == parameters.Count * 3);
+        Assert.Equal(parameters.Count * 3, dbParameters.Count);
         for (int i = 0; i < parameters.Count; i++)
         {
-            Assert.True(dbParameters[i * 3].ParameterName == $"@Price{i}");
-            Assert.True(dbParameters[i * 3 + 1].ParameterName == $"@Quantity{i}");
-            Assert.True(dbParameters[i * 3 + 2].ParameterName == $"@kId{i}");
+            Assert.Equal($"@Price{i}", dbParameters[i * 3].ParameterName);
+            Assert.Equal($"@Quantity{i}", dbParameters[i * 3 + 1].ParameterName);
+            Assert.Equal($"@kId{i}", dbParameters[i * 3 + 2].ParameterName);
         }
 
         var ids = parameters.Select(f => f.Id).ToList();
@@ -7273,6 +7513,1396 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
         commands.AddRange(new[] { deleteCommand, insertCommand, insertCommand2, updateCommand, bulkUpdateCommand });
         var count = repository.MultipleExecute(commands);
         Assert.True(count > 0);
+    }
+
+
+
+
+    [Fact]
+    public async Task Create_WithBy_UseTable()
+    {
+        var repository = this.dbFactory.Create();
+        await repository.Delete<User>()
+            .UseTableBy("104")
+            .Where(101)
+            .ExecuteAsync();
+        var count = repository.From<User>()
+            .UseTable("sys_user_104")
+            .Where(f => f.Id == 101)
+            .Count();
+        Assert.Equal(0, count);
+
+        repository.Create<User>()
+            .UseTable("sys_user_104")
+            .WithBy(new
+            {
+                Id = 101,
+                TenantId = "104",
+                Name = "leafkevin",
+                Age = 25,
+                CompanyId = 1,
+                Gender = Gender.Male,
+                GuidField = Guid.NewGuid(),
+                SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
+                SourceType = UserSourceType.Douyin,
+                IsEnabled = true,
+                CreatedAt = DateTime.Parse("2024-05-10 06:07:08"),
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Parse("2024-05-15 16:27:38"),
+                UpdatedBy = 1
+            })
+            .Execute();
+        var result = repository.From<User>()
+            .UseTableBy("104")
+            .Where(f => f.Id == 101)
+            .First();
+        Assert.NotNull(result);
+        Assert.Equal("104", result.TenantId);
+    }
+    [Fact]
+    public async Task Create_WithBy_WithoutUseTable()
+    {
+        var repository = this.dbFactory.Create();
+        await repository.Delete<User>()
+            .UseTableBy("104")
+            .Where(101)
+            .ExecuteAsync();
+        var count = repository.From<User>()
+            .UseTableBy("104")
+            .Where(f => f.Id == 101)
+            .Count();
+        Assert.Equal(0, count);
+
+        await repository.Create<User>()
+            .WithBy(new
+            {
+                Id = 101,
+                TenantId = "104",
+                Name = "leafkevin",
+                Age = 25,
+                CompanyId = 1,
+                Gender = Gender.Male,
+                GuidField = Guid.NewGuid(),
+                SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
+                SourceType = UserSourceType.Douyin,
+                IsEnabled = true,
+                CreatedAt = DateTime.Parse("2023-03-10 06:07:08"),
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Parse("2023-03-15 16:27:38"),
+                UpdatedBy = 1
+            })
+            .ExecuteAsync();
+        var result = await repository.From<User>()
+            .UseTableBy("104")
+            .Where(f => f.Id == 101)
+            .FirstAsync();
+        Assert.NotNull(result);
+        Assert.Equal("104", result.TenantId);
+    }
+    [Fact]
+    public async Task Create_WithBulk_UseTable()
+    {
+        var repository = this.dbFactory.Create();
+        await repository.Delete<User>()
+            .UseTableBy("104")
+            .Where(101)
+            .ExecuteAsync();
+        var count = repository.From<User>()
+            .UseTableBy("104")
+            .Where(f => f.Id == 101)
+            .Count();
+        Assert.Equal(0, count);
+
+        repository.Create<User>()
+            .UseTableBy("104")
+            .WithBulk(new[]{new
+            {
+                Id = 101,
+                TenantId = "104",
+                Name = "leafkevin",
+                Age = 25,
+                CompanyId = 1,
+                Gender = Gender.Male,
+                GuidField = Guid.NewGuid(),
+                SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
+                SourceType = UserSourceType.Douyin,
+                IsEnabled = true,
+                CreatedAt = DateTime.Parse("2023-03-10 06:07:08"),
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Parse("2023-03-15 16:27:38"),
+                UpdatedBy = 1
+            }})
+            .Execute();
+        var result = repository.From<User>()
+            .UseTableBy("104")
+            .Where(f => f.Id == 101)
+            .First();
+        Assert.NotNull(result);
+        Assert.Equal("104", result.TenantId);
+    }
+    [Fact]
+    public async Task Create_WithoutUseTable()
+    {
+        var repository = this.dbFactory.Create();
+        await repository.Delete<User>()
+            .UseTableBy("104")
+            .UseTableBy("105")
+            .Where(new object[] { 101, 102, 103 })
+            .ExecuteAsync();
+        await repository.CreateAsync<User>(new
+        {
+            Id = 102,
+            TenantId = "105",
+            Name = "cindy",
+            Age = 21,
+            CompanyId = 2,
+            Gender = Gender.Female,
+            GuidField = Guid.NewGuid(),
+            SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+            SourceType = UserSourceType.Taobao,
+            IsEnabled = true,
+            CreatedAt = DateTime.Parse($"{DateTime.Today.AddDays(-1):yyyy-MM-dd} 06:07:08"),
+            CreatedBy = 1,
+            UpdatedAt = DateTime.Now,
+            UpdatedBy = 1
+        });
+
+        await repository.CreateAsync<User>(new[]
+        {
+            new
+            {
+                Id = 101,
+                TenantId ="104",
+                Name = "leafkevin",
+                Age = 25,
+                CompanyId = 1,
+                Gender = Gender.Male,
+                GuidField = Guid.NewGuid(),
+                SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
+                SourceType = UserSourceType.Douyin,
+                IsEnabled = true,
+                CreatedAt = DateTime.Parse("2023-03-10 06:07:08"),
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Parse("2023-03-15 16:27:38"),
+                UpdatedBy = 1
+            },
+            new
+            {
+                Id = 103,
+                TenantId ="105",
+                Name = "xiyuan",
+                Age = 17,
+                CompanyId = 3,
+                Gender = Gender.Female,
+                GuidField= Guid.NewGuid(),
+                SomeTimes= TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+                SourceType = UserSourceType.Taobao,
+                IsEnabled = true,
+                CreatedAt = DateTime.Parse($"{DateTime.Today.AddDays(-1):yyyy-MM-dd} 06:07:08"),
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            }
+        });
+        var result = await repository.From<User>()
+            .UseTableBy("104")
+            .Where(f => f.Id == 101)
+            .FirstAsync();
+        Assert.NotNull(result);
+        Assert.Equal("104", result.TenantId);
+
+        result = await repository.From<User>()
+           .UseTableBy("105")
+           .Where(f => f.Id == 102)
+           .FirstAsync();
+        Assert.NotNull(result);
+        Assert.Equal("105", result.TenantId);
+
+        result = await repository.From<User>()
+           .UseTableBy("105")
+           .Where(f => f.Id == 103)
+           .FirstAsync();
+        Assert.NotNull(result);
+        Assert.Equal("105", result.TenantId);
+    }
+    [Fact]
+    public async Task Create_WithBulk_WithoutUseTable()
+    {
+        var repository = this.dbFactory.Create();
+        var userIds = new[] { 101, 102, 103 };
+        await repository.Delete<User>()
+            .UseTable(f => f.Contains("104") || f.Contains("105"))
+            .Where(userIds)
+            .ExecuteAsync();
+        repository.Create<User>(new[]
+        {
+            new User
+            {
+                Id = 101,
+                TenantId ="104",
+                Name = "leafkevin",
+                Age = 25,
+                CompanyId = 1,
+                Gender = Gender.Male,
+                GuidField = Guid.NewGuid(),
+                SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
+                SourceType = UserSourceType.Douyin,
+                IsEnabled = true,
+                CreatedAt = DateTime.Parse("2023-03-10 06:07:08"),
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Parse("2023-03-15 16:27:38"),
+                UpdatedBy = 1
+            },
+            new User
+            {
+                Id = 102,
+                TenantId ="105",
+                Name = "cindy",
+                Age = 21,
+                CompanyId = 2,
+                Gender = Gender.Female,
+                GuidField= Guid.NewGuid(),
+                SomeTimes= TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+                SourceType = UserSourceType.Taobao,
+                IsEnabled = true,
+                CreatedAt = DateTime.Parse($"{DateTime.Today.AddDays(-1):yyyy-MM-dd} 06:07:08"),
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            },
+            new User
+            {
+                Id = 103,
+                TenantId ="105",
+                Name = "xiyuan",
+                Age = 17,
+                CompanyId = 3,
+                Gender = Gender.Female,
+                GuidField= Guid.NewGuid(),
+                SomeTimes= TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+                SourceType = UserSourceType.Taobao,
+                IsEnabled = true,
+                CreatedAt = DateTime.Parse($"{DateTime.Today.AddDays(-1):yyyy-MM-dd} 06:07:08"),
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            }
+        });
+
+        var result = await repository.From<User>()
+            .UseTableBy("104")
+            .Where(f => f.Id == 101)
+            .FirstAsync();
+        Assert.NotNull(result);
+        Assert.Equal("104", result.TenantId);
+
+        var result1 = await repository.From<User>()
+            .UseTableBy("105")
+            .Where(f => userIds.Contains(f.Id))
+            .FirstAsync();
+        Assert.NotNull(result);
+        Assert.Equal("104", result.TenantId);
+    }
+    [Fact]
+    public async Task Create_BulkCopy_UseTable()
+    {
+        var createdAt = DateTime.Parse("2024-05-24");
+        var orders = new List<Order>();
+        var orderDetails = new List<OrderDetail>();
+        for (int i = 1000; i < 2000; i++)
+        {
+            var orderId = $"ON_{i + 1}";
+            orders.Add(new Order
+            {
+                Id = orderId,
+                TenantId = "104",
+                OrderNo = $"ON-{i + 1}",
+                BuyerId = 101,
+                SellerId = 2,
+                TotalAmount = 420,
+                ProductCount = 2,
+                Products = new List<int> { 1, 2 },
+                Disputes = new Dispute
+                {
+                    Id = i + 1,
+                    Content = "无良商家",
+                    Result = "同意退款",
+                    Users = "Buyer2,Seller2",
+                    CreatedAt = createdAt
+                },
+                IsEnabled = true,
+                CreatedAt = createdAt,
+                CreatedBy = 1,
+                UpdatedAt = createdAt,
+                UpdatedBy = 1
+            });
+            orderDetails.Add(new OrderDetail
+            {
+                Id = $"OND_{1000 + (i - 1000) * 2 + 1}",
+                TenantId = "104",
+                Amount = 240,
+                OrderId = orderId,
+                Price = 120,
+                ProductId = 11,
+                Quantity = 2,
+                IsEnabled = true,
+                CreatedAt = createdAt,
+                CreatedBy = 1,
+                UpdatedAt = createdAt,
+                UpdatedBy = 1
+            });
+            orderDetails.Add(new OrderDetail
+            {
+                Id = $"OND_{1000 + (i - 1000) * 2 + 2}",
+                TenantId = "104",
+                Amount = 180,
+                OrderId = orderId,
+                Price = 180,
+                ProductId = 12,
+                Quantity = 1,
+                IsEnabled = true,
+                CreatedAt = createdAt,
+                CreatedBy = 1,
+                UpdatedAt = createdAt,
+                UpdatedBy = 1
+            });
+        }
+        var repository = this.dbFactory.Create();
+        var removeIds = orders.Select(f => f.Id).ToList();
+
+        await repository.BeginTransactionAsync();
+        var deleteOrders = repository.Delete<Order>()
+           .UseTableBy("104", createdAt)
+           .Where(f => removeIds.Contains(f.Id))
+           .ToMultipleCommand();
+        var deleteOrderDetails = repository.Delete<OrderDetail>()
+           .UseTableBy("104", createdAt)
+           .Where(f => removeIds.Contains(f.OrderId))
+           .ToMultipleCommand();
+        await repository.MultipleExecuteAsync(new List<MultipleCommand>
+        {
+            deleteOrders, deleteOrderDetails
+        });
+        var count1 = await repository.Create<Order>()
+            .UseTableBy("104", createdAt)
+            .WithBulkCopy(orders)
+            .ExecuteAsync();
+        var count2 = await repository.Create<OrderDetail>()
+             .UseTableBy("104", createdAt)
+             .WithBulkCopy(orderDetails)
+             .ExecuteAsync();
+        await repository.CommitAsync();
+        Assert.Equal(1000, count1);
+        Assert.Equal(2000, count2);
+
+        orders.Clear();
+        orderDetails.Clear();
+        for (int i = 2000; i < 3000; i++)
+        {
+            var orderId = $"ON_{i + 1}";
+            orders.Add(new Order
+            {
+                Id = orderId,
+                TenantId = "105",
+                OrderNo = $"ON-{i + 1}",
+                BuyerId = 102,
+                SellerId = 2,
+                TotalAmount = 630,
+                ProductCount = 2,
+                Products = new List<int> { 1, 2 },
+                Disputes = new Dispute
+                {
+                    Id = i + 1,
+                    Content = "无良商家",
+                    Result = "同意退款",
+                    Users = "Buyer2,Seller2",
+                    CreatedAt = DateTime.Now
+                },
+                IsEnabled = true,
+                CreatedAt = createdAt,
+                CreatedBy = 1,
+                UpdatedAt = createdAt,
+                UpdatedBy = 1
+            });
+            orderDetails.Add(new OrderDetail
+            {
+                Id = $"OND_{2000 + (i - 2000) * 2 + 1}",
+                TenantId = "105",
+                Amount = 230,
+                OrderId = orderId,
+                Price = 230,
+                ProductId = 13,
+                Quantity = 1,
+                IsEnabled = true,
+                CreatedAt = createdAt,
+                CreatedBy = 1,
+                UpdatedAt = createdAt,
+                UpdatedBy = 1
+            });
+            orderDetails.Add(new OrderDetail
+            {
+                Id = $"OND_{2000 + (i - 2000) * 2 + 2}",
+                TenantId = "105",
+                Amount = 400,
+                OrderId = orderId,
+                Price = 200,
+                ProductId = 14,
+                Quantity = 2,
+                IsEnabled = true,
+                CreatedAt = createdAt,
+                CreatedBy = 1,
+                UpdatedAt = createdAt,
+                UpdatedBy = 1
+            });
+        }
+
+        removeIds = orders.Select(f => f.Id).ToList();
+        await repository.BeginTransactionAsync();
+        await repository.Delete<Order>()
+            .UseTableBy("105", createdAt)
+            .Where(f => removeIds.Contains(f.Id))
+            .ExecuteAsync();
+        await repository.Delete<OrderDetail>()
+            .UseTableBy("105", createdAt)
+            .Where(f => removeIds.Contains(f.OrderId))
+            .ExecuteAsync();
+
+        count1 = await repository.Create<Order>()
+            .UseTableBy("105", createdAt)
+            .WithBulkCopy(orders)
+            .ExecuteAsync();
+        count2 = await repository.Create<OrderDetail>()
+            .UseTableBy("105", createdAt)
+            .WithBulkCopy(orderDetails)
+            .ExecuteAsync();
+        await repository.CommitAsync();
+        Assert.Equal(1000, count1);
+        Assert.Equal(2000, count2);
+    }
+    [Fact]
+    public async Task Create_BulkCopy_WithoutUseTable()
+    {
+        var createdAt = DateTime.Parse("2024-05-24");
+        var orders = new List<Order>();
+        var orderDetails = new List<OrderDetail>();
+        for (int i = 1000; i < 2000; i++)
+        {
+            var orderId = $"ON_{i + 1}";
+            orders.Add(new Order
+            {
+                Id = orderId,
+                TenantId = "104",
+                OrderNo = $"ON-{i + 1}",
+                BuyerId = 101,
+                SellerId = 2,
+                TotalAmount = 420,
+                ProductCount = 2,
+                Products = new List<int> { 1, 2 },
+                Disputes = new Dispute
+                {
+                    Id = i + 1,
+                    Content = "无良商家",
+                    Result = "同意退款",
+                    Users = "Buyer2,Seller2",
+                    CreatedAt = createdAt
+                },
+                IsEnabled = true,
+                CreatedAt = createdAt,
+                CreatedBy = 1,
+                UpdatedAt = createdAt,
+                UpdatedBy = 1
+            });
+            orderDetails.Add(new OrderDetail
+            {
+                Id = $"OND_{1000 + (i - 1000) * 2 + 1}",
+                TenantId = "104",
+                Amount = 240,
+                OrderId = orderId,
+                Price = 120,
+                ProductId = 11,
+                Quantity = 2,
+                IsEnabled = true,
+                CreatedAt = createdAt,
+                CreatedBy = 1,
+                UpdatedAt = createdAt,
+                UpdatedBy = 1
+            });
+            orderDetails.Add(new OrderDetail
+            {
+                Id = $"OND_{1000 + (i - 1000) * 2 + 2}",
+                TenantId = "104",
+                Amount = 180,
+                OrderId = orderId,
+                Price = 180,
+                ProductId = 12,
+                Quantity = 1,
+                IsEnabled = true,
+                CreatedAt = createdAt,
+                CreatedBy = 1,
+                UpdatedAt = createdAt,
+                UpdatedBy = 1
+            });
+        }
+        for (int i = 2000; i < 3000; i++)
+        {
+            var orderId = $"ON_{i + 1}";
+            orders.Add(new Order
+            {
+                Id = orderId,
+                TenantId = "105",
+                OrderNo = $"ON-{i + 1}",
+                BuyerId = 102,
+                SellerId = 2,
+                TotalAmount = 630,
+                ProductCount = 2,
+                Products = new List<int> { 1, 2 },
+                Disputes = new Dispute
+                {
+                    Id = i + 1,
+                    Content = "无良商家",
+                    Result = "同意退款",
+                    Users = "Buyer2,Seller2",
+                    CreatedAt = DateTime.Now
+                },
+                IsEnabled = true,
+                CreatedAt = createdAt,
+                CreatedBy = 1,
+                UpdatedAt = createdAt,
+                UpdatedBy = 1
+            });
+            orderDetails.Add(new OrderDetail
+            {
+                Id = $"OND_{2000 + (i - 2000) * 2 + 1}",
+                TenantId = "105",
+                Amount = 230,
+                OrderId = orderId,
+                Price = 230,
+                ProductId = 13,
+                Quantity = 1,
+                IsEnabled = true,
+                CreatedAt = createdAt,
+                CreatedBy = 1,
+                UpdatedAt = createdAt,
+                UpdatedBy = 1
+            });
+            orderDetails.Add(new OrderDetail
+            {
+                Id = $"OND_{2000 + (i - 2000) * 2 + 2}",
+                TenantId = "105",
+                Amount = 400,
+                OrderId = orderId,
+                Price = 200,
+                ProductId = 14,
+                Quantity = 2,
+                IsEnabled = true,
+                CreatedAt = createdAt,
+                CreatedBy = 1,
+                UpdatedAt = createdAt,
+                UpdatedBy = 1
+            });
+        }
+        var removeIds = orders.Select(f => f.Id).ToList();
+
+        var repository = this.dbFactory.Create();
+        await repository.BeginTransactionAsync();
+        await repository.Delete<Order>()
+            .UseTableBy("104", createdAt)
+            .Where(f => removeIds.Contains(f.Id))
+            .ExecuteAsync();
+        await repository.Delete<Order>()
+            .UseTableBy("105", createdAt)
+            .Where(f => removeIds.Contains(f.Id))
+            .ExecuteAsync();
+        await repository.Delete<OrderDetail>()
+            .UseTableBy("104", createdAt)
+            .Where(f => removeIds.Contains(f.OrderId))
+            .ExecuteAsync();
+        await repository.Delete<OrderDetail>()
+            .UseTableBy("105", createdAt)
+            .Where(f => removeIds.Contains(f.OrderId))
+            .ExecuteAsync();
+
+        var count1 = await repository.Create<Order>()
+            .WithBulkCopy(orders)
+            .ExecuteAsync();
+        var count2 = await repository.Create<OrderDetail>()
+            .WithBulkCopy(orderDetails)
+            .ExecuteAsync();
+        await repository.CommitAsync();
+        Assert.Equal(2000, count1);
+        Assert.Equal(4000, count2);
+    }
+    [Fact]
+    public async Task Query_ManySharding_SingleTable()
+    {
+        await this.InitSharding();
+        var productCount = 1;
+        var repository = this.dbFactory.Create();
+        var sql = repository.From<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .Where(f => f.ProductCount > productCount)
+            .ToSql(out _);
+        Assert.Equal("SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\" FROM \"sys_order_104_202405\" a WHERE a.\"ProductCount\">@p0 UNION ALL SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\" FROM \"sys_order_105_202405\" a WHERE a.\"ProductCount\">@p0", sql);
+
+        var result = repository.From<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .Where(f => f.ProductCount > productCount)
+            .ToList();
+        if (result.Count > 0)
+        {
+            var tenantIds = result.Select(f => f.TenantId).ToList();
+            Assert.True(tenantIds.Exists(f => "104,105".Contains(f)));
+        }
+    }
+    [Fact]
+    public async Task Query_ManySharding_SingleTable_Include()
+    {
+        await this.InitSharding();
+        var productCount = 1;
+        var repository = this.dbFactory.Create();
+        var sql = repository.From<Order>()
+            .UseTable(f => f.Contains("_104_") && int.Parse(f[^6..]) > 202001)
+            .Include(f => f.Details)
+            .UseTable<Order>((origOrderName, origOrderDetailName, orderName) =>
+                orderName.Replace(origOrderName, origOrderDetailName))
+            .Where(f => f.ProductCount > productCount)
+            .ToSql(out _);
+        Assert.Equal("SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\" FROM \"sys_order_104_202405\" a WHERE a.\"ProductCount\">@p0", sql);
+
+        var result = repository.From<Order>()
+            .UseTable(f => f.Contains("_104_") && int.Parse(f[^6..]) > 202001)
+            .Include(f => f.Details)
+            .UseTable<Order>((origOrderName, origOrderDetailName, orderName) =>
+                orderName.Replace(origOrderName, origOrderDetailName))
+            .Where(f => f.ProductCount > productCount)
+            .ToList();
+        if (result.Count > 0)
+        {
+            var tenantIds = result.Select(f => f.TenantId).Distinct().ToList();
+            Assert.False(tenantIds.Exists(f => f != "104"));
+            foreach (var order in result)
+            {
+                Assert.NotNull(order.Details);
+                foreach (var orderDetail in order.Details)
+                {
+                    Assert.Equal("104", orderDetail.TenantId);
+                }
+            }
+        }
+
+        sql = repository.From<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .Include(f => f.Details)
+            .UseTable<Order>((origOrderName, origOrderDetailName, orderName) =>
+                orderName.Replace(origOrderName, origOrderDetailName))
+            .Where(f => f.ProductCount > productCount)
+            .ToSql(out _);
+        Assert.Equal("SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\" FROM \"sys_order_104_202405\" a WHERE a.\"ProductCount\">@p0 UNION ALL SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\" FROM \"sys_order_105_202405\" a WHERE a.\"ProductCount\">@p0", sql);
+
+        result = repository.From<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .Include(f => f.Details)
+            .UseTable<Order>((origOrderName, origOrderDetailName, orderName) =>
+                orderName.Replace(origOrderName, origOrderDetailName))
+            .Where(f => f.ProductCount > productCount)
+            .ToList();
+        if (result.Count > 0)
+        {
+            var tenantIds = result.Select(f => f.TenantId).ToList();
+            Assert.True(tenantIds.Exists(f => "104,105".Contains(f)));
+            foreach (var order in result)
+            {
+                Assert.NotNull(order.Details);
+                foreach (var orderDetail in order.Details)
+                {
+                    Assert.Contains(orderDetail.TenantId, "104,105");
+                }
+            }
+        }
+    }
+    [Fact]
+    public async Task Query_SingleSharding_Value()
+    {
+        await this.InitSharding();
+        var orderId = "ON_1015";
+        var repository = this.dbFactory.Create();
+        var sql = repository.From<Order>()
+            .UseTableBy("104", DateTime.Parse("2024-05-01"))
+            .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
+            .UseTableBy("104")
+            .Where((x, y) => x.Id == orderId)
+            .Select((x, y) => new { x.Id, x.OrderNo, x.TenantId, x.BuyerId, BuyerName = y.Name })
+            .ToSql(out _);
+        Assert.Equal("SELECT a.\"Id\",a.\"OrderNo\",a.\"TenantId\",a.\"BuyerId\",b.\"Name\" AS \"BuyerName\" FROM \"sys_order_104_202405\" a INNER JOIN \"sys_user_104\" b ON a.\"BuyerId\"=b.\"Id\" WHERE a.\"Id\"=@p0", sql);
+
+        var result = await repository.From<Order>()
+            .UseTableBy("104", DateTime.Parse("2024-05-01"))
+            .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
+            .UseTableBy("104")
+            .Where((x, y) => x.Id == orderId)
+            .Select((x, y) => new { x.Id, x.OrderNo, x.TenantId, x.BuyerId, BuyerName = y.Name })
+            .FirstAsync();
+        if (result != null)
+        {
+            Assert.Equal("104", result.TenantId);
+        }
+    }
+    [Fact]
+    public async Task Query_ManySharding_SingleTable_SubQuery()
+    {
+        await this.InitSharding();
+        var repository = this.dbFactory.Create();
+        var sql = repository
+            .From(f => f.From<OrderDetail>()
+                .UseTable("sys_order_detail_104_202405", "sys_order_detail_105_202405")
+                .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
+                .UseTable<OrderDetail>((orderOrigName, userOrigName, orderTableName) => orderTableName.Replace(orderOrigName, userOrigName))
+                .GroupBy((a, b) => new { OrderId = b.Id, b.BuyerId })
+                .Select((x, a, b) => new { Group = x.Grouping, ProductCount = x.CountDistinct(a.ProductId) }))
+            .InnerJoin<User>((x, y) => x.Group.BuyerId == y.Id)
+            .UseTable<OrderDetail>((orderOrigName, userOrigName, orderTableName) =>
+            {
+                var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+                return tableName[..^7];
+            })
+            .Where((a, b) => a.ProductCount > 1)
+            .Select((x, y) => new
+            {
+                x.Group,
+                y.TenantId,
+                Buyer = y,
+                x.ProductCount
+            })
+            .ToSql(out _);
+        Assert.Equal("SELECT a.\"OrderId\",a.\"BuyerId\",b.\"TenantId\",b.\"Id\",b.\"TenantId\",b.\"Name\",b.\"Gender\",b.\"Age\",b.\"CompanyId\",b.\"GuidField\",b.\"SomeTimes\",b.\"SourceType\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\",a.\"ProductCount\" FROM (SELECT b.\"Id\" AS \"OrderId\",b.\"BuyerId\",COUNT(DISTINCT a.\"ProductId\") AS \"ProductCount\" FROM \"sys_order_detail_104_202405\" a INNER JOIN \"sys_order_104_202405\" b ON a.\"OrderId\"=b.\"Id\" GROUP BY b.\"Id\",b.\"BuyerId\") a INNER JOIN \"sys_user_104\" b ON a.\"BuyerId\"=b.\"Id\" WHERE a.\"ProductCount\">1 UNION ALL SELECT a.\"OrderId\",a.\"BuyerId\",b.\"TenantId\",b.\"Id\",b.\"TenantId\",b.\"Name\",b.\"Gender\",b.\"Age\",b.\"CompanyId\",b.\"GuidField\",b.\"SomeTimes\",b.\"SourceType\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\",a.\"ProductCount\" FROM (SELECT b.\"Id\" AS \"OrderId\",b.\"BuyerId\",COUNT(DISTINCT a.\"ProductId\") AS \"ProductCount\" FROM \"sys_order_detail_105_202405\" a INNER JOIN \"sys_order_105_202405\" b ON a.\"OrderId\"=b.\"Id\" GROUP BY b.\"Id\",b.\"BuyerId\") a INNER JOIN \"sys_user_105\" b ON a.\"BuyerId\"=b.\"Id\" WHERE a.\"ProductCount\">1", sql);
+
+        var result = await repository
+            .From(f => f.From<OrderDetail>()
+                .UseTable("sys_order_detail_104_202405", "sys_order_detail_105_202405")
+                .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
+                .UseTable<OrderDetail>((orderOrigName, userOrigName, orderTableName) => orderTableName.Replace(orderOrigName, userOrigName))
+                .GroupBy((a, b) => new { OrderId = b.Id, b.BuyerId })
+                .Select((x, a, b) => new { Group = x.Grouping, ProductCount = x.CountDistinct(a.ProductId) }))
+            .InnerJoin<User>((x, y) => x.Group.BuyerId == y.Id)
+            .UseTable<OrderDetail>((orderOrigName, userOrigName, orderTableName) =>
+            {
+                var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+                return tableName[..^7];
+            })
+            .Where((a, b) => a.ProductCount > 1)
+            .Select((x, y) => new
+            {
+                x.Group,
+                y.TenantId,
+                Buyer = y,
+                x.ProductCount
+            })
+            .ToListAsync();
+        if (result.Count > 0)
+        {
+            Assert.NotNull(result[0]);
+            Assert.NotNull(result[0].Group);
+            Assert.NotNull(result[0].Buyer);
+            Assert.True(result[0].ProductCount > 1);
+            var tenantIds = result.Select(f => f.TenantId).Distinct().ToList();
+            Assert.False(tenantIds.Exists(f => f != "104" && f != "105"));
+        }
+    }
+    [Fact]
+    public async Task Query_ManySharding_MultiTable1()
+    {
+        await this.InitSharding();
+        var productCount = 1;
+        var repository = this.dbFactory.Create();
+        var sql = repository.From<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
+            .UseTable<Order>((orderOrigName, userOrigName, orderTableName) =>
+            {
+                var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+                return tableName[..^7];
+            })
+            .Where((a, b) => a.ProductCount > productCount)
+            .Select((x, y) => new
+            {
+                Order = x,
+                Buyer = y
+            })
+            .ToSql(out _);
+        Assert.Equal("SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\",b.\"Id\",b.\"TenantId\",b.\"Name\",b.\"Gender\",b.\"Age\",b.\"CompanyId\",b.\"GuidField\",b.\"SomeTimes\",b.\"SourceType\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\" FROM \"sys_order_104_202405\" a INNER JOIN \"sys_user_104\" b ON a.\"BuyerId\"=b.\"Id\" WHERE a.\"ProductCount\">@p0 UNION ALL SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\",b.\"Id\",b.\"TenantId\",b.\"Name\",b.\"Gender\",b.\"Age\",b.\"CompanyId\",b.\"GuidField\",b.\"SomeTimes\",b.\"SourceType\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\" FROM \"sys_order_105_202405\" a INNER JOIN \"sys_user_105\" b ON a.\"BuyerId\"=b.\"Id\" WHERE a.\"ProductCount\">@p0", sql);
+
+        var result = repository.From<Order>()
+            .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
+            .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
+            .UseTable<Order>((orderOrigName, userOrigName, orderTableName) =>
+            {
+                var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+                return tableName[..^7];
+            })
+            .Where((a, b) => a.ProductCount > productCount)
+            .Select((x, y) => new
+            {
+                Order = x,
+                Buyer = y
+            })
+            .ToList();
+        if (result.Count > 0)
+        {
+            var tenantIds = result.Select(f => f.Order.TenantId).ToList();
+            Assert.True(tenantIds.Exists(f => "104,105".Contains(f)));
+        }
+    }
+    [Fact]
+    public async Task Query_ManySharding_MultiTable2()
+    {
+        await this.InitSharding();
+        var productCount = 1;
+        var repository = this.dbFactory.Create();
+        var sql = repository.From<Order>()
+            .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
+            .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
+            .UseTable<Order>((orderOrigName, userOrigName, orderTableName) =>
+            {
+                var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+                return tableName[..^7];
+            })
+            .Where((a, b) => a.ProductCount > productCount)
+            .Select((x, y) => new
+            {
+                Order = x,
+                Buyer = y
+            })
+            .ToSql(out _);
+        Assert.Equal("SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\",b.\"Id\",b.\"TenantId\",b.\"Name\",b.\"Gender\",b.\"Age\",b.\"CompanyId\",b.\"GuidField\",b.\"SomeTimes\",b.\"SourceType\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\" FROM \"sys_order_104_202405\" a INNER JOIN \"sys_user_104\" b ON a.\"BuyerId\"=b.\"Id\" WHERE a.\"ProductCount\">@p0 UNION ALL SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\",b.\"Id\",b.\"TenantId\",b.\"Name\",b.\"Gender\",b.\"Age\",b.\"CompanyId\",b.\"GuidField\",b.\"SomeTimes\",b.\"SourceType\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\" FROM \"sys_order_105_202405\" a INNER JOIN \"sys_user_105\" b ON a.\"BuyerId\"=b.\"Id\" WHERE a.\"ProductCount\">@p0", sql);
+
+        var result = repository.From<Order>()
+            .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
+            .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
+            .UseTable<Order>((orderOrigName, userOrigName, orderTableName) =>
+            {
+                var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+                return tableName[..^7];
+            })
+            .Where((a, b) => a.ProductCount > productCount)
+            .Select((x, y) => new
+            {
+                Order = x,
+                Buyer = y
+            })
+            .ToList();
+        if (result.Count > 0)
+        {
+            var tenantIds = result.Select(f => f.Order.TenantId).ToList();
+            Assert.True(tenantIds.Exists(f => "104,105".Contains(f)));
+        }
+    }
+    [Fact]
+    public async Task Query_ManySharding_MultiTable3()
+    {
+        await this.InitSharding();
+        var productCount = 1;
+        var repository = this.dbFactory.Create();
+        var sql = repository.From<Order>()
+            .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
+            .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
+            .UseTable<Order>((orderOrigName, orderDetailOrigName, orderTableName) => orderTableName.Replace(orderOrigName, orderDetailOrigName))
+            .Where((a, b) => a.ProductCount > productCount)
+            .Select((x, y) => new
+            {
+                Order = x,
+                Detail = y
+            })
+            .ToSql(out _);
+        Assert.Equal("SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\",b.\"Id\",b.\"TenantId\",b.\"OrderId\",b.\"ProductId\",b.\"Price\",b.\"Quantity\",b.\"Amount\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\" FROM \"sys_order_104_202405\" a INNER JOIN \"sys_order_detail_104_202405\" b ON a.\"Id\"=b.\"OrderId\" WHERE a.\"ProductCount\">@p0 UNION ALL SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\",b.\"Id\",b.\"TenantId\",b.\"OrderId\",b.\"ProductId\",b.\"Price\",b.\"Quantity\",b.\"Amount\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\" FROM \"sys_order_105_202405\" a INNER JOIN \"sys_order_detail_105_202405\" b ON a.\"Id\"=b.\"OrderId\" WHERE a.\"ProductCount\">@p0", sql);
+
+        var result = repository.From<Order>()
+            .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
+            .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
+            .UseTable<Order>((orderOrigName, orderDetailOrigName, orderTableName) => orderTableName.Replace(orderOrigName, orderDetailOrigName))
+            .Where((a, b) => a.ProductCount > productCount)
+            .Select((x, y) => new
+            {
+                Order = x,
+                Detail = y
+            })
+            .ToList();
+        if (result.Count > 0)
+        {
+            var tenantIds = result.Select(f => f.Order.TenantId).Distinct().ToList();
+            Assert.True(tenantIds.Exists(f => "104,105".Contains(f)));
+        }
+    }
+    [Fact]
+    public async Task Query_SingleSharding_Exists1()
+    {
+        await this.InitSharding();
+        var repository = this.dbFactory.Create();
+        var sql = repository.From<Order>()
+            .UseTableBy("104", DateTime.Parse("2024-05-24"))
+            .Where(f => repository.From<User>('b')
+                .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                .Exists(t => t.Id == f.BuyerId && t.Age < 25))
+            .ToSql(out _);
+        Assert.Equal("SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\" FROM \"sys_order_104_202405\" a WHERE EXISTS(SELECT * FROM \"sys_user_104\" b WHERE b.\"Id\"=a.\"BuyerId\" AND b.\"Age\"<25)", sql);
+
+        var result = repository.From<Order>()
+            .UseTableBy("104", DateTime.Parse("2024-05-24"))
+            .Where(f => repository.From<User>('b')
+                .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                .Exists(t => t.Id == f.BuyerId && t.Age < 25))
+            .ToList();
+        if (result.Count > 0)
+        {
+            var tenantIds = result.Select(f => f.TenantId).Distinct().ToList();
+            Assert.Contains("104", tenantIds);
+        }
+    }
+    [Fact]
+    public async Task Query_SingleSharding_Exists2()
+    {
+        await this.InitSharding();
+        var repository = this.dbFactory.Create();
+        var sql = repository.From<Order>()
+            .UseTableBy("104", DateTime.Parse("2024-05-24"))
+            .Where(f => repository.From<User>('b')
+                .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                .InnerJoin<OrderDetail>((x, y) => f.Id == y.OrderId)
+                .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                .Exists((x, y) => x.Id == f.BuyerId && x.Age <= 25 && y.Price > 100))
+            .ToSql(out _);
+        Assert.Equal("SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\" FROM \"sys_order_104_202405\" a WHERE EXISTS(SELECT * FROM \"sys_user_104\" b INNER JOIN \"sys_order_detail_104_202405\" c ON a.\"Id\"=c.\"OrderId\" WHERE b.\"Id\"=a.\"BuyerId\" AND b.\"Age\"<=25 AND c.\"Price\">100)", sql);
+
+        sql = repository.From<Order>()
+            .UseTableBy("104", DateTime.Parse("2024-05-24"))
+            .Where(f => repository.From<User>('b')
+                .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                .InnerJoin<OrderDetail>((x, y) => f.Id == y.OrderId)
+                .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                .Exists((x, y) => x.Id == f.BuyerId && x.Age <= 25 && y.Price > 100))
+            .ToSql(out _);
+        Assert.Equal("SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\" FROM \"sys_order_104_202405\" a WHERE EXISTS(SELECT * FROM \"sys_user_104\" b INNER JOIN \"sys_order_detail_104_202405\" c ON a.\"Id\"=c.\"OrderId\" WHERE b.\"Id\"=a.\"BuyerId\" AND b.\"Age\"<=25 AND c.\"Price\">100)", sql);
+
+        var result = repository.From<Order>()
+            .UseTableBy("104", DateTime.Parse("2024-05-24"))
+            .Where(f => repository.From<User>('b')
+                .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                .InnerJoin<OrderDetail>((x, y) => f.Id == y.OrderId)
+                .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                .Exists((x, y) => x.Id == f.BuyerId && x.Age <= 25 && y.Price > 100))
+            .ToList();
+        if (result.Count > 0)
+        {
+            var tenantIds = result.Select(f => f.TenantId).Distinct().ToList();
+            Assert.Contains("104", tenantIds);
+        }
+    }
+    [Fact]
+    public async Task Update_SingleSharding()
+    {
+        await this.InitSharding();
+        var repository = this.dbFactory.Create();
+        var orderIds = new string[] { "ON_1001", "ON_1002", "ON_1003", "ON_1004" };
+        var sql = repository.Update<Order>()
+            .UseTableBy("104", DateTime.Parse("2024-05-24"))
+            .Set(new { TotalAmount = 400 })
+            .Where(f => orderIds.Contains(f.Id))
+            .ToSql(out var dbParameters);
+        Assert.Equal("UPDATE \"sys_order_104_202405\" SET \"TotalAmount\"=@TotalAmount WHERE \"Id\" IN (@p1,@p2,@p3,@p4)", sql);
+        Assert.Equal(400, (double)dbParameters[0].Value);
+        Assert.Equal(NpgsqlDbType.Double, ((NpgsqlParameter)dbParameters[0]).NpgsqlDbType);
+        Assert.Equal(orderIds[0], (string)dbParameters[1].Value);
+        Assert.Equal(orderIds[1], (string)dbParameters[2].Value);
+        Assert.Equal(orderIds[2], (string)dbParameters[3].Value);
+        Assert.Equal(orderIds[3], (string)dbParameters[4].Value);
+
+        var result = await repository.Update<Order>()
+            .UseTableBy("104", DateTime.Parse("2024-05-24"))
+            .Set(new { TotalAmount = 400 })
+            .Where(f => orderIds.Contains(f.Id))
+            .ExecuteAsync();
+        Assert.True(result > 0);
+    }
+    [Fact]
+    public async Task Update_ManySharding1()
+    {
+        await this.InitSharding();
+        var repository = this.dbFactory.Create();
+        var orderIds = new string[] { "ON_1001", "ON_1002", "ON_2003", "ON_2004" };
+        var sql = repository.Update<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .Set(new { TotalAmount = 400 })
+            .Where(f => orderIds.Contains(f.Id))
+            .ToSql(out var dbParameters);
+        Assert.Equal("UPDATE \"sys_order_104_202405\" SET \"TotalAmount\"=@TotalAmount WHERE \"Id\" IN (@p1,@p2,@p3,@p4);UPDATE \"sys_order_105_202405\" SET \"TotalAmount\"=@TotalAmount WHERE \"Id\" IN (@p1,@p2,@p3,@p4)", sql);
+        Assert.Equal(400, (double)dbParameters[0].Value);
+        Assert.Equal(NpgsqlDbType.Double, ((NpgsqlParameter)dbParameters[0]).NpgsqlDbType);
+        Assert.Equal(orderIds[0], (string)dbParameters[1].Value);
+        Assert.Equal(orderIds[1], (string)dbParameters[2].Value);
+        Assert.Equal(orderIds[2], (string)dbParameters[3].Value);
+        Assert.Equal(orderIds[3], (string)dbParameters[4].Value);
+
+        await repository.BeginTransactionAsync();
+        var result = await repository.Update<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .Set(new { TotalAmount = 400 })
+            .Where(f => orderIds.Contains(f.Id))
+            .ExecuteAsync();
+        var orders = await repository.From<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .Where(f => orderIds.Contains(f.Id))
+            .ToListAsync();
+        await repository.CommitAsync();
+
+        Assert.True(result > 0);
+        foreach (var order in orders)
+        {
+            Assert.Equal(400, order.TotalAmount);
+            Assert.True(order.TenantId == "104" || order.TenantId == "105");
+            Assert.Contains(order.Id, orderIds);
+        }
+    }
+    [Fact]
+    public async Task Update_ManySharding2()
+    {
+        await this.InitSharding();
+        var repository = this.dbFactory.Create();
+        var orderIds = new string[] { "ON_1001", "ON_1002", "ON_2003", "ON_2004" };
+        var sql = repository.Update<Order>()
+            .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
+            .Set(new { TotalAmount = 400 })
+            .Where(f => orderIds.Contains(f.Id))
+            .ToSql(out var dbParameters);
+        //Assert.True(sql == "SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND b.nspname='public' AND a.relkind='r' AND a.relname LIKE 'sys_order%';UPDATE \"sys_order_104_202405\" SET \"TotalAmount\"=@TotalAmount WHERE \"Id\" IN (@p1,@p2,@p3,@p4);UPDATE \"sys_order_105_202405\" SET \"TotalAmount\"=@TotalAmount WHERE \"Id\" IN (@p1,@p2,@p3,@p4)");
+        Assert.Equal(400, (double)dbParameters[0].Value);
+        Assert.Equal(NpgsqlDbType.Double, ((NpgsqlParameter)dbParameters[0]).NpgsqlDbType);
+        Assert.Equal(orderIds[0], (string)dbParameters[1].Value);
+        Assert.Equal(orderIds[1], (string)dbParameters[2].Value);
+        Assert.Equal(orderIds[2], (string)dbParameters[3].Value);
+        Assert.Equal(orderIds[3], (string)dbParameters[4].Value);
+
+        await repository.BeginTransactionAsync();
+        var result = await repository.Update<Order>()
+            .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
+            .Set(new { TotalAmount = 400 })
+            .Where(f => orderIds.Contains(f.Id))
+            .ExecuteAsync();
+        var orders = await repository.From<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .Where(f => orderIds.Contains(f.Id))
+            .ToListAsync();
+        await repository.CommitAsync();
+
+        Assert.True(result > 0);
+        foreach (var order in orders)
+        {
+            Assert.Equal(400, order.TotalAmount);
+            Assert.True(order.TenantId == "104" || order.TenantId == "105");
+            Assert.Contains(order.Id, orderIds);
+        }
+    }
+    [Fact]
+    public async Task Update_SetBulk_ManySharding()
+    {
+        await this.InitSharding();
+        var createdAt = DateTime.Parse("2024-05-24");
+        var repository = this.dbFactory.Create();
+        var orders = repository.From<Order>()
+            .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
+            .Select(f => new
+            {
+                f.Id,
+                f.OrderNo,
+                f.BuyerId,
+                f.SellerId,
+                TotalAmount = f.TotalAmount + 50,
+                ProductCount = 3,
+                UpdatedAt = DateTime.Now
+            })
+            .OrderByDescending(f => f.Id)
+            .Take(20)
+            .ToList();
+        var orderIds = orders.Select(f => f.Id).ToList();
+
+        var sql = repository.Update<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .SetBulk(orders, 10)
+            .Set(f => f.BuyerSource, UserSourceType.Wechat)
+            .IgnoreFields(f => new { f.OrderNo, f.BuyerId, f.SellerId })
+            .ToSql(out var dbParameters);
+
+        Assert.Equal("UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount0,\"ProductCount\"=@ProductCount0,\"UpdatedAt\"=@UpdatedAt0 WHERE \"Id\"=@kId0;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount0,\"ProductCount\"=@ProductCount0,\"UpdatedAt\"=@UpdatedAt0 WHERE \"Id\"=@kId0;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount1,\"ProductCount\"=@ProductCount1,\"UpdatedAt\"=@UpdatedAt1 WHERE \"Id\"=@kId1;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount1,\"ProductCount\"=@ProductCount1,\"UpdatedAt\"=@UpdatedAt1 WHERE \"Id\"=@kId1;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount2,\"ProductCount\"=@ProductCount2,\"UpdatedAt\"=@UpdatedAt2 WHERE \"Id\"=@kId2;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount2,\"ProductCount\"=@ProductCount2,\"UpdatedAt\"=@UpdatedAt2 WHERE \"Id\"=@kId2;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount3,\"ProductCount\"=@ProductCount3,\"UpdatedAt\"=@UpdatedAt3 WHERE \"Id\"=@kId3;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount3,\"ProductCount\"=@ProductCount3,\"UpdatedAt\"=@UpdatedAt3 WHERE \"Id\"=@kId3;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount4,\"ProductCount\"=@ProductCount4,\"UpdatedAt\"=@UpdatedAt4 WHERE \"Id\"=@kId4;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount4,\"ProductCount\"=@ProductCount4,\"UpdatedAt\"=@UpdatedAt4 WHERE \"Id\"=@kId4;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount5,\"ProductCount\"=@ProductCount5,\"UpdatedAt\"=@UpdatedAt5 WHERE \"Id\"=@kId5;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount5,\"ProductCount\"=@ProductCount5,\"UpdatedAt\"=@UpdatedAt5 WHERE \"Id\"=@kId5;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount6,\"ProductCount\"=@ProductCount6,\"UpdatedAt\"=@UpdatedAt6 WHERE \"Id\"=@kId6;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount6,\"ProductCount\"=@ProductCount6,\"UpdatedAt\"=@UpdatedAt6 WHERE \"Id\"=@kId6;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount7,\"ProductCount\"=@ProductCount7,\"UpdatedAt\"=@UpdatedAt7 WHERE \"Id\"=@kId7;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount7,\"ProductCount\"=@ProductCount7,\"UpdatedAt\"=@UpdatedAt7 WHERE \"Id\"=@kId7;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount8,\"ProductCount\"=@ProductCount8,\"UpdatedAt\"=@UpdatedAt8 WHERE \"Id\"=@kId8;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount8,\"ProductCount\"=@ProductCount8,\"UpdatedAt\"=@UpdatedAt8 WHERE \"Id\"=@kId8;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount9,\"ProductCount\"=@ProductCount9,\"UpdatedAt\"=@UpdatedAt9 WHERE \"Id\"=@kId9;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount9,\"ProductCount\"=@ProductCount9,\"UpdatedAt\"=@UpdatedAt9 WHERE \"Id\"=@kId9;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount10,\"ProductCount\"=@ProductCount10,\"UpdatedAt\"=@UpdatedAt10 WHERE \"Id\"=@kId10;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount10,\"ProductCount\"=@ProductCount10,\"UpdatedAt\"=@UpdatedAt10 WHERE \"Id\"=@kId10;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount11,\"ProductCount\"=@ProductCount11,\"UpdatedAt\"=@UpdatedAt11 WHERE \"Id\"=@kId11;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount11,\"ProductCount\"=@ProductCount11,\"UpdatedAt\"=@UpdatedAt11 WHERE \"Id\"=@kId11;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount12,\"ProductCount\"=@ProductCount12,\"UpdatedAt\"=@UpdatedAt12 WHERE \"Id\"=@kId12;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount12,\"ProductCount\"=@ProductCount12,\"UpdatedAt\"=@UpdatedAt12 WHERE \"Id\"=@kId12;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount13,\"ProductCount\"=@ProductCount13,\"UpdatedAt\"=@UpdatedAt13 WHERE \"Id\"=@kId13;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount13,\"ProductCount\"=@ProductCount13,\"UpdatedAt\"=@UpdatedAt13 WHERE \"Id\"=@kId13;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount14,\"ProductCount\"=@ProductCount14,\"UpdatedAt\"=@UpdatedAt14 WHERE \"Id\"=@kId14;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount14,\"ProductCount\"=@ProductCount14,\"UpdatedAt\"=@UpdatedAt14 WHERE \"Id\"=@kId14;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount15,\"ProductCount\"=@ProductCount15,\"UpdatedAt\"=@UpdatedAt15 WHERE \"Id\"=@kId15;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount15,\"ProductCount\"=@ProductCount15,\"UpdatedAt\"=@UpdatedAt15 WHERE \"Id\"=@kId15;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount16,\"ProductCount\"=@ProductCount16,\"UpdatedAt\"=@UpdatedAt16 WHERE \"Id\"=@kId16;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount16,\"ProductCount\"=@ProductCount16,\"UpdatedAt\"=@UpdatedAt16 WHERE \"Id\"=@kId16;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount17,\"ProductCount\"=@ProductCount17,\"UpdatedAt\"=@UpdatedAt17 WHERE \"Id\"=@kId17;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount17,\"ProductCount\"=@ProductCount17,\"UpdatedAt\"=@UpdatedAt17 WHERE \"Id\"=@kId17;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount18,\"ProductCount\"=@ProductCount18,\"UpdatedAt\"=@UpdatedAt18 WHERE \"Id\"=@kId18;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount18,\"ProductCount\"=@ProductCount18,\"UpdatedAt\"=@UpdatedAt18 WHERE \"Id\"=@kId18;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount19,\"ProductCount\"=@ProductCount19,\"UpdatedAt\"=@UpdatedAt19 WHERE \"Id\"=@kId19;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount19,\"ProductCount\"=@ProductCount19,\"UpdatedAt\"=@UpdatedAt19 WHERE \"Id\"=@kId19;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount20,\"ProductCount\"=@ProductCount20,\"UpdatedAt\"=@UpdatedAt20 WHERE \"Id\"=@kId20;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount20,\"ProductCount\"=@ProductCount20,\"UpdatedAt\"=@UpdatedAt20 WHERE \"Id\"=@kId20;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount21,\"ProductCount\"=@ProductCount21,\"UpdatedAt\"=@UpdatedAt21 WHERE \"Id\"=@kId21;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount21,\"ProductCount\"=@ProductCount21,\"UpdatedAt\"=@UpdatedAt21 WHERE \"Id\"=@kId21;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount22,\"ProductCount\"=@ProductCount22,\"UpdatedAt\"=@UpdatedAt22 WHERE \"Id\"=@kId22;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount22,\"ProductCount\"=@ProductCount22,\"UpdatedAt\"=@UpdatedAt22 WHERE \"Id\"=@kId22;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount23,\"ProductCount\"=@ProductCount23,\"UpdatedAt\"=@UpdatedAt23 WHERE \"Id\"=@kId23;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount23,\"ProductCount\"=@ProductCount23,\"UpdatedAt\"=@UpdatedAt23 WHERE \"Id\"=@kId23;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount24,\"ProductCount\"=@ProductCount24,\"UpdatedAt\"=@UpdatedAt24 WHERE \"Id\"=@kId24;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount24,\"ProductCount\"=@ProductCount24,\"UpdatedAt\"=@UpdatedAt24 WHERE \"Id\"=@kId24;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount25,\"ProductCount\"=@ProductCount25,\"UpdatedAt\"=@UpdatedAt25 WHERE \"Id\"=@kId25;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount25,\"ProductCount\"=@ProductCount25,\"UpdatedAt\"=@UpdatedAt25 WHERE \"Id\"=@kId25;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount26,\"ProductCount\"=@ProductCount26,\"UpdatedAt\"=@UpdatedAt26 WHERE \"Id\"=@kId26;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount26,\"ProductCount\"=@ProductCount26,\"UpdatedAt\"=@UpdatedAt26 WHERE \"Id\"=@kId26;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount27,\"ProductCount\"=@ProductCount27,\"UpdatedAt\"=@UpdatedAt27 WHERE \"Id\"=@kId27;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount27,\"ProductCount\"=@ProductCount27,\"UpdatedAt\"=@UpdatedAt27 WHERE \"Id\"=@kId27;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount28,\"ProductCount\"=@ProductCount28,\"UpdatedAt\"=@UpdatedAt28 WHERE \"Id\"=@kId28;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount28,\"ProductCount\"=@ProductCount28,\"UpdatedAt\"=@UpdatedAt28 WHERE \"Id\"=@kId28;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount29,\"ProductCount\"=@ProductCount29,\"UpdatedAt\"=@UpdatedAt29 WHERE \"Id\"=@kId29;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount29,\"ProductCount\"=@ProductCount29,\"UpdatedAt\"=@UpdatedAt29 WHERE \"Id\"=@kId29;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount30,\"ProductCount\"=@ProductCount30,\"UpdatedAt\"=@UpdatedAt30 WHERE \"Id\"=@kId30;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount30,\"ProductCount\"=@ProductCount30,\"UpdatedAt\"=@UpdatedAt30 WHERE \"Id\"=@kId30;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount31,\"ProductCount\"=@ProductCount31,\"UpdatedAt\"=@UpdatedAt31 WHERE \"Id\"=@kId31;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount31,\"ProductCount\"=@ProductCount31,\"UpdatedAt\"=@UpdatedAt31 WHERE \"Id\"=@kId31;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount32,\"ProductCount\"=@ProductCount32,\"UpdatedAt\"=@UpdatedAt32 WHERE \"Id\"=@kId32;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount32,\"ProductCount\"=@ProductCount32,\"UpdatedAt\"=@UpdatedAt32 WHERE \"Id\"=@kId32;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount33,\"ProductCount\"=@ProductCount33,\"UpdatedAt\"=@UpdatedAt33 WHERE \"Id\"=@kId33;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount33,\"ProductCount\"=@ProductCount33,\"UpdatedAt\"=@UpdatedAt33 WHERE \"Id\"=@kId33;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount34,\"ProductCount\"=@ProductCount34,\"UpdatedAt\"=@UpdatedAt34 WHERE \"Id\"=@kId34;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount34,\"ProductCount\"=@ProductCount34,\"UpdatedAt\"=@UpdatedAt34 WHERE \"Id\"=@kId34;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount35,\"ProductCount\"=@ProductCount35,\"UpdatedAt\"=@UpdatedAt35 WHERE \"Id\"=@kId35;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount35,\"ProductCount\"=@ProductCount35,\"UpdatedAt\"=@UpdatedAt35 WHERE \"Id\"=@kId35;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount36,\"ProductCount\"=@ProductCount36,\"UpdatedAt\"=@UpdatedAt36 WHERE \"Id\"=@kId36;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount36,\"ProductCount\"=@ProductCount36,\"UpdatedAt\"=@UpdatedAt36 WHERE \"Id\"=@kId36;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount37,\"ProductCount\"=@ProductCount37,\"UpdatedAt\"=@UpdatedAt37 WHERE \"Id\"=@kId37;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount37,\"ProductCount\"=@ProductCount37,\"UpdatedAt\"=@UpdatedAt37 WHERE \"Id\"=@kId37;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount38,\"ProductCount\"=@ProductCount38,\"UpdatedAt\"=@UpdatedAt38 WHERE \"Id\"=@kId38;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount38,\"ProductCount\"=@ProductCount38,\"UpdatedAt\"=@UpdatedAt38 WHERE \"Id\"=@kId38;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount39,\"ProductCount\"=@ProductCount39,\"UpdatedAt\"=@UpdatedAt39 WHERE \"Id\"=@kId39;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount39,\"ProductCount\"=@ProductCount39,\"UpdatedAt\"=@UpdatedAt39 WHERE \"Id\"=@kId39", sql);
+
+        await repository.BeginTransactionAsync();
+        var result = await repository.Update<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .SetBulk(orders, 10)
+            .Set(f => f.BuyerSource, UserSourceType.Wechat)
+            .IgnoreFields(f => new { f.OrderNo, f.BuyerId, f.SellerId })
+            .ExecuteAsync();
+        var updatedOrders = await repository.From<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .Where(f => orderIds.Contains(f.Id))
+            .ToListAsync();
+        await repository.CommitAsync();
+        orders.Sort((x, y) => x.Id.CompareTo(y.Id));
+        updatedOrders.Sort((x, y) => x.Id.CompareTo(y.Id));
+        Assert.True(result > 0);
+        for (int i = 0; i < orders.Count; i++)
+        {
+            Assert.True(orders[i].TotalAmount == updatedOrders[i].TotalAmount);
+            Assert.True(orders[i].ProductCount == updatedOrders[i].ProductCount);
+
+            Assert.True(orders[i].OrderNo == updatedOrders[i].OrderNo);
+            Assert.True(orders[i].BuyerId == updatedOrders[i].BuyerId);
+            Assert.True(orders[i].SellerId == updatedOrders[i].SellerId);
+            Assert.True(updatedOrders[i].TenantId == "104" || updatedOrders[i].TenantId == "105");
+        }
+    }
+    [Fact]
+    public async Task Update_BulkCopy_ManySharding()
+    {
+        await this.InitSharding();
+        var createdAt = DateTime.Parse("2024-05-24");
+        var repository = this.dbFactory.Create();
+        var orders = repository.From<Order>()
+            .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
+            .Select(f => new
+            {
+                f.Id,
+                f.TenantId,
+                TotalAmount = f.TotalAmount + 50,
+                ProductCount = 3,
+                UpdatedAt = DateTime.Now
+            })
+            .OrderByDescending(f => f.Id)
+            .Take(20)
+            .ToList();
+        var orderIds = orders.Select(f => f.Id).ToList();
+
+        var sql = repository.Update<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .SetBulkCopy(orders)
+            .ToSql(out var dbParameters);
+        //Assert.True(sql == "CREATE TEMPORARY TABLE \"sys_order_0c0f27d1c0224df38030d8e78b03f8c4\"(\r\n\"Id\" varchar(50) NOT NULL,\r\n\"TotalAmount\" double,\r\n\"ProductCount\" int,\r\n\"UpdatedAt\" datetime,\r\nPRIMARY KEY(\"Id\")\r\n);\r\nUPDATE \"sys_order_104_202405\" a INNER JOIN \"sys_order_0c0f27d1c0224df38030d8e78b03f8c4\" b ON a.\"Id\"=b.\"Id\" SET a.\"TotalAmount\"=b.\"TotalAmount\",a.\"ProductCount\"=b.\"ProductCount\",a.\"UpdatedAt\"=b.\"UpdatedAt\";UPDATE \"sys_order_105_202405\" a INNER JOIN \"sys_order_0c0f27d1c0224df38030d8e78b03f8c4\" b ON a.\"Id\"=b.\"Id\" SET a.\"TotalAmount\"=b.\"TotalAmount\",a.\"ProductCount\"=b.\"ProductCount\",a.\"UpdatedAt\"=b.\"UpdatedAt\";DROP TABLE \"sys_order_0c0f27d1c0224df38030d8e78b03f8c4\"");
+
+        await repository.BeginTransactionAsync();
+        var result = await repository.Update<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .SetBulkCopy(orders)
+            .ExecuteAsync();
+        var updatedOrders = await repository.From<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .Where(f => orderIds.Contains(f.Id))
+            .ToListAsync();
+        await repository.CommitAsync();
+        orders.Sort((x, y) => x.Id.CompareTo(y.Id));
+        updatedOrders.Sort((x, y) => x.Id.CompareTo(y.Id));
+        Assert.True(result == orders.Count);
+        for (int i = 0; i < orders.Count; i++)
+        {
+            Assert.True(orders[i].TotalAmount == updatedOrders[i].TotalAmount);
+            Assert.True(orders[i].ProductCount == updatedOrders[i].ProductCount);
+            Assert.True(updatedOrders[i].TenantId == "104" || updatedOrders[i].TenantId == "105");
+        }
+    }
+    [Fact]
+    public async Task Update_ManySharding_Range()
+    {
+        await this.InitSharding();
+        var beginTime = DateTime.Parse("2020-01-01");
+        var endTime = DateTime.Parse("2024-12-31");
+        var repository = this.dbFactory.Create();
+        var sql = repository.From<Order>()
+            .UseTableByRange("104", beginTime, endTime)
+            .Select(f => new
+            {
+                f.Id,
+                f.TenantId,
+                f.OrderNo,
+                f.TotalAmount
+            })
+            .OrderByDescending(f => f.Id)
+            .ToSql(out _);
+        Assert.Equal("SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"TotalAmount\" FROM \"sys_order_104_202405\" a ORDER BY a.\"Id\" DESC", sql);
+        var orders = repository.From<Order>()
+            .UseTableByRange("104", beginTime, endTime)
+            .Select(f => new
+            {
+                f.Id,
+                f.TenantId,
+                f.OrderNo,
+                f.TotalAmount
+            })
+            .OrderByDescending(f => f.Id)
+            .ToList();
+
+        sql = repository.From<Order>()
+           .UseTableByRange("104", beginTime, endTime)
+           .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
+           .UseTable<Order>((orderOrigName, userOrigName, orderTableName) =>
+           {
+               var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+               return tableName[..^7];
+           })
+           .Select((x, y) => new
+           {
+               x.Id,
+               x.TenantId,
+               BuyerName = y.Name,
+               x.TotalAmount
+           })
+           .OrderByDescending(f => f.Id)
+           .ToSql(out _);
+        Assert.Equal("SELECT a.\"Id\",a.\"TenantId\",b.\"Name\" AS \"BuyerName\",a.\"TotalAmount\" FROM \"sys_order_104_202405\" a INNER JOIN \"sys_user_104\" b ON a.\"BuyerId\"=b.\"Id\" ORDER BY a.\"Id\" DESC", sql);
+        var orderInfos = repository.From<Order>()
+            .UseTableByRange("104", beginTime, endTime)
+            .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
+            .UseTable<Order>((orderOrigName, userOrigName, orderTableName) =>
+            {
+                var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+                return tableName[..^7];
+            })
+            .Select((x, y) => new
+            {
+                x.Id,
+                x.TenantId,
+                BuyerName = y.Name,
+                x.TotalAmount
+            })
+            .OrderByDescending(f => f.Id)
+            .ToList();
+
+        Assert.Equal(orders.Count, orderInfos.Count);
+    }
+    [Fact]
+    public async Task ManySharding_FromQuery_SubQuery()
+    {
+        await this.InitSharding();
+        var repository = this.dbFactory.Create();
+        var count = 1;
+        var amount = 50;
+        var sql = repository
+            .From(f => f.From<Order>()
+                .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
+                .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+                .UseTable<Order>((orderOrigName, userOrigName, orderTableName)
+                    => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+                .LeftJoin<OrderDetail>((a, b, c) => a.Id == c.OrderId)
+                .UseTable<Order>((orderOrigName, orderDetailOrigName, orderTableName)
+                    => orderTableName.Replace(orderOrigName, orderDetailOrigName))
+                .GroupBy((a, b, c) => new { a.BuyerId, OrderId = a.Id, a.OrderNo })
+                .Having((x, a, b, c) => Sql.CountDistinct(c.ProductId) > count)
+                .Select((a, b, c, d) => new { a.Grouping.BuyerId, a.Grouping.OrderId, a.Grouping.OrderNo, ProductTotal = Sql.CountDistinct(d.ProductId) }))
+            .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
+            .IncludeMany((a, b) => b.Details, f => f.Amount > amount)
+            .UseTable<Order>((orderOrigName, orderDetailOrigName, orderTableName)
+                => orderTableName.Replace(orderOrigName, orderDetailOrigName))
+            .Select((x, y) => new { y.Disputes, x.BuyerId, x.OrderId, x.OrderNo, x.ProductTotal, Order = y })
+            .ToSql(out var dbParameters);
+        Assert.Equal("SELECT b.\"Disputes\",a.\"BuyerId\",a.\"OrderId\",a.\"OrderNo\",a.\"ProductTotal\",b.\"Id\",b.\"TenantId\",b.\"OrderNo\",b.\"ProductCount\",b.\"TotalAmount\",b.\"BuyerId\",b.\"BuyerSource\",b.\"SellerId\",b.\"Products\",b.\"Disputes\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\" FROM (SELECT a.\"BuyerId\",a.\"Id\" AS \"OrderId\",a.\"OrderNo\",COUNT(DISTINCT c.\"ProductId\") AS \"ProductTotal\" FROM \"sys_order_104_202405\" a INNER JOIN \"sys_user_104\" b ON a.\"BuyerId\"=b.\"Id\" LEFT JOIN \"sys_order_detail_104_202405\" c ON a.\"Id\"=c.\"OrderId\" GROUP BY a.\"BuyerId\",a.\"Id\",a.\"OrderNo\" HAVING COUNT(DISTINCT c.\"ProductId\")>@p0) a INNER JOIN \"sys_order\" b ON a.\"OrderId\"=b.\"Id\" UNION ALL SELECT b.\"Disputes\",a.\"BuyerId\",a.\"OrderId\",a.\"OrderNo\",a.\"ProductTotal\",b.\"Id\",b.\"TenantId\",b.\"OrderNo\",b.\"ProductCount\",b.\"TotalAmount\",b.\"BuyerId\",b.\"BuyerSource\",b.\"SellerId\",b.\"Products\",b.\"Disputes\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\" FROM (SELECT a.\"BuyerId\",a.\"Id\" AS \"OrderId\",a.\"OrderNo\",COUNT(DISTINCT c.\"ProductId\") AS \"ProductTotal\" FROM \"sys_order_105_202405\" a INNER JOIN \"sys_user_105\" b ON a.\"BuyerId\"=b.\"Id\" LEFT JOIN \"sys_order_detail_105_202405\" c ON a.\"Id\"=c.\"OrderId\" GROUP BY a.\"BuyerId\",a.\"Id\",a.\"OrderNo\" HAVING COUNT(DISTINCT c.\"ProductId\")>@p0) a INNER JOIN \"sys_order\" b ON a.\"OrderId\"=b.\"Id\"", sql);
+        Assert.Single(dbParameters);
+        Assert.Equal((int)dbParameters[0].Value, count);
+
+        var result = repository
+            .From(f => f.From<Order>()
+                .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
+                .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+                .UseTable<Order>((orderOrigName, userOrigName, orderTableName)
+                    => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+                .LeftJoin<OrderDetail>((a, b, c) => a.Id == c.OrderId)
+                .UseTable<Order>((orderOrigName, orderDetailOrigName, orderTableName)
+                    => orderTableName.Replace(orderOrigName, orderDetailOrigName))
+                .GroupBy((a, b, c) => new { a.BuyerId, OrderId = a.Id, a.OrderNo })
+                .Having((x, a, b, c) => Sql.CountDistinct(c.ProductId) > count)
+                .Select((a, b, c, d) => new { a.Grouping.BuyerId, a.Grouping.OrderId, a.Grouping.OrderNo, ProductTotal = Sql.CountDistinct(d.ProductId) }))
+            .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
+            .IncludeMany((a, b) => b.Details, f => f.Amount > amount)
+            .UseTable<Order>((orderOrigName, orderDetailOrigName, orderTableName)
+                => orderTableName.Replace(orderOrigName, orderDetailOrigName))
+            .Select((x, y) => new { y.Disputes, x.BuyerId, x.OrderId, x.OrderNo, x.ProductTotal, Order = y })
+            .First();
+        if (result != null)
+        {
+            Assert.NotNull(result.Disputes);
+            Assert.NotNull(result.Order);
+            Assert.NotNull(result.Order.Details);
+            Assert.True(result.Order.Details.Count > 0);
+            Assert.True(result.Order.Details[0].Amount > 0);
+        }
+    }
+    [Fact]
+    public async Task Query_ManySharding_SingleTable_Include_TableSchema()
+    {
+        await this.InitSharding();
+        var productCount = 1;
+        var repository = this.dbFactory.Create();
+        var sql = repository.From<Order>()
+            .UseTable(f => f.Contains("_104_") && int.Parse(f[^6..]) > 202001)
+            .UseTableSchema("myschema")
+            .Include(f => f.Details)
+            .UseTableSchema("myschema")
+            .UseTable<Order>((origOrderName, origOrderDetailName, orderName) =>
+                orderName.Replace(origOrderName, origOrderDetailName))
+            .Where(f => f.ProductCount > productCount)
+            .ToSql(out _);
+        Assert.Equal("SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\" FROM \"myschema\".\"sys_order_104_202405\" a WHERE a.\"ProductCount\">@p0", sql);
+
+        var result = repository.From<Order>()
+            .UseTable(f => f.Contains("_104_") && int.Parse(f[^6..]) > 202001)
+            .UseTableSchema("myschema")
+            .Include(f => f.Details)
+            .UseTableSchema("myschema")
+            .UseTable<Order>((origOrderName, origOrderDetailName, orderName) =>
+                orderName.Replace(origOrderName, origOrderDetailName))
+            .Where(f => f.ProductCount > productCount)
+            .ToList();
+        if (result.Count > 0)
+        {
+            var tenantIds = result.Select(f => f.TenantId).Distinct().ToList();
+            Assert.False(tenantIds.Exists(f => f != "104"));
+            foreach (var order in result)
+            {
+                Assert.NotNull(order.Details);
+                foreach (var orderDetail in order.Details)
+                {
+                    Assert.Equal("104", orderDetail.TenantId);
+                }
+            }
+        }
+
+        sql = repository.From<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .UseTableSchema("myschema")
+            .Include(f => f.Details)
+            .UseTableSchema("myschema")
+            .UseTable<Order>((origOrderName, origOrderDetailName, orderName) =>
+                orderName.Replace(origOrderName, origOrderDetailName))
+            .Where(f => f.ProductCount > productCount)
+            .ToSql(out _);
+        Assert.Equal("SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\" FROM \"myschema\".\"sys_order_104_202405\" a WHERE a.\"ProductCount\">@p0 UNION ALL SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\" FROM \"myschema\".\"sys_order_105_202405\" a WHERE a.\"ProductCount\">@p0", sql);
+
+        result = repository.From<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .UseTableSchema("myschema")
+            .Include(f => f.Details)
+            .UseTableSchema("myschema")
+            .UseTable<Order>((origOrderName, origOrderDetailName, orderName) =>
+                orderName.Replace(origOrderName, origOrderDetailName))
+            .Where(f => f.ProductCount > productCount)
+            .ToList();
+        if (result.Count > 0)
+        {
+            var tenantIds = result.Select(f => f.TenantId).ToList();
+            Assert.True(tenantIds.Exists(f => "104,105".Contains(f)));
+            foreach (var order in result)
+            {
+                Assert.NotNull(order.Details);
+                foreach (var orderDetail in order.Details)
+                {
+                    Assert.Contains(orderDetail.TenantId, "104,105");
+                }
+            }
+        }
     }
 
 

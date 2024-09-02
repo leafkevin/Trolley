@@ -98,12 +98,22 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     {
         readerFields = null;
         var tableSegment = this.Tables[0];
+        var entityType = tableSegment.EntityType;
         var entityMapper = tableSegment.Mapper;
-        var tableName = tableSegment.Body ?? entityMapper.TableName;
+        string tableName;
+        if (tableSegment.IsSharding)
+            tableName = tableSegment.Body;
+        else
+        {
+            if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
+                tableName = this.GetShardingTableName();
+            else tableName = entityMapper.TableName;
+        }
         var tableSchema = tableSegment.TableSchema;
-        if (!string.IsNullOrEmpty(tableSchema))
-            tableName = tableSchema + "." + tableName;
+        if (!string.IsNullOrEmpty(tableSegment.TableSchema))
+            tableName = tableSegment.TableSchema + "." + tableName;
         tableName = this.OrmProvider.GetTableName(tableName);
+
         var fieldsBuilder = new StringBuilder($"INSERT INTO {tableName} (");
         var valuesBuilder = new StringBuilder(" VALUES (");
         for (int i = 0; i < this.InsertFields.Count; i++)
@@ -231,13 +241,9 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         var entityType = tableSegment.EntityType;
 
         if (tableSegment.IsSharding)
-        {
-            //有设置分表，优先使用分表，没有设置分表，则根据数据的字段确定分表
-            if (!string.IsNullOrEmpty(tableSegment.Body))
-                tableName = tableSegment.Body;
-            //未指定分表，或是需要根据数据字段确定分表
-            else isNeedSplit = true;
-        }
+            tableName = tableSegment.Body;
+        else isNeedSplit = this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out _);
+
         var fieldsSqlPartSetter = RepositoryHelper.BuildCreateFieldsSqlPart(this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames);
         var valuesSqlPartSetter = RepositoryHelper.BuildCreateValuesSqlParametes(this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames, true);
         bool isDictionary = typeof(IDictionary<string, object>).IsAssignableFrom(insertObjType);
@@ -559,6 +565,35 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             return fieldNames;
         return null;
     }
+    public string GetShardingTableName()
+    {
+        var entityType = this.Tables[0].EntityType;
+        var origTableName = this.Tables[0].Mapper.TableName;
+        if (this.deferredSegments.Count == 1)
+        {
+            var insertObj = this.deferredSegments[0].Value;
+            var insertObjType = insertObj.GetType();
+            return this.DbContext.GetShardingTableName(entityType, insertObjType, insertObj);
+        }
+        else
+        {
+            if (!this.ShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
+                throw new Exception($"实体表{entityType.FullName}没有配置分表，不能调用此方法UseAutoTable");
+            if (tableShardingInfo.DependOnMembers.Count > 1)
+            {
+                var shardingRule = tableShardingInfo.Rule as Func<string, object, object, string>;
+                var memberValue1 = this.GetShardingFieldValue(tableShardingInfo.DependOnMembers[0]);
+                var memberValue2 = this.GetShardingFieldValue(tableShardingInfo.DependOnMembers[1]);
+                return shardingRule.Invoke(origTableName, memberValue1, memberValue2);
+            }
+            else
+            {
+                var shardingRule = tableShardingInfo.Rule as Func<string, object, string>;
+                var memberValue = this.GetShardingFieldValue(tableShardingInfo.DependOnMembers[0]);
+                return shardingRule.Invoke(origTableName, memberValue);
+            }
+        }
+    }
     public virtual void Clear()
     {
         this.Tables?.Clear();
@@ -577,5 +612,39 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         this.InsertFields = null;
         this.OnlyFieldNames = null;
         this.IgnoreFieldNames = null;
+    }
+    private object GetShardingFieldValue(string memberName)
+    {
+        foreach (var deferredSegment in this.deferredSegments)
+        {
+            switch (deferredSegment.Type)
+            {
+                case "WithBy":
+                    var insertObj = deferredSegment.Value;
+                    var insertObjType = insertObj.GetType();
+                    if (this.TryGetMemberValue(insertObjType, insertObj, memberName, out var memberValue))
+                        return memberValue;
+                    break;
+                case "WithByField":
+                    (var fieldSelector, var fieldValue) = ((Expression, object))deferredSegment.Value;
+                    var lambdaExpr = fieldSelector as LambdaExpression;
+                    var memberExpr = lambdaExpr.Body as MemberExpression;
+                    if (memberExpr.Member.Name == memberName)
+                        return fieldValue;
+                    break;
+            }
+        }
+        throw new Exception($"缺少分表规则依赖的成员{memberName}，无法确定分表");
+    }
+    private bool TryGetMemberValue(Type insertObjType, object insertObj, string memberName, out object memberValue)
+    {
+        var memberInfos = insertObjType.GetMember(memberName);
+        if (memberInfos.Length > 0)
+        {
+            memberValue = FasterEvaluator.EvaluateAndCache(insertObj, memberInfos[0]);
+            return true;
+        }
+        memberValue = null;
+        return false;
     }
 }

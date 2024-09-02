@@ -1726,7 +1726,10 @@ public class UnitTest6 : UnitTestBase
     public async Task Create_Without_Sharding()
     {
         var repository = this.dbFactory.Create();
-        await repository.DeleteAsync<User>(11);
+        await repository.Delete<User>()
+            .UseTableBy("104")
+            .Where(11)
+            .ExecuteAsync();
         repository.Create<User>()
             .WithBy(new
             {
@@ -1747,6 +1750,7 @@ public class UnitTest6 : UnitTestBase
             })
             .Execute();
         var result = repository.From<User>()
+            .UseTableBy("104")
             .Where(f => f.Id == 11)
             .First();
         Assert.NotNull(result);

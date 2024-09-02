@@ -10,7 +10,7 @@ public class TableShardingConfiguration : ITableShardingConfiguration
         builder
             .Table<Order>(t => t
                 .DependOn(d => d.TenantId).DependOn(d => d.CreatedAt)
-                .UseRule((origName, tenantId, createdAt) => $"{origName}_{tenantId}_{createdAt:yyyyMM}", "^sys_order_\\d{1,4}_[1,2]\\d{3}[0,1][0-9]$")
+                .UseRule((origName, tenantId, createdAt) => tenantId.Length >= 3 ? $"{origName}_{tenantId}_{createdAt:yyyyMM}" : origName, "^sys_order_\\d{1,4}_[1,2]\\d{3}[0,1][0-9]$")
                 //时间分表，通常都是支持范围查询
                 .UseRangeRule((origName, tenantId, beginTime, endTime) =>
                 {
@@ -32,7 +32,7 @@ public class TableShardingConfiguration : ITableShardingConfiguration
             //按照租户+时间分表
             .Table<OrderDetail>(t => t
                 .DependOn(d => d.TenantId).DependOn(d => d.CreatedAt)
-                .UseRule((origName, tenantId, createdAt) => $"{origName}_{tenantId}_{createdAt:yyyyMM}", "^sys_order_detail_\\d{1,4}_[1,2]\\d{3}[0,1][0-9]$")
+                .UseRule((origName, tenantId, createdAt) => tenantId.Length >= 3 ? $"{origName}_{tenantId}_{createdAt:yyyyMM}" : origName, "^sys_order_detail_\\d{1,4}_[1,2]\\d{3}[0,1][0-9]$")
                 //时间分表，通常都是支持范围查询
                 .UseRangeRule((origName, tenantId, beginTime, endTime) =>
                 {
@@ -58,6 +58,6 @@ public class TableShardingConfiguration : ITableShardingConfiguration
             ////按照Id字段哈希取模分表
             //.UseTable<Order>(t => t.DependOn(d => d.Id).UseRule((origName, id) => $"{origName}_{HashCode.Combine(id) % 5}", "^sys_order_\\S{24}$"))
             //按照租户ID分表
-            .Table<User>(t => t.DependOn(d => d.TenantId).UseRule((origName, tenantId) => $"{origName}_{tenantId}", "^sys_user_\\d{1,4}$"));
+            .Table<User>(t => t.DependOn(d => d.TenantId).UseRule((origName, tenantId) => tenantId.Length >= 3 ? $"{origName}_{tenantId}" : origName, "^sys_user_\\d{1,4}$"));
     }
 }
