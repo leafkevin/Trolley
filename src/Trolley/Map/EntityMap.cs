@@ -107,6 +107,7 @@ public class EntityMap
         {
             if (!this.TryGetMemberMap(memberInfo.Name, out var memberMapper))
             {
+                if (this.IsMapped) continue;
                 memberMapper = new MemberMap(this, memberInfo);
                 this.AddMemberMap(memberInfo.Name, memberMapper);
 

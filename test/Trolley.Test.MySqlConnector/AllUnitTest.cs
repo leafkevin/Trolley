@@ -36,7 +36,9 @@ public class AllUnitTest : UnitTestBase
                 .UseDatabaseSharding(() =>
                 {
                     //可以硬编码分库，也可以使用redis，映射表 ...，其他方式等
-                    var passport = f.GetService<IPassport>();
+                    var scopeFactory = f.GetRequiredService<IServiceScopeFactory>();
+                    var serviceScope = scopeFactory.CreateScope();
+                    var passport = serviceScope.ServiceProvider.GetService<IPassport>();
                     return passport.TenantId switch
                     {
                         "200" => "fengling1",
@@ -77,18 +79,7 @@ public class AllUnitTest : UnitTestBase
         services.AddTransient<IPassport>(f => new Passport { TenantId = "104", UserId = "1" });
         var serviceProvider = services.BuildServiceProvider();
         this.dbFactory = serviceProvider.GetService<IOrmDbFactory>();
-    }
-    public interface IPassport
-    {
-        //只用于演示，实际使用中要与ASP.NET CORE中间件或是IOC组件相结合，赋值此对象
-        string TenantId { get; set; }
-        string UserId { get; set; }
-    }
-    class Passport : IPassport
-    {
-        public string TenantId { get; set; }
-        public string UserId { get; set; }
-    }
+    }   
     private async Task InitSharding()
     {
         var repository = this.dbFactory.Create();

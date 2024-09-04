@@ -46,7 +46,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
     }
     public abstract object GetNativeDbType(Type type);
     public abstract Type MapDefaultType(object nativeDbType);
-    public abstract string CastTo(Type type, object value);
+    public abstract string CastTo(Type type, object value, string characterSetOrCollation = null);
     public virtual string GetIdentitySql(string keyField) => ";SELECT @@IDENTITY";
     public virtual string GetQuotedValue(Type expectType, object value)
     {

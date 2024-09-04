@@ -185,7 +185,7 @@ public partial class SqlServerProvider : BaseOrmProvider
         return typeof(object);
     }
     public override string GetIdentitySql(string keyField) => ";SELECT SCOPE_IDENTITY()";
-    public override string CastTo(Type type, object value)
+    public override string CastTo(Type type, object value, string characterSetOrCollation = null)
         => $"CAST({value} AS {castTos[type]})";
     public override string GetQuotedValue(Type expectType, object value)
     {
@@ -371,7 +371,11 @@ on e.id = c.default_object_id left join sys.index_columns f on f.object_id=a.obj
                 else
                 {
                     if (!fieldMapHandler.TryFindMember(columnInfo.FieldName, memberInfos, out var memberInfo))
-                        continue;
+                    {
+                        if (columnInfo.IsNullable || memberMapper.DbColumnType.ToLower() == "timestamp")
+                            continue;
+                        throw new Exception($"表{tableName}非空字段{columnInfo.FieldName}在实体{entityMapper.EntityType.FullName}中没有对应映射成员或是不满足默认字段映射处理器DefaultFieldMapHandler规则，可手动配置映射字段如：.Member(f => f.XxxMember).Field(\"xxxField\")");
+                    }
 
                     entityMapper.AddMemberMap(memberInfo.Name, memberMapper = new MemberMap(entityMapper, memberInfo)
                     {

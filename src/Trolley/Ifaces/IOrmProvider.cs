@@ -172,7 +172,7 @@ public interface IOrmProvider
     object GetNativeDbType(Type type);
     Type MapDefaultType(object nativeDbType);
     string GetIdentitySql(string keyField);
-    string CastTo(Type type, object value);
+    string CastTo(Type type, object value, string characterSetOrCollation = null);
     string GetQuotedValue(Type expectType, object value);
     string GetBinaryOperator(ExpressionType nodeType);
     Func<object, object> GetParameterValueGetter(Type fromType, Type fieldType, bool isNullable);

@@ -20,7 +20,7 @@ public class AllUnitTest : UnitTestBase
     private static int connTotal = 0;
     private static int connOpenTotal = 0;
     private readonly ITestOutputHelper output;
-    public UnitTest6(ITestOutputHelper output)
+    public AllUnitTest(ITestOutputHelper output)
     {
         this.output = output;
         var services = new ServiceCollection();
@@ -36,11 +36,13 @@ public class AllUnitTest : UnitTestBase
                 .Configure<ModelConfiguration>(OrmProviderType.PostgreSql)
                 .UseDatabaseSharding(() =>
                 {
-                    var passport = f.GetService<IPassport>();
+                    var scopeFactory = f.GetRequiredService<IServiceScopeFactory>();
+                    var serviceScope = scopeFactory.CreateScope();
+                    var passport = serviceScope.ServiceProvider.GetService<IPassport>();
                     return passport.TenantId switch
                     {
-                        "200" => "fengling_tenant1",
-                        "300" => "fengling_tenant2",
+                        "200" => "fengling1",
+                        "300" => "fengling2",
                         _ => "fengling"
                     };
                 })
@@ -80,17 +82,6 @@ public class AllUnitTest : UnitTestBase
         AppContext.SetSwitch("Npgsql.DisableDateTimeInfinityConversions", true);
         var serviceProvider = services.BuildServiceProvider();
         this.dbFactory = serviceProvider.GetService<IOrmDbFactory>();
-    }
-    public interface IPassport
-    {
-        //只用于演示，实际使用中要与ASP.NET CORE中间件或是IOC组件相结合，赋值此对象
-        string TenantId { get; set; }
-        string UserId { get; set; }
-    }
-    class Passport : IPassport
-    {
-        public string TenantId { get; set; }
-        public string UserId { get; set; }
     }
     private async Task InitSharding()
     {

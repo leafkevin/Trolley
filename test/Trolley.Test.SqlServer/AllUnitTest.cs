@@ -27,9 +27,26 @@ public class AllUnitTest : UnitTestBase
         services.AddSingleton(f =>
         {
             var connectionString = "Server=127.0.0.1;Database=fengling;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true";
+            var connectionString1 = "Server=127.0.0.1;Database=fengling1;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true";
+            var connectionString2 = "Server=127.0.0.1;Database=fengling2;Uid=sa;password=SQLserverSA123456;TrustServerCertificate=true";
             var builder = new OrmDbFactoryBuilder()
                 .Register(OrmProviderType.SqlServer, "fengling", connectionString, true)
+                .Register(OrmProviderType.SqlServer, "fengling1", connectionString1)
+                .Register(OrmProviderType.SqlServer, "fengling2", connectionString2)
                 .Configure<ModelConfiguration>(OrmProviderType.SqlServer)
+                .UseDatabaseSharding(() =>
+                {
+                    var scopeFactory = f.GetRequiredService<IServiceScopeFactory>();
+                    var serviceScope = scopeFactory.CreateScope();
+                    var passport = serviceScope.ServiceProvider.GetService<IPassport>();
+                    return passport.TenantId switch
+                    {
+                        "200" => "fengling1",
+                        "300" => "fengling2",
+                        _ => "fengling"
+                    };
+                })
+                .UseTableSharding<TableShardingConfiguration>(OrmProviderType.SqlServer)
                 .UseInterceptors(df =>
                 {
                     df.OnConnectionCreated += evt =>

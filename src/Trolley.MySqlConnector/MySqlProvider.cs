@@ -165,8 +165,12 @@ public partial class MySqlProvider : BaseOrmProvider
             return result;
         return typeof(object);
     }
-    public override string CastTo(Type type, object value)
-        => $"CAST({value} AS {castTos[type]})";
+    public override string CastTo(Type type, object value, string characterSetOrCollation = null)
+    {
+        if (string.IsNullOrEmpty(characterSetOrCollation))
+            return $"CAST({value} AS {castTos[type]})";
+        return $"CAST({value} AS {castTos[type]} {characterSetOrCollation})";
+    }
     public override object MapNativeDbType(DbColumnInfo columnInfo)
     {
         bool isUnsigned = columnInfo.DbColumnType.Contains("unsigned");
@@ -327,8 +331,11 @@ public partial class MySqlProvider : BaseOrmProvider
                 else
                 {
                     if (!fieldMapHandler.TryFindMember(columnInfo.FieldName, memberInfos, out var memberInfo))
-                        continue;
-
+                    {
+                        if (columnInfo.IsNullable)
+                            continue;
+                        throw new Exception($"表{tableName}非空字段{columnInfo.FieldName}在实体{entityMapper.EntityType.FullName}中没有对应映射成员或是不满足默认字段映射处理器DefaultFieldMapHandler规则，可手动配置映射字段如：.Member(f => f.XxxMember).Field(\"xxxField\")，如果是RowVersion字段，需要手动指定，如：.Member(f => f.XxxMember).Field(\"xxxField\").RowVersion()");
+                    }
                     entityMapper.AddMemberMap(memberInfo.Name, memberMapper = new MemberMap(entityMapper, memberInfo)
                     {
                         FieldName = columnInfo.FieldName,

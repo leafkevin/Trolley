@@ -177,7 +177,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
             return result;
         return typeof(object);
     }
-    public override string CastTo(Type type, object value)
+    public override string CastTo(Type type, object value, string characterSetOrCollation = null)
         => $"CAST({value} AS {castTos[type]})";
     public override string GetIdentitySql(string keyField) => $" RETURNING {keyField}";
     public override string GetQuotedValue(Type expectType, object value)
@@ -420,7 +420,11 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
                 else
                 {
                     if (!fieldMapHandler.TryFindMember(columnInfo.FieldName, memberInfos, out var memberInfo))
-                        continue;
+                    {
+                        if (columnInfo.IsNullable)
+                            continue;
+                        throw new Exception($"表{tableName}非空字段{columnInfo.FieldName}在实体{entityMapper.EntityType.FullName}中没有对应映射成员或是不满足默认字段映射处理器DefaultFieldMapHandler规则，可手动配置映射字段如：.Member(f => f.XxxMember).Field(\"xxxField\")，如果是RowVersion字段，需要手动指定，如：.Member(f => f.XxxMember).Field(\"xxxField\").RowVersion()");
+                    }
 
                     entityMapper.AddMemberMap(memberInfo.Name, memberMapper = new MemberMap(entityMapper, memberInfo)
                     {
