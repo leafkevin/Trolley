@@ -2908,81 +2908,92 @@ services.AddSingleton(f =>
         .Register(OrmProviderType.MySql, "fengling", "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true", true)
         .Register(OrmProviderType.MySql, "fengling_tenant1", "Server=localhost;Database=fengling_tenant1;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true", false)
         .Register(OrmProviderType.MySql, "fengling_tenant2", "Server=localhost;Database=fengling_tenant2;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true", false)
-        .UseSharding(s =>
+        //分库规则
+        .UseDatabaseSharding(() =>
         {
-            s.UseDatabase(() =>
+            //可以硬编码分库，也可以使用redis，映射表 ...，其他方式等
+            var scopeFactory = f.GetRequiredService<IServiceScopeFactory>();
+            var serviceScope = scopeFactory.CreateScope();
+            var passport = serviceScope.ServiceProvider.GetService<IPassport>();
+            return passport.TenantId switch
             {
-                //可以硬编码分库，也可以使用redis，映射表 ...，其他方式等
-                var passport = f.GetService<IPassport>();
-                return passport.TenantId switch
-                {
-                    "200" => "fengling_tenant1",
-                    "300" => "fengling_tenant2",
-                    _ => "fengling"
-                };
-            })
-            //按照租户+时间分表
-            .UseTable<Order>(t =>
-            {
-                t.DependOn(d => d.TenantId).DependOn(d => d.CreatedAt)
-                .UseRule((dbKey, origName, tenantId, createdAt) => $"{origName}_{tenantId}_{createdAt:yyyyMM}", "^sys_order_\\d{1,4}_[1,2]\\d{3}[0,1][0-9]$")
-                //时间分表，通常都是支持范围查询
-                .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =>
-                {
-                    var tableNames = new List<string>();
-                    var current = beginTime.AddDays(1 - beginTime.Day);
-                    while (current <= endTime)
-                    {
-                        var tableName = $"{origName}_{tenantId}_{current:yyyyMM}";
-                        if (tableNames.Contains(tableName))
-                        {
-                            current = current.AddMonths(1);
-                            continue;
-                        }
-                        tableNames.Add(tableName);
-                        current = current.AddMonths(1);
-                    }
-                    return tableNames;
-                });
-            })
-            //按照租户+时间分表
-            .UseTable<OrderDetail>(t =>
-            {
-                t.DependOn(d => d.TenantId).DependOn(d => d.CreatedAt)
-                .UseRule((dbKey, origName, tenantId, createdAt) => $"{origName}_{tenantId}_{createdAt:yyyyMM}", "^sys_order_detail_\\d{1,4}_[1,2]\\d{3}[0,1][0-9]$")
-                //时间分表，通常都是支持范围查询
-                .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =>
-                {
-                    var tableNames = new List<string>();
-                    var current = beginTime.AddDays(1 - beginTime.Day);
-                    while (current <= endTime)
-                    {
-                        var tableName = $"{origName}_{tenantId}_{current:yyyyMM}";
-                        if (tableNames.Contains(tableName))
-                        {
-                            current = current.AddMonths(1);
-                            continue;
-                        }
-                        tableNames.Add(tableName);
-                        current = current.AddMonths(1);
-                    }
-                    return tableNames;
-                });
-            })
-            //按租户分表
-            //.UseTable<Order>(t => t.DependOn(d => d.TenantId).UseRule((dbKey, origName, tenantId) => $"{origName}_{tenantId}", "^sys_order_\\d{1,4}$"))
-            ////按照Id字段分表，Id字段是带有时间属性的ObjectId
-            //.UseTable<Order>(t => t.DependOn(d => d.Id).UseRule((dbKey, origName, id) => $"{origName}_{new DateTime(ObjectId.Parse(id).Timestamp):yyyyMM}", "^sys_order_\\S{24}$"))
-            ////按照Id字段哈希取模分表
-            //.UseTable<Order>(t => t.DependOn(d => d.Id).UseRule((dbKey, origName, id) => $"{origName}_{HashCode.Combine(id) % 5}", "^sys_order_\\S{24}$"))
-            .UseTable<User>(t => t.DependOn(d => d.TenantId).UseRule((dbKey, origName, tenantId) => $"{origName}_{tenantId}", "^sys_user_\\d{1,4}$"));
+                "200" => "fengling1",
+                "300" => "fengling2",
+                _ => "fengling"
+            };
         })
+        //分表规则
+        .UseTableSharding<TableShardingConfiguration>(OrmProviderType.MySql)
         .Configure<ModelConfiguration>(OrmProviderType.MySql);
     return builder.Build();
 });
 services.AddTransient<IPassport>(f => new Passport { TenantId = "104", UserId = "1" });
 var serviceProvider = services.BuildServiceProvider();
 this.dbFactory = serviceProvider.GetService<IOrmDbFactory>();
+
+class TableShardingConfiguration : ITableShardingConfiguration
+{
+    public void OnModelCreating(TableShardingBuilder builder)
+    {
+        //按照租户+时间分表
+        builder
+            .Table<Order>(t => t
+                .DependOn(d => d.TenantId).DependOn(d => d.CreatedAt)
+                .UseRule((origName, tenantId, createdAt) => tenantId.Length >= 3 ? $"{origName}_{tenantId}_{createdAt:yyyyMM}" : origName, "^sys_order_\\d{1,4}_[1,2]\\d{3}[0,1][0-9]$")
+                //时间分表，通常都是支持范围查询
+                .UseRangeRule((origName, tenantId, beginTime, endTime) =>
+                {
+                    if (tenantId.Length < 3)
+                        return new List<string> { origName };
+                    var tableNames = new List<string>();
+                    var current = beginTime.AddDays(1 - beginTime.Day);
+                    while (current <= endTime)
+                    {
+                        var tableName = $"{origName}_{tenantId}_{current:yyyyMM}";
+                        if (tableNames.Contains(tableName))
+                        {
+                            current = current.AddMonths(1);
+                            continue;
+                        }
+                        tableNames.Add(tableName);
+                        current = current.AddMonths(1);
+                    }
+                    return tableNames;
+                }))
+            //按照租户+时间分表
+            .Table<OrderDetail>(t => t
+                .DependOn(d => d.TenantId).DependOn(d => d.CreatedAt)
+                .UseRule((origName, tenantId, createdAt) => tenantId.Length >= 3 ? $"{origName}_{tenantId}_{createdAt:yyyyMM}" : origName, "^sys_order_detail_\\d{1,4}_[1,2]\\d{3}[0,1][0-9]$")
+                //时间分表，通常都是支持范围查询
+                .UseRangeRule((origName, tenantId, beginTime, endTime) =>
+                {
+                    if (tenantId.Length < 3)
+                        return new List<string> { origName };
+                    var tableNames = new List<string>();
+                    var current = beginTime.AddDays(1 - beginTime.Day);
+                    while (current <= endTime)
+                    {
+                        var tableName = $"{origName}_{tenantId}_{current:yyyyMM}";
+                        if (tableNames.Contains(tableName))
+                        {
+                            current = current.AddMonths(1);
+                            continue;
+                        }
+                        tableNames.Add(tableName);
+                        current = current.AddMonths(1);
+                    }
+                    return tableNames;
+                }))
+            //按租户分表
+            //.UseTable<Order>(t => t.DependOn(d => d.TenantId).UseRule((origName, tenantId) => $"{origName}_{tenantId}", "^sys_order_\\d{1,4}$"))
+            ////按照Id字段分表，Id字段是带有时间属性的ObjectId
+            //.UseTable<Order>(t => t.DependOn(d => d.Id).UseRule((origName, id) => $"{origName}_{new DateTime(ObjectId.Parse(id).Timestamp):yyyyMM}", "^sys_order_\\S{24}$"))
+            ////按照Id字段哈希取模分表
+            //.UseTable<Order>(t => t.DependOn(d => d.Id).UseRule((origName, id) => $"{origName}_{HashCode.Combine(id) % 5}", "^sys_order_\\S{24}$"))
+            //按照租户ID分表
+            .Table<User>(t => t.DependOn(d => d.TenantId).UseRule((origName, tenantId) => tenantId.Length >= 3 ? $"{origName}_{tenantId}" : origName, "^sys_user_\\d{1,4}$"));
+    }
+}
 ```
 
 配置了分库规则后，在执行查询时，会优先根据分库规则获取dbKey，确定连接串。
@@ -3017,7 +3028,7 @@ repository.Create<User>()
     .WithBy(new
     {
         Id = 101,
-        TenantId = "104",
+        TenantId = "1",
         Name = "leafkevin",
         Age = 25,
         CompanyId = 1,
@@ -3209,6 +3220,57 @@ var orderInfos = repository.From<Order>()
 SELECT * FROM (SELECT a.`Id`,a.`TenantId`,b.`Name` AS `BuyerName`,a.`TotalAmount` FROM `sys_order_104_202005` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ORDER BY a.`Id` DESC) a UNION ALL SELECT * FROM (SELECT a.`Id`,a.`TenantId`,b.`Name` AS `BuyerName`,a.`TotalAmount` FROM `sys_order_104_202105` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ORDER BY a.`Id` DESC) a UNION ALL SELECT * FROM (SELECT a.`Id`,a.`TenantId`,b.`Name` AS `BuyerName`,a.`TotalAmount` FROM `sys_order_104_202205` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ORDER BY a.`Id` DESC) a UNION ALL SELECT * FROM (SELECT a.`Id`,a.`TenantId`,b.`Name` AS `BuyerName`,a.`TotalAmount` FROM `sys_order_104_202305` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ORDER BY a.`Id` DESC) a UNION ALL SELECT * FROM (SELECT a.`Id`,a.`TenantId`,b.`Name` AS `BuyerName`,a.`TotalAmount` FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ORDER BY a.`Id` DESC) a
 ```
 
+#### 查询、更新、删除需要明确指定分表
+当启用分表时，所有查询、更新、删除都需要指定分表，否则将操作主表的数据，指定了分表将操作分表数据
+
+#### Insert插入
+当启用分表时，插入的时候，`Trolley`会根据分表规则，插入到对应的分表，但是，插入的数据需要包含确定分表的依赖字段，如果有指定分表，就插入到指定的分表中，不再执行分表规则判断分表了，如：
+```csharp
+var result = repository.Create<User>()
+    .WithBy(new
+    {
+        Id = 1,
+        TenantId = "1",
+        Name = "leafkevin",
+        Age = 25,
+        CompanyId = 1,
+        Gender = Gender.Male,
+        IsEnabled = true,
+        CreatedAt = now,
+        CreatedBy = 1,
+        UpdatedAt = now,
+        UpdatedBy = 1
+    })
+    .Execute();
+//没有明确指定分表，会根据分表规则插入到sys_user表中
+//INSERT INTO `sys_user` (`Id`,`TenantId`,`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id,@TenantId,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)
+
+var count = await repository.Create<User>()
+    .UseTableBy("104")
+    .WithBy(new
+    {
+        Id = 101,
+        TenantId = "104",
+        Name = "leafkevin",
+        Age = 25,
+        CompanyId = 1,
+        Gender = Gender.Male,
+        GuidField = Guid.NewGuid(),
+        SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
+        SourceType = UserSourceType.Douyin,
+        IsEnabled = true,
+        CreatedAt = DateTime.Parse("2024-05-10 06:07:08"),
+        CreatedBy = 1,
+        UpdatedAt = DateTime.Parse("2024-05-15 16:27:38"),
+        UpdatedBy = 1
+    })
+    .Execute();
+//有指定分表，根据租户ID 104，执行分表规则确定分表sys_user_104分表
+//INSERT INTO `sys_user_104` (`Id`,`TenantId`,`Name`,`Age`,`CompanyId`,`Gender`,`GuidField`,`SomeTimes`,`SourceType`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id,@TenantId,@Name,@Age,@CompanyId,@Gender,@GuidField,@SomeTimes,@SourceType,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)
+```
+#### 
+
+
 
 #### TableSchema支持
 有些数据库，是有`TableSchema`概念的，如：`PostgreSql`和`SqlServer`数据库，这些数据库有默认的`Schema`，如：`PostgreSql`的默认`TableSchema`是`public`,`SqlServer`数据库的默认`TableSchema`是`dbo`，`MySql`数据库没有默认`TableSchema`，也可以认为默认`TableSchema`就是数据库名称。
@@ -3260,7 +3322,7 @@ var result = repository
 
 
 #### 读写分离
-在`Trolley`中，读写分离，只需要在配置从库字符串就可以了，默认所有的查询都会走从库，事务操作和增删改都会走主库，多个从库之间是使用轮询方式访问，这样负载更均衡一点。
+在`Trolley`中，读写分离，只需要在配置从库字符串就可以了，默认所有的查询都会走从库，事务操作和增删改操作都会走主库，多个从库之间是使用轮询方式访问，这样负载更均衡一点。
 ```csharp
 //主库的连接串
 var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
