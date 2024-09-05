@@ -7,7 +7,7 @@
 		<Authors>leaf kevin</Authors>
 		<Copyright>2022 leafkevin</Copyright>
 		<TargetFrameworks>net6.0</TargetFrameworks>
-		<Version>2.0.5</Version>
+		<Version>2.0.6</Version>
 		<PackageTags>orm;trolley;sqlserver</PackageTags>
 		<PublishRepositoryUrl>true</PublishRepositoryUrl>
 		<PackageProjectUrl>https://github.com/leafkevin/Trolley</PackageProjectUrl>
