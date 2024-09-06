@@ -338,17 +338,11 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
         this.Visitor.Select(null, defaultExpr);
         return this;
     }
-    //TODO:
-    //public IMultiQuery<TTarget> Select<TTarget>(TTarget parameters)
-    //{
-    //    if (parameters == null)
-    //        throw new ArgumentNullException(nameof(parameters));
-    //    //TODO:
-    //    this.visitor.Select(fields, null, true);
-    //    var fromQuery = new FromQuery<TTarget>(this.connection, this.transaction,this.ormProvider, this.mapProvider, this.visitor, this.insertType);
-    //    //this.visitor.Select()
-    //    return fromQuery;
-    //}
+    public IMultiQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T, TTarget>> specialMemberSelector = null)
+    {
+        this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
+        return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
+    }
     public IMultiQuery<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr)
     {
         if (fieldsExpr == null)
