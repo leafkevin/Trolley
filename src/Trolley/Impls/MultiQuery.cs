@@ -311,22 +311,24 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
         => this.OrderBy(true, fieldsExpr);
     public IMultiQuery<T> OrderBy<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("ASC", fieldsExpr);
+        }
         return this;
     }
     public IMultiQuery<T> OrderByDescending<TFields>(Expression<Func<T, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
     public IMultiQuery<T> OrderByDescending<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr)
     {
-        if (fieldsExpr == null)
-            throw new ArgumentNullException(nameof(fieldsExpr));
-
         if (condition)
+        {
+            if (fieldsExpr == null)
+                throw new ArgumentNullException(nameof(fieldsExpr));
             this.Visitor.OrderBy("DESC", fieldsExpr);
+        }
         return this;
     }
     #endregion

@@ -201,11 +201,12 @@ public class QueryInternal
     }
     protected void WhereInternal(bool condition, Expression ifPredicate, Expression elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.Where(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
     }
     protected void AndInternal(Expression predicate)
@@ -217,11 +218,12 @@ public class QueryInternal
     }
     protected void AndInternal(bool condition, Expression ifPredicate, Expression elsePredicate = null)
     {
-        if (ifPredicate == null)
-            throw new ArgumentNullException(nameof(ifPredicate));
-
         if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
             this.Visitor.And(ifPredicate);
+        }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
     }
     #endregion
