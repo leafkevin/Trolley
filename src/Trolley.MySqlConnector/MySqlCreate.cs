@@ -18,9 +18,9 @@ public class MySqlCreate<TEntity> : Create<TEntity>, IMySqlCreate<TEntity>
     #endregion
 
     #region Sharding
-    public override IMySqlCreate<TEntity> UseTable(string tableName)
+    public new IMySqlCreate<TEntity> UseTable(string tableName)
         => base.UseTable(tableName) as IMySqlCreate<TEntity>;
-    public override IMySqlCreate<TEntity> UseTableBy(object field1Value, object field2Value = null)
+    public new IMySqlCreate<TEntity> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as IMySqlCreate<TEntity>;
     #endregion
 
@@ -33,12 +33,12 @@ public class MySqlCreate<TEntity> : Create<TEntity>, IMySqlCreate<TEntity>
     #endregion
 
     #region WithBy
-    public override IMySqlContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj)
+    public new IMySqlContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj)
         => base.WithBy(insertObj) as IMySqlContinuedCreate<TEntity>;
     #endregion
 
     #region WithBulk
-    public override IMySqlBulkContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount)
+    public new IMySqlBulkContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount)
         => base.WithBulk(insertObjs, bulkCount) as IMySqlBulkContinuedCreate<TEntity>;
     #endregion
 

@@ -13,7 +13,7 @@ partial class SqlServerProvider
         bool result = false;
         formatter = null;
         var memberInfo = memberExpr.Member;
-        var cacheKey = HashCode.Combine(memberInfo.DeclaringType, memberInfo);
+        var cacheKey = RepositoryHelper.GetCacheKey(memberInfo.DeclaringType, memberInfo);
         if (memberExpr.Expression == null)
         {
             switch (memberInfo.Name)
@@ -48,7 +48,7 @@ partial class SqlServerProvider
         formatter = null;
         var methodInfo = methodCallExpr.Method;
         var parameterInfos = methodInfo.GetParameters();
-        var cacheKey = HashCode.Combine(methodInfo.DeclaringType, methodInfo);
+        var cacheKey = RepositoryHelper.GetCacheKey(methodInfo.DeclaringType, methodInfo);
         if (methodInfo.IsStatic)
         {
             switch (methodInfo.Name)

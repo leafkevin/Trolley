@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Trolley;
@@ -27,7 +29,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
     public abstract Type NativeDbTypeType { get; }
     public virtual string DefaultTableSchema { get; }
     public virtual ICollection<ITypeHandler> TypeHandlers => typeHandlers.Values;
-    public abstract IDbConnection CreateConnection(string connectionString);
+    public abstract ITheaConnection CreateConnection(string dbKey, string connectionString);
     public abstract IDbCommand CreateCommand();
     public abstract IDbDataParameter CreateParameter(string parameterName, object value);
     public abstract IDbDataParameter CreateParameter(string parameterName, object nativeDbType, object value);
@@ -63,8 +65,10 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                 return $"'{Convert.ToDateTime(value):yyyy\\-MM\\-dd\\ HH\\:mm\\:ss\\.fff}'";
             case Type factType when factType == typeof(DateTimeOffset):
                 return $"'{(DateTimeOffset)value:yyyy\\-MM\\-dd\\ HH\\:mm\\:ss\\.fffZ}'";
+#if NET6_0_OR_GREATER
             case Type factType when factType == typeof(DateOnly):
                 return $"'{(DateOnly)value:yyyy\\-MM\\-dd}'";
+#endif
             case Type factType when factType == typeof(TimeSpan):
                 {
                     var factValue = (TimeSpan)value;
@@ -72,7 +76,9 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                         return $"'{(int)factValue.TotalDays}.{factValue:hh\\:mm\\:ss\\.ffffff}'";
                     return $"'{factValue:hh\\:mm\\:ss\\.ffffff}'";
                 }
+#if NET6_0_OR_GREATER
             case Type factType when factType == typeof(TimeOnly): return $"'{(TimeOnly)value:hh\\:mm\\:ss\\.ffffff}'";
+#endif
             case Type factType when factType == typeof(SqlFieldSegment):
                 {
                     var sqlSegment = value as SqlFieldSegment;
@@ -109,7 +115,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
         };
     public virtual Func<object, object> GetParameterValueGetter(Type fromType, Type fieldType, bool isNullable)
     {
-        var hashKey = HashCode.Combine(fromType, fieldType, isNullable);
+        var hashKey = RepositoryHelper.GetCacheKey(fromType, fieldType, isNullable);
         return parameterValueGetters.GetOrAdd(hashKey, f =>
         {
             var underlyingType = Nullable.GetUnderlyingType(fromType);
@@ -134,7 +140,15 @@ public abstract partial class BaseOrmProvider : IOrmProvider
             else
             {
                 //当前参数类型是非空类型，尽管数据库可为null，当作非空类型处理
-                if (underlyingType.IsEnumType(out _))
+                if (underlyingType.IsArray && fieldType == typeof(Array))
+                {
+                    typeHandler = value =>
+                    {
+                        if (value is DBNull) return null;
+                        return Convert.ChangeType(value, underlyingType);
+                    };
+                }
+                else if (underlyingType.IsEnumType(out _))
                 {
                     var enumUnderlyingType = Enum.GetUnderlyingType(underlyingType);
                     var supportedTypes = new Type[] { typeof(byte), typeof(sbyte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(float), typeof(double), typeof(decimal) };
@@ -192,10 +206,10 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                 typeHandler = value =>
                                 {
                                     if (value == null) return DBNull.Value;
-                                    return ((Guid)value).ToString();
+                                    return new Guid((string)value);
                                 };
                             }
-                            else typeHandler = value => ((Guid)value).ToString();
+                            else typeHandler = value => new Guid((string)value);
                         }
                         else if (underlyingType == typeof(byte[]))
                         {
@@ -251,6 +265,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                             }
                             else typeHandler = value => DateTime.Parse((string)value);
                         }
+#if NET6_0_OR_GREATER
                         else if (underlyingType == typeof(DateOnly))
                         {
                             if (isNullableType && isNullable)
@@ -263,6 +278,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                             }
                             else typeHandler = value => ((DateOnly)value).ToDateTime(TimeOnly.MinValue);
                         }
+#endif
                         else if (underlyingType == typeof(DateTimeOffset))
                         {
                             if (isNullableType && isNullable)
@@ -276,6 +292,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                             else typeHandler = value => ((DateTimeOffset)value).LocalDateTime;
                         }
                     }
+#if NET6_0_OR_GREATER
                     else if (fieldType == typeof(DateOnly))
                     {
                         if (underlyingType == typeof(string))
@@ -315,6 +332,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                             else typeHandler = value => DateOnly.FromDateTime(((DateTimeOffset)value).LocalDateTime);
                         }
                     }
+#endif
                     else if (fieldType == typeof(TimeSpan))
                     {
                         if (underlyingType == typeof(long))
@@ -341,6 +359,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                             }
                             else typeHandler = value => TimeSpan.Parse((string)value);
                         }
+#if NET6_0_OR_GREATER
                         else if (underlyingType == typeof(TimeOnly))
                         {
                             if (isNullableType && isNullable)
@@ -353,6 +372,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                             }
                             else typeHandler = value => ((TimeOnly)value).ToTimeSpan();
                         }
+#endif
                         else if (underlyingType == typeof(DateTime))
                         {
                             if (isNullableType && isNullable)
@@ -378,6 +398,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                             else typeHandler = value => ((DateTimeOffset)value).LocalDateTime.TimeOfDay;
                         }
                     }
+#if NET6_0_OR_GREATER
                     else if (fieldType == typeof(TimeOnly))
                     {
                         if (underlyingType == typeof(long))
@@ -399,10 +420,10 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                 typeHandler = value =>
                                 {
                                     if (value == null) return DBNull.Value;
-                                    return TimeOnly.FromTimeSpan(TimeSpan.Parse((string)value));
+                                    return TimeOnly.Parse((string)value);
                                 };
                             }
-                            else typeHandler = value => TimeOnly.FromTimeSpan(TimeSpan.Parse((string)value));
+                            else typeHandler = value => TimeOnly.Parse((string)value);
                         }
                         else if (underlyingType == typeof(TimeSpan))
                         {
@@ -441,6 +462,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                             else typeHandler = value => TimeOnly.FromTimeSpan(((DateTimeOffset)value).LocalDateTime.TimeOfDay);
                         }
                     }
+#endif
                     else if (fieldType == typeof(string))
                     {
                         if (isNullable)
@@ -471,7 +493,11 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                     }
                     else if (fieldType == typeof(byte[]))
                     {
-                        var supportedTypes = new Type[] { typeof(bool), typeof(char), typeof(byte), typeof(sbyte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(float), typeof(double), typeof(decimal), typeof(Half) };
+                        var supportedTypes = new Type[] { typeof(bool), typeof(char), typeof(byte), typeof(sbyte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(float), typeof(double), typeof(decimal) 
+#if NET6_0_OR_GREATER
+                            , typeof(Half)
+#endif
+                        };
                         if (supportedTypes.Contains(underlyingType))
                         {
                             switch (underlyingType)
@@ -586,6 +612,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     }
                                     else typeHandler = value => BitConverter.GetBytes((double)value);
                                     break;
+#if NET6_0_OR_GREATER
                                 case Type factType when factType == typeof(Half):
                                     if (isNullableType && isNullable)
                                     {
@@ -597,6 +624,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     }
                                     else typeHandler = value => BitConverter.GetBytes((Half)value);
                                     break;
+#endif
                             }
                         }
                     }
@@ -663,7 +691,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
     }
     public virtual Func<object, object> GetReaderValueGetter(Type targetType, Type fieldType)
     {
-        var hashKey = HashCode.Combine(targetType, fieldType);
+        var hashKey = RepositoryHelper.GetCacheKey(targetType, fieldType);
         return readerValueGetters.GetOrAdd(hashKey, f =>
         {
             var underlyingType = Nullable.GetUnderlyingType(targetType);
@@ -682,7 +710,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                 var resultLabelExpr = Expression.Label(typeof(object));
                 blockBodies.Add(Expression.Return(resultLabelExpr, resultExpr));
                 blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(typeof(object))));
-                var bodyExpr = Expression.Block(new[] { resultExpr }, blockBodies);
+                var bodyExpr = Expression.Block([resultExpr], blockBodies);
                 typeHandler = Expression.Lambda<Func<object, object>>(bodyExpr, valueExpr).Compile();
             }
             else
@@ -858,6 +886,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                 };
                             }
                         }
+#if NET6_0_OR_GREATER
                         else if (fieldType == typeof(DateOnly))
                         {
                             if (isNullableType)
@@ -877,6 +906,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                 };
                             }
                         }
+#endif
                         else if (fieldType == typeof(DateTimeOffset))
                         {
                             if (isNullableType)
@@ -891,12 +921,13 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                             {
                                 typeHandler = value =>
                                 {
-                                    if (value is DBNull) return DateOnly.MinValue;
+                                    if (value is DBNull) return DateTime.MinValue;
                                     return ((DateTimeOffset)value).LocalDateTime;
                                 };
                             }
                         }
                     }
+#if NET6_0_OR_GREATER
                     else if (underlyingType == typeof(DateOnly))
                     {
                         if (fieldType == typeof(string))
@@ -957,6 +988,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                             }
                         }
                     }
+#endif
                     else if (underlyingType == typeof(TimeSpan))
                     {
                         if (fieldType == typeof(long))
@@ -974,7 +1006,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                 typeHandler = value =>
                                 {
                                     if (value is DBNull) return TimeSpan.MinValue;
-                                    return DateOnly.FromDateTime(((DateTimeOffset)value).LocalDateTime);
+                                    return TimeSpan.FromTicks((long)value);
                                 };
                             }
                         }
@@ -997,6 +1029,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                 };
                             }
                         }
+#if NET6_0_OR_GREATER
                         else if (fieldType == typeof(TimeOnly))
                         {
                             if (isNullableType)
@@ -1016,6 +1049,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                 };
                             }
                         }
+#endif
                         else if (fieldType == typeof(DateTime))
                         {
                             if (isNullableType)
@@ -1055,6 +1089,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                             }
                         }
                     }
+#if NET6_0_OR_GREATER
                     else if (underlyingType == typeof(TimeOnly))
                     {
                         if (fieldType == typeof(long))
@@ -1153,6 +1188,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                             }
                         }
                     }
+#endif
                     else if (underlyingType == typeof(string))
                     {
                         typeHandler = value =>
@@ -1186,7 +1222,11 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                     }
                     else if (underlyingType == typeof(byte[]))
                     {
-                        var supportedTypes = new Type[] { typeof(bool), typeof(char), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(float), typeof(double), typeof(Half) };
+                        var supportedTypes = new Type[] { typeof(bool), typeof(char), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(float), typeof(double)
+#if NET6_0_OR_GREATER
+                            , typeof(Half) 
+#endif
+                        };
                         if (supportedTypes.Contains(fieldType))
                         {
                             switch (fieldType)
@@ -1261,6 +1301,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                         return BitConverter.GetBytes((double)value);
                                     };
                                     break;
+#if NET6_0_OR_GREATER
                                 case Type factType when factType == typeof(Half):
                                     typeHandler = value =>
                                     {
@@ -1268,6 +1309,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                         return BitConverter.GetBytes((Half)value);
                                     };
                                     break;
+#endif
                             }
                         }
                     }
@@ -1340,7 +1382,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                 {
                                     typeHandler = value =>
                                     {
-                                        if (value is DBNull) return Convert.ChangeType(value, 0);
+                                        if (value is DBNull) return Convert.ChangeType(0, underlyingType);
                                         return Convert.ChangeType(value, underlyingType);
                                     };
                                 }
@@ -1364,7 +1406,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
     public virtual bool TryGetMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter)
     {
         var memberInfo = memberExpr.Member;
-        var cacheKey = HashCode.Combine(memberInfo.DeclaringType, memberInfo);
+        var cacheKey = RepositoryHelper.GetCacheKey(memberInfo.DeclaringType, memberInfo);
         if (memberAccessSqlFormatterCache.TryGetValue(cacheKey, out formatter))
             return true;
 
@@ -1372,12 +1414,16 @@ public abstract partial class BaseOrmProvider : IOrmProvider
             return true;
         if (memberInfo.DeclaringType == typeof(DateTime) && this.TryGetDateTimeMemberAccessSqlFormatter(memberExpr, out formatter))
             return true;
+#if NET6_0_OR_GREATER
         if (memberInfo.DeclaringType == typeof(DateOnly) && this.TryGetDateOnlyMemberAccessSqlFormatter(memberExpr, out formatter))
             return true;
+#endif
         if (memberInfo.DeclaringType == typeof(TimeSpan) && this.TryGetTimeSpanMemberAccessSqlFormatter(memberExpr, out formatter))
             return true;
+#if NET6_0_OR_GREATER
         if (memberInfo.DeclaringType == typeof(TimeOnly) && this.TryGetTimeOnlyMemberAccessSqlFormatter(memberExpr, out formatter))
             return true;
+#endif
         //自定义成员访问解析
         if (this.TryGetMyMemberAccessSqlFormatter(memberExpr, out formatter))
             return true;
@@ -1391,7 +1437,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
     public virtual bool TryGetMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)
     {
         var methodInfo = methodCallExpr.Method;
-        var cacheKey = HashCode.Combine(methodInfo.DeclaringType, methodInfo);
+        var cacheKey = RepositoryHelper.GetCacheKey(methodInfo.DeclaringType, methodInfo);
         if (methodCallSqlFormatterCache.TryGetValue(cacheKey, out formatter))
             return true;
 
@@ -1399,12 +1445,16 @@ public abstract partial class BaseOrmProvider : IOrmProvider
             return true;
         if (methodInfo.DeclaringType == typeof(DateTime) && this.TryGetDateTimeMethodCallSqlFormatter(methodCallExpr, out formatter))
             return true;
+#if NET6_0_OR_GREATER
         if (methodInfo.DeclaringType == typeof(DateOnly) && this.TryGetDateOnlyMethodCallSqlFormatter(methodCallExpr, out formatter))
             return true;
+#endif
         if (methodInfo.DeclaringType == typeof(TimeSpan) && this.TryGetTimeSpanMethodCallSqlFormatter(methodCallExpr, out formatter))
             return true;
+#if NET6_0_OR_GREATER
         if (methodInfo.DeclaringType == typeof(TimeOnly) && this.TryGetTimeOnlyMethodCallSqlFormatter(methodCallExpr, out formatter))
             return true;
+#endif
         if (methodInfo.DeclaringType == typeof(Convert) && this.TryGetConvertMethodCallSqlFormatter(methodCallExpr, out formatter))
             return true;
         if (this.TryGetIEnumerableMethodCallSqlFormatter(methodCallExpr, out formatter))
@@ -1721,7 +1771,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
         formatter = null;
         var methodInfo = methodCallExpr.Method;
         var parameterInfos = methodInfo.GetParameters();
-        var cacheKey = HashCode.Combine(methodInfo.DeclaringType, methodInfo);
+        var cacheKey = RepositoryHelper.GetCacheKey(methodInfo.DeclaringType, methodInfo);
         switch (methodInfo.Name)
         {
             case "ToBoolean":
@@ -1784,7 +1834,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
         formatter = null;
         var methodInfo = methodCallExpr.Method;
         var parameterInfos = methodInfo.GetParameters();
-        var cacheKey = HashCode.Combine(methodInfo.DeclaringType, methodInfo);
+        var cacheKey = RepositoryHelper.GetCacheKey(methodInfo.DeclaringType, methodInfo);
         switch (methodInfo.Name)
         {
             case "Contains":

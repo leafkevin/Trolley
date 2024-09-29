@@ -6,8 +6,9 @@
 		<Description>Trolley的SqlServer数据库提供程序</Description>
 		<Authors>leaf kevin</Authors>
 		<Copyright>2022 leafkevin</Copyright>
-		<TargetFrameworks>net6.0</TargetFrameworks>
+		<TargetFrameworks>net462;net471;net48;netstandard2.0;netstandard2.1;net6.0;net8.0</TargetFrameworks>
 		<Version>2.0.6</Version>
+		<LangVersion>12.0</LangVersion>
 		<PackageTags>orm;trolley;sqlserver</PackageTags>
 		<PublishRepositoryUrl>true</PublishRepositoryUrl>
 		<PackageProjectUrl>https://github.com/leafkevin/Trolley</PackageProjectUrl>
@@ -22,12 +23,17 @@
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 	</PropertyGroup>
 	<ItemGroup>
-		<None Include="README.md" Pack="true" PackagePath="\"/>
+		<None Include="README.md" Pack="true" PackagePath="\" />
 		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.1" />
+		<PackageReference Include="System.Data.SqlClient" Version="4.8.6" />
 		<ProjectReference Include="..\Trolley\Trolley.csproj" />
+	</ItemGroup>
+	<ItemGroup Condition="'$(TargetFramework)'=='net462' OR '$(TargetFramework)'=='net471' OR '$(TargetFramework)'=='net48'">
+		<Reference Include="System.Transactions" />
+		<PackageReference Include="System.Data.Common" Version="4.3.0" />
+		<PackageReference Include="System.Threading.Thread" Version="4.3.0" />
 	</ItemGroup>
 </Project>

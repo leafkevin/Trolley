@@ -51,9 +51,10 @@ public interface IUpdateVisitor : IDisposable
     void WhereWith(object whereObj);
     void Where(Expression whereExpr);
     void And(Expression whereExpr);
-    DataTable ToDataTable(Type updateObjType, IEnumerable entities, List<(MemberMap RefMemberMapper, Func<object, object> ValueGetter)> memberMappers, string tableName = null);
-    List<(MemberMap RefMemberMapper, Func<object, object> ValueGetter)> GetRefMemberMappers(Type entityType, EntityMap refEntityMapper, bool isUpdate = false);
+    DataTable ToDataTable(Type updateObjType, IEnumerable entities, List<(MemberMap, Func<object, object>)> memberMappers, string tableName = null);
+    List<(MemberMap, Func<object, object>)> GetRefMemberMappers(Type entityType, EntityMap refEntityMapper, bool isUpdate = false);
     string BuildTableShardingsSql();
     void SetShardingTables(List<string> shardingTables);
     string GetTableName(TableSegment tableSegment);
+    bool IsMemberVisit(Expression expr);
 }

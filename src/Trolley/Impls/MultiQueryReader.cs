@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.Common;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -14,14 +13,14 @@ class MultiQueryReader : IMultiQueryReader
     private readonly bool isNeedClose;
     private readonly DbContext dbContext;
     private readonly IOrmProvider ormProvider;
-    private TheaConnection connection;
-    private IDbCommand command;
-    private IDataReader reader;
+    private ITheaConnection connection;
+    private ITheaCommand command;
+    private ITheaDataReader reader;
     private List<ReaderAfter> readerAfters;
 
     private int readerIndex = 0;
     private List<NextReaderAfter> nextAfters;
-    public MultiQueryReader(DbContext dbContext, TheaConnection connection, IDbCommand command, IDataReader reader, List<ReaderAfter> readerAfters, bool isNeedClose)
+    public MultiQueryReader(DbContext dbContext, ITheaConnection connection, ITheaCommand command, ITheaDataReader reader, List<ReaderAfter> readerAfters, bool isNeedClose)
     {
         this.dbContext = dbContext;
         this.connection = connection;
@@ -46,12 +45,7 @@ class MultiQueryReader : IMultiQueryReader
     public List<T> Read<T>()
     {
         var result = new List<T>();
-        var readerAfter = this.readerAfters[this.readerIndex];
-        while (this.reader.Read())
-        {
-            result.Add((T)readerAfter.ReaderGetter.Invoke(this.reader));
-        }
-        this.NextReader(readerAfter, result);
+        this.ReadList(result, false);
         return result;
     }
     public IPagedList<T> ReadPageList<T>()
@@ -61,16 +55,7 @@ class MultiQueryReader : IMultiQueryReader
             totalCount = reader.To<int>(this.ormProvider);
         this.reader.NextResult();
         var dataList = new List<T>();
-
-        var readerAfter = this.readerAfters[this.readerIndex];
-        while (this.reader.Read())
-        {
-            dataList.Add((T)readerAfter.ReaderGetter.Invoke(this.reader));
-        }
-        var pageNumber = readerAfter.PageNumber;
-        var pageSize = readerAfter.PageSize;
-        this.NextReader(readerAfter, dataList);
-
+        (var pageNumber, var pageSize) = this.ReadList<T>(dataList, true);
         return new PagedList<T>
         {
             Data = dataList,
@@ -92,10 +77,7 @@ class MultiQueryReader : IMultiQueryReader
     public async Task<T> ReadFirstAsync<T>(CancellationToken cancellationToken = default)
     {
         T result = default;
-        if (this.reader is not DbDataReader dbReader)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
-        if (await dbReader.ReadAsync(cancellationToken))
+        if (await this.reader.ReadAsync(cancellationToken))
         {
             var readerAfter = this.readerAfters[this.readerIndex];
             result = (T)readerAfter.ReaderGetter.Invoke(this.reader);
@@ -112,13 +94,10 @@ class MultiQueryReader : IMultiQueryReader
     }
     public async Task<IPagedList<T>> ReadPageListAsync<T>(CancellationToken cancellationToken = default)
     {
-        if (this.reader is not DbDataReader dbReader)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
         int totalCount = 0;
-        if (await dbReader.ReadAsync(cancellationToken))
+        if (await this.reader.ReadAsync(cancellationToken))
             totalCount = reader.To<int>(this.ormProvider);
-        await dbReader.NextResultAsync(cancellationToken);
+        await this.reader.NextResultAsync(cancellationToken);
 
         var dataList = new List<T>();
         (var pageIndex, var pageSize) = await this.ReadListAsync(dataList, true, cancellationToken);
@@ -168,10 +147,8 @@ class MultiQueryReader : IMultiQueryReader
     {
         int pageIndex = 0;
         int pageSize = 0;
-        if (this.reader is not DbDataReader dbReader)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
         var readerAfter = this.readerAfters[this.readerIndex];
-        while (await dbReader.ReadAsync(cancellationToken))
+        while (await this.reader.ReadAsync(cancellationToken))
         {
             dataList.Add((T)readerAfter.ReaderGetter.Invoke(this.reader));
         }
@@ -200,15 +177,10 @@ class MultiQueryReader : IMultiQueryReader
         this.command?.Dispose();
         this.command = null;
         if (this.isNeedClose && this.connection != null)
-            this.dbContext.Close(this.connection);
+            this.connection.Close();
     }
     public async ValueTask DisposeAsync()
     {
-        if (this.command is not DbCommand dbCommand)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-        if (this.reader is not DbDataReader dbReader)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-
         if (this.readerAfters != null)
         {
             this.readerAfters.Clear();
@@ -219,19 +191,13 @@ class MultiQueryReader : IMultiQueryReader
             this.nextAfters.Clear();
             this.nextAfters = null;
         }
-        if (dbReader != null)
-        {
-            await dbReader.DisposeAsync();
-            this.reader = null;
-        }
-        if (dbCommand != null)
-        {
-            command.Parameters.Clear();
-            await dbCommand.DisposeAsync();
-            this.command = null;
-        }
+        await this.reader.DisposeAsync();
+        this.reader = null;
+        this.command.Parameters.Clear();
+        await this.command.DisposeAsync();
+        this.command = null;
         if (this.isNeedClose && this.connection != null)
-            await this.dbContext.CloseAsync(this.connection);
+            await this.connection.CloseAsync();
     }
     private void NextReader()
     {
@@ -243,7 +209,7 @@ class MultiQueryReader : IMultiQueryReader
     private void NextReader(ReaderAfter readerAfter, object target)
     {
         var visitor = readerAfter.QueryVisitor;
-        if (visitor != null && visitor.BuildIncludeSql(readerAfter.TargetType, target, out var sql))
+        if (visitor != null && visitor.BuildIncludeSql(readerAfter.TargetType, target, readerAfter.IsSingle, out var sql))
         {
             this.nextAfters ??= new();
             this.nextAfters.Add(new NextReaderAfter
@@ -251,6 +217,7 @@ class MultiQueryReader : IMultiQueryReader
                 TargetType = readerAfter.TargetType,
                 Sql = sql,
                 Visitor = visitor,
+                IsSingle = readerAfter.IsSingle,
                 Target = target
             });
         }
@@ -270,21 +237,18 @@ class MultiQueryReader : IMultiQueryReader
                 this.command.CommandText = builder.ToString();
                 this.command.Parameters.Clear();
                 visitor.NextDbParameters.CopyTo(this.command.Parameters);
-                using var includeReader = command.ExecuteReader(CommandBehavior.SequentialAccess);
+                using var includeReader = command.ExecuteReader(CommandSqlType.Select, CommandBehavior.SequentialAccess);
                 foreach (var nextAfter in this.nextAfters)
                 {
-                    nextAfter.Visitor.SetIncludeValues(nextAfter.TargetType, nextAfter.Target, includeReader);
+                    nextAfter.Visitor.SetIncludeValues(nextAfter.TargetType, nextAfter.Target, includeReader, nextAfter.IsSingle);
                 }
-                includeReader.NextResult();
             }
             this.Dispose();
         }
     }
     private async Task NextReaderAsync(CancellationToken cancellationToken = default)
     {
-        if (this.reader is not DbDataReader dbReader)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
-        await dbReader.NextResultAsync(cancellationToken);
+        await this.reader.NextResultAsync(cancellationToken);
         this.readerIndex++;
         if (this.readerIndex >= this.readerAfters.Count)
             await this.DisposeAsync();
@@ -292,7 +256,7 @@ class MultiQueryReader : IMultiQueryReader
     private async Task NextReaderAsync(ReaderAfter readerAfter, object target, CancellationToken cancellationToken = default)
     {
         var visitor = readerAfter.QueryVisitor;
-        if (visitor != null && visitor.BuildIncludeSql(readerAfter.TargetType, target, out var sql))
+        if (visitor != null && visitor.BuildIncludeSql(readerAfter.TargetType, target, readerAfter.IsSingle, out var sql))
         {
             this.nextAfters ??= new();
             this.nextAfters.Add(new NextReaderAfter
@@ -300,13 +264,12 @@ class MultiQueryReader : IMultiQueryReader
                 TargetType = readerAfter.TargetType,
                 Sql = sql,
                 Visitor = visitor,
+                IsSingle = readerAfter.IsSingle,
                 Target = target
             });
         }
-        if (this.reader is not DbDataReader dbReader)
-            throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
-        await dbReader.NextResultAsync(cancellationToken);
+        await this.reader.NextResultAsync(cancellationToken);
         this.readerIndex++;
 
         if (this.readerIndex >= this.readerAfters.Count)
@@ -322,13 +285,11 @@ class MultiQueryReader : IMultiQueryReader
                 this.command.CommandText = builder.ToString();
                 this.command.Parameters.Clear();
                 visitor.NextDbParameters.CopyTo(this.command.Parameters);
-                if (this.command is not DbCommand dbCommand)
-                    throw new NotSupportedException("当前数据库驱动不支持异步SQL查询");
 
-                using var includeReader = await dbCommand.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
+                using var includeReader = await this.command.ExecuteReaderAsync(CommandSqlType.Select, CommandBehavior.SequentialAccess, cancellationToken);
                 foreach (var nextAfter in this.nextAfters)
                 {
-                    nextAfter.Visitor.SetIncludeValues(nextAfter.TargetType, nextAfter.Target, includeReader);
+                    nextAfter.Visitor.SetIncludeValues(nextAfter.TargetType, nextAfter.Target, includeReader, nextAfter.IsSingle);
                 }
                 await includeReader.NextResultAsync(cancellationToken);
             }
@@ -340,6 +301,7 @@ class MultiQueryReader : IMultiQueryReader
         public Type TargetType { get; set; }
         public string Sql { get; set; }
         public IQueryVisitor Visitor { get; set; }
+        public bool IsSingle { get; set; }
         public object Target { get; set; }
     }
 }

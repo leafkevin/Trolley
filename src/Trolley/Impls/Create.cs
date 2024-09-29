@@ -115,191 +115,150 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
     public virtual int Execute()
     {
         int result = 0;
-        Exception exception = null;
-        CommandEventArgs eventArgs = null;
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        try
+        switch (this.Visitor.ActionMode)
         {
-            switch (this.Visitor.ActionMode)
-            {
-                case ActionMode.Bulk:
-                    {
-                        var builder = new StringBuilder();
-                        (var isNeedSplit, var tableName, var insertObjs, var bulkCount,
-                            var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
+            case ActionMode.Bulk:
+                {
+                    var builder = new StringBuilder();
+                    (var isNeedSplit, var tableName, var insertObjs, var bulkCount,
+                        var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command.BaseCommand);
 
-                        int executor(string tableName, IEnumerable insertObjs)
+                    int executor(string tableName, IEnumerable insertObjs)
+                    {
+                        int count = 0, index = 0;
+                        foreach (var insertObj in insertObjs)
                         {
-                            int count = 0, index = 0;
-                            foreach (var insertObj in insertObjs)
-                            {
-                                if (index > 0) builder.Append(',');
-                                loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
-                                if (index >= bulkCount)
-                                {
-                                    command.CommandText = builder.ToString();
-                                    eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
-                                    count += command.ExecuteNonQuery();
-                                    builder.Clear();
-                                    command.Parameters.Clear();
-                                    firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                                    index = 0;
-                                    continue;
-                                }
-                                index++;
-                            }
-                            if (index > 0)
+                            if (index > 0) builder.Append(',');
+                            loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
+                            if (index >= bulkCount)
                             {
                                 command.CommandText = builder.ToString();
-                                eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
-                                count += command.ExecuteNonQuery();
+                                count += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
                                 builder.Clear();
                                 command.Parameters.Clear();
+                                firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                                index = 0;
+                                continue;
                             }
-                            return count;
+                            index++;
                         }
-                        this.DbContext.Open(connection);
-                        if (isNeedSplit)
+                        if (index > 0)
                         {
-                            var entityType = this.Visitor.Tables[0].EntityType;
-                            var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
-                            foreach (var tabledInsertObj in tabledInsertObjs)
-                            {
-                                firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
-                                result += executor(tabledInsertObj.Key, tabledInsertObj.Value);
-                            }
+                            command.CommandText = builder.ToString();
+                            count += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
+                            builder.Clear();
+                            command.Parameters.Clear();
                         }
-                        else
-                        {
-                            firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                            result = executor(tableName, insertObjs);
-                        }
-                        builder.Clear();
-                        builder = null;
+                        return count;
                     }
-                    break;
-                default:
+                    connection.Open();
+                    if (isNeedSplit)
                     {
-                        //默认单条
-                        command.CommandText = this.Visitor.BuildCommand(command, false, out _);
-                        this.DbContext.Open(connection);
-                        eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Insert);
-                        result = command.ExecuteNonQuery();
+                        var entityType = this.Visitor.Tables[0].EntityType;
+                        var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
+                        foreach (var tabledInsertObj in tabledInsertObjs)
+                        {
+                            firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
+                            result += executor(tabledInsertObj.Key, tabledInsertObj.Value);
+                        }
                     }
-                    break;
-            }
+                    else
+                    {
+                        firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                        result = executor(tableName, insertObjs);
+                    }
+                    builder.Clear();
+                    builder = null;
+                }
+                break;
+            default:
+                {
+                    //默认单条
+                    command.CommandText = this.Visitor.BuildCommand(command.BaseCommand, false, out _);
+                    connection.Open();
+                    result = command.ExecuteNonQuery(CommandSqlType.Insert);
+                }
+                break;
         }
-        catch (Exception ex)
-        {
-            isNeedClose = true;
-            exception = ex;
-            var sqlType = this.Visitor.ActionMode == ActionMode.Bulk ? CommandSqlType.BulkInsert : CommandSqlType.Insert;
-            this.DbContext.AddCommandFailedFilter(connection, command, sqlType, eventArgs, exception);
-        }
-        finally
-        {
-            var sqlType = this.Visitor.ActionMode == ActionMode.Bulk ? CommandSqlType.BulkInsert : CommandSqlType.Insert;
-            this.DbContext.AddCommandAfterFilter(connection, command, sqlType, eventArgs, exception == null, exception);
-            command.Parameters.Clear();
-            command.Dispose();
-            if (isNeedClose) this.Close(connection);
-        }
-        if (exception != null) throw exception;
+        command.Parameters.Clear();
+        command.Dispose();
+        if (isNeedClose) connection.Close();
         return result;
     }
     public virtual async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        Exception exception = null;
-        CommandEventArgs eventArgs = null;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterDbCommand();
-        try
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        switch (this.Visitor.ActionMode)
         {
-            switch (this.Visitor.ActionMode)
-            {
-                case ActionMode.Bulk:
-                    {
-                        var builder = new StringBuilder();
-                        (var isNeedSplit, var tableName, var insertObjs, var bulkCount,
-                            var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
+            case ActionMode.Bulk:
+                {
+                    var builder = new StringBuilder();
+                    (var isNeedSplit, var tableName, var insertObjs, var bulkCount,
+                        var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command.BaseCommand);
 
-                        async Task<int> executor(string tableName, IEnumerable insertObjs)
+                    async Task<int> executor(string tableName, IEnumerable insertObjs)
+                    {
+                        int count = 0, index = 0, bulkIndex = 0;
+                        foreach (var insertObj in insertObjs)
                         {
-                            int count = 0, index = 0;
-                            foreach (var insertObj in insertObjs)
-                            {
-                                if (index > 0) builder.Append(',');
-                                loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
-                                if (index >= bulkCount)
-                                {
-                                    command.CommandText = builder.ToString();
-                                    eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
-                                    count += await command.ExecuteNonQueryAsync(cancellationToken);
-                                    builder.Clear();
-                                    command.Parameters.Clear();
-                                    firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                                    index = 0;
-                                    continue;
-                                }
-                                index++;
-                            }
-                            if (index > 0)
+                            if (index > 0) builder.Append(',');
+                            loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
+                            if (index >= bulkCount)
                             {
                                 command.CommandText = builder.ToString();
-                                eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
-                                count += await command.ExecuteNonQueryAsync(cancellationToken);
+                                count += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
                                 builder.Clear();
                                 command.Parameters.Clear();
+                                firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                                index = 0;
+                                bulkIndex++;
+                                continue;
                             }
-                            return count;
+                            index++;
                         }
-                        await this.DbContext.OpenAsync(connection, cancellationToken);
-                        if (isNeedSplit)
+                        if (index > 0)
                         {
-                            var entityType = this.Visitor.Tables[0].EntityType;
-                            var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
-                            foreach (var tabledInsertObj in tabledInsertObjs)
-                            {
-                                firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
-                                result += await executor(tabledInsertObj.Key, tabledInsertObj.Value);
-                            }
+                            command.CommandText = builder.ToString();
+                            count += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
+                            builder.Clear();
+                            command.Parameters.Clear();
                         }
-                        else
-                        {
-                            firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                            result = await executor(tableName, insertObjs);
-                        }
-                        builder.Clear();
-                        builder = null;
+                        return count;
                     }
-                    break;
-                default:
+                    await connection.OpenAsync(cancellationToken);
+                    if (isNeedSplit)
                     {
-                        //默认单条
-                        command.CommandText = this.Visitor.BuildCommand(command, false, out _);
-                        await this.DbContext.OpenAsync(connection, cancellationToken);
-                        eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Insert);
-                        result = await command.ExecuteNonQueryAsync(cancellationToken);
+                        var entityType = this.Visitor.Tables[0].EntityType;
+                        var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
+                        foreach (var tabledInsertObj in tabledInsertObjs)
+                        {
+                            firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
+                            result += await executor(tabledInsertObj.Key, tabledInsertObj.Value);
+                        }
                     }
-                    break;
-            }
+                    else
+                    {
+                        firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                        result = await executor(tableName, insertObjs);
+                    }
+                    builder.Clear();
+                    builder = null;
+                }
+                break;
+            default:
+                {
+                    //默认单条
+                    command.CommandText = this.Visitor.BuildCommand(command.BaseCommand, false, out _);
+                    await connection.OpenAsync(cancellationToken);
+                    result = await command.ExecuteNonQueryAsync(CommandSqlType.Insert, cancellationToken);
+                }
+                break;
         }
-        catch (Exception ex)
-        {
-            isNeedClose = true;
-            exception = ex;
-            var sqlType = this.Visitor.ActionMode == ActionMode.Bulk ? CommandSqlType.BulkInsert : CommandSqlType.Insert;
-            this.DbContext.AddCommandFailedFilter(connection, command, sqlType, eventArgs, exception);
-        }
-        finally
-        {
-            var sqlType = this.Visitor.ActionMode == ActionMode.Bulk ? CommandSqlType.BulkInsert : CommandSqlType.Insert;
-            this.DbContext.AddCommandAfterFilter(connection, command, sqlType, eventArgs, exception == null, exception);
-            command.Parameters.Clear();
-            await command.DisposeAsync();
-            if (isNeedClose) await this.CloseAsync(connection);
-        }
-        if (exception != null) throw exception;
+        command.Parameters.Clear();
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
         return result;
     }
     #endregion
@@ -343,7 +302,7 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        var sql = this.Visitor.BuildCommand(command, false, out _);
+        var sql = this.Visitor.BuildCommand(command.BaseCommand, false, out _);
         dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
         if (isNeedClose) connection.Close();
@@ -352,15 +311,15 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
     #endregion
 
     #region Close
-    public virtual void Close(TheaConnection connection)
+    public virtual void Close(ITheaConnection connection)
     {
-        this.DbContext.Close(connection);
+        connection.Close();
         this.Visitor.Dispose();
         this.Visitor = null;
     }
-    public virtual async ValueTask CloseAsync(TheaConnection connection)
+    public virtual async ValueTask CloseAsync(ITheaConnection connection)
     {
-        await this.DbContext.CloseAsync(connection);
+        await connection.CloseAsync();
         this.Visitor.Dispose();
         this.Visitor = null;
     }

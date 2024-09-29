@@ -444,7 +444,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 };
             }
         }
-        return (isNeedSplit, tableName, insertObjs, bulkCount, firstSqlSetter, loopSqlSetter, null);
+        return (isNeedSplit, tableName, insertObjs, bulkCount, firstSqlSetter, loopSqlSetter, (List<SqlFieldSegment>)null);
     }
     public virtual void VisitWithBy(object insertObj)
     {
@@ -497,7 +497,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     {
         (var fieldSelector, var fieldValue) = ((Expression, object))deferredSegmentValue;
         var lambdaExpr = fieldSelector as LambdaExpression;
-        var memberExpr = lambdaExpr.Body as MemberExpression;
+        var memberExpr = this.EnsureMemberVisit(lambdaExpr.Body) as MemberExpression;
         var entityMapper = this.Tables[0].Mapper;
         var memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
         if (memberMapper.IsIgnore || memberMapper.IsIgnoreInsert)
@@ -628,7 +628,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 case "WithByField":
                     (var fieldSelector, var fieldValue) = ((Expression, object))deferredSegment.Value;
                     var lambdaExpr = fieldSelector as LambdaExpression;
-                    var memberExpr = lambdaExpr.Body as MemberExpression;
+                    var memberExpr = this.EnsureMemberVisit(lambdaExpr.Body) as MemberExpression;
                     if (memberExpr.Member.Name == memberName)
                         return fieldValue;
                     break;

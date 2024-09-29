@@ -18,7 +18,7 @@ public class PostgreSqlDeleteVisitor : DeleteVisitor
             {
                 var tableSchema = tableSegment.TableSchema ?? this.DefaultTableSchema;
                 if (!schemaBuilders.TryGetValue(tableSchema, out var tableBuilder))
-                    schemaBuilders.TryAdd(tableSchema, tableBuilder = new StringBuilder());
+                    schemaBuilders.Add(tableSchema, tableBuilder = new StringBuilder());
 
                 if (tableBuilder.Length > 0) tableBuilder.Append(" OR ");
                 tableBuilder.Append($"a.relname LIKE '{tableSegment.Mapper.TableName}%'");

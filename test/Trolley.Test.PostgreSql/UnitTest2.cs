@@ -694,8 +694,8 @@ SELECT a.""MenuId"",a.""ParentId"",a.""Url"" FROM ""menuPageList"" a WHERE a.""P
             .InnerJoin<User>((a, b) => a.SellerId == b.Id)
             .Include((x, y) => x.Buyer)
             .ThenInclude(f => f.Company)
-            .Where((a, b) => a.TotalAmount > 300 && Sql.In(a.Id, new string[] { "1", "2", "3" }))
-            .Select((x, y) => new { Order = x, Seller = y })
+            .Where((a, b) => a.Buyer.Name.Contains("kevin"))
+            .Select((x, y) => new { Order = x, Seller = y, Buyer = x.Buyer })
             .ToListAsync();
 
         if (result.Count > 0)
@@ -764,11 +764,11 @@ SELECT a.""MenuId"",a.""ParentId"",a.""Url"" FROM ""menuPageList"" a WHERE a.""P
                 TotalAmount = x.Sum(b.TotalAmount)
             })
             .ToSql(out _);
-        Assert.Equal("SELECT a.\"Id\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE) AS \"Date\",COUNT(b.\"Id\") AS \"OrderCount\",SUM(b.\"TotalAmount\") AS \"TotalAmount\" FROM \"sys_user\" a INNER JOIN \"sys_order\" b ON a.\"Id\"=b.\"BuyerId\" GROUP BY a.\"Id\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE) ORDER BY a.\"Id\",CAST(b.\"CreatedAt\" AS DATE)", sql);
+        Assert.Equal("SELECT a.\"Id\",a.\"Name\",b.\"CreatedAt\"::DATE AS \"Date\",COUNT(b.\"Id\") AS \"OrderCount\",SUM(b.\"TotalAmount\") AS \"TotalAmount\" FROM \"sys_user\" a INNER JOIN \"sys_order\" b ON a.\"Id\"=b.\"BuyerId\" GROUP BY a.\"Id\",a.\"Name\",b.\"CreatedAt\"::DATE ORDER BY a.\"Id\",b.\"CreatedAt\"::DATE", sql);
         var result = repository.From<User>()
             .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
-            //.IncludeMany((a, b) => a.Orders)
-            //.ThenIncludeMany(f => f.Details)
+            .IncludeMany((a, b) => a.Orders)
+            .ThenIncludeMany(f => f.Details)
             .GroupBy((a, b) => new { a.Id, a.Name, b.CreatedAt.Date })
             .OrderBy((x, a, b) => new { UserId = a.Id, OrderId = b.CreatedAt.Date })
             .Select((x, a, b) => new
@@ -817,7 +817,7 @@ SELECT a.""MenuId"",a.""ParentId"",a.""Url"" FROM ""menuPageList"" a WHERE a.""P
                 TotalAmount = x.Sum(b.TotalAmount)
             })
             .ToSql(out _);
-        Assert.Equal("SELECT a.\"Id\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE) AS \"Date\",COUNT(b.\"Id\") AS \"OrderCount\",SUM(b.\"TotalAmount\") AS \"TotalAmount\" FROM \"sys_user\" a INNER JOIN \"sys_order\" b ON a.\"Id\"=b.\"BuyerId\" GROUP BY a.\"Id\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE) ORDER BY a.\"Id\"", sql1);
+        Assert.Equal("SELECT a.\"Id\",a.\"Name\",b.\"CreatedAt\"::DATE AS \"Date\",COUNT(b.\"Id\") AS \"OrderCount\",SUM(b.\"TotalAmount\") AS \"TotalAmount\" FROM \"sys_user\" a INNER JOIN \"sys_order\" b ON a.\"Id\"=b.\"BuyerId\" GROUP BY a.\"Id\",a.\"Name\",b.\"CreatedAt\"::DATE ORDER BY a.\"Id\"", sql1);
         var result1 = repository.From<User>()
             .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
             .GroupBy((a, b) => new { a.Id, a.Name, b.CreatedAt.Date })
@@ -858,7 +858,7 @@ SELECT a.""MenuId"",a.""ParentId"",a.""Url"" FROM ""menuPageList"" a WHERE a.""P
                 TotalAmount = x.Sum(b.TotalAmount)
             })
            .ToSql(out _);
-        Assert.Equal("SELECT a.\"Id\" AS \"UserId1\",a.\"Name\" AS \"UserName\",CAST(b.\"CreatedAt\" AS DATE) AS \"CreatedDate1\",COUNT(b.\"Id\") AS \"OrderCount\",SUM(b.\"TotalAmount\") AS \"TotalAmount\" FROM \"sys_user\" a INNER JOIN \"sys_order\" b ON a.\"Id\"=b.\"BuyerId\" GROUP BY a.\"Id\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE) ORDER BY a.\"Id\"", sql);
+        Assert.Equal("SELECT a.\"Id\" AS \"UserId1\",a.\"Name\" AS \"UserName\",b.\"CreatedAt\"::DATE AS \"CreatedDate1\",COUNT(b.\"Id\") AS \"OrderCount\",SUM(b.\"TotalAmount\") AS \"TotalAmount\" FROM \"sys_user\" a INNER JOIN \"sys_order\" b ON a.\"Id\"=b.\"BuyerId\" GROUP BY a.\"Id\",a.\"Name\",b.\"CreatedAt\"::DATE ORDER BY a.\"Id\"", sql);
         var result = repository.From<User>()
             .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
             .GroupBy((a, b) => new { UserId = a.Id, a.Name, CreatedDate = b.CreatedAt.Date })
@@ -891,7 +891,7 @@ SELECT a.""MenuId"",a.""ParentId"",a.""Url"" FROM ""menuPageList"" a WHERE a.""P
                TotalAmount = x.Sum(b.TotalAmount)
            })
            .ToSql(out _);
-        Assert.Equal("SELECT a.\"Id\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE) AS \"Date\",COUNT(b.\"Id\") AS \"OrderCount\",SUM(b.\"TotalAmount\") AS \"TotalAmount\" FROM \"sys_user\" a INNER JOIN \"sys_order\" b ON a.\"Id\"=b.\"BuyerId\" GROUP BY a.\"Id\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE) ORDER BY a.\"Id\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE)", sql);
+        Assert.Equal("SELECT a.\"Id\",a.\"Name\",b.\"CreatedAt\"::DATE AS \"Date\",COUNT(b.\"Id\") AS \"OrderCount\",SUM(b.\"TotalAmount\") AS \"TotalAmount\" FROM \"sys_user\" a INNER JOIN \"sys_order\" b ON a.\"Id\"=b.\"BuyerId\" GROUP BY a.\"Id\",a.\"Name\",b.\"CreatedAt\"::DATE ORDER BY a.\"Id\",a.\"Name\",b.\"CreatedAt\"::DATE", sql);
         var result = repository.From<User>()
           .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
           .GroupBy((a, b) => new { a.Id, a.Name, b.CreatedAt.Date })
@@ -919,7 +919,7 @@ SELECT a.""MenuId"",a.""ParentId"",a.""Url"" FROM ""menuPageList"" a WHERE a.""P
                 TotalAmount = x.Sum(b.TotalAmount)
             })
             .ToSql(out _);
-        Assert.Equal("SELECT a.\"Id\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE) AS \"CreatedAt\",COUNT(b.\"Id\") AS \"OrderCount\",SUM(b.\"TotalAmount\") AS \"TotalAmount\" FROM \"sys_user\" a INNER JOIN \"sys_order\" b ON a.\"Id\"=b.\"BuyerId\" GROUP BY a.\"Id\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE) ORDER BY a.\"Id\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE)", sql1);
+        Assert.Equal("SELECT a.\"Id\",a.\"Name\",b.\"CreatedAt\"::DATE AS \"CreatedAt\",COUNT(b.\"Id\") AS \"OrderCount\",SUM(b.\"TotalAmount\") AS \"TotalAmount\" FROM \"sys_user\" a INNER JOIN \"sys_order\" b ON a.\"Id\"=b.\"BuyerId\" GROUP BY a.\"Id\",a.\"Name\",b.\"CreatedAt\"::DATE ORDER BY a.\"Id\",a.\"Name\",b.\"CreatedAt\"::DATE", sql1);
         var result1 = repository.From<User>()
             .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
             .GroupBy((a, b) => new { a.Id, a.Name, b.CreatedAt.Date })
@@ -953,7 +953,7 @@ SELECT a.""MenuId"",a.""ParentId"",a.""Url"" FROM ""menuPageList"" a WHERE a.""P
                TotalAmount = x.Sum(b.TotalAmount)
            })
            .ToSql(out _);
-        Assert.Equal("SELECT a.\"Id\" AS \"UserId\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE) AS \"CreatedDate\",COUNT(b.\"Id\") AS \"OrderCount\",SUM(b.\"TotalAmount\") AS \"TotalAmount\" FROM \"sys_user\" a INNER JOIN \"sys_order\" b ON a.\"Id\"=b.\"BuyerId\" GROUP BY a.\"Id\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE) ORDER BY a.\"Id\",a.\"Name\" DESC,CAST(b.\"CreatedAt\" AS DATE)", sql);
+        Assert.Equal("SELECT a.\"Id\" AS \"UserId\",a.\"Name\",b.\"CreatedAt\"::DATE AS \"CreatedDate\",COUNT(b.\"Id\") AS \"OrderCount\",SUM(b.\"TotalAmount\") AS \"TotalAmount\" FROM \"sys_user\" a INNER JOIN \"sys_order\" b ON a.\"Id\"=b.\"BuyerId\" GROUP BY a.\"Id\",a.\"Name\",b.\"CreatedAt\"::DATE ORDER BY a.\"Id\",a.\"Name\" DESC,b.\"CreatedAt\"::DATE", sql);
 
         await repository.From<User>()
            .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
@@ -997,7 +997,7 @@ SELECT a.""MenuId"",a.""ParentId"",a.""Url"" FROM ""menuPageList"" a WHERE a.""P
                 a.TotalAmount
             })
             .ToSql(out _);
-        Assert.Equal("SELECT a.\"BuyerId\",b.\"Name\" AS \"BuyerName\",a.\"Date\" AS \"BuyDate\",a.\"ProductCount\",a.\"OrderCount\",a.\"TotalAmount\" FROM (SELECT a.\"BuyerId\",CAST(a.\"CreatedAt\" AS DATE) AS \"Date\",COUNT(a.\"Id\") AS \"OrderCount\",COUNT(DISTINCT b.\"ProductId\") AS \"ProductCount\",SUM(a.\"TotalAmount\") AS \"TotalAmount\" FROM \"sys_order\" a,\"sys_order_detail\" b WHERE a.\"Id\"=b.\"OrderId\" GROUP BY a.\"BuyerId\",CAST(a.\"CreatedAt\" AS DATE)) a INNER JOIN \"sys_user\" b ON a.\"BuyerId\"=b.\"Id\" WHERE a.\"ProductCount\">2 AND a.\"TotalAmount\">300 ORDER BY b.\"Id\"", sql);
+        Assert.Equal("SELECT a.\"BuyerId\",b.\"Name\" AS \"BuyerName\",a.\"Date\" AS \"BuyDate\",a.\"ProductCount\",a.\"OrderCount\",a.\"TotalAmount\" FROM (SELECT a.\"BuyerId\",a.\"CreatedAt\"::DATE AS \"Date\",COUNT(a.\"Id\") AS \"OrderCount\",COUNT(DISTINCT b.\"ProductId\") AS \"ProductCount\",SUM(a.\"TotalAmount\") AS \"TotalAmount\" FROM \"sys_order\" a,\"sys_order_detail\" b WHERE a.\"Id\"=b.\"OrderId\" GROUP BY a.\"BuyerId\",a.\"CreatedAt\"::DATE) a INNER JOIN \"sys_user\" b ON a.\"BuyerId\"=b.\"Id\" WHERE a.\"ProductCount\">2 AND a.\"TotalAmount\">300 ORDER BY b.\"Id\"", sql);
         var result = await repository.From(f => f
             .From<Order, OrderDetail>()
                 .Where((x, y) => x.Id == y.OrderId)
@@ -1041,7 +1041,7 @@ SELECT a.""MenuId"",a.""ParentId"",a.""Url"" FROM ""menuPageList"" a WHERE a.""P
                 TotalAmount = x.Sum(b.TotalAmount)
             })
             .ToSql(out _);
-        Assert.Equal("SELECT a.\"Id\" AS \"BuyerId\",a.\"Name\" AS \"BuyerName\",CAST(b.\"CreatedAt\" AS DATE) AS \"BuyDate\",COUNT(DISTINCT c.\"ProductId\") AS \"ProductCount\",COUNT(b.\"Id\") AS \"OrderCount\",SUM(b.\"TotalAmount\") AS \"TotalAmount\" FROM \"sys_user\" a INNER JOIN \"sys_order\" b ON a.\"Id\"=b.\"BuyerId\" INNER JOIN \"sys_order_detail\" c ON b.\"Id\"=c.\"OrderId\" GROUP BY a.\"Id\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE) HAVING SUM(b.\"TotalAmount\")>300 AND COUNT(DISTINCT c.\"ProductId\")>2 ORDER BY a.\"Id\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE)", sql1);
+        Assert.Equal("SELECT a.\"Id\" AS \"BuyerId\",a.\"Name\" AS \"BuyerName\",b.\"CreatedAt\"::DATE AS \"BuyDate\",COUNT(DISTINCT c.\"ProductId\") AS \"ProductCount\",COUNT(b.\"Id\") AS \"OrderCount\",SUM(b.\"TotalAmount\") AS \"TotalAmount\" FROM \"sys_user\" a INNER JOIN \"sys_order\" b ON a.\"Id\"=b.\"BuyerId\" INNER JOIN \"sys_order_detail\" c ON b.\"Id\"=c.\"OrderId\" GROUP BY a.\"Id\",a.\"Name\",b.\"CreatedAt\"::DATE HAVING SUM(b.\"TotalAmount\")>300 AND COUNT(DISTINCT c.\"ProductId\")>2 ORDER BY a.\"Id\",a.\"Name\",b.\"CreatedAt\"::DATE", sql1);
         var result1 = await repository.From<User>()
             .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
             .InnerJoin<OrderDetail>((a, b, c) => b.Id == c.OrderId)
@@ -1080,7 +1080,7 @@ SELECT a.""MenuId"",a.""ParentId"",a.""Url"" FROM ""menuPageList"" a WHERE a.""P
                 TotalAmount = x.Sum(b.TotalAmount)
             })
             .ToSql(out _);
-        Assert.Equal("SELECT a.\"Id\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE) AS \"Date\",COUNT(b.\"Id\") AS \"OrderCount\",SUM(b.\"TotalAmount\") AS \"TotalAmount\" FROM \"sys_user\" a INNER JOIN \"sys_order\" b ON a.\"Id\"=b.\"BuyerId\" WHERE EXISTS(SELECT * FROM \"sys_order_detail\" f WHERE b.\"Id\"=f.\"OrderId\" AND f.\"ProductId\"=2) GROUP BY a.\"Id\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE) HAVING SUM(b.\"TotalAmount\")>300 ORDER BY a.\"Id\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE)", sql);
+        Assert.Equal("SELECT a.\"Id\",a.\"Name\",b.\"CreatedAt\"::DATE AS \"Date\",COUNT(b.\"Id\") AS \"OrderCount\",SUM(b.\"TotalAmount\") AS \"TotalAmount\" FROM \"sys_user\" a INNER JOIN \"sys_order\" b ON a.\"Id\"=b.\"BuyerId\" WHERE EXISTS(SELECT * FROM \"sys_order_detail\" f WHERE b.\"Id\"=f.\"OrderId\" AND f.\"ProductId\"=2) GROUP BY a.\"Id\",a.\"Name\",b.\"CreatedAt\"::DATE HAVING SUM(b.\"TotalAmount\")>300 ORDER BY a.\"Id\",a.\"Name\",b.\"CreatedAt\"::DATE", sql);
         var result = repository.From<User>()
             .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
             .Where((a, b) => Sql.Exists<OrderDetail>(f => b.Id == f.OrderId && f.ProductId == 2))
@@ -1120,7 +1120,7 @@ SELECT a.""MenuId"",a.""ParentId"",a.""Url"" FROM ""menuPageList"" a WHERE a.""P
                 TotalAmount = x.Sum(b.TotalAmount)
             })
             .ToSql(out _);
-        Assert.Equal("SELECT a.\"Id\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE) AS \"Date\",COUNT(b.\"Id\") AS \"OrderCount\",SUM(b.\"TotalAmount\") AS \"TotalAmount\" FROM \"sys_user\" a INNER JOIN \"sys_order\" b ON a.\"Id\"=b.\"BuyerId\" WHERE EXISTS(SELECT * FROM \"sys_order_detail\" f WHERE b.\"Id\"=f.\"OrderId\" AND f.\"ProductId\"=2) GROUP BY a.\"Id\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE) HAVING SUM(b.\"TotalAmount\")>300 ORDER BY a.\"Id\",a.\"Name\" DESC,CAST(b.\"CreatedAt\" AS DATE)", sql);
+        Assert.Equal("SELECT a.\"Id\",a.\"Name\",b.\"CreatedAt\"::DATE AS \"Date\",COUNT(b.\"Id\") AS \"OrderCount\",SUM(b.\"TotalAmount\") AS \"TotalAmount\" FROM \"sys_user\" a INNER JOIN \"sys_order\" b ON a.\"Id\"=b.\"BuyerId\" WHERE EXISTS(SELECT * FROM \"sys_order_detail\" f WHERE b.\"Id\"=f.\"OrderId\" AND f.\"ProductId\"=2) GROUP BY a.\"Id\",a.\"Name\",b.\"CreatedAt\"::DATE HAVING SUM(b.\"TotalAmount\")>300 ORDER BY a.\"Id\",a.\"Name\" DESC,b.\"CreatedAt\"::DATE", sql);
         var result = repository.From<User>()
             .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
             .Where((a, b) => Sql.Exists<OrderDetail>(f => b.Id == f.OrderId && f.ProductId == 2))
@@ -1330,7 +1330,7 @@ SELECT a.""Id"",a.""Name"",b.""Name"" AS ""CompanyName"" FROM ""sys_user"" a INN
                 TotalAmount = x.Sum(b.TotalAmount)
             })
             .ToSql(out _);
-        Assert.Equal("SELECT a.\"Id\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE) AS \"Date\",COUNT(b.\"Id\") AS \"OrderCount\",SUM(b.\"TotalAmount\") AS \"TotalAmount\" FROM \"sys_user\" a INNER JOIN \"sys_order\" b ON a.\"Id\"=b.\"BuyerId\" WHERE a.\"Id\" IN (1,2,3) AND EXISTS(SELECT * FROM \"sys_order_detail\" f WHERE b.\"Id\"=f.\"OrderId\" AND f.\"ProductId\"=2) GROUP BY a.\"Id\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE) HAVING SUM(b.\"TotalAmount\")>300 ORDER BY a.\"Id\"", sql);
+        Assert.Equal("SELECT a.\"Id\",a.\"Name\",b.\"CreatedAt\"::DATE AS \"Date\",COUNT(b.\"Id\") AS \"OrderCount\",SUM(b.\"TotalAmount\") AS \"TotalAmount\" FROM \"sys_user\" a INNER JOIN \"sys_order\" b ON a.\"Id\"=b.\"BuyerId\" WHERE a.\"Id\" IN (1,2,3) AND EXISTS(SELECT * FROM \"sys_order_detail\" f WHERE b.\"Id\"=f.\"OrderId\" AND f.\"ProductId\"=2) GROUP BY a.\"Id\",a.\"Name\",b.\"CreatedAt\"::DATE HAVING SUM(b.\"TotalAmount\")>300 ORDER BY a.\"Id\"", sql);
         var result = repository.From<User>()
             .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
             .Where((x, y) => Sql.In(x.Id, new int[] { 1, 2, 3 }) && Sql.Exists<OrderDetail>(f => y.Id == f.OrderId && f.ProductId == 2))
@@ -1360,7 +1360,7 @@ SELECT a.""Id"",a.""Name"",b.""Name"" AS ""CompanyName"" FROM ""sys_user"" a INN
                 TotalAmount = x.Sum(b.TotalAmount)
             })
             .ToSql(out _);
-        Assert.Equal("SELECT a.\"Id\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE) AS \"Date\",COUNT(b.\"Id\") AS \"OrderCount\",SUM(b.\"TotalAmount\") AS \"TotalAmount\" FROM \"sys_user\" a INNER JOIN \"sys_order\" b ON a.\"Id\"=b.\"BuyerId\" WHERE a.\"Id\" IN (1,2,3) AND EXISTS(SELECT * FROM \"sys_order_detail\" f WHERE b.\"Id\"=f.\"OrderId\" AND f.\"ProductId\"=2) GROUP BY a.\"Id\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE) HAVING SUM(b.\"TotalAmount\")>300 ORDER BY a.\"Id\",CAST(b.\"CreatedAt\" AS DATE)", sql);
+        Assert.Equal("SELECT a.\"Id\",a.\"Name\",b.\"CreatedAt\"::DATE AS \"Date\",COUNT(b.\"Id\") AS \"OrderCount\",SUM(b.\"TotalAmount\") AS \"TotalAmount\" FROM \"sys_user\" a INNER JOIN \"sys_order\" b ON a.\"Id\"=b.\"BuyerId\" WHERE a.\"Id\" IN (1,2,3) AND EXISTS(SELECT * FROM \"sys_order_detail\" f WHERE b.\"Id\"=f.\"OrderId\" AND f.\"ProductId\"=2) GROUP BY a.\"Id\",a.\"Name\",b.\"CreatedAt\"::DATE HAVING SUM(b.\"TotalAmount\")>300 ORDER BY a.\"Id\",b.\"CreatedAt\"::DATE", sql);
         result = repository.From<User>()
             .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
             .Where((a, b) => Sql.In(a.Id, new int[] { 1, 2, 3 }) && Sql.Exists<OrderDetail>(f => b.Id == f.OrderId && f.ProductId == 2))
@@ -2546,7 +2546,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
                 b.TotalAmount
             })
             .ToSql(out _);
-        Assert.Equal("SELECT DISTINCT ON (a.\"Id\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE)) a.\"Id\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE) AS \"CreatedAt\",b.\"TotalAmount\" FROM \"sys_user\" a INNER JOIN \"sys_order\" b ON a.\"Id\"=b.\"BuyerId\" ORDER BY a.\"Id\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE)", sql);
+        Assert.Equal("SELECT DISTINCT ON (a.\"Id\",a.\"Name\",b.\"CreatedAt\"::DATE) a.\"Id\",a.\"Name\",b.\"CreatedAt\"::DATE AS \"CreatedAt\",b.\"TotalAmount\" FROM \"sys_user\" a INNER JOIN \"sys_order\" b ON a.\"Id\"=b.\"BuyerId\" ORDER BY a.\"Id\",a.\"Name\",b.\"CreatedAt\"::DATE", sql);
         var result = repository.From<User>()
             .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
             .DistinctOn((a, b) => new { a.Id, a.Name, CreatedAt = b.CreatedAt.Date })
@@ -2572,7 +2572,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
                 b.TotalAmount
             })
             .ToSql(out _);
-        Assert.Equal("SELECT DISTINCT ON (a.\"Id\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE)) a.\"Id\" AS \"UserId\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE) AS \"CreatedAt\",b.\"TotalAmount\" FROM \"sys_user\" a INNER JOIN \"sys_order\" b ON a.\"Id\"=b.\"BuyerId\" ORDER BY a.\"Id\",a.\"Name\",CAST(b.\"CreatedAt\" AS DATE)", sql1);
+        Assert.Equal("SELECT DISTINCT ON (a.\"Id\",a.\"Name\",b.\"CreatedAt\"::DATE) a.\"Id\" AS \"UserId\",a.\"Name\",b.\"CreatedAt\"::DATE AS \"CreatedAt\",b.\"TotalAmount\" FROM \"sys_user\" a INNER JOIN \"sys_order\" b ON a.\"Id\"=b.\"BuyerId\" ORDER BY a.\"Id\",a.\"Name\",b.\"CreatedAt\"::DATE", sql1);
         var result1 = repository.From<User>()
             .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
             .DistinctOn((a, b) => new { UserId = a.Id, a.Name, CreatedAt = b.CreatedAt.Date })

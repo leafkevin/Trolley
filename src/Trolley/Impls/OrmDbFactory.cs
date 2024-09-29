@@ -18,8 +18,8 @@ public sealed class OrmDbFactory : IOrmDbFactory
     private ConcurrentDictionary<string, ITableShardingProvider> complexTableShardingProviders;
 
     private IFieldMapHandler fieldMapHandler = new DefaultFieldMapHandler();
+    private OrmDbFactoryOptions options = new();
     private Func<string> dbKeySelector;
-    private OrmDbFactoryOptions options;
     private TheaDatabase defaultDatabase;
 
     public ICollection<TheaDatabase> Databases => this.databases.Values;
@@ -191,8 +191,8 @@ public sealed class OrmDbFactory : IOrmDbFactory
             throw new Exception($"没有注册dbKey：{localDbKey}的IEntityMapProvider对象，也没有注册OrmProviderType：{database.OrmProviderType}的IEntityMapProvider对象");
         this.complexTableShardingProviders.TryGetValue(localDbKey, out var tableShardingProvider);
 
-        //只是为了获取默认TableSchema
-        var connection = database.OrmProvider.CreateConnection(database.ConnectionString);
+        //只是为了获取默认TableSchema      
+        var connection = database.OrmProvider.CreateConnection(localDbKey, database.ConnectionString);
         var defaultSchema = database.OrmProvider.DefaultTableSchema ?? connection.Database;
         connection.Dispose();
         var dbContext = new DbContext
@@ -203,8 +203,9 @@ public sealed class OrmDbFactory : IOrmDbFactory
             OrmProvider = database.OrmProvider,
             MapProvider = mapProvider,
             ShardingProvider = tableShardingProvider,
-            CommandTimeout = this.options?.Timeout ?? 30,
-            IsParameterized = this.options?.IsParameterized ?? false,
+            CommandTimeout = this.options.Timeout,
+            IsParameterized = this.options.IsParameterized,
+            DefaultEnumMapDbType = this.options.DefaultEnumMapDbType,
             DbInterceptors = this.interceptors
         };
         return database.OrmProvider.CreateRepository(dbContext);
@@ -213,7 +214,6 @@ public sealed class OrmDbFactory : IOrmDbFactory
     {
         if (optionsInitializer == null)
             throw new ArgumentNullException(nameof(optionsInitializer));
-        this.options = new OrmDbFactoryOptions();
         optionsInitializer.Invoke(this.options);
     }
     public Type GetOrmProviderType(OrmProviderType ormProviderType)

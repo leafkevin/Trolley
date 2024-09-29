@@ -36,6 +36,7 @@ public class RepositoryHelper
     private static ConcurrentDictionary<int, object> updateMultiWithCommandInitializerCache = new();
 
     private static ConcurrentDictionary<int, Func<string, object, string>> shardingTableNameGetters = new();
+    //private static ConcurrentDictionary<int, Action<object>> targetRefIncludeValuesSetters = new();
 
     public static void AddValueParameter(IOrmProvider ormProvider, Expression dbParametersExpr, Expression ormProviderExpr, Expression parameterNameExpr,
         Type fieldValueType, Expression parameterValueExpr, MemberMap memberMapper, List<ParameterExpression> blockParameters, List<Expression> blockBodies)
@@ -103,7 +104,6 @@ public class RepositoryHelper
         }
         blockBodies.Add(addParameterExpr);
     }
-
     public static string BuildFieldsSqlPart(IOrmProvider ormProvider, EntityMap entityMapper, Type selectType, bool isNeedAs)
     {
         var index = 0;
@@ -531,19 +531,19 @@ public class RepositoryHelper
     }
     public static object BuildGetSqlParameters(IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, Type whereObjType, bool isMultiple)
     {
-        var cacheKey = HashCode.Combine(ormProvider, mapProvider, entityType, whereObjType);
+        var cacheKey = RepositoryHelper.GetCacheKey(ormProvider, mapProvider, entityType, whereObjType);
         var commandInitializerCache = isMultiple ? queryMultiGetCommandInitializerCache : queryGetCommandInitializerCache;
         return commandInitializerCache.GetOrAdd(cacheKey, BuildWhereSqlParameters(ormProvider, mapProvider, entityType, whereObjType, isMultiple, false));
     }
     public static object BuildQueryWhereObjSqlParameters(IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, Type whereObjType, bool isMultiple)
     {
-        var cacheKey = HashCode.Combine(ormProvider, mapProvider, entityType, whereObjType);
+        var cacheKey = RepositoryHelper.GetCacheKey(ormProvider, mapProvider, entityType, whereObjType);
         var commandInitializerCache = isMultiple ? queryMultiWhereObjCommandInitializerCache : queryWhereObjCommandInitializerCache;
         return commandInitializerCache.GetOrAdd(cacheKey, BuildWhereSqlParameters(ormProvider, mapProvider, entityType, whereObjType, isMultiple, false));
     }
     public static object BuildExistsSqlParameters(IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, Type whereObjType, bool isMultiple)
     {
-        var cacheKey = HashCode.Combine(ormProvider, mapProvider, entityType, whereObjType);
+        var cacheKey = RepositoryHelper.GetCacheKey(ormProvider, mapProvider, entityType, whereObjType);
         var commandInitializerCache = isMultiple ? queryMultiExistsCommandInitializerCache : queryExistsCommandInitializerCache;
         return commandInitializerCache.GetOrAdd(cacheKey, BuildWhereSqlParameters(ormProvider, mapProvider, entityType, whereObjType, isMultiple, true));
     }
@@ -568,7 +568,7 @@ public class RepositoryHelper
         else
         {
             var parameterType = parameters.GetType();
-            var cacheKey = HashCode.Combine(rawSql, parameterType);
+            var cacheKey = RepositoryHelper.GetCacheKey(rawSql, parameterType);
             commandInitializer = queryRawSqlCommandInitializerCache.GetOrAdd(cacheKey, f =>
             {
                 var memberInfos = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
@@ -600,7 +600,7 @@ public class RepositoryHelper
 
     public static object BuildCreateFieldsSqlPart(IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, Type insertObjType, List<string> onlyFieldNames, List<string> ignoreFieldNames)
     {
-        var cacheKey = HashCode.Combine(ormProvider, mapProvider, entityType, insertObjType, onlyFieldNames, ignoreFieldNames);
+        var cacheKey = RepositoryHelper.GetCacheKey(ormProvider, mapProvider, entityType, insertObjType, onlyFieldNames, ignoreFieldNames);
         return createFieldsSqlCache.GetOrAdd(cacheKey, f =>
         {
             object commandInitializer = null;
@@ -669,7 +669,7 @@ public class RepositoryHelper
     }
     public static object BuildCreateValuesSqlParametes(IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, Type insertObjType, List<string> onlyFieldNames, List<string> ignoreFieldNames, bool hasSuffix)
     {
-        var cacheKey = HashCode.Combine(ormProvider, mapProvider, entityType, insertObjType, onlyFieldNames, ignoreFieldNames);
+        var cacheKey = RepositoryHelper.GetCacheKey(ormProvider, mapProvider, entityType, insertObjType, onlyFieldNames, ignoreFieldNames);
         var cache = hasSuffix ? createBulkValuesSqlParametersCache : createValuesSqlParametersCache;
         return cache.GetOrAdd(cacheKey, f =>
         {
@@ -858,7 +858,7 @@ public class RepositoryHelper
     }
     public static (string, Action<StringBuilder, string>, object, object) BuildUpdateSqlParameters(IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, Type updateObjType, bool hasSuffix, List<string> onlyFieldNames, List<string> ignoreFieldNames)
     {
-        var cacheKey = HashCode.Combine(ormProvider, mapProvider, entityType, updateObjType, hasSuffix, onlyFieldNames, ignoreFieldNames);
+        var cacheKey = RepositoryHelper.GetCacheKey(ormProvider, mapProvider, entityType, updateObjType, hasSuffix, onlyFieldNames, ignoreFieldNames);
         var cache = hasSuffix ? updateMultiCommandInitializerCache : updateCommandInitializerCache;
         return cache.GetOrAdd(cacheKey, f =>
         {
@@ -927,7 +927,7 @@ public class RepositoryHelper
 
     public static object BuildUpdateSetWithPartSqlParameters(IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, Type updateObjType, List<string> onlyFieldNames, List<string> ignoreFieldNames, bool hasSuffix)
     {
-        var cacheKey = HashCode.Combine(ormProvider, mapProvider, entityType, updateObjType, onlyFieldNames, ignoreFieldNames);
+        var cacheKey = RepositoryHelper.GetCacheKey(ormProvider, mapProvider, entityType, updateObjType, onlyFieldNames, ignoreFieldNames);
         var commandInitializerCache = hasSuffix ? updateMultiWithCommandInitializerCache : updateWithCommandInitializerCache;
         return commandInitializerCache.GetOrAdd(cacheKey, f =>
         {
@@ -1127,7 +1127,7 @@ public class RepositoryHelper
     }
     public static (bool, string, object, Action<StringBuilder, string>) BuildDeleteCommandInitializer(IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, Type whereObjType, bool isBulk, bool hasSuffix)
     {
-        var cacheKey = HashCode.Combine(ormProvider, mapProvider, entityType, whereObjType, isBulk);
+        var cacheKey = RepositoryHelper.GetCacheKey(ormProvider, mapProvider, entityType, whereObjType, isBulk);
         var commandInitializerCache = hasSuffix ? deleteMultiCommandInitializerCache : deleteCommandInitializerCache;
         return commandInitializerCache.GetOrAdd(cacheKey, f =>
         {
@@ -1197,7 +1197,7 @@ public class RepositoryHelper
         if (shardingTable.DependOnMembers == null || shardingTable.DependOnMembers.Count == 0)
             throw new NotSupportedException($"实体表{entityType.FullName}有设置分表，但未指定依赖字段，插入数据无法确定分表");
 
-        var cacheKey = HashCode.Combine(entityType, parameterType);
+        var cacheKey = RepositoryHelper.GetCacheKey(entityType, parameterType);
         if (shardingTable.DependOnMembers.Count > 1)
         {
             if (typeof(IDictionary<string, object>).IsAssignableFrom(parameterType))
@@ -1286,5 +1286,26 @@ public class RepositoryHelper
             }
         }
         return true;
+    }
+    public static int GetCacheKey(params object[] parameters)
+    {
+#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+        var hashCode = new HashCode();
+        foreach (var parameter in parameters)
+        {
+            hashCode.Add(parameter);
+        }
+        return hashCode.ToHashCode();
+#else
+        int hashCode = 17;
+        unchecked
+        {
+            foreach (var parameter in parameters)
+            {
+                hashCode = hashCode * 23 + parameter.GetHashCode();
+            }
+        }
+        return hashCode;
+#endif
     }
 }

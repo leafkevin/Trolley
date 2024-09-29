@@ -1,11 +1,15 @@
-﻿using Microsoft.Data.SqlClient;
-using System;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using Trolley.SqlConnector;
 
 namespace Trolley.SqlServer;
 
@@ -42,8 +46,10 @@ public partial class SqlServerProvider : BaseOrmProvider
         defaultMapTypes[SqlDbType.Timestamp] = typeof(byte[]);
         defaultMapTypes[SqlDbType.DateTime2] = typeof(DateTime);
         defaultMapTypes[SqlDbType.DateTimeOffset] = typeof(DateTimeOffset);
+#if NET6_0_OR_GREATER
         defaultMapTypes[SqlDbType.Date] = typeof(DateOnly);
         defaultMapTypes[SqlDbType.Time] = typeof(TimeOnly);
+#endif
         defaultMapTypes[SqlDbType.Image] = typeof(byte[]);
         defaultMapTypes[SqlDbType.Binary] = typeof(byte[]);
         defaultMapTypes[SqlDbType.VarBinary] = typeof(byte[]);
@@ -64,8 +70,10 @@ public partial class SqlServerProvider : BaseOrmProvider
         defaultDbTypes[typeof(string)] = SqlDbType.NVarChar;
         defaultDbTypes[typeof(DateTime)] = SqlDbType.DateTime;
         defaultDbTypes[typeof(DateTimeOffset)] = SqlDbType.DateTimeOffset;
+#if NET6_0_OR_GREATER
         defaultDbTypes[typeof(DateOnly)] = SqlDbType.Date;
         defaultDbTypes[typeof(TimeOnly)] = SqlDbType.Time;
+#endif
         defaultDbTypes[typeof(byte[])] = SqlDbType.VarBinary;
         defaultDbTypes[typeof(Guid)] = SqlDbType.UniqueIdentifier;
 
@@ -83,8 +91,10 @@ public partial class SqlServerProvider : BaseOrmProvider
         defaultDbTypes[typeof(decimal?)] = SqlDbType.Decimal;
         defaultDbTypes[typeof(DateTime?)] = SqlDbType.DateTime;
         defaultDbTypes[typeof(DateTimeOffset?)] = SqlDbType.DateTimeOffset;
+#if NET6_0_OR_GREATER
         defaultDbTypes[typeof(DateOnly?)] = SqlDbType.Date;
         defaultDbTypes[typeof(TimeOnly?)] = SqlDbType.Time;
+#endif
         defaultDbTypes[typeof(Guid?)] = SqlDbType.UniqueIdentifier;
 
 
@@ -102,8 +112,10 @@ public partial class SqlServerProvider : BaseOrmProvider
         castTos[typeof(decimal)] = "DECIMAL(36,18)";
         castTos[typeof(bool)] = "BIT";
         castTos[typeof(DateTime)] = "DATETIME";
+#if NET6_0_OR_GREATER
         castTos[typeof(DateOnly)] = "DATE";
         castTos[typeof(TimeOnly)] = "TIME";
+#endif
         castTos[typeof(Guid)] = "UNIQUEIDENTIFIER";
 
         castTos[typeof(string)] = "NVARCHAR(MAX)";
@@ -120,12 +132,14 @@ public partial class SqlServerProvider : BaseOrmProvider
         castTos[typeof(decimal?)] = "DECIMAL(36,18)";
         castTos[typeof(bool?)] = "BIT";
         castTos[typeof(DateTime?)] = "DATETIME";
+#if NET6_0_OR_GREATER
         castTos[typeof(DateOnly?)] = "DATE";
         castTos[typeof(TimeOnly?)] = "TIME";
+#endif
         castTos[typeof(Guid?)] = "UNIQUEIDENTIFIER";
     }
-    public override IDbConnection CreateConnection(string connectionString)
-        => new SqlConnection(connectionString);
+    public override ITheaConnection CreateConnection(string dbKey, string connectionString)
+        => new SqlServerTheaConnection(dbKey, connectionString);
     public override IDbCommand CreateCommand() => new SqlCommand();
     public override IDbDataParameter CreateParameter(string parameterName, object value)
         => new SqlParameter(parameterName, value);
@@ -202,8 +216,10 @@ public partial class SqlServerProvider : BaseOrmProvider
                 return $"'{Convert.ToDateTime(value):yyyy\\-MM\\-dd\\ HH\\:mm\\:ss\\.fff}'";
             case Type factType when factType == typeof(DateTimeOffset):
                 return $"'{(DateTimeOffset)value:yyyy\\-MM\\-dd\\ HH\\:mm\\:ss\\.fffZ}'";
+#if NET6_0_OR_GREATER
             case Type factType when factType == typeof(DateOnly):
                 return $"'{(DateOnly)value:yyyy\\-MM\\-dd}'";
+#endif
             case Type factType when factType == typeof(TimeSpan):
                 {
                     var factValue = (TimeSpan)value;
@@ -211,7 +227,9 @@ public partial class SqlServerProvider : BaseOrmProvider
                         return $"'{(int)factValue.TotalDays}.{factValue:hh\\:mm\\:ss\\.ffffff}'";
                     return $"'{factValue:hh\\:mm\\:ss\\.ffffff}'";
                 }
+#if NET6_0_OR_GREATER
             case Type factType when factType == typeof(TimeOnly): return $"'{(TimeOnly)value:hh\\:mm\\:ss\\.ffffff}'";
+#endif
             case Type factType when factType == typeof(SqlFieldSegment):
                 {
                     var sqlSegment = value as SqlFieldSegment;
@@ -283,13 +301,13 @@ on e.id = c.default_object_id left join sys.index_columns f on f.object_id=a.obj
                 var tableSchema = myTableNames[0];
                 myTableName = myTableNames[1];
                 if (!tableBuilders.TryGetValue(tableSchema, out builder))
-                    tableBuilders.TryAdd(tableSchema, builder = new StringBuilder());
+                    tableBuilders.Add(tableSchema, builder = new StringBuilder());
             }
             else
             {
                 var tableSchema = this.DefaultTableSchema;
                 if (!tableBuilders.TryGetValue(tableSchema, out builder))
-                    tableBuilders.TryAdd(tableSchema, builder = new StringBuilder());
+                    tableBuilders.Add(tableSchema, builder = new StringBuilder());
                 myTableName = tableName;
             }
             if (builder.Length > 0)
@@ -422,7 +440,7 @@ on e.id = c.default_object_id left join sys.index_columns f on f.object_id=a.obj
         switch (methodInfo.Name)
         {
             case "IsNull":
-                cacheKey = HashCode.Combine(typeof(Sql), methodInfo.GetGenericMethodDefinition());
+                cacheKey = RepositoryHelper.GetCacheKey(typeof(Sql), methodInfo.GetGenericMethodDefinition());
                 formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
@@ -435,5 +453,125 @@ on e.id = c.default_object_id left join sys.index_columns f on f.object_id=a.obj
         }
         formatter = null;
         return false;
+    }
+    public int ExecuteBulkCopy(DbContext dbContext, SqlVisitor visitor, ITheaConnection connection, Type insertObjType, IEnumerable insertObjs, int? timeoutSeconds, string tableName = null)
+    {
+        var entityMapper = visitor.Tables[0].Mapper;
+        var memberMappers = visitor.GetRefMemberMappers(insertObjType, entityMapper);
+        var dataTable = visitor.ToDataTable(insertObjType, insertObjs, memberMappers, tableName ?? entityMapper.TableName);
+        if (dataTable.Rows.Count == 0) return 0;
+
+        connection.Open();
+        var dbConnection = connection.BaseConnection as SqlConnection;
+        var transaction = dbContext.Transaction.BaseTransaction as SqlTransaction;
+        var bulkCopy = new SqlBulkCopy(dbConnection, SqlBulkCopyOptions.Default, transaction);
+        if (timeoutSeconds.HasValue) bulkCopy.BulkCopyTimeout = timeoutSeconds.Value;
+        bulkCopy.DestinationTableName = dataTable.TableName;
+        for (int i = 0; i < dataTable.Columns.Count; i++)
+        {
+            bulkCopy.ColumnMappings.Add(new SqlBulkCopyColumnMapping(i, dataTable.Columns[i].ColumnName));
+        }
+
+		var createdAt = DateTime.Now;
+        dbContext.DbInterceptors.OnCommandExecuting?.Invoke(new CommandEventArgs
+        {
+            DbKey = dbContext.DbKey,
+            ConnectionString = connection.ConnectionString,
+            SqlType = CommandSqlType.BulkCopyInsert,
+            CreatedAt = createdAt
+        });
+        int recordsAffected = 0;
+        bool isSuccess = true;
+        Exception exception = null;
+        try
+        {
+        	bulkCopy.WriteToServer(dataTable);
+        	recordsAffected = dataTable.Rows.Count;
+		}
+        catch (Exception ex)
+        {
+            exception = ex;
+            isSuccess = false;
+        }
+        finally
+        {
+            var elapsed = DateTime.Now.Subtract(createdAt).TotalMilliseconds;
+            dbContext.DbInterceptors.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs
+            {
+                DbKey = dbContext.DbKey,
+                ConnectionString = connection.ConnectionString,
+                SqlType = CommandSqlType.BulkCopyInsert,
+                IsSuccess = isSuccess,
+                Exception = exception,
+                Elapsed = (int)elapsed,
+                CreatedAt = createdAt
+            });
+        }
+        if (!isSuccess)
+        {
+            if (transaction == null) connection.Close();
+            throw exception;
+        }
+        return recordsAffected;
+    }
+    public async Task<int> ExecuteBulkCopyAsync(DbContext dbContext, SqlVisitor visitor, ITheaConnection connection, Type insertObjType, IEnumerable insertObjs, int? timeoutSeconds, CancellationToken cancellationToken = default, string tableName = null)
+    {
+        var entityMapper = visitor.Tables[0].Mapper;
+        var memberMappers = visitor.GetRefMemberMappers(insertObjType, entityMapper);
+        var dataTable = visitor.ToDataTable(insertObjType, insertObjs, memberMappers, tableName ?? entityMapper.TableName);
+        if (dataTable.Rows.Count == 0) return 0;
+
+        await connection.OpenAsync(cancellationToken);
+        var dbConnection = connection.BaseConnection as SqlConnection;
+        var transaction = dbContext.Transaction.BaseTransaction as SqlTransaction;
+        var bulkCopy = new SqlBulkCopy(dbConnection, SqlBulkCopyOptions.Default, transaction);
+        if (timeoutSeconds.HasValue) bulkCopy.BulkCopyTimeout = timeoutSeconds.Value;
+        bulkCopy.DestinationTableName = dataTable.TableName;
+        for (int i = 0; i < dataTable.Columns.Count; i++)
+        {
+            bulkCopy.ColumnMappings.Add(new SqlBulkCopyColumnMapping(i, dataTable.Columns[i].ColumnName));
+        }
+		
+		var createdAt = DateTime.Now;
+        dbContext.DbInterceptors.OnCommandExecuting?.Invoke(new CommandEventArgs
+        {
+            DbKey = dbContext.DbKey,
+            ConnectionString = connection.ConnectionString,
+            SqlType = CommandSqlType.BulkCopyInsert,
+            CreatedAt = createdAt
+        });
+        int recordsAffected = 0;
+        bool isSuccess = true;
+        Exception exception = null;
+        try
+        {
+        	await bulkCopy.WriteToServerAsync(dataTable);
+        	recordsAffected = dataTable.Rows.Count;
+		}
+        catch (Exception ex)
+        {
+            exception = ex;
+            isSuccess = false;
+        }
+        finally
+        {
+            var elapsed = DateTime.Now.Subtract(createdAt).TotalMilliseconds;
+            dbContext.DbInterceptors.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs
+            {
+                DbKey = dbContext.DbKey,
+                ConnectionString = connection.ConnectionString,
+                SqlType = CommandSqlType.BulkCopyInsert,
+                IsSuccess = isSuccess,
+                Exception = exception,
+                Elapsed = (int)elapsed,
+                CreatedAt = createdAt
+            });
+        }
+        if (!isSuccess)
+        {
+            if (transaction == null) await connection.CloseAsync();
+            throw exception;
+        }
+        return recordsAffected;
     }
 }

@@ -4,6 +4,7 @@ using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.InteropServices;
 
 namespace Trolley;
 
@@ -111,7 +112,7 @@ public static class FasterEvaluator
     public static object EvaluateAndCache(object entity, MemberInfo memberInfo)
     {
         var type = memberInfo.DeclaringType;
-        var cacheKey = HashCode.Combine(type, memberInfo);
+        var cacheKey = RepositoryHelper.GetCacheKey(type, memberInfo);
         var memberGetter = memberGetterCache.GetOrAdd(cacheKey, f =>
         {
             Expression valueExpr;
@@ -145,7 +146,7 @@ public static class FasterEvaluator
     public static void SetValueAndCache(object entity, MemberInfo memberInfo, object value)
     {
         var type = memberInfo.DeclaringType;
-        var cacheKey = HashCode.Combine(type, memberInfo);
+        var cacheKey = RepositoryHelper.GetCacheKey(type, memberInfo);
         var memberSetter = memberSetterCache.GetOrAdd(cacheKey, f =>
         {
             Expression bodyExpr = null;

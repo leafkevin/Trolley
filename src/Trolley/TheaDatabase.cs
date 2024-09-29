@@ -13,7 +13,7 @@ public class TheaDatabase
     public bool IsDefault { get; internal set; }
     public OrmProviderType OrmProviderType { get; internal set; }
     public IOrmProvider OrmProvider { get; internal set; }
-    internal string UseSlave()
+    public string UseSlave()
     {
         if (this.SlaveConnectionStrings == null)
             return this.ConnectionString;

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.Common;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
@@ -73,13 +72,9 @@ public interface IQueryVisitor : IDisposable
     bool Include(Expression memberSelector, Expression filter = null);
     bool ThenInclude(Expression memberSelector, Expression filter = null);
     bool HasIncludeTables();
-    bool BuildIncludeSql<TTarget>(Type targetType, TTarget target, out string sql);
-    bool BuildIncludeSql<TTarget>(Type targetType, List<TTarget> targets, out string sql);
-    void SetIncludeValues<TTarget>(Type targetType, TTarget target, IDataReader reader);
-    Task SetIncludeValuesAsync<TTarget>(Type targetType, TTarget target, DbDataReader reader, CancellationToken cancellationToken);
-    void SetIncludeValues<TTarget>(Type targetType, List<TTarget> targets, IDataReader reader);
-    Task SetIncludeValueAsync<TTarget>(Type targetType, List<TTarget> targets, DbDataReader reader, CancellationToken cancellationToken);
-
+    bool BuildIncludeSql(Type targetType, object target, bool isSingle, out string sql);
+    void SetIncludeValues(Type targetType, object target, ITheaDataReader reader, bool isSingle);
+    Task SetIncludeValuesAsync(Type targetType, object target, ITheaDataReader reader, bool isSingle, CancellationToken cancellationToken);
     void Where(Expression whereExpr);
     void And(Expression whereExpr);
     void GroupBy(Expression expr);

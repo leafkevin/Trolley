@@ -398,9 +398,10 @@ public class UnitTest3 : UnitTestBase
             {
                 Age = 30,
                 Name = "leafkevinabc",
-                CompanyId = 1
+                CompanyId = 1,
+                SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(30))
             })
-            .OnlyFields(f => f.Name)
+            .OnlyFields(f => f.SomeTimes)
             .Where(f => f.Id == 1)
             .ToSql(out var dbParameters);
         Assert.Equal("UPDATE \"sys_user\" SET \"Name\"=@Name WHERE \"Id\"=1", sql);

@@ -7,12 +7,15 @@ namespace Trolley.PostgreSql;
 
 partial class PostgreSqlProvider
 {
+#if !NETSTANDARD2_1_OR_GREATER
+    private static DateTime UnixEpoch = new DateTime(1970, 1, 1);
+#endif
     public override bool TryGetDateTimeMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter)
     {
         bool result = false;
         formatter = null;
         var memberInfo = memberExpr.Member;
-        var cacheKey = HashCode.Combine(memberInfo.DeclaringType, memberInfo);
+        var cacheKey = RepositoryHelper.GetCacheKey(memberInfo.DeclaringType, memberInfo);
         if (memberExpr.Expression == null)
         {
             switch (memberInfo.Name)
@@ -27,7 +30,11 @@ partial class PostgreSqlProvider
                     result = true;
                     break;
                 case "UnixEpoch":
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) => target.ChangeValue(DateTime.UnixEpoch, true));
+#if NETSTANDARD2_1_OR_GREATER
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) => target.ChangeValue(DateTime.UnixEpoch, true));       
+#else
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) => target.ChangeValue(UnixEpoch, true));
+#endif
                     result = true;
                     break;
                 case "Today":
@@ -59,8 +66,7 @@ partial class PostgreSqlProvider
 
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.ChangeValue(((DateTime)targetSegment.Value).Date);
-
-                        return targetSegment.Change($"{this.CastTo(typeof(DateOnly), targetSegment.Body)}", false, true);
+                        return targetSegment.Change($"{targetSegment.ToExprWrap()}::DATE", false, true);
                     });
                     result = true;
                     break;
@@ -236,8 +242,7 @@ partial class PostgreSqlProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.ChangeValue(((DateTime)targetSegment.Value).TimeOfDay);
 
-                        var targetArugment = targetSegment.ToExprWrap();
-                        return targetSegment.Change($"{targetArugment}-{this.CastTo(typeof(DateOnly), targetArugment)}");
+                        return targetSegment.Change($"{targetSegment.ToExprWrap()}::TIME");
                     });
                     result = true;
                     break;
@@ -267,7 +272,7 @@ partial class PostgreSqlProvider
         formatter = null;
         var methodInfo = methodCallExpr.Method;
         var parameterInfos = methodInfo.GetParameters();
-        var cacheKey = HashCode.Combine(methodInfo.DeclaringType, methodInfo);
+        var cacheKey = RepositoryHelper.GetCacheKey(methodInfo.DeclaringType, methodInfo);
         if (methodInfo.IsStatic)
         {
             switch (methodInfo.Name)

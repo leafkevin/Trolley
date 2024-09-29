@@ -65,7 +65,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
                 tableName = this.GetShardingTableName();
             else tableName = entityMapper.TableName;
         }
-        var tableSchema = tableSegment.TableSchema;      
+        var tableSchema = tableSegment.TableSchema;
         if (!string.IsNullOrEmpty(tableSegment.TableSchema))
             tableName = tableSegment.TableSchema + "." + tableName;
         tableName = this.OrmProvider.GetTableName(tableName);
@@ -413,7 +413,9 @@ public class PostgreSqlCreateVisitor : CreateVisitor
         {
             if (parameterExpr.Type == typeof(IPostgreSqlCreateConflictDoUpdate<>).MakeGenericType(this.Tables[0].EntityType))
                 continue;
-            this.TableAliases.TryAdd(parameterExpr.Name, this.Tables[0]);
+            if (this.TableAliases.ContainsKey(parameterExpr.Name))
+                continue;
+            this.TableAliases.Add(parameterExpr.Name, this.Tables[0]);
         }
     }
     public void AddMemberElement(SqlFieldSegment sqlSegment, MemberMap memberMapper)
@@ -458,7 +460,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
     public void VisitWithSetField(Expression fieldSelector, object fieldValue)
     {
         var lambdaExpr = this.EnsureLambda(fieldSelector);
-        var memberExpr = lambdaExpr.Body as MemberExpression;
+        var memberExpr = this.EnsureMemberVisit(lambdaExpr.Body) as MemberExpression;
         var entityMapper = this.Tables[0].Mapper;
         var memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
         var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;

@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.Common;
 using System.Linq.Expressions;
 using System.Text;
 using System.Threading;
@@ -267,151 +266,131 @@ public class Repository : IRepository
             throw new ArgumentNullException(nameof(insertObjs));
 
         int result = 0;
-        Exception exception = null;
-        CommandEventArgs eventArgs = null;
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         bool isBulk = insertObjs is IEnumerable && insertObjs is not string && insertObjs is not IDictionary<string, object>;
-        try
+        var sqlType = isBulk ? CommandSqlType.BulkInsert : CommandSqlType.Insert;
+        var entityType = typeof(TEntity);
+        if (isBulk)
         {
-            var entityType = typeof(TEntity);
-            if (isBulk)
+            var builder = new StringBuilder();
+            object firstInsertObj = null;
+            Type insertObjType = null;
+            var entities = insertObjs as IEnumerable;
+            foreach (var insertObj in entities)
             {
-                var builder = new StringBuilder();
-                object firstInsertObj = null;
-                Type insertObjType = null;
-                var entities = insertObjs as IEnumerable;
-                foreach (var insertObj in entities)
-                {
-                    firstInsertObj = insertObj;
-                    break;
-                }
-                insertObjType = firstInsertObj.GetType();
-                var ormProvider = this.DbContext.OrmProvider;
-                var mapProvider = this.DbContext.MapProvider;
+                firstInsertObj = insertObj;
+                break;
+            }
+            insertObjType = firstInsertObj.GetType();
+            var ormProvider = this.DbContext.OrmProvider;
+            var mapProvider = this.DbContext.MapProvider;
 
-                var fieldsSqlPartSetter = RepositoryHelper.BuildCreateFieldsSqlPart(ormProvider, mapProvider, entityType, insertObjType, null, null);
-                var valuesSqlPartSetter = RepositoryHelper.BuildCreateValuesSqlParametes(ormProvider, mapProvider, entityType, insertObjType, null, null, true);
-                bool isDictionary = typeof(IDictionary<string, object>).IsAssignableFrom(insertObjType);
+            var fieldsSqlPartSetter = RepositoryHelper.BuildCreateFieldsSqlPart(ormProvider, mapProvider, entityType, insertObjType, null, null);
+            var valuesSqlPartSetter = RepositoryHelper.BuildCreateValuesSqlParametes(ormProvider, mapProvider, entityType, insertObjType, null, null, true);
+            bool isDictionary = typeof(IDictionary<string, object>).IsAssignableFrom(insertObjType);
 
-                Action<IDataParameterCollection, StringBuilder, string> firstSqlSetter = null;
-                Action<IDataParameterCollection, StringBuilder, object, string> loopSqlSetter = null;
+            Action<IDataParameterCollection, StringBuilder, string> firstSqlSetter = null;
+            Action<IDataParameterCollection, StringBuilder, object, string> loopSqlSetter = null;
 
-                if (isDictionary)
-                {
-                    var typedFieldsSqlPartSetter = fieldsSqlPartSetter as Func<StringBuilder, object, List<MemberMap>>;
-                    var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, List<MemberMap>, object, string>;
+            if (isDictionary)
+            {
+                var typedFieldsSqlPartSetter = fieldsSqlPartSetter as Func<StringBuilder, object, List<MemberMap>>;
+                var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, List<MemberMap>, object, string>;
 
-                    var memberMappers = typedFieldsSqlPartSetter.Invoke(builder, firstInsertObj);
-                    builder.Append(") VALUES ");
-                    var firstHeadSql = builder.ToString();
-                    builder.Clear();
-                    builder = null;
-
-                    firstSqlSetter = (dbParameters, builder, tableName) =>
-                    {
-                        builder.Append($"INSERT INTO {ormProvider.GetTableName(tableName)} (");
-                        builder.Append(firstHeadSql);
-                    };
-                    loopSqlSetter = (dbParameters, builder, insertObj, suffix) =>
-                    {
-                        builder.Append('(');
-                        typedValuesSqlPartSetter.Invoke(dbParameters, builder, ormProvider, memberMappers, insertObj, suffix);
-                        builder.Append(')');
-                    };
-                }
-                else
-                {
-                    var typedFieldsSqlPartSetter = fieldsSqlPartSetter as Action<StringBuilder>;
-                    var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
-
-                    firstSqlSetter = (dbParameters, builder, tableName) =>
-                    {
-                        builder.Append($"INSERT INTO {ormProvider.GetTableName(tableName)} (");
-                        typedFieldsSqlPartSetter.Invoke(builder);
-                        builder.Append(") VALUES ");
-                    };
-                    loopSqlSetter = (dbParameters, builder, insertObj, suffix) =>
-                    {
-                        builder.Append('(');
-                        typedValuesSqlPartSetter.Invoke(dbParameters, builder, ormProvider, insertObj, suffix);
-                        builder.Append(')');
-                    };
-                }
-                int executor(string tableName, IEnumerable insertObjs)
-                {
-                    int count = 0, index = 0;
-                    foreach (var insertObj in insertObjs)
-                    {
-                        if (index > 0) builder.Append(',');
-                        loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
-                        if (index >= bulkCount)
-                        {
-                            command.CommandText = builder.ToString();
-                            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
-                            count += command.ExecuteNonQuery();
-                            builder.Clear();
-                            command.Parameters.Clear();
-                            firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                            index = 0;
-                            continue;
-                        }
-                        index++;
-                    }
-                    if (index > 0)
-                    {
-                        command.CommandText = builder.ToString();
-                        eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
-                        count += command.ExecuteNonQuery();
-                    }
-                    return count;
-                }
-
-                this.DbContext.Open(connection);
-                if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out _))
-                {
-                    var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, entities);
-                    foreach (var tabledInsertObj in tabledInsertObjs)
-                    {
-                        firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
-                        result += executor(tabledInsertObj.Key, tabledInsertObj.Value);
-                        builder.Clear();
-                        command.Parameters.Clear();
-                    }
-                }
-                else
-                {
-                    var entityMapper = mapProvider.GetEntityMap(entityType);
-                    var tableName = entityMapper.TableName;
-                    firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                    result = executor(tableName, entities);
-                }
+                var memberMappers = typedFieldsSqlPartSetter.Invoke(builder, firstInsertObj);
+                builder.Append(") VALUES ");
+                var firstHeadSql = builder.ToString();
                 builder.Clear();
                 builder = null;
+
+                firstSqlSetter = (dbParameters, builder, tableName) =>
+                {
+                    builder.Append($"INSERT INTO {ormProvider.GetTableName(tableName)} (");
+                    builder.Append(firstHeadSql);
+                };
+                loopSqlSetter = (dbParameters, builder, insertObj, suffix) =>
+                {
+                    builder.Append('(');
+                    typedValuesSqlPartSetter.Invoke(dbParameters, builder, ormProvider, memberMappers, insertObj, suffix);
+                    builder.Append(')');
+                };
             }
             else
             {
-                this.DbContext.BuildCreateCommand(command, entityType, insertObjs, false);
-                this.DbContext.Open(connection);
-                eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Insert);
-                result = command.ExecuteNonQuery();
+                var typedFieldsSqlPartSetter = fieldsSqlPartSetter as Action<StringBuilder>;
+                var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
+
+                firstSqlSetter = (dbParameters, builder, tableName) =>
+                {
+                    builder.Append($"INSERT INTO {ormProvider.GetTableName(tableName)} (");
+                    typedFieldsSqlPartSetter.Invoke(builder);
+                    builder.Append(") VALUES ");
+                };
+                loopSqlSetter = (dbParameters, builder, insertObj, suffix) =>
+                {
+                    builder.Append('(');
+                    typedValuesSqlPartSetter.Invoke(dbParameters, builder, ormProvider, insertObj, suffix);
+                    builder.Append(')');
+                };
             }
+            int executor(string tableName, IEnumerable insertObjs)
+            {
+                int count = 0, index = 0;
+                foreach (var insertObj in insertObjs)
+                {
+                    if (index > 0) builder.Append(',');
+                    loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
+                    if (index >= bulkCount)
+                    {
+                        command.CommandText = builder.ToString();
+                        count += command.ExecuteNonQuery(sqlType);
+                        builder.Clear();
+                        command.Parameters.Clear();
+                        firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                        index = 0;
+                        continue;
+                    }
+                    index++;
+                }
+                if (index > 0)
+                {
+                    command.CommandText = builder.ToString();
+                    count += command.ExecuteNonQuery(sqlType);
+                }
+                return count;
+            }
+
+            connection.Open();
+            if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out _))
+            {
+                var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, entities);
+                foreach (var tabledInsertObj in tabledInsertObjs)
+                {
+                    firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
+                    result += executor(tabledInsertObj.Key, tabledInsertObj.Value);
+                    builder.Clear();
+                    command.Parameters.Clear();
+                }
+            }
+            else
+            {
+                var entityMapper = mapProvider.GetEntityMap(entityType);
+                var tableName = entityMapper.TableName;
+                firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                result = executor(tableName, entities);
+            }
+            builder.Clear();
+            builder = null;
         }
-        catch (Exception ex)
+        else
         {
-            isNeedClose = true;
-            exception = ex;
-            var sqlType = isBulk ? CommandSqlType.BulkInsert : CommandSqlType.Insert;
-            this.DbContext.AddCommandFailedFilter(connection, command, sqlType, eventArgs, exception);
+            this.DbContext.BuildCreateCommand(command.BaseCommand, entityType, insertObjs, false);
+            connection.Open();
+            result = command.ExecuteNonQuery(sqlType);
         }
-        finally
-        {
-            var sqlType = isBulk ? CommandSqlType.BulkInsert : CommandSqlType.Insert;
-            this.DbContext.AddCommandAfterFilter(connection, command, sqlType, eventArgs, exception == null, exception);
-            command.Parameters.Clear();
-            command.Dispose();
-            if (isNeedClose) this.Dispose(connection);
-        }
-        if (exception != null) throw exception;
+        command.Parameters.Clear();
+        command.Dispose();
+        if (isNeedClose) connection.Close();
         return result;
     }
     public virtual async Task<int> CreateAsync<TEntity>(object insertObjs, int bulkCount = 500, CancellationToken cancellationToken = default)
@@ -420,151 +399,130 @@ public class Repository : IRepository
             throw new ArgumentNullException(nameof(insertObjs));
 
         int result = 0;
-        Exception exception = null;
-        CommandEventArgs eventArgs = null;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterDbCommand();
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         bool isBulk = insertObjs is IEnumerable && insertObjs is not string && insertObjs is not IDictionary<string, object>;
-        try
+        var sqlType = isBulk ? CommandSqlType.BulkInsert : CommandSqlType.Insert;
+        var entityType = typeof(TEntity);
+        if (isBulk)
         {
-            var entityType = typeof(TEntity);
-            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, isBulk ? CommandSqlType.BulkInsert : CommandSqlType.Insert);
-            if (isBulk)
+            var builder = new StringBuilder();
+            object firstInsertObj = null;
+            Type insertObjType = null;
+            var entities = insertObjs as IEnumerable;
+            foreach (var insertObj in entities)
             {
-                var builder = new StringBuilder();
-                object firstInsertObj = null;
-                Type insertObjType = null;
-                var entities = insertObjs as IEnumerable;
-                foreach (var insertObj in entities)
-                {
-                    firstInsertObj = insertObj;
-                    break;
-                }
-                insertObjType = firstInsertObj.GetType();
-                var ormProvider = this.DbContext.OrmProvider;
-                var mapProvider = this.DbContext.MapProvider;
+                firstInsertObj = insertObj;
+                break;
+            }
+            insertObjType = firstInsertObj.GetType();
+            var ormProvider = this.DbContext.OrmProvider;
+            var mapProvider = this.DbContext.MapProvider;
 
-                var fieldsSqlPartSetter = RepositoryHelper.BuildCreateFieldsSqlPart(ormProvider, mapProvider, entityType, insertObjType, null, null);
-                var valuesSqlPartSetter = RepositoryHelper.BuildCreateValuesSqlParametes(ormProvider, mapProvider, entityType, insertObjType, null, null, true);
-                bool isDictionary = typeof(IDictionary<string, object>).IsAssignableFrom(insertObjType);
+            var fieldsSqlPartSetter = RepositoryHelper.BuildCreateFieldsSqlPart(ormProvider, mapProvider, entityType, insertObjType, null, null);
+            var valuesSqlPartSetter = RepositoryHelper.BuildCreateValuesSqlParametes(ormProvider, mapProvider, entityType, insertObjType, null, null, true);
+            bool isDictionary = typeof(IDictionary<string, object>).IsAssignableFrom(insertObjType);
 
-                Action<IDataParameterCollection, StringBuilder, string> firstSqlSetter = null;
-                Action<IDataParameterCollection, StringBuilder, object, string> loopSqlSetter = null;
+            Action<IDataParameterCollection, StringBuilder, string> firstSqlSetter = null;
+            Action<IDataParameterCollection, StringBuilder, object, string> loopSqlSetter = null;
 
-                if (isDictionary)
-                {
-                    var typedFieldsSqlPartSetter = fieldsSqlPartSetter as Func<StringBuilder, object, List<MemberMap>>;
-                    var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, List<MemberMap>, object, string>;
+            if (isDictionary)
+            {
+                var typedFieldsSqlPartSetter = fieldsSqlPartSetter as Func<StringBuilder, object, List<MemberMap>>;
+                var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, List<MemberMap>, object, string>;
 
-                    var memberMappers = typedFieldsSqlPartSetter.Invoke(builder, firstInsertObj);
-                    builder.Append(") VALUES ");
-                    var firstHeadSql = builder.ToString();
-                    builder.Clear();
-                    builder = null;
-
-                    firstSqlSetter = (dbParameters, builder, tableName) =>
-                    {
-                        builder.Append($"INSERT INTO {ormProvider.GetTableName(tableName)} (");
-                        builder.Append(firstHeadSql);
-                    };
-                    loopSqlSetter = (dbParameters, builder, insertObj, suffix) =>
-                    {
-                        builder.Append('(');
-                        typedValuesSqlPartSetter.Invoke(dbParameters, builder, ormProvider, memberMappers, insertObj, suffix);
-                        builder.Append(')');
-                    };
-                }
-                else
-                {
-                    var typedFieldsSqlPartSetter = fieldsSqlPartSetter as Action<StringBuilder>;
-                    var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
-
-                    firstSqlSetter = (dbParameters, builder, tableName) =>
-                    {
-                        builder.Append($"INSERT INTO {ormProvider.GetTableName(tableName)} (");
-                        typedFieldsSqlPartSetter.Invoke(builder);
-                        builder.Append(") VALUES ");
-                    };
-                    loopSqlSetter = (dbParameters, builder, insertObj, suffix) =>
-                    {
-                        builder.Append('(');
-                        typedValuesSqlPartSetter.Invoke(dbParameters, builder, ormProvider, insertObj, suffix);
-                        builder.Append(')');
-                    };
-                }
-                async Task<int> executor(string tableName, IEnumerable insertObjs)
-                {
-                    int count = 0, index = 0;
-                    foreach (var insertObj in insertObjs)
-                    {
-                        if (index > 0) builder.Append(',');
-                        loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
-                        if (index >= bulkCount)
-                        {
-                            command.CommandText = builder.ToString();
-                            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
-                            count += await command.ExecuteNonQueryAsync(cancellationToken);
-                            builder.Clear();
-                            command.Parameters.Clear();
-                            firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                            index = 0;
-                            continue;
-                        }
-                        index++;
-                    }
-                    if (index > 0)
-                    {
-                        command.CommandText = builder.ToString();
-                        eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
-                        count += await command.ExecuteNonQueryAsync(cancellationToken);
-                    }
-                    return count;
-                }
-                await this.DbContext.OpenAsync(connection, cancellationToken);
-                if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out _))
-                {
-                    var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, entities);
-                    foreach (var tabledInsertObj in tabledInsertObjs)
-                    {
-                        firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
-                        result += await executor(tabledInsertObj.Key, tabledInsertObj.Value);
-                        builder.Clear();
-                        command.Parameters.Clear();
-                    }
-                }
-                else
-                {
-                    var entityMapper = mapProvider.GetEntityMap(entityType);
-                    var tableName = entityMapper.TableName;
-                    firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                    result = await executor(tableName, entities);
-                }
+                var memberMappers = typedFieldsSqlPartSetter.Invoke(builder, firstInsertObj);
+                builder.Append(") VALUES ");
+                var firstHeadSql = builder.ToString();
                 builder.Clear();
                 builder = null;
+
+                firstSqlSetter = (dbParameters, builder, tableName) =>
+                {
+                    builder.Append($"INSERT INTO {ormProvider.GetTableName(tableName)} (");
+                    builder.Append(firstHeadSql);
+                };
+                loopSqlSetter = (dbParameters, builder, insertObj, suffix) =>
+                {
+                    builder.Append('(');
+                    typedValuesSqlPartSetter.Invoke(dbParameters, builder, ormProvider, memberMappers, insertObj, suffix);
+                    builder.Append(')');
+                };
             }
             else
             {
-                this.DbContext.BuildCreateCommand(command, entityType, insertObjs, false);
-                await this.DbContext.OpenAsync(connection, cancellationToken);
-                eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Insert);
-                result = await command.ExecuteNonQueryAsync(cancellationToken);
+                var typedFieldsSqlPartSetter = fieldsSqlPartSetter as Action<StringBuilder>;
+                var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
+
+                firstSqlSetter = (dbParameters, builder, tableName) =>
+                {
+                    builder.Append($"INSERT INTO {ormProvider.GetTableName(tableName)} (");
+                    typedFieldsSqlPartSetter.Invoke(builder);
+                    builder.Append(") VALUES ");
+                };
+                loopSqlSetter = (dbParameters, builder, insertObj, suffix) =>
+                {
+                    builder.Append('(');
+                    typedValuesSqlPartSetter.Invoke(dbParameters, builder, ormProvider, insertObj, suffix);
+                    builder.Append(')');
+                };
             }
+            async Task<int> executor(string tableName, IEnumerable insertObjs)
+            {
+                int count = 0, index = 0;
+                foreach (var insertObj in insertObjs)
+                {
+                    if (index > 0) builder.Append(',');
+                    loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
+                    if (index >= bulkCount)
+                    {
+                        command.CommandText = builder.ToString();
+                        count += await command.ExecuteNonQueryAsync(sqlType, cancellationToken);
+                        builder.Clear();
+                        command.Parameters.Clear();
+                        firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                        index = 0;
+                        continue;
+                    }
+                    index++;
+                }
+                if (index > 0)
+                {
+                    command.CommandText = builder.ToString();
+                    count += await command.ExecuteNonQueryAsync(sqlType, cancellationToken);
+                }
+                return count;
+            }
+            await connection.OpenAsync(cancellationToken);
+            if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out _))
+            {
+                var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, entities);
+                foreach (var tabledInsertObj in tabledInsertObjs)
+                {
+                    firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
+                    result += await executor(tabledInsertObj.Key, tabledInsertObj.Value);
+                    builder.Clear();
+                    command.Parameters.Clear();
+                }
+            }
+            else
+            {
+                var entityMapper = mapProvider.GetEntityMap(entityType);
+                var tableName = entityMapper.TableName;
+                firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                result = await executor(tableName, entities);
+            }
+            builder.Clear();
+            builder = null;
         }
-        catch (Exception ex)
+        else
         {
-            isNeedClose = true;
-            exception = ex;
-            var sqlType = isBulk ? CommandSqlType.BulkInsert : CommandSqlType.Insert;
-            this.DbContext.AddCommandFailedFilter(connection, command, sqlType, eventArgs, exception);
+            this.DbContext.BuildCreateCommand(command.BaseCommand, entityType, insertObjs, false);
+            await connection.OpenAsync(cancellationToken);
+            result = await command.ExecuteNonQueryAsync(sqlType, cancellationToken);
         }
-        finally
-        {
-            var sqlType = isBulk ? CommandSqlType.BulkInsert : CommandSqlType.Insert;
-            this.DbContext.AddCommandAfterFilter(connection, command, sqlType, eventArgs, exception == null, exception);
-            command.Parameters.Clear();
-            await command.DisposeAsync();
-            if (isNeedClose) await this.DisposeAsync(connection);
-        }
-        if (exception != null) throw exception;
+        command.Parameters.Clear();
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
         return result;
     }
     public virtual int CreateIdentity<TEntity>(object insertObj)
@@ -627,83 +585,61 @@ public class Repository : IRepository
             throw new ArgumentNullException(nameof(updateObjs));
 
         int result = 0;
-        Exception exception = null;
-        CommandEventArgs eventArgs = null;
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         bool isBulk = updateObjs is IEnumerable && updateObjs is not string && updateObjs is not IDictionary<string, object>;
-        try
+        var entityType = typeof(TEntity);
+        var builder = new StringBuilder();
+        if (isBulk)
         {
-            var entityType = typeof(TEntity);
-            var builder = new StringBuilder();
-            if (isBulk)
+            int index = 0;
+            var entities = updateObjs as IEnumerable;
+            Type updateObjType = null;
+            foreach (var updateObj in entities)
             {
-                int index = 0;
-                var entities = updateObjs as IEnumerable;
-                Type updateObjType = null;
-                foreach (var updateObj in entities)
-                {
-                    updateObjType = updateObj.GetType();
-                    break;
-                }
-                (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.OrmProvider, this.MapProvider, entityType, updateObjType, true, null, null);
-                var typedSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
+                updateObjType = updateObj.GetType();
+                break;
+            }
+            (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.OrmProvider, this.MapProvider, entityType, updateObjType, true, null, null);
+            var typedSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
 
-                this.DbContext.Open(connection);
-                foreach (var updateObj in entities)
-                {
-                    if (index > 0) builder.Append(';');
-                    headSqlSetter.Invoke(builder, tableName);
-                    typedSqlSetter.Invoke(command.Parameters, builder, this.OrmProvider, updateObj, index.ToString());
-                    if (index >= bulkCount)
-                    {
-                        command.CommandText = builder.ToString();
-                        eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkUpdate, eventArgs);
-                        result += command.ExecuteNonQuery();
-                        command.Parameters.Clear();
-                        builder.Clear();
-                        index = 0;
-                        continue;
-                    }
-                    index++;
-                }
-                if (index > 0)
+            connection.Open();
+            foreach (var updateObj in entities)
+            {
+                if (index > 0) builder.Append(';');
+                headSqlSetter.Invoke(builder, tableName);
+                typedSqlSetter.Invoke(command.Parameters, builder, this.OrmProvider, updateObj, index.ToString());
+                if (index >= bulkCount)
                 {
                     command.CommandText = builder.ToString();
-                    eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkUpdate, eventArgs);
-                    result += command.ExecuteNonQuery();
+                    result += command.ExecuteNonQuery(CommandSqlType.BulkUpdate);
+                    command.Parameters.Clear();
+                    builder.Clear();
+                    index = 0;
+                    continue;
                 }
+                index++;
             }
-            else
+            if (index > 0)
             {
-                var updateObjType = updateObjs.GetType();
-                (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.OrmProvider, this.MapProvider, entityType, updateObjType, false, null, null);
-                headSqlSetter.Invoke(builder, tableName);
-                var typedSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object>;
-                typedSqlSetter.Invoke(command.Parameters, builder, this.OrmProvider, updateObjs);
                 command.CommandText = builder.ToString();
-                this.DbContext.Open(connection);
-                eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Update);
-                result = command.ExecuteNonQuery();
+                result += command.ExecuteNonQuery(CommandSqlType.BulkUpdate);
             }
-            builder.Clear();
-            builder = null;
         }
-        catch (Exception ex)
+        else
         {
-            isNeedClose = true;
-            exception = ex;
-            var sqlType = isBulk ? CommandSqlType.BulkUpdate : CommandSqlType.Update;
-            this.DbContext.AddCommandFailedFilter(connection, command, sqlType, eventArgs, exception);
+            var updateObjType = updateObjs.GetType();
+            (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.OrmProvider, this.MapProvider, entityType, updateObjType, false, null, null);
+            headSqlSetter.Invoke(builder, tableName);
+            var typedSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object>;
+            typedSqlSetter.Invoke(command.Parameters, builder, this.OrmProvider, updateObjs);
+            command.CommandText = builder.ToString();
+            connection.Open();
+            result = command.ExecuteNonQuery(CommandSqlType.Update);
         }
-        finally
-        {
-            var sqlType = isBulk ? CommandSqlType.BulkUpdate : CommandSqlType.Update;
-            this.DbContext.AddCommandAfterFilter(connection, command, sqlType, eventArgs, exception == null, exception);
-            command.Parameters.Clear();
-            command.Dispose();
-            if (isNeedClose) this.Dispose(connection);
-        }
-        if (exception != null) throw exception;
+        builder.Clear();
+        command.Parameters.Clear();
+        command.Dispose();
+        if (isNeedClose) connection.Close();
         return result;
     }
     public virtual async Task<int> UpdateAsync<TEntity>(object updateObjs, int bulkCount = 500, CancellationToken cancellationToken = default)
@@ -712,82 +648,60 @@ public class Repository : IRepository
             throw new ArgumentNullException(nameof(updateObjs));
 
         int result = 0;
-        Exception exception = null;
-        CommandEventArgs eventArgs = null;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterDbCommand();
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         bool isBulk = updateObjs is IEnumerable && updateObjs is not string && updateObjs is not IDictionary<string, object>;
-        try
+        var entityType = typeof(TEntity);
+        var builder = new StringBuilder();
+        if (isBulk)
         {
-            var entityType = typeof(TEntity);
-            var builder = new StringBuilder();
-            if (isBulk)
+            int index = 0;
+            var entities = updateObjs as IEnumerable;
+            Type updateObjType = null;
+            foreach (var updateObj in entities)
             {
-                int index = 0;
-                var entities = updateObjs as IEnumerable;
-                Type updateObjType = null;
-                foreach (var updateObj in entities)
-                {
-                    updateObjType = updateObj.GetType();
-                    break;
-                }
-                (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.OrmProvider, this.MapProvider, entityType, updateObjType, true, null, null);
-                var typedSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
-                await this.DbContext.OpenAsync(connection, cancellationToken);
-                foreach (var updateObj in entities)
-                {
-                    if (index > 0) builder.Append(';');
-                    headSqlSetter.Invoke(builder, tableName);
-                    typedSqlSetter.Invoke(command.Parameters, builder, this.OrmProvider, updateObj, index.ToString());
-                    if (index >= bulkCount)
-                    {
-                        command.CommandText = builder.ToString();
-                        eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkUpdate, eventArgs);
-                        result += await command.ExecuteNonQueryAsync(cancellationToken);
-                        command.Parameters.Clear();
-                        builder.Clear();
-                        index = 0;
-                        continue;
-                    }
-                    index++;
-                }
-                if (index > 0)
+                updateObjType = updateObj.GetType();
+                break;
+            }
+            (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.OrmProvider, this.MapProvider, entityType, updateObjType, true, null, null);
+            var typedSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
+            await connection.OpenAsync(cancellationToken);
+            foreach (var updateObj in entities)
+            {
+                if (index > 0) builder.Append(';');
+                headSqlSetter.Invoke(builder, tableName);
+                typedSqlSetter.Invoke(command.Parameters, builder, this.OrmProvider, updateObj, index.ToString());
+                if (index >= bulkCount)
                 {
                     command.CommandText = builder.ToString();
-                    eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkUpdate, eventArgs);
-                    result += await command.ExecuteNonQueryAsync(cancellationToken);
+                    result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkUpdate, cancellationToken);
+                    command.Parameters.Clear();
+                    builder.Clear();
+                    index = 0;
+                    continue;
                 }
+                index++;
             }
-            else
+            if (index > 0)
             {
-                var updateObjType = updateObjs.GetType();
-                (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.OrmProvider, this.MapProvider, entityType, updateObjType, false, null, null);
-                headSqlSetter.Invoke(builder, tableName);
-                var typedSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object>;
-                typedSqlSetter.Invoke(command.Parameters, builder, this.OrmProvider, updateObjs);
                 command.CommandText = builder.ToString();
-                await this.DbContext.OpenAsync(connection, cancellationToken);
-                eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Update);
-                result = await command.ExecuteNonQueryAsync(cancellationToken);
+                result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkUpdate, cancellationToken);
             }
-            builder.Clear();
-            builder = null;
         }
-        catch (Exception ex)
+        else
         {
-            isNeedClose = true;
-            exception = ex;
-            var sqlType = isBulk ? CommandSqlType.BulkUpdate : CommandSqlType.Update;
-            this.DbContext.AddCommandFailedFilter(connection, command, sqlType, eventArgs, exception);
+            var updateObjType = updateObjs.GetType();
+            (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.OrmProvider, this.MapProvider, entityType, updateObjType, false, null, null);
+            headSqlSetter.Invoke(builder, tableName);
+            var typedSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object>;
+            typedSqlSetter.Invoke(command.Parameters, builder, this.OrmProvider, updateObjs);
+            command.CommandText = builder.ToString();
+            await connection.OpenAsync(cancellationToken);
+            result = await command.ExecuteNonQueryAsync(CommandSqlType.Update, cancellationToken);
         }
-        finally
-        {
-            var sqlType = isBulk ? CommandSqlType.BulkUpdate : CommandSqlType.Update;
-            this.DbContext.AddCommandAfterFilter(connection, command, sqlType, eventArgs, exception == null, exception);
-            command.Parameters.Clear();
-            await command.DisposeAsync();
-            if (isNeedClose) await this.DisposeAsync(connection);
-        }
-        if (exception != null) throw exception;
+        builder.Clear();
+        command.Parameters.Clear();
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
         return result;
     }
     #endregion
@@ -799,32 +713,14 @@ public class Repository : IRepository
         if (whereKeys == null)
             throw new ArgumentNullException(nameof(whereKeys));
 
-        int result = 0;
-        Exception exception = null;
-        CommandEventArgs eventArgs = null;
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        try
-        {
-            var entityType = typeof(TEntity);
-            this.BuildDeleteCommand(command, entityType, whereKeys);
-            this.DbContext.Open(connection);
-            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Delete);
-            result = command.ExecuteNonQuery();
-        }
-        catch (Exception ex)
-        {
-            isNeedClose = true;
-            exception = ex;
-            this.DbContext.AddCommandFailedFilter(connection, command, CommandSqlType.Delete, eventArgs, exception);
-        }
-        finally
-        {
-            this.DbContext.AddCommandAfterFilter(connection, command, CommandSqlType.Delete, eventArgs, exception == null, exception);
-            command.Parameters.Clear();
-            command.Dispose();
-            if (isNeedClose) this.Dispose(connection);
-        }
-        if (exception != null) throw exception;
+        var entityType = typeof(TEntity);
+        this.BuildDeleteCommand(command.BaseCommand, entityType, whereKeys);
+        connection.Open();
+        var result = command.ExecuteNonQuery(CommandSqlType.Delete);
+        command.Parameters.Clear();
+        command.Dispose();
+        if (isNeedClose) connection.Close();
         return result;
     }
     public virtual async Task<int> DeleteAsync<TEntity>(object whereKeys, CancellationToken cancellationToken = default)
@@ -832,32 +728,15 @@ public class Repository : IRepository
         if (whereKeys == null)
             throw new ArgumentNullException(nameof(whereKeys));
 
-        int result = 0;
-        Exception exception = null;
-        CommandEventArgs eventArgs = null;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterDbCommand();
-        try
-        {
-            var entityType = typeof(TEntity);
-            this.BuildDeleteCommand(command, entityType, whereKeys);
-            await this.DbContext.OpenAsync(connection, cancellationToken);
-            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Delete);
-            result = await command.ExecuteNonQueryAsync(cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            isNeedClose = true;
-            exception = ex;
-            this.DbContext.AddCommandFailedFilter(connection, command, CommandSqlType.Delete, eventArgs, exception);
-        }
-        finally
-        {
-            this.DbContext.AddCommandAfterFilter(connection, command, CommandSqlType.Delete, eventArgs, exception == null, exception);
-            command.Parameters.Clear();
-            await command.DisposeAsync();
-            if (isNeedClose) await this.DisposeAsync(connection);
-        }
-        if (exception != null) throw exception;
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        var entityType = typeof(TEntity);
+        this.BuildDeleteCommand(command.BaseCommand, entityType, whereKeys);
+        await connection.OpenAsync(cancellationToken);
+        var result = await command.ExecuteNonQueryAsync(CommandSqlType.Delete, cancellationToken);
+
+        command.Parameters.Clear();
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
         return result;
     }
     private void BuildDeleteCommand(IDbCommand command, Type entityType, object whereKeys)
@@ -991,70 +870,30 @@ public class Repository : IRepository
         if (subQueries == null)
             throw new ArgumentNullException(nameof(subQueries));
 
-        IMultiQueryReader result = null;
-        IDataReader reader;
-        Exception exception = null;
-        CommandEventArgs eventArgs = null;
         using var multiQuery = new MultipleQuery(this.DbContext);
         subQueries.Invoke(multiQuery);
         (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(multiQuery.isUseMaster, multiQuery.Command);
-        try
-        {
-            multiQuery.Command.Connection = connection.BaseConnection;
-            command.CommandText = multiQuery.BuildSql(out var readerAfters);
-            this.DbContext.Open(connection);
-            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.MultiQuery);
-            reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
-            result = new MultiQueryReader(this.DbContext, connection, command, reader, readerAfters, isNeedClose);
-        }
-        catch (Exception ex)
-        {
-            isNeedClose = true;
-            exception = ex;
-            this.DbContext.AddCommandFailedFilter(connection, command, CommandSqlType.MultiQuery, eventArgs, exception);
-        }
-        finally
-        {
-            this.DbContext.AddCommandAfterFilter(connection, command, CommandSqlType.MultiQuery, eventArgs, exception == null, exception);
-            //多语句查询，在最后reader读取后，自动关闭
-        }
-        if (exception != null) throw exception;
-        return result;
+        multiQuery.Command.Connection = connection.BaseConnection;
+        command.CommandText = multiQuery.BuildSql(out var readerAfters);
+        connection.Open();
+        var reader = command.ExecuteReader(CommandSqlType.MultiQuery, CommandBehavior.SequentialAccess);
+        //多语句查询，在最后reader读取后，自动关闭
+        return new MultiQueryReader(this.DbContext, connection, command, reader, readerAfters, isNeedClose);
     }
     public virtual async Task<IMultiQueryReader> QueryMultipleAsync(Action<IMultipleQuery> subQueries, CancellationToken cancellationToken = default)
     {
         if (subQueries == null)
             throw new ArgumentNullException(nameof(subQueries));
 
-        IMultiQueryReader result = null;
-        DbDataReader reader;
-        Exception exception = null;
-        CommandEventArgs eventArgs = null;
         using var multiQuery = new MultipleQuery(this.DbContext);
         subQueries.Invoke(multiQuery);
-        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveDbCommand(multiQuery.isUseMaster, multiQuery.Command);
-        try
-        {
-            multiQuery.Command.Connection = connection.BaseConnection;
-            command.CommandText = multiQuery.BuildSql(out var readerAfters);
-            await this.DbContext.OpenAsync(connection, cancellationToken);
-            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.MultiQuery);
-            reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
-            result = new MultiQueryReader(this.DbContext, connection, command, reader, readerAfters, isNeedClose);
-        }
-        catch (Exception ex)
-        {
-            isNeedClose = true;
-            exception = ex;
-            this.DbContext.AddCommandFailedFilter(connection, command, CommandSqlType.MultiQuery, eventArgs, exception);
-        }
-        finally
-        {
-            this.DbContext.AddCommandAfterFilter(connection, command, CommandSqlType.MultiQuery, eventArgs, exception == null, exception);
-            //多语句查询，在最后reader读取后，自动关闭
-        }
-        if (exception != null) throw exception;
-        return result;
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(multiQuery.isUseMaster, multiQuery.Command);
+        multiQuery.Command.Connection = connection.BaseConnection;
+        command.CommandText = multiQuery.BuildSql(out var readerAfters);
+        await connection.OpenAsync(cancellationToken);
+        var reader = await command.ExecuteReaderAsync(CommandSqlType.MultiQuery, CommandBehavior.SequentialAccess, cancellationToken);
+        //多语句查询，在最后reader读取后，自动关闭
+        return new MultiQueryReader(this.DbContext, connection, command, reader, readerAfters, isNeedClose);
     }
     #endregion
 
@@ -1064,69 +903,51 @@ public class Repository : IRepository
         if (commands == null || commands.Count == 0)
             throw new ArgumentNullException(nameof(commands));
 
-        int result = 0;
-        Exception exception = null;
-        CommandEventArgs eventArgs = null;
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        try
+        int commandIndex = 0;
+        var sqlBuilder = new StringBuilder();
+        var visitors = new Dictionary<MultipleCommandType, object>();
+        foreach (var multiCcommand in commands)
         {
-            int commandIndex = 0;
-            var sqlBuilder = new StringBuilder();
-            var visitors = new Dictionary<MultipleCommandType, object>();
-            foreach (var multiCcommand in commands)
+            bool isFirst = false;
+            if (!visitors.TryGetValue(multiCcommand.CommandType, out var visitor))
             {
-                bool isFirst = false;
-                if (!visitors.TryGetValue(multiCcommand.CommandType, out var visitor))
+                visitor = multiCcommand.CommandType switch
                 {
-                    visitor = multiCcommand.CommandType switch
-                    {
-                        MultipleCommandType.Insert => this.OrmProvider.NewCreateVisitor(this.DbContext),
-                        MultipleCommandType.Update => this.OrmProvider.NewUpdateVisitor(this.DbContext),
-                        MultipleCommandType.Delete => this.OrmProvider.NewDeleteVisitor(this.DbContext),
-                        _ => this.OrmProvider.NewUpdateVisitor(this.DbContext)
-                    };
-                    visitors.Add(multiCcommand.CommandType, visitor);
-                    isFirst = true;
-                }
-                switch (multiCcommand.CommandType)
-                {
-                    case MultipleCommandType.Insert:
-                        var insertVisitor = visitor as ICreateVisitor;
-                        insertVisitor.Initialize(multiCcommand.EntityType, true, isFirst);
-                        insertVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
-                        break;
-                    case MultipleCommandType.Update:
-                        var updateVisitor = visitor as IUpdateVisitor;
-                        updateVisitor.Initialize(multiCcommand.EntityType, true, isFirst);
-                        updateVisitor.BuildMultiCommand(this.DbContext, command, sqlBuilder, multiCcommand, commandIndex);
-                        break;
-                    case MultipleCommandType.Delete:
-                        var deleteVisitor = visitor as IDeleteVisitor;
-                        deleteVisitor.Initialize(multiCcommand.EntityType, true, isFirst);
-                        deleteVisitor.BuildMultiCommand(this.DbContext, command, sqlBuilder, multiCcommand, commandIndex);
-                        break;
-                }
-                commandIndex++;
+                    MultipleCommandType.Insert => this.OrmProvider.NewCreateVisitor(this.DbContext),
+                    MultipleCommandType.Update => this.OrmProvider.NewUpdateVisitor(this.DbContext),
+                    MultipleCommandType.Delete => this.OrmProvider.NewDeleteVisitor(this.DbContext),
+                    _ => this.OrmProvider.NewUpdateVisitor(this.DbContext)
+                };
+                visitors.Add(multiCcommand.CommandType, visitor);
+                isFirst = true;
             }
-            command.CommandText = sqlBuilder.ToString();
-            this.DbContext.Open(connection);
-            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.MultiCommand);
-            result = command.ExecuteNonQuery();
+            switch (multiCcommand.CommandType)
+            {
+                case MultipleCommandType.Insert:
+                    var insertVisitor = visitor as ICreateVisitor;
+                    insertVisitor.Initialize(multiCcommand.EntityType, true, isFirst);
+                    insertVisitor.BuildMultiCommand(command.BaseCommand, sqlBuilder, multiCcommand, commandIndex);
+                    break;
+                case MultipleCommandType.Update:
+                    var updateVisitor = visitor as IUpdateVisitor;
+                    updateVisitor.Initialize(multiCcommand.EntityType, true, isFirst);
+                    updateVisitor.BuildMultiCommand(this.DbContext, command.BaseCommand, sqlBuilder, multiCcommand, commandIndex);
+                    break;
+                case MultipleCommandType.Delete:
+                    var deleteVisitor = visitor as IDeleteVisitor;
+                    deleteVisitor.Initialize(multiCcommand.EntityType, true, isFirst);
+                    deleteVisitor.BuildMultiCommand(this.DbContext, command.BaseCommand, sqlBuilder, multiCcommand, commandIndex);
+                    break;
+            }
+            commandIndex++;
         }
-        catch (Exception ex)
-        {
-            isNeedClose = true;
-            exception = ex;
-            this.DbContext.AddCommandFailedFilter(connection, command, CommandSqlType.MultiCommand, eventArgs, exception);
-        }
-        finally
-        {
-            this.DbContext.AddCommandAfterFilter(connection, command, CommandSqlType.MultiCommand, eventArgs, exception == null, exception);
-            command.Parameters.Clear();
-            command.Dispose();
-            if (isNeedClose) this.Dispose(connection);
-        }
-        if (exception != null) throw exception;
+        command.CommandText = sqlBuilder.ToString();
+        connection.Open();
+        var result = command.ExecuteNonQuery(CommandSqlType.MultiCommand);
+        command.Parameters.Clear();
+        command.Dispose();
+        if (isNeedClose) connection.Close();
         return result;
     }
     public virtual async Task<int> MultipleExecuteAsync(List<MultipleCommand> commands, CancellationToken cancellationToken = default)
@@ -1134,76 +955,58 @@ public class Repository : IRepository
         if (commands == null || commands.Count == 0)
             throw new ArgumentNullException(nameof(commands));
 
-        int result = 0;
-        Exception exception = null;
-        CommandEventArgs eventArgs = null;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterDbCommand();
-        try
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        int commandIndex = 0;
+        var sqlBuilder = new StringBuilder();
+        var visitors = new Dictionary<MultipleCommandType, object>();
+        foreach (var multiCcommand in commands)
         {
-            int commandIndex = 0;
-            var sqlBuilder = new StringBuilder();
-            var visitors = new Dictionary<MultipleCommandType, object>();
-            foreach (var multiCcommand in commands)
+            bool isFirst = false;
+            if (!visitors.TryGetValue(multiCcommand.CommandType, out var visitor))
             {
-                bool isFirst = false;
-                if (!visitors.TryGetValue(multiCcommand.CommandType, out var visitor))
+                visitor = multiCcommand.CommandType switch
                 {
-                    visitor = multiCcommand.CommandType switch
-                    {
-                        MultipleCommandType.Insert => this.OrmProvider.NewCreateVisitor(this.DbContext),
-                        MultipleCommandType.Update => this.OrmProvider.NewUpdateVisitor(this.DbContext),
-                        MultipleCommandType.Delete => this.OrmProvider.NewDeleteVisitor(this.DbContext),
-                        _ => this.OrmProvider.NewUpdateVisitor(this.DbContext)
-                    };
-                    visitors.Add(multiCcommand.CommandType, visitor);
-                    isFirst = true;
-                }
-                switch (multiCcommand.CommandType)
-                {
-                    case MultipleCommandType.Insert:
-                        var insertVisitor = visitor as ICreateVisitor;
-                        insertVisitor.Initialize(multiCcommand.EntityType, true, isFirst);
-                        insertVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
-                        break;
-                    case MultipleCommandType.Update:
-                        var updateVisitor = visitor as IUpdateVisitor;
-                        updateVisitor.Initialize(multiCcommand.EntityType, true, isFirst);
-                        updateVisitor.BuildMultiCommand(this.DbContext, command, sqlBuilder, multiCcommand, commandIndex);
-                        break;
-                    case MultipleCommandType.Delete:
-                        var deleteVisitor = visitor as IDeleteVisitor;
-                        deleteVisitor.Initialize(multiCcommand.EntityType, true, isFirst);
-                        deleteVisitor.BuildMultiCommand(this.DbContext, command, sqlBuilder, multiCcommand, commandIndex);
-                        break;
-                }
-                commandIndex++;
+                    MultipleCommandType.Insert => this.OrmProvider.NewCreateVisitor(this.DbContext),
+                    MultipleCommandType.Update => this.OrmProvider.NewUpdateVisitor(this.DbContext),
+                    MultipleCommandType.Delete => this.OrmProvider.NewDeleteVisitor(this.DbContext),
+                    _ => this.OrmProvider.NewUpdateVisitor(this.DbContext)
+                };
+                visitors.Add(multiCcommand.CommandType, visitor);
+                isFirst = true;
             }
-            command.CommandText = sqlBuilder.ToString();
-            await this.DbContext.OpenAsync(connection, cancellationToken);
-            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.MultiCommand);
-            result = await command.ExecuteNonQueryAsync(cancellationToken);
+            switch (multiCcommand.CommandType)
+            {
+                case MultipleCommandType.Insert:
+                    var insertVisitor = visitor as ICreateVisitor;
+                    insertVisitor.Initialize(multiCcommand.EntityType, true, isFirst);
+                    insertVisitor.BuildMultiCommand(command.BaseCommand, sqlBuilder, multiCcommand, commandIndex);
+                    break;
+                case MultipleCommandType.Update:
+                    var updateVisitor = visitor as IUpdateVisitor;
+                    updateVisitor.Initialize(multiCcommand.EntityType, true, isFirst);
+                    updateVisitor.BuildMultiCommand(this.DbContext, command.BaseCommand, sqlBuilder, multiCcommand, commandIndex);
+                    break;
+                case MultipleCommandType.Delete:
+                    var deleteVisitor = visitor as IDeleteVisitor;
+                    deleteVisitor.Initialize(multiCcommand.EntityType, true, isFirst);
+                    deleteVisitor.BuildMultiCommand(this.DbContext, command.BaseCommand, sqlBuilder, multiCcommand, commandIndex);
+                    break;
+            }
+            commandIndex++;
         }
-        catch (Exception ex)
-        {
-            isNeedClose = true;
-            exception = ex;
-            this.DbContext.AddCommandFailedFilter(connection, command, CommandSqlType.MultiCommand, eventArgs, exception);
-        }
-        finally
-        {
-            this.DbContext.AddCommandAfterFilter(connection, command, CommandSqlType.MultiCommand, eventArgs, exception == null, exception);
-            command.Parameters.Clear();
-            await command.DisposeAsync();
-            if (isNeedClose) await this.DisposeAsync(connection);
-        }
-        if (exception != null) throw exception;
+        command.CommandText = sqlBuilder.ToString();
+        await connection.OpenAsync(cancellationToken);
+        var result = await command.ExecuteNonQueryAsync(CommandSqlType.MultiCommand, cancellationToken);
+        command.Parameters.Clear();
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
         return result;
     }
     #endregion
 
     #region Others
-    //public virtual void Close() => this.Dispose(connection);
-    //public virtual async Task CloseAsync() => await this.DisposeAsync(connection);
+    public virtual void Close() => this.DbContext.Connection.Close();
+    public virtual async Task CloseAsync() => await this.DbContext.Connection.CloseAsync();
     public virtual IRepository Timeout(int timeout)
     {
         this.DbContext.CommandTimeout = timeout;
@@ -1230,9 +1033,6 @@ public class Repository : IRepository
     public virtual void Rollback() => this.DbContext.Rollback();
     public virtual async Task RollbackAsync(CancellationToken cancellationToken = default)
         => await this.DbContext.RollbackAsync(cancellationToken);
-    public virtual void Dispose(TheaConnection connection) => this.DbContext.Close(connection);
-    public virtual async ValueTask DisposeAsync(TheaConnection connection)
-        => await this.DbContext.CloseAsync(connection);
     //抛异常的时候，会走到析构函数，但是Transaction，没有提交也没有回滚
     private IQueryVisitor CreateQueryVisitor(char tableAsStart = 'a')
         => this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart);

@@ -693,8 +693,8 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
             .InnerJoin<User>((a, b) => a.SellerId == b.Id)
             .Include((x, y) => x.Buyer)
             .ThenInclude(f => f.Company)
-            .Where((a, b) => a.TotalAmount > 300 && Sql.In(a.Id, new string[] { "1", "2", "3" }))
-            .Select((x, y) => new { Order = x, Seller = y })
+            .Where((a, b) => a.Buyer.Name.Contains("kevin"))
+            .Select((x, y) => new { Order = x, Seller = y, Buyer = x.Buyer })
             .ToListAsync();
 
         if (result.Count > 0)

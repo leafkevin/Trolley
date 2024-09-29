@@ -57,13 +57,11 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         if (this.Tables.Count > 0)
         {
             //每个表都要有单独的GUID值，否则有类似的表前缀名，也会被替换导致表名替换错误
-            int startIndex = 0;
-            if (this.IsFromCommand) startIndex = 1;
-            for (int i = startIndex; i < this.Tables.Count; i++)
+            for (int i = 0; i < this.Tables.Count; i++)
             {
                 var tableSegment = this.Tables[i];
                 string tableName = this.GetTableName(tableSegment);
-                if (i > startIndex)
+                if (i > 0)
                 {
                     if (!string.IsNullOrEmpty(tableSegment.JoinType))
                     {
@@ -110,7 +108,6 @@ public class PostgreSqlQueryVisitor : QueryVisitor
             whereSql = $" WHERE {this.WhereSql}";
             builder.Append(whereSql);
         }
-
         if (!string.IsNullOrEmpty(this.GroupBySql))
             builder.Append($" GROUP BY {this.GroupBySql}");
         if (!string.IsNullOrEmpty(this.HavingSql))
@@ -154,7 +151,6 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         }
         sql = builder.ToString();
         builder.Clear();
-        builder = null;
         return sql;
     }
     public override string BuildCommandSql(out IDataParameterCollection dbParameters)
@@ -168,7 +164,8 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         foreach (var readerField in this.ReaderFields)
         {
             //Union后，如果没有select语句时，通常实体类型或是select分组对象
-            if (!entityMapper.TryGetMemberMap(readerField.TargetMember.Name, out var memberMapper)
+            var memberName = readerField.TargetMember.Name;
+            if (!entityMapper.TryGetMemberMap(memberName, out var memberMapper)
                 || memberMapper.IsIgnore || memberMapper.IsIgnoreInsert
                 || memberMapper.IsNavigation || memberMapper.IsAutoIncrement || memberMapper.IsRowVersion
                 || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
@@ -319,7 +316,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
             {
                 var tableSchema = tableSegment.TableSchema ?? this.DefaultTableSchema;
                 if (!schemaBuilders.TryGetValue(tableSchema, out var tableBuilder))
-                    schemaBuilders.TryAdd(tableSchema, tableBuilder = new StringBuilder());
+                    schemaBuilders.Add(tableSchema, tableBuilder = new StringBuilder());
 
                 if (tableBuilder.Length > 0) tableBuilder.Append(" OR ");
                 tableBuilder.Append($"a.relname LIKE '{tableSegment.Mapper.TableName}%'");
@@ -539,6 +536,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
             }
 
             //此场景一定是select
+            //Select((x, a, b, ... ) => new { x.Grouping, ... });
             if (this.IsGroupingMember(memberExpr))
             {
                 List<SqlFieldSegment> groupFields = new();
@@ -602,8 +600,9 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                     var memberExprs = this.GetMemberExprs(memberExpr, out var parameterExpr);
                     if (memberExprs.Count > 1)
                     {
-                        while (memberExprs.TryPop(out var currentExpr))
+                        while (memberExprs.Count > 1)
                         {
+                            var currentExpr = memberExprs.Pop();
                             builder.Append("." + currentExpr.Member.Name);
                         }
                         path = builder.ToString();
@@ -622,7 +621,6 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                     //实体类型字段，三个场景：Json类型实体字段成员访问(包含实体表和子查询表)，Include导航实体类型成员访问(包括1:1,1:N关系)，
                     //Grouping分组对象的访问(包含当前查询中的和子查询表中的)                  
                     //子查询时，Mapper为null
-
                     if (fromSegment.Mapper != null)
                     {
                         //非子查询场景
@@ -633,52 +631,24 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                         if (memberMapper.IsNavigation)
                         {
                             //引用导航属性
-                            if (!this.IsSelect)
-                                throw new NotSupportedException("暂时不支持Select场景以外的访问Include成员场景");
+                            if (this.IsWhere)
+                                throw new NotSupportedException("不支持使用Include成员作为where条件，可以使用Join关联后再做where条件筛选");
 
+                            path ??= fromSegment.Path.Replace(fromSegment.AliasName, parameterName);
                             path += "." + memberExpr.Member.Name;
                             var refReaderField = this.ReaderFields.Find(f => f.Path == path);
                             if (refReaderField == null)
                                 throw new NotSupportedException("Select访问Include成员，要先Select访问Include成员的主表实体，如：.Select((x, y) =&gt; new { Order = x, x.Seller, x.Buyer, ... })");
 
                             //引用实体类型导航属性，当前导航属性可能还会有Include导航属性，所以构造时只给默认值
-                            //在初始化完最外层实体后，再做赋值，但要先确定返回目标的当前成员是否支持Set，不支持Set无法完成
-                            if (memberInfo is PropertyInfo propertyInfo && propertyInfo.GetSetMethod() == null)
-                                throw new NotSupportedException($"类型{propertyInfo.DeclaringType.FullName}的成员{propertyInfo.Name}不支持Set操作");
-
-                            var includeSegment = this.IncludeTables.Find(f => f.Path == path);
-                            var rootReaderField = this.ReaderFields.Find(f => f.Path == parameterName);
-                            var refRootPath = rootReaderField.TargetMember.Name;
-                            var refPath = refRootPath + path.Substring(path.IndexOf("."));
-                            var cacheKey = GetRefIncludeKey(memberInfo.DeclaringType, refPath);
-                            var deferredSetter = targetRefIncludeValuesSetters.GetOrAdd(cacheKey, f =>
-                            {
-                                var targetExpr = Expression.Parameter(typeof(object), "target");
-                                var typedTargetExpr = Expression.Convert(targetExpr, memberInfo.DeclaringType);
-                                var targetMemberExpr = Expression.PropertyOrField(typedTargetExpr, memberInfo.Name);
-
-                                Expression refValueExpr = typedTargetExpr;
-                                refValueExpr = Expression.PropertyOrField(refValueExpr, refRootPath);
-                                foreach (var memberInfo in includeSegment.ParentMemberVisits)
-                                {
-                                    refValueExpr = Expression.PropertyOrField(refValueExpr, memberInfo.Name);
-                                }
-                                refValueExpr = Expression.PropertyOrField(refValueExpr, includeSegment.FromMember.MemberName);
-                                Expression bodyExpr = null;
-                                if (memberInfo.MemberType == MemberTypes.Property)
-                                    bodyExpr = Expression.Call(targetMemberExpr, (memberInfo as PropertyInfo).GetSetMethod(), refValueExpr);
-                                else if (memberInfo.MemberType == MemberTypes.Field)
-                                    bodyExpr = Expression.Assign(targetMemberExpr, refValueExpr);
-                                return Expression.Lambda<Action<object>>(bodyExpr, targetExpr).Compile();
-                            });
-                            this.deferredRefIncludeValuesSetters ??= new();
-                            this.deferredRefIncludeValuesSetters.Add(deferredSetter);
-
+                            //在初始化完最外层实体后，再做赋值
+                            if (!memberMapper.IsToOne) throw new NotSupportedException("暂时不支持引用1:N关系Include导航属性成员访问");
+                            var readerField = this.ReaderFields.Find(f => f.Path == path);
                             //只有select场景才会Include对象
                             sqlSegment.HasField = true;
                             sqlSegment.FieldType = SqlFieldType.IncludeRef;
                             sqlSegment.FromMember = memberMapper.Member;
-                            sqlSegment.TargetMember = memberInfo;
+                            sqlSegment.Value = refReaderField;
                             return sqlSegment;
                         }
                         else
@@ -687,7 +657,6 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                             if (memberMapper.TypeHandler == null)
                                 throw new NotSupportedException($"类{fromSegment.EntityType.FullName}的成员{memberExpr.Member.Name}是实体类型，未配置导航属性也没有配置TypeHandler");
 
-                            sqlSegment.HasField = true;
                             var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
                             if (this.IsNeedTableAlias) fieldName = fromSegment.AliasName + "." + fieldName;
                             sqlSegment.FieldType = SqlFieldType.Field;
@@ -704,7 +673,6 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                     }
                     else
                     {
-                        sqlSegment.HasField = true;
                         //子查询和CTE子查询场景
                         //子查询和CTE子查询中，Select了Grouping分组对象或是临时匿名对象，目前子查询，只有分组对象才是实体类型，后续会支持匿名对象
                         //OrderBy中的实体类型对象访问已经单独处理了，包括Grouping对象
@@ -856,6 +824,8 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                     index++;
                     continue;
                 }
+                if (this.TableAliases.ContainsKey(parameterExpr.Name))
+                    continue;
                 this.TableAliases.Add(parameterExpr.Name, masterTables[index]);
                 tableSegment = masterTables[index];
                 index++;

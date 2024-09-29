@@ -25,7 +25,7 @@ public class TheaDbParameterCollection : IDataParameterCollection
                 throw new Exception("只支持IDbDataParameter类型参数");
 
             if (!this.namedIndices.TryGetValue(parameterName, out var index))
-                this.namedIndices.TryAdd(parameterName, index = this.parameters.Count);
+                this.namedIndices.Add(parameterName, index = this.parameters.Count);
             this.parameters[index] = dbParameter;
         }
     }
@@ -61,8 +61,9 @@ public class TheaDbParameterCollection : IDataParameterCollection
             throw new Exception("只支持IDbDataParameter类型参数");
 
         var index = this.Count;
-        if (!this.namedIndices.TryAdd(dbParameter.ParameterName, index))
+        if (this.namedIndices.ContainsKey(dbParameter.ParameterName))
             throw new Exception($"参数{dbParameter.ParameterName}已存在，请考虑使用ToParameter方法，更改子查询或是CTE子句中的参数名，避免参数名重复，如：.Where(f => f.Id > orderId.ToParameter(\"@OrderId\"))");
+        this.namedIndices.Add(dbParameter.ParameterName, index);
         this.parameters.Add(dbParameter);
         return index;
     }
@@ -124,8 +125,11 @@ public class TheaDbParameterCollection : IDataParameterCollection
     }
     public void RemoveAt(string parameterName)
     {
-        if (this.namedIndices.Remove(parameterName, out var index))
+        if (this.namedIndices.TryGetValue(parameterName, out var index))
+        {
+            this.namedIndices.Remove(parameterName);
             this.RemoveAt(index);
+        }
     }
     public void RemoveAt(int index)
     {

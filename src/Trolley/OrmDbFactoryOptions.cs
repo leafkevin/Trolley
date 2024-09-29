@@ -1,4 +1,6 @@
-﻿namespace Trolley;
+﻿using System;
+
+namespace Trolley;
 
 public class OrmDbFactoryOptions
 {
@@ -10,4 +12,8 @@ public class OrmDbFactoryOptions
     /// 表达式解析中，所有变量都会参数化，常量不会参数化。如果设置为true，所有常量也将都会参数化
     /// </summary>
     public bool IsParameterized { get; set; }
+    /// <summary>
+    /// 枚举类型常量或变量映射到数据库的默认类型，默认值是int类型
+    /// </summary>
+    public Type DefaultEnumMapDbType { get; set; } = typeof(int);
 }

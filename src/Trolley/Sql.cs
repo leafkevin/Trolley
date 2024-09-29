@@ -43,6 +43,14 @@ public static class Sql
         return field;
     }
     /// <summary>
+    /// 更改当前字段对应的数据库类型，常用于枚举类型常量，无法获取当前字段对应的数据库类型
+    /// </summary>
+    /// <typeparam name="TField"></typeparam>
+    /// <typeparam name="TDbType"></typeparam>
+    /// <param name="field"></param>
+    /// <returns></returns>
+    public static TField ToDbType<TField, TDbType>(this TField field) => field;
+    /// <summary>
     /// 更改参数名称，在子查询或是CTE子句中使用参数会有与主查询SQL中参数名相同，可以使用此方法更改参数名，避免参数名重复
     /// </summary>
     /// <typeparam name="T">变量类型</typeparam>

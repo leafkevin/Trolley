@@ -18,19 +18,19 @@ public class PostgreSqlCreate<TEntity> : Create<TEntity>, IPostgreSqlCreate<TEnt
     #endregion
 
     #region Sharding
-    public override IPostgreSqlCreate<TEntity> UseTable(string tableName)
+    public new IPostgreSqlCreate<TEntity> UseTable(string tableName)
         => base.UseTable(tableName) as IPostgreSqlCreate<TEntity>;
-    public override IPostgreSqlCreate<TEntity> UseTableBy(object field1Value, object field2Value = null)
+    public new IPostgreSqlCreate<TEntity> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as IPostgreSqlCreate<TEntity>;
     #endregion
 
     #region WithBy
-    public override IPostgreSqlContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj)
+    public new IPostgreSqlContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj)
         => base.WithBy(insertObj) as IPostgreSqlContinuedCreate<TEntity>;
     #endregion
 
     #region WithBulk
-    public override IPostgreSqlBulkContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount)
+    public new IPostgreSqlBulkContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount)
         => base.WithBulk(insertObjs, bulkCount) as IPostgreSqlBulkContinuedCreate<TEntity>;
     #endregion
 

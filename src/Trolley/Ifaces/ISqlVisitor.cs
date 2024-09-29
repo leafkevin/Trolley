@@ -47,8 +47,8 @@ public interface ISqlVisitor : IDisposable
     List<Expression> ConvertFormatToConcatList(Expression[] argsExprs);
     List<Expression> SplitConcatList(Expression[] argsExprs);
     string VisitFromQuery(LambdaExpression lambdaExpr);
-    DataTable ToDataTable(Type entityType, IEnumerable entities, List<(MemberMap RefMemberMapper, Func<object, object> ValueGetter)> memberMappers, string tableName = null);
-    List<(MemberMap RefMemberMapper, Func<object, object> ValueGetter)> GetRefMemberMappers(Type entityType, EntityMap refEntityMapper, bool isUpdate = false);
+    DataTable ToDataTable(Type entityType, IEnumerable entities, List<(MemberMap, Func<object, object>)> memberMappers, string tableName = null);
+    List<(MemberMap, Func<object, object>)> GetRefMemberMappers(Type entityType, EntityMap refEntityMapper, bool isUpdate = false);
     SqlFieldSegment BuildDeferredSqlSegment(MethodCallExpression methodCallExpr, SqlFieldSegment sqlSegment);
     SqlFieldSegment ToEnumString(SqlFieldSegment sqlSegment);
 }

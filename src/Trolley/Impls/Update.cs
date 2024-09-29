@@ -88,7 +88,7 @@ public class Update<TEntity> : IUpdate<TEntity>
                 throw new ArgumentNullException(nameof(fieldSelector));
             if (fieldValue == null)
                 throw new ArgumentNullException(nameof(fieldValue));
-            if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
+            if (!this.Visitor.IsMemberVisit(fieldSelector.Body))
                 throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
 
             this.Visitor.SetField(fieldSelector, fieldValue);
@@ -187,209 +187,164 @@ public class Updated<TEntity> : IUpdated<TEntity>
     public virtual int Execute()
     {
         int result = 0;
-        Exception exception = null;
-        CommandEventArgs eventArgs = null;
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        try
+        if (this.Visitor.IsNeedFetchShardingTables)
+            this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
+        switch (this.Visitor.ActionMode)
         {
-            if (this.Visitor.IsNeedFetchShardingTables)
-                this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
-            switch (this.Visitor.ActionMode)
-            {
-                case ActionMode.Bulk:
-                    var builder = new StringBuilder();
-                    (var updateObjs, var bulkCount, var tableName, var firstParametersSetter,
-                        var firstSqlParametersSetter, var headSqlSetter, var sqlSetter) = this.Visitor.BuildWithBulk(command);
-                    Func<int, string> suffixGetter = index => this.Visitor.IsMultiple ? $"_m{this.Visitor.CommandIndex}{index}" : $"{index}";
+            case ActionMode.Bulk:
+                var builder = new StringBuilder();
+                (var updateObjs, var bulkCount, var tableName, var firstParametersSetter,
+                    var firstSqlParametersSetter, var headSqlSetter, var sqlSetter) = this.Visitor.BuildWithBulk(command.BaseCommand);
+                Func<int, string> suffixGetter = index => this.Visitor.IsMultiple ? $"_m{this.Visitor.CommandIndex}{index}" : $"{index}";
 
-                    Action<object, int> sqlExecuter = null;
-                    if (this.Visitor.ShardingTables != null && this.Visitor.ShardingTables.Count > 0)
+                Action<object, int> sqlExecuter = null;
+                if (this.Visitor.ShardingTables != null && this.Visitor.ShardingTables.Count > 0)
+                {
+                    sqlExecuter = (updateObj, index) =>
                     {
-                        sqlExecuter = (updateObj, index) =>
-                        {
-                            if (index > 0) builder.Append(';');
-                            var tableNames = this.Visitor.ShardingTables[0].TableNames;
-                            headSqlSetter.Invoke(builder, tableNames[0]);
-                            firstSqlParametersSetter.Invoke(command.Parameters, builder, this.Visitor.OrmProvider, updateObj, suffixGetter.Invoke(index));
+                        if (index > 0) builder.Append(';');
+                        var tableNames = this.Visitor.ShardingTables[0].TableNames;
+                        headSqlSetter.Invoke(builder, tableNames[0]);
+                        firstSqlParametersSetter.Invoke(command.Parameters, builder, this.Visitor.OrmProvider, updateObj, suffixGetter.Invoke(index));
 
-                            for (int i = 1; i < tableNames.Count; i++)
-                            {
-                                builder.Append(';');
-                                headSqlSetter.Invoke(builder, tableNames[i]);
-                                sqlSetter.Invoke(builder, this.Visitor.OrmProvider, updateObj, suffixGetter.Invoke(index));
-                            }
-                        };
-                    }
-                    else
-                    {
-                        sqlExecuter = (updateObj, index) =>
+                        for (int i = 1; i < tableNames.Count; i++)
                         {
-                            if (index > 0) builder.Append(';');
-                            headSqlSetter.Invoke(builder, tableName);
-                            firstSqlParametersSetter.Invoke(command.Parameters, builder, this.Visitor.OrmProvider, updateObj, suffixGetter.Invoke(index));
-                        };
-                    }
-
-                    int index = 0;
-                    firstParametersSetter?.Invoke(command.Parameters);
-                    this.DbContext.Open(connection);
-                    foreach (var updateObj in updateObjs)
-                    {
-                        sqlExecuter.Invoke(updateObj, index);
-                        if (index >= bulkCount)
-                        {
-                            command.CommandText = builder.ToString();
-                            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkUpdate, eventArgs);
-                            result += command.ExecuteNonQuery();
-                            command.Parameters.Clear();
-                            firstParametersSetter?.Invoke(command.Parameters);
-                            builder.Clear();
-                            index = 0;
-                            continue;
+                            builder.Append(';');
+                            headSqlSetter.Invoke(builder, tableNames[i]);
+                            sqlSetter.Invoke(builder, this.Visitor.OrmProvider, updateObj, suffixGetter.Invoke(index));
                         }
-                        index++;
-                    }
-                    if (index > 0)
+                    };
+                }
+                else
+                {
+                    sqlExecuter = (updateObj, index) =>
+                    {
+                        if (index > 0) builder.Append(';');
+                        headSqlSetter.Invoke(builder, tableName);
+                        firstSqlParametersSetter.Invoke(command.Parameters, builder, this.Visitor.OrmProvider, updateObj, suffixGetter.Invoke(index));
+                    };
+                }
+
+                int index = 0;
+                firstParametersSetter?.Invoke(command.Parameters);
+                connection.Open();
+                foreach (var updateObj in updateObjs)
+                {
+                    sqlExecuter.Invoke(updateObj, index);
+                    if (index >= bulkCount)
                     {
                         command.CommandText = builder.ToString();
-                        eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkUpdate, eventArgs);
-                        result += command.ExecuteNonQuery();
+                        result += command.ExecuteNonQuery(CommandSqlType.BulkUpdate);
+                        command.Parameters.Clear();
+                        firstParametersSetter?.Invoke(command.Parameters);
+                        builder.Clear();
+                        index = 0;
+                        continue;
                     }
-                    builder.Clear();
-                    builder = null;
-                    break;
-                default:
-                    if (!this.Visitor.HasWhere)
-                        throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
-                    command.CommandText = this.Visitor.BuildCommand(this.DbContext, command);
-                    this.DbContext.Open(connection);
-                    eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Update);
-                    result = command.ExecuteNonQuery();
-                    break;
-            }
+                    index++;
+                }
+                if (index > 0)
+                {
+                    command.CommandText = builder.ToString();
+                    result += command.ExecuteNonQuery(CommandSqlType.BulkUpdate);
+                }
+                builder.Clear();
+                builder = null;
+                break;
+            default:
+                if (!this.Visitor.HasWhere)
+                    throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
+                command.CommandText = this.Visitor.BuildCommand(this.DbContext, command.BaseCommand);
+                connection.Open();
+                result = command.ExecuteNonQuery(CommandSqlType.Update);
+                break;
         }
-        catch (Exception ex)
-        {
-            isNeedClose = true;
-            exception = ex;
-            var sqlType = this.Visitor.ActionMode == ActionMode.Bulk ? CommandSqlType.BulkUpdate : CommandSqlType.Update;
-            this.DbContext.AddCommandFailedFilter(connection, command, sqlType, eventArgs, exception);
-        }
-        finally
-        {
-            var sqlType = this.Visitor.ActionMode == ActionMode.Bulk ? CommandSqlType.BulkUpdate : CommandSqlType.Update;
-            this.DbContext.AddCommandAfterFilter(connection, command, sqlType, eventArgs, exception == null, exception);
-            command.Parameters.Clear();
-            command.Dispose();
-            if (isNeedClose) this.Close(connection);
-        }
-        if (exception != null) throw exception;
+        command.Parameters.Clear();
+        command.Dispose();
+        if (isNeedClose) connection.Close();
         return result;
     }
     public virtual async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        Exception exception = null;
-        CommandEventArgs eventArgs = null;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterDbCommand();
-        try
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        if (this.Visitor.IsNeedFetchShardingTables)
+            await this.DbContext.FetchShardingTablesAsync(this.Visitor as SqlVisitor, cancellationToken);
+
+        switch (this.Visitor.ActionMode)
         {
-            bool isOpened = false;
-            if (this.Visitor.IsNeedFetchShardingTables)
-            {
-                await this.DbContext.FetchShardingTablesAsync(this.Visitor as SqlVisitor, cancellationToken);
-                isOpened = true;
-            }
-            switch (this.Visitor.ActionMode)
-            {
-                case ActionMode.Bulk:
-                    var builder = new StringBuilder();
-                    (var updateObjs, var bulkCount, var tableName, var firstParametersSetter,
-                        var firstSqlParametersSetter, var headSqlSetter, var sqlSetter) = this.Visitor.BuildWithBulk(command);
-                    Func<int, string> suffixGetter = index => this.Visitor.IsMultiple ? $"_m{this.Visitor.CommandIndex}{index}" : $"{index}";
+            case ActionMode.Bulk:
+                var builder = new StringBuilder();
+                (var updateObjs, var bulkCount, var tableName, var firstParametersSetter,
+                    var firstSqlParametersSetter, var headSqlSetter, var sqlSetter) = this.Visitor.BuildWithBulk(command.BaseCommand);
+                Func<int, string> suffixGetter = index => this.Visitor.IsMultiple ? $"_m{this.Visitor.CommandIndex}{index}" : $"{index}";
 
-                    Action<object, int> sqlExecuter = null;
-                    if (this.Visitor.ShardingTables != null && this.Visitor.ShardingTables.Count > 0)
+                Action<object, int> sqlExecuter = null;
+                if (this.Visitor.ShardingTables != null && this.Visitor.ShardingTables.Count > 0)
+                {
+                    sqlExecuter = (updateObj, index) =>
                     {
-                        sqlExecuter = (updateObj, index) =>
-                        {
-                            if (index > 0) builder.Append(';');
-                            var tableNames = this.Visitor.ShardingTables[0].TableNames;
-                            headSqlSetter.Invoke(builder, tableNames[0]);
-                            firstSqlParametersSetter.Invoke(command.Parameters, builder, this.Visitor.OrmProvider, updateObj, suffixGetter.Invoke(index));
+                        if (index > 0) builder.Append(';');
+                        var tableNames = this.Visitor.ShardingTables[0].TableNames;
+                        headSqlSetter.Invoke(builder, tableNames[0]);
+                        firstSqlParametersSetter.Invoke(command.Parameters, builder, this.Visitor.OrmProvider, updateObj, suffixGetter.Invoke(index));
 
-                            for (int i = 1; i < tableNames.Count; i++)
-                            {
-                                builder.Append(';');
-                                headSqlSetter.Invoke(builder, tableNames[i]);
-                                sqlSetter.Invoke(builder, this.Visitor.OrmProvider, updateObj, suffixGetter.Invoke(index));
-                            }
-                        };
-                    }
-                    else
-                    {
-                        sqlExecuter = (updateObj, index) =>
+                        for (int i = 1; i < tableNames.Count; i++)
                         {
-                            if (index > 0) builder.Append(';');
-                            headSqlSetter.Invoke(builder, tableName);
-                            firstSqlParametersSetter.Invoke(command.Parameters, builder, this.Visitor.OrmProvider, updateObj, suffixGetter.Invoke(index));
-                        };
-                    }
-
-                    int index = 0;
-                    firstParametersSetter?.Invoke(command.Parameters);
-                    await this.DbContext.OpenAsync(connection, cancellationToken);
-                    foreach (var updateObj in updateObjs)
-                    {
-                        sqlExecuter.Invoke(updateObj, index);
-                        if (index >= bulkCount)
-                        {
-                            command.CommandText = builder.ToString();
-                            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkUpdate, eventArgs);
-                            result += await command.ExecuteNonQueryAsync(cancellationToken);
-                            command.Parameters.Clear();
-                            firstParametersSetter?.Invoke(command.Parameters);
-                            builder.Clear();
-                            index = 0;
-                            continue;
+                            builder.Append(';');
+                            headSqlSetter.Invoke(builder, tableNames[i]);
+                            sqlSetter.Invoke(builder, this.Visitor.OrmProvider, updateObj, suffixGetter.Invoke(index));
                         }
-                        index++;
-                    }
-                    if (index > 0)
+                    };
+                }
+                else
+                {
+                    sqlExecuter = (updateObj, index) =>
+                    {
+                        if (index > 0) builder.Append(';');
+                        headSqlSetter.Invoke(builder, tableName);
+                        firstSqlParametersSetter.Invoke(command.Parameters, builder, this.Visitor.OrmProvider, updateObj, suffixGetter.Invoke(index));
+                    };
+                }
+
+                int index = 0;
+                firstParametersSetter?.Invoke(command.Parameters);
+                await connection.OpenAsync(cancellationToken);
+                foreach (var updateObj in updateObjs)
+                {
+                    sqlExecuter.Invoke(updateObj, index);
+                    if (index >= bulkCount)
                     {
                         command.CommandText = builder.ToString();
-                        eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkUpdate, eventArgs);
-                        result += await command.ExecuteNonQueryAsync(cancellationToken);
+                        result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkUpdate, cancellationToken);
+                        command.Parameters.Clear();
+                        firstParametersSetter?.Invoke(command.Parameters);
+                        builder.Clear();
+                        index = 0;
+                        continue;
                     }
-                    builder.Clear();
-                    builder = null;
-                    break;
-                default:
-                    if (!this.Visitor.HasWhere)
-                        throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
-                    command.CommandText = this.Visitor.BuildCommand(this.DbContext, command);
-                    if (!isOpened) await this.DbContext.OpenAsync(connection, cancellationToken);
-                    eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Update);
-                    result = await command.ExecuteNonQueryAsync(cancellationToken);
-                    break;
-            }
+                    index++;
+                }
+                if (index > 0)
+                {
+                    command.CommandText = builder.ToString();
+                    result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkUpdate, cancellationToken);
+                }
+                builder.Clear();
+                builder = null;
+                break;
+            default:
+                if (!this.Visitor.HasWhere)
+                    throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
+                command.CommandText = this.Visitor.BuildCommand(this.DbContext, command.BaseCommand);
+                await connection.OpenAsync(cancellationToken);
+                result = await command.ExecuteNonQueryAsync(CommandSqlType.Update, cancellationToken);
+                break;
         }
-        catch (Exception ex)
-        {
-            isNeedClose = true;
-            exception = ex;
-            var sqlType = this.Visitor.ActionMode == ActionMode.Bulk ? CommandSqlType.BulkUpdate : CommandSqlType.Update;
-            this.DbContext.AddCommandFailedFilter(connection, command, sqlType, eventArgs, exception);
-        }
-        finally
-        {
-            var sqlType = this.Visitor.ActionMode == ActionMode.Bulk ? CommandSqlType.BulkUpdate : CommandSqlType.Update;
-            this.DbContext.AddCommandAfterFilter(connection, command, sqlType, eventArgs, exception == null, exception);
-            command.Parameters.Clear();
-            await command.DisposeAsync();
-            if (isNeedClose) await this.CloseAsync(connection);
-        }
-        if (exception != null) throw exception;
+        command.Parameters.Clear();
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
         return result;
     }
     #endregion
@@ -404,28 +359,13 @@ public class Updated<TEntity> : IUpdated<TEntity>
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         if (this.Visitor.IsNeedFetchShardingTables)
             this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
-        var sql = this.Visitor.BuildCommand(this.DbContext, command);
+        var sql = this.Visitor.BuildCommand(this.DbContext, command.BaseCommand);
         dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
         if (isNeedClose) connection.Close();
         return sql;
     }
-    #endregion
-
-    #region Close
-    public virtual void Close(TheaConnection connection)
-    {
-        this.DbContext.Close(connection);
-        this.Visitor.Dispose();
-        this.Visitor = null;
-    }
-    public virtual async ValueTask CloseAsync(TheaConnection connection)
-    {
-        await this.DbContext.CloseAsync(connection);
-        this.Visitor.Dispose();
-        this.Visitor = null;
-    }
-    #endregion
+    #endregion   
 }
 public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEntity>
 {
@@ -457,7 +397,7 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
                 throw new ArgumentNullException(nameof(fieldSelector));
             if (fieldValue == null)
                 throw new ArgumentNullException(nameof(fieldValue));
-            if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
+            if (!this.Visitor.IsMemberVisit(fieldSelector.Body))
                 throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
 
             this.Visitor.SetField(fieldSelector, fieldValue);
@@ -686,7 +626,7 @@ public class UpdateJoin<TEntity, T1> : Updated<TEntity>, IUpdateJoin<TEntity, T1
                 throw new ArgumentNullException(nameof(fieldSelector));
             if (fieldValue == null)
                 throw new ArgumentNullException(nameof(fieldValue));
-            if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
+            if (!this.Visitor.IsMemberVisit(fieldSelector.Body))
                 throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
 
             this.Visitor.SetField(fieldSelector, fieldValue);
@@ -866,7 +806,7 @@ public class UpdateJoin<TEntity, T1, T2> : Updated<TEntity>, IUpdateJoin<TEntity
                 throw new ArgumentNullException(nameof(fieldSelector));
             if (fieldValue == null)
                 throw new ArgumentNullException(nameof(fieldValue));
-            if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
+            if (!this.Visitor.IsMemberVisit(fieldSelector.Body))
                 throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
 
             this.Visitor.SetField(fieldSelector, fieldValue);
@@ -1046,7 +986,7 @@ public class UpdateJoin<TEntity, T1, T2, T3> : Updated<TEntity>, IUpdateJoin<TEn
                 throw new ArgumentNullException(nameof(fieldSelector));
             if (fieldValue == null)
                 throw new ArgumentNullException(nameof(fieldValue));
-            if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
+            if (!this.Visitor.IsMemberVisit(fieldSelector.Body))
                 throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
 
             this.Visitor.SetField(fieldSelector, fieldValue);
@@ -1226,7 +1166,7 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4> : Updated<TEntity>, IUpdateJoin
                 throw new ArgumentNullException(nameof(fieldSelector));
             if (fieldValue == null)
                 throw new ArgumentNullException(nameof(fieldValue));
-            if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
+            if (!this.Visitor.IsMemberVisit(fieldSelector.Body))
                 throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
 
             this.Visitor.SetField(fieldSelector, fieldValue);
@@ -1387,7 +1327,7 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : Updated<TEntity>, IUpdate
                 throw new ArgumentNullException(nameof(fieldSelector));
             if (fieldValue == null)
                 throw new ArgumentNullException(nameof(fieldValue));
-            if (fieldSelector.Body.NodeType != ExpressionType.MemberAccess)
+            if (!this.Visitor.IsMemberVisit(fieldSelector.Body))
                 throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
 
             this.Visitor.SetField(fieldSelector, fieldValue);

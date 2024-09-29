@@ -1,11 +1,14 @@
 ﻿using MySqlConnector;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace Trolley.MySqlConnector;
 
@@ -47,8 +50,10 @@ public partial class MySqlProvider : BaseOrmProvider
         defaultMapTypes[MySqlDbType.DateTime] = typeof(DateTime);
         defaultMapTypes[MySqlDbType.Newdate] = typeof(DateTime);
         defaultMapTypes[MySqlDbType.Timestamp] = typeof(DateTime);
+#if NET6_0_OR_GREATER
         defaultMapTypes[MySqlDbType.Date] = typeof(DateOnly);
         defaultMapTypes[MySqlDbType.Time] = typeof(TimeOnly);
+#endif
         defaultMapTypes[MySqlDbType.TinyBlob] = typeof(byte[]);
         defaultMapTypes[MySqlDbType.MediumBlob] = typeof(byte[]);
         defaultMapTypes[MySqlDbType.LongBlob] = typeof(byte[]);
@@ -73,8 +78,10 @@ public partial class MySqlProvider : BaseOrmProvider
         defaultDbTypes[typeof(string)] = MySqlDbType.VarChar;
         defaultDbTypes[typeof(DateTime)] = MySqlDbType.DateTime;
         defaultDbTypes[typeof(DateTimeOffset)] = MySqlDbType.Timestamp;
+#if NET6_0_OR_GREATER
         defaultDbTypes[typeof(DateOnly)] = MySqlDbType.Date;
         defaultDbTypes[typeof(TimeOnly)] = MySqlDbType.Time;
+#endif
         defaultDbTypes[typeof(Guid)] = MySqlDbType.Guid;
         defaultDbTypes[typeof(byte[])] = MySqlDbType.VarBinary;
 
@@ -92,8 +99,10 @@ public partial class MySqlProvider : BaseOrmProvider
         defaultDbTypes[typeof(decimal?)] = MySqlDbType.Decimal;
         defaultDbTypes[typeof(DateTime?)] = MySqlDbType.DateTime;
         defaultDbTypes[typeof(DateTimeOffset?)] = MySqlDbType.Timestamp;
+#if NET6_0_OR_GREATER
         defaultDbTypes[typeof(DateOnly?)] = MySqlDbType.Date;
         defaultDbTypes[typeof(TimeOnly?)] = MySqlDbType.Time;
+#endif
         defaultDbTypes[typeof(Guid?)] = MySqlDbType.Guid;
 
         castTos[typeof(string)] = "CHAR";
@@ -110,9 +119,10 @@ public partial class MySqlProvider : BaseOrmProvider
         castTos[typeof(double)] = "DOUBLE";
         castTos[typeof(decimal)] = "DECIMAL(36,18)";
         castTos[typeof(DateTime)] = "DATETIME";
+#if NET6_0_OR_GREATER
         castTos[typeof(DateOnly)] = "DATE";
         castTos[typeof(TimeOnly)] = "TIME";
-
+#endif
         castTos[typeof(bool?)] = "SIGNED";
         castTos[typeof(byte?)] = "UNSIGNED";
         castTos[typeof(sbyte?)] = "SIGNED";
@@ -126,11 +136,13 @@ public partial class MySqlProvider : BaseOrmProvider
         castTos[typeof(double?)] = "DOUBLE";
         castTos[typeof(decimal?)] = "DECIMAL(36,18)";
         castTos[typeof(DateTime?)] = "DATETIME";
+#if NET6_0_OR_GREATER
         castTos[typeof(DateOnly?)] = "DATE";
         castTos[typeof(TimeOnly?)] = "TIME";
+#endif
     }
-    public override IDbConnection CreateConnection(string connectionString)
-        => new MySqlConnection(connectionString);
+    public override ITheaConnection CreateConnection(string dbKey, string connectionString)
+        => new MySqlTheaConnection(dbKey, connectionString);
     public override IDbCommand CreateCommand() => new MySqlCommand();
     public override IDbDataParameter CreateParameter(string parameterName, object value)
         => new MySqlParameter(parameterName, value);
@@ -242,13 +254,13 @@ public partial class MySqlProvider : BaseOrmProvider
                 var tableSchema = myTableNames[0];
                 myTableName = myTableNames[1];
                 if (!tableBuilders.TryGetValue(tableSchema, out builder))
-                    tableBuilders.TryAdd(tableSchema, builder = new StringBuilder());
+                    tableBuilders.Add(tableSchema, builder = new StringBuilder());
             }
             else
             {
                 var tableSchema = connection.Database;
                 if (!tableBuilders.TryGetValue(tableSchema, out builder))
-                    tableBuilders.TryAdd(tableSchema, builder = new StringBuilder());
+                    tableBuilders.Add(tableSchema, builder = new StringBuilder());
                 myTableName = tableName;
             }
             if (builder.Length > 0)
@@ -381,7 +393,7 @@ public partial class MySqlProvider : BaseOrmProvider
                 var genericArgumentTypes = methodInfo.DeclaringType.GetGenericArguments();
                 if (genericArgumentTypes.Length == 1 && methodInfo.DeclaringType == typeof(IMySqlCreateDuplicateKeyUpdate<>).MakeGenericType(genericArgumentTypes[0]))
                 {
-                    cacheKey = HashCode.Combine(typeof(IMySqlCreateDuplicateKeyUpdate<>), methodInfo.GetGenericMethodDefinition());
+                    cacheKey = RepositoryHelper.GetCacheKey(typeof(IMySqlCreateDuplicateKeyUpdate<>), methodInfo.GetGenericMethodDefinition());
                     //.Set(f => new { TotalAmount = f.TotalAmount + x.Values(f.TotalAmount) })
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
@@ -408,7 +420,7 @@ public partial class MySqlProvider : BaseOrmProvider
                 }
                 break;
             case "IsNull":
-                cacheKey = HashCode.Combine(typeof(Sql), methodInfo.GetGenericMethodDefinition());
+                cacheKey = RepositoryHelper.GetCacheKey(typeof(Sql), methodInfo.GetGenericMethodDefinition());
                 formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
@@ -421,5 +433,125 @@ public partial class MySqlProvider : BaseOrmProvider
         }
         formatter = null;
         return false;
+    }
+    public int ExecuteBulkCopy(bool isUpdate, DbContext dbContext, SqlVisitor visitor, ITheaConnection connection, Type insertObjType, IEnumerable insertObjs, int? timeoutSeconds, string tableName = null)
+    {
+        var entityMapper = visitor.Tables[0].Mapper;
+        var memberMappers = visitor.GetRefMemberMappers(insertObjType, entityMapper, isUpdate);
+        var dataTable = visitor.ToDataTable(insertObjType, insertObjs, memberMappers, tableName ?? entityMapper.TableName);
+        if (dataTable.Rows.Count == 0) return 0;
+
+        connection.Open();
+        var dbConnection = connection.BaseConnection as MySqlConnection;
+        var transaction = dbContext.Transaction?.BaseTransaction as MySqlTransaction;
+        var bulkCopy = new MySqlBulkCopy(dbConnection, transaction);
+        if (timeoutSeconds.HasValue) bulkCopy.BulkCopyTimeout = timeoutSeconds.Value;
+        bulkCopy.DestinationTableName = dataTable.TableName;
+        for (int i = 0; i < dataTable.Columns.Count; i++)
+        {
+            bulkCopy.ColumnMappings.Add(new MySqlBulkCopyColumnMapping(i, dataTable.Columns[i].ColumnName));
+        }
+
+        var createdAt = DateTime.Now;
+        dbContext.DbInterceptors.OnCommandExecuting?.Invoke(new CommandEventArgs
+        {
+            DbKey = dbContext.DbKey,
+            ConnectionString = connection.ConnectionString,
+            SqlType = CommandSqlType.BulkCopyInsert,
+            CreatedAt = createdAt
+        });
+        int recordsAffected = 0;
+        bool isSuccess = true;
+        Exception exception = null;
+        try
+        {
+            var bulkCopyResult = bulkCopy.WriteToServer(dataTable);
+            recordsAffected = bulkCopyResult.RowsInserted;
+        }
+        catch (Exception ex)
+        {
+            exception = ex;
+            isSuccess = false;
+        }
+        finally
+        {
+            var elapsed = DateTime.Now.Subtract(createdAt).TotalMilliseconds;
+            dbContext.DbInterceptors.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs
+            {
+                DbKey = dbContext.DbKey,
+                ConnectionString = connection.ConnectionString,
+                SqlType = CommandSqlType.BulkCopyInsert,
+                IsSuccess = isSuccess,
+                Exception = exception,
+                Elapsed = (int)elapsed,
+                CreatedAt = createdAt
+            });
+        }
+        if (!isSuccess)
+        {
+            if (transaction == null) connection.Close();
+            throw exception;
+        }
+        return recordsAffected;
+    }
+    public async Task<int> ExecuteBulkCopyAsync(bool isUpdate, DbContext dbContext, SqlVisitor visitor, ITheaConnection connection, Type insertObjType, IEnumerable insertObjs, int? timeoutSeconds, CancellationToken cancellationToken = default, string tableName = null)
+    {
+        var entityMapper = visitor.Tables[0].Mapper;
+        var memberMappers = visitor.GetRefMemberMappers(insertObjType, entityMapper, isUpdate);
+        var dataTable = visitor.ToDataTable(insertObjType, insertObjs, memberMappers, tableName ?? entityMapper.TableName);
+        if (dataTable.Rows.Count == 0) return 0;
+
+        await connection.OpenAsync(cancellationToken);
+        var dbConnection = connection.BaseConnection as MySqlConnection;
+        var transaction = dbContext.Transaction?.BaseTransaction as MySqlTransaction;
+        var bulkCopy = new MySqlBulkCopy(dbConnection, transaction);
+        if (timeoutSeconds.HasValue) bulkCopy.BulkCopyTimeout = timeoutSeconds.Value;
+        bulkCopy.DestinationTableName = dataTable.TableName;
+        for (int i = 0; i < dataTable.Columns.Count; i++)
+        {
+            bulkCopy.ColumnMappings.Add(new MySqlBulkCopyColumnMapping(i, dataTable.Columns[i].ColumnName));
+        }
+
+        var createdAt = DateTime.Now;
+        dbContext.DbInterceptors.OnCommandExecuting?.Invoke(new CommandEventArgs
+        {
+            DbKey = dbContext.DbKey,
+            ConnectionString = connection.ConnectionString,
+            SqlType = CommandSqlType.BulkCopyInsert,
+            CreatedAt = createdAt
+        });
+        int recordsAffected = 0;
+        bool isSuccess = true;
+        Exception exception = null;
+        try
+        {
+            var bulkCopyResult = await bulkCopy.WriteToServerAsync(dataTable);
+            recordsAffected = bulkCopyResult.RowsInserted;
+        }
+        catch (Exception ex)
+        {
+            exception = ex;
+            isSuccess = false;
+        }
+        finally
+        {
+            var elapsed = DateTime.Now.Subtract(createdAt).TotalMilliseconds;
+            dbContext.DbInterceptors.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs
+            {
+                DbKey = dbContext.DbKey,
+                ConnectionString = connection.ConnectionString,
+                SqlType = CommandSqlType.BulkCopyInsert,
+                IsSuccess = isSuccess,
+                Exception = exception,
+                Elapsed = (int)elapsed,
+                CreatedAt = createdAt
+            });
+        }
+        if (!isSuccess)
+        {
+            if (transaction == null) await connection.CloseAsync();
+            throw exception;
+        }
+        return recordsAffected;
     }
 }

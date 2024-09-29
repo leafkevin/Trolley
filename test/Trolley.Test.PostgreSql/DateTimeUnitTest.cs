@@ -81,7 +81,7 @@ public class DateTimeUnitTest : UnitTestBase
                 IsEquals1 = f.UpdatedAt.Equals(localDate)
             })
             .ToSql(out var dbParameters);
-        Assert.Equal("SELECT CURRENT_TIMESTAMP AS \"Now\",TIMESTAMP '0001-01-01 00:00:00.000' AS \"MinValue\",TIMESTAMP '9999-12-31 23:59:59.999' AS \"MaxValue\",(CURRENT_TIMESTAMP AT TIME ZONE 'UTC') AS \"UtcNow\",CURRENT_DATE AS \"Today\",TIMESTAMP '1970-01-01 00:00:00.000' AS \"UnixEpoch\",TIMESTAMP '2023-05-06 00:00:00.000' AS \"Date\",CAST(CURRENT_TIMESTAMP AS DATE) AS \"CurrentDate\",@p0 AS \"localDate\",(a.\"UpdatedAt\"=TIMESTAMP '2023-03-25 00:00:00.000') AS \"IsEquals\",(a.\"UpdatedAt\"=@p1) AS \"IsEquals1\" FROM \"sys_user\" a WHERE a.\"Id\"=1", sql);
+        Assert.Equal("SELECT CURRENT_TIMESTAMP AS \"Now\",TIMESTAMP '0001-01-01 00:00:00.000' AS \"MinValue\",TIMESTAMP '9999-12-31 23:59:59.999' AS \"MaxValue\",(CURRENT_TIMESTAMP AT TIME ZONE 'UTC') AS \"UtcNow\",CURRENT_DATE AS \"Today\",TIMESTAMP '1970-01-01 00:00:00.000' AS \"UnixEpoch\",TIMESTAMP '2023-05-06 00:00:00.000' AS \"Date\",CURRENT_TIMESTAMP::DATE AS \"CurrentDate\",@p0 AS \"localDate\",(a.\"UpdatedAt\"=TIMESTAMP '2023-03-25 00:00:00.000') AS \"IsEquals\",(a.\"UpdatedAt\"=@p1) AS \"IsEquals1\" FROM \"sys_user\" a WHERE a.\"Id\"=1", sql);
         Assert.Equal(2, dbParameters.Count);
         Assert.True(dbParameters[0].Value.GetType() == typeof(DateTime));
         Assert.True(dbParameters[1].Value.GetType() == typeof(DateTime));

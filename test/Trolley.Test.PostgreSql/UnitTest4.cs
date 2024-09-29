@@ -80,9 +80,9 @@ public class UnitTest4 : UnitTestBase
         Assert.False(typeof(Collection<string>).IsEntityType(out _));
         Assert.False(typeof(DBNull).IsEntityType(out _));
 
-        var vt1 = ValueTuple.Create("kevin");
+        var vt1 = ("kevin");
         Assert.False(vt1.GetType().IsEntityType(out _));
-        var vt2 = ValueTuple.Create(1, "kevin", 25, 30000.00d);
+        var vt2 = (1, "kevin", 25, 30000.00d);
         Assert.True(vt2.GetType().IsEntityType(out _));
         Assert.True(typeof((string Name, int Age)).IsEntityType(out _));
         Assert.True(typeof(Dictionary<string, int>).IsEntityType(out _));

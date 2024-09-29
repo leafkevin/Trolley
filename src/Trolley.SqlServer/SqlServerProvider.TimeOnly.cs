@@ -1,4 +1,6 @@
-﻿using System;
+﻿#if NET6_0_OR_GREATER
+using System;
+#endif
 using System.Linq.Expressions;
 
 namespace Trolley.SqlServer;
@@ -9,8 +11,9 @@ partial class SqlServerProvider
     {
         bool result = false;
         formatter = null;
+#if NET6_0_OR_GREATER
         var memberInfo = memberExpr.Member;
-        var cacheKey = HashCode.Combine(memberInfo.DeclaringType, memberInfo);
+        var cacheKey = RepositoryHelper.GetCacheKey(memberInfo.DeclaringType, memberInfo);
         if (memberExpr.Expression == null)
         {
             switch (memberInfo.Name)
@@ -86,15 +89,17 @@ partial class SqlServerProvider
                     break;
             }
         }
+#endif
         return result;
     }
     public override bool TryGetTimeOnlyMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)
     {
         var result = false;
         formatter = null;
+#if NET6_0_OR_GREATER
         var methodInfo = methodCallExpr.Method;
         var parameterInfos = methodInfo.GetParameters();
-        var cacheKey = HashCode.Combine(methodInfo.DeclaringType, methodInfo);
+        var cacheKey = RepositoryHelper.GetCacheKey(methodInfo.DeclaringType, methodInfo);
         if (methodInfo.IsStatic)
         {
             switch (methodInfo.Name)
@@ -242,6 +247,7 @@ partial class SqlServerProvider
                     break;
             }
         }
+#endif
         return result;
     }
 }

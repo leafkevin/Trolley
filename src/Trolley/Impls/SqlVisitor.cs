@@ -14,7 +14,7 @@ namespace Trolley;
 public class SqlVisitor : ISqlVisitor
 {
     private static ConcurrentDictionary<int, Func<object, object>> memberGetterCache = new();
-    private static string[] calcOps = new string[] { ">", ">=", "<", "<=", "+", "-", "*", "/", "%", "&", "|", "^", "<<", ">>" };
+    private static string[] calcOps = { ">", ">=", "<", "<=", "+", "-", "*", "/", "%", "&", "|", "^", "<<", ">>" };
     private bool isDisposed;
 
     public DbContext DbContext { get; set; }
@@ -57,6 +57,7 @@ public class SqlVisitor : ISqlVisitor
     public bool IsNeedFetchShardingTables { get; set; }
     public List<TableSegment> ShardingTables { get; set; }
 
+    public SqlVisitor() { }
     public void UseTable(bool isIncludeMany, params string[] tableNames)
     {
         if (tableNames == null) throw new ArgumentNullException(nameof(tableNames));
@@ -1033,7 +1034,7 @@ public class SqlVisitor : ISqlVisitor
                                     Fields = cteQuery.ReaderFields,
                                     Body = cteQuery.Body
                                 };
-                                this.TableAliases.TryAdd(parameterName, tableSegment);
+                                this.TableAliases.Add(parameterName, tableSegment);
                                 removeTables.Add(tableSegment);
                                 builder.Append(this.OrmProvider.GetTableName(cteQuery.TableName));
                                 builder.Append($" {parameterName}");
@@ -1058,7 +1059,7 @@ public class SqlVisitor : ISqlVisitor
                                     Mapper = tableMapper
                                 };
                                 this.Tables.Add(tableSegment);
-                                this.TableAliases.TryAdd(aliasName, tableSegment);
+                                this.TableAliases.Add(aliasName, tableSegment);
                                 removeTables.Add(tableSegment);
                                 if (index > 0) builder.Append(',');
                                 builder.Append(this.OrmProvider.GetTableName(tableMapper.TableName));
@@ -1566,13 +1567,6 @@ public class SqlVisitor : ISqlVisitor
             else
             {
                 var dbFieldValue = sqlSegment.Value;
-                if (sqlSegment.ExpectType != null && sqlSegment.SegmentType != sqlSegment.ExpectType)
-                {
-                    if (sqlSegment.ExpectType.IsEnum)
-                        dbFieldValue = Enum.ToObject(sqlSegment.ExpectType, dbFieldValue);
-                    else dbFieldValue = Convert.ChangeType(dbFieldValue, sqlSegment.ExpectType);
-                    sqlSegment.SegmentType = sqlSegment.ExpectType;
-                }
                 if (sqlSegment.TypeHandler != null)
                 {
                     //枚举类型或是有强制转换时，要取sqlSegment.ExpectType值
@@ -1582,9 +1576,15 @@ public class SqlVisitor : ISqlVisitor
                         dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, sqlSegment.NativeDbType, dbFieldValue));
                     else dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, dbFieldValue));
                 }
-                //常量、方法调用、表达式计算等场景
                 else
                 {
+                    if (sqlSegment.ExpectType != null && sqlSegment.SegmentType != sqlSegment.ExpectType)
+                    {
+                        if (sqlSegment.ExpectType.IsEnum)
+                            dbFieldValue = Enum.ToObject(sqlSegment.ExpectType, dbFieldValue);
+                        else dbFieldValue = Convert.ChangeType(dbFieldValue, sqlSegment.ExpectType);
+                        sqlSegment.SegmentType = sqlSegment.ExpectType;
+                    }
                     if (sqlSegment.NativeDbType != null)
                     {
                         var targetType = this.OrmProvider.MapDefaultType(sqlSegment.NativeDbType);
@@ -1620,18 +1620,18 @@ public class SqlVisitor : ISqlVisitor
                 sqlSegment.Body = strFieldValue;
                 return sqlSegment.Body;
             }
-            if (sqlSegment.ExpectType != null && sqlSegment.SegmentType != sqlSegment.ExpectType)
-            {
-                if (sqlSegment.ExpectType.IsEnum)
-                    dbFieldValue = Enum.ToObject(sqlSegment.ExpectType, dbFieldValue);
-                else dbFieldValue = Convert.ChangeType(dbFieldValue, sqlSegment.ExpectType);
-                sqlSegment.SegmentType = sqlSegment.ExpectType;
-            }
             string body = null;
             if (sqlSegment.TypeHandler != null)
                 body = sqlSegment.TypeHandler.GetQuotedValue(this.OrmProvider, dbFieldValue);
             else
             {
+                if (sqlSegment.ExpectType != null && sqlSegment.SegmentType != sqlSegment.ExpectType)
+                {
+                    if (sqlSegment.ExpectType.IsEnum)
+                        dbFieldValue = Enum.ToObject(sqlSegment.ExpectType, dbFieldValue);
+                    else dbFieldValue = Convert.ChangeType(dbFieldValue, sqlSegment.ExpectType);
+                    sqlSegment.SegmentType = sqlSegment.ExpectType;
+                }
                 var targetType = sqlSegment.SegmentType;
                 if (sqlSegment.NativeDbType != null)
                 {
@@ -1641,6 +1641,12 @@ public class SqlVisitor : ISqlVisitor
                         var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, false);
                         dbFieldValue = valueGetter.Invoke(dbFieldValue);
                     }
+                }
+                //枚举类型常量，无法确定数据库是什么类型，取默认配置类型，通常是SELECT场景
+                else if (targetType.IsEnum)
+                {
+                    targetType = this.DbContext.DefaultEnumMapDbType;
+                    dbFieldValue = Convert.ChangeType(dbFieldValue, targetType);
                 }
                 body = this.OrmProvider.GetQuotedValue(targetType, dbFieldValue);
             }
@@ -1683,11 +1689,6 @@ public class SqlVisitor : ISqlVisitor
                 var nativeDbType = elementSegment.NativeDbType;
                 var typeHandler = elementSegment.TypeHandler;
 
-                if (expectType != null && segmentType != expectType)
-                {
-                    dbFieldValue = Enum.ToObject(expectType, dbFieldValue);
-                    segmentType = expectType;
-                }
                 if (typeHandler != null)
                 {
                     dbFieldValue = typeHandler.ToFieldValue(this.OrmProvider, dbFieldValue);
@@ -1697,6 +1698,11 @@ public class SqlVisitor : ISqlVisitor
                 }
                 else
                 {
+                    if (expectType != null && segmentType != expectType)
+                    {
+                        dbFieldValue = Enum.ToObject(expectType, dbFieldValue);
+                        segmentType = expectType;
+                    }
                     if (nativeDbType != null)
                     {
                         var targetType = this.OrmProvider.MapDefaultType(nativeDbType);
@@ -1720,16 +1726,15 @@ public class SqlVisitor : ISqlVisitor
             var nativeDbType = elementSegment.NativeDbType;
             var typeHandler = elementSegment.TypeHandler;
 
-            if (expectType != null && segmentType != expectType)
-            {
-                dbFieldValue = Enum.ToObject(expectType, dbFieldValue);
-                segmentType = expectType;
-            }
             if (typeHandler != null)
                 return typeHandler.GetQuotedValue(this.OrmProvider, dbFieldValue);
-            //常量、方法调用、表达式计算等场景
             else
             {
+                if (expectType != null && segmentType != expectType)
+                {
+                    dbFieldValue = Enum.ToObject(expectType, dbFieldValue);
+                    segmentType = expectType;
+                }
                 var targetType = segmentType;
                 if (nativeDbType != null)
                 {
@@ -1739,6 +1744,12 @@ public class SqlVisitor : ISqlVisitor
                         var valueGetter = this.OrmProvider.GetParameterValueGetter(segmentType, targetType, false);
                         dbFieldValue = valueGetter.Invoke(dbFieldValue);
                     }
+                }
+                //枚举类型常量，无法确定数据库是什么类型，取默认配置类型，通常是SELECT场景
+                else if (targetType.IsEnum)
+                {
+                    targetType = this.DbContext.DefaultEnumMapDbType;
+                    dbFieldValue = Convert.ChangeType(dbFieldValue, targetType);
                 }
                 return this.OrmProvider.GetQuotedValue(targetType, dbFieldValue);
             }
@@ -1879,6 +1890,7 @@ public class SqlVisitor : ISqlVisitor
             result = this.VisitMethodCall(sqlSegment.Next(operatorExpr));
             return true;
         }
+#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
         if (binaryExpr.Left.Type == typeof(TimeSpan) && binaryExpr.NodeType == ExpressionType.Multiply)
         {
             var rightExpr = binaryExpr.Right;
@@ -1903,6 +1915,7 @@ public class SqlVisitor : ISqlVisitor
             result = this.VisitMethodCall(sqlSegment.Next(operatorExpr));
             return true;
         }
+#endif
         result = null;
         return false;
     }
@@ -1948,13 +1961,13 @@ public class SqlVisitor : ISqlVisitor
                 result.Add(cteQueryObj);
         }
     }
-    public DataTable ToDataTable(Type parameterType, IEnumerable entities, List<(MemberMap RefMemberMapper, Func<object, object> ValueGetter)> memberMappers, string tableName = null)
+    public DataTable ToDataTable(Type parameterType, IEnumerable entities, List<(MemberMap, Func<object, object>)> memberMappers, string tableName = null)
     {
         var result = new DataTable();
         result.TableName = tableName;
         foreach (var memberMapper in memberMappers)
         {
-            var refMemberMapper = memberMapper.RefMemberMapper;
+            (var refMemberMapper, _) = memberMapper;
             var targetType = this.OrmProvider.MapDefaultType(refMemberMapper.NativeDbType);
             result.Columns.Add(refMemberMapper.FieldName, targetType);
         }
@@ -1963,14 +1976,14 @@ public class SqlVisitor : ISqlVisitor
             var row = new object[memberMappers.Count];
             for (var i = 0; i < memberMappers.Count; i++)
             {
-                var memberMapper = memberMappers[i].RefMemberMapper;
-                row[i] = memberMappers[i].ValueGetter.Invoke(entity);
+                (_, var valueGetter) = memberMappers[i];
+                row[i] = valueGetter.Invoke(entity);
             }
             result.Rows.Add(row);
         }
         return result;
     }
-    public List<(MemberMap RefMemberMapper, Func<object, object> ValueGetter)> GetRefMemberMappers(Type parameterType, EntityMap refEntityMapper, bool isUpdate = false)
+    public List<(MemberMap, Func<object, object>)> GetRefMemberMappers(Type parameterType, EntityMap refEntityMapper, bool isUpdate = false)
     {
         var memberInfos = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
             .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
@@ -2122,6 +2135,28 @@ public class SqlVisitor : ISqlVisitor
             sqlSegment.Value = Enum.GetName(sqlSegment.SegmentType, sqlSegment.Value);
         sqlSegment.SegmentType = typeof(string);
         return sqlSegment;
+    }
+    public Expression EnsureMemberVisit(Expression expr)
+    {
+        var myExpr = expr;
+        while (myExpr is not MemberExpression memberExpr)
+        {
+            if (myExpr is UnaryExpression unaryExpr)
+                myExpr = unaryExpr.Operand;
+            else throw new NotSupportedException($"不支持的表达式解析:{myExpr}->MemberExpression");
+        }
+        return myExpr;
+    }
+    public bool IsMemberVisit(Expression expr)
+    {
+        var myExpr = expr;
+        while (myExpr is not MemberExpression memberExpr)
+        {
+            if (myExpr is UnaryExpression unaryExpr)
+                myExpr = unaryExpr.Operand;
+            else throw new NotSupportedException($"不支持的表达式解析:{myExpr}->MemberExpression");
+        }
+        return myExpr.NodeType == ExpressionType.MemberAccess;
     }
     public virtual void Dispose()
     {

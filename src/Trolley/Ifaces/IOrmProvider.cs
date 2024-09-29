@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
 using System.Linq.Expressions;
 
 namespace Trolley;
@@ -22,7 +23,7 @@ public interface IOrmProvider
     Type NativeDbTypeType { get; }
     string DefaultTableSchema { get; }
     ICollection<ITypeHandler> TypeHandlers { get; }
-    IDbConnection CreateConnection(string connectionString);
+    ITheaConnection CreateConnection(string dbKey, string connectionString);
     IDbCommand CreateCommand();
     IDbDataParameter CreateParameter(string parameterName, object value);
     IDbDataParameter CreateParameter(string parameterName, object nativeDbType, object value);
@@ -148,7 +149,7 @@ public interface IOrmProvider
     ICreated<TEntity> NewCreated<TEntity>(DbContext dbContext, ICreateVisitor visitor);
     IContinuedCreate<TEntity> NewContinuedCreate<TEntity>(DbContext dbContext, ICreateVisitor visitor);
 
-    IUpdate<TEntity> NewUpdate<TEntity>(DbContext dbContext) => new Update<TEntity>(dbContext);
+    IUpdate<TEntity> NewUpdate<TEntity>(DbContext dbContext);
     IUpdated<TEntity> NewUpdated<TEntity>(DbContext dbContext, IUpdateVisitor visitor);
     IContinuedUpdate<TEntity> NewContinuedUpdate<TEntity>(DbContext dbContext, IUpdateVisitor visitor);
     IUpdateJoin<TEntity, T1> NewUpdateJoin<TEntity, T1>(DbContext dbContext, IUpdateVisitor visitor);

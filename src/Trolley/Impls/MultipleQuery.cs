@@ -118,11 +118,11 @@ public class MultipleQuery : IMultipleQuery, IDisposable
             throw new ArgumentNullException(nameof(rawSql));
 
         var targetType = typeof(TEntity);
-        Func<IDataReader, object> readerGetter;
+        Func<ITheaDataReader, object> readerGetter;
         if (targetType.IsEntityType(out _))
             readerGetter = reader => reader.To<TEntity>(this.DbContext);
         else readerGetter = reader => reader.To<TEntity>(this.OrmProvider);
-        this.AddReader(targetType, rawSql, readerGetter);
+        this.AddReader(targetType, rawSql, readerGetter, true);
         return this;
     }
     public IMultipleQuery QueryFirst<TEntity>(string rawSql, object parameters)
@@ -136,11 +136,11 @@ public class MultipleQuery : IMultipleQuery, IDisposable
         commandInitializer.Invoke(this.Command.Parameters, this.OrmProvider, parameters);
 
         var targetType = typeof(TEntity);
-        Func<IDataReader, object> readerGetter;
+        Func<ITheaDataReader, object> readerGetter;
         if (targetType.IsEntityType(out _))
             readerGetter = reader => reader.To<TEntity>(this.DbContext);
         else readerGetter = reader => reader.To<TEntity>(this.OrmProvider);
-        this.AddReader(targetType, rawSql, readerGetter);
+        this.AddReader(targetType, rawSql, readerGetter, true);
         return this;
     }
     public IMultipleQuery QueryFirst<TEntity>(object whereObj)
@@ -154,8 +154,8 @@ public class MultipleQuery : IMultipleQuery, IDisposable
         var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string, string>;
         var sql = typedCommandInitializer.Invoke(this.Command.Parameters, this.OrmProvider, whereObj, $"_m{this.ReaderAfters.Count}");
 
-        Func<IDataReader, object> readerGetter = reader => reader.To<TEntity>(this.DbContext);
-        this.AddReader(targetType, sql, readerGetter);
+        Func<ITheaDataReader, object> readerGetter = reader => reader.To<TEntity>(this.DbContext);
+        this.AddReader(targetType, sql, readerGetter, true);
         return this;
     }
     public IMultipleQuery Query<TEntity>(string rawSql)
@@ -164,11 +164,11 @@ public class MultipleQuery : IMultipleQuery, IDisposable
             throw new ArgumentNullException(nameof(rawSql));
 
         var targetType = typeof(TEntity);
-        Func<IDataReader, object> readerGetter;
+        Func<ITheaDataReader, object> readerGetter;
         if (targetType.IsEntityType(out _))
             readerGetter = reader => reader.To<TEntity>(this.DbContext);
         else readerGetter = reader => reader.To<TEntity>(this.OrmProvider);
-        this.AddReader(targetType, rawSql, readerGetter);
+        this.AddReader(targetType, rawSql, readerGetter, false);
         return this;
     }
     public IMultipleQuery Query<TEntity>(string rawSql, object parameters)
@@ -182,11 +182,11 @@ public class MultipleQuery : IMultipleQuery, IDisposable
         commandInitializer.Invoke(this.Command.Parameters, this.OrmProvider, parameters);
 
         var targetType = typeof(TEntity);
-        Func<IDataReader, object> readerGetter;
+        Func<ITheaDataReader, object> readerGetter;
         if (targetType.IsEntityType(out _))
             readerGetter = reader => reader.To<TEntity>(this.DbContext);
         else readerGetter = reader => reader.To<TEntity>(this.OrmProvider);
-        this.AddReader(targetType, rawSql, readerGetter);
+        this.AddReader(targetType, rawSql, readerGetter, false);
         return this;
     }
     public IMultipleQuery Query<TEntity>(object whereObj)
@@ -200,8 +200,8 @@ public class MultipleQuery : IMultipleQuery, IDisposable
         var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string, string>;
         var sql = typedCommandInitializer.Invoke(this.Command.Parameters, this.OrmProvider, whereObj, $"_m{this.ReaderAfters.Count}");
 
-        Func<IDataReader, object> readerGetter = reader => reader.To<TEntity>(this.DbContext);
-        this.AddReader(targetType, sql, readerGetter);
+        Func<ITheaDataReader, object> readerGetter = reader => reader.To<TEntity>(this.DbContext);
+        this.AddReader(targetType, sql, readerGetter, false);
         return this;
     }
     #endregion
@@ -218,8 +218,8 @@ public class MultipleQuery : IMultipleQuery, IDisposable
         var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string, string>;
         var sql = typedCommandInitializer.Invoke(this.Command.Parameters, this.OrmProvider, whereObj, $"_m{this.ReaderAfters.Count}");
 
-        Func<IDataReader, object> readerGetter = reader => reader.To<TEntity>(this.DbContext);
-        this.AddReader(targetType, sql, readerGetter);
+        Func<ITheaDataReader, object> readerGetter = reader => reader.To<TEntity>(this.DbContext);
+        this.AddReader(targetType, sql, readerGetter, false);
         return this;
     }
     #endregion
@@ -236,8 +236,8 @@ public class MultipleQuery : IMultipleQuery, IDisposable
         var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string, string>;
         var sql = typedCommandInitializer.Invoke(this.Command.Parameters, this.OrmProvider, whereObj, $"_m{this.ReaderAfters.Count}");
 
-        Func<IDataReader, object> readerGetter = reader => reader.To<int>(this.OrmProvider) > 0;
-        this.AddReader(typeof(int), sql, readerGetter);
+        Func<ITheaDataReader, object> readerGetter = reader => reader.To<int>(this.OrmProvider) > 0;
+        this.AddReader(typeof(int), sql, readerGetter, true);
         return this;
     }
     public IMultipleQuery Exists<TEntity>(Expression<Func<TEntity, bool>> wherePredicate = null)
@@ -252,14 +252,14 @@ public class MultipleQuery : IMultipleQuery, IDisposable
             sql = this.From<TEntity>().Where(wherePredicate).Select(f => Sql.Count()).ToSql(out _);
         else sql = this.From<TEntity>().Select(f => Sql.Count()).ToSql(out _);
 
-        Func<IDataReader, object> readerGetter = reader => reader.To<int>(this.OrmProvider) > 0;
-        this.AddReader(typeof(int), sql, readerGetter);
+        Func<ITheaDataReader, object> readerGetter = reader => reader.To<int>(this.OrmProvider) > 0;
+        this.AddReader(typeof(int), sql, readerGetter, true);
         return this;
     }
     #endregion
 
     #region AddReader/BuildSql
-    public void AddReader(Type targetType, string sql, Func<IDataReader, object> readerGetter, IQueryVisitor queryVisitor = null, int pageNumber = 0, int pageSize = 0)
+    public void AddReader(Type targetType, string sql, Func<ITheaDataReader, object> readerGetter, bool isSingle, IQueryVisitor queryVisitor = null, int pageNumber = 0, int pageSize = 0)
     {
         if (this.sqlBuilder.Length > 0)
             this.sqlBuilder.Append(';');
@@ -269,6 +269,7 @@ public class MultipleQuery : IMultipleQuery, IDisposable
             TargetType = targetType,
             ReaderGetter = readerGetter,
             QueryVisitor = queryVisitor,
+            IsSingle = isSingle,
             PageNumber = pageNumber,
             PageSize = pageSize
         });
@@ -302,8 +303,9 @@ public class MultipleQuery : IMultipleQuery, IDisposable
 public class ReaderAfter
 {
     public Type TargetType { get; set; }
-    public Func<IDataReader, object> ReaderGetter { get; set; }
+    public Func<ITheaDataReader, object> ReaderGetter { get; set; }
     public IQueryVisitor QueryVisitor { get; set; }
+    public bool IsSingle { get; set; }
     public int PageNumber { get; set; }
     public int PageSize { get; set; }
 }

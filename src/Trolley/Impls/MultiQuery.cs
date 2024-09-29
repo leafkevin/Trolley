@@ -52,8 +52,8 @@ public class MultiQueryBase : IMultiQueryBase
     {
         this.Visitor.Select(sqlFormat, fieldExpr);
         var sql = this.Visitor.BuildSql(out _);
-        Func<IDataReader, object> readerGetter = reader => reader.To<TTarget>(this.OrmProvider);
-        this.MultipleQuery.AddReader(typeof(TTarget), sql, readerGetter);
+        Func<ITheaDataReader, object> readerGetter = reader => reader.To<TTarget>(this.OrmProvider);
+        this.MultipleQuery.AddReader(typeof(TTarget), sql, readerGetter, true);
         return this.MultipleQuery;
     }
     #endregion
@@ -466,9 +466,9 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
     #endregion
 
     #region First/ToList/ToPageList/ToDictionary
-    public IMultipleQuery First() => this.QueryResult();
-    public IMultipleQuery ToList() => this.QueryResult();
-    public IMultipleQuery ToPageList() => this.QueryResult();
+    public IMultipleQuery First() => this.QueryResult(true);
+    public IMultipleQuery ToList() => this.QueryResult(false);
+    public IMultipleQuery ToPageList() => this.QueryResult(false);
     public IMultipleQuery ToDictionary<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector) where TKey : notnull
     {
         if (keySelector == null)
@@ -476,25 +476,25 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
         if (valueSelector == null)
             throw new ArgumentNullException(nameof(valueSelector));
 
-        return this.QueryResult();
+        return this.QueryResult(false);
     }
     #endregion
 
     #region QueryResult
-    private IMultipleQuery QueryResult()
+    private IMultipleQuery QueryResult(bool isSingle)
     {
         Expression<Func<T, T>> defaultExpr = f => f;
         this.Visitor.SelectDefault(defaultExpr);
         var sql = this.Visitor.BuildSql(out var readerFields);
         var targetType = typeof(T);
-        Func<IDataReader, object> readerGetter = null;
+        Func<ITheaDataReader, object> readerGetter = null;
         if (targetType.IsEntityType(out _))
             readerGetter = reader => reader.To<T>(this.DbContext, readerFields);
         else readerGetter = reader => reader.To<T>(this.OrmProvider);
         IQueryVisitor queryVisitor = null;
         if (this.Visitor.HasIncludeTables())
             queryVisitor = this.Visitor;
-        this.MultipleQuery.AddReader(targetType, sql, readerGetter, queryVisitor, this.pageNumber, this.pageSize);
+        this.MultipleQuery.AddReader(targetType, sql, readerGetter, isSingle, queryVisitor, this.pageNumber, this.pageSize);
         return this.MultipleQuery;
     }
     #endregion

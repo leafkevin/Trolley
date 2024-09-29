@@ -11,7 +11,7 @@ partial class SqlServerProvider
         formatter = null;
         var methodInfo = methodCallExpr.Method;
         var parameterInfos = methodInfo.GetParameters();
-        var cacheKey = HashCode.Combine(methodInfo.DeclaringType, methodInfo);
+        var cacheKey = RepositoryHelper.GetCacheKey(methodInfo.DeclaringType, methodInfo);
         switch (methodInfo.Name)
         {
             case "Abs":

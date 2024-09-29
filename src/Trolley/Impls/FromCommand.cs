@@ -31,32 +31,14 @@ public class FromCommand : QueryInternal, IFromCommand
     {
         if (this.Visitor.IsNeedFetchShardingTables)
             this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
-        int result = 0;
-        Exception exception = null;
-        CommandEventArgs eventArgs = null;
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        try
-        {
-            command.CommandText = this.Visitor.BuildCommandSql(out var dbParameters);
-            dbParameters.CopyTo(command.Parameters);
-            this.DbContext.Open(connection);
-            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Insert);
-            result = command.ExecuteNonQuery();
-        }
-        catch (Exception ex)
-        {
-            isNeedClose = true;
-            exception = ex;
-            this.DbContext.AddCommandFailedFilter(connection, command, CommandSqlType.Insert, eventArgs, exception);
-        }
-        finally
-        {
-            this.DbContext.AddCommandAfterFilter(connection, command, CommandSqlType.Insert, eventArgs, exception == null, exception);
-            command.Parameters.Clear();
-            command.Dispose();
-            if (isNeedClose) this.DbContext.Close(connection);
-        }
-        if (exception != null) throw exception;
+        command.CommandText = this.Visitor.BuildCommandSql(out var dbParameters);
+        dbParameters.CopyTo(command.Parameters);
+        connection.Open();
+        var result = command.ExecuteNonQuery(CommandSqlType.Insert);
+        command.Parameters.Clear();
+        command.Dispose();
+        if (isNeedClose) connection.Close();
         return result;
     }
     public virtual async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
@@ -64,32 +46,14 @@ public class FromCommand : QueryInternal, IFromCommand
         if (this.Visitor.IsNeedFetchShardingTables)
             await this.DbContext.FetchShardingTablesAsync(this.Visitor as SqlVisitor, cancellationToken);
 
-        int result = 0;
-        Exception exception = null;
-        CommandEventArgs eventArgs = null;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterDbCommand();
-        try
-        {
-            command.CommandText = this.Visitor.BuildCommandSql(out var dbParameters);
-            dbParameters.CopyTo(command.Parameters);
-            await this.DbContext.OpenAsync(connection, cancellationToken);
-            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Insert);
-            result = await command.ExecuteNonQueryAsync(cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            isNeedClose = true;
-            exception = ex;
-            this.DbContext.AddCommandFailedFilter(connection, command, CommandSqlType.Insert, eventArgs, exception);
-        }
-        finally
-        {
-            this.DbContext.AddCommandAfterFilter(connection, command, CommandSqlType.Insert, eventArgs, exception == null, exception);
-            command.Parameters.Clear();
-            await command.DisposeAsync();
-            if (isNeedClose) await this.DbContext.CloseAsync(connection);
-        }
-        if (exception != null) throw exception;
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        command.CommandText = this.Visitor.BuildCommandSql(out var dbParameters);
+        dbParameters.CopyTo(command.Parameters);
+        await connection.OpenAsync(cancellationToken);
+        var result = await command.ExecuteNonQueryAsync(CommandSqlType.Insert, cancellationToken);
+        command.Parameters.Clear();
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
         return result;
     }
     #endregion

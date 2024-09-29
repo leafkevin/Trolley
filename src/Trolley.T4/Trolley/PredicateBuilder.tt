@@ -26,6 +26,11 @@ public class PredicateBuilder
 public class PredicateBuilder<T>
 {
     private Expression<Func<T, bool>> expression;
+    public PredicateBuilder<T> Where(Expression<Func<T, bool>> predicate)
+    {
+        this.expression = predicate;
+        return this;
+    }
     public PredicateBuilder<T> And(Expression<Func<T, bool>> predicate) => this.Merge(Expression.AndAlso, predicate);
     public PredicateBuilder<T> And(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
         => this.Merge(condition, Expression.AndAlso, ifPredicate, elsePredicate);
@@ -55,7 +60,7 @@ public class PredicateBuilder<T>
         if (condition) this.Not();
         return this;
     }
-    public Expression<Func<T, bool>> Build() => this.expression as Expression<Func<T, bool>>;
+    public Expression<Func<T, bool>> Build() => this.expression;
     private PredicateBuilder<T> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<T, bool>> predicate)
     {
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));
@@ -83,6 +88,11 @@ public class PredicateBuilder<T>
 public class PredicateBuilder<<#=tables#>>
 {
     private Expression<Func<<#=tables#>, bool>> expression;
+    public PredicateBuilder<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate)
+    {
+        this.expression = predicate;
+        return this;
+    }
     public PredicateBuilder<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate) => this.Merge(Expression.AndAlso, predicate);
     public PredicateBuilder<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
         => this.Merge(condition, Expression.AndAlso, ifPredicate, elsePredicate);
@@ -112,7 +122,7 @@ public class PredicateBuilder<<#=tables#>>
         if (condition) this.Not();
         return this;
     }
-    public Expression<Func<<#=tables#>, bool>> Build() => this.expression as Expression<Func<<#=tables#>, bool>>;
+    public Expression<Func<<#=tables#>, bool>> Build() => this.expression;
     private PredicateBuilder<<#=tables#>> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<<#=tables#>, bool>> predicate)
     {
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));

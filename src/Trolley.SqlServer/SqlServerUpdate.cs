@@ -19,47 +19,47 @@ public class SqlServerUpdate<TEntity> : Update<TEntity>, ISqlServerUpdate<TEntit
     #endregion
 
     #region Sharding
-    public override ISqlServerUpdate<TEntity> UseTable(params string[] tableNames)
+    public new ISqlServerUpdate<TEntity> UseTable(params string[] tableNames)
 		=> base.UseTable(tableNames) as ISqlServerUpdate<TEntity>;
-    public override ISqlServerUpdate<TEntity> UseTable(Func<string, bool> tableNamePredicate)
+    public new ISqlServerUpdate<TEntity> UseTable(Func<string, bool> tableNamePredicate)
 		=> base.UseTable(tableNamePredicate) as ISqlServerUpdate<TEntity>;
-    public override ISqlServerUpdate<TEntity> UseTableBy(object field1Value, object field2Value = null)
+    public new ISqlServerUpdate<TEntity> UseTableBy(object field1Value, object field2Value = null)
     	=> base.UseTableBy(field1Value, field2Value) as ISqlServerUpdate<TEntity>;
-    public override ISqlServerUpdate<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue)
+    public new ISqlServerUpdate<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue)
         => base.UseTableByRange(beginFieldValue, endFieldValue) as ISqlServerUpdate<TEntity>;
 
-    public override ISqlServerUpdate<TEntity> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public new ISqlServerUpdate<TEntity> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
         => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as ISqlServerUpdate<TEntity>;
     #endregion
 
     #region Set
-    public override ISqlServerContinuedUpdate<TEntity> Set<TFields>(TFields setObj)
+    public new ISqlServerContinuedUpdate<TEntity> Set<TFields>(TFields setObj)
         => this.Set(true, setObj);
-    public override ISqlServerContinuedUpdate<TEntity> Set<TFields>(bool condition, TFields setObj)
+    public new ISqlServerContinuedUpdate<TEntity> Set<TFields>(bool condition, TFields setObj)
         => base.Set(condition, setObj) as ISqlServerContinuedUpdate<TEntity>;
-    public override ISqlServerContinuedUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
+    public new ISqlServerContinuedUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
         => this.Set(true, fieldSelector, fieldValue);
-    public override ISqlServerContinuedUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
+    public new ISqlServerContinuedUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
         => base.Set(condition, fieldSelector, fieldValue) as ISqlServerContinuedUpdate<TEntity>;
-    public override ISqlServerContinuedUpdate<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsAssignment)
+    public new ISqlServerContinuedUpdate<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsAssignment)
         => this.Set(true, fieldsAssignment);
-    public override ISqlServerContinuedUpdate<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment)
+    public new ISqlServerContinuedUpdate<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment)
         => base.Set(condition, fieldsAssignment) as ISqlServerContinuedUpdate<TEntity>;
     #endregion
 
     #region SetFrom    
-    public override ISqlServerContinuedUpdate<TEntity> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
+    public new ISqlServerContinuedUpdate<TEntity> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
         => this.SetFrom(true, fieldSelector, valueSelector);
-    public override ISqlServerContinuedUpdate<TEntity> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
+    public new ISqlServerContinuedUpdate<TEntity> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
         => base.SetFrom(condition, fieldSelector, valueSelector) as ISqlServerContinuedUpdate<TEntity>;
-    public override ISqlServerContinuedUpdate<TEntity> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
+    public new ISqlServerContinuedUpdate<TEntity> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
         => this.SetFrom(true, fieldsAssignment);
-    public override ISqlServerContinuedUpdate<TEntity> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
+    public new ISqlServerContinuedUpdate<TEntity> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
         => base.SetFrom(condition, fieldsAssignment) as ISqlServerContinuedUpdate<TEntity>;
     #endregion
 
     #region SetBulk
-    public override ISqlServerContinuedUpdate<TEntity> SetBulk<TUpdateObj>(IEnumerable<TUpdateObj> updateObjs, int bulkCount = 500)
+    public new ISqlServerContinuedUpdate<TEntity> SetBulk<TUpdateObj>(IEnumerable<TUpdateObj> updateObjs, int bulkCount = 500)
         => base.SetBulk(updateObjs, bulkCount) as ISqlServerContinuedUpdate<TEntity>;
     #endregion
 

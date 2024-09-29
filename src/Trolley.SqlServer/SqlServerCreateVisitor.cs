@@ -94,7 +94,6 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
         }
         var sql = builder.ToString();
         builder.Clear();
-        builder = null;
         return sql;
     }
     public override (bool, string, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
@@ -112,17 +111,12 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
         }
         insertObjType = firstInsertObj.GetType();
         var tableSegment = this.Tables[0];
-        var tableName = tableSegment.Mapper.TableName;
         var entityType = tableSegment.EntityType;
-
+        string tableName = tableSegment.Mapper.TableName;
         if (tableSegment.IsSharding)
-        {
-            //有设置分表，优先使用分表，没有设置分表，则根据数据的字段确定分表
-            if (!string.IsNullOrEmpty(tableSegment.Body))
-                tableName = tableSegment.Body;
-            //未指定分表，需要根据数据字段确定分表
-            else isNeedSplit = true;
-        }
+            tableName = tableSegment.Body;
+        else isNeedSplit = this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out _);
+
         var fieldsSqlPartSetter = RepositoryHelper.BuildCreateFieldsSqlPart(this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames);
         var valuesSqlPartSetter = RepositoryHelper.BuildCreateValuesSqlParametes(this.OrmProvider, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames, true);
         bool isDictionary = typeof(IDictionary<string, object>).IsAssignableFrom(insertObjType);
@@ -371,7 +365,7 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
         var readerFields = new List<SqlFieldSegment>();
         var entityMapper = this.Tables[0].Mapper;
         var builder = new StringBuilder();
-        Action<MemberMap> addReaderField = memberMapper =>
+        void addReaderField(MemberMap memberMapper)
         {
             readerFields.Add(new SqlFieldSegment
             {
@@ -383,7 +377,7 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
                 TypeHandler = memberMapper.TypeHandler,
                 Body = memberMapper.FieldName
             });
-        };
+        }
         builder.Append(" OUTPUT ");
         for (int i = 0; i < this.OutputFieldNames.Count; i++)
         {
@@ -398,18 +392,17 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
                     if (memberMapper.IsIgnore || memberMapper.IsNavigation
                         || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
                         continue;
-                    addReaderField.Invoke(memberMapper);
+                    addReaderField(memberMapper);
                 }
             }
             else
             {
                 var memberMapper = entityMapper.GetMemberMapByFieldName(fieldName);
-                addReaderField.Invoke(memberMapper);
+                addReaderField(memberMapper);
             }
         }
         var sql = builder.ToString();
         builder.Clear();
-        builder = null;
         return (sql, readerFields);
     }
 }

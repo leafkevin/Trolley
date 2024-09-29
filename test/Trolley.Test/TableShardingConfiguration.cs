@@ -60,7 +60,7 @@ public class TableShardingConfiguration : ITableShardingConfiguration
             ////按照Id字段分表，Id字段是带有时间属性的ObjectId
             //.UseTable<Order>(t => t.DependOn(d => d.Id).UseRule((origName, id) => $"{origName}_{new DateTime(ObjectId.Parse(id).Timestamp):yyyyMM}", "^sys_order_\\S{24}$"))
             ////按照Id字段哈希取模分表
-            //.UseTable<Order>(t => t.DependOn(d => d.Id).UseRule((origName, id) => $"{origName}_{HashCode.Combine(id) % 5}", "^sys_order_\\S{24}$"))
+            //.UseTable<Order>(t => t.DependOn(d => d.Id).UseRule((origName, id) => $"{origName}_{RepositoryHelper.GetCacheKey(id) % 5}", "^sys_order_\\S{24}$"))
             //按照租户ID分表
             .Table<User>(t => t.DependOn(d => d.TenantId).UseRule((origName, tenantId) => tenantId.Length >= 3 ? $"{origName}_{tenantId}" : origName, "^sys_user_\\d{1,4}$"));
     }

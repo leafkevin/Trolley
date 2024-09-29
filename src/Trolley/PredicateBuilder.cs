@@ -25,6 +25,11 @@ public class PredicateBuilder
 public class PredicateBuilder<T>
 {
     private Expression<Func<T, bool>> expression;
+    public PredicateBuilder<T> Where(Expression<Func<T, bool>> predicate)
+    {
+        this.expression = predicate;
+        return this;
+    }
     public PredicateBuilder<T> And(Expression<Func<T, bool>> predicate) => this.Merge(Expression.AndAlso, predicate);
     public PredicateBuilder<T> And(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
         => this.Merge(condition, Expression.AndAlso, ifPredicate, elsePredicate);
@@ -54,7 +59,7 @@ public class PredicateBuilder<T>
         if (condition) this.Not();
         return this;
     }
-    public Expression<Func<T, bool>> Build() => this.expression as Expression<Func<T, bool>>;
+    public Expression<Func<T, bool>> Build() => this.expression;
     private PredicateBuilder<T> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<T, bool>> predicate)
     {
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));
@@ -76,6 +81,11 @@ public class PredicateBuilder<T>
 public class PredicateBuilder<T1, T2>
 {
     private Expression<Func<T1, T2, bool>> expression;
+    public PredicateBuilder<T1, T2> Where(Expression<Func<T1, T2, bool>> predicate)
+    {
+        this.expression = predicate;
+        return this;
+    }
     public PredicateBuilder<T1, T2> And(Expression<Func<T1, T2, bool>> predicate) => this.Merge(Expression.AndAlso, predicate);
     public PredicateBuilder<T1, T2> And(bool condition, Expression<Func<T1, T2, bool>> ifPredicate, Expression<Func<T1, T2, bool>> elsePredicate = null)
         => this.Merge(condition, Expression.AndAlso, ifPredicate, elsePredicate);
@@ -105,7 +115,7 @@ public class PredicateBuilder<T1, T2>
         if (condition) this.Not();
         return this;
     }
-    public Expression<Func<T1, T2, bool>> Build() => this.expression as Expression<Func<T1, T2, bool>>;
+    public Expression<Func<T1, T2, bool>> Build() => this.expression;
     private PredicateBuilder<T1, T2> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<T1, T2, bool>> predicate)
     {
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));
@@ -127,6 +137,11 @@ public class PredicateBuilder<T1, T2>
 public class PredicateBuilder<T1, T2, T3>
 {
     private Expression<Func<T1, T2, T3, bool>> expression;
+    public PredicateBuilder<T1, T2, T3> Where(Expression<Func<T1, T2, T3, bool>> predicate)
+    {
+        this.expression = predicate;
+        return this;
+    }
     public PredicateBuilder<T1, T2, T3> And(Expression<Func<T1, T2, T3, bool>> predicate) => this.Merge(Expression.AndAlso, predicate);
     public PredicateBuilder<T1, T2, T3> And(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate, Expression<Func<T1, T2, T3, bool>> elsePredicate = null)
         => this.Merge(condition, Expression.AndAlso, ifPredicate, elsePredicate);
@@ -156,7 +171,7 @@ public class PredicateBuilder<T1, T2, T3>
         if (condition) this.Not();
         return this;
     }
-    public Expression<Func<T1, T2, T3, bool>> Build() => this.expression as Expression<Func<T1, T2, T3, bool>>;
+    public Expression<Func<T1, T2, T3, bool>> Build() => this.expression;
     private PredicateBuilder<T1, T2, T3> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<T1, T2, T3, bool>> predicate)
     {
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));
@@ -178,6 +193,11 @@ public class PredicateBuilder<T1, T2, T3>
 public class PredicateBuilder<T1, T2, T3, T4>
 {
     private Expression<Func<T1, T2, T3, T4, bool>> expression;
+    public PredicateBuilder<T1, T2, T3, T4> Where(Expression<Func<T1, T2, T3, T4, bool>> predicate)
+    {
+        this.expression = predicate;
+        return this;
+    }
     public PredicateBuilder<T1, T2, T3, T4> And(Expression<Func<T1, T2, T3, T4, bool>> predicate) => this.Merge(Expression.AndAlso, predicate);
     public PredicateBuilder<T1, T2, T3, T4> And(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null)
         => this.Merge(condition, Expression.AndAlso, ifPredicate, elsePredicate);
@@ -207,7 +227,7 @@ public class PredicateBuilder<T1, T2, T3, T4>
         if (condition) this.Not();
         return this;
     }
-    public Expression<Func<T1, T2, T3, T4, bool>> Build() => this.expression as Expression<Func<T1, T2, T3, T4, bool>>;
+    public Expression<Func<T1, T2, T3, T4, bool>> Build() => this.expression;
     private PredicateBuilder<T1, T2, T3, T4> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<T1, T2, T3, T4, bool>> predicate)
     {
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));
@@ -229,6 +249,11 @@ public class PredicateBuilder<T1, T2, T3, T4>
 public class PredicateBuilder<T1, T2, T3, T4, T5>
 {
     private Expression<Func<T1, T2, T3, T4, T5, bool>> expression;
+    public PredicateBuilder<T1, T2, T3, T4, T5> Where(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
+    {
+        this.expression = predicate;
+        return this;
+    }
     public PredicateBuilder<T1, T2, T3, T4, T5> And(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate) => this.Merge(Expression.AndAlso, predicate);
     public PredicateBuilder<T1, T2, T3, T4, T5> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null)
         => this.Merge(condition, Expression.AndAlso, ifPredicate, elsePredicate);
@@ -258,7 +283,7 @@ public class PredicateBuilder<T1, T2, T3, T4, T5>
         if (condition) this.Not();
         return this;
     }
-    public Expression<Func<T1, T2, T3, T4, T5, bool>> Build() => this.expression as Expression<Func<T1, T2, T3, T4, T5, bool>>;
+    public Expression<Func<T1, T2, T3, T4, T5, bool>> Build() => this.expression;
     private PredicateBuilder<T1, T2, T3, T4, T5> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
     {
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));
@@ -280,6 +305,11 @@ public class PredicateBuilder<T1, T2, T3, T4, T5>
 public class PredicateBuilder<T1, T2, T3, T4, T5, T6>
 {
     private Expression<Func<T1, T2, T3, T4, T5, T6, bool>> expression;
+    public PredicateBuilder<T1, T2, T3, T4, T5, T6> Where(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate)
+    {
+        this.expression = predicate;
+        return this;
+    }
     public PredicateBuilder<T1, T2, T3, T4, T5, T6> And(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate) => this.Merge(Expression.AndAlso, predicate);
     public PredicateBuilder<T1, T2, T3, T4, T5, T6> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> elsePredicate = null)
         => this.Merge(condition, Expression.AndAlso, ifPredicate, elsePredicate);
@@ -309,7 +339,7 @@ public class PredicateBuilder<T1, T2, T3, T4, T5, T6>
         if (condition) this.Not();
         return this;
     }
-    public Expression<Func<T1, T2, T3, T4, T5, T6, bool>> Build() => this.expression as Expression<Func<T1, T2, T3, T4, T5, T6, bool>>;
+    public Expression<Func<T1, T2, T3, T4, T5, T6, bool>> Build() => this.expression;
     private PredicateBuilder<T1, T2, T3, T4, T5, T6> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate)
     {
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));
@@ -331,6 +361,11 @@ public class PredicateBuilder<T1, T2, T3, T4, T5, T6>
 public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7>
 {
     private Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> expression;
+    public PredicateBuilder<T1, T2, T3, T4, T5, T6, T7> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> predicate)
+    {
+        this.expression = predicate;
+        return this;
+    }
     public PredicateBuilder<T1, T2, T3, T4, T5, T6, T7> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> predicate) => this.Merge(Expression.AndAlso, predicate);
     public PredicateBuilder<T1, T2, T3, T4, T5, T6, T7> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> elsePredicate = null)
         => this.Merge(condition, Expression.AndAlso, ifPredicate, elsePredicate);
@@ -360,7 +395,7 @@ public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7>
         if (condition) this.Not();
         return this;
     }
-    public Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> Build() => this.expression as Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>>;
+    public Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> Build() => this.expression;
     private PredicateBuilder<T1, T2, T3, T4, T5, T6, T7> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> predicate)
     {
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));
@@ -382,6 +417,11 @@ public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7>
 public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8>
 {
     private Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> expression;
+    public PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate)
+    {
+        this.expression = predicate;
+        return this;
+    }
     public PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate) => this.Merge(Expression.AndAlso, predicate);
     public PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> elsePredicate = null)
         => this.Merge(condition, Expression.AndAlso, ifPredicate, elsePredicate);
@@ -411,7 +451,7 @@ public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8>
         if (condition) this.Not();
         return this;
     }
-    public Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> Build() => this.expression as Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>>;
+    public Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> Build() => this.expression;
     private PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate)
     {
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));
@@ -433,6 +473,11 @@ public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8>
 public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9>
 {
     private Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> expression;
+    public PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate)
+    {
+        this.expression = predicate;
+        return this;
+    }
     public PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate) => this.Merge(Expression.AndAlso, predicate);
     public PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> elsePredicate = null)
         => this.Merge(condition, Expression.AndAlso, ifPredicate, elsePredicate);
@@ -462,7 +507,7 @@ public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9>
         if (condition) this.Not();
         return this;
     }
-    public Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> Build() => this.expression as Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>>;
+    public Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> Build() => this.expression;
     private PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate)
     {
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));
@@ -484,6 +529,11 @@ public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9>
 public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
 {
     private Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> expression;
+    public PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate)
+    {
+        this.expression = predicate;
+        return this;
+    }
     public PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate) => this.Merge(Expression.AndAlso, predicate);
     public PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> elsePredicate = null)
         => this.Merge(condition, Expression.AndAlso, ifPredicate, elsePredicate);
@@ -513,7 +563,7 @@ public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
         if (condition) this.Not();
         return this;
     }
-    public Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> Build() => this.expression as Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>>;
+    public Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> Build() => this.expression;
     private PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate)
     {
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));
@@ -535,6 +585,11 @@ public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
 public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
 {
     private Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> expression;
+    public PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate)
+    {
+        this.expression = predicate;
+        return this;
+    }
     public PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate) => this.Merge(Expression.AndAlso, predicate);
     public PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> elsePredicate = null)
         => this.Merge(condition, Expression.AndAlso, ifPredicate, elsePredicate);
@@ -564,7 +619,7 @@ public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
         if (condition) this.Not();
         return this;
     }
-    public Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> Build() => this.expression as Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>>;
+    public Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> Build() => this.expression;
     private PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate)
     {
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));
@@ -586,6 +641,11 @@ public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
 public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>
 {
     private Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> expression;
+    public PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate)
+    {
+        this.expression = predicate;
+        return this;
+    }
     public PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate) => this.Merge(Expression.AndAlso, predicate);
     public PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> elsePredicate = null)
         => this.Merge(condition, Expression.AndAlso, ifPredicate, elsePredicate);
@@ -615,7 +675,7 @@ public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>
         if (condition) this.Not();
         return this;
     }
-    public Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> Build() => this.expression as Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>>;
+    public Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> Build() => this.expression;
     private PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate)
     {
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));
@@ -637,6 +697,11 @@ public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>
 public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>
 {
     private Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> expression;
+    public PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate)
+    {
+        this.expression = predicate;
+        return this;
+    }
     public PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate) => this.Merge(Expression.AndAlso, predicate);
     public PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> elsePredicate = null)
         => this.Merge(condition, Expression.AndAlso, ifPredicate, elsePredicate);
@@ -666,7 +731,7 @@ public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12,
         if (condition) this.Not();
         return this;
     }
-    public Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> Build() => this.expression as Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>>;
+    public Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> Build() => this.expression;
     private PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate)
     {
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));
@@ -688,6 +753,11 @@ public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12,
 public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>
 {
     private Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> expression;
+    public PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate)
+    {
+        this.expression = predicate;
+        return this;
+    }
     public PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate) => this.Merge(Expression.AndAlso, predicate);
     public PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> elsePredicate = null)
         => this.Merge(condition, Expression.AndAlso, ifPredicate, elsePredicate);
@@ -717,7 +787,7 @@ public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12,
         if (condition) this.Not();
         return this;
     }
-    public Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> Build() => this.expression as Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>>;
+    public Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> Build() => this.expression;
     private PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate)
     {
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));
@@ -739,6 +809,11 @@ public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12,
 public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>
 {
     private Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> expression;
+    public PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> predicate)
+    {
+        this.expression = predicate;
+        return this;
+    }
     public PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> predicate) => this.Merge(Expression.AndAlso, predicate);
     public PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> elsePredicate = null)
         => this.Merge(condition, Expression.AndAlso, ifPredicate, elsePredicate);
@@ -768,7 +843,7 @@ public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12,
         if (condition) this.Not();
         return this;
     }
-    public Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> Build() => this.expression as Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>>;
+    public Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> Build() => this.expression;
     private PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> predicate)
     {
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));
@@ -790,6 +865,11 @@ public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12,
 public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>
 {
     private Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> expression;
+    public PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> predicate)
+    {
+        this.expression = predicate;
+        return this;
+    }
     public PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> predicate) => this.Merge(Expression.AndAlso, predicate);
     public PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> elsePredicate = null)
         => this.Merge(condition, Expression.AndAlso, ifPredicate, elsePredicate);
@@ -819,7 +899,7 @@ public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12,
         if (condition) this.Not();
         return this;
     }
-    public Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> Build() => this.expression as Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>>;
+    public Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> Build() => this.expression;
     private PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> predicate)
     {
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));

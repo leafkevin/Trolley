@@ -26,33 +26,33 @@ public class IncludableQuery<T, TMember> : Query<T>, IIncludableQuery<T, TMember
     #endregion
 
     #region Sharding
-    public override IIncludableQuery<T, TMember> UseTable(params string[] tableNames)
+    public new IIncludableQuery<T, TMember> UseTable(params string[] tableNames)
     {
         this.Visitor.UseTable(this.IsIncludeMany, tableNames);
         return this;
     }
-    public override IIncludableQuery<T, TMember> UseTable(Func<string, bool> tableNamePredicate)
+    public new IIncludableQuery<T, TMember> UseTable(Func<string, bool> tableNamePredicate)
     {
         this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
         return this;
     }
-    public override IIncludableQuery<T, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+    public new IIncludableQuery<T, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
-    public override IIncludableQuery<T, TMember> UseTableBy(object field1Value, object field2Value = null)
+    public new IIncludableQuery<T, TMember> UseTableBy(object field1Value, object field2Value = null)
     {
         this.Visitor.UseTableBy(this.IsIncludeMany, field1Value, field2Value);
         return this;
     }
-    public override IIncludableQuery<T, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
+    public new IIncludableQuery<T, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
         this.Visitor.UseTableByRange(this.IsIncludeMany, beginFieldValue, endFieldValue);
         return this;
     }
-    public override IIncludableQuery<T, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public new IIncludableQuery<T, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         this.Visitor.UseTableByRange(this.IsIncludeMany, fieldValue1, fieldValue2, fieldValue3);
         return this;
@@ -60,7 +60,7 @@ public class IncludableQuery<T, TMember> : Query<T>, IIncludableQuery<T, TMember
     #endregion
 
     #region UseTableSchema
-    public override IIncludableQuery<T, TMember> UseTableSchema(string tableSchema)
+    public new IIncludableQuery<T, TMember> UseTableSchema(string tableSchema)
     {
         this.Visitor.UseTableSchema(this.IsIncludeMany, tableSchema);
         return this;
@@ -106,33 +106,33 @@ public class IncludableQuery<<#=tables#>, TMember> : Query<<#=tables#>>, IInclud
 #>
 
     #region Sharding
-    public override IIncludableQuery<<#=tables#>, TMember> UseTable(params string[] tableNames)
+    public new IIncludableQuery<<#=tables#>, TMember> UseTable(params string[] tableNames)
     {
         this.Visitor.UseTable(this.IsIncludeMany, tableNames);
         return this;
     }
-    public override IIncludableQuery<<#=tables#>, TMember> UseTable(Func<string, bool> tableNamePredicate)
+    public new IIncludableQuery<<#=tables#>, TMember> UseTable(Func<string, bool> tableNamePredicate)
     {
         this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
         return this;
     }
-    public override IIncludableQuery<<#=tables#>, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+    public new IIncludableQuery<<#=tables#>, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
-    public override IIncludableQuery<<#=tables#>, TMember> UseTableBy(object field1Value, object field2Value = null)
+    public new IIncludableQuery<<#=tables#>, TMember> UseTableBy(object field1Value, object field2Value = null)
     {
         this.Visitor.UseTableBy(this.IsIncludeMany, field1Value, field2Value);
         return this;
     }
-    public override IIncludableQuery<<#=tables#>, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
+    public new IIncludableQuery<<#=tables#>, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
         this.Visitor.UseTableByRange(this.IsIncludeMany, beginFieldValue, endFieldValue);
         return this;
     }
-    public override IIncludableQuery<<#=tables#>, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public new IIncludableQuery<<#=tables#>, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
     {
         this.Visitor.UseTableByRange(this.IsIncludeMany, fieldValue1, fieldValue2, fieldValue3);
         return this;
@@ -140,7 +140,7 @@ public class IncludableQuery<<#=tables#>, TMember> : Query<<#=tables#>>, IInclud
     #endregion
 
     #region UseTableSchema
-    public override IIncludableQuery<<#=tables#>, TMember> UseTableSchema(string tableSchema)
+    public new IIncludableQuery<<#=tables#>, TMember> UseTableSchema(string tableSchema)
     {
         this.Visitor.UseTableSchema(this.IsIncludeMany, tableSchema);
         return this;

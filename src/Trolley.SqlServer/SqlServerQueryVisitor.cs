@@ -297,7 +297,7 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
             {
                 var tableSchema = tableSegment.TableSchema ?? this.DefaultTableSchema;
                 if (!schemaBuilders.TryGetValue(tableSchema, out var tableBuilder))
-                    schemaBuilders.TryAdd(tableSchema, tableBuilder = new StringBuilder());
+                    schemaBuilders.Add(tableSchema, tableBuilder = new StringBuilder());
 
                 if (tableBuilder.Length > 0) tableBuilder.Append(" OR ");
                 tableBuilder.Append($"a.name LIKE '{tableSegment.Mapper.TableName}%'");

@@ -18,9 +18,9 @@ public class SqlServerCreate<TEntity> : Create<TEntity>, ISqlServerCreate<TEntit
     #endregion
 
     #region Sharding
-    public override ISqlServerCreate<TEntity> UseTable(string tableName)
+    public new ISqlServerCreate<TEntity> UseTable(string tableName)
         => base.UseTable(tableName) as ISqlServerCreate<TEntity>;
-    public override ISqlServerCreate<TEntity> UseTableBy(object field1Value, object field2Value = null)
+    public new ISqlServerCreate<TEntity> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as ISqlServerCreate<TEntity>;
     #endregion
 
@@ -33,12 +33,12 @@ public class SqlServerCreate<TEntity> : Create<TEntity>, ISqlServerCreate<TEntit
     #endregion
 
     #region WithBy
-    public override ISqlServerContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj)
+    public new ISqlServerContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj)
         => base.WithBy(insertObj) as ISqlServerContinuedCreate<TEntity>;
     #endregion
 
     #region WithBulk
-    public override ISqlServerBulkContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount)
+    public new ISqlServerBulkContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount)
         => base.WithBulk(insertObjs, bulkCount) as ISqlServerBulkContinuedCreate<TEntity>;
     #endregion
 

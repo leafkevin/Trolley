@@ -498,6 +498,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 index++;
                 continue;
             }
+            if (this.TableAliases.ContainsKey(parameterExpr.Name))
+                continue;
             this.TableAliases.Add(parameterExpr.Name, this.Tables[index]);
             index++;
         }
@@ -506,7 +508,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     {
         (var fieldSelector, var fieldValue) = ((Expression, object))deferredSegmentValue;
         var lambdaExpr = fieldSelector as LambdaExpression;
-        var memberExpr = lambdaExpr.Body as MemberExpression;
+        var memberExpr = this.EnsureMemberVisit(lambdaExpr.Body) as MemberExpression;
         var entityMapper = this.Tables[0].Mapper;
         var memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
         if (memberMapper.IsIgnore || memberMapper.IsIgnoreUpdate || memberMapper.IsRowVersion)
@@ -617,7 +619,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var entityMapper = this.Tables[0].Mapper;
         (var fieldSelector, var valueSelector) = ((Expression, Expression))deferredSegmentValue;
         var lambdaExpr = fieldSelector as LambdaExpression;
-        var memberExpr = lambdaExpr.Body as MemberExpression;
+        var memberExpr = this.EnsureMemberVisit(lambdaExpr.Body) as MemberExpression;
         var memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
 
         if (memberMapper.IsIgnore || memberMapper.IsIgnoreUpdate || memberMapper.IsRowVersion)

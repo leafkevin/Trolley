@@ -46,22 +46,21 @@ public class FromCommand : QueryInternal, IFromCommand
         {
             command.CommandText = this.Visitor.BuildCommandSql(out var dbParameters);
             dbParameters.CopyTo(command.Parameters);
-            this.DbContext.Open(connection);
-            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Insert);
+            connection.Open();
+            command.AfterExecute(CommandSqlType.Insert);
             result = command.ExecuteNonQuery();
         }
         catch (Exception ex)
         {
-            isNeedClose = true;
             exception = ex;
-            this.DbContext.AddCommandFailedFilter(connection, command, CommandSqlType.Insert, eventArgs, exception);
+            command.AfterExecute(CommandSqlType.Insert, ex);
         }
         finally
         {
-            this.DbContext.AddCommandAfterFilter(connection, command, CommandSqlType.Insert, eventArgs, exception == null, exception);
+           command.AfterExecute(CommandSqlType.Insert, exception == null, exception);
             command.Parameters.Clear();
             command.Dispose();
-            if (isNeedClose) this.DbContext.Close(connection);
+            if (isNeedClose) connection.Close();
         }
         if (exception != null) throw exception;
         return result;
@@ -74,27 +73,26 @@ public class FromCommand : QueryInternal, IFromCommand
         int result = 0;
         Exception exception = null;
         CommandEventArgs eventArgs = null;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterDbCommand();
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         try
         {
             command.CommandText = this.Visitor.BuildCommandSql(out var dbParameters);
             dbParameters.CopyTo(command.Parameters);
-            await this.DbContext.OpenAsync(connection, cancellationToken);
-            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Insert);
+            await connection.OpenAsync(cancellationToken);
+            command.AfterExecute(CommandSqlType.Insert);
             result = await command.ExecuteNonQueryAsync(cancellationToken);
         }
         catch (Exception ex)
         {
-            isNeedClose = true;
             exception = ex;
-            this.DbContext.AddCommandFailedFilter(connection, command, CommandSqlType.Insert, eventArgs, exception);
+            command.AfterExecute(CommandSqlType.Insert, ex);
         }
         finally
         {
-            this.DbContext.AddCommandAfterFilter(connection, command, CommandSqlType.Insert, eventArgs, exception == null, exception);
+           command.AfterExecute(CommandSqlType.Insert, exception == null, exception);
             command.Parameters.Clear();
             await command.DisposeAsync();
-            if (isNeedClose) await this.DbContext.CloseAsync(connection);
+            if (isNeedClose) await connection.CloseAsync();
         }
         if (exception != null) throw exception;
         return result;

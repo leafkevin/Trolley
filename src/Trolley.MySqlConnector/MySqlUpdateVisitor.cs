@@ -18,7 +18,7 @@ public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
             {
                 var tableSchema = tableSegment.TableSchema ?? this.DefaultTableSchema;
                 if (!schemaBuilders.TryGetValue(tableSchema, out var tableBuilder))
-                    schemaBuilders.TryAdd(tableSchema, tableBuilder = new StringBuilder());
+                    schemaBuilders.Add(tableSchema, tableBuilder = new StringBuilder());
 
                 if (tableBuilder.Length > 0) tableBuilder.Append(" OR ");
                 tableBuilder.Append($"TABLE_NAME LIKE '{tableSegment.Mapper.TableName}%'");

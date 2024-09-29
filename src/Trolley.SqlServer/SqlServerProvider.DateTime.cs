@@ -7,12 +7,15 @@ namespace Trolley.SqlServer;
 
 partial class SqlServerProvider
 {
+#if !NETSTANDARD2_1_OR_GREATER
+    private static DateTime UnixEpoch = new DateTime(1970, 1, 1);
+#endif
     public override bool TryGetDateTimeMemberAccessSqlFormatter(MemberExpression memberExpr, out MemberAccessSqlFormatter formatter)
     {
         bool result = false;
         formatter = null;
         var memberInfo = memberExpr.Member;
-        var cacheKey = HashCode.Combine(memberInfo.DeclaringType, memberInfo);
+        var cacheKey = RepositoryHelper.GetCacheKey(memberInfo.DeclaringType, memberInfo);
         if (memberExpr.Expression == null)
         {
             switch (memberInfo.Name)
@@ -27,7 +30,11 @@ partial class SqlServerProvider
                     result = true;
                     break;
                 case "UnixEpoch":
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) => target.ChangeValue(DateTime.UnixEpoch, true));
+#if NETSTANDARD2_1_OR_GREATER
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) => target.ChangeValue(DateTime.UnixEpoch, true));       
+#else
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) => target.ChangeValue(UnixEpoch, true));
+#endif
                     result = true;
                     break;
                 case "Today":
@@ -266,7 +273,7 @@ partial class SqlServerProvider
         formatter = null;
         var methodInfo = methodCallExpr.Method;
         var parameterInfos = methodInfo.GetParameters();
-        var cacheKey = HashCode.Combine(methodInfo.DeclaringType, methodInfo);
+        var cacheKey = RepositoryHelper.GetCacheKey(methodInfo.DeclaringType, methodInfo);
         if (methodInfo.IsStatic)
         {
             switch (methodInfo.Name)

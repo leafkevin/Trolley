@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Globalization;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 
@@ -13,7 +12,7 @@ partial class PostgreSqlProvider
         bool result = false;
         formatter = null;
         var memberInfo = memberExpr.Member;
-        var cacheKey = HashCode.Combine(memberInfo.DeclaringType, memberInfo);
+        var cacheKey = RepositoryHelper.GetCacheKey(memberInfo.DeclaringType, memberInfo);
         if (memberExpr.Expression == null)
         {
             switch (memberInfo.Name)
@@ -168,7 +167,7 @@ partial class PostgreSqlProvider
         formatter = null;
         var methodInfo = methodCallExpr.Method;
         var parameterInfos = methodInfo.GetParameters();
-        var cacheKey = HashCode.Combine(methodInfo.DeclaringType, methodInfo);
+        var cacheKey = RepositoryHelper.GetCacheKey(methodInfo.DeclaringType, methodInfo);
         if (methodInfo.IsStatic)
         {
             switch (methodInfo.Name)
@@ -405,6 +404,7 @@ partial class PostgreSqlProvider
                     });
                     result = true;
                     break;
+#if NETCOREAPP2_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
                 case "Multiply":
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
@@ -454,6 +454,7 @@ partial class PostgreSqlProvider
                         result = true;
                     }
                     break;
+#endif
             }
         }
         return result;

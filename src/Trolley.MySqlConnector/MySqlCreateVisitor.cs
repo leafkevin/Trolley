@@ -96,7 +96,7 @@ public class MySqlCreateVisitor : CreateVisitor
             this.UpdateFields = null;
             hasUpdateFields = true;
         }
-        string outputSql = null;
+        string outputSql;
         if (this.OutputFieldNames != null && this.OutputFieldNames.Count > 0)
         {
             (outputSql, readerFields) = this.BuildOutputSqlReaderFields();
@@ -114,8 +114,6 @@ public class MySqlCreateVisitor : CreateVisitor
         valuesBuilder.Clear();
         var sql = fieldsBuilder.ToString();
         fieldsBuilder.Clear();
-        fieldsBuilder = null;
-        valuesBuilder = null;
         return sql;
     }
     public override string BuildWithBulkSql(IDbCommand command, out List<SqlFieldSegment> readerFields)
@@ -130,7 +128,7 @@ public class MySqlCreateVisitor : CreateVisitor
         if (this.OutputFieldNames != null && this.OutputFieldNames.Count > 0)
             (outputSql, readerFields) = this.BuildOutputSqlReaderFields();
 
-        Action<string, IEnumerable> executor = (tableName, insertObjs) =>
+        void executor(string tableName, IEnumerable insertObjs)
         {
             firstSqlSetter.Invoke(command.Parameters, builder, tableName);
             int index = 0;
@@ -142,7 +140,7 @@ public class MySqlCreateVisitor : CreateVisitor
             }
             if (outputSql != null)
                 builder.Append(outputSql);
-        };
+        }
         if (isNeedSplit)
         {
             var entityType = this.Tables[0].EntityType;
@@ -151,14 +149,13 @@ public class MySqlCreateVisitor : CreateVisitor
             foreach (var tabledInsertObj in tabledInsertObjs)
             {
                 if (index > 0) builder.Append(';');
-                executor.Invoke(tabledInsertObj.Key, tabledInsertObj.Value);
+                executor(tabledInsertObj.Key, tabledInsertObj.Value);
                 index++;
             }
         }
-        else executor.Invoke(tableName, insertObjs);
+        else executor(tableName, insertObjs);
         var sql = builder.ToString();
         builder.Clear();
-        builder = null;
         return sql;
     }
     public override (bool, string, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
@@ -598,12 +595,14 @@ public class MySqlCreateVisitor : CreateVisitor
     }
     public override IQueryVisitor CreateQueryVisitor()
     {
-        var queryVisiter = new MySqlQueryVisitor(this.DbContext, this.TableAsStart, this.DbParameters);
-        queryVisiter.IsMultiple = this.IsMultiple;
-        queryVisiter.CommandIndex = this.CommandIndex;
-        queryVisiter.RefQueries = this.RefQueries;
-        queryVisiter.ShardingTables = this.ShardingTables;
-        queryVisiter.IsUseIgnoreInto = this.IsUseIgnoreInto;
+        var queryVisiter = new MySqlQueryVisitor(this.DbContext, this.TableAsStart, this.DbParameters)
+        {
+            IsMultiple = this.IsMultiple,
+            CommandIndex = this.CommandIndex,
+            RefQueries = this.RefQueries,
+            ShardingTables = this.ShardingTables,
+            IsUseIgnoreInto = this.IsUseIgnoreInto
+        };
         return queryVisiter;
     }
     public void InitTableAlias(LambdaExpression lambdaExpr)
@@ -616,7 +615,9 @@ public class MySqlCreateVisitor : CreateVisitor
         {
             if (parameterExpr.Type == typeof(IMySqlCreateDuplicateKeyUpdate<>).MakeGenericType(this.Tables[0].EntityType))
                 continue;
-            this.TableAliases.TryAdd(parameterExpr.Name, this.Tables[0]);
+            if (this.TableAliases.ContainsKey(parameterExpr.Name))
+                continue;
+            this.TableAliases.Add(parameterExpr.Name, this.Tables[0]);
         }
     }
     public void AddMemberElement(SqlFieldSegment sqlSegment, MemberMap memberMapper)
@@ -658,7 +659,7 @@ public class MySqlCreateVisitor : CreateVisitor
     public void VisitWithSetField(Expression fieldSelector, object fieldValue)
     {
         var lambdaExpr = this.EnsureLambda(fieldSelector);
-        var memberExpr = lambdaExpr.Body as MemberExpression;
+        var memberExpr = this.EnsureMemberVisit(lambdaExpr.Body) as MemberExpression;
         var entityMapper = this.Tables[0].Mapper;
         var memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
         var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
@@ -684,7 +685,7 @@ public class MySqlCreateVisitor : CreateVisitor
         var readerFields = new List<SqlFieldSegment>();
         var entityMapper = this.Tables[0].Mapper;
         var builder = new StringBuilder();
-        Action<MemberMap> addReaderField = memberMapper =>
+        void addReaderField(MemberMap memberMapper)
         {
             readerFields.Add(new SqlFieldSegment
             {
@@ -696,7 +697,7 @@ public class MySqlCreateVisitor : CreateVisitor
                 TypeHandler = memberMapper.TypeHandler,
                 Body = memberMapper.FieldName
             });
-        };
+        }
         builder.Append(" RETURNING ");
         for (int i = 0; i < this.OutputFieldNames.Count; i++)
         {
@@ -711,18 +712,17 @@ public class MySqlCreateVisitor : CreateVisitor
                     if (memberMapper.IsIgnore || memberMapper.IsNavigation
                         || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
                         continue;
-                    addReaderField.Invoke(memberMapper);
+                    addReaderField(memberMapper);
                 }
             }
             else
             {
                 var memberMapper = entityMapper.GetMemberMapByFieldName(fieldName);
-                addReaderField.Invoke(memberMapper);
+                addReaderField(memberMapper);
             }
         }
         var sql = builder.ToString();
         builder.Clear();
-        builder = null;
         return (sql, readerFields);
     }
 }

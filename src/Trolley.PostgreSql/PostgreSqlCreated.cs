@@ -27,350 +27,189 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
     public override int Execute()
     {
         int result = 0;
-        Exception exception = null;
-        IEnumerable insertObjs = null;
-        CommandEventArgs eventArgs = null;
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        try
+        bool isNeedSplit;
+        var entityType = typeof(TEntity);
+        switch (this.Visitor.ActionMode)
         {
-            bool isNeedSplit = false;
-            var entityType = typeof(TEntity);
-            switch (this.Visitor.ActionMode)
-            {
-                case ActionMode.BulkCopy:
-                    insertObjs = this.DialectVisitor.BuildWithBulkCopy();
-
-                    Type insertObjType = null;
-                    foreach (var insertObj in insertObjs)
-                    {
-                        insertObjType = insertObj.GetType();
-                        break;
-                    }
-                    if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out var shardingTable))
-                    {
-                        isNeedSplit = this.Visitor.Tables[0].Body == null;
-                        if (isNeedSplit)
-                        {
-                            var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
-                            foreach (var tabledInsertObj in tabledInsertObjs)
-                            {
-                                eventArgs = this.DbContext.AddCommandBeforeFilter(connection, CommandSqlType.BulkCopyInsert, eventArgs);
-                                result += this.ExecuteBulkCopy(connection, insertObjType, tabledInsertObj.Value, tabledInsertObj.Key);
-                            }
-                        }
-                        else
-                        {
-                            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, CommandSqlType.BulkCopyInsert, eventArgs);
-                            result = this.ExecuteBulkCopy(connection, insertObjType, insertObjs, this.Visitor.Tables[0].Body);
-                        }
-                    }
-                    else
-                    {
-                        eventArgs = this.DbContext.AddCommandBeforeFilter(connection, CommandSqlType.BulkCopyInsert, eventArgs);
-                        result = this.ExecuteBulkCopy(connection, insertObjType, insertObjs);
-                    }
+            case ActionMode.BulkCopy:
+                var insertObjs = this.DialectVisitor.BuildWithBulkCopy();
+                Type insertObjType = null;
+                foreach (var insertObj in insertObjs)
+                {
+                    insertObjType = insertObj.GetType();
                     break;
-                case ActionMode.Bulk:
-                    var builder = new StringBuilder();
-                    (isNeedSplit, var tableName, insertObjs, var bulkCount,
-                        var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
-
-                    int executor(string tableName, IEnumerable insertObjs)
-                    {
-                        int count = 0, index = 0;
-                        foreach (var insertObj in insertObjs)
-                        {
-                            if (index > 0) builder.Append(',');
-                            loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
-                            if (index >= bulkCount)
-                            {
-                                command.CommandText = builder.ToString();
-                                eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
-                                count += command.ExecuteNonQuery();
-                                builder.Clear();
-                                command.Parameters.Clear();
-                                firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                                index = 0;
-                                continue;
-                            }
-                            index++;
-                        }
-                        if (index > 0)
-                        {
-                            command.CommandText = builder.ToString();
-                            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
-                            count += command.ExecuteNonQuery();
-                            builder.Clear();
-                            command.Parameters.Clear();
-                        }
-                        return count;
-                    };
-                    this.DbContext.Open(connection);
+                }
+                var dialectOrmProvider = this.OrmProvider as PostgreSqlProvider;
+                var sqlVisitor = this.Visitor as SqlVisitor;
+                if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out var shardingTable))
+                {
+                    isNeedSplit = this.Visitor.Tables[0].Body == null;
                     if (isNeedSplit)
                     {
                         var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
                         foreach (var tabledInsertObj in tabledInsertObjs)
                         {
-                            firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
-                            result += executor(tabledInsertObj.Key, tabledInsertObj.Value);
+                            result += dialectOrmProvider.ExecuteBulkCopy(false, this.DbContext, sqlVisitor, connection, insertObjType, tabledInsertObj.Value, tabledInsertObj.Key);
                         }
                     }
-                    else
+                    else result = dialectOrmProvider.ExecuteBulkCopy(false, this.DbContext, sqlVisitor, connection, insertObjType, insertObjs, this.Visitor.Tables[0].Body);
+                }
+                else result = dialectOrmProvider.ExecuteBulkCopy(false, this.DbContext, sqlVisitor, connection, insertObjType, insertObjs);
+                break;
+            case ActionMode.Bulk:
+                var builder = new StringBuilder();
+                (isNeedSplit, var tableName, insertObjs, var bulkCount,
+                    var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command.BaseCommand);
+                int executor(string tableName, IEnumerable insertObjs)
+                {
+                    int count = 0, index = 0;
+                    foreach (var insertObj in insertObjs)
                     {
-                        firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                        result = executor(tableName, insertObjs);
+                        if (index > 0) builder.Append(',');
+                        loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
+                        if (index >= bulkCount)
+                        {
+                            command.CommandText = builder.ToString();
+                            count += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
+                            builder.Clear();
+                            command.Parameters.Clear();
+                            firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                            index = 0;
+                            continue;
+                        }
+                        index++;
                     }
-                    builder.Clear();
-                    builder = null;
-                    break;
-                default:
-                    //默认单条
-                    command.CommandText = this.Visitor.BuildCommand(command, false, out _);
-                    this.DbContext.Open(connection);
-                    eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Insert);
-                    result = command.ExecuteNonQuery();
-                    break;
-            }
+                    if (index > 0)
+                    {
+                        command.CommandText = builder.ToString();
+                        count += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
+                        builder.Clear();
+                        command.Parameters.Clear();
+                    }
+                    return count;
+                };
+                connection.Open();
+                if (isNeedSplit)
+                {
+                    var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
+                    foreach (var tabledInsertObj in tabledInsertObjs)
+                    {
+                        firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
+                        result += executor(tabledInsertObj.Key, tabledInsertObj.Value);
+                    }
+                }
+                else
+                {
+                    firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                    result = executor(tableName, insertObjs);
+                }
+                builder.Clear();
+                break;
+            default:
+                //默认单条
+                command.CommandText = this.Visitor.BuildCommand(command.BaseCommand, false, out _);
+                connection.Open();
+                result = command.ExecuteNonQuery(CommandSqlType.Insert);
+                break;
         }
-        catch (Exception ex)
-        {
-            isNeedClose = true;
-            exception = ex;
-            var sqlType = this.Visitor.ActionMode switch
-            {
-                ActionMode.BulkCopy => CommandSqlType.BulkCopyInsert,
-                ActionMode.Bulk => CommandSqlType.BulkInsert,
-                _ => CommandSqlType.Insert
-            };
-            this.DbContext.AddCommandFailedFilter(connection, command, sqlType, eventArgs, exception);
-        }
-        finally
-        {
-            var sqlType = this.Visitor.ActionMode switch
-            {
-                ActionMode.BulkCopy => CommandSqlType.BulkCopyInsert,
-                ActionMode.Bulk => CommandSqlType.BulkInsert,
-                _ => CommandSqlType.Insert
-            };
-            this.DbContext.AddCommandAfterFilter(connection, command, sqlType, eventArgs, exception == null, exception);
-            command?.Dispose();
-            if (isNeedClose) this.Close(connection);
-        }
-        if (exception != null) throw exception;
+        command.Parameters.Clear();
+        command.Dispose();
+        if (isNeedClose) connection.Close();
         return result;
     }
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         int result = 0;
-        Exception exception = null;
-        IEnumerable insertObjs = null;
-        CommandEventArgs eventArgs = null;
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterDbCommand();
-        try
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        bool isNeedSplit;
+        var entityType = typeof(TEntity);
+        switch (this.Visitor.ActionMode)
         {
-            bool isNeedSplit = false;
-            var entityType = typeof(TEntity);
-            switch (this.Visitor.ActionMode)
-            {
-                case ActionMode.BulkCopy:
-                    insertObjs = this.DialectVisitor.BuildWithBulkCopy();
-                    bool isOpened = false;
-                    Type insertObjType = null;
-                    foreach (var insertObj in insertObjs)
-                    {
-                        insertObjType = insertObj.GetType();
-                        break;
-                    }
-                    if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out _))
-                    {
-                        isNeedSplit = this.Visitor.Tables[0].Body == null;
-                        if (isNeedSplit)
-                        {
-                            var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
-                            foreach (var tabledInsertObj in tabledInsertObjs)
-                            {
-                                eventArgs = this.DbContext.AddCommandBeforeFilter(connection, CommandSqlType.BulkCopyInsert, eventArgs);
-                                result += await this.ExecuteBulkCopyAsync(connection, insertObjType, tabledInsertObj.Value, cancellationToken, tabledInsertObj.Key);
-                                if (!isOpened) isOpened = true;
-                            }
-                        }
-                        else
-                        {
-                            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, CommandSqlType.BulkCopyInsert, eventArgs);
-                            result = await this.ExecuteBulkCopyAsync(connection, insertObjType, insertObjs, cancellationToken, this.Visitor.Tables[0].Body);
-                        }
-                    }
-                    else
-                    {
-                        eventArgs = this.DbContext.AddCommandBeforeFilter(connection, CommandSqlType.BulkCopyInsert, eventArgs);
-                        result = await this.ExecuteBulkCopyAsync(connection, insertObjType, insertObjs, cancellationToken);
-                    }
+            case ActionMode.BulkCopy:
+                var insertObjs = this.DialectVisitor.BuildWithBulkCopy();
+                Type insertObjType = null;
+                foreach (var insertObj in insertObjs)
+                {
+                    insertObjType = insertObj.GetType();
                     break;
-                case ActionMode.Bulk:
-                    var sqlBuilder = new StringBuilder();
-                    (isNeedSplit, var tableName, insertObjs, var bulkCount,
-                        var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
-
-                    async Task<int> executor(string tableName, IEnumerable insertObjs)
-                    {
-                        int count = 0, index = 0;
-                        foreach (var insertObj in insertObjs)
-                        {
-                            if (index > 0) sqlBuilder.Append(',');
-                            loopSqlSetter.Invoke(command.Parameters, sqlBuilder, insertObj, index.ToString());
-                            if (index >= bulkCount)
-                            {
-                                command.CommandText = sqlBuilder.ToString();
-                                eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
-                                count += await command.ExecuteNonQueryAsync(cancellationToken);
-                                sqlBuilder.Clear();
-                                command.Parameters.Clear();
-                                firstSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName);
-                                index = 0;
-                                continue;
-                            }
-                            index++;
-                        }
-                        if (index > 0)
-                        {
-                            command.CommandText = sqlBuilder.ToString();
-                            eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.BulkInsert, eventArgs);
-                            count += await command.ExecuteNonQueryAsync(cancellationToken);
-                            sqlBuilder.Clear();
-                            command.Parameters.Clear();
-                        }
-                        return count;
-                    };
-                    await this.DbContext.OpenAsync(connection, cancellationToken);
+                }
+                var dialectOrmProvider = this.OrmProvider as PostgreSqlProvider;
+                var sqlVisitor = this.Visitor as SqlVisitor;
+                if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out var shardingTable))
+                {
+                    isNeedSplit = this.Visitor.Tables[0].Body == null;
                     if (isNeedSplit)
                     {
                         var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
                         foreach (var tabledInsertObj in tabledInsertObjs)
                         {
-                            firstSqlSetter.Invoke(command.Parameters, sqlBuilder, tabledInsertObj.Key);
-                            result += await executor(tabledInsertObj.Key, tabledInsertObj.Value);
+                            result += await dialectOrmProvider.ExecuteBulkCopyAsync(false, this.DbContext, sqlVisitor, connection, insertObjType, tabledInsertObj.Value, cancellationToken, tabledInsertObj.Key);
                         }
                     }
-                    else
+                    else result = await dialectOrmProvider.ExecuteBulkCopyAsync(false, this.DbContext, sqlVisitor, connection, insertObjType, insertObjs, cancellationToken, this.Visitor.Tables[0].Body);
+                }
+                else result = await dialectOrmProvider.ExecuteBulkCopyAsync(false, this.DbContext, sqlVisitor, connection, insertObjType, insertObjs, cancellationToken);
+                break;
+            case ActionMode.Bulk:
+                var builder = new StringBuilder();
+                (isNeedSplit, var tableName, insertObjs, var bulkCount,
+                    var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command.BaseCommand);
+                async Task<int> executor(string tableName, IEnumerable insertObjs)
+                {
+                    int count = 0, index = 0;
+                    foreach (var insertObj in insertObjs)
                     {
-                        firstSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName);
-                        result = await executor(tableName, insertObjs);
+                        if (index > 0) builder.Append(',');
+                        loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
+                        if (index >= bulkCount)
+                        {
+                            command.CommandText = builder.ToString();
+                            count += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
+                            builder.Clear();
+                            command.Parameters.Clear();
+                            firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                            index = 0;
+                            continue;
+                        }
+                        index++;
                     }
-                    sqlBuilder.Clear();
-                    sqlBuilder = null;
-                    break;
-                default:
-                    //默认单条
-                    command.CommandText = this.Visitor.BuildCommand(command, false, out _);
-                    await this.DbContext.OpenAsync(connection, cancellationToken);
-                    eventArgs = this.DbContext.AddCommandBeforeFilter(connection, command, CommandSqlType.Insert);
-                    result = await command.ExecuteNonQueryAsync(cancellationToken);
-                    break;
-            }
+                    if (index > 0)
+                    {
+                        command.CommandText = builder.ToString();
+                        count += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
+                        builder.Clear();
+                        command.Parameters.Clear();
+                    }
+                    return count;
+                };
+                await connection.OpenAsync(cancellationToken);
+                if (isNeedSplit)
+                {
+                    var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
+                    foreach (var tabledInsertObj in tabledInsertObjs)
+                    {
+                        firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
+                        result += await executor(tabledInsertObj.Key, tabledInsertObj.Value);
+                    }
+                }
+                else
+                {
+                    firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                    result = await executor(tableName, insertObjs);
+                }
+                builder.Clear();
+                break;
+            default:
+                //默认单条
+                command.CommandText = this.Visitor.BuildCommand(command.BaseCommand, false, out _);
+                await connection.OpenAsync(cancellationToken);
+                result = await command.ExecuteNonQueryAsync(CommandSqlType.Insert, cancellationToken);
+                break;
         }
-        catch (Exception ex)
-        {
-            isNeedClose = true;
-            exception = ex;
-            var sqlType = this.Visitor.ActionMode switch
-            {
-                ActionMode.BulkCopy => CommandSqlType.BulkCopyInsert,
-                ActionMode.Bulk => CommandSqlType.BulkInsert,
-                _ => CommandSqlType.Insert
-            };
-            this.DbContext.AddCommandFailedFilter(connection, command, sqlType, eventArgs, exception);
-        }
-        finally
-        {
-            var sqlType = this.Visitor.ActionMode switch
-            {
-                ActionMode.BulkCopy => CommandSqlType.BulkCopyInsert,
-                ActionMode.Bulk => CommandSqlType.BulkInsert,
-                _ => CommandSqlType.Insert
-            };
-            this.DbContext.AddCommandAfterFilter(connection, command, sqlType, eventArgs, exception == null, exception);
-            if (command != null)
-            {
-                command.Parameters.Clear();
-                await command.DisposeAsync();
-            }
-            if (isNeedClose) await this.CloseAsync(connection);
-        }
-        if (exception != null) throw exception;
-        return result;
-    }
-    private int ExecuteBulkCopy(TheaConnection connection, Type insertObjType, IEnumerable insertObjs, string tableName = null)
-    {
-        var entityMapper = this.Visitor.Tables[0].Mapper;
-        var memberMappers = this.Visitor.GetRefMemberMappers(insertObjType, entityMapper);
-        var dataTable = this.Visitor.ToDataTable(insertObjType, insertObjs, memberMappers, tableName ?? entityMapper.TableName);
-        if (dataTable.Rows.Count == 0) return 0;
-
-        this.DbContext.Open(connection);
-        var fromMapper = this.Visitor.Tables[0].Mapper;
-        int index = 0;
-        tableName ??= fromMapper.TableName;
-        var builder = new StringBuilder($"COPY {this.OrmProvider.GetTableName(tableName)}(");
-        foreach (var (refMemberMapper, _) in memberMappers)
-        {
-            if (index > 0) builder.Append(',');
-            builder.Append(this.OrmProvider.GetFieldName((string)refMemberMapper.FieldName));
-            index++;
-        }
-        builder.Append(") FROM STDIN BINARY");
-        var dbConnection = connection.BaseConnection as NpgsqlConnection;
-        using var writer = dbConnection.BeginBinaryImport(builder.ToString());
-        int result = 0;
-        foreach (var insertObj in insertObjs)
-        {
-            writer.StartRow();
-            foreach (var (refMemberMapper, valueGetter) in memberMappers)
-            {
-                object fieldValue = valueGetter.Invoke(insertObj);
-                writer.Write(fieldValue, (NpgsqlDbType)refMemberMapper.NativeDbType);
-            }
-            result++;
-        }
-        writer.Complete();
-        builder.Clear();
-        builder = null;
-        return result;
-    }
-    private async Task<int> ExecuteBulkCopyAsync(TheaConnection connection, Type insertObjType, IEnumerable insertObjs, CancellationToken cancellationToken = default, string tableName = null)
-    {
-        var entityMapper = this.Visitor.Tables[0].Mapper;
-        var memberMappers = this.Visitor.GetRefMemberMappers(insertObjType, entityMapper);
-        var dataTable = this.Visitor.ToDataTable(insertObjType, insertObjs, memberMappers, tableName ?? entityMapper.TableName);
-        if (dataTable.Rows.Count == 0) return 0;
-
-        await this.DbContext.OpenAsync(connection, cancellationToken);
-        var fromMapper = this.Visitor.Tables[0].Mapper;
-        int index = 0;
-        tableName ??= fromMapper.TableName;
-        var builder = new StringBuilder($"COPY {this.OrmProvider.GetTableName(tableName)}(");
-        foreach (var (refMemberMapper, _) in memberMappers)
-        {
-            if (index > 0) builder.Append(',');
-            builder.Append(this.OrmProvider.GetFieldName(refMemberMapper.FieldName));
-            index++;
-        }
-        builder.Append(") FROM STDIN BINARY");
-        var dbConnection = connection.BaseConnection as NpgsqlConnection;
-        using var writer = await dbConnection.BeginBinaryImportAsync(builder.ToString(), cancellationToken);
-        int result = 0;
-        foreach (var insertObj in insertObjs)
-        {
-            await writer.StartRowAsync(cancellationToken);
-            foreach (var (refMemberMapper, valueGetter) in memberMappers)
-            {
-                object fieldValue = valueGetter.Invoke(insertObj);
-                await writer.WriteAsync(fieldValue, (NpgsqlDbType)refMemberMapper.NativeDbType, cancellationToken);
-            }
-            result++;
-        }
-        await writer.CompleteAsync(cancellationToken);
-        builder.Clear();
-        builder = null;
+        command.Parameters.Clear();
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
         return result;
     }
     #endregion

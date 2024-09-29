@@ -1,12 +1,15 @@
 ﻿using Npgsql;
 using NpgsqlTypes;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace Trolley.PostgreSql;
 
@@ -37,8 +40,10 @@ public partial class PostgreSqlProvider : BaseOrmProvider
         defaultMapTypes[NpgsqlDbType.Xml] = typeof(string);
         defaultMapTypes[NpgsqlDbType.Timestamp] = typeof(DateTime);
         defaultMapTypes[NpgsqlDbType.TimestampTz] = typeof(DateTimeOffset);
+#if NET6_0_OR_GREATER
         defaultMapTypes[NpgsqlDbType.Date] = typeof(DateOnly);
         defaultMapTypes[NpgsqlDbType.Time] = typeof(TimeOnly);
+#endif
         defaultMapTypes[NpgsqlDbType.Interval] = typeof(TimeSpan);
         defaultMapTypes[NpgsqlDbType.Bytea] = typeof(byte[]);
         defaultMapTypes[NpgsqlDbType.Varbit] = typeof(byte[]);
@@ -60,8 +65,10 @@ public partial class PostgreSqlProvider : BaseOrmProvider
         defaultDbTypes[typeof(string)] = NpgsqlDbType.Varchar;
         defaultDbTypes[typeof(DateTime)] = NpgsqlDbType.Timestamp;
         defaultDbTypes[typeof(DateTimeOffset)] = NpgsqlDbType.TimestampTz;
+#if NET6_0_OR_GREATER
         defaultDbTypes[typeof(DateOnly)] = NpgsqlDbType.Date;
         defaultDbTypes[typeof(TimeOnly)] = NpgsqlDbType.Time;
+#endif
         defaultDbTypes[typeof(TimeSpan)] = NpgsqlDbType.Interval;
         defaultDbTypes[typeof(Guid)] = NpgsqlDbType.Uuid;
         defaultDbTypes[typeof(byte[])] = NpgsqlDbType.Bytea;
@@ -75,31 +82,36 @@ public partial class PostgreSqlProvider : BaseOrmProvider
         defaultDbTypes[typeof(uint?)] = NpgsqlDbType.Bigint;
         defaultDbTypes[typeof(long?)] = NpgsqlDbType.Bigint;
         defaultDbTypes[typeof(ulong?)] = NpgsqlDbType.Numeric;
+
         defaultDbTypes[typeof(float?)] = NpgsqlDbType.Real;
         defaultDbTypes[typeof(double?)] = NpgsqlDbType.Double;
         defaultDbTypes[typeof(decimal?)] = NpgsqlDbType.Numeric;
         defaultDbTypes[typeof(DateTime?)] = NpgsqlDbType.Timestamp;
         defaultDbTypes[typeof(DateTimeOffset?)] = NpgsqlDbType.TimestampTz;
+#if NET6_0_OR_GREATER
         defaultDbTypes[typeof(DateOnly?)] = NpgsqlDbType.Date;
         defaultDbTypes[typeof(TimeOnly?)] = NpgsqlDbType.Time;
+#endif
         defaultDbTypes[typeof(TimeSpan?)] = NpgsqlDbType.Interval;
         defaultDbTypes[typeof(Guid?)] = NpgsqlDbType.Uuid;
         defaultDbTypes[typeof(byte[])] = NpgsqlDbType.Bytea;
 
         //PostgreSql支持数据类型，值为各自值|int.MinValue
         //如, int[]类型: int.MinValue | NpgsqlDbType.Integer
-        defaultDbTypes[typeof(long[])] = NpgsqlDbType.BigIntRange;
+        defaultDbTypes[typeof(long[])] = NpgsqlDbType.Bigint | NpgsqlDbType.Range;
         defaultDbTypes[typeof(bool[])] = NpgsqlDbType.Boolean | NpgsqlDbType.Range;
         defaultDbTypes[typeof(short[])] = NpgsqlDbType.Smallint | NpgsqlDbType.Range;
         defaultDbTypes[typeof(int[])] = NpgsqlDbType.Integer | NpgsqlDbType.Range;
         defaultDbTypes[typeof(float[])] = NpgsqlDbType.Real | NpgsqlDbType.Range;
         defaultDbTypes[typeof(double[])] = NpgsqlDbType.Double | NpgsqlDbType.Range;
         defaultDbTypes[typeof(decimal[])] = NpgsqlDbType.Numeric | NpgsqlDbType.Range;
+#if NET6_0_OR_GREATER
         defaultDbTypes[typeof(DateOnly[])] = NpgsqlDbType.DateRange;
         defaultDbTypes[typeof(TimeOnly[])] = NpgsqlDbType.Time | NpgsqlDbType.Range;
+#endif
         defaultDbTypes[typeof(TimeSpan[])] = NpgsqlDbType.Interval | NpgsqlDbType.Range;
         defaultDbTypes[typeof(string[])] = NpgsqlDbType.Varchar | NpgsqlDbType.Range;
-        defaultDbTypes[typeof(DateTimeOffset[])] = NpgsqlDbType.TimestampTzRange;
+        defaultDbTypes[typeof(DateTimeOffset[])] = NpgsqlDbType.TimestampTz | NpgsqlDbType.Range;
         defaultDbTypes[typeof(Guid[])] = NpgsqlDbType.Uuid | NpgsqlDbType.Range;
 
         castTos[typeof(string)] = "VARCHAR";
@@ -116,9 +128,10 @@ public partial class PostgreSqlProvider : BaseOrmProvider
         castTos[typeof(decimal)] = "DECIMAL";
         castTos[typeof(bool)] = "BOOLEAN";
         castTos[typeof(DateTime)] = "TIMESTAMP";
+#if NET6_0_OR_GREATER
         castTos[typeof(DateOnly)] = "DATE";
         castTos[typeof(TimeOnly)] = "TIME";
-
+#endif
         castTos[typeof(sbyte?)] = "SMALLINT";
         castTos[typeof(byte?)] = "SMALLINT";
         castTos[typeof(short?)] = "SMALLINT";
@@ -132,12 +145,14 @@ public partial class PostgreSqlProvider : BaseOrmProvider
         castTos[typeof(decimal?)] = "DECIMAL";
         castTos[typeof(bool?)] = "BOOLEAN";
         castTos[typeof(DateTime?)] = "TIMESTAMP";
+#if NET6_0_OR_GREATER
         castTos[typeof(DateOnly?)] = "DATE";
         castTos[typeof(TimeOnly?)] = "TIME";
+#endif
     }
 
-    public override IDbConnection CreateConnection(string connectionString)
-        => new NpgsqlConnection(connectionString);
+    public override ITheaConnection CreateConnection(string dbKey, string connectionString)
+        => new PostgreSqlTheaConnection(dbKey, connectionString);
     public override IDbCommand CreateCommand() => new NpgsqlCommand();
     public override IDbDataParameter CreateParameter(string parameterName, object value)
         => new NpgsqlParameter(parameterName, value);
@@ -195,8 +210,10 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                 return $"TIMESTAMP '{Convert.ToDateTime(value):yyyy\\-MM\\-dd\\ HH\\:mm\\:ss\\.fff}'";
             case Type factType when factType == typeof(DateTimeOffset):
                 return $"TIMESTAMPTZ '{(DateTimeOffset)value:yyyy\\-MM\\-dd\\ HH\\:mm\\:ss\\.fffZ}'";
+#if NET6_0_OR_GREATER
             case Type factType when factType == typeof(DateOnly):
                 return $"DATE '{(DateOnly)value:yyyy\\-MM\\-dd}'";
+#endif
             case Type factType when factType == typeof(TimeSpan):
                 {
                     var factValue = (TimeSpan)value;
@@ -204,7 +221,9 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                         return $"INTERVAL '{(int)factValue.TotalDays}D {factValue:hh\\:mm\\:ss\\.ffffff}'";
                     return $"INTERVAL '{factValue:hh\\:mm\\:ss\\.ffffff}'";
                 }
+#if NET6_0_OR_GREATER
             case Type factType when factType == typeof(TimeOnly): return $"TIME '{(TimeOnly)value:hh\\:mm\\:ss\\.ffffff}'";
+#endif
             case Type factType when factType == typeof(SqlFieldSegment):
                 {
                     var sqlSegment = value as SqlFieldSegment;
@@ -271,12 +290,12 @@ public partial class PostgreSqlProvider : BaseOrmProvider
 
             case "uuid": result = NpgsqlDbType.Uuid; break;
 
-            case "int4range": result = NpgsqlDbType.IntegerRange; break;
-            case "int8range": result = NpgsqlDbType.BigIntRange; break;
-            case "numrange": result = NpgsqlDbType.NumericRange; break;
-            case "tsrange": result = NpgsqlDbType.TimestampRange; break;
-            case "tstzrange": result = NpgsqlDbType.TimestampTzRange; break;
-            case "daterange": result = NpgsqlDbType.DateRange; break;
+            case "int4range": result = NpgsqlDbType.Integer | NpgsqlDbType.Range; break;
+            case "int8range": result = NpgsqlDbType.Bigint | NpgsqlDbType.Range; break;
+            case "numrange": result = NpgsqlDbType.Numeric | NpgsqlDbType.Range; break;
+            case "tsrange": result = NpgsqlDbType.Timestamp | NpgsqlDbType.Range; break;
+            case "tstzrange": result = NpgsqlDbType.TimestampTz | NpgsqlDbType.Range; break;
+            case "daterange": result = NpgsqlDbType.Date | NpgsqlDbType.Range; break;
 
             case "hstore": result = NpgsqlDbType.Hstore; break;
 
@@ -307,13 +326,13 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
                 var tableSchema = myTableNames[0];
                 myTableName = myTableNames[1];
                 if (!tableBuilders.TryGetValue(tableSchema, out builder))
-                    tableBuilders.TryAdd(tableSchema, builder = new StringBuilder());
+                    tableBuilders.Add(tableSchema, builder = new StringBuilder());
             }
             else
             {
                 var tableSchema = this.DefaultTableSchema;
                 if (!tableBuilders.TryGetValue(tableSchema, out builder))
-                    tableBuilders.TryAdd(tableSchema, builder = new StringBuilder());
+                    tableBuilders.Add(tableSchema, builder = new StringBuilder());
                 myTableName = tableName;
             }
             if (builder.Length > 0)
@@ -425,7 +444,6 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
                             continue;
                         throw new Exception($"表{tableName}非空字段{columnInfo.FieldName}在实体{entityMapper.EntityType.FullName}中没有对应映射成员或是不满足默认字段映射处理器DefaultFieldMapHandler规则，可手动配置映射字段如：.Member(f => f.XxxMember).Field(\"xxxField\")，如果是RowVersion字段，需要手动指定，如：.Member(f => f.XxxMember).Field(\"xxxField\").RowVersion()");
                     }
-
                     entityMapper.AddMemberMap(memberInfo.Name, memberMapper = new MemberMap(entityMapper, memberInfo)
                     {
                         FieldName = columnInfo.FieldName,
@@ -438,7 +456,6 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
                         Position = columnInfo.Position
                     });
                 }
-
                 //允许自定义TypeHandlerType设置，默认设置
                 if ((memberMapper.UnderlyingType.IsClass && memberMapper.UnderlyingType != typeof(string) || memberMapper.UnderlyingType.IsEntityType(out _))
                     && this.MapDefaultType(memberMapper.NativeDbType) == typeof(string) && memberMapper.TypeHandlerType == null)
@@ -465,14 +482,14 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
     {
         var methodInfo = methodCallExpr.Method;
         var parameterInfos = methodInfo.GetParameters();
-        var genericArgumentTypes = methodInfo.DeclaringType.GetGenericArguments();
         int cacheKey = 0;
         switch (methodInfo.Name)
         {
             case "Excluded":
+                var genericArgumentTypes = methodInfo.DeclaringType.GetGenericArguments();
                 if (genericArgumentTypes.Length == 1 && methodInfo.DeclaringType == typeof(IPostgreSqlCreateConflictDoUpdate<>).MakeGenericType(genericArgumentTypes[0]))
                 {
-                    cacheKey = HashCode.Combine(typeof(IPostgreSqlCreateConflictDoUpdate<>), methodInfo.GetGenericMethodDefinition());
+                    cacheKey = RepositoryHelper.GetCacheKey(typeof(IPostgreSqlCreateConflictDoUpdate<>), methodInfo.GetGenericMethodDefinition());
                     //.OnConflict(x => x.UseKeys().Set(f => new { TotalAmount = f.TotalAmount + x.Excluded(f.TotalAmount) }) ... )
                     formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                     {
@@ -496,7 +513,7 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
                 }
                 break;
             case "IsNull":
-                cacheKey = HashCode.Combine(typeof(Sql), methodInfo.GetGenericMethodDefinition());
+                cacheKey = RepositoryHelper.GetCacheKey(typeof(Sql), methodInfo.GetGenericMethodDefinition());
                 formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                 {
                     var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
@@ -509,5 +526,157 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
         }
         formatter = null;
         return false;
+    }
+    public int ExecuteBulkCopy(bool isUpdate, DbContext dbContext, SqlVisitor visitor, ITheaConnection connection, Type insertObjType, IEnumerable insertObjs, string tableName = null)
+    {
+        var entityMapper = visitor.Tables[0].Mapper;
+        var memberMappers = visitor.GetRefMemberMappers(insertObjType, entityMapper, isUpdate);
+        var dataTable = visitor.ToDataTable(insertObjType, insertObjs, memberMappers, tableName ?? entityMapper.TableName);
+        if (dataTable.Rows.Count == 0) return 0;
+
+        connection.Open();
+        var fromMapper = visitor.Tables[0].Mapper;
+        int index = 0;
+        tableName ??= fromMapper.TableName;
+        var builder = new StringBuilder($"COPY {this.GetTableName(tableName)}(");
+        foreach ((var refMemberMapper, _) in memberMappers)
+        {
+            if (index > 0) builder.Append(',');
+            builder.Append(this.GetFieldName(refMemberMapper.FieldName));
+            index++;
+        }
+        builder.Append(") FROM STDIN BINARY");
+        var dbConnection = connection.BaseConnection as NpgsqlConnection;
+        var transaction = dbContext.Transaction?.BaseTransaction as NpgsqlTransaction;
+        var createdAt = DateTime.Now;
+        dbContext.DbInterceptors.OnCommandExecuting?.Invoke(new CommandEventArgs
+        {
+            DbKey = dbContext.DbKey,
+            ConnectionString = connection.ConnectionString,
+            SqlType = CommandSqlType.BulkCopyInsert,
+            CreatedAt = createdAt
+        });
+        int recordsAffected = 0;
+        bool isSuccess = true;
+        Exception exception = null;
+        try
+        {
+            using var writer = dbConnection.BeginBinaryImport(builder.ToString());
+            foreach (var insertObj in insertObjs)
+            {
+                writer.StartRow();
+                foreach ((var refMemberMapper, var valueGetter) in memberMappers)
+                {
+                    object fieldValue = valueGetter.Invoke(insertObj);
+                    writer.Write(fieldValue, (NpgsqlDbType)refMemberMapper.NativeDbType);
+                }
+                recordsAffected++;
+            }
+            writer.Complete();
+        }
+        catch (Exception ex)
+        {
+            exception = ex;
+            isSuccess = false;
+        }
+        finally
+        {
+            var elapsed = DateTime.Now.Subtract(createdAt).TotalMilliseconds;
+            dbContext.DbInterceptors.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs
+            {
+                DbKey = dbContext.DbKey,
+                ConnectionString = connection.ConnectionString,
+                SqlType = CommandSqlType.BulkCopyInsert,
+                IsSuccess = isSuccess,
+                Exception = exception,
+                Elapsed = (int)elapsed,
+                CreatedAt = createdAt
+            });
+            builder.Clear();
+        }
+        if (!isSuccess)
+        {
+            if (transaction == null) connection.Close();
+            throw exception;
+        }
+        return recordsAffected;
+    }
+    public async Task<int> ExecuteBulkCopyAsync(bool isUpdate, DbContext dbContext, SqlVisitor visitor, ITheaConnection connection, Type insertObjType, IEnumerable insertObjs, CancellationToken cancellationToken = default, string tableName = null)
+    {
+        var entityMapper = visitor.Tables[0].Mapper;
+        var memberMappers = visitor.GetRefMemberMappers(insertObjType, entityMapper, isUpdate);
+        var dataTable = visitor.ToDataTable(insertObjType, insertObjs, memberMappers, tableName ?? entityMapper.TableName);
+        if (dataTable.Rows.Count == 0) return 0;
+
+        await connection.OpenAsync(cancellationToken);
+        var fromMapper = visitor.Tables[0].Mapper;
+        int index = 0;
+        tableName ??= fromMapper.TableName;
+        var builder = new StringBuilder($"COPY {this.GetTableName(tableName)}(");
+        foreach ((var refMemberMapper, _) in memberMappers)
+        {
+            if (index > 0) builder.Append(',');
+            builder.Append(this.GetFieldName(refMemberMapper.FieldName));
+            index++;
+        }
+        builder.Append(") FROM STDIN BINARY");
+        var dbConnection = connection.BaseConnection as NpgsqlConnection;
+        var transaction = dbContext.Transaction?.BaseTransaction as NpgsqlTransaction;
+        var createdAt = DateTime.Now;
+        dbContext.DbInterceptors.OnCommandExecuting?.Invoke(new CommandEventArgs
+        {
+            DbKey = dbContext.DbKey,
+            ConnectionString = connection.ConnectionString,
+            SqlType = CommandSqlType.BulkCopyInsert,
+            CreatedAt = createdAt
+        });
+        int recordsAffected = 0;
+        bool isSuccess = true;
+        Exception exception = null;
+        try
+        {
+#if NETFX
+            using var writer = dbConnection.BeginBinaryImport(builder.ToString());
+#else
+            using var writer = await dbConnection.BeginBinaryImportAsync(builder.ToString(), cancellationToken);
+#endif
+            foreach (var insertObj in insertObjs)
+            {
+                await writer.StartRowAsync(cancellationToken);
+                foreach ((var refMemberMapper, var valueGetter) in memberMappers)
+                {
+                    object fieldValue = valueGetter.Invoke(insertObj);
+                    await writer.WriteAsync(fieldValue, (NpgsqlDbType)refMemberMapper.NativeDbType, cancellationToken);
+                }
+                recordsAffected++;
+            }
+            await writer.CompleteAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            exception = ex;
+            isSuccess = false;
+        }
+        finally
+        {
+            var elapsed = DateTime.Now.Subtract(createdAt).TotalMilliseconds;
+            dbContext.DbInterceptors.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs
+            {
+                DbKey = dbContext.DbKey,
+                ConnectionString = connection.ConnectionString,
+                SqlType = CommandSqlType.BulkCopyInsert,
+                IsSuccess = isSuccess,
+                Exception = exception,
+                Elapsed = (int)elapsed,
+                CreatedAt = createdAt
+            });
+            builder.Clear();
+        }
+        if (!isSuccess)
+        {
+            if (transaction == null) connection.Close();
+            throw exception;
+        }
+        return recordsAffected;
     }
 }
