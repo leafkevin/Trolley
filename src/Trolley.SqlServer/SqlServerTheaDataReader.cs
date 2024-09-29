@@ -1,4 +1,4 @@
-﻿using System.Data.SqlClient;
+﻿using Microsoft.Data.SqlClient;
 using System;
 using System.Collections;
 #if NET5_0_OR_GREATER
@@ -10,7 +10,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Trolley.SqlConnector;
+namespace Trolley.SqlServer;
 
 class SqlServerTheaDataReader : ITheaDataReader
 {

@@ -103,7 +103,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
                     command.ExecuteNonQuery(CommandSqlType.BulkCopyUpdate);
                     var dialectOrmProvider = this.OrmProvider as SqlServerProvider;
                     var sqlVisitor = this.Visitor as SqlVisitor;
-                    result = dialectOrmProvider.ExecuteBulkCopy(this.DbContext, sqlVisitor, connection, updateObjType, updateObjs, timeoutSeconds, tableName);
+                    result = dialectOrmProvider.ExecuteBulkCopy(true, this.DbContext, sqlVisitor, connection, updateObjType, updateObjs, timeoutSeconds, tableName);
                     if (result == 0) updateSql = $"DROP TABLE {tableName}";
                     command.CommandText = updateSql;
                     result = command.ExecuteNonQuery(CommandSqlType.BulkCopyUpdate);
@@ -269,7 +269,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
                     await command.ExecuteNonQueryAsync(CommandSqlType.BulkCopyUpdate, cancellationToken);
                     var dialectOrmProvider = this.OrmProvider as SqlServerProvider;
                     var sqlVisitor = this.Visitor as SqlVisitor;
-                    result = await dialectOrmProvider.ExecuteBulkCopyAsync(this.DbContext, sqlVisitor, connection, updateObjType, updateObjs, timeoutSeconds, cancellationToken, tableName);
+                    result = await dialectOrmProvider.ExecuteBulkCopyAsync(true, this.DbContext, sqlVisitor, connection, updateObjType, updateObjs, timeoutSeconds, cancellationToken, tableName);
                     if (result == 0) updateSql = $"DROP TABLE {tableName}";
                     command.CommandText = updateSql;
                     result = await command.ExecuteNonQueryAsync(CommandSqlType.BulkCopyUpdate, cancellationToken);

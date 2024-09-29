@@ -3,11 +3,11 @@ using System.Data;
 #if NET6_0_OR_GREATER
 using System.Data.Common;
 #endif
-using System.Data.SqlClient;
+using Microsoft.Data.SqlClient;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Trolley.SqlConnector;
+namespace Trolley.SqlServer;
 
 class SqlServerTheaConnection : ITheaConnection
 {

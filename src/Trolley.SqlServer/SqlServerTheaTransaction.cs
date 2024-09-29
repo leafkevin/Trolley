@@ -1,10 +1,10 @@
 ﻿using System;
-using System.Data.SqlClient;
 using System.Data;
+using Microsoft.Data.SqlClient;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Trolley.SqlConnector;
+namespace Trolley.SqlServer;
 
 class SqlServerTheaTransaction : ITheaTransaction
 {

@@ -105,6 +105,14 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
     }
     #endregion
 
+    #region UseTableSchema
+    public virtual IMultiQuery<T> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(false, tableSchema);
+        return this;
+    }
+    #endregion
+
     #region Union/UnionAll
     public IMultiQuery<T> Union(IQuery<T> subQuery)
     {

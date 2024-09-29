@@ -1,10 +1,10 @@
-﻿using System;
+﻿using Microsoft.Data.SqlClient;
+using System;
 using System.Data;
-using System.Data.SqlClient;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Trolley.SqlConnector;
+namespace Trolley.SqlServer;
 
 class SqlServerTheaCommand : ITheaCommand
 {

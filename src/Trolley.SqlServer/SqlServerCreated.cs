@@ -48,12 +48,12 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
                         var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
                         foreach (var tabledInsertObj in tabledInsertObjs)
                         {
-                            result += dialectOrmProvider.ExecuteBulkCopy(this.DbContext, sqlVisitor, connection, insertObjType, tabledInsertObj.Value, timeoutSeconds, tabledInsertObj.Key);
+                            result += dialectOrmProvider.ExecuteBulkCopy(true, this.DbContext, sqlVisitor, connection, insertObjType, tabledInsertObj.Value, timeoutSeconds, tabledInsertObj.Key);
                         }
                     }
-                    else result = dialectOrmProvider.ExecuteBulkCopy(this.DbContext, sqlVisitor, connection, insertObjType, insertObjs, timeoutSeconds, this.Visitor.Tables[0].Body);
+                    else result = dialectOrmProvider.ExecuteBulkCopy(true, this.DbContext, sqlVisitor, connection, insertObjType, insertObjs, timeoutSeconds, this.Visitor.Tables[0].Body);
                 }
-                else result = dialectOrmProvider.ExecuteBulkCopy(this.DbContext, sqlVisitor, connection, insertObjType, insertObjs, timeoutSeconds);
+                else result = dialectOrmProvider.ExecuteBulkCopy(true, this.DbContext, sqlVisitor, connection, insertObjType, insertObjs, timeoutSeconds);
                 break;
             case ActionMode.Bulk:
                 var builder = new StringBuilder();
@@ -141,12 +141,12 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
                         var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
                         foreach (var tabledInsertObj in tabledInsertObjs)
                         {
-                            result += await dialectOrmProvider.ExecuteBulkCopyAsync(this.DbContext, sqlVisitor, connection, insertObjType, tabledInsertObj.Value, timeoutSeconds, cancellationToken, tabledInsertObj.Key);
+                            result += await dialectOrmProvider.ExecuteBulkCopyAsync(true, this.DbContext, sqlVisitor, connection, insertObjType, tabledInsertObj.Value, timeoutSeconds, cancellationToken, tabledInsertObj.Key);
                         }
                     }
-                    else result = await dialectOrmProvider.ExecuteBulkCopyAsync(this.DbContext, sqlVisitor, connection, insertObjType, insertObjs, timeoutSeconds, cancellationToken, this.Visitor.Tables[0].Body);
+                    else result = await dialectOrmProvider.ExecuteBulkCopyAsync(true, this.DbContext, sqlVisitor, connection, insertObjType, insertObjs, timeoutSeconds, cancellationToken, this.Visitor.Tables[0].Body);
                 }
-                else result = await dialectOrmProvider.ExecuteBulkCopyAsync(this.DbContext, sqlVisitor, connection, insertObjType, insertObjs, timeoutSeconds, cancellationToken);
+                else result = await dialectOrmProvider.ExecuteBulkCopyAsync(true, this.DbContext, sqlVisitor, connection, insertObjType, insertObjs, timeoutSeconds, cancellationToken);
                 break;
             case ActionMode.Bulk:
                 var sqlBuilder = new StringBuilder();

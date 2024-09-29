@@ -1,15 +1,14 @@
-﻿using System;
+﻿using Microsoft.Data.SqlClient;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.SqlClient;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Trolley.SqlConnector;
 
 namespace Trolley.SqlServer;
 
@@ -454,16 +453,16 @@ on e.id = c.default_object_id left join sys.index_columns f on f.object_id=a.obj
         formatter = null;
         return false;
     }
-    public int ExecuteBulkCopy(DbContext dbContext, SqlVisitor visitor, ITheaConnection connection, Type insertObjType, IEnumerable insertObjs, int? timeoutSeconds, string tableName = null)
+    public int ExecuteBulkCopy(bool isUpdate, DbContext dbContext, SqlVisitor visitor, ITheaConnection connection, Type insertObjType, IEnumerable insertObjs, int? timeoutSeconds, string tableName = null)
     {
         var entityMapper = visitor.Tables[0].Mapper;
-        var memberMappers = visitor.GetRefMemberMappers(insertObjType, entityMapper);
+        var memberMappers = visitor.GetRefMemberMappers(insertObjType, entityMapper, isUpdate);
         var dataTable = visitor.ToDataTable(insertObjType, insertObjs, memberMappers, tableName ?? entityMapper.TableName);
         if (dataTable.Rows.Count == 0) return 0;
 
         connection.Open();
         var dbConnection = connection.BaseConnection as SqlConnection;
-        var transaction = dbContext.Transaction.BaseTransaction as SqlTransaction;
+        var transaction = dbContext.Transaction?.BaseTransaction as SqlTransaction;
         var bulkCopy = new SqlBulkCopy(dbConnection, SqlBulkCopyOptions.Default, transaction);
         if (timeoutSeconds.HasValue) bulkCopy.BulkCopyTimeout = timeoutSeconds.Value;
         bulkCopy.DestinationTableName = dataTable.TableName;
@@ -472,7 +471,7 @@ on e.id = c.default_object_id left join sys.index_columns f on f.object_id=a.obj
             bulkCopy.ColumnMappings.Add(new SqlBulkCopyColumnMapping(i, dataTable.Columns[i].ColumnName));
         }
 
-		var createdAt = DateTime.Now;
+        var createdAt = DateTime.Now;
         dbContext.DbInterceptors.OnCommandExecuting?.Invoke(new CommandEventArgs
         {
             DbKey = dbContext.DbKey,
@@ -485,9 +484,9 @@ on e.id = c.default_object_id left join sys.index_columns f on f.object_id=a.obj
         Exception exception = null;
         try
         {
-        	bulkCopy.WriteToServer(dataTable);
-        	recordsAffected = dataTable.Rows.Count;
-		}
+            bulkCopy.WriteToServer(dataTable);
+            recordsAffected = dataTable.Rows.Count;
+        }
         catch (Exception ex)
         {
             exception = ex;
@@ -514,16 +513,16 @@ on e.id = c.default_object_id left join sys.index_columns f on f.object_id=a.obj
         }
         return recordsAffected;
     }
-    public async Task<int> ExecuteBulkCopyAsync(DbContext dbContext, SqlVisitor visitor, ITheaConnection connection, Type insertObjType, IEnumerable insertObjs, int? timeoutSeconds, CancellationToken cancellationToken = default, string tableName = null)
+    public async Task<int> ExecuteBulkCopyAsync(bool isUpdate, DbContext dbContext, SqlVisitor visitor, ITheaConnection connection, Type insertObjType, IEnumerable insertObjs, int? timeoutSeconds, CancellationToken cancellationToken = default, string tableName = null)
     {
         var entityMapper = visitor.Tables[0].Mapper;
-        var memberMappers = visitor.GetRefMemberMappers(insertObjType, entityMapper);
+        var memberMappers = visitor.GetRefMemberMappers(insertObjType, entityMapper, isUpdate);
         var dataTable = visitor.ToDataTable(insertObjType, insertObjs, memberMappers, tableName ?? entityMapper.TableName);
         if (dataTable.Rows.Count == 0) return 0;
 
         await connection.OpenAsync(cancellationToken);
         var dbConnection = connection.BaseConnection as SqlConnection;
-        var transaction = dbContext.Transaction.BaseTransaction as SqlTransaction;
+        var transaction = dbContext.Transaction?.BaseTransaction as SqlTransaction;
         var bulkCopy = new SqlBulkCopy(dbConnection, SqlBulkCopyOptions.Default, transaction);
         if (timeoutSeconds.HasValue) bulkCopy.BulkCopyTimeout = timeoutSeconds.Value;
         bulkCopy.DestinationTableName = dataTable.TableName;
@@ -531,8 +530,8 @@ on e.id = c.default_object_id left join sys.index_columns f on f.object_id=a.obj
         {
             bulkCopy.ColumnMappings.Add(new SqlBulkCopyColumnMapping(i, dataTable.Columns[i].ColumnName));
         }
-		
-		var createdAt = DateTime.Now;
+
+        var createdAt = DateTime.Now;
         dbContext.DbInterceptors.OnCommandExecuting?.Invoke(new CommandEventArgs
         {
             DbKey = dbContext.DbKey,
@@ -545,9 +544,9 @@ on e.id = c.default_object_id left join sys.index_columns f on f.object_id=a.obj
         Exception exception = null;
         try
         {
-        	await bulkCopy.WriteToServerAsync(dataTable);
-        	recordsAffected = dataTable.Rows.Count;
-		}
+            await bulkCopy.WriteToServerAsync(dataTable);
+            recordsAffected = dataTable.Rows.Count;
+        }
         catch (Exception ex)
         {
             exception = ex;

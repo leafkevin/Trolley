@@ -1,8 +1,8 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.SqlClient;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -78,7 +78,7 @@ public class UnitTest1 : UnitTestBase
             CreatedBy = 1,
             UpdatedAt = DateTime.Now,
             UpdatedBy = 1,
-            SomeTimes = TimeSpan.FromMinutes(35),
+            SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(35)),
             GuidField = Guid.NewGuid()
         });
         repository.Commit();
