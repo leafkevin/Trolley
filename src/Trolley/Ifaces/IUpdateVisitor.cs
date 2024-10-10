@@ -46,8 +46,8 @@ public interface IUpdateVisitor : IDisposable
     void OnlyFields(params string[] fieldNames);
     void OnlyFields(Expression fieldsSelector);
     void SetBulk(IEnumerable updateObjs, int bulkCount);
-    (IEnumerable, int, string, Action<IDataParameterCollection>, Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>,
-        Action<StringBuilder, string>, Action<StringBuilder, IOrmProvider, object, string>) BuildWithBulk(IDbCommand command);
+    (IEnumerable, int, string, Action<IDataParameterCollection>, Action<IDataParameterCollection, StringBuilder, DbContext, object, string>,
+        Action<StringBuilder, string>, Action<StringBuilder, DbContext, object, string>) BuildWithBulk(IDbCommand command);
     void WhereWith(object whereObj);
     void Where(Expression whereExpr);
     void And(Expression whereExpr);

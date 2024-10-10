@@ -285,8 +285,8 @@ public partial class MySqlProvider : BaseOrmProvider
         DbTableInfo tableInfo = null;
         while (reader.Read())
         {
-            var tableSchema = reader.ToValue<string>(0);
-            var tableName = reader.ToValue<string>(1);
+            var tableSchema = reader.ToFieldValue<string>(0);
+            var tableName = reader.ToFieldValue<string>(1);
             if (tableInfo == null || tableInfo.TableSchema != tableSchema || tableInfo.TableName != tableName)
             {
                 tableInfo = new DbTableInfo
@@ -299,18 +299,18 @@ public partial class MySqlProvider : BaseOrmProvider
             }
             tableInfo.Columns.Add(new DbColumnInfo
             {
-                FieldName = reader.ToValue<string>(2),
-                DataType = reader.ToValue<string>(3),
-                DbColumnType = reader.ToValue<string>(4),
-                MaxLength = (int)reader.ToValue<ulong>(5),
-                Scale = reader.ToValue<int>(6),
-                Precision = reader.ToValue<int>(7),
-                Description = reader.ToValue<string>(8),
-                DefaultValue = reader.ToValue<string>(9),
-                IsPrimaryKey = reader.ToValue<bool>(10),
-                IsAutoIncrement = reader.ToValue<bool>(11),
-                IsNullable = reader.ToValue<bool>(12),
-                Position = reader.ToValue<int>(13)
+                FieldName = reader.ToFieldValue<string>(2),
+                DataType = reader.ToFieldValue<string>(3),
+                DbColumnType = reader.ToFieldValue<string>(4),
+                MaxLength = (int)reader.ToFieldValue<ulong>(5),
+                Scale = reader.ToFieldValue<int>(6),
+                Precision = reader.ToFieldValue<int>(7),
+                Description = reader.ToFieldValue<string>(8),
+                DefaultValue = reader.ToFieldValue<string>(9),
+                IsPrimaryKey = reader.ToFieldValue<bool>(10),
+                IsAutoIncrement = reader.ToFieldValue<bool>(11),
+                IsNullable = reader.ToFieldValue<bool>(12),
+                Position = reader.ToFieldValue<int>(13)
             });
         }
         reader.Close();

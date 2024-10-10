@@ -7,8 +7,7 @@ public interface IOrmDbFactory
 {
     ICollection<TheaDatabase> Databases { get; }
     ICollection<IOrmProvider> OrmProviders { get; }
-    IFieldMapHandler FieldMapHandler { get; }
-    DbInterceptors Interceptors { get; }
+    OrmDbFactoryOptions Options { get; }
 
     void UseDefaultDatabase(string dbKey);
     void UseDatabaseSharding(Func<string> dbKeySelector);
@@ -27,7 +26,6 @@ public interface IOrmDbFactory
     bool TryGetMapProvider(string dbKey, out IEntityMapProvider mapProvider);
     void AddMapProvider(OrmProviderType ormProviderType, IEntityMapProvider mapProvider);
     bool TryGetMapProvider(OrmProviderType ormProviderType, out IEntityMapProvider mapProvider);
-    void UseFieldMapHandler(IFieldMapHandler fieldMapHandler);
     TheaDatabase GetDatabase(string dbKey = null);
     /// <summary>
     /// 使用指定的dbKey，创建仓储对象。

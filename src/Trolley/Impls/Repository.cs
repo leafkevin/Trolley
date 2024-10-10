@@ -16,7 +16,7 @@ public class Repository : IRepository
     public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
     public IEntityMapProvider MapProvider => this.DbContext.MapProvider;
     public ITableShardingProvider ShardingProvider => this.DbContext.ShardingProvider;
-    public bool IsParameterized => this.DbContext.IsParameterized;
+    public bool IsParameterized => this.DbContext.IsConstantParameterized;
     #endregion
 
     #region Constructor
@@ -155,9 +155,9 @@ public class Repository : IRepository
         return this.DbContext.QueryFirst<TEntity>(f =>
         {
             var entityType = typeof(TEntity);
-            var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.OrmProvider, this.MapProvider, entityType, whereObjType, false);
-            var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
-            f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.OrmProvider, whereObj);
+            var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.DbContext, entityType, whereObjType, false);
+            var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
+            f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.DbContext, whereObj);
         });
     }
     public virtual async Task<TEntity> QueryFirstAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default)
@@ -171,9 +171,9 @@ public class Repository : IRepository
         return await this.DbContext.QueryFirstAsync<TEntity>(f =>
         {
             var entityType = typeof(TEntity);
-            var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.OrmProvider, this.MapProvider, entityType, whereObjType, false);
-            var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
-            f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.OrmProvider, whereObj);
+            var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.DbContext, entityType, whereObjType, false);
+            var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
+            f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.DbContext, whereObj);
         }, cancellationToken);
     }
     public virtual List<TEntity> Query<TEntity>(string rawSql, object parameters = null)
@@ -229,9 +229,9 @@ public class Repository : IRepository
         return this.DbContext.Query<TEntity>(f =>
         {
             var entityType = typeof(TEntity);
-            var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.OrmProvider, this.MapProvider, entityType, whereObjType, false);
-            var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
-            f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.OrmProvider, whereObj);
+            var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.DbContext, entityType, whereObjType, false);
+            var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
+            f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.DbContext, whereObj);
         });
     }
     public virtual async Task<List<TEntity>> QueryAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default)
@@ -245,9 +245,9 @@ public class Repository : IRepository
         return await this.DbContext.QueryAsync<TEntity>(f =>
         {
             var entityType = typeof(TEntity);
-            var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.OrmProvider, this.MapProvider, entityType, whereObjType, false);
-            var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
-            f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.OrmProvider, whereObj);
+            var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.DbContext, entityType, whereObjType, false);
+            var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
+            f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.DbContext, whereObj);
         }, cancellationToken);
     }
     #endregion
@@ -286,7 +286,7 @@ public class Repository : IRepository
             var mapProvider = this.DbContext.MapProvider;
 
             var fieldsSqlPartSetter = RepositoryHelper.BuildCreateFieldsSqlPart(ormProvider, mapProvider, entityType, insertObjType, null, null);
-            var valuesSqlPartSetter = RepositoryHelper.BuildCreateValuesSqlParametes(ormProvider, mapProvider, entityType, insertObjType, null, null, true);
+            var valuesSqlPartSetter = RepositoryHelper.BuildCreateValuesSqlParametes(this.DbContext, entityType, insertObjType, null, null, true);
             bool isDictionary = typeof(IDictionary<string, object>).IsAssignableFrom(insertObjType);
 
             Action<IDataParameterCollection, StringBuilder, string> firstSqlSetter = null;
@@ -295,7 +295,7 @@ public class Repository : IRepository
             if (isDictionary)
             {
                 var typedFieldsSqlPartSetter = fieldsSqlPartSetter as Func<StringBuilder, object, List<MemberMap>>;
-                var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, List<MemberMap>, object, string>;
+                var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, DbContext, List<MemberMap>, object, string>;
 
                 var memberMappers = typedFieldsSqlPartSetter.Invoke(builder, firstInsertObj);
                 builder.Append(") VALUES ");
@@ -311,14 +311,14 @@ public class Repository : IRepository
                 loopSqlSetter = (dbParameters, builder, insertObj, suffix) =>
                 {
                     builder.Append('(');
-                    typedValuesSqlPartSetter.Invoke(dbParameters, builder, ormProvider, memberMappers, insertObj, suffix);
+                    typedValuesSqlPartSetter.Invoke(dbParameters, builder, this.DbContext, memberMappers, insertObj, suffix);
                     builder.Append(')');
                 };
             }
             else
             {
                 var typedFieldsSqlPartSetter = fieldsSqlPartSetter as Action<StringBuilder>;
-                var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
+                var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
 
                 firstSqlSetter = (dbParameters, builder, tableName) =>
                 {
@@ -329,7 +329,7 @@ public class Repository : IRepository
                 loopSqlSetter = (dbParameters, builder, insertObj, suffix) =>
                 {
                     builder.Append('(');
-                    typedValuesSqlPartSetter.Invoke(dbParameters, builder, ormProvider, insertObj, suffix);
+                    typedValuesSqlPartSetter.Invoke(dbParameters, builder, this.DbContext, insertObj, suffix);
                     builder.Append(')');
                 };
             }
@@ -419,7 +419,7 @@ public class Repository : IRepository
             var mapProvider = this.DbContext.MapProvider;
 
             var fieldsSqlPartSetter = RepositoryHelper.BuildCreateFieldsSqlPart(ormProvider, mapProvider, entityType, insertObjType, null, null);
-            var valuesSqlPartSetter = RepositoryHelper.BuildCreateValuesSqlParametes(ormProvider, mapProvider, entityType, insertObjType, null, null, true);
+            var valuesSqlPartSetter = RepositoryHelper.BuildCreateValuesSqlParametes(this.DbContext, entityType, insertObjType, null, null, true);
             bool isDictionary = typeof(IDictionary<string, object>).IsAssignableFrom(insertObjType);
 
             Action<IDataParameterCollection, StringBuilder, string> firstSqlSetter = null;
@@ -428,7 +428,7 @@ public class Repository : IRepository
             if (isDictionary)
             {
                 var typedFieldsSqlPartSetter = fieldsSqlPartSetter as Func<StringBuilder, object, List<MemberMap>>;
-                var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, List<MemberMap>, object, string>;
+                var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, DbContext, List<MemberMap>, object, string>;
 
                 var memberMappers = typedFieldsSqlPartSetter.Invoke(builder, firstInsertObj);
                 builder.Append(") VALUES ");
@@ -444,14 +444,14 @@ public class Repository : IRepository
                 loopSqlSetter = (dbParameters, builder, insertObj, suffix) =>
                 {
                     builder.Append('(');
-                    typedValuesSqlPartSetter.Invoke(dbParameters, builder, ormProvider, memberMappers, insertObj, suffix);
+                    typedValuesSqlPartSetter.Invoke(dbParameters, builder, this.DbContext, memberMappers, insertObj, suffix);
                     builder.Append(')');
                 };
             }
             else
             {
                 var typedFieldsSqlPartSetter = fieldsSqlPartSetter as Action<StringBuilder>;
-                var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
+                var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
 
                 firstSqlSetter = (dbParameters, builder, tableName) =>
                 {
@@ -462,7 +462,7 @@ public class Repository : IRepository
                 loopSqlSetter = (dbParameters, builder, insertObj, suffix) =>
                 {
                     builder.Append('(');
-                    typedValuesSqlPartSetter.Invoke(dbParameters, builder, ormProvider, insertObj, suffix);
+                    typedValuesSqlPartSetter.Invoke(dbParameters, builder, this.DbContext, insertObj, suffix);
                     builder.Append(')');
                 };
             }
@@ -599,15 +599,15 @@ public class Repository : IRepository
                 updateObjType = updateObj.GetType();
                 break;
             }
-            (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.OrmProvider, this.MapProvider, entityType, updateObjType, true, null, null);
-            var typedSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
+            (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.DbContext, entityType, updateObjType, true, null, null);
+            var typedSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
 
             connection.Open();
             foreach (var updateObj in entities)
             {
                 if (index > 0) builder.Append(';');
                 headSqlSetter.Invoke(builder, tableName);
-                typedSqlSetter.Invoke(command.Parameters, builder, this.OrmProvider, updateObj, index.ToString());
+                typedSqlSetter.Invoke(command.Parameters, builder, this.DbContext, updateObj, index.ToString());
                 if (index >= bulkCount)
                 {
                     command.CommandText = builder.ToString();
@@ -628,10 +628,10 @@ public class Repository : IRepository
         else
         {
             var updateObjType = updateObjs.GetType();
-            (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.OrmProvider, this.MapProvider, entityType, updateObjType, false, null, null);
+            (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.DbContext, entityType, updateObjType, false, null, null);
             headSqlSetter.Invoke(builder, tableName);
-            var typedSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object>;
-            typedSqlSetter.Invoke(command.Parameters, builder, this.OrmProvider, updateObjs);
+            var typedSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
+            typedSqlSetter.Invoke(command.Parameters, builder, this.DbContext, updateObjs);
             command.CommandText = builder.ToString();
             connection.Open();
             result = command.ExecuteNonQuery(CommandSqlType.Update);
@@ -662,14 +662,14 @@ public class Repository : IRepository
                 updateObjType = updateObj.GetType();
                 break;
             }
-            (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.OrmProvider, this.MapProvider, entityType, updateObjType, true, null, null);
-            var typedSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
+            (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.DbContext, entityType, updateObjType, true, null, null);
+            var typedSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
             await connection.OpenAsync(cancellationToken);
             foreach (var updateObj in entities)
             {
                 if (index > 0) builder.Append(';');
                 headSqlSetter.Invoke(builder, tableName);
-                typedSqlSetter.Invoke(command.Parameters, builder, this.OrmProvider, updateObj, index.ToString());
+                typedSqlSetter.Invoke(command.Parameters, builder, this.DbContext, updateObj, index.ToString());
                 if (index >= bulkCount)
                 {
                     command.CommandText = builder.ToString();
@@ -690,10 +690,10 @@ public class Repository : IRepository
         else
         {
             var updateObjType = updateObjs.GetType();
-            (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.OrmProvider, this.MapProvider, entityType, updateObjType, false, null, null);
+            (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.DbContext, entityType, updateObjType, false, null, null);
             headSqlSetter.Invoke(builder, tableName);
-            var typedSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object>;
-            typedSqlSetter.Invoke(command.Parameters, builder, this.OrmProvider, updateObjs);
+            var typedSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
+            typedSqlSetter.Invoke(command.Parameters, builder, this.DbContext, updateObjs);
             command.CommandText = builder.ToString();
             await connection.OpenAsync(cancellationToken);
             result = await command.ExecuteNonQueryAsync(CommandSqlType.Update, cancellationToken);
@@ -753,7 +753,7 @@ public class Repository : IRepository
             }
         }
         else whereObjType = whereKeys.GetType();
-        (var isMultiKeys, var tableName, var whereSqlParametersSetter, var sqlSetter) = RepositoryHelper.BuildDeleteCommandInitializer(this.OrmProvider, this.MapProvider, entityType, whereObjType, isBulk, isBulk);
+        (var isMultiKeys, var tableName, var whereSqlParametersSetter, var sqlSetter) = RepositoryHelper.BuildDeleteCommandInitializer(this.DbContext, entityType, whereObjType, isBulk, isBulk);
 
         int index = 0;
         var builder = new StringBuilder();
@@ -761,20 +761,20 @@ public class Repository : IRepository
         if (isBulk)
         {
             var jointMark = isMultiKeys ? " OR " : ",";
-            var typedWhereSqlParametersSetter = whereSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
+            var typedWhereSqlParametersSetter = whereSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
 
             foreach (var entity in entities)
             {
                 if (index > 0) whereSqlBuilder.Append(jointMark);
-                typedWhereSqlParametersSetter.Invoke(command.Parameters, whereSqlBuilder, this.OrmProvider, entity, $"{index}");
+                typedWhereSqlParametersSetter.Invoke(command.Parameters, whereSqlBuilder, this.DbContext, entity, $"{index}");
                 index++;
             }
             if (!isMultiKeys) whereSqlBuilder.Append(')');
         }
         else
         {
-            var typedWhereSqlParametersSetter = whereSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object>;
-            typedWhereSqlParametersSetter.Invoke(command.Parameters, whereSqlBuilder, this.OrmProvider, whereKeys);
+            var typedWhereSqlParametersSetter = whereSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
+            typedWhereSqlParametersSetter.Invoke(command.Parameters, whereSqlBuilder, this.DbContext, whereKeys);
         }
         sqlSetter.Invoke(builder, tableName);
         builder.Append(whereSqlBuilder);
@@ -794,9 +794,9 @@ public class Repository : IRepository
         {
             var entityType = typeof(TEntity);
             var whereObjType = whereObj.GetType();
-            var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.OrmProvider, this.MapProvider, entityType, whereObjType, false);
-            var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
-            f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.OrmProvider, whereObj);
+            var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.DbContext, entityType, whereObjType, false);
+            var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
+            f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.DbContext, whereObj);
         });
         return result > 0;
     }
@@ -809,9 +809,9 @@ public class Repository : IRepository
         {
             var entityType = typeof(TEntity);
             var whereObjType = whereObj.GetType();
-            var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.OrmProvider, this.MapProvider, entityType, whereObjType, false);
-            var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
-            f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.OrmProvider, whereObj);
+            var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.DbContext, entityType, whereObjType, false);
+            var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
+            f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.DbContext, whereObj);
         }, cancellationToken);
         return result > 0;
     }
@@ -1007,23 +1007,6 @@ public class Repository : IRepository
     #region Others
     public virtual void Close() => this.DbContext.Connection.Close();
     public virtual async Task CloseAsync() => await this.DbContext.Connection.CloseAsync();
-    public virtual IRepository Timeout(int timeout)
-    {
-        this.DbContext.CommandTimeout = timeout;
-        return this;
-    }
-    public virtual IRepository WithParameterized(bool isParameterized = true)
-    {
-        this.DbContext.IsParameterized = isParameterized;
-        return this;
-    }
-    public virtual IRepository With(OrmDbFactoryOptions options)
-    {
-        if (options == null) return this;
-        this.DbContext.IsParameterized = options.IsParameterized;
-        this.DbContext.CommandTimeout = options.Timeout;
-        return this;
-    }
     public virtual void BeginTransaction() => this.DbContext.BeginTransaction();
     public virtual async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
         => await this.DbContext.BeginTransactionAsync(cancellationToken);

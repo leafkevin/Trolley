@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
@@ -27,7 +28,7 @@ public class RepositoryHelper
 
     private static ConcurrentDictionary<int, (bool, string, object, Action<StringBuilder, string>)> deleteCommandInitializerCache = new();
     private static ConcurrentDictionary<int, (bool, string, object, Action<StringBuilder, string>)> deleteMultiCommandInitializerCache = new();
-    private static ConcurrentDictionary<int, (bool, string, Action<StringBuilder, string>, Action<IDataParameterCollection, StringBuilder, IOrmProvider, string, object, string>)> deleteBulkCommandInitializerCache = new();
+    private static ConcurrentDictionary<int, (bool, string, Action<StringBuilder, string>, Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>)> deleteBulkCommandInitializerCache = new();
 
     private static ConcurrentDictionary<int, (string, Action<StringBuilder, string>, object, object)> updateCommandInitializerCache = new();
     private static ConcurrentDictionary<int, (string, Action<StringBuilder, string>, object, object)> updateMultiCommandInitializerCache = new();
@@ -36,9 +37,12 @@ public class RepositoryHelper
     private static ConcurrentDictionary<int, object> updateMultiWithCommandInitializerCache = new();
 
     private static ConcurrentDictionary<int, Func<string, object, string>> shardingTableNameGetters = new();
-    //private static ConcurrentDictionary<int, Action<object>> targetRefIncludeValuesSetters = new();
+    private static ConcurrentDictionary<Type, Func<object>> typedListGetters = new();
+    private static ConcurrentDictionary<Type, Func<object, object>> typedInitListGetters = new();
+    private static ConcurrentDictionary<Type, Func<object, object>> typedCollectionGetters = new();
+    private static ConcurrentDictionary<Type, Func<object, object>> toArrayGetters = new();
 
-    public static void AddValueParameter(IOrmProvider ormProvider, Expression dbParametersExpr, Expression ormProviderExpr, Expression parameterNameExpr,
+    public static void AddValueParameter(DbContext dbContext, Expression dbParametersExpr, Expression ormProviderExpr, Expression parameterNameExpr,
         Type fieldValueType, Expression parameterValueExpr, MemberMap memberMapper, List<ParameterExpression> blockParameters, List<Expression> blockBodies)
     {
         MethodInfo methodInfo = null;
@@ -56,8 +60,9 @@ public class RepositoryHelper
         }
         else
         {
+            var ormProvider = dbContext.OrmProvider;
             var targetType = ormProvider.MapDefaultType(memberMapper.NativeDbType);
-            var valueGetter = ormProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired);
+            var valueGetter = ormProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, dbContext.Options);
             if (fieldValueType != typeof(object))
                 fieldValueExpr = Expression.Convert(fieldValueExpr, typeof(object));
             fieldValueExpr = Expression.Invoke(Expression.Constant(valueGetter), fieldValueExpr);
@@ -67,17 +72,6 @@ public class RepositoryHelper
         if (nativeDbTypeExpr.Type != typeof(object))
             nativeDbTypeExpr = Expression.Convert(nativeDbTypeExpr, typeof(object));
         var dbParameterExpr = Expression.Call(ormProviderExpr, createParameterMethodInfo, parameterNameExpr, nativeDbTypeExpr, fieldValueExpr);
-        //Expression dbParameterExpr = null;
-
-        ////可为null类型，要判断是否=null
-        //if (!memberMapper.IsRequired && (fieldValueType.IsNullableType(out _) || !fieldValueType.IsValueType))
-        //{
-        //    var isNullExpr = Expression.NotEqual(parameterValueExpr, Expression.Constant(null));
-        //    var setNullExpr = Expression.Call(ormProviderExpr, createParameterMethodInfo, parameterNameExpr, nativeDbTypeExpr, Expression.Constant(DBNull.Value));
-        //    dbParameterExpr = Expression.IfThenElse(isNullExpr, setNullExpr, setParameterExpr);
-        //}
-        ////不可为null，直接赋值
-        //else dbParameterExpr = setParameterExpr;
         blockBodies.Add(Expression.Call(dbParametersExpr, addMethodInfo, dbParameterExpr));
     }
     public static void AddValueParameter(Expression dbParametersExpr, Expression ormProviderExpr, Expression parameterNameExpr, Expression parameterValueExpr, List<Expression> blockBodies)
@@ -126,16 +120,20 @@ public class RepositoryHelper
         }
         return builder.ToString();
     }
-    public static (bool, object) BuildSqlParametersPart(IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, Type parametersType, bool isUpdate, bool isFunc, bool isOnlySql, bool isUseKey, bool isWithKey, bool isOnlyParameters, bool hasSuffix, bool isIgnoreKeys, List<string> onlyFieldNames, List<string> ignoreFieldNames, string jointMark, string headSql)
+    public static (bool, object) BuildSqlParametersPart(DbContext dbContext, Type entityType, Type parametersType, bool isUpdate, bool isFunc, bool isOnlySql, bool isUseKey, bool isWithKey, bool isOnlyParameters, bool hasSuffix, bool isIgnoreKeys, List<string> onlyFieldNames, List<string> ignoreFieldNames, string jointMark, string headSql)
     {
         object commandInitializer = null;
+        var ormProvider = dbContext.OrmProvider;
+        var mapProvider = dbContext.MapProvider;
         var dbParametersExpr = Expression.Parameter(typeof(IDataParameterCollection), "dbParameters");
         var builderExpr = Expression.Parameter(typeof(StringBuilder), "builder");
-        var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
+        var dbContextExpr = Expression.Parameter(typeof(DbContext), "dbContext");
         var parametersExpr = Expression.Parameter(typeof(object), "parameters");
 
         ParameterExpression entityMapperExpr = null;
         ParameterExpression suffixExpr = null;
+        var ormProviderExpr = Expression.Variable(typeof(IOrmProvider), "ormProvider");
+
         var blockParameters = new List<ParameterExpression>();
         var blockBodies = new List<Expression>();
         MethodInfo methodInfo = null;
@@ -147,9 +145,11 @@ public class RepositoryHelper
             var constructorExpr = typeof(StringBuilder).GetConstructor(Type.EmptyTypes);
             blockBodies.Add(Expression.Assign(builderExpr, Expression.New(constructorExpr)));
         }
-        var appendMethodInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(string) });
+        var appendMethodInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), [typeof(string)]);
         if (!string.IsNullOrEmpty(headSql))
             blockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, Expression.Constant(headSql)));
+        blockParameters.Add(ormProviderExpr);
+        blockBodies.Add(Expression.Assign(ormProviderExpr, Expression.Property(dbContextExpr, nameof(DbContext.OrmProvider))));
 
         bool isDictionary = typeof(IDictionary<string, object>).IsAssignableFrom(parametersType);
         if (isDictionary)
@@ -158,7 +158,7 @@ public class RepositoryHelper
             var parameterNameExpr = Expression.Variable(typeof(string), "parameterName");
             var dictExpr = Expression.Variable(typeof(IDictionary<string, object>), "dict");
             var fieldValueExpr = Expression.Variable(typeof(object), "fieldValue");
-            blockParameters.AddRange(new[] { dictExpr, fieldValueExpr, parameterNameExpr });
+            blockParameters.AddRange([dictExpr, fieldValueExpr, parameterNameExpr]);
             blockBodies.Add(Expression.Assign(dictExpr, Expression.Convert(parametersExpr, typeof(IDictionary<string, object>))));
 
             var index = 0;
@@ -198,7 +198,7 @@ public class RepositoryHelper
                     if (!isOnlySql)
                     {
                         var typedFieldValueExpr = Expression.Convert(fieldValueExpr, keyMapper.MemberType);
-                        AddValueParameter(ormProvider, dbParametersExpr, ormProviderExpr, parameterNameExpr, keyMapper.MemberType, typedFieldValueExpr, keyMapper, blockParameters, blockBodies);
+                        AddValueParameter(dbContext, dbParametersExpr, ormProviderExpr, parameterNameExpr, keyMapper.MemberType, typedFieldValueExpr, keyMapper, blockParameters, blockBodies);
                     }
                     index++;
                 }
@@ -311,7 +311,7 @@ public class RepositoryHelper
                     //else
                     //{
                     //    var targetType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);
-                    //    var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, false);
+                    //    var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, false, dbContext.Options);
                     //    dbFieldValue = valueGetter.Invoke(dbFieldValue);
                     //}
                     Expression nativeDbTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.NativeDbType));
@@ -329,7 +329,8 @@ public class RepositoryHelper
                     methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.GetParameterValueGetter));
 
                     var fieldValueTypeExpr = Expression.Call(fieldValueExpr, typeof(object).GetMethod(nameof(object.GetType)));
-                    var valueGetterExpr = Expression.Call(ormProviderExpr, methodInfo, fieldValueTypeExpr, targetTypeExpr, Expression.Constant(false));
+                    var optionsExpr = Expression.Property(dbContextExpr, nameof(DbContext.Options));
+                    var valueGetterExpr = Expression.Call(ormProviderExpr, methodInfo, fieldValueTypeExpr, targetTypeExpr, Expression.Constant(false), optionsExpr);
                     var valueGetterValueExpr = Expression.Invoke(valueGetterExpr, myFieldValueExpr);
 
                     if (dbFieldValueExpr == null)
@@ -368,8 +369,6 @@ public class RepositoryHelper
                 parameterNameExpr = Expression.Variable(typeof(string), "parameterName");
                 blockParameters.Add(parameterNameExpr);
             }
-            targetMemberInfos = parametersType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
 
             if (parametersType.IsEntityType(out _))
             {
@@ -377,6 +376,9 @@ public class RepositoryHelper
                 typedParametersExpr = Expression.Variable(parametersType, "typedParameters");
                 blockParameters.Add(typedParametersExpr);
                 blockBodies.Add(Expression.Assign(typedParametersExpr, Expression.Convert(parametersExpr, parametersType)));
+
+                targetMemberInfos = parametersType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
+                    .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
                 if (isUseKey) filterMemberInfos = entityMapper.KeyMembers.Select(f => f.Member).ToList();
                 else filterMemberInfos = targetMemberInfos;
             }
@@ -426,12 +428,12 @@ public class RepositoryHelper
                     {
                         var fieldValueExpr = Expression.PropertyOrField(typedParametersExpr, memberMapper.MemberName);
                         var fieldValueType = targetMemberInfos.Find(f => f.Name == memberMapper.MemberName).GetMemberType();
-                        AddValueParameter(ormProvider, dbParametersExpr, ormProviderExpr, myParameterNameExpr, fieldValueType, fieldValueExpr, memberMapper, blockParameters, blockBodies);
+                        AddValueParameter(dbContext, dbParametersExpr, ormProviderExpr, myParameterNameExpr, fieldValueType, fieldValueExpr, memberMapper, blockParameters, blockBodies);
                     }
                     else
                     {
                         var fieldValueExpr = Expression.Convert(parametersExpr, memberMapper.MemberType);
-                        AddValueParameter(ormProvider, dbParametersExpr, ormProviderExpr, myParameterNameExpr, memberMapper.MemberType, fieldValueExpr, memberMapper, blockParameters, blockBodies);
+                        AddValueParameter(dbContext, dbParametersExpr, ormProviderExpr, myParameterNameExpr, memberMapper.MemberType, fieldValueExpr, memberMapper, blockParameters, blockBodies);
                     }
                 }
                 index++;
@@ -449,17 +451,17 @@ public class RepositoryHelper
 
             if (isDictionary)
             {
-                if (hasSuffix) commandInitializer = Expression.Lambda<Func<IDataParameterCollection, IOrmProvider, EntityMap, object, string, string>>(
-                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, ormProviderExpr, entityMapperExpr, parametersExpr, suffixExpr).Compile();
-                else commandInitializer = Expression.Lambda<Func<IDataParameterCollection, IOrmProvider, EntityMap, object, string>>(
-                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, ormProviderExpr, entityMapperExpr, parametersExpr).Compile();
+                if (hasSuffix) commandInitializer = Expression.Lambda<Func<IDataParameterCollection, DbContext, EntityMap, object, string, string>>(
+                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, dbContextExpr, entityMapperExpr, parametersExpr, suffixExpr).Compile();
+                else commandInitializer = Expression.Lambda<Func<IDataParameterCollection, DbContext, EntityMap, object, string>>(
+                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, dbContextExpr, entityMapperExpr, parametersExpr).Compile();
             }
             else
             {
-                if (hasSuffix) commandInitializer = Expression.Lambda<Func<IDataParameterCollection, IOrmProvider, object, string, string>>(
-                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, ormProviderExpr, parametersExpr, suffixExpr).Compile();
-                else commandInitializer = Expression.Lambda<Func<IDataParameterCollection, IOrmProvider, object, string>>(
-                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, ormProviderExpr, parametersExpr).Compile();
+                if (hasSuffix) commandInitializer = Expression.Lambda<Func<IDataParameterCollection, DbContext, object, string, string>>(
+                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, dbContextExpr, parametersExpr, suffixExpr).Compile();
+                else commandInitializer = Expression.Lambda<Func<IDataParameterCollection, DbContext, object, string>>(
+                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, dbContextExpr, parametersExpr).Compile();
             }
         }
         else
@@ -469,41 +471,43 @@ public class RepositoryHelper
             {
                 if (isDictionary)
                 {
-                    if (hasSuffix) commandInitializer = Expression.Lambda<Action<StringBuilder, IOrmProvider, EntityMap, object, string>>(
-                        Expression.Block(blockParameters, blockBodies), builderExpr, ormProviderExpr, entityMapperExpr, parametersExpr, suffixExpr).Compile();
-                    else commandInitializer = Expression.Lambda<Action<StringBuilder, IOrmProvider, EntityMap, object>>(
-                        Expression.Block(blockParameters, blockBodies), builderExpr, ormProviderExpr, entityMapperExpr, parametersExpr).Compile();
+                    if (hasSuffix) commandInitializer = Expression.Lambda<Action<StringBuilder, DbContext, EntityMap, object, string>>(
+                        Expression.Block(blockParameters, blockBodies), builderExpr, dbContextExpr, entityMapperExpr, parametersExpr, suffixExpr).Compile();
+                    else commandInitializer = Expression.Lambda<Action<StringBuilder, DbContext, EntityMap, object>>(
+                        Expression.Block(blockParameters, blockBodies), builderExpr, dbContextExpr, entityMapperExpr, parametersExpr).Compile();
                 }
                 else
                 {
-                    if (hasSuffix) commandInitializer = Expression.Lambda<Action<StringBuilder, IOrmProvider, object, string>>(
-                        Expression.Block(blockParameters, blockBodies), builderExpr, ormProviderExpr, parametersExpr, suffixExpr).Compile();
-                    else commandInitializer = Expression.Lambda<Action<StringBuilder, IOrmProvider, object>>(
-                        Expression.Block(blockParameters, blockBodies), builderExpr, ormProviderExpr, parametersExpr).Compile();
+                    if (hasSuffix) commandInitializer = Expression.Lambda<Action<StringBuilder, DbContext, object, string>>(
+                        Expression.Block(blockParameters, blockBodies), builderExpr, dbContextExpr, parametersExpr, suffixExpr).Compile();
+                    else commandInitializer = Expression.Lambda<Action<StringBuilder, DbContext, object>>(
+                        Expression.Block(blockParameters, blockBodies), builderExpr, dbContextExpr, parametersExpr).Compile();
                 }
             }
             else
             {
                 if (isDictionary)
                 {
-                    if (hasSuffix) commandInitializer = Expression.Lambda<Action<IDataParameterCollection, StringBuilder, IOrmProvider, EntityMap, object, string>>(
-                        Expression.Block(blockParameters, blockBodies), dbParametersExpr, builderExpr, ormProviderExpr, entityMapperExpr, parametersExpr, suffixExpr).Compile();
-                    else commandInitializer = Expression.Lambda<Action<IDataParameterCollection, StringBuilder, IOrmProvider, EntityMap, object>>(
-                        Expression.Block(blockParameters, blockBodies), dbParametersExpr, builderExpr, ormProviderExpr, entityMapperExpr, parametersExpr).Compile();
+                    if (hasSuffix) commandInitializer = Expression.Lambda<Action<IDataParameterCollection, StringBuilder, DbContext, EntityMap, object, string>>(
+                        Expression.Block(blockParameters, blockBodies), dbParametersExpr, builderExpr, dbContextExpr, entityMapperExpr, parametersExpr, suffixExpr).Compile();
+                    else commandInitializer = Expression.Lambda<Action<IDataParameterCollection, StringBuilder, DbContext, EntityMap, object>>(
+                        Expression.Block(blockParameters, blockBodies), dbParametersExpr, builderExpr, dbContextExpr, entityMapperExpr, parametersExpr).Compile();
                 }
                 else
                 {
-                    if (hasSuffix) commandInitializer = Expression.Lambda<Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>>(
-                        Expression.Block(blockParameters, blockBodies), dbParametersExpr, builderExpr, ormProviderExpr, parametersExpr, suffixExpr).Compile();
-                    else commandInitializer = Expression.Lambda<Action<IDataParameterCollection, StringBuilder, IOrmProvider, object>>(
-                        Expression.Block(blockParameters, blockBodies), dbParametersExpr, builderExpr, ormProviderExpr, parametersExpr).Compile();
+                    if (hasSuffix) commandInitializer = Expression.Lambda<Action<IDataParameterCollection, StringBuilder, DbContext, object, string>>(
+                        Expression.Block(blockParameters, blockBodies), dbParametersExpr, builderExpr, dbContextExpr, parametersExpr, suffixExpr).Compile();
+                    else commandInitializer = Expression.Lambda<Action<IDataParameterCollection, StringBuilder, DbContext, object>>(
+                        Expression.Block(blockParameters, blockBodies), dbParametersExpr, builderExpr, dbContextExpr, parametersExpr).Compile();
                 }
             }
         }
         return (isDictionary, commandInitializer);
     }
-    public static object BuildWhereSqlParameters(IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, Type whereObjType, bool isMultiple, bool isExists)
+    public static object BuildWhereSqlParameters(DbContext dbContext, Type entityType, Type whereObjType, bool isMultiple, bool isExists)
     {
+        var ormProvider = dbContext.OrmProvider;
+        var mapProvider = dbContext.MapProvider;
         var entityMapper = mapProvider.GetEntityMap(entityType);
         string tableName = ormProvider.GetTableName(entityMapper.TableName);
         string fieldsSql = null;
@@ -511,41 +515,41 @@ public class RepositoryHelper
             fieldsSql = "COUNT(1)";
         else fieldsSql = BuildFieldsSqlPart(ormProvider, entityMapper, entityType, true);
         var headSql = $"SELECT {fieldsSql} FROM {tableName} WHERE ";
-        (var isDictionary, var whereSqlParameter) = BuildSqlParametersPart(ormProvider, mapProvider, entityType, whereObjType, false, true, false, false, false, false, isMultiple, false, null, null, " AND ", headSql);
+        (var isDictionary, var whereSqlParameter) = BuildSqlParametersPart(dbContext, entityType, whereObjType, false, true, false, false, false, false, isMultiple, false, null, null, " AND ", headSql);
         if (isDictionary)
         {
-            Func<IDataParameterCollection, IOrmProvider, object, string, string> typedWhereSqlParameters = null;
+            Func<IDataParameterCollection, DbContext, object, string, string> typedWhereSqlParameters = null;
             if (isMultiple)
             {
-                var typedWhereSqlParameter = whereSqlParameter as Func<IDataParameterCollection, IOrmProvider, EntityMap, object, string, string>;
-                typedWhereSqlParameters = (dbParameters, ormProvider, whereObj, suffix) => typedWhereSqlParameter.Invoke(dbParameters, ormProvider, entityMapper, whereObj, suffix);
+                var typedWhereSqlParameter = whereSqlParameter as Func<IDataParameterCollection, DbContext, EntityMap, object, string, string>;
+                typedWhereSqlParameters = (dbParameters, dbContext, whereObj, suffix) => typedWhereSqlParameter.Invoke(dbParameters, dbContext, entityMapper, whereObj, suffix);
             }
             else
             {
-                var typedWhereSqlParameter = whereSqlParameter as Func<IDataParameterCollection, IOrmProvider, EntityMap, object, string>;
-                typedWhereSqlParameters = (dbParameters, ormProvider, whereObj, suffix) => typedWhereSqlParameter.Invoke(dbParameters, ormProvider, entityMapper, whereObj);
+                var typedWhereSqlParameter = whereSqlParameter as Func<IDataParameterCollection, DbContext, EntityMap, object, string>;
+                typedWhereSqlParameters = (dbParameters, dbContext, whereObj, suffix) => typedWhereSqlParameter.Invoke(dbParameters, dbContext, entityMapper, whereObj);
             }
             return typedWhereSqlParameters;
         }
         return whereSqlParameter;
     }
-    public static object BuildGetSqlParameters(IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, Type whereObjType, bool isMultiple)
+    public static object BuildGetSqlParameters(DbContext dbContext, Type entityType, Type whereObjType, bool isMultiple)
     {
-        var cacheKey = RepositoryHelper.GetCacheKey(ormProvider, mapProvider, entityType, whereObjType);
+        var cacheKey = RepositoryHelper.GetCacheKey(dbContext.OrmProvider.OrmProviderType, dbContext.MapProvider, entityType, whereObjType);
         var commandInitializerCache = isMultiple ? queryMultiGetCommandInitializerCache : queryGetCommandInitializerCache;
-        return commandInitializerCache.GetOrAdd(cacheKey, BuildWhereSqlParameters(ormProvider, mapProvider, entityType, whereObjType, isMultiple, false));
+        return commandInitializerCache.GetOrAdd(cacheKey, BuildWhereSqlParameters(dbContext, entityType, whereObjType, isMultiple, false));
     }
-    public static object BuildQueryWhereObjSqlParameters(IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, Type whereObjType, bool isMultiple)
+    public static object BuildQueryWhereObjSqlParameters(DbContext dbContext, Type entityType, Type whereObjType, bool isMultiple)
     {
-        var cacheKey = RepositoryHelper.GetCacheKey(ormProvider, mapProvider, entityType, whereObjType);
+        var cacheKey = RepositoryHelper.GetCacheKey(dbContext.OrmProvider.OrmProviderType, dbContext.MapProvider, entityType, whereObjType);
         var commandInitializerCache = isMultiple ? queryMultiWhereObjCommandInitializerCache : queryWhereObjCommandInitializerCache;
-        return commandInitializerCache.GetOrAdd(cacheKey, BuildWhereSqlParameters(ormProvider, mapProvider, entityType, whereObjType, isMultiple, false));
+        return commandInitializerCache.GetOrAdd(cacheKey, BuildWhereSqlParameters(dbContext, entityType, whereObjType, isMultiple, false));
     }
-    public static object BuildExistsSqlParameters(IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, Type whereObjType, bool isMultiple)
+    public static object BuildExistsSqlParameters(DbContext dbContext, Type entityType, Type whereObjType, bool isMultiple)
     {
-        var cacheKey = RepositoryHelper.GetCacheKey(ormProvider, mapProvider, entityType, whereObjType);
+        var cacheKey = RepositoryHelper.GetCacheKey(dbContext.OrmProvider.OrmProviderType, dbContext.MapProvider, entityType, whereObjType);
         var commandInitializerCache = isMultiple ? queryMultiExistsCommandInitializerCache : queryExistsCommandInitializerCache;
-        return commandInitializerCache.GetOrAdd(cacheKey, BuildWhereSqlParameters(ormProvider, mapProvider, entityType, whereObjType, isMultiple, true));
+        return commandInitializerCache.GetOrAdd(cacheKey, BuildWhereSqlParameters(dbContext, entityType, whereObjType, isMultiple, true));
     }
     public static Action<IDataParameterCollection, IOrmProvider, object> BuildQueryRawSqlParameters(IOrmProvider ormProvider, string rawSql, object parameters)
     {
@@ -600,7 +604,7 @@ public class RepositoryHelper
 
     public static object BuildCreateFieldsSqlPart(IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, Type insertObjType, List<string> onlyFieldNames, List<string> ignoreFieldNames)
     {
-        var cacheKey = RepositoryHelper.GetCacheKey(ormProvider, mapProvider, entityType, insertObjType, onlyFieldNames, ignoreFieldNames);
+        var cacheKey = RepositoryHelper.GetCacheKey(ormProvider.OrmProviderType, mapProvider, entityType, insertObjType, onlyFieldNames, ignoreFieldNames);
         return createFieldsSqlCache.GetOrAdd(cacheKey, f =>
         {
             object commandInitializer = null;
@@ -667,22 +671,26 @@ public class RepositoryHelper
             return commandInitializer;
         });
     }
-    public static object BuildCreateValuesSqlParametes(IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, Type insertObjType, List<string> onlyFieldNames, List<string> ignoreFieldNames, bool hasSuffix)
+    public static object BuildCreateValuesSqlParametes(DbContext dbContext, Type entityType, Type insertObjType, List<string> onlyFieldNames, List<string> ignoreFieldNames, bool hasSuffix)
     {
-        var cacheKey = RepositoryHelper.GetCacheKey(ormProvider, mapProvider, entityType, insertObjType, onlyFieldNames, ignoreFieldNames);
+        var ormProvider = dbContext.OrmProvider;
+        var mapProvider = dbContext.MapProvider;
+        var cacheKey = RepositoryHelper.GetCacheKey(ormProvider.OrmProviderType, dbContext.MapProvider, entityType, insertObjType, onlyFieldNames, ignoreFieldNames);
         var cache = hasSuffix ? createBulkValuesSqlParametersCache : createValuesSqlParametersCache;
         return cache.GetOrAdd(cacheKey, f =>
         {
             var dbParametersExpr = Expression.Parameter(typeof(IDataParameterCollection), "dbParameters");
             var builderExpr = Expression.Parameter(typeof(StringBuilder), "builder");
-            var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
+            var dbContextExpr = Expression.Parameter(typeof(DbContext), "dbContext");
             var insertObjExpr = Expression.Parameter(typeof(object), "insertObj");
             var blockParameters = new List<ParameterExpression>();
             var blockBodies = new List<Expression>();
 
             ParameterExpression suffixExpr = null;
             ParameterExpression dbFieldValueExpr = null;
+            var ormProviderExpr = Expression.Variable(typeof(IOrmProvider), "ormProvider");
             if (hasSuffix) suffixExpr = Expression.Parameter(typeof(string), "suffix");
+            blockBodies.Add(Expression.Assign(ormProviderExpr, Expression.Property(dbContextExpr, nameof(DbContext.OrmProvider))));
 
             MethodInfo methodInfo = null;
             var appendMethodInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(string) });
@@ -699,7 +707,7 @@ public class RepositoryHelper
                 var countExpr = Expression.Variable(typeof(int), "count");
                 var memberMapperExpr = Expression.Variable(typeof(MemberMap), "memberMapper");
 
-                blockParameters.AddRange(new[] { dictExpr, fieldValueExpr, parameterNameExpr, indexExpr, countExpr, memberMapperExpr });
+                blockParameters.AddRange([ormProviderExpr, dictExpr, fieldValueExpr, parameterNameExpr, indexExpr, countExpr, memberMapperExpr]);
                 blockBodies.Add(Expression.Assign(dictExpr, Expression.Convert(insertObjExpr, typeof(IDictionary<string, object>))));
                 var breakLabel = Expression.Label();
 
@@ -750,7 +758,7 @@ public class RepositoryHelper
                 //else
                 //{
                 //    var targetType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);
-                //    var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, false);
+                //    var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, false, dbContext.Options);
                 //    dbFieldValue = valueGetter.Invoke(dbFieldValue);
                 //}
                 Expression nativeDbTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.NativeDbType));
@@ -768,7 +776,8 @@ public class RepositoryHelper
                 methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.GetParameterValueGetter));
 
                 var fieldValueTypeExpr = Expression.Call(fieldValueExpr, typeof(object).GetMethod(nameof(object.GetType)));
-                var valueGetterExpr = Expression.Call(ormProviderExpr, methodInfo, fieldValueTypeExpr, targetTypeExpr, Expression.Constant(false));
+                var optionsExpr = Expression.Property(dbContextExpr, nameof(DbContext.Options));
+                var valueGetterExpr = Expression.Call(ormProviderExpr, methodInfo, fieldValueTypeExpr, targetTypeExpr, Expression.Constant(false), optionsExpr);
                 var valueGetterValueExpr = Expression.Invoke(valueGetterExpr, myFieldValueExpr);
 
                 if (dbFieldValueExpr == null)
@@ -794,17 +803,17 @@ public class RepositoryHelper
                 blockBodies.Add(Expression.Loop(Expression.Block(loopBodies), breakLabel));
 
                 object result = null;
-                if (hasSuffix) result = Expression.Lambda<Action<IDataParameterCollection, StringBuilder, IOrmProvider, List<MemberMap>, object, string>>(
-                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, builderExpr, ormProviderExpr, memberMappersExpr, insertObjExpr, suffixExpr).Compile();
-                else result = Expression.Lambda<Action<IDataParameterCollection, StringBuilder, IOrmProvider, List<MemberMap>, object>>(
-                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, builderExpr, ormProviderExpr, memberMappersExpr, insertObjExpr).Compile();
+                if (hasSuffix) result = Expression.Lambda<Action<IDataParameterCollection, StringBuilder, DbContext, List<MemberMap>, object, string>>(
+                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, builderExpr, dbContextExpr, memberMappersExpr, insertObjExpr, suffixExpr).Compile();
+                else result = Expression.Lambda<Action<IDataParameterCollection, StringBuilder, DbContext, List<MemberMap>, object>>(
+                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, builderExpr, dbContextExpr, memberMappersExpr, insertObjExpr).Compile();
                 return result;
             }
             else
             {
                 ParameterExpression parameterNameExpr = null;
                 var typedInsertObjExpr = Expression.Variable(insertObjType, "typedInsertObj");
-                blockParameters.Add(typedInsertObjExpr);
+                blockParameters.AddRange([ormProviderExpr, typedInsertObjExpr]);
 
                 if (hasSuffix)
                 {
@@ -843,30 +852,32 @@ public class RepositoryHelper
 
                     var fieldValueExpr = Expression.PropertyOrField(typedInsertObjExpr, memberMapper.MemberName);
                     var fieldValueType = memberInfo.GetMemberType();
-                    AddValueParameter(ormProvider, dbParametersExpr, ormProviderExpr, myParameterNameExpr, fieldValueType, fieldValueExpr, memberMapper, blockParameters, blockBodies);
+                    AddValueParameter(dbContext, dbParametersExpr, ormProviderExpr, myParameterNameExpr, fieldValueType, fieldValueExpr, memberMapper, blockParameters, blockBodies);
                     index++;
                 }
 
                 object result = null;
-                if (hasSuffix) result = Expression.Lambda<Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>>(
-                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, builderExpr, ormProviderExpr, insertObjExpr, suffixExpr).Compile();
-                else result = Expression.Lambda<Action<IDataParameterCollection, StringBuilder, IOrmProvider, object>>(
-                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, builderExpr, ormProviderExpr, insertObjExpr).Compile();
+                if (hasSuffix) result = Expression.Lambda<Action<IDataParameterCollection, StringBuilder, DbContext, object, string>>(
+                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, builderExpr, dbContextExpr, insertObjExpr, suffixExpr).Compile();
+                else result = Expression.Lambda<Action<IDataParameterCollection, StringBuilder, DbContext, object>>(
+                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, builderExpr, dbContextExpr, insertObjExpr).Compile();
                 return result;
             }
         });
     }
-    public static (string, Action<StringBuilder, string>, object, object) BuildUpdateSqlParameters(IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, Type updateObjType, bool hasSuffix, List<string> onlyFieldNames, List<string> ignoreFieldNames)
+    public static (string, Action<StringBuilder, string>, object, object) BuildUpdateSqlParameters(DbContext dbContext, Type entityType, Type updateObjType, bool hasSuffix, List<string> onlyFieldNames, List<string> ignoreFieldNames)
     {
-        var cacheKey = RepositoryHelper.GetCacheKey(ormProvider, mapProvider, entityType, updateObjType, hasSuffix, onlyFieldNames, ignoreFieldNames);
+        var ormProvider = dbContext.OrmProvider;
+        var mapProvider = dbContext.MapProvider;
+        var cacheKey = RepositoryHelper.GetCacheKey(ormProvider.OrmProviderType, mapProvider, entityType, updateObjType, hasSuffix, onlyFieldNames, ignoreFieldNames);
         var cache = hasSuffix ? updateMultiCommandInitializerCache : updateCommandInitializerCache;
         return cache.GetOrAdd(cacheKey, f =>
         {
             var entityMapper = mapProvider.GetEntityMap(entityType);
-            (bool isDictionary, var setSqlParametersSetter) = BuildSqlParametersPart(ormProvider, mapProvider, entityType, updateObjType, true, false, false, false, false, false, hasSuffix, true, onlyFieldNames, ignoreFieldNames, ",", null);
-            (_, var whereSqlParametersSetter) = BuildSqlParametersPart(ormProvider, mapProvider, entityType, updateObjType, false, false, false, true, true, false, hasSuffix, false, null, null, " AND ", null);
-            (_, var setSqlSetter) = BuildSqlParametersPart(ormProvider, mapProvider, entityType, updateObjType, true, false, true, false, false, false, hasSuffix, true, onlyFieldNames, ignoreFieldNames, ",", null);
-            (_, var whereSqlSetter) = BuildSqlParametersPart(ormProvider, mapProvider, entityType, updateObjType, false, false, true, true, true, false, hasSuffix, false, null, null, " AND ", null);
+            (bool isDictionary, var setSqlParametersSetter) = BuildSqlParametersPart(dbContext, entityType, updateObjType, true, false, false, false, false, false, hasSuffix, true, onlyFieldNames, ignoreFieldNames, ",", null);
+            (_, var whereSqlParametersSetter) = BuildSqlParametersPart(dbContext, entityType, updateObjType, false, false, false, true, true, false, hasSuffix, false, null, null, " AND ", null);
+            (_, var setSqlSetter) = BuildSqlParametersPart(dbContext, entityType, updateObjType, true, false, true, false, false, false, hasSuffix, true, onlyFieldNames, ignoreFieldNames, ",", null);
+            (_, var whereSqlSetter) = BuildSqlParametersPart(dbContext, entityType, updateObjType, false, false, true, true, true, false, hasSuffix, false, null, null, " AND ", null);
             object firstSqlParametersSetter = null, sqlSetter = null;
 
             string tableName = entityMapper.TableName;
@@ -875,18 +886,18 @@ public class RepositoryHelper
 
             if (hasSuffix)
             {
-                Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string> typedFirstSqlParametersSetter = null;
-                Action<StringBuilder, IOrmProvider, object, string> typedSqlSetter = null;
-                var typedSetSqlParametersSetter = setSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
-                var typedWhereSqlParametersSetter = whereSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
-                var typedSetSqlSetter = setSqlSetter as Action<StringBuilder, IOrmProvider, object, string>;
-                var typedWhereSqlSetter = whereSqlSetter as Action<StringBuilder, IOrmProvider, object, string>;
+                Action<IDataParameterCollection, StringBuilder, DbContext, object, string> typedFirstSqlParametersSetter = null;
+                Action<StringBuilder, DbContext, object, string> typedSqlSetter = null;
+                var typedSetSqlParametersSetter = setSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
+                var typedWhereSqlParametersSetter = whereSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
+                var typedSetSqlSetter = setSqlSetter as Action<StringBuilder, DbContext, object, string>;
+                var typedWhereSqlSetter = whereSqlSetter as Action<StringBuilder, DbContext, object, string>;
 
-                typedFirstSqlParametersSetter = (dbParameters, builder, ormProvider, parameters, suffix) =>
+                typedFirstSqlParametersSetter = (dbParameters, builder, dbContext, parameters, suffix) =>
                 {
-                    typedSetSqlParametersSetter.Invoke(dbParameters, builder, ormProvider, parameters, suffix);
+                    typedSetSqlParametersSetter.Invoke(dbParameters, builder, dbContext, parameters, suffix);
                     builder.Append(" WHERE ");
-                    typedWhereSqlParametersSetter.Invoke(dbParameters, builder, ormProvider, parameters, suffix);
+                    typedWhereSqlParametersSetter.Invoke(dbParameters, builder, dbContext, parameters, suffix);
                 };
                 typedSqlSetter = (builder, ormProvider, parameters, suffix) =>
                 {
@@ -899,24 +910,24 @@ public class RepositoryHelper
             }
             else
             {
-                Action<IDataParameterCollection, StringBuilder, IOrmProvider, object> typedFirstSqlParametersSetter = null;
-                Action<StringBuilder, IOrmProvider, object> typedSqlSetter = null;
-                var typedSetSqlParametersSetter = setSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object>;
-                var typedWhereSqlParametersSetter = whereSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object>;
-                var typedSetSqlSetter = setSqlParametersSetter as Action<StringBuilder, IOrmProvider, object>;
-                var typedWhereSqlSetter = whereSqlParametersSetter as Action<StringBuilder, IOrmProvider, object>;
+                Action<IDataParameterCollection, StringBuilder, DbContext, object> typedFirstSqlParametersSetter = null;
+                Action<StringBuilder, DbContext, object> typedSqlSetter = null;
+                var typedSetSqlParametersSetter = setSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
+                var typedWhereSqlParametersSetter = whereSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
+                var typedSetSqlSetter = setSqlParametersSetter as Action<StringBuilder, DbContext, object>;
+                var typedWhereSqlSetter = whereSqlParametersSetter as Action<StringBuilder, DbContext, object>;
 
-                typedFirstSqlParametersSetter = (dbParameters, builder, ormProvider, parameters) =>
+                typedFirstSqlParametersSetter = (dbParameters, builder, dbContext, parameters) =>
                 {
-                    typedSetSqlParametersSetter.Invoke(dbParameters, builder, ormProvider, parameters);
+                    typedSetSqlParametersSetter.Invoke(dbParameters, builder, dbContext, parameters);
                     builder.Append(" WHERE ");
-                    typedWhereSqlParametersSetter.Invoke(dbParameters, builder, ormProvider, parameters);
+                    typedWhereSqlParametersSetter.Invoke(dbParameters, builder, dbContext, parameters);
                 };
-                typedSqlSetter = (builder, ormProvider, parameters) =>
+                typedSqlSetter = (builder, dbContext, parameters) =>
                 {
-                    typedSetSqlSetter.Invoke(builder, ormProvider, parameters);
+                    typedSetSqlSetter.Invoke(builder, dbContext, parameters);
                     builder.Append(" WHERE ");
-                    typedWhereSqlSetter.Invoke(builder, ormProvider, parameters);
+                    typedWhereSqlSetter.Invoke(builder, dbContext, parameters);
                 };
                 firstSqlParametersSetter = typedFirstSqlParametersSetter;
                 sqlSetter = typedSqlSetter;
@@ -925,20 +936,24 @@ public class RepositoryHelper
         });
     }
 
-    public static object BuildUpdateSetWithPartSqlParameters(IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, Type updateObjType, List<string> onlyFieldNames, List<string> ignoreFieldNames, bool hasSuffix)
+    public static object BuildUpdateSetWithPartSqlParameters(DbContext dbContext, Type entityType, Type updateObjType, List<string> onlyFieldNames, List<string> ignoreFieldNames, bool hasSuffix)
     {
-        var cacheKey = RepositoryHelper.GetCacheKey(ormProvider, mapProvider, entityType, updateObjType, onlyFieldNames, ignoreFieldNames);
+        var ormProvider = dbContext.OrmProvider;
+        var mapProvider = dbContext.MapProvider;
+        var cacheKey = RepositoryHelper.GetCacheKey(ormProvider.OrmProviderType, dbContext.MapProvider, entityType, updateObjType, onlyFieldNames, ignoreFieldNames);
         var commandInitializerCache = hasSuffix ? updateMultiWithCommandInitializerCache : updateWithCommandInitializerCache;
         return commandInitializerCache.GetOrAdd(cacheKey, f =>
         {
             var dbParametersExpr = Expression.Parameter(typeof(IDataParameterCollection), "dbParameters");
-            var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
+            var dbContextExpr = Expression.Parameter(typeof(DbContext), "dbContext");
             var updateFieldsExpr = Expression.Parameter(typeof(List<string>), "updateFields");
             var updateObjExpr = Expression.Parameter(typeof(object), "updateObj");
             var blockParameters = new List<ParameterExpression>();
             var blockBodies = new List<Expression>();
 
             ParameterExpression suffixExpr = null;
+            var ormProviderExpr = Expression.Variable(typeof(IOrmProvider), "ormProvider");
+            blockBodies.Add(Expression.Assign(ormProviderExpr, Expression.Property(dbContextExpr, nameof(DbContext.OrmProvider))));
             if (hasSuffix) suffixExpr = Expression.Parameter(typeof(string), "suffix");
             MethodInfo methodInfo = null;
             var entityMapper = mapProvider.GetEntityMap(entityType);
@@ -958,7 +973,7 @@ public class RepositoryHelper
                 var itemKeyExpr = Expression.Variable(typeof(string), "itemKey");
                 var memberMapperExpr = Expression.Variable(typeof(MemberMap), "memberMapper");
                 var outTypeExpr = Expression.Variable(typeof(Type), "outType");
-                blockParameters.AddRange(new[] { dictExpr, fieldValueExpr, parameterNameExpr, indexExpr, enumeratorExpr, memberMapperExpr, itemKeyExpr, outTypeExpr });
+                blockParameters.AddRange([ormProviderExpr, dictExpr, fieldValueExpr, parameterNameExpr, indexExpr, enumeratorExpr, memberMapperExpr, itemKeyExpr, outTypeExpr]);
                 blockBodies.Add(Expression.Assign(dictExpr, Expression.Convert(updateObjExpr, typeof(IDictionary<string, object>))));
                 var breakLabel = Expression.Label();
                 var continueLabel = Expression.Label();
@@ -1023,7 +1038,7 @@ public class RepositoryHelper
                 //else
                 //{
                 //    var targetType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);
-                //    var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, false);
+                //    var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, false, dbContext.Options);
                 //    dbFieldValue = valueGetter.Invoke(dbFieldValue);
                 //}
                 Expression nativeDbTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.NativeDbType));
@@ -1038,7 +1053,8 @@ public class RepositoryHelper
                 methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.GetParameterValueGetter));
 
                 var fieldValueTypeExpr = Expression.Call(fieldValueExpr, typeof(object).GetMethod(nameof(object.GetType)));
-                var valueGetterExpr = Expression.Call(ormProviderExpr, methodInfo, fieldValueTypeExpr, targetTypeExpr, Expression.Constant(true));
+                var optionsExpr = Expression.Property(dbContextExpr, nameof(DbContext.Options));
+                var valueGetterExpr = Expression.Call(ormProviderExpr, methodInfo, fieldValueTypeExpr, targetTypeExpr, Expression.Constant(true), optionsExpr);
                 var valueGetterValueExpr = Expression.Invoke(valueGetterExpr, fieldValueExpr);
 
                 var isNotNullExpr = Expression.IsFalse(Expression.Equal(typeHandlerExpr, Expression.Constant(null)));
@@ -1062,17 +1078,17 @@ public class RepositoryHelper
                 blockBodies.Add(Expression.Loop(Expression.Block(loopBodies), breakLabel, continueLabel));
 
                 object result = null;
-                if (hasSuffix) result = Expression.Lambda<Action<IDataParameterCollection, IOrmProvider, EntityMap, List<string>, object, string>>(
-                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, ormProviderExpr, entityMapperExpr, updateFieldsExpr, updateObjExpr, suffixExpr).Compile();
-                else result = Expression.Lambda<Action<IDataParameterCollection, IOrmProvider, EntityMap, List<string>, object>>(
-                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, ormProviderExpr, entityMapperExpr, updateFieldsExpr, updateObjExpr).Compile();
+                if (hasSuffix) result = Expression.Lambda<Action<IDataParameterCollection, DbContext, EntityMap, List<string>, object, string>>(
+                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, dbContextExpr, entityMapperExpr, updateFieldsExpr, updateObjExpr, suffixExpr).Compile();
+                else result = Expression.Lambda<Action<IDataParameterCollection, DbContext, EntityMap, List<string>, object>>(
+                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, dbContextExpr, entityMapperExpr, updateFieldsExpr, updateObjExpr).Compile();
                 return result;
             }
             else
             {
                 ParameterExpression parameterNameExpr = null;
                 var typedUpdateObjExpr = Expression.Variable(updateObjType, "typeUpdateObj");
-                blockParameters.Add(typedUpdateObjExpr);
+                blockParameters.AddRange([ormProviderExpr, typedUpdateObjExpr]);
                 blockBodies.Add(Expression.Assign(typedUpdateObjExpr, Expression.Convert(updateObjExpr, updateObjType)));
                 if (hasSuffix)
                 {
@@ -1112,22 +1128,24 @@ public class RepositoryHelper
 
                     var fieldValueExpr = Expression.PropertyOrField(typedUpdateObjExpr, memberMapper.MemberName);
                     var fieldVallueType = memberInfo.GetMemberType();
-                    AddValueParameter(ormProvider, dbParametersExpr, ormProviderExpr, myParameterNameExpr, fieldVallueType, fieldValueExpr, memberMapper, blockParameters, blockBodies);
+                    AddValueParameter(dbContext, dbParametersExpr, ormProviderExpr, myParameterNameExpr, fieldVallueType, fieldValueExpr, memberMapper, blockParameters, blockBodies);
                     index++;
                 }
 
                 object result = null;
-                if (hasSuffix) result = Expression.Lambda<Action<IDataParameterCollection, IOrmProvider, List<string>, object, string>>(
-                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, ormProviderExpr, updateFieldsExpr, updateObjExpr, suffixExpr).Compile();
-                else result = Expression.Lambda<Action<IDataParameterCollection, IOrmProvider, List<string>, object>>(
-                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, ormProviderExpr, updateFieldsExpr, updateObjExpr).Compile();
+                if (hasSuffix) result = Expression.Lambda<Action<IDataParameterCollection, DbContext, List<string>, object, string>>(
+                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, dbContextExpr, updateFieldsExpr, updateObjExpr, suffixExpr).Compile();
+                else result = Expression.Lambda<Action<IDataParameterCollection, DbContext, List<string>, object>>(
+                    Expression.Block(blockParameters, blockBodies), dbParametersExpr, dbContextExpr, updateFieldsExpr, updateObjExpr).Compile();
                 return result;
             }
         });
     }
-    public static (bool, string, object, Action<StringBuilder, string>) BuildDeleteCommandInitializer(IOrmProvider ormProvider, IEntityMapProvider mapProvider, Type entityType, Type whereObjType, bool isBulk, bool hasSuffix)
+    public static (bool, string, object, Action<StringBuilder, string>) BuildDeleteCommandInitializer(DbContext dbContext, Type entityType, Type whereObjType, bool isBulk, bool hasSuffix)
     {
-        var cacheKey = RepositoryHelper.GetCacheKey(ormProvider, mapProvider, entityType, whereObjType, isBulk);
+        var ormProvider = dbContext.OrmProvider;
+        var mapProvider = dbContext.MapProvider;
+        var cacheKey = RepositoryHelper.GetCacheKey(ormProvider.OrmProviderType, mapProvider, entityType, whereObjType, isBulk);
         var commandInitializerCache = hasSuffix ? deleteMultiCommandInitializerCache : deleteCommandInitializerCache;
         return commandInitializerCache.GetOrAdd(cacheKey, f =>
         {
@@ -1141,19 +1159,19 @@ public class RepositoryHelper
             }
             else sqlSetter = (builder, tableName) => builder.Append($"DELETE FROM {ormProvider.GetTableName(tableName)} WHERE ");
             var isOnlyParameters = isBulk && !isMultiKeys;
-            (var isDictionary, var whereSqlParametersSetter) = BuildSqlParametersPart(ormProvider, mapProvider, entityType, whereObjType, false, false, false, true, false, isOnlyParameters, hasSuffix, false, null, null, " AND ", null);
+            (var isDictionary, var whereSqlParametersSetter) = BuildSqlParametersPart(dbContext, entityType, whereObjType, false, false, false, true, false, isOnlyParameters, hasSuffix, false, null, null, " AND ", null);
             if (isDictionary)
             {
-                Func<IDataParameterCollection, IOrmProvider, object, string, string> typedWhereSqlParameters = null;
+                Func<IDataParameterCollection, DbContext, object, string, string> typedWhereSqlParameters = null;
                 if (hasSuffix)
                 {
-                    var typedWhereSqlParameter = whereSqlParametersSetter as Func<IDataParameterCollection, IOrmProvider, EntityMap, object, string, string>;
-                    typedWhereSqlParameters = (dbParameters, ormProvider, whereObj, suffix) => typedWhereSqlParameter.Invoke(dbParameters, ormProvider, entityMapper, whereObj, suffix);
+                    var typedWhereSqlParameter = whereSqlParametersSetter as Func<IDataParameterCollection, DbContext, EntityMap, object, string, string>;
+                    typedWhereSqlParameters = (dbParameters, dbContext, whereObj, suffix) => typedWhereSqlParameter.Invoke(dbParameters, dbContext, entityMapper, whereObj, suffix);
                 }
                 else
                 {
-                    var typedWhereSqlParameter = whereSqlParametersSetter as Func<IDataParameterCollection, IOrmProvider, EntityMap, object, string>;
-                    typedWhereSqlParameters = (dbParameters, ormProvider, whereObj, suffix) => typedWhereSqlParameter.Invoke(dbParameters, ormProvider, entityMapper, whereObj);
+                    var typedWhereSqlParameter = whereSqlParametersSetter as Func<IDataParameterCollection, DbContext, EntityMap, object, string>;
+                    typedWhereSqlParameters = (dbParameters, dbContext, whereObj, suffix) => typedWhereSqlParameter.Invoke(dbParameters, dbContext, entityMapper, whereObj);
                 }
                 whereSqlParametersSetter = typedWhereSqlParameters;
             }
@@ -1287,6 +1305,56 @@ public class RepositoryHelper
         }
         return true;
     }
+    public static object CreateListInstance(Type elementType)
+    {
+        var typedListGetter = typedListGetters.GetOrAdd(elementType, f =>
+        {
+            var listType = typeof(List<>).MakeGenericType(elementType);
+            var bodyExpr = Expression.New(listType.GetConstructor(Type.EmptyTypes));
+            return Expression.Lambda<Func<object>>(bodyExpr).Compile();
+        });
+        return typedListGetter.Invoke();
+    }
+    public static object CreateListInstance(Type elementType, object parameters)
+    {
+        var typedListGetter = typedInitListGetters.GetOrAdd(elementType, f =>
+        {
+            var collectionExpr = Expression.Parameter(typeof(object), "collection");
+            var parametersType = typeof(IEnumerable<>).MakeGenericType(elementType);
+            var typedCollectionExpr = Expression.Convert(collectionExpr, parametersType);
+            var listType = typeof(List<>).MakeGenericType(elementType);
+            var bodyExpr = Expression.New(listType.GetConstructor([parametersType]), typedCollectionExpr);
+            return Expression.Lambda<Func<object, object>>(bodyExpr, collectionExpr).Compile();
+        });
+        return typedListGetter.Invoke(parameters);
+    }
+    public static object CreateCollectionInstance(Type elementType, object parameters)
+    {
+        var typedCollectionGetter = typedCollectionGetters.GetOrAdd(elementType, f =>
+        {
+            var listExpr = Expression.Parameter(typeof(object), "collection");
+            var parametersType = typeof(IList<>).MakeGenericType(elementType);
+            var typedListExpr = Expression.Convert(listExpr, parametersType);
+            var collectionType = typeof(Collection<>).MakeGenericType(elementType);
+            var bodyExpr = Expression.New(collectionType.GetConstructor([parametersType]), typedListExpr);
+            return Expression.Lambda<Func<object, object>>(bodyExpr, listExpr).Compile();
+        });
+        return typedCollectionGetter.Invoke(parameters);
+    }
+    public static object ToArray(Type elementType, object parameters)
+    {
+        var toArrayGetter = toArrayGetters.GetOrAdd(elementType, f =>
+        {
+            var enumerableExpr = Expression.Parameter(typeof(object), "enumerable");
+            var parametersType = typeof(IEnumerable<>).MakeGenericType(elementType);
+            var typedEnumerableExpr = Expression.Convert(enumerableExpr, parametersType);
+            var methodInfo = typeof(Enumerable).GetMethod(nameof(Enumerable.ToArray), [parametersType]);
+            var bodyExpr = Expression.Call(methodInfo, typedEnumerableExpr);
+            return Expression.Lambda<Func<object>>(bodyExpr, enumerableExpr).Compile();
+        });
+        return toArrayGetter.Invoke(parameters);
+    }
+
     public static int GetCacheKey(params object[] parameters)
     {
 #if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER

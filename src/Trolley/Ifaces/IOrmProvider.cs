@@ -176,8 +176,8 @@ public interface IOrmProvider
     string CastTo(Type type, object value, string characterSetOrCollation = null);
     string GetQuotedValue(Type expectType, object value);
     string GetBinaryOperator(ExpressionType nodeType);
-    Func<object, object> GetParameterValueGetter(Type fromType, Type fieldType, bool isNullable);
-    Func<object, object> GetReaderValueGetter(Type targetType, Type fieldType);
+    Func<object, object> GetParameterValueGetter(Type fromType, Type fieldType, bool isNullable, OrmDbFactoryOptions options);
+    Func<object, object> GetReaderValueGetter(Type targetType, Type fieldType, OrmDbFactoryOptions options);
     ITypeHandler GetTypeHandler(Type typeHandlerType);
     object MapNativeDbType(DbColumnInfo columnInfo);
     void MapTables(string connectionString, IEntityMapProvider mapProvider);

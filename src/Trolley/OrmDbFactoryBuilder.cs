@@ -84,7 +84,7 @@ public sealed class OrmDbFactoryBuilder
     }
     public OrmDbFactoryBuilder UseFieldMapHandler(IFieldMapHandler fieldMapHandler)
     {
-        this.dbFactory.UseFieldMapHandler(fieldMapHandler);
+        this.dbFactory.Options.FieldMapHandler = fieldMapHandler;
         return this;
     }
     public OrmDbFactoryBuilder With(Action<OrmDbFactoryOptions> optionsInitializer)
@@ -97,7 +97,7 @@ public sealed class OrmDbFactoryBuilder
         if (filterInitializer == null)
             throw new ArgumentNullException(nameof(filterInitializer));
 
-        filterInitializer.Invoke(this.dbFactory.Interceptors);
+        filterInitializer.Invoke(this.dbFactory.Options.DbInterceptors);
         return this;
     }
     public IOrmDbFactory Build()

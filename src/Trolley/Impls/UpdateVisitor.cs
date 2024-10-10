@@ -64,13 +64,13 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                             if (index > 0) builder.Append(';');
                             var tableNames = this.ShardingTables[0].TableNames;
                             headSqlSetter.Invoke(builder, tableNames[0]);
-                            firstSqlParametersSetter.Invoke(command.Parameters, builder, this.OrmProvider, updateObj, suffixGetter.Invoke(index));
+                            firstSqlParametersSetter.Invoke(command.Parameters, builder, this.DbContext, updateObj, suffixGetter.Invoke(index));
 
                             for (int i = 1; i < tableNames.Count; i++)
                             {
                                 builder.Append(';');
                                 headSqlSetter.Invoke(builder, tableNames[i]);
-                                sqlSetter.Invoke(builder, this.OrmProvider, updateObj, suffixGetter.Invoke(index));
+                                sqlSetter.Invoke(builder, this.DbContext, updateObj, suffixGetter.Invoke(index));
                             }
                         };
                     }
@@ -80,7 +80,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                         {
                             if (index > 0) builder.Append(';');
                             headSqlSetter.Invoke(builder, tableName);
-                            firstSqlParametersSetter.Invoke(command.Parameters, builder, this.OrmProvider, updateObj, suffixGetter.Invoke(index));
+                            firstSqlParametersSetter.Invoke(command.Parameters, builder, this.DbContext, updateObj, suffixGetter.Invoke(index));
                         };
                     }
 
@@ -238,8 +238,8 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             this.ActionMode = ActionMode.Bulk;
         sqlBuilder.Append(this.BuildCommand(dbContext, command));
     }
-    public (IEnumerable, int, string, Action<IDataParameterCollection>, Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>,
-        Action<StringBuilder, string>, Action<StringBuilder, IOrmProvider, object, string>) BuildWithBulk(IDbCommand command)
+    public (IEnumerable, int, string, Action<IDataParameterCollection>, Action<IDataParameterCollection, StringBuilder, DbContext, object, string>,
+        Action<StringBuilder, string>, Action<StringBuilder, DbContext, object, string>) BuildWithBulk(IDbCommand command)
     {
         Type updateObjType = null;
         (var updateObjs, var bulkCount) = ((IEnumerable, int))this.deferredSegments[0].Value;
@@ -304,12 +304,12 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         if (!string.IsNullOrEmpty(tableSegment.TableSchema))
             headSqlSetter = (builder, tableName) => builder.Append($"UPDATE {this.OrmProvider.GetTableName(tableSegment.TableSchema + "." + tableName)} {fixedHeadUpdateSql}");
         else headSqlSetter = (builder, tableName) => builder.Append($"UPDATE {this.OrmProvider.GetTableName(tableName)} {fixedHeadUpdateSql}");
-        (var origName, _, var firstSqlParametersSetter, var sqlSetter) = RepositoryHelper.BuildUpdateSqlParameters(this.OrmProvider, this.MapProvider, entityType, updateObjType, true, this.OnlyFieldNames, this.IgnoreFieldNames);
+        (var origName, _, var firstSqlParametersSetter, var sqlSetter) = RepositoryHelper.BuildUpdateSqlParameters(this.DbContext, entityType, updateObjType, true, this.OnlyFieldNames, this.IgnoreFieldNames);
         Action<IDataParameterCollection> firstParametersSetter = null;
         if (this.FixedDbParameters != null && this.FixedDbParameters.Count > 0)
             firstParametersSetter = dbParameters => this.FixedDbParameters.ToList().ForEach(f => dbParameters.Add(f));
-        var typedSqlSetter = sqlSetter as Action<StringBuilder, IOrmProvider, object, string>;
-        var typedFirstSqlParametersSetter = firstSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
+        var typedSqlSetter = sqlSetter as Action<StringBuilder, DbContext, object, string>;
+        var typedFirstSqlParametersSetter = firstSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
         //有设置分表
         var tableName = tableSegment.Body ?? origName;
         return (updateObjs, bulkCount, tableName, firstParametersSetter, typedFirstSqlParametersSetter, headSqlSetter, typedSqlSetter);
@@ -523,31 +523,31 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var entityMapper = this.Tables[0].Mapper;
         var entityType = entityMapper.EntityType;
         var updateObjType = updateObj.GetType();
-        var commandInitializer = RepositoryHelper.BuildUpdateSetWithPartSqlParameters(this.OrmProvider, this.MapProvider, entityType, updateObjType, this.OnlyFieldNames, this.IgnoreFieldNames, this.IsMultiple);
+        var commandInitializer = RepositoryHelper.BuildUpdateSetWithPartSqlParameters(this.DbContext, entityType, updateObjType, this.OnlyFieldNames, this.IgnoreFieldNames, this.IsMultiple);
         if (typeof(IDictionary<string, object>).IsAssignableFrom(updateObjType))
         {
             if (this.IsMultiple)
             {
-                var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, IOrmProvider, EntityMap, List<string>, object, string>;
-                typedCommandInitializer.Invoke(this.DbParameters, this.OrmProvider, entityMapper, this.UpdateFields, updateObj, $"_m{this.CommandIndex}");
+                var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, DbContext, EntityMap, List<string>, object, string>;
+                typedCommandInitializer.Invoke(this.DbParameters, this.DbContext, entityMapper, this.UpdateFields, updateObj, $"_m{this.CommandIndex}");
             }
             else
             {
-                var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, IOrmProvider, EntityMap, List<string>, object>;
-                typedCommandInitializer.Invoke(this.DbParameters, this.OrmProvider, entityMapper, this.UpdateFields, updateObj);
+                var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, DbContext, EntityMap, List<string>, object>;
+                typedCommandInitializer.Invoke(this.DbParameters, this.DbContext, entityMapper, this.UpdateFields, updateObj);
             }
         }
         else
         {
             if (this.IsMultiple)
             {
-                var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, IOrmProvider, List<string>, object, string>;
-                typedCommandInitializer.Invoke(this.DbParameters, this.OrmProvider, this.UpdateFields, updateObj, $"_m{this.CommandIndex}");
+                var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, DbContext, List<string>, object, string>;
+                typedCommandInitializer.Invoke(this.DbParameters, this.DbContext, this.UpdateFields, updateObj, $"_m{this.CommandIndex}");
             }
             else
             {
-                var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, IOrmProvider, List<string>, object>;
-                typedCommandInitializer.Invoke(this.DbParameters, this.OrmProvider, this.UpdateFields, updateObj);
+                var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, DbContext, List<string>, object>;
+                typedCommandInitializer.Invoke(this.DbParameters, this.DbContext, this.UpdateFields, updateObj);
             }
         }
     }
@@ -635,7 +635,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     {
         var entityType = this.Tables[0].EntityType;
         var whereObjType = whereObj.GetType();
-        (var isDictionary, var whereSqlParametersSetter) = RepositoryHelper.BuildSqlParametersPart(this.OrmProvider, this.MapProvider, entityType, whereObjType, false, false, false, true, true, false, this.IsMultiple, false, null, null, " AND ", null);
+        (var isDictionary, var whereSqlParametersSetter) = RepositoryHelper.BuildSqlParametersPart(this.DbContext, entityType, whereObjType, false, false, false, true, true, false, this.IsMultiple, false, null, null, " AND ", null);
         var builder = new StringBuilder();
         if (!string.IsNullOrEmpty(this.WhereSql))
             builder.Append($"{this.WhereSql} AND ");
@@ -644,26 +644,26 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             var entityMapper = this.Tables[0].Mapper;
             if (this.IsMultiple)
             {
-                var typedWhereSqlParametersSetter = whereSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, EntityMap, object, string>;
-                typedWhereSqlParametersSetter.Invoke(this.DbParameters, builder, this.OrmProvider, entityMapper, whereObj, $"_m{this.CommandIndex}");
+                var typedWhereSqlParametersSetter = whereSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, DbContext, EntityMap, object, string>;
+                typedWhereSqlParametersSetter.Invoke(this.DbParameters, builder, this.DbContext, entityMapper, whereObj, $"_m{this.CommandIndex}");
             }
             else
             {
-                var typedWhereSqlParametersSetter = whereSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, EntityMap, object>;
-                typedWhereSqlParametersSetter.Invoke(this.DbParameters, builder, this.OrmProvider, entityMapper, whereObj);
+                var typedWhereSqlParametersSetter = whereSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, DbContext, EntityMap, object>;
+                typedWhereSqlParametersSetter.Invoke(this.DbParameters, builder, this.DbContext, entityMapper, whereObj);
             }
         }
         else
         {
             if (this.IsMultiple)
             {
-                var typedWhereSqlParametersSetter = whereSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
-                typedWhereSqlParametersSetter.Invoke(this.DbParameters, builder, this.OrmProvider, whereObj, $"_m{this.CommandIndex}");
+                var typedWhereSqlParametersSetter = whereSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
+                typedWhereSqlParametersSetter.Invoke(this.DbParameters, builder, this.DbContext, whereObj, $"_m{this.CommandIndex}");
             }
             else
             {
-                var typedWhereSqlParametersSetter = whereSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object>;
-                typedWhereSqlParametersSetter.Invoke(this.DbParameters, builder, this.OrmProvider, whereObj);
+                var typedWhereSqlParametersSetter = whereSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
+                typedWhereSqlParametersSetter.Invoke(this.DbParameters, builder, this.DbContext, whereObj);
             }
         }
         this.WhereSql = builder.ToString();
@@ -763,7 +763,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         else
         {
             var targetType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);
-            var valueGetter = this.OrmProvider.GetParameterValueGetter(memberValue.GetType(), targetType, false);
+            var valueGetter = this.OrmProvider.GetParameterValueGetter(memberValue.GetType(), targetType, false, this.Options);
             fieldValue = valueGetter.Invoke(fieldValue);
         }
         this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
@@ -786,7 +786,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             else
             {
                 var targetType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);
-                var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, false);
+                var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, false, this.Options);
                 fieldValue = valueGetter.Invoke(fieldValue);
             }
             this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));

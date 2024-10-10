@@ -138,7 +138,7 @@ public class DateOnlyUnitTest : UnitTestBase
                 ParseExact = DateOnly.ParseExact("05-07/2023", "MM-dd/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None)
             })
             .ToSql(out _);
-         Assert.Equal("SELECT DATEADD(DAY,30,a.[DateOnlyField]) AS [AddDays],DATEADD(MONTH,5,a.[DateOnlyField]) AS [AddMonths],DATEADD(YEAR,2,a.[DateOnlyField]) AS [AddYears],(CASE WHEN a.[DateOnlyField]=@p0 THEN 0 WHEN a.[DateOnlyField]>@p0 THEN 1 ELSE -1 END) AS [CompareTo],@p1 AS [Parse],'2023-05-07' AS [ParseExact] FROM [sys_update_entity] a WHERE a.[Id]=1", sql);
+        Assert.Equal("SELECT DATEADD(DAY,30,a.[DateOnlyField]) AS [AddDays],DATEADD(MONTH,5,a.[DateOnlyField]) AS [AddMonths],DATEADD(YEAR,2,a.[DateOnlyField]) AS [AddYears],(CASE WHEN a.[DateOnlyField]=@p0 THEN 0 WHEN a.[DateOnlyField]>@p0 THEN 1 ELSE -1 END) AS [CompareTo],@p1 AS [Parse],'2023-05-07' AS [ParseExact] FROM [sys_update_entity] a WHERE a.[Id]=1", sql);
 
         var now = DateTime.Now;
         var result = await repository.From<UpdateEntity>()

@@ -15,8 +15,7 @@ namespace Trolley;
 public class QueryVisitor : SqlVisitor, IQueryVisitor
 {
     protected static ConcurrentDictionary<int, (string, Action<StringBuilder, IOrmProvider, object>)> includeSqlGetterCache = new();
-    protected static ConcurrentDictionary<Type, Func<object>> typedListGetters = new();
-    protected static ConcurrentDictionary<Type, Action<object, ITheaDataReader, IOrmProvider, IEntityMapProvider>> typedReaderElementSetters = new();
+    protected static ConcurrentDictionary<Type, Action<object, ITheaDataReader, DbContext>> typedReaderElementSetters = new();
     protected static ConcurrentDictionary<int, Action<object, object>> targetIncludeValuesSetters = new();
     private bool isDisposed;
 
@@ -666,7 +665,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         foreach (var includeSegment in this.IncludeTables)
         {
             var navigationType = includeSegment.FromMember.NavigationType;
-            var includeValues = this.CreateIncludeValues(navigationType);
+            var includeValues = RepositoryHelper.CreateListInstance(navigationType);
             var rootPath = includeSegment.Path.Substring(0, 1);
             var rootReaderField = this.ReaderFields.Find(f => f.Path == rootPath);
             //当最外层实体是参数访问时，此值为null
@@ -705,7 +704,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         foreach (var includeSegment in this.IncludeTables)
         {
             var navigationType = includeSegment.FromMember.NavigationType;
-            var includeValues = this.CreateIncludeValues(navigationType);
+            var includeValues = RepositoryHelper.CreateListInstance(navigationType);
             var rootPath = includeSegment.Path.Substring(0, 1);
             var rootReaderField = this.ReaderFields.Find(f => f.Path == rootPath);
             var firstMember = rootReaderField.TargetMember;
@@ -737,24 +736,13 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         await reader.NextResultAsync(cancellationToken);
     }
-    private object CreateIncludeValues(Type elementType)
-    {
-        var typedListGetter = typedListGetters.GetOrAdd(elementType, f =>
-        {
-            var listType = typeof(List<>).MakeGenericType(elementType);
-            var bodyExpr = Expression.New(listType.GetConstructor(Type.EmptyTypes));
-            return Expression.Lambda<Func<object>>(bodyExpr).Compile();
-        });
-        return typedListGetter.Invoke();
-    }
     private void AddIncludeValue(Type elementType, object includeValues, ITheaDataReader reader)
     {
         var typedReaderElementSetter = typedReaderElementSetters.GetOrAdd(elementType, f =>
         {
             var anonObjsExpr = Expression.Parameter(typeof(object), "anonObjs");
             var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader");
-            var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
-            var mapProviderExpr = Expression.Parameter(typeof(IEntityMapProvider), "mapProvider");
+            var dbContextExpr = Expression.Parameter(typeof(DbContext), "dbContext");
 
             var blockParameters = new List<ParameterExpression>();
             var blockBodies = new List<Expression>();
@@ -763,15 +751,15 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             blockParameters.Add(typedListExpr);
             blockBodies.Add(Expression.Assign(typedListExpr, Expression.Convert(anonObjsExpr, listType)));
 
-            var methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.To), new Type[] { typeof(ITheaDataReader), typeof(IOrmProvider), typeof(IEntityMapProvider) });
+            var methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.ToEntity), [typeof(ITheaDataReader), typeof(DbContext)]);
             methodInfo = methodInfo.MakeGenericMethod(elementType);
-            var elementExpr = Expression.Call(methodInfo, readerExpr, ormProviderExpr, mapProviderExpr);
-            methodInfo = listType.GetMethod("Add", new Type[] { elementType });
+            var elementExpr = Expression.Call(methodInfo, readerExpr, dbContextExpr);
+            methodInfo = listType.GetMethod("Add", [elementType]);
             blockBodies.Add(Expression.Call(typedListExpr, methodInfo, elementExpr));
-            return Expression.Lambda<Action<object, ITheaDataReader, IOrmProvider, IEntityMapProvider>>(
-                Expression.Block(blockParameters, blockBodies), anonObjsExpr, readerExpr, ormProviderExpr, mapProviderExpr).Compile();
+            return Expression.Lambda<Action<object, ITheaDataReader, DbContext>>(
+                Expression.Block(blockParameters, blockBodies), anonObjsExpr, readerExpr, dbContextExpr).Compile();
         });
-        typedReaderElementSetter.Invoke(includeValues, reader, this.OrmProvider, this.MapProvider);
+        typedReaderElementSetter.Invoke(includeValues, reader, this.DbContext);
     }
     private void SetIncludeValueToTarget(Type targetType, MemberInfo firstMember, TableSegment includeSegment, object target, object includeValues)
     {
@@ -787,7 +775,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             var listType = typeof(List<>).MakeGenericType(elementType);
             var typedListExpr = Expression.Variable(listType, "typedList");
             var typedTargetExpr = Expression.Variable(targetType, "typedTarget");
-            blockParameters.AddRange(new[] { typedListExpr, typedTargetExpr });
+            blockParameters.AddRange([typedListExpr, typedTargetExpr]);
             blockBodies.Add(Expression.Assign(typedListExpr, Expression.Convert(anonListExpr, listType)));
             blockBodies.Add(Expression.Assign(typedTargetExpr, Expression.Convert(targetExpr, targetType)));
 

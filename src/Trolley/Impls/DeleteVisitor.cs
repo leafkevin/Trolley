@@ -55,7 +55,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
                 }
             }
             else whereObjType = whereKeys.GetType();
-            (var isMultiKeys, var origName, var whereSqlSetter, var headSqlSetter) = RepositoryHelper.BuildDeleteCommandInitializer(this.OrmProvider, this.MapProvider, entityType, whereObjType, isBulk, isBulk || this.IsMultiple);
+            (var isMultiKeys, var origName, var whereSqlSetter, var headSqlSetter) = RepositoryHelper.BuildDeleteCommandInitializer(this.DbContext, entityType, whereObjType, isBulk, isBulk || this.IsMultiple);
 
             int index = 0;
             var builder = new StringBuilder();
@@ -63,7 +63,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
             Action sqlExecuter = null;
             if (isBulk)
             {
-                var typedWhereSqlSetter = whereSqlSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object, string>;
+                var typedWhereSqlSetter = whereSqlSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
                 Func<int, string> suffixGetter = index => this.IsMultiple ? $"_m{this.CommandIndex}{index}" : $"{index}";
                 sqlExecuter = () =>
                 {
@@ -71,7 +71,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
                     foreach (var entity in entities)
                     {
                         if (index > 0) whereSqlBuilder.Append(jointMark);
-                        typedWhereSqlSetter.Invoke(command.Parameters, whereSqlBuilder, this.OrmProvider, entity, suffixGetter.Invoke(index));
+                        typedWhereSqlSetter.Invoke(command.Parameters, whereSqlBuilder, this.DbContext, entity, suffixGetter.Invoke(index));
                         index++;
                     }
                     if (!isMultiKeys) whereSqlBuilder.Append(')');
@@ -79,8 +79,8 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
             }
             else
             {
-                var typedWhereSqlSetter = whereSqlSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object>;
-                sqlExecuter = () => typedWhereSqlSetter.Invoke(command.Parameters, whereSqlBuilder, this.OrmProvider, whereKeys);
+                var typedWhereSqlSetter = whereSqlSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
+                sqlExecuter = () => typedWhereSqlSetter.Invoke(command.Parameters, whereSqlBuilder, this.DbContext, whereKeys);
             }
             if (!string.IsNullOrEmpty(this.Tables[0].TableSchema))
                 headSqlSetter = (builder, tableName) => headSqlSetter.Invoke(builder, this.Tables[0].TableSchema + "." + tableName);

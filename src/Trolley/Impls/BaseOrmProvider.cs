@@ -2,11 +2,11 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Trolley;
@@ -113,7 +113,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
             ExpressionType.RightShift => ">>",
             _ => nodeType.ToString()
         };
-    public virtual Func<object, object> GetParameterValueGetter(Type fromType, Type fieldType, bool isNullable)
+    public virtual Func<object, object> GetParameterValueGetter(Type fromType, Type fieldType, bool isNullable, OrmDbFactoryOptions options)
     {
         var hashKey = RepositoryHelper.GetCacheKey(fromType, fieldType, isNullable);
         return parameterValueGetters.GetOrAdd(hashKey, f =>
@@ -140,13 +140,37 @@ public abstract partial class BaseOrmProvider : IOrmProvider
             else
             {
                 //当前参数类型是非空类型，尽管数据库可为null，当作非空类型处理
-                if (underlyingType.IsArray && fieldType == typeof(Array))
+                if (fieldType == typeof(Array))
                 {
-                    typeHandler = value =>
+                    //数组类支持一元的，多元建议用json
+                    if (underlyingType.IsArray)
                     {
-                        if (value is DBNull) return null;
-                        return Convert.ChangeType(value, underlyingType);
-                    };
+                        typeHandler = value =>
+                        {
+                            if (value is DBNull) return null;
+                            return Convert.ChangeType(value, underlyingType);
+                        };
+                    }
+                    else
+                    {
+                        if (underlyingType.IsGenericType)
+                        {
+                            var elelmentTypes = underlyingType.GetGenericArguments();
+                            if (elelmentTypes.Length > 1)
+                                throw new NotSupportedException("暂时不支持多维数组的数据类型");
+
+                            if (underlyingType == typeof(List<>).MakeGenericType(elelmentTypes)
+                                || underlyingType == typeof(Collection<>).MakeGenericType(elelmentTypes)
+                                || underlyingType.IsInterface)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return null;
+                                    return RepositoryHelper.ToArray(elelmentTypes[0], value);
+                                };
+                            }
+                        }
+                    }
                 }
                 else if (underlyingType.IsEnumType(out _))
                 {
@@ -689,7 +713,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
             return typeHandler;
         });
     }
-    public virtual Func<object, object> GetReaderValueGetter(Type targetType, Type fieldType)
+    public virtual Func<object, object> GetReaderValueGetter(Type targetType, Type fieldType, OrmDbFactoryOptions options)
     {
         var hashKey = RepositoryHelper.GetCacheKey(targetType, fieldType);
         return readerValueGetters.GetOrAdd(hashKey, f =>
@@ -705,7 +729,29 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                 var resultExpr = Expression.Variable(typeof(object), "result");
                 var isDbNullExpr = Expression.TypeIs(valueExpr, typeof(DBNull));
                 var setDefaultExpr = Expression.Assign(resultExpr, Expression.Convert(Expression.Default(targetType), typeof(object)));
-                var setTypedValueExpr = Expression.Assign(resultExpr, valueExpr);
+
+                Expression typedValueExpr = null;
+                if (underlyingType == typeof(DateTime) || underlyingType == typeof(DateTimeOffset))
+                {
+                    MethodInfo methodInfo;
+                    if (options.DefaultDateTimeKind == DateTimeKind.Utc)
+                    {
+                        typedValueExpr = Expression.Convert(valueExpr, underlyingType);
+                        methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.ToUtc), BindingFlags.NonPublic | BindingFlags.Static, null, [underlyingType], null);
+                        typedValueExpr = Expression.Call(methodInfo, typedValueExpr);
+                        typedValueExpr = Expression.Convert(typedValueExpr, typeof(object));
+                    }
+                    else if (options.DefaultDateTimeKind == DateTimeKind.Local)
+                    {
+                        typedValueExpr = Expression.Convert(valueExpr, underlyingType);
+                        methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.ToLocal), BindingFlags.NonPublic | BindingFlags.Static, null, [underlyingType], null);
+                        typedValueExpr = Expression.Call(methodInfo, typedValueExpr);
+                        typedValueExpr = Expression.Convert(typedValueExpr, typeof(object));
+                    }
+                    else typedValueExpr = valueExpr;
+                }
+                else typedValueExpr = valueExpr;
+                var setTypedValueExpr = Expression.Assign(resultExpr, typedValueExpr);
                 blockBodies.Add(Expression.IfThenElse(isDbNullExpr, setDefaultExpr, setTypedValueExpr));
                 var resultLabelExpr = Expression.Label(typeof(object));
                 blockBodies.Add(Expression.Return(resultLabelExpr, resultExpr));
@@ -716,7 +762,46 @@ public abstract partial class BaseOrmProvider : IOrmProvider
             else
             {
                 //当前参数类型是非空类型，尽管数据库可为null，当作非空类型处理
-                if (underlyingType.IsEnumType(out _))
+                if (fieldType == typeof(Array))
+                {
+                    //数组类支持一元的，多元建议用json
+                    if (underlyingType.IsArray)
+                    {
+                        typeHandler = value =>
+                        {
+                            if (value is DBNull) return null;
+                            return Convert.ChangeType(value, underlyingType);
+                        };
+                    }
+                    else
+                    {
+                        if (underlyingType.IsGenericType)
+                        {
+                            var elelmentTypes = underlyingType.GetGenericArguments();
+                            if (elelmentTypes.Length > 1)
+                                throw new NotSupportedException("暂时不支持多维数组的数据类型");
+
+                            if (underlyingType == typeof(List<>).MakeGenericType(elelmentTypes)
+                                || underlyingType.IsInterface)
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return null;
+                                    return RepositoryHelper.CreateListInstance(elelmentTypes[0], value);
+                                };
+                            }
+                            else if (underlyingType == typeof(Collection<>).MakeGenericType(elelmentTypes))
+                            {
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return null;
+                                    return RepositoryHelper.CreateCollectionInstance(elelmentTypes[0], value);
+                                };
+                            }
+                        }
+                    }
+                }
+                else if (underlyingType.IsEnumType(out _))
                 {
                     var enumUnderlyingType = Enum.GetUnderlyingType(underlyingType);
                     var supportedTypes = new Type[] { typeof(byte), typeof(sbyte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(float), typeof(double), typeof(decimal) };
@@ -830,38 +915,114 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                         {
                             if (isNullableType)
                             {
-                                typeHandler = value =>
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
-                                    if (value is DBNull) return null;
-                                    return DateTimeOffset.Parse((string)value);
-                                };
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return DateTimeOffset.Parse((string)value).ToUtc();
+                                    };
+                                }
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return DateTimeOffset.Parse((string)value).ToLocal();
+                                    };
+                                }
+                                else
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return DateTimeOffset.Parse((string)value);
+                                    };
+                                }
                             }
                             else
                             {
-                                typeHandler = value =>
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
-                                    if (value is DBNull) return DateTimeOffset.MinValue;
-                                    return DateTimeOffset.Parse((string)value);
-                                };
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return DateTimeOffset.MinValue;
+                                        return DateTimeOffset.Parse((string)value).ToUtc();
+                                    };
+                                }
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return DateTimeOffset.MinValue;
+                                        return DateTimeOffset.Parse((string)value).ToLocal();
+                                    };
+                                }
+                                else
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return DateTimeOffset.MinValue;
+                                        return DateTimeOffset.Parse((string)value);
+                                    };
+                                }
                             }
                         }
                         else if (fieldType == typeof(DateTime))
                         {
                             if (isNullableType)
                             {
-                                typeHandler = value =>
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
-                                    if (value is DBNull) return null;
-                                    return new DateTimeOffset((DateTime)value);
-                                };
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return new DateTimeOffset(((DateTime)value).ToUtc());
+                                    };
+                                }
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return new DateTimeOffset(((DateTime)value).ToLocal());
+                                    };
+                                }
+                                else
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return new DateTimeOffset((DateTime)value);
+                                    };
+                                }
                             }
                             else
                             {
-                                typeHandler = value =>
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
-                                    if (value is DBNull) return DateTimeOffset.MinValue;
-                                    return new DateTimeOffset((DateTime)value);
-                                };
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return DateTimeOffset.MinValue;
+                                        return new DateTimeOffset(((DateTime)value).ToUtc());
+                                    };
+                                }
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return DateTimeOffset.MinValue;
+                                        return new DateTimeOffset(((DateTime)value).ToLocal());
+                                    };
+                                }
+                                else
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return DateTimeOffset.MinValue;
+                                        return new DateTimeOffset((DateTime)value);
+                                    };
+                                }
                             }
                         }
                     }
@@ -871,19 +1032,57 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                         {
                             if (isNullableType)
                             {
-                                typeHandler = value =>
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
-                                    if (value is DBNull) return null;
-                                    return DateTime.Parse((string)value);
-                                };
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return DateTime.Parse((string)value).ToUtc();
+                                    };
+                                }
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return DateTime.Parse((string)value).ToLocal();
+                                    };
+                                }
+                                else
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return DateTime.Parse((string)value);
+                                    };
+                                }
                             }
                             else
                             {
-                                typeHandler = value =>
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
-                                    if (value is DBNull) return DateTime.MinValue;
-                                    return DateTime.Parse((string)value);
-                                };
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return DateTime.MinValue;
+                                        return DateTime.Parse((string)value).ToUtc();
+                                    };
+                                }
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Utc)
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return DateTime.MinValue;
+                                        return DateTime.Parse((string)value).ToLocal();
+                                    };
+                                }
+                                else
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return DateTime.MinValue;
+                                        return DateTime.Parse((string)value);
+                                    };
+                                }
                             }
                         }
 #if NET6_0_OR_GREATER
@@ -911,19 +1110,57 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                         {
                             if (isNullableType)
                             {
-                                typeHandler = value =>
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
-                                    if (value is DBNull) return null;
-                                    return ((DateTimeOffset)value).LocalDateTime;
-                                };
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return ((DateTimeOffset)value).ToUtc();
+                                    };
+                                }
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return ((DateTimeOffset)value).ToLocal();
+                                    };
+                                }
+                                else
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return ((DateTimeOffset)value).DateTime;
+                                    };
+                                }
                             }
                             else
                             {
-                                typeHandler = value =>
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
-                                    if (value is DBNull) return DateTime.MinValue;
-                                    return ((DateTimeOffset)value).LocalDateTime;
-                                };
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return DateTime.MinValue;
+                                        return ((DateTimeOffset)value).ToUtc();
+                                    };
+                                }
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return DateTime.MinValue;
+                                        return ((DateTimeOffset)value).ToLocal();
+                                    };
+                                }
+                                else
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return DateTime.MinValue;
+                                        return ((DateTimeOffset)value).DateTime;
+                                    };
+                                }
                             }
                         }
                     }
@@ -953,38 +1190,114 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                         {
                             if (isNullableType)
                             {
-                                typeHandler = value =>
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
-                                    if (value is DBNull) return null;
-                                    return DateOnly.FromDateTime((DateTime)value);
-                                };
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return DateOnly.FromDateTime(((DateTime)value).ToUtc());
+                                    };
+                                }
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return DateOnly.FromDateTime(((DateTime)value).ToLocal());
+                                    };
+                                }
+                                else
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return DateOnly.FromDateTime(((DateTime)value));
+                                    };
+                                }
                             }
                             else
                             {
-                                typeHandler = value =>
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
-                                    if (value is DBNull) return DateOnly.MinValue;
-                                    return DateOnly.FromDateTime((DateTime)value);
-                                };
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return DateOnly.MinValue;
+                                        return DateOnly.FromDateTime(((DateTime)value).ToUtc());
+                                    };
+                                }
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return DateOnly.MinValue;
+                                        return DateOnly.FromDateTime(((DateTime)value).ToLocal());
+                                    };
+                                }
+                                else
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return DateOnly.MinValue;
+                                        return DateOnly.FromDateTime((DateTime)value);
+                                    };
+                                }
                             }
                         }
                         else if (fieldType == typeof(DateTimeOffset))
                         {
                             if (isNullableType)
                             {
-                                typeHandler = value =>
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
-                                    if (value is DBNull) return null;
-                                    return DateOnly.FromDateTime(((DateTimeOffset)value).LocalDateTime);
-                                };
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return DateOnly.FromDateTime(((DateTimeOffset)value).ToUtc().DateTime);
+                                    };
+                                }
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return DateOnly.FromDateTime(((DateTimeOffset)value).ToLocal().DateTime);
+                                    };
+                                }
+                                else
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return DateOnly.FromDateTime(((DateTimeOffset)value).DateTime);
+                                    };
+                                }
                             }
                             else
                             {
-                                typeHandler = value =>
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
-                                    if (value is DBNull) return DateOnly.MinValue;
-                                    return DateOnly.FromDateTime(((DateTimeOffset)value).LocalDateTime);
-                                };
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return DateOnly.MinValue;
+                                        return DateOnly.FromDateTime(((DateTimeOffset)value).ToUtc().DateTime);
+                                    };
+                                }
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return DateOnly.MinValue;
+                                        return DateOnly.FromDateTime(((DateTimeOffset)value).ToLocal().DateTime);
+                                    };
+                                }
+                                else
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return DateOnly.MinValue;
+                                        return DateOnly.FromDateTime(((DateTimeOffset)value).DateTime);
+                                    };
+                                }
                             }
                         }
                     }
@@ -1054,38 +1367,114 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                         {
                             if (isNullableType)
                             {
-                                typeHandler = value =>
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
-                                    if (value is DBNull) return null;
-                                    return ((DateTime)value).TimeOfDay;
-                                };
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return ((DateTime)value).ToUtc().TimeOfDay;
+                                    };
+                                }
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return ((DateTime)value).ToLocal().TimeOfDay;
+                                    };
+                                }
+                                else
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return ((DateTime)value).TimeOfDay;
+                                    };
+                                }
                             }
                             else
                             {
-                                typeHandler = value =>
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
-                                    if (value is DBNull) return TimeSpan.MinValue;
-                                    return ((DateTime)value).TimeOfDay;
-                                };
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return TimeSpan.MinValue;
+                                        return ((DateTime)value).ToUtc().TimeOfDay;
+                                    };
+                                }
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return TimeSpan.MinValue;
+                                        return ((DateTime)value).ToLocal().TimeOfDay;
+                                    };
+                                }
+                                else
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return TimeSpan.MinValue;
+                                        return ((DateTime)value).TimeOfDay;
+                                    };
+                                }
                             }
                         }
                         else if (fieldType == typeof(DateTimeOffset))
                         {
                             if (isNullableType)
                             {
-                                typeHandler = value =>
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
-                                    if (value is DBNull) return null;
-                                    return ((DateTimeOffset)value).LocalDateTime.TimeOfDay;
-                                };
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return ((DateTimeOffset)value).ToUtc().TimeOfDay;
+                                    };
+                                }
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return ((DateTimeOffset)value).ToLocal().TimeOfDay;
+                                    };
+                                }
+                                else
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return ((DateTimeOffset)value).DateTime.TimeOfDay;
+                                    };
+                                }
                             }
                             else
                             {
-                                typeHandler = value =>
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
-                                    if (value is DBNull) return TimeSpan.MinValue;
-                                    return ((DateTimeOffset)value).LocalDateTime.TimeOfDay;
-                                };
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return TimeSpan.MinValue;
+                                        return ((DateTimeOffset)value).ToUtc().TimeOfDay;
+                                    };
+                                }
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return TimeSpan.MinValue;
+                                        return ((DateTimeOffset)value).ToLocal().TimeOfDay;
+                                    };
+                                }
+                                else
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return TimeSpan.MinValue;
+                                        return ((DateTimeOffset)value).DateTime.TimeOfDay;
+                                    };
+                                }
                             }
                         }
                     }
@@ -1153,38 +1542,114 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                         {
                             if (isNullableType)
                             {
-                                typeHandler = value =>
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
-                                    if (value is DBNull) return null;
-                                    return TimeOnly.FromTimeSpan(((DateTime)value).TimeOfDay);
-                                };
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return TimeOnly.FromTimeSpan(((DateTime)value).ToUtc().TimeOfDay);
+                                    };
+                                }
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return TimeOnly.FromTimeSpan(((DateTime)value).ToLocal().TimeOfDay);
+                                    };
+                                }
+                                else
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return TimeOnly.FromTimeSpan(((DateTime)value).TimeOfDay);
+                                    };
+                                }
                             }
                             else
                             {
-                                typeHandler = value =>
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
+                                { 
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return TimeOnly.MinValue;
+                                        return TimeOnly.FromTimeSpan(((DateTime)value).ToUtc().TimeOfDay);
+                                    };
+                                }
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
                                 {
-                                    if (value is DBNull) return TimeOnly.MinValue;
-                                    return TimeOnly.FromTimeSpan(((DateTime)value).TimeOfDay);
-                                };
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return TimeOnly.MinValue;
+                                        return TimeOnly.FromTimeSpan(((DateTime)value).ToLocal().TimeOfDay);
+                                    };
+                                }
+                                else
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return TimeOnly.MinValue;
+                                        return TimeOnly.FromTimeSpan(((DateTime)value).TimeOfDay);
+                                    };
+                                }
                             }
                         }
                         else if (fieldType == typeof(DateTimeOffset))
                         {
                             if (isNullableType)
                             {
-                                typeHandler = value =>
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
+                                {                                    
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return TimeOnly.FromTimeSpan(((DateTimeOffset)value).ToUtc().TimeOfDay);
+                                    };
+                                }
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
                                 {
-                                    if (value is DBNull) return null;
-                                    return TimeOnly.FromTimeSpan(((DateTimeOffset)value).LocalDateTime.TimeOfDay);
-                                };
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return TimeOnly.FromTimeSpan(((DateTimeOffset)value).ToLocal().TimeOfDay);
+                                    };
+                                }
+                                else
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return null;
+                                        return TimeOnly.FromTimeSpan(((DateTimeOffset)value).DateTime.TimeOfDay);
+                                    };
+                                }
                             }
                             else
                             {
-                                typeHandler = value =>
+                                if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                                 {
-                                    if (value is DBNull) return TimeOnly.MinValue;
-                                    return TimeOnly.FromTimeSpan(((DateTimeOffset)value).LocalDateTime.TimeOfDay);
-                                };
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return TimeOnly.MinValue;
+                                        return TimeOnly.FromTimeSpan(((DateTimeOffset)value).ToUtc().TimeOfDay);
+                                    };
+                                }
+                                else if (options.DefaultDateTimeKind == DateTimeKind.Local)
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return TimeOnly.MinValue;
+                                        return TimeOnly.FromTimeSpan(((DateTimeOffset)value).ToLocal().TimeOfDay);
+                                    };
+                                }
+                                else
+                                {
+                                    typeHandler = value =>
+                                    {
+                                        if (value is DBNull) return TimeOnly.MinValue;
+                                        return TimeOnly.FromTimeSpan(((DateTimeOffset)value).DateTime.TimeOfDay);
+                                    };
+                                }
                             }
                         }
                     }

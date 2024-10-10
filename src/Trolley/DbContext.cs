@@ -20,11 +20,11 @@ public sealed class DbContext
     public IEntityMapProvider MapProvider { get; set; }
     public ITableShardingProvider ShardingProvider { get; set; }
     public ITheaTransaction Transaction { get; set; }
-    public bool IsParameterized { get; set; }
-    public int CommandTimeout { get; set; }
-    public string ParameterPrefix { get; set; } = "p";
-    public Type DefaultEnumMapDbType { get; set; }
-    public DbInterceptors DbInterceptors { get; set; }
+    public bool IsConstantParameterized => this.Options.IsConstantParameterized;
+    public int CommandTimeout => this.Options.CommandTimeout;
+    public Type DefaultEnumMapDbType => this.Options.DefaultEnumMapDbType;
+    public DbInterceptors DbInterceptors => this.Options.DbInterceptors;
+    public OrmDbFactoryOptions Options { get; set; }
     #endregion   
 
     #region UseMasterCommand
@@ -117,8 +117,8 @@ public sealed class DbContext
         if (reader.Read())
         {
             if (entityType.IsEntityType(out _))
-                result = reader.To<TResult>(this.OrmProvider, this.MapProvider);
-            else result = reader.To<TResult>(this.OrmProvider);
+                result = reader.ToEntity<TResult>(this);
+            else result = reader.ToValue<TResult>(this);
         }
 
         reader.Dispose();
@@ -140,8 +140,8 @@ public sealed class DbContext
         if (await reader.ReadAsync(cancellationToken))
         {
             if (entityType.IsEntityType(out _))
-                result = reader.To<TResult>(this.OrmProvider, this.MapProvider);
-            else result = reader.To<TResult>(this.OrmProvider);
+                result = reader.ToEntity<TResult>(this);
+            else result = reader.ToValue<TResult>(this);
         }
 
         await reader.DisposeAsync();
@@ -171,8 +171,8 @@ public sealed class DbContext
         if (reader.Read())
         {
             if (entityType.IsEntityType(out _))
-                result = reader.To<TResult>(this.OrmProvider, readerFields);
-            else result = reader.To<TResult>(this.OrmProvider);
+                result = reader.ToEntity<TResult>(this, readerFields);
+            else result = reader.ToValue<TResult>(this);
         }
         if (visitor.BuildIncludeSql(entityType, result, true, out sql))
         {
@@ -211,8 +211,8 @@ public sealed class DbContext
         if (await reader.ReadAsync(cancellationToken))
         {
             if (entityType.IsEntityType(out _))
-                result = reader.To<TResult>(this.OrmProvider, readerFields);
-            else result = reader.To<TResult>(this.OrmProvider);
+                result = reader.ToEntity<TResult>(this, readerFields);
+            else result = reader.ToValue<TResult>(this);
         }
         if (visitor.BuildIncludeSql(entityType, result, true, out sql))
         {
@@ -248,14 +248,14 @@ public sealed class DbContext
         {
             while (reader.Read())
             {
-                result.Add(reader.To<TResult>(this.OrmProvider, this.MapProvider));
+                result.Add(reader.ToEntity<TResult>(this));
             }
         }
         else
         {
             while (reader.Read())
             {
-                result.Add(reader.To<TResult>(this.OrmProvider));
+                result.Add(reader.ToValue<TResult>(this));
             }
         }
 
@@ -279,14 +279,14 @@ public sealed class DbContext
         {
             while (await reader.ReadAsync(cancellationToken))
             {
-                result.Add(reader.To<TResult>(this.OrmProvider, this.MapProvider));
+                result.Add(reader.ToEntity<TResult>(this));
             }
         }
         else
         {
             while (await reader.ReadAsync(cancellationToken))
             {
-                result.Add(reader.To<TResult>(this.OrmProvider));
+                result.Add(reader.ToValue<TResult>(this));
             }
         }
 
@@ -318,14 +318,14 @@ public sealed class DbContext
         {
             while (reader.Read())
             {
-                result.Add(reader.To<TResult>(this.OrmProvider, readerFields));
+                result.Add(reader.ToEntity<TResult>(this, readerFields));
             }
         }
         else
         {
             while (reader.Read())
             {
-                result.Add(reader.To<TResult>(this.OrmProvider));
+                result.Add(reader.ToValue<TResult>(this));
             }
         }
         if (visitor.BuildIncludeSql(entityType, result, false, out sql))
@@ -368,14 +368,14 @@ public sealed class DbContext
         {
             while (await reader.ReadAsync(cancellationToken))
             {
-                result.Add(reader.To<TResult>(this.OrmProvider, readerFields));
+                result.Add(reader.ToEntity<TResult>(this, readerFields));
             }
         }
         else
         {
             while (await reader.ReadAsync(cancellationToken))
             {
-                result.Add(reader.To<TResult>(this.OrmProvider));
+                result.Add(reader.ToValue<TResult>(this));
             }
         }
         if (visitor.BuildIncludeSql(entityType, result, false, out sql))
@@ -412,7 +412,7 @@ public sealed class DbContext
         connection.Open();
         var behavior = CommandBehavior.SequentialAccess;
         var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
-        if (reader.Read()) result.TotalCount = reader.To<int>(this.OrmProvider);
+        if (reader.Read()) result.TotalCount = reader.ToValue<int>(this);
         result.PageNumber = visitor.PageNumber;
         result.PageSize = visitor.PageSize;
 
@@ -422,14 +422,14 @@ public sealed class DbContext
         {
             while (reader.Read())
             {
-                result.Data.Add(reader.To<TResult>(this.OrmProvider, readerFields));
+                result.Data.Add(reader.ToEntity<TResult>(this, readerFields));
             }
         }
         else
         {
             while (reader.Read())
             {
-                result.Data.Add(reader.To<TResult>(this.OrmProvider));
+                result.Data.Add(reader.ToValue<TResult>(this));
             }
         }
         result.Count = result.Data.Count;
@@ -466,7 +466,7 @@ public sealed class DbContext
         var behavior = CommandBehavior.SequentialAccess;
         var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
         if (await reader.ReadAsync(cancellationToken))
-            result.TotalCount = reader.To<int>(this.OrmProvider);
+            result.TotalCount = reader.ToValue<int>(this);
         result.PageNumber = visitor.PageNumber;
         result.PageSize = visitor.PageSize;
 
@@ -476,14 +476,14 @@ public sealed class DbContext
         {
             while (await reader.ReadAsync(cancellationToken))
             {
-                result.Data.Add(reader.To<TResult>(this.OrmProvider, readerFields));
+                result.Data.Add(reader.ToEntity<TResult>(this, readerFields));
             }
         }
         else
         {
             while (await reader.ReadAsync(cancellationToken))
             {
-                result.Data.Add(reader.To<TResult>(this.OrmProvider));
+                result.Data.Add(reader.ToValue<TResult>(this));
             }
         }
         result.Count = result.Data.Count;
@@ -516,15 +516,15 @@ public sealed class DbContext
         var entityType = typeof(TEntity);
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand(false);
         var whereObjType = whereObj.GetType();
-        var commandInitializer = RepositoryHelper.BuildGetSqlParameters(this.OrmProvider, this.MapProvider, entityType, whereObjType, false);
-        var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
-        command.CommandText = typedCommandInitializer.Invoke(command.BaseCommand.Parameters, this.OrmProvider, whereObj);
+        var commandInitializer = RepositoryHelper.BuildGetSqlParameters(this, entityType, whereObjType, false);
+        var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
+        command.CommandText = typedCommandInitializer.Invoke(command.BaseCommand.Parameters, this, whereObj);
 
         connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
         if (reader.Read())
-            result = reader.To<TEntity>(this.OrmProvider, this.MapProvider);
+            result = reader.ToEntity<TEntity>(this);
 
         reader.Dispose();
         command.Parameters.Clear();
@@ -541,15 +541,15 @@ public sealed class DbContext
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand(false);
         var entityType = typeof(TEntity);
         var whereObjType = whereObj.GetType();
-        var commandInitializer = RepositoryHelper.BuildGetSqlParameters(this.OrmProvider, this.MapProvider, entityType, whereObjType, false);
-        var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, IOrmProvider, object, string>;
-        command.CommandText = typedCommandInitializer.Invoke(command.BaseCommand.Parameters, this.OrmProvider, whereObj);
+        var commandInitializer = RepositoryHelper.BuildGetSqlParameters(this, entityType, whereObjType, false);
+        var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
+        command.CommandText = typedCommandInitializer.Invoke(command.BaseCommand.Parameters, this, whereObj);
 
         await connection.OpenAsync(cancellationToken);
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
         if (await reader.ReadAsync(cancellationToken))
-            result = reader.To<TEntity>(this.OrmProvider, this.MapProvider);
+            result = reader.ToEntity<TEntity>(this);
 
         await reader.DisposeAsync();
         command.Parameters.Clear();
@@ -571,8 +571,8 @@ public sealed class DbContext
         if (reader.Read())
         {
             if (readerFields != null && readerFields.Count > 0)
-                result = reader.To<TResult>(this.OrmProvider, readerFields, true);
-            else result = reader.To<TResult>(this.OrmProvider);
+                result = reader.ToEntity<TResult>(this, readerFields, true);
+            else result = reader.ToValue<TResult>(this);
         }
 
         reader.Dispose();
@@ -592,8 +592,8 @@ public sealed class DbContext
         if (await reader.ReadAsync(cancellationToken))
         {
             if (readerFields != null && readerFields.Count > 0)
-                result = reader.To<TResult>(this.OrmProvider, readerFields, true);
-            else result = reader.To<TResult>(this.OrmProvider);
+                result = reader.ToEntity<TResult>(this, readerFields, true);
+            else result = reader.ToValue<TResult>(this);
         }
 
         await reader.DisposeAsync();
@@ -611,7 +611,7 @@ public sealed class DbContext
         using var reader = command.ExecuteReader(CommandSqlType.Insert, CommandBehavior.SequentialAccess);
         while (reader.Read())
         {
-            result.Add(reader.To<TResult>(this.OrmProvider, readerFields, true));
+            result.Add(reader.ToEntity<TResult>(this, readerFields, true));
         }
         reader.Dispose();
         command.Parameters.Clear();
@@ -628,7 +628,7 @@ public sealed class DbContext
         using var reader = await command.ExecuteReaderAsync(CommandSqlType.Insert, CommandBehavior.SequentialAccess, cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
         {
-            result.Add(reader.To<TResult>(this.OrmProvider, readerFields, true));
+            result.Add(reader.ToEntity<TResult>(this, readerFields, true));
         }
         await reader.DisposeAsync();
         command.Parameters.Clear();
@@ -641,7 +641,7 @@ public sealed class DbContext
     {
         var insertObjType = insertObj.GetType();
         var fieldsSqlPartSetter = RepositoryHelper.BuildCreateFieldsSqlPart(this.OrmProvider, this.MapProvider, entityType, insertObjType, null, null);
-        var valuesSqlPartSetter = RepositoryHelper.BuildCreateValuesSqlParametes(this.OrmProvider, this.MapProvider, entityType, insertObjType, null, null, false);
+        var valuesSqlPartSetter = RepositoryHelper.BuildCreateValuesSqlParametes(this, entityType, insertObjType, null, null, false);
         bool isDictionary = typeof(IDictionary<string, object>).IsAssignableFrom(insertObjType);
 
         Action<IDataParameterCollection, StringBuilder, string> firstSqlSetter = null;
@@ -652,7 +652,7 @@ public sealed class DbContext
         if (isDictionary)
         {
             var typedFieldsSqlPartSetter = fieldsSqlPartSetter as Func<StringBuilder, object, List<MemberMap>>;
-            var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, List<MemberMap>, object>;
+            var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, DbContext, List<MemberMap>, object>;
 
             var builder = new StringBuilder();
             var memberMappers = typedFieldsSqlPartSetter.Invoke(builder, insertObj);
@@ -668,14 +668,14 @@ public sealed class DbContext
             loopSqlSetter = (dbParameters, builder, insertObj) =>
             {
                 builder.Append('(');
-                typedValuesSqlPartSetter.Invoke(dbParameters, builder, this.OrmProvider, memberMappers, insertObj);
+                typedValuesSqlPartSetter.Invoke(dbParameters, builder, this, memberMappers, insertObj);
                 builder.Append(')');
             };
         }
         else
         {
             var typedFieldsSqlPartSetter = fieldsSqlPartSetter as Action<StringBuilder>;
-            var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, IOrmProvider, object>;
+            var typedValuesSqlPartSetter = valuesSqlPartSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
 
             firstSqlSetter = (dbParameters, builder, tableName) =>
             {
@@ -686,7 +686,7 @@ public sealed class DbContext
             loopSqlSetter = (dbParameters, builder, insertObj) =>
             {
                 builder.Append('(');
-                typedValuesSqlPartSetter.Invoke(dbParameters, builder, this.OrmProvider, insertObj);
+                typedValuesSqlPartSetter.Invoke(dbParameters, builder, this, insertObj);
                 builder.Append(')');
             };
         }
@@ -796,7 +796,7 @@ public sealed class DbContext
         var shardingTables = new List<string>();
         while (reader.Read())
         {
-            shardingTables.Add(reader.To<string>(this.OrmProvider));
+            shardingTables.Add(reader.ToValue<string>(this));
         }
         visitor.SetShardingTables(shardingTables);
 
@@ -816,7 +816,7 @@ public sealed class DbContext
         var shardingTables = new List<string>();
         while (await reader.ReadAsync(cancellationToken))
         {
-            shardingTables.Add(reader.To<string>(this.OrmProvider));
+            shardingTables.Add(reader.ToValue<string>(this));
         }
         visitor.SetShardingTables(shardingTables);
 

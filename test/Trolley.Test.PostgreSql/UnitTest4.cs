@@ -351,7 +351,6 @@ public class UnitTest4 : UnitTestBase
     {
         var repository = this.dbFactory.Create();
         bool? isMale = true;
-        repository.Timeout(60);
         repository.BeginTransaction();
         repository.Update<User>()
             .Set(new { Name = "leafkevin1" })

@@ -52,7 +52,7 @@ class MultiQueryReader : IMultiQueryReader
     {
         int totalCount = 0;
         if (this.reader.Read())
-            totalCount = reader.To<int>(this.ormProvider);
+            totalCount = reader.ToValue<int>(this.dbContext);
         this.reader.NextResult();
         var dataList = new List<T>();
         (var pageNumber, var pageSize) = this.ReadList<T>(dataList, true);
@@ -96,7 +96,7 @@ class MultiQueryReader : IMultiQueryReader
     {
         int totalCount = 0;
         if (await this.reader.ReadAsync(cancellationToken))
-            totalCount = reader.To<int>(this.ormProvider);
+            totalCount = reader.ToValue<int>(this.dbContext);
         await this.reader.NextResultAsync(cancellationToken);
 
         var dataList = new List<T>();

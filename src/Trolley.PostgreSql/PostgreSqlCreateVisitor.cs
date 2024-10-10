@@ -188,32 +188,32 @@ public class PostgreSqlCreateVisitor : CreateVisitor
     {
         var entityType = this.Tables[0].EntityType;
         var updateObjType = updateObj.GetType();
-        (var isDictionary, var setFieldsInitializer) = RepositoryHelper.BuildSqlParametersPart(this.OrmProvider, this.MapProvider, entityType, updateObjType, true, false, true, false, false, false, this.IsMultiple, false, this.OnlyFieldNames, this.IgnoreFieldNames, ",", null);
+        (var isDictionary, var setFieldsInitializer) = RepositoryHelper.BuildSqlParametersPart(this.DbContext, entityType, updateObjType, true, false, true, false, false, false, this.IsMultiple, false, this.OnlyFieldNames, this.IgnoreFieldNames, ",", null);
         if (isDictionary)
         {
             var entityMapper = this.Tables[0].Mapper;
             if (this.IsMultiple)
             {
-                var typedSetFieldsInitializer = setFieldsInitializer as Action<StringBuilder, IOrmProvider, EntityMap, object, string>;
-                typedSetFieldsInitializer.Invoke(this.UpdateFields, this.OrmProvider, entityMapper, updateObj, $"_m{this.CommandIndex}");
+                var typedSetFieldsInitializer = setFieldsInitializer as Action<StringBuilder, DbContext, EntityMap, object, string>;
+                typedSetFieldsInitializer.Invoke(this.UpdateFields, this.DbContext, entityMapper, updateObj, $"_m{this.CommandIndex}");
             }
             else
             {
-                var typedSetFieldsInitializer = setFieldsInitializer as Action<StringBuilder, IOrmProvider, EntityMap, object>;
-                typedSetFieldsInitializer.Invoke(this.UpdateFields, this.OrmProvider, entityMapper, updateObj);
+                var typedSetFieldsInitializer = setFieldsInitializer as Action<StringBuilder, DbContext, EntityMap, object>;
+                typedSetFieldsInitializer.Invoke(this.UpdateFields, this.DbContext, entityMapper, updateObj);
             }
         }
         else
         {
             if (this.IsMultiple)
             {
-                var typedSetFieldsInitializer = setFieldsInitializer as Action<StringBuilder, IOrmProvider, object, string>;
-                typedSetFieldsInitializer.Invoke(this.UpdateFields, this.OrmProvider, updateObj, $"_m{this.CommandIndex}");
+                var typedSetFieldsInitializer = setFieldsInitializer as Action<StringBuilder, DbContext, object, string>;
+                typedSetFieldsInitializer.Invoke(this.UpdateFields, this.DbContext, updateObj, $"_m{this.CommandIndex}");
             }
             else
             {
-                var typedSetFieldsInitializer = setFieldsInitializer as Action<StringBuilder, IOrmProvider, object>;
-                typedSetFieldsInitializer.Invoke(this.UpdateFields, this.OrmProvider, updateObj);
+                var typedSetFieldsInitializer = setFieldsInitializer as Action<StringBuilder, DbContext, object>;
+                typedSetFieldsInitializer.Invoke(this.UpdateFields, this.DbContext, updateObj);
             }
         }
     }
@@ -436,7 +436,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
             else
             {
                 var targetType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);
-                var valueGetter = this.OrmProvider.GetParameterValueGetter(dbFieldValue.GetType(), targetType, false);
+                var valueGetter = this.OrmProvider.GetParameterValueGetter(dbFieldValue.GetType(), targetType, false, this.Options);
                 dbFieldValue = valueGetter.Invoke(dbFieldValue);
             }
 
@@ -473,7 +473,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
             else
             {
                 var targetType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);
-                var valueGetter = this.OrmProvider.GetParameterValueGetter(fieldValue.GetType(), targetType, false);
+                var valueGetter = this.OrmProvider.GetParameterValueGetter(fieldValue.GetType(), targetType, false, this.Options);
                 fieldValue = valueGetter.Invoke(fieldValue);
             }
             this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));

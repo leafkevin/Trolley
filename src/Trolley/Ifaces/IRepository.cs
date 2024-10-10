@@ -537,21 +537,4 @@ public interface IRepository
     void Rollback();
     Task RollbackAsync(CancellationToken cancellationToken = default);
     #endregion
-
-    #region Others
-    /// <summary>
-    /// 设置命令超时时间，本次命令执行有效，单位是秒
-    /// </summary>
-    /// <param name="seconds">超时时间，单位是秒</param>
-    /// <returns>返回仓储对象</returns>
-    IRepository Timeout(int seconds);
-    /// <summary>
-    /// 是否使用参数化常量，如果设置为true，本repository对象的所有查询语句中用到的常量都将变成参数
-    /// <code>var result = await repository.QueryAsync&lt;Product&gt;(f =&gt; f.ProductNo.Contains("PN-001"));</code>//常量PN-001，会被参数化
-    /// 默认情况下，所有变量都会参数化处理
-    /// </summary>
-    /// <param name="isParameterized">是否参数化</param>
-    /// <returns>返回仓储对象</returns>
-    IRepository WithParameterized(bool isParameterized = true);
-    #endregion
 }

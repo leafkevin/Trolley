@@ -86,12 +86,14 @@ public class DateTimeUnitTest : UnitTestBase
         Assert.Equal(localDate, (DateTime)dbParameters[0].Value);
         Assert.Equal(localDate, (DateTime)dbParameters[1].Value);
 
+        var lastNow = DateTime.Parse("2024-10-10 05:06:07.123");
         var result = await repository.From<User>()
             .Where(f => f.Id == 1)
             .Select(f => new
             {
                 f.UpdatedAt,
                 DateTime.Now,
+                lastNow,
                 DateTime.MinValue,
                 DateTime.MaxValue,
                 DateTime.UtcNow,
@@ -108,7 +110,8 @@ public class DateTimeUnitTest : UnitTestBase
         //由于精度不同，差一些微秒
         //Assert.True(result.MaxValue == DateTime.MaxValue);
         //取决于时区的设置
-        Assert.Equal(DateTime.Now.Date, result.Today);
+        //Assert.Equal(now, result.Now);
+        Assert.Equal(lastNow, result.lastNow);
         Assert.Equal(DateTime.UnixEpoch, result.UnixEpoch);
         Assert.Equal(DateTime.Parse("2023-05-06").Date, result.Date);
         Assert.Equal(localDate, result.localDate);

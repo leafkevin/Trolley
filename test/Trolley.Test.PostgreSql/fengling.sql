@@ -35,7 +35,8 @@ CREATE TABLE "public"."sys_brand" (
 -- ----------------------------
 -- Table structure for sys_company
 -- ----------------------------
-DROP TABLE IF EXISTS "public"."sys_company";
+DROP TABLE IF EXISTS "public"."sys_company" CASCADE;
+DROP SEQUENCE IF EXISTS "public"."sys_company_Id_seq" CASCADE;
 CREATE TABLE "public"."sys_company" (
   "Id" SERIAL NOT NULL,
   "Name" varchar(50) NULL DEFAULT NULL,
@@ -341,7 +342,8 @@ CREATE TABLE "myschema"."sys_brand" (
 -- ----------------------------
 -- Table structure for sys_company
 -- ----------------------------
-DROP TABLE IF EXISTS "myschema"."sys_company";
+DROP TABLE IF EXISTS "myschema"."sys_company" CASCADE;
+DROP SEQUENCE IF EXISTS "myschema"."sys_company_Id_seq" CASCADE;
 CREATE TABLE "myschema"."sys_company" (
   "Id" SERIAL NOT NULL,
   "Name" varchar(50) NULL DEFAULT NULL,

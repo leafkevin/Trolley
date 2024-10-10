@@ -7147,7 +7147,6 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
     {
         var repository = this.dbFactory.Create();
         bool? isMale = true;
-        repository.Timeout(60);
         repository.BeginTransaction();
         repository.Update<User>()
             .Set(new { Name = "leafkevin1" })

@@ -126,13 +126,13 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                             if (index > 0) builder.Append(';');
                             var tableNames = this.Visitor.ShardingTables[0].TableNames;
                             headSqlSetter.Invoke(builder, tableNames[0]);
-                            firstSqlParametersSetter.Invoke(command.Parameters, builder, this.OrmProvider, updateObj, suffixGetter(index));
+                            firstSqlParametersSetter.Invoke(command.Parameters, builder, this.DbContext, updateObj, suffixGetter(index));
 
                             for (int i = 1; i < tableNames.Count; i++)
                             {
                                 builder.Append(';');
                                 headSqlSetter.Invoke(builder, tableNames[i]);
-                                sqlSetter.Invoke(builder, this.OrmProvider, updateObj, suffixGetter(index));
+                                sqlSetter.Invoke(builder, this.DbContext, updateObj, suffixGetter(index));
                             }
                         };
                     }
@@ -142,7 +142,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                         {
                             if (index > 0) builder.Append(';');
                             headSqlSetter.Invoke(builder, tableName);
-                            firstSqlParametersSetter.Invoke(command.Parameters, builder, this.OrmProvider, updateObj, suffixGetter(index));
+                            firstSqlParametersSetter.Invoke(command.Parameters, builder, this.DbContext, updateObj, suffixGetter(index));
                         };
                     }
                     if (this.Visitor.IsNeedFetchShardingTables)
@@ -294,13 +294,13 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                             if (index > 0) builder.Append(';');
                             var tableNames = this.Visitor.ShardingTables[0].TableNames;
                             headSqlSetter.Invoke(builder, tableNames[0]);
-                            firstSqlParametersSetter.Invoke(command.Parameters, builder, this.OrmProvider, updateObj, suffixGetter(index));
+                            firstSqlParametersSetter.Invoke(command.Parameters, builder, this.DbContext, updateObj, suffixGetter(index));
 
                             for (int i = 1; i < tableNames.Count; i++)
                             {
                                 builder.Append(';');
                                 headSqlSetter.Invoke(builder, tableNames[i]);
-                                sqlSetter.Invoke(builder, this.OrmProvider, updateObj, suffixGetter(index));
+                                sqlSetter.Invoke(builder, this.DbContext, updateObj, suffixGetter(index));
                             }
                         };
                     }
@@ -310,7 +310,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                         {
                             if (index > 0) builder.Append(';');
                             headSqlSetter.Invoke(builder, tableName);
-                            firstSqlParametersSetter.Invoke(command.Parameters, builder, this.OrmProvider, updateObj, suffixGetter(index));
+                            firstSqlParametersSetter.Invoke(command.Parameters, builder, this.DbContext, updateObj, suffixGetter(index));
                         };
                     }
                     if (this.Visitor.IsNeedFetchShardingTables)

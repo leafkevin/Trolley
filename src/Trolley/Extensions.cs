@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
-using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -38,7 +37,7 @@ public static class Extensions
     public static void Configure(this IOrmDbFactory dbFactory, OrmProviderType ormProviderType, IModelConfiguration configuration)
     {
         if (!dbFactory.TryGetMapProvider(ormProviderType, out var mapProvider))
-            dbFactory.AddMapProvider(ormProviderType, mapProvider = new EntityMapProvider(dbFactory.FieldMapHandler));
+            dbFactory.AddMapProvider(ormProviderType, mapProvider = new EntityMapProvider(dbFactory.Options.FieldMapHandler));
         configuration.OnModelCreating(new ModelBuilder(mapProvider));
     }
     public static void Configure<TModelConfiguration>(this IOrmDbFactory dbFactory, OrmProviderType ormProviderType) where TModelConfiguration : class, IModelConfiguration, new()
@@ -46,7 +45,7 @@ public static class Extensions
     public static void Configure(this IOrmDbFactory dbFactory, string dbKey, IModelConfiguration configuration)
     {
         if (!dbFactory.TryGetMapProvider(dbKey, out var mapProvider))
-            dbFactory.AddMapProvider(dbKey, mapProvider = new EntityMapProvider(dbFactory.FieldMapHandler));
+            dbFactory.AddMapProvider(dbKey, mapProvider = new EntityMapProvider(dbFactory.Options.FieldMapHandler));
         configuration.OnModelCreating(new ModelBuilder(mapProvider));
     }
     public static void Configure<TModelConfiguration>(this IOrmDbFactory dbFactory, string dbKey) where TModelConfiguration : class, IModelConfiguration, new()
@@ -208,32 +207,27 @@ public static class Extensions
     /// </summary>
     /// <typeparam name="TValue"></typeparam>
     /// <param name="reader"></param>
-    /// <param name="ormProvider"></param>
+    /// <param name="dbContext"></param>
     /// <returns></returns>
-    public static TValue To<TValue>(this ITheaDataReader reader, IOrmProvider ormProvider)
+    public static TValue ToValue<TValue>(this ITheaDataReader reader, DbContext dbContext)
     {
         var targetType = typeof(TValue);
         var fieldType = reader.GetFieldType(0);
-        var valueGetter = ormProvider.GetReaderValueGetter(targetType, fieldType);
+        var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(targetType, fieldType, dbContext.Options);
         return (TValue)valueGetter.Invoke(reader.BaseDataReader[0]);
     }
-    public static TEntity To<TEntity>(this ITheaDataReader reader, DbContext dbContext)
-        => reader.To<TEntity>(dbContext.OrmProvider, dbContext.MapProvider);
-    public static TEntity To<TEntity>(this ITheaDataReader reader, DbContext dbContext, List<SqlFieldSegment> readerFields)
-        => reader.To<TEntity>(dbContext.OrmProvider, readerFields);
     /// <summary>
-    /// 使用SQL+参数查询,返回的是单纯的实体
+    /// 使用SQL+参数查询，返回的是单纯的实体
     /// </summary>
     /// <typeparam name="TEntity"></typeparam>
     /// <param name="reader"></param>
-    /// <param name="ormProvider"></param>
-    /// <param name="mapProvider"></param>
+    /// <param name="dbContext"></param>
     /// <returns></returns>
-    public static TEntity To<TEntity>(this ITheaDataReader reader, IOrmProvider ormProvider, IEntityMapProvider mapProvider)
+    public static TEntity ToEntity<TEntity>(this ITheaDataReader reader, DbContext dbContext)
     {
         var dbReader = reader.BaseDataReader;
         var entityType = typeof(TEntity);
-        var ormProviderType = ormProvider.GetType();
+        var ormProviderType = dbContext.OrmProvider.OrmProviderType;
         var isValueTuple = entityType.FullName.StartsWith("System.ValueTuple`");
 
         int cacheKey;
@@ -250,7 +244,7 @@ public static class Extensions
         }
         if (!deserializerCache.TryGetValue(cacheKey, out var deserializer))
         {
-            deserializer = CreateReaderDeserializer(ormProvider, mapProvider, dbReader, entityType, isValueTuple);
+            deserializer = CreateReaderDeserializer(dbContext, dbReader, entityType, isValueTuple);
             deserializerCache.TryAdd(cacheKey, deserializer);
         }
         return ((Func<IDataReader, TEntity>)deserializer).Invoke(dbReader);
@@ -260,19 +254,19 @@ public static class Extensions
     /// </summary>
     /// <typeparam name="TEntity"></typeparam>
     /// <param name="reader"></param>
-    /// <param name="dbKey"></param>
-    /// <param name="ormProvider"></param>
+    /// <param name="dbContext"></param>
     /// <param name="readerFields"></param>
+    /// <param name="isUseReaderOrder"></param>
     /// <returns></returns>
-    public static TEntity To<TEntity>(this ITheaDataReader reader, IOrmProvider ormProvider, List<SqlFieldSegment> readerFields, bool isUseReaderOrder = false)
+    public static TEntity ToEntity<TEntity>(this ITheaDataReader reader, DbContext dbContext, List<SqlFieldSegment> readerFields, bool isUseReaderOrder = false)
     {
         var dbReader = reader.BaseDataReader;
         var entityType = typeof(TEntity);
-        var ormProviderType = ormProvider.GetType();
+        var ormProviderType = dbContext.OrmProvider.OrmProviderType;
         var cacheKey = GetTypeReaderKey(entityType, ormProviderType, dbReader, readerFields, isUseReaderOrder, out var deferredFuncs);
         if (!queryReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
         {
-            deserializer = CreateReaderDeserializer(ormProvider, dbReader, entityType, readerFields, isUseReaderOrder);
+            deserializer = CreateReaderDeserializer(dbContext, dbReader, entityType, readerFields, isUseReaderOrder);
             queryReaderDeserializerCache.TryAdd(cacheKey, deserializer);
         }
         if (deferredFuncs != null && deferredFuncs.Count > 0)
@@ -318,7 +312,7 @@ public static class Extensions
         if (subQuery.Visitor.DbParameters?.Count > 0)
             subQuery.Visitor.DbParameters.CopyTo(visitor.DbParameters);
     }
-    public static T ToValue<T>(this IDataReader reader, int index)
+    public static T ToFieldValue<T>(this IDataReader reader, int index)
     {
         var readerValue = reader.GetValue(index);
         if (readerValue == null || readerValue is DBNull)
@@ -357,11 +351,35 @@ public static class Extensions
         return false;
     }
 #endif
-    private static Delegate CreateReaderDeserializer(IOrmProvider ormProvider, IEntityMapProvider mapProvider, IDataReader reader, Type entityType, bool isValueTuple)
+    internal static DateTime ToUtc(this DateTime dateTime)
+    {
+        if (dateTime.Kind == DateTimeKind.Local)
+            return dateTime.ToUniversalTime();
+        return dateTime;
+    }
+    internal static DateTimeOffset ToUtc(this DateTimeOffset dateTimeOffset)
+    {
+        if (dateTimeOffset.DateTime.Kind == DateTimeKind.Local)
+            return dateTimeOffset.ToUniversalTime();
+        return dateTimeOffset;
+    }
+    internal static DateTime ToLocal(this DateTime dateTime)
+    {
+        if (dateTime.Kind == DateTimeKind.Utc)
+            return dateTime.ToLocalTime();
+        return dateTime;
+    }
+    internal static DateTimeOffset ToLocal(this DateTimeOffset dateTimeOffset)
+    {
+        if (dateTimeOffset.DateTime.Kind == DateTimeKind.Utc)
+            return dateTimeOffset.ToLocalTime();
+        return dateTimeOffset;
+    }
+    private static Delegate CreateReaderDeserializer(DbContext dbContext, IDataReader reader, Type entityType, bool isValueTuple)
     {
         var readerExpr = Expression.Parameter(typeof(IDataReader), "reader");
-        var ormProviderExpr = Expression.Constant(ormProvider);
-        var entityMapper = mapProvider.GetEntityMap(entityType);
+        var ormProviderExpr = Expression.Constant(dbContext.OrmProvider);
+        var entityMapper = dbContext.MapProvider.GetEntityMap(entityType);
         var index = 0;
         var target = NewBuildInfo(entityType);
         var blockParameters = new List<ParameterExpression>();
@@ -375,7 +393,7 @@ public static class Extensions
                 throw new Exception($"SQL中字段{memberName}映射不到模型{entityType.FullName}任何栏位,或者没有添加AS子句");
 
             var fieldType = reader.GetFieldType(index);
-            var readerValueExpr = GetReaderValue(ormProvider, ormProviderExpr, readerExpr, Expression.Constant(index),
+            var readerValueExpr = GetReaderValue(dbContext, ormProviderExpr, readerExpr, Expression.Constant(index),
                 memberMapper.MemberType, fieldType, memberMapper.TypeHandler, blockParameters, blockBodies);
 
             if (target.IsDefault)
@@ -392,13 +410,13 @@ public static class Extensions
         blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(entityType)));
         return Expression.Lambda(Expression.Block(blockParameters, blockBodies), readerExpr).Compile();
     }
-    private static Delegate CreateReaderDeserializer(IOrmProvider ormProvider, IDataReader reader, Type entityType, List<SqlFieldSegment> readerFields, bool isUseReaderOrder = false)
+    private static Delegate CreateReaderDeserializer(DbContext dbContext, IDataReader reader, Type entityType, List<SqlFieldSegment> readerFields, bool isUseReaderOrder = false)
     {
         var blockParameters = new List<ParameterExpression>();
         var blockBodies = new List<Expression>();
         var readerExpr = Expression.Parameter(typeof(IDataReader), "reader");
         var parameterExprs = new List<ParameterExpression> { readerExpr };
-        var ormProviderExpr = Expression.Constant(ormProvider);
+        var ormProviderExpr = Expression.Constant(dbContext.OrmProvider);
 
         int index = 0, readerIndex = 0;
         var root = NewBuildInfo(entityType);
@@ -420,7 +438,7 @@ public static class Extensions
             if (readerField.FieldType == SqlFieldType.Field)
             {
                 var fieldType = reader.GetFieldType(index);
-                var readerValueExpr = GetReaderValue(ormProvider, ormProviderExpr, readerExpr, Expression.Constant(index),
+                var readerValueExpr = GetReaderValue(dbContext, ormProviderExpr, readerExpr, Expression.Constant(index),
                     readerField.SegmentType, fieldType, readerField.TypeHandler, blockParameters, blockBodies);
                 if (root.IsDefault) root.Bindings.Add(Expression.Bind(readerField.TargetMember, readerValueExpr));
                 else root.Arguments.Add(readerValueExpr);
@@ -459,7 +477,7 @@ public static class Extensions
                             var fieldType = reader.GetFieldType(index);
                             //延迟的方法调用，有字段值作为方法参数就读取，没有什么也不做
                             childReaderField = readerField.Fields[childIndex];
-                            readerValueExpr = GetReaderValue(ormProvider, ormProviderExpr, readerExpr, Expression.Constant(index),
+                            readerValueExpr = GetReaderValue(dbContext, ormProviderExpr, readerExpr, Expression.Constant(index),
                                 childReaderField.SegmentType, fieldType, childReaderField.TypeHandler, blockParameters, blockBodies);
                             argsExprs.Add(readerValueExpr);
                             childIndex++;
@@ -499,7 +517,7 @@ public static class Extensions
                     {
                         var fieldType = reader.GetFieldType(index);
                         childReaderField = readerField.Fields[childIndex];
-                        readerValueExpr = GetReaderValue(ormProvider, ormProviderExpr, readerExpr, Expression.Constant(index),
+                        readerValueExpr = GetReaderValue(dbContext, ormProviderExpr, readerExpr, Expression.Constant(index),
                             childReaderField.SegmentType, fieldType, childReaderField.TypeHandler, blockParameters, blockBodies);
 
                         if (current.IsDefault) current.Bindings.Add(Expression.Bind(childReaderField.TargetMember, readerValueExpr));
@@ -550,7 +568,7 @@ public static class Extensions
         blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(entityType)));
         return Expression.Lambda(Expression.Block(blockParameters, blockBodies), parameterExprs).Compile();
     }
-    private static Expression GetReaderValue(IOrmProvider ormProvider, Expression ormProviderExpr, ParameterExpression readerExpr, Expression indexExpr, Type targetType, Type fieldType, ITypeHandler typeHandler, List<ParameterExpression> blockParameters, List<Expression> blockBodies)
+    private static Expression GetReaderValue(DbContext dbContext, Expression ormProviderExpr, ParameterExpression readerExpr, Expression indexExpr, Type targetType, Type fieldType, ITypeHandler typeHandler, List<ParameterExpression> blockParameters, List<Expression> blockBodies)
     {
         var methodInfo = typeof(IDataRecord).GetMethod(nameof(IDataRecord.GetValue), new Type[] { typeof(int) });
         var readerValueExpr = AssignLocalParameter(typeof(object), Expression.Call(readerExpr, methodInfo, indexExpr), blockParameters, blockBodies);
@@ -565,7 +583,7 @@ public static class Extensions
         }
         else
         {
-            var valueGetter = ormProvider.GetReaderValueGetter(targetType, fieldType);
+            var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(targetType, fieldType, dbContext.Options);
             targetValueExpr = Expression.Invoke(Expression.Constant(valueGetter), readerValueExpr);
         }
         blockBodies.Add(Expression.Assign(readerValueExpr, targetValueExpr));
@@ -605,7 +623,7 @@ public static class Extensions
         blockBodies.Add(Expression.Assign(objLocalExpr, valueExpr));
         return objLocalExpr;
     }
-    private static int GetTypeReaderKey(Type entityType, Type ormProviderType, IDataReader reader, List<SqlFieldSegment> readerFields, bool isUseReaderOrder, out List<object> deferredFuncs)
+    private static int GetTypeReaderKey(Type entityType, OrmProviderType ormProviderType, IDataReader reader, List<SqlFieldSegment> readerFields, bool isUseReaderOrder, out List<object> deferredFuncs)
     {
         deferredFuncs = null;
 #if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
@@ -661,7 +679,7 @@ public static class Extensions
         return hashCode;
 #endif
     }
-    private static int GetTypeReaderKey(Type entityType, Type ormProviderType, IDataReader reader)
+    private static int GetTypeReaderKey(Type entityType, OrmProviderType ormProviderType, IDataReader reader)
     {
 #if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
         var hashCode = new HashCode();

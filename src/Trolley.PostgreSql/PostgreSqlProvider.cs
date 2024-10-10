@@ -8,8 +8,8 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
-using System.Threading.Tasks;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Trolley.PostgreSql;
 
@@ -358,8 +358,8 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
         DbTableInfo tableInfo = null;
         while (reader.Read())
         {
-            var tableSchema = reader.ToValue<string>(0);
-            var tableName = reader.ToValue<string>(1);
+            var tableSchema = reader.ToFieldValue<string>(0);
+            var tableName = reader.ToFieldValue<string>(1);
             if (tableInfo == null || tableInfo.TableSchema != tableSchema || tableInfo.TableName != tableName)
             {
                 tableInfo = new DbTableInfo
@@ -370,10 +370,10 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
                 };
                 tableInfos.Add(tableInfo);
             }
-            var fieldName = reader.ToValue<string>(2);
-            var arrayDimens = reader.ToValue<int>(3);
-            var dataType = reader.ToValue<string>(4);
-            var length = reader.ToValue<int>(5);
+            var fieldName = reader.ToFieldValue<string>(2);
+            var arrayDimens = reader.ToFieldValue<int>(3);
+            var dataType = reader.ToFieldValue<string>(4);
+            var length = reader.ToFieldValue<int>(5);
             var scale = (length >> 16) & 0xFFFF;
             var precision = length & 0xFFFF;
             var lengthTypes = new[] { "bool", "name", "bit", "varbit", "char", "bpchar", "varchar", "bytea", "text", "uuid" };
@@ -402,12 +402,12 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
                 Scale = scale,
                 Precision = precision,
                 ArrayDimens = arrayDimens,
-                Description = reader.ToValue<string>(6),
-                DefaultValue = reader.ToValue<string>(7),
-                IsPrimaryKey = reader.ToValue<bool>(8),
-                IsAutoIncrement = reader.ToValue<bool>(9),
-                IsNullable = !reader.ToValue<bool>(10),
-                Position = reader.ToValue<int>(11)
+                Description = reader.ToFieldValue<string>(6),
+                DefaultValue = reader.ToFieldValue<string>(7),
+                IsPrimaryKey = reader.ToFieldValue<bool>(8),
+                IsAutoIncrement = reader.ToFieldValue<bool>(9),
+                IsNullable = !reader.ToFieldValue<bool>(10),
+                Position = reader.ToFieldValue<int>(11)
             });
         }
         reader.Close();

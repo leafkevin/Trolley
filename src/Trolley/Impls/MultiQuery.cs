@@ -52,7 +52,7 @@ public class MultiQueryBase : IMultiQueryBase
     {
         this.Visitor.Select(sqlFormat, fieldExpr);
         var sql = this.Visitor.BuildSql(out _);
-        Func<ITheaDataReader, object> readerGetter = reader => reader.To<TTarget>(this.OrmProvider);
+        Func<ITheaDataReader, object> readerGetter = reader => reader.ToValue<TTarget>(this.DbContext);
         this.MultipleQuery.AddReader(typeof(TTarget), sql, readerGetter, true);
         return this.MultipleQuery;
     }
@@ -497,8 +497,8 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
         var targetType = typeof(T);
         Func<ITheaDataReader, object> readerGetter = null;
         if (targetType.IsEntityType(out _))
-            readerGetter = reader => reader.To<T>(this.DbContext, readerFields);
-        else readerGetter = reader => reader.To<T>(this.OrmProvider);
+            readerGetter = reader => reader.ToEntity<T>(this.DbContext, readerFields);
+        else readerGetter = reader => reader.ToValue<T>(this.DbContext);
         IQueryVisitor queryVisitor = null;
         if (this.Visitor.HasIncludeTables())
             queryVisitor = this.Visitor;

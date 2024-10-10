@@ -13,19 +13,16 @@ public sealed class OrmDbFactory : IOrmDbFactory
 
     private readonly ConcurrentDictionary<string, ITableShardingProvider> tableShardingProviders = new();
     private readonly ConcurrentDictionary<OrmProviderType, ITableShardingProvider> globalTableShardingProviders = new();
-    private readonly DbInterceptors interceptors = new();
     private ConcurrentDictionary<string, IEntityMapProvider> complexMapProviders;
     private ConcurrentDictionary<string, ITableShardingProvider> complexTableShardingProviders;
 
-    private IFieldMapHandler fieldMapHandler = new DefaultFieldMapHandler();
     private OrmDbFactoryOptions options = new();
     private Func<string> dbKeySelector;
     private TheaDatabase defaultDatabase;
 
     public ICollection<TheaDatabase> Databases => this.databases.Values;
     public ICollection<IOrmProvider> OrmProviders => this.ormProviders.Values;
-    public IFieldMapHandler FieldMapHandler => this.fieldMapHandler;
-    public DbInterceptors Interceptors => this.interceptors;
+    public OrmDbFactoryOptions Options => this.options;
 
     public TheaDatabase Register(OrmProviderType ormProviderType, string dbKey, string connectionString)
     {
@@ -163,8 +160,6 @@ public sealed class OrmDbFactory : IOrmDbFactory
     public bool TryGetMapProvider(string dbKey, out IEntityMapProvider entityMapProvider)
         => this.mapProviders.TryGetValue(dbKey, out entityMapProvider);
 
-    public void UseFieldMapHandler(IFieldMapHandler fieldMapHandler) => this.fieldMapHandler = fieldMapHandler;
-
     public TheaDatabase GetDatabase(string dbKey = null)
     {
         if (string.IsNullOrEmpty(dbKey))
@@ -203,10 +198,7 @@ public sealed class OrmDbFactory : IOrmDbFactory
             OrmProvider = database.OrmProvider,
             MapProvider = mapProvider,
             ShardingProvider = tableShardingProvider,
-            CommandTimeout = this.options.Timeout,
-            IsParameterized = this.options.IsParameterized,
-            DefaultEnumMapDbType = this.options.DefaultEnumMapDbType,
-            DbInterceptors = this.interceptors
+            Options = this.options
         };
         return database.OrmProvider.CreateRepository(dbContext);
     }
@@ -276,7 +268,7 @@ public sealed class OrmDbFactory : IOrmDbFactory
                 var ormProviderType = database.OrmProviderType;
                 this.TryGetMapProvider(database.DbKey, out var mapProvider);
                 this.TryGetMapProvider(ormProviderType, out var globalMapProvider);
-                var entityMapProvider = new ComplexEntityMapProvider(mapProvider, globalMapProvider, this.fieldMapHandler);
+                var entityMapProvider = new ComplexEntityMapProvider(mapProvider, globalMapProvider, this.options.FieldMapHandler);
                 entityMapProvider.Build(database);
                 this.complexMapProviders.TryAdd(database.DbKey, entityMapProvider);
             }

@@ -320,12 +320,14 @@ public class AllUnitTest : UnitTestBase
         Assert.Equal(localDate, (DateOnly)dbParameters[0].Value);
         Assert.Equal(localDate, (DateOnly)dbParameters[1].Value);
 
+        var now = DateTime.Now;
         var result = await repository.From<User>()
             .Where(f => f.Id == 1)
             .Select(f => new
             {
                 f.UpdatedAt,
                 DateTime.Today,
+                Now = now,
                 Today1 = DateOnly.FromDateTime(DateTime.Now),
                 FromDayNumber = DateOnly.FromDayNumber(739081),
                 localDate,
@@ -342,7 +344,9 @@ public class AllUnitTest : UnitTestBase
             .FirstAsync();
         Assert.Equal(DateOnly.MinValue, result.MinValue);
         Assert.Equal(DateOnly.MaxValue, result.MaxValue);
+        //postgresql默认返回的时间是UTC，在8:00以前会有出入
         Assert.Equal(DateTime.Now.Date, result.Today);
+        Assert.Equal(now, result.Now);
         Assert.Equal(DateOnly.FromDateTime(DateTime.Now), result.Today1);
         Assert.Equal(localDate, result.localDate);
         Assert.Equal(result.UpdatedAt.Equals(DateTime.Parse("2023-03-25")), result.IsEquals);
@@ -7302,7 +7306,6 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
     {
         var repository = this.dbFactory.Create();
         bool? isMale = true;
-        repository.Timeout(60);
         repository.BeginTransaction();
         repository.Update<User>()
             .Set(new { Name = "leafkevin1" })

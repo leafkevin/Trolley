@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -13,8 +12,6 @@ namespace Trolley;
 
 public class SqlVisitor : ISqlVisitor
 {
-    private static ConcurrentDictionary<int, Func<object, object>> memberGetterCache = new();
-    private static string[] calcOps = { ">", ">=", "<", "<=", "+", "-", "*", "/", "%", "&", "|", "^", "<<", ">>" };
     private bool isDisposed;
 
     public DbContext DbContext { get; set; }
@@ -23,14 +20,15 @@ public class SqlVisitor : ISqlVisitor
     public IEntityMapProvider MapProvider => this.DbContext.MapProvider;
     public ITableShardingProvider ShardingProvider => this.DbContext.ShardingProvider;
     public string DefaultTableSchema => this.DbContext.DefaultTableSchema;
-    public bool IsParameterized => this.DbContext.IsParameterized;
-    public string ParameterPrefix => this.DbContext.ParameterPrefix;
+    public bool IsConstantParameterized => this.Options.IsConstantParameterized;
+    public string ParameterPrefix => this.Options.ParameterPrefix;
     public IDataParameterCollection DbParameters { get; set; }
     public IDataParameterCollection NextDbParameters { get; set; }
     public char TableAsStart { get; set; }
     public bool IsMultiple { get; set; }
     public int CommandIndex { get; set; }
     public bool IsUseMaster { get; set; }
+    public OrmDbFactoryOptions Options => this.DbContext.Options;
 
     /// <summary>
     /// 所有表都是扁平化的，主表、1:1关系Include子表，也在这里
@@ -1359,7 +1357,7 @@ public class SqlVisitor : ISqlVisitor
                 if (currentExpr.NodeType == ExpressionType.Parameter)
                 {
                     queryVisitor = this.CreateQueryVisitor();
-                    fromQuery = new FromQuery(this.OrmProvider, this.MapProvider, queryVisitor, this.IsParameterized);
+                    fromQuery = new FromQuery(this.DbContext, queryVisitor);
                     dbContext = fromQuery.dbContext;
                     break;
                 }
@@ -1369,7 +1367,7 @@ public class SqlVisitor : ISqlVisitor
                     if (sqlSegment.Value is IRepository)
                     {
                         queryVisitor = this.CreateQueryVisitor();
-                        fromQuery = new FromQuery(this.OrmProvider, this.MapProvider, queryVisitor, this.IsParameterized);
+                        fromQuery = new FromQuery(this.DbContext, queryVisitor);
                         dbContext = fromQuery.dbContext;
                     }
                     else
@@ -1551,7 +1549,7 @@ public class SqlVisitor : ISqlVisitor
     public virtual string GetQuotedValue(SqlFieldSegment sqlSegment, bool isNeedExprWrap = false)
     {
         //默认只要是变量就设置为参数
-        if (sqlSegment.IsVariable || (this.IsParameterized || sqlSegment.IsParameterized) && sqlSegment.IsConstant)
+        if (sqlSegment.IsVariable || (this.IsConstantParameterized || sqlSegment.IsParameterized) && sqlSegment.IsConstant)
         {
             var dbParameters = this.DbParameters;
             if (this.IsIncludeMany)
@@ -1590,7 +1588,7 @@ public class SqlVisitor : ISqlVisitor
                         var targetType = this.OrmProvider.MapDefaultType(sqlSegment.NativeDbType);
                         if (sqlSegment.SegmentType != targetType)
                         {
-                            var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, false);
+                            var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, false, this.Options);
                             dbFieldValue = valueGetter.Invoke(dbFieldValue);
                             sqlSegment.SegmentType = targetType;
                         }
@@ -1638,7 +1636,7 @@ public class SqlVisitor : ISqlVisitor
                     targetType = this.OrmProvider.MapDefaultType(sqlSegment.NativeDbType);
                     if (sqlSegment.SegmentType != targetType)
                     {
-                        var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, false);
+                        var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, false, this.Options);
                         dbFieldValue = valueGetter.Invoke(dbFieldValue);
                     }
                 }
@@ -1668,7 +1666,7 @@ public class SqlVisitor : ISqlVisitor
     {
         if (elementValue is DBNull || elementValue == null)
             return "NULL";
-        if (arraySegment.IsVariable || (this.IsParameterized || arraySegment.IsParameterized) && arraySegment.IsConstant)
+        if (arraySegment.IsVariable || (this.IsConstantParameterized || arraySegment.IsParameterized) && arraySegment.IsConstant)
         {
             var dbParameters = this.DbParameters;
             if (this.IsIncludeMany)
@@ -1708,7 +1706,7 @@ public class SqlVisitor : ISqlVisitor
                         var targetType = this.OrmProvider.MapDefaultType(nativeDbType);
                         if (segmentType != targetType)
                         {
-                            var valueGetter = this.OrmProvider.GetParameterValueGetter(segmentType, targetType, false);
+                            var valueGetter = this.OrmProvider.GetParameterValueGetter(segmentType, targetType, false, this.Options);
                             dbFieldValue = valueGetter.Invoke(dbFieldValue);
                         }
                         dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, nativeDbType, dbFieldValue));
@@ -1741,7 +1739,7 @@ public class SqlVisitor : ISqlVisitor
                     targetType = this.OrmProvider.MapDefaultType(nativeDbType);
                     if (segmentType != targetType)
                     {
-                        var valueGetter = this.OrmProvider.GetParameterValueGetter(segmentType, targetType, false);
+                        var valueGetter = this.OrmProvider.GetParameterValueGetter(segmentType, targetType, false, this.Options);
                         dbFieldValue = valueGetter.Invoke(dbFieldValue);
                     }
                 }
@@ -2014,7 +2012,7 @@ public class SqlVisitor : ISqlVisitor
                 else
                 {
                     Func<object, object> typedValueGetter = null;
-                    typedValueGetter = this.OrmProvider.GetParameterValueGetter(memberInfo.GetMemberType(), targetType, true);
+                    typedValueGetter = this.OrmProvider.GetParameterValueGetter(memberInfo.GetMemberType(), targetType, true, this.Options);
                     valueGetter = value =>
                     {
                         var fieldValue = memberInfo.Evaluate(value);

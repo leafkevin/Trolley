@@ -206,13 +206,13 @@ public class Updated<TEntity> : IUpdated<TEntity>
                         if (index > 0) builder.Append(';');
                         var tableNames = this.Visitor.ShardingTables[0].TableNames;
                         headSqlSetter.Invoke(builder, tableNames[0]);
-                        firstSqlParametersSetter.Invoke(command.Parameters, builder, this.Visitor.OrmProvider, updateObj, suffixGetter.Invoke(index));
+                        firstSqlParametersSetter.Invoke(command.Parameters, builder, this.DbContext, updateObj, suffixGetter.Invoke(index));
 
                         for (int i = 1; i < tableNames.Count; i++)
                         {
                             builder.Append(';');
                             headSqlSetter.Invoke(builder, tableNames[i]);
-                            sqlSetter.Invoke(builder, this.Visitor.OrmProvider, updateObj, suffixGetter.Invoke(index));
+                            sqlSetter.Invoke(builder, this.DbContext, updateObj, suffixGetter.Invoke(index));
                         }
                     };
                 }
@@ -222,7 +222,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
                     {
                         if (index > 0) builder.Append(';');
                         headSqlSetter.Invoke(builder, tableName);
-                        firstSqlParametersSetter.Invoke(command.Parameters, builder, this.Visitor.OrmProvider, updateObj, suffixGetter.Invoke(index));
+                        firstSqlParametersSetter.Invoke(command.Parameters, builder, this.DbContext, updateObj, suffixGetter.Invoke(index));
                     };
                 }
 
@@ -288,13 +288,13 @@ public class Updated<TEntity> : IUpdated<TEntity>
                         if (index > 0) builder.Append(';');
                         var tableNames = this.Visitor.ShardingTables[0].TableNames;
                         headSqlSetter.Invoke(builder, tableNames[0]);
-                        firstSqlParametersSetter.Invoke(command.Parameters, builder, this.Visitor.OrmProvider, updateObj, suffixGetter.Invoke(index));
+                        firstSqlParametersSetter.Invoke(command.Parameters, builder, this.DbContext, updateObj, suffixGetter.Invoke(index));
 
                         for (int i = 1; i < tableNames.Count; i++)
                         {
                             builder.Append(';');
                             headSqlSetter.Invoke(builder, tableNames[i]);
-                            sqlSetter.Invoke(builder, this.Visitor.OrmProvider, updateObj, suffixGetter.Invoke(index));
+                            sqlSetter.Invoke(builder, this.DbContext, updateObj, suffixGetter.Invoke(index));
                         }
                     };
                 }
@@ -304,7 +304,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
                     {
                         if (index > 0) builder.Append(';');
                         headSqlSetter.Invoke(builder, tableName);
-                        firstSqlParametersSetter.Invoke(command.Parameters, builder, this.Visitor.OrmProvider, updateObj, suffixGetter.Invoke(index));
+                        firstSqlParametersSetter.Invoke(command.Parameters, builder, this.DbContext, updateObj, suffixGetter.Invoke(index));
                     };
                 }
 
