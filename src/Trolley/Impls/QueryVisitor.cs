@@ -14,9 +14,9 @@ namespace Trolley;
 
 public class QueryVisitor : SqlVisitor, IQueryVisitor
 {
-    protected static ConcurrentDictionary<int, (string, Action<StringBuilder, IOrmProvider, object>)> includeSqlGetterCache = new();
-    protected static ConcurrentDictionary<Type, Action<object, ITheaDataReader, DbContext>> typedReaderElementSetters = new();
-    protected static ConcurrentDictionary<int, Action<object, object>> targetIncludeValuesSetters = new();
+    protected static readonly ConcurrentDictionary<int, (string, Action<StringBuilder, IOrmProvider, object>)> includeSqlGetterCache = new();
+    protected static readonly ConcurrentDictionary<Type, Action<object, ITheaDataReader, DbContext>> typedReaderElementSetters = new();
+    protected static readonly ConcurrentDictionary<int, Action<object, object>> targetIncludeValuesSetters = new();
     private bool isDisposed;
 
     protected List<CommandSegment> deferredSegments = new();
@@ -812,7 +812,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             var equalExpr = Expression.Equal(Expression.PropertyOrField(parameterExpr, foreignKey), foreignKeyValueExpr);
 
             var predicateExpr = Expression.Lambda(predicateType, equalExpr, parameterExpr);
-            var methodInfo = listType.GetMethod("FindAll", new Type[] { predicateType });
+            var methodInfo = listType.GetMethod("FindAll", [predicateType]);
             var filterValuesExpr = Expression.Call(typedListExpr, methodInfo, predicateExpr);
 
             var myIncludeValuesExpr = Expression.Variable(listType, "myIncludeValues");
@@ -977,7 +977,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             var methedInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.GetQuotedValue));
             var fieldTypeExpr = Expression.Constant(foreignKeyMember.MemberType);
             foreignKeyValueExpr = Expression.Call(ormProviderExpr, methedInfo, fieldTypeExpr, foreignKeyValueExpr);
-            methedInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(string) });
+            methedInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), [typeof(string)]);
             blockBodies.Add(Expression.Call(builderExpr, methedInfo, foreignKeyValueExpr));
 
             var foreignKey = this.OrmProvider.GetFieldName(includeSegment.FromMember.ForeignKey);

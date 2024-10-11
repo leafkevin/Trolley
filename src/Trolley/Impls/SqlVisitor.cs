@@ -1143,7 +1143,7 @@ public class SqlVisitor : ISqlVisitor
         if (binaryExpr.NodeType == ExpressionType.Add && (binaryExpr.Left.Type == typeof(string) || binaryExpr.Right.Type == typeof(string)))
         {
             //调用拼接方法Concat,每个数据库Provider都实现了这个方法
-            var methodInfo = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(object[]) });
+            var methodInfo = typeof(string).GetMethod(nameof(string.Concat), [typeof(object[])]);
             var parameters = Expression.NewArrayInit(typeof(object), binaryExpr);
             var methodCallExpr = Expression.Call(methodInfo, parameters);
             sqlSegment.Expression = methodCallExpr;
@@ -1856,14 +1856,14 @@ public class SqlVisitor : ISqlVisitor
         var binaryExpr = sqlSegment.Expression as BinaryExpression;
         if (binaryExpr.Left.Type == typeof(DateTime) && binaryExpr.Right.Type == typeof(TimeSpan) && binaryExpr.NodeType == ExpressionType.Add)
         {
-            var methodInfo = typeof(DateTime).GetMethod(nameof(DateTime.Add), new Type[] { binaryExpr.Right.Type });
+            var methodInfo = typeof(DateTime).GetMethod(nameof(DateTime.Add), [binaryExpr.Right.Type]);
             var operatorExpr = Expression.Call(binaryExpr.Left, methodInfo, binaryExpr.Right);
             result = this.VisitMethodCall(sqlSegment.Next(operatorExpr));
             return true;
         }
         if (binaryExpr.Left.Type == typeof(DateTime) && (binaryExpr.Right.Type == typeof(DateTime) || binaryExpr.Right.Type == typeof(TimeSpan)) && binaryExpr.NodeType == ExpressionType.Subtract)
         {
-            var methodInfo = typeof(DateTime).GetMethod(nameof(DateTime.Subtract), new Type[] { binaryExpr.Right.Type });
+            var methodInfo = typeof(DateTime).GetMethod(nameof(DateTime.Subtract), [binaryExpr.Right.Type]);
             var operatorExpr = Expression.Call(binaryExpr.Left, methodInfo, binaryExpr.Right);
             result = this.VisitMethodCall(sqlSegment.Next(operatorExpr));
             return true;
@@ -1876,14 +1876,14 @@ public class SqlVisitor : ISqlVisitor
         var binaryExpr = sqlSegment.Expression as BinaryExpression;
         if (binaryExpr.Left.Type == typeof(TimeSpan) && binaryExpr.Right.Type == typeof(TimeSpan) && binaryExpr.NodeType == ExpressionType.Add)
         {
-            var methodInfo = typeof(TimeSpan).GetMethod(nameof(TimeSpan.Add), new Type[] { binaryExpr.Right.Type });
+            var methodInfo = typeof(TimeSpan).GetMethod(nameof(TimeSpan.Add), [binaryExpr.Right.Type]);
             var operatorExpr = Expression.Call(binaryExpr.Left, methodInfo, binaryExpr.Right);
             result = this.VisitMethodCall(sqlSegment.Next(operatorExpr));
             return true;
         }
         if (binaryExpr.Left.Type == typeof(TimeSpan) && binaryExpr.Right.Type == typeof(TimeSpan) && binaryExpr.NodeType == ExpressionType.Subtract)
         {
-            var methodInfo = typeof(TimeSpan).GetMethod(nameof(TimeSpan.Subtract), new Type[] { binaryExpr.Right.Type });
+            var methodInfo = typeof(TimeSpan).GetMethod(nameof(TimeSpan.Subtract), [binaryExpr.Right.Type]);
             var operatorExpr = Expression.Call(binaryExpr.Left, methodInfo, binaryExpr.Right);
             result = this.VisitMethodCall(sqlSegment.Next(operatorExpr));
             return true;
@@ -1894,7 +1894,7 @@ public class SqlVisitor : ISqlVisitor
             var rightExpr = binaryExpr.Right;
             if (binaryExpr.Right.Type != typeof(double))
                 rightExpr = Expression.Convert(rightExpr, typeof(double));
-            var methodInfo = typeof(TimeSpan).GetMethod(nameof(TimeSpan.Multiply), new Type[] { typeof(double) });
+            var methodInfo = typeof(TimeSpan).GetMethod(nameof(TimeSpan.Multiply), [typeof(double)]);
             var operatorExpr = Expression.Call(binaryExpr.Left, methodInfo, rightExpr);
             result = this.VisitMethodCall(sqlSegment.Next(operatorExpr));
             return true;
@@ -1905,7 +1905,7 @@ public class SqlVisitor : ISqlVisitor
             if (binaryExpr.Right.Type == typeof(TimeSpan))
                 divideType = typeof(TimeSpan);
             else divideType = typeof(double);
-            var methodInfo = typeof(TimeSpan).GetMethod(nameof(TimeSpan.Divide), new Type[] { divideType });
+            var methodInfo = typeof(TimeSpan).GetMethod(nameof(TimeSpan.Divide), [divideType]);
             var rightExpr = binaryExpr.Right;
             if (divideType == typeof(double) && binaryExpr.Right.Type != typeof(double))
                 rightExpr = Expression.Convert(rightExpr, typeof(double));
@@ -1917,12 +1917,7 @@ public class SqlVisitor : ISqlVisitor
         result = null;
         return false;
     }
-    public void Swap<T>(ref T left, ref T right)
-    {
-        var temp = right;
-        right = left;
-        left = temp;
-    }
+    public void Swap<T>(ref T left, ref T right) => (left, right) = (right, left);
     public LambdaExpression EnsureLambda(Expression expr)
     {
         if (expr.NodeType == ExpressionType.Lambda)

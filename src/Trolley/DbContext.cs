@@ -27,7 +27,7 @@ public sealed class DbContext
     public OrmDbFactoryOptions Options { get; set; }
     #endregion   
 
-    #region UseMasterCommand
+    #region UseMasterCommand/UseSlaveCommand
     public (bool, ITheaConnection, ITheaCommand) UseMasterCommand()
     {
         bool isNeedClose = false;
@@ -38,20 +38,7 @@ public sealed class DbContext
         else
         {
             isNeedClose = true;
-            var connString = this.Database.ConnectionString;
-            connection = this.OrmProvider.CreateConnection(this.DbKey, connString);
-            connection.OnOpening = this.DbInterceptors.OnConnectionOpening;
-            connection.OnOpened = this.DbInterceptors.OnConnectionOpened;
-            connection.OnClosing = this.DbInterceptors.OnConnectionClosing;
-            connection.OnClosed = this.DbInterceptors.OnConnectionClosed;
-
-            this.DbInterceptors.OnConnectionCreated?.Invoke(new ConectionEventArgs
-            {
-                DbKey = this.DbKey,
-                ConnectionId = connection.ConnectionId,
-                ConnectionString = connString,
-                CreatedAt = DateTime.Now
-            });
+            connection = this.CreateConnection(this.Database.ConnectionString);
         }
         var dbCommand = this.OrmProvider.CreateCommand();
         command = connection.CreateCommand(dbCommand);
@@ -62,9 +49,6 @@ public sealed class DbContext
         command.OnExecuted = this.DbInterceptors.OnCommandExecuted;
         return (isNeedClose, connection, command);
     }
-    #endregion
-
-    #region UseSlaveCommand
     public (bool, ITheaConnection, ITheaCommand) UseSlaveCommand(bool isUseMaster)
         => this.UseSlaveCommand(isUseMaster, null);
     public (bool, ITheaConnection, ITheaCommand) UseSlaveCommand(bool isUseMaster, IDbCommand dbCommand)
@@ -77,20 +61,8 @@ public sealed class DbContext
         else
         {
             isNeedClose = true;
-            var connString = isUseMaster ? this.Database.ConnectionString : this.Database.UseSlave();
-            connection = this.OrmProvider.CreateConnection(this.DbKey, connString);
-            connection.OnOpening = this.DbInterceptors.OnConnectionOpening;
-            connection.OnOpened = this.DbInterceptors.OnConnectionOpened;
-            connection.OnClosing = this.DbInterceptors.OnConnectionClosing;
-            connection.OnClosed = this.DbInterceptors.OnConnectionClosed;
-
-            this.DbInterceptors.OnConnectionCreated?.Invoke(new ConectionEventArgs
-            {
-                DbKey = this.DbKey,
-                ConnectionId = connection.ConnectionId,
-                ConnectionString = connString,
-                CreatedAt = DateTime.Now
-            });
+            var connectionString = isUseMaster ? this.Database.ConnectionString : this.Database.UseSlave();
+            connection = this.CreateConnection(connectionString);
         }
         dbCommand ??= this.OrmProvider.CreateCommand();
         command = connection.CreateCommand(dbCommand);
@@ -100,6 +72,23 @@ public sealed class DbContext
         command.OnExecuting = this.DbInterceptors.OnCommandExecuting;
         command.OnExecuted = this.DbInterceptors.OnCommandExecuted;
         return (isNeedClose, connection, command);
+    }
+    private ITheaConnection CreateConnection(string connectionString)
+    {
+        var connection = this.OrmProvider.CreateConnection(this.DbKey, connectionString);
+        connection.OnOpening = this.DbInterceptors.OnConnectionOpening;
+        connection.OnOpened = this.DbInterceptors.OnConnectionOpened;
+        connection.OnClosing = this.DbInterceptors.OnConnectionClosing;
+        connection.OnClosed = this.DbInterceptors.OnConnectionClosed;
+
+        this.DbInterceptors.OnConnectionCreated?.Invoke(new ConectionEventArgs
+        {
+            DbKey = this.DbKey,
+            ConnectionId = connection.ConnectionId,
+            ConnectionString = connectionString,
+            CreatedAt = DateTime.Now
+        });
+        return connection;
     }
     #endregion
 
@@ -735,7 +724,7 @@ public sealed class DbContext
     {
         if (this.Transaction != null)
             throw new Exception("上一个事务还没有完成，无法开启新事务");
-        this.Connection ??= this.OrmProvider.CreateConnection(this.DbKey, this.Database.ConnectionString);
+        this.Connection ??= this.CreateConnection(this.Database.ConnectionString);
         this.Connection.Open();
         this.Transaction = this.Connection.BeginTransaction();
     }
@@ -743,7 +732,7 @@ public sealed class DbContext
     {
         if (this.Transaction != null)
             throw new Exception("上一个事务还没有完成，无法开启新事务");
-        this.Connection = this.OrmProvider.CreateConnection(this.DbKey, this.Database.ConnectionString);
+        this.Connection ??= this.CreateConnection(this.Database.ConnectionString);
         await this.Connection.OpenAsync(cancellationToken);
         this.Transaction = await this.Connection.BeginTransactionAsync(IsolationLevel.Unspecified, cancellationToken);
     }

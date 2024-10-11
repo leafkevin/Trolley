@@ -175,7 +175,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                 else if (underlyingType.IsEnumType(out _))
                 {
                     var enumUnderlyingType = Enum.GetUnderlyingType(underlyingType);
-                    var supportedTypes = new Type[] { typeof(byte), typeof(sbyte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(float), typeof(double), typeof(decimal) };
+                    Type[] supportedTypes = [typeof(byte), typeof(sbyte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(float), typeof(double), typeof(decimal)];
                     if (fieldType == typeof(string))
                     {
                         //参数类型可为null，数据库一定可为null
@@ -501,7 +501,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                     }
                     else if (fieldType == typeof(bool))
                     {
-                        var supportedTypes = new Type[] { typeof(byte), typeof(sbyte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong) };
+                        Type[] supportedTypes = [typeof(byte), typeof(sbyte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong)];
                         if (supportedTypes.Contains(underlyingType))
                         {
                             if (isNullableType && isNullable)
@@ -517,11 +517,11 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                     }
                     else if (fieldType == typeof(byte[]))
                     {
-                        var supportedTypes = new Type[] { typeof(bool), typeof(char), typeof(byte), typeof(sbyte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(float), typeof(double), typeof(decimal) 
+                        Type[] supportedTypes = [ typeof(bool), typeof(char), typeof(byte), typeof(sbyte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(float), typeof(double), typeof(decimal)
 #if NET6_0_OR_GREATER
                             , typeof(Half)
 #endif
-                        };
+                        ];
                         if (supportedTypes.Contains(underlyingType))
                         {
                             switch (underlyingType)
@@ -654,7 +654,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                     }
                     else if (fieldType == typeof(char))
                     {
-                        var supportedTypes = new Type[] { typeof(byte), typeof(sbyte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong) };
+                        Type[] supportedTypes = [typeof(byte), typeof(sbyte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong)];
                         if (underlyingType == typeof(string))
                         {
                             if (isNullableType && isNullable)
@@ -804,7 +804,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                 else if (underlyingType.IsEnumType(out _))
                 {
                     var enumUnderlyingType = Enum.GetUnderlyingType(underlyingType);
-                    var supportedTypes = new Type[] { typeof(byte), typeof(sbyte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(float), typeof(double), typeof(decimal) };
+                    Type[] supportedTypes = [typeof(byte), typeof(sbyte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(float), typeof(double), typeof(decimal)];
                     if (fieldType == typeof(string))
                     {
                         //参数类型可为null，数据库一定可为null
@@ -1664,7 +1664,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                     }
                     else if (underlyingType == typeof(bool))
                     {
-                        var supportedTypes = new Type[] { typeof(byte), typeof(sbyte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong) };
+                        Type[] supportedTypes = [typeof(byte), typeof(sbyte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong)];
                         if (supportedTypes.Contains(fieldType))
                         {
                             if (isNullableType)
@@ -1687,11 +1687,11 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                     }
                     else if (underlyingType == typeof(byte[]))
                     {
-                        var supportedTypes = new Type[] { typeof(bool), typeof(char), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(float), typeof(double)
-#if NET6_0_OR_GREATER
+                        Type[] supportedTypes = [ typeof(bool), typeof(char), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(float), typeof(double)
+    #if NET6_0_OR_GREATER
                             , typeof(Half) 
 #endif
-                        };
+                        ];
                         if (supportedTypes.Contains(fieldType))
                         {
                             switch (fieldType)
@@ -1780,7 +1780,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                     }
                     else if (underlyingType == typeof(char))
                     {
-                        var supportedTypes = new Type[] { typeof(byte), typeof(sbyte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong) };
+                        Type[] supportedTypes = [typeof(byte), typeof(sbyte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong)];
                         if (fieldType == typeof(string))
                         {
                             if (isNullableType)

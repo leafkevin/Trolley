@@ -14,33 +14,33 @@ namespace Trolley;
 
 public class RepositoryHelper
 {
-    private static ConcurrentDictionary<int, object> queryGetCommandInitializerCache = new();
-    private static ConcurrentDictionary<int, object> queryMultiGetCommandInitializerCache = new();
-    private static ConcurrentDictionary<int, object> queryWhereObjCommandInitializerCache = new();
-    private static ConcurrentDictionary<int, object> queryMultiWhereObjCommandInitializerCache = new();
-    private static ConcurrentDictionary<int, object> queryExistsCommandInitializerCache = new();
-    private static ConcurrentDictionary<int, object> queryMultiExistsCommandInitializerCache = new();
-    private static ConcurrentDictionary<int, Action<IDataParameterCollection, IOrmProvider, object>> queryRawSqlCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<int, object> queryGetCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<int, object> queryMultiGetCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<int, object> queryWhereObjCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<int, object> queryMultiWhereObjCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<int, object> queryExistsCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<int, object> queryMultiExistsCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<int, Action<IDataParameterCollection, IOrmProvider, object>> queryRawSqlCommandInitializerCache = new();
 
-    private static ConcurrentDictionary<int, object> createFieldsSqlCache = new();
-    private static ConcurrentDictionary<int, object> createValuesSqlParametersCache = new();
-    private static ConcurrentDictionary<int, object> createBulkValuesSqlParametersCache = new();
+    private static readonly ConcurrentDictionary<int, object> createFieldsSqlCache = new();
+    private static readonly ConcurrentDictionary<int, object> createValuesSqlParametersCache = new();
+    private static readonly ConcurrentDictionary<int, object> createBulkValuesSqlParametersCache = new();
 
-    private static ConcurrentDictionary<int, (bool, string, object, Action<StringBuilder, string>)> deleteCommandInitializerCache = new();
-    private static ConcurrentDictionary<int, (bool, string, object, Action<StringBuilder, string>)> deleteMultiCommandInitializerCache = new();
-    private static ConcurrentDictionary<int, (bool, string, Action<StringBuilder, string>, Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>)> deleteBulkCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<int, (bool, string, object, Action<StringBuilder, string>)> deleteCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<int, (bool, string, object, Action<StringBuilder, string>)> deleteMultiCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<int, (bool, string, Action<StringBuilder, string>, Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>)> deleteBulkCommandInitializerCache = new();
 
-    private static ConcurrentDictionary<int, (string, Action<StringBuilder, string>, object, object)> updateCommandInitializerCache = new();
-    private static ConcurrentDictionary<int, (string, Action<StringBuilder, string>, object, object)> updateMultiCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<int, (string, Action<StringBuilder, string>, object, object)> updateCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<int, (string, Action<StringBuilder, string>, object, object)> updateMultiCommandInitializerCache = new();
 
-    private static ConcurrentDictionary<int, object> updateWithCommandInitializerCache = new();
-    private static ConcurrentDictionary<int, object> updateMultiWithCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<int, object> updateWithCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<int, object> updateMultiWithCommandInitializerCache = new();
 
-    private static ConcurrentDictionary<int, Func<string, object, string>> shardingTableNameGetters = new();
-    private static ConcurrentDictionary<Type, Func<object>> typedListGetters = new();
-    private static ConcurrentDictionary<Type, Func<object, object>> typedInitListGetters = new();
-    private static ConcurrentDictionary<Type, Func<object, object>> typedCollectionGetters = new();
-    private static ConcurrentDictionary<Type, Func<object, object>> toArrayGetters = new();
+    private static readonly ConcurrentDictionary<int, Func<string, object, string>> shardingTableNameGetters = new();
+    private static readonly ConcurrentDictionary<Type, Func<object>> typedListGetters = new();
+    private static readonly ConcurrentDictionary<Type, Func<object, object>> typedInitListGetters = new();
+    private static readonly ConcurrentDictionary<Type, Func<object, object>> typedCollectionGetters = new();
+    private static readonly ConcurrentDictionary<Type, Func<object, object>> toArrayGetters = new();
 
     public static void AddValueParameter(DbContext dbContext, Expression dbParametersExpr, Expression ormProviderExpr, Expression parameterNameExpr,
         Type fieldValueType, Expression parameterValueExpr, MemberMap memberMapper, List<ParameterExpression> blockParameters, List<Expression> blockBodies)
@@ -48,7 +48,7 @@ public class RepositoryHelper
         MethodInfo methodInfo = null;
         var fieldValueExpr = parameterValueExpr;
         var addMethodInfo = typeof(IList).GetMethod(nameof(IDataParameterCollection.Add));
-        var createParameterMethodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), new Type[] { typeof(string), typeof(object), typeof(object) });
+        var createParameterMethodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), [typeof(string), typeof(object), typeof(object)]);
 
         if (memberMapper.TypeHandler != null)
         {
@@ -85,7 +85,7 @@ public class RepositoryHelper
         if (fieldValueExpr.Type != typeof(object))
             fieldValueExpr = Expression.Convert(fieldValueExpr, typeof(object));
 
-        var methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), new Type[] { typeof(string), typeof(object) });
+        var methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), [typeof(string), typeof(object)]);
         var typedParameterExpr = Expression.Call(ormProviderExpr, methodInfo, parameterNameExpr, fieldValueExpr);
         Expression addParameterExpr = Expression.Call(dbParametersExpr, addMethodInfo, typedParameterExpr);
 
@@ -162,8 +162,8 @@ public class RepositoryHelper
             blockBodies.Add(Expression.Assign(dictExpr, Expression.Convert(parametersExpr, typeof(IDictionary<string, object>))));
 
             var index = 0;
-            var concatMethodInfo1 = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(string), typeof(string) });
-            var concatMethodInfo2 = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(string), typeof(string), typeof(string) });
+            var concatMethodInfo1 = typeof(string).GetMethod(nameof(string.Concat), [typeof(string), typeof(string)]);
+            var concatMethodInfo2 = typeof(string).GetMethod(nameof(string.Concat), [typeof(string), typeof(string), typeof(string)]);
             if (isUseKey)
             {
                 var tryGetValueMethodInfo = typeof(IDictionary<string, object>).GetMethod(nameof(IDictionary<string, object>.TryGetValue));
@@ -252,13 +252,13 @@ public class RepositoryHelper
                 if (ignoreFieldNames != null)
                 {
                     var ignoreFieldsExpr = Expression.Constant(ignoreFieldNames);
-                    methodInfo = typeof(Enumerable).GetMethod(nameof(Enumerable.Contains), new Type[] { typeof(string) });
+                    methodInfo = typeof(Enumerable).GetMethod(nameof(Enumerable.Contains), [typeof(string)]);
                     isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Call(methodInfo, ignoreFieldsExpr, itemKeyExpr));
                 }
                 if (onlyFieldNames != null)
                 {
                     var onlyFieldsExpr = Expression.Constant(onlyFieldNames);
-                    methodInfo = typeof(Enumerable).GetMethod(nameof(Enumerable.Contains), new Type[] { typeof(string) });
+                    methodInfo = typeof(Enumerable).GetMethod(nameof(Enumerable.Contains), [typeof(string)]);
                     var isFalseExpr = Expression.IsFalse(Expression.Call(methodInfo, onlyFieldsExpr, itemKeyExpr));
                     isContinueExpr = Expression.OrElse(isContinueExpr, isFalseExpr);
                 }
@@ -266,7 +266,7 @@ public class RepositoryHelper
                 {
                     var keyNames = entityMapper.KeyMembers.Select(f => f.MemberName).ToArray();
                     var keyNamesExpr = Expression.Constant(keyNames);
-                    methodInfo = typeof(Enumerable).GetMethod(nameof(Enumerable.Contains), new Type[] { typeof(string) });
+                    methodInfo = typeof(Enumerable).GetMethod(nameof(Enumerable.Contains), [typeof(string)]);
                     var isFalseExpr = Expression.IsFalse(Expression.Call(methodInfo, keyNamesExpr, itemKeyExpr));
                     isContinueExpr = Expression.OrElse(isContinueExpr, isFalseExpr);
                 }
@@ -345,9 +345,9 @@ public class RepositoryHelper
                     loopBodies.Add(Expression.IfThenElse(isNotNullExpr, setTypeHandlerValueExpr, setValueGetterValueExpr));
 
                     //dbParameters.Add(ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue);
-                    methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), new Type[] { typeof(string), typeof(object), typeof(object) });
+                    methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), [typeof(string), typeof(object), typeof(object)]);
                     var dbParameterExpr = Expression.Call(ormProviderExpr, methodInfo, parameterNameExpr, nativeDbTypeExpr, dbFieldValueExpr);
-                    methodInfo = typeof(IList).GetMethod(nameof(IDataParameterCollection.Add), new Type[] { typeof(object) });
+                    methodInfo = typeof(IList).GetMethod(nameof(IDataParameterCollection.Add), [typeof(object)]);
                     blockBodies.Add(Expression.Call(dbParametersExpr, methodInfo, dbParameterExpr));
                 }
 
@@ -386,7 +386,7 @@ public class RepositoryHelper
 
             var index = 0;
             var keyNames = entityMapper.KeyMembers.Select(f => f.MemberName).ToArray();
-            var concatMethodInfo = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(string), typeof(string) });
+            var concatMethodInfo = typeof(string).GetMethod(nameof(string.Concat), [typeof(string), typeof(string)]);
             foreach (var memberInfo in filterMemberInfos)
             {
                 if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper)
@@ -613,37 +613,37 @@ public class RepositoryHelper
             {
                 Func<StringBuilder, object, List<MemberMap>> typedCommandInitializer = null;
                 typedCommandInitializer = (builder, insertObj) =>
-                {
-                    int index = 0;
-                    var result = new List<MemberMap>();
-                    var dict = insertObj as IDictionary<string, object>;
-                    foreach (var item in dict)
                     {
-                        if (!entityMapper.TryGetMemberMap(item.Key, out var memberMapper)
-                            || memberMapper.IsIgnore || memberMapper.IsIgnoreInsert
-                            || memberMapper.IsNavigation || memberMapper.IsAutoIncrement || memberMapper.IsRowVersion
-                            || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
-                            continue;
+                        int index = 0;
+                        var result = new List<MemberMap>();
+                        var dict = insertObj as IDictionary<string, object>;
+                        foreach (var item in dict)
+                        {
+                            if (!entityMapper.TryGetMemberMap(item.Key, out var memberMapper)
+                                || memberMapper.IsIgnore || memberMapper.IsIgnoreInsert
+                                || memberMapper.IsNavigation || memberMapper.IsAutoIncrement || memberMapper.IsRowVersion
+                                || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
+                                continue;
 
-                        if (ignoreFieldNames != null && ignoreFieldNames.Contains(item.Key))
-                            continue;
-                        if (onlyFieldNames != null && !onlyFieldNames.Contains(item.Key))
-                            continue;
+                            if (ignoreFieldNames != null && ignoreFieldNames.Contains(item.Key))
+                                continue;
+                            if (onlyFieldNames != null && !onlyFieldNames.Contains(item.Key))
+                                continue;
 
-                        result.Add(memberMapper);
-                        if (index > 0) builder.Append(',');
-                        builder.Append(ormProvider.GetFieldName(memberMapper.FieldName));
-                        index++;
-                    }
-                    return result;
-                };
+                            result.Add(memberMapper);
+                            if (index > 0) builder.Append(',');
+                            builder.Append(ormProvider.GetFieldName(memberMapper.FieldName));
+                            index++;
+                        }
+                        return result;
+                    };
                 commandInitializer = typedCommandInitializer;
             }
             else
             {
                 var builderExpr = Expression.Parameter(typeof(StringBuilder), "builder");
                 var blockBodies = new List<Expression>();
-                var appendMethodInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(string) });
+                var appendMethodInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), [typeof(string)]);
                 var memberInfos = insertObjType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
                     .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
 
@@ -693,9 +693,9 @@ public class RepositoryHelper
             blockBodies.Add(Expression.Assign(ormProviderExpr, Expression.Property(dbContextExpr, nameof(DbContext.OrmProvider))));
 
             MethodInfo methodInfo = null;
-            var appendMethodInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(string) });
-            var concatMethodInfo1 = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(string), typeof(string) });
-            var concatMethodInfo2 = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(string), typeof(string), typeof(string) });
+            var appendMethodInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), [typeof(string)]);
+            var concatMethodInfo1 = typeof(string).GetMethod(nameof(string.Concat), [typeof(string), typeof(string)]);
+            var concatMethodInfo2 = typeof(string).GetMethod(nameof(string.Concat), [typeof(string), typeof(string), typeof(string)]);
 
             if (typeof(IDictionary<string, object>).IsAssignableFrom(insertObjType))
             {
@@ -729,9 +729,9 @@ public class RepositoryHelper
                 //var itemKey = memberMapper.MemberName;
                 //var fieldValue = dict[itemKey];
                 var listItemPropertyInfo = typeof(List<MemberMap>).GetProperties(BindingFlags.Instance | BindingFlags.Public)
-                    .Where(p => p.GetIndexParameters().Length == 1 && p.GetIndexParameters()[0].ParameterType == typeof(int)).First();
+                .Where(p => p.GetIndexParameters().Length == 1 && p.GetIndexParameters()[0].ParameterType == typeof(int)).First();
                 var dictItemPropertyInfo = typeof(IDictionary<string, object>).GetProperties(BindingFlags.Instance | BindingFlags.Public)
-                    .Where(p => p.GetIndexParameters().Length == 1 && p.GetIndexParameters()[0].ParameterType == typeof(string)).First();
+                .Where(p => p.GetIndexParameters().Length == 1 && p.GetIndexParameters()[0].ParameterType == typeof(string)).First();
 
                 loopBodies.Add(Expression.Assign(memberMapperExpr, Expression.Property(memberMappersExpr, listItemPropertyInfo, indexExpr)));
                 var itemKeyExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.MemberName));
@@ -792,9 +792,9 @@ public class RepositoryHelper
                 loopBodies.Add(Expression.IfThenElse(isNotNullExpr, setTypeHandlerValueExpr, setValueGetterValueExpr));
 
                 //dbParameters.Add(ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue);
-                methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), new Type[] { typeof(string), typeof(object), typeof(object) });
+                methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), [typeof(string), typeof(object), typeof(object)]);
                 var dbParameterExpr = Expression.Call(ormProviderExpr, methodInfo, parameterNameExpr, nativeDbTypeExpr, dbFieldValueExpr);
-                methodInfo = typeof(IList).GetMethod(nameof(IDataParameterCollection.Add), new Type[] { typeof(object) });
+                methodInfo = typeof(IList).GetMethod(nameof(IDataParameterCollection.Add), [typeof(object)]);
                 loopBodies.Add(Expression.Call(dbParametersExpr, methodInfo, dbParameterExpr));
 
                 //index++;
@@ -957,9 +957,9 @@ public class RepositoryHelper
             if (hasSuffix) suffixExpr = Expression.Parameter(typeof(string), "suffix");
             MethodInfo methodInfo = null;
             var entityMapper = mapProvider.GetEntityMap(entityType);
-            var appendMethodInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new Type[] { typeof(string) });
-            var concatMethodInfo1 = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(string), typeof(string) });
-            var concatMethodInfo2 = typeof(string).GetMethod(nameof(string.Concat), new Type[] { typeof(string), typeof(string), typeof(string) });
+            var appendMethodInfo = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), [typeof(string)]);
+            var concatMethodInfo1 = typeof(string).GetMethod(nameof(string.Concat), [typeof(string), typeof(string)]);
+            var concatMethodInfo2 = typeof(string).GetMethod(nameof(string.Concat), [typeof(string), typeof(string), typeof(string)]);
             var addMethodInfo = typeof(List<string>).GetMethod(nameof(List<string>.Add));
 
             if (typeof(IDictionary<string, object>).IsAssignableFrom(updateObjType))
@@ -1063,9 +1063,9 @@ public class RepositoryHelper
                 loopBodies.Add(Expression.IfThenElse(isNotNullExpr, setTypeHandlerValueExpr, setValueGetterValueExpr));
 
                 //dbParameters.Add(ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue);
-                methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), new Type[] { typeof(string), typeof(object), typeof(object) });
+                methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), [typeof(string), typeof(object), typeof(object)]);
                 var dbParameterExpr = Expression.Call(ormProviderExpr, methodInfo, parameterNameExpr, nativeDbTypeExpr, fieldValueExpr);
-                methodInfo = typeof(IList).GetMethod(nameof(IDataParameterCollection.Add), new Type[] { typeof(object) });
+                methodInfo = typeof(IList).GetMethod(nameof(IDataParameterCollection.Add), [typeof(object)]);
                 var addParameterExpr = Expression.Call(dbParametersExpr, methodInfo, dbParameterExpr);
 
                 methodInfo = typeof(IDataParameterCollection).GetMethod(nameof(IDataParameterCollection.Contains));
