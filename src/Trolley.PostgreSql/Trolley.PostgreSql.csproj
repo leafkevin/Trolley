@@ -6,7 +6,7 @@
 		<Description>Trolley的MySql、Mariadb数据库提供程序</Description>
 		<Authors>leaf kevin</Authors>
 		<Copyright>2022 leafkevin</Copyright>
-		<TargetFrameworks>net462;net471;net48;netstandard2.0;netstandard2.1;net6.0;net8.0</TargetFrameworks>
+		<TargetFrameworks>netstandard2.0;netstandard2.1;net6.0;net8.0</TargetFrameworks>
 		<Version>2.0.6</Version>
 		<LangVersion>12.0</LangVersion>
 		<PackageTags>orm;trolley;postgresql;npgsql</PackageTags>
@@ -29,19 +29,6 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<ProjectReference Include="..\Trolley\Trolley.csproj" />
-	</ItemGroup>
-	<ItemGroup Condition="'$(TargetFramework)'=='netstandard2.0' OR '$(TargetFramework)'=='netstandard2.1' OR '$(TargetFramework)'=='net6.0' OR '$(TargetFramework)'=='net8.0'">
 		<PackageReference Include="Npgsql" Version="8.0.4" />
 	</ItemGroup>
-	<ItemGroup Condition="'$(TargetFramework)'=='netstandard2.0' OR '$(TargetFramework)'=='net462' OR '$(TargetFramework)'=='net471' OR '$(TargetFramework)'=='net48'">
-		<PackageReference Include="System.Threading.Tasks.Extensions" Version="4.5.4" />
-	</ItemGroup>
-	<ItemGroup Condition="'$(TargetFramework)'=='net462' OR '$(TargetFramework)'=='net471' OR '$(TargetFramework)'=='net48'">
-		<PackageReference Include="System.Data.Common" Version="4.3.0" />
-		<PackageReference Include="Npgsql" Version="4.1.14" />
-		<Reference Include="System.Transactions" />
-	</ItemGroup>
-	<PropertyGroup Condition="'$(TargetFramework)'=='net462' OR '$(TargetFramework)'=='net471' OR '$(TargetFramework)'=='net48'">
-		<DefineConstants>NETFX</DefineConstants>
-	</PropertyGroup>
 </Project>

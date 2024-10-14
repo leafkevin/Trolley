@@ -634,12 +634,8 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
         bool isSuccess = true;
         Exception exception = null;
         try
-        {
-#if NETFX
-            using var writer = dbConnection.BeginBinaryImport(builder.ToString());
-#else
-            using var writer = await dbConnection.BeginBinaryImportAsync(builder.ToString(), cancellationToken);
-#endif
+        { 
+            using var writer = await dbConnection.BeginBinaryImportAsync(builder.ToString(), cancellationToken); 
             foreach (var insertObj in insertObjs)
             {
                 await writer.StartRowAsync(cancellationToken);

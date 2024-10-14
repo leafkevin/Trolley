@@ -405,8 +405,8 @@ class PostgreSqlTheaCommand : ITheaCommand
         this.command.CommandText = null;
         this.command.Parameters.Clear();
 #if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-        return this.command.DisposeAsync();    
-#else       
+        return this.command.DisposeAsync();
+#else
         this.Dispose();
         return default;
 #endif

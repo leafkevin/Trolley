@@ -372,7 +372,12 @@ class SqlServerTheaCommand : ITheaCommand
         return result;
     }
 
-    public void Dispose() => this.command.Dispose();
+    public void Dispose()
+    {
+        this.command.CommandText = null;
+        this.command.Parameters.Clear();
+        this.command.Dispose();
+    }
     public ValueTask DisposeAsync()
     {
         this.command.CommandText = null;

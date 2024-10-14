@@ -9,6 +9,7 @@ namespace Trolley.PostgreSql;
 class PostgreSqlTheaConnection : ITheaConnection
 {
     private readonly NpgsqlConnection connection;
+    private readonly DateTime createdAt;
 
     public string DbKey { get; private set; }
     public string ConnectionId { get; private set; }
@@ -34,6 +35,7 @@ class PostgreSqlTheaConnection : ITheaConnection
         this.ConnectionId = Guid.NewGuid().ToString("N");
         this.ConnectionString = connection.ConnectionString;
         this.connection = connection;
+        this.createdAt = DateTime.Now;
     }
 
     public void Close()
@@ -63,7 +65,7 @@ class PostgreSqlTheaConnection : ITheaConnection
             DbKey = this.DbKey,
             ConnectionId = this.ConnectionId,
             ConnectionString = this.ConnectionString,
-            CreatedAt = DateTime.Now
+            CreatedAt = this.createdAt
         });
         await this.connection.CloseAsync();
         this.OnClosed?.Invoke(new ConectionEventArgs
@@ -71,7 +73,7 @@ class PostgreSqlTheaConnection : ITheaConnection
             DbKey = this.DbKey,
             ConnectionId = this.ConnectionId,
             ConnectionString = this.ConnectionString,
-            CreatedAt = DateTime.Now
+            CreatedAt = this.createdAt
         });
     }
     public void Open()
@@ -88,7 +90,7 @@ class PostgreSqlTheaConnection : ITheaConnection
                 DbKey = this.DbKey,
                 ConnectionId = this.ConnectionId,
                 ConnectionString = this.ConnectionString,
-                CreatedAt = DateTime.Now
+                CreatedAt = this.createdAt
             });
             this.connection.Open();
             this.OnOpened?.Invoke(new ConectionEventArgs
@@ -96,7 +98,7 @@ class PostgreSqlTheaConnection : ITheaConnection
                 DbKey = this.DbKey,
                 ConnectionId = this.ConnectionId,
                 ConnectionString = this.ConnectionString,
-                CreatedAt = DateTime.Now
+                CreatedAt = this.createdAt
             });
         }
     }
@@ -114,7 +116,7 @@ class PostgreSqlTheaConnection : ITheaConnection
                 DbKey = this.DbKey,
                 ConnectionId = this.ConnectionId,
                 ConnectionString = this.ConnectionString,
-                CreatedAt = DateTime.Now
+                CreatedAt = this.createdAt
             });
             await this.connection.OpenAsync(cancellationToken);
             this.OnOpened?.Invoke(new ConectionEventArgs
@@ -122,7 +124,7 @@ class PostgreSqlTheaConnection : ITheaConnection
                 DbKey = this.DbKey,
                 ConnectionId = this.ConnectionId,
                 ConnectionString = this.ConnectionString,
-                CreatedAt = DateTime.Now
+                CreatedAt = this.createdAt
             });
         }
     }
@@ -148,11 +150,11 @@ class PostgreSqlTheaConnection : ITheaConnection
             TransactionId = theaTransaction.TransactionId,
             ConnectionId = this.ConnectionId,
             ConnectionString = this.ConnectionString,
-            CreatedAt = DateTime.Now
+            CreatedAt = this.createdAt
         });
         return theaTransaction;
     }
-#if NETSTANDARD2_1_OR_GREATER || NET3_0_OR_GREATER
+#if NETSTANDARD2_1_OR_GREATER || NET6_0_OR_GREATER
     public async ValueTask<ITheaTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
     {
         var transaction = await this.connection.BeginTransactionAsync(cancellationToken);
@@ -167,7 +169,7 @@ class PostgreSqlTheaConnection : ITheaConnection
             TransactionId = theaTransaction.TransactionId,
             ConnectionId = this.ConnectionId,
             ConnectionString = this.ConnectionString,
-            CreatedAt = DateTime.Now
+            CreatedAt = this.createdAt
         });
         return theaTransaction;
     }
@@ -200,7 +202,7 @@ class PostgreSqlTheaConnection : ITheaConnection
                 TransactionId = theaTransaction.TransactionId,
                 ConnectionId = this.ConnectionId,
                 ConnectionString = this.ConnectionString,
-                CreatedAt = DateTime.Now
+                CreatedAt = this.createdAt
             });
         }
         return result;

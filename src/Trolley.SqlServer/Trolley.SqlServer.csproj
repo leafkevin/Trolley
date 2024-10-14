@@ -6,7 +6,7 @@
 		<Description>Trolley的SqlServer数据库提供程序</Description>
 		<Authors>leaf kevin</Authors>
 		<Copyright>2022 leafkevin</Copyright>
-		<TargetFrameworks>net462;net471;net48;netstandard2.0;netstandard2.1;net6.0;net8.0</TargetFrameworks>
+		<TargetFrameworks>netstandard2.0;netstandard2.1;net6.0;net8.0</TargetFrameworks>
 		<Version>2.0.6</Version>
 		<LangVersion>12.0</LangVersion>
 		<PackageTags>orm;trolley;sqlserver</PackageTags>
@@ -30,10 +30,5 @@
 		</PackageReference>
 		<PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" />
 		<ProjectReference Include="..\Trolley\Trolley.csproj" />
-	</ItemGroup>
-	<ItemGroup Condition="'$(TargetFramework)'=='net462' OR '$(TargetFramework)'=='net471' OR '$(TargetFramework)'=='net48'">
-		<Reference Include="System.Transactions" />
-		<PackageReference Include="System.Data.Common" Version="4.3.0" />
-		<PackageReference Include="System.Threading.Thread" Version="4.3.0" />
 	</ItemGroup>
 </Project>

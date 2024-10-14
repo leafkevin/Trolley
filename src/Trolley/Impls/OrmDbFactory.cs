@@ -189,7 +189,7 @@ public sealed class OrmDbFactory : IOrmDbFactory
         //只是为了获取默认TableSchema      
         var connection = database.OrmProvider.CreateConnection(localDbKey, database.ConnectionString);
         var defaultSchema = database.OrmProvider.DefaultTableSchema ?? connection.Database;
-        connection.Close();
+        connection.Dispose();
         var dbContext = new DbContext
         {
             DbKey = localDbKey,
