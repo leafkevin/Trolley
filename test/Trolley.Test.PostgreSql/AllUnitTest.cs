@@ -85,9 +85,6 @@ public class AllUnitTest : UnitTestBase
             return builder.Build();
         });
         services.AddTransient<IPassport>(f => new Passport { TenantId = "104", UserId = "1" });
-
-        AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
-        AppContext.SetSwitch("Npgsql.DisableDateTimeInfinityConversions", true);
         var serviceProvider = services.BuildServiceProvider();
         this.dbFactory = serviceProvider.GetService<IOrmDbFactory>();
     }
@@ -6923,15 +6920,16 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
     {
         var repository = this.dbFactory.Create();
         var timeSpan = TimeSpan.FromMinutes(455);
+        var now = DateTime.Now;
         await repository.DeleteAsync<UpdateEntity>(1);
-        await repository.CreateAsync<UpdateEntity>(new UpdateEntity
+        await repository.CreateAsync<UpdateEntity>(new
         {
             Id = 1,
             BooleanField = true,
             TimeSpanField = TimeSpan.FromSeconds(456),
             DateOnlyField = new DateOnly(2022, 05, 06),
             DateTimeField = DateTime.Now,
-            DateTimeOffsetField = new DateTimeOffset(DateTime.Parse("2022-01-02 03:04:05")).ToUniversalTime(),
+            DateTimeOffsetField = now,
             EnumField = Gender.Male,
             GuidField = Guid.NewGuid(),
             TimeOnlyField = new TimeOnly(3, 5, 7)

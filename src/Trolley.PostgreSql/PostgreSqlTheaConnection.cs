@@ -9,7 +9,6 @@ namespace Trolley.PostgreSql;
 class PostgreSqlTheaConnection : ITheaConnection
 {
     private readonly NpgsqlConnection connection;
-    private readonly DateTime createdAt;
 
     public string DbKey { get; private set; }
     public string ConnectionId { get; private set; }
@@ -35,7 +34,6 @@ class PostgreSqlTheaConnection : ITheaConnection
         this.ConnectionId = Guid.NewGuid().ToString("N");
         this.ConnectionString = connection.ConnectionString;
         this.connection = connection;
-        this.createdAt = DateTime.Now;
     }
 
     public void Close()
@@ -65,7 +63,7 @@ class PostgreSqlTheaConnection : ITheaConnection
             DbKey = this.DbKey,
             ConnectionId = this.ConnectionId,
             ConnectionString = this.ConnectionString,
-            CreatedAt = this.createdAt
+            CreatedAt = DateTime.Now
         });
         await this.connection.CloseAsync();
         this.OnClosed?.Invoke(new ConectionEventArgs
@@ -73,7 +71,7 @@ class PostgreSqlTheaConnection : ITheaConnection
             DbKey = this.DbKey,
             ConnectionId = this.ConnectionId,
             ConnectionString = this.ConnectionString,
-            CreatedAt = this.createdAt
+            CreatedAt = DateTime.Now
         });
     }
     public void Open()
@@ -90,7 +88,7 @@ class PostgreSqlTheaConnection : ITheaConnection
                 DbKey = this.DbKey,
                 ConnectionId = this.ConnectionId,
                 ConnectionString = this.ConnectionString,
-                CreatedAt = this.createdAt
+                CreatedAt = DateTime.Now
             });
             this.connection.Open();
             this.OnOpened?.Invoke(new ConectionEventArgs
@@ -98,7 +96,7 @@ class PostgreSqlTheaConnection : ITheaConnection
                 DbKey = this.DbKey,
                 ConnectionId = this.ConnectionId,
                 ConnectionString = this.ConnectionString,
-                CreatedAt = this.createdAt
+                CreatedAt = DateTime.Now
             });
         }
     }
@@ -116,7 +114,7 @@ class PostgreSqlTheaConnection : ITheaConnection
                 DbKey = this.DbKey,
                 ConnectionId = this.ConnectionId,
                 ConnectionString = this.ConnectionString,
-                CreatedAt = this.createdAt
+                CreatedAt = DateTime.Now
             });
             await this.connection.OpenAsync(cancellationToken);
             this.OnOpened?.Invoke(new ConectionEventArgs
@@ -124,7 +122,7 @@ class PostgreSqlTheaConnection : ITheaConnection
                 DbKey = this.DbKey,
                 ConnectionId = this.ConnectionId,
                 ConnectionString = this.ConnectionString,
-                CreatedAt = this.createdAt
+                CreatedAt = DateTime.Now
             });
         }
     }
@@ -150,7 +148,7 @@ class PostgreSqlTheaConnection : ITheaConnection
             TransactionId = theaTransaction.TransactionId,
             ConnectionId = this.ConnectionId,
             ConnectionString = this.ConnectionString,
-            CreatedAt = this.createdAt
+            CreatedAt = DateTime.Now
         });
         return theaTransaction;
     }
@@ -169,7 +167,7 @@ class PostgreSqlTheaConnection : ITheaConnection
             TransactionId = theaTransaction.TransactionId,
             ConnectionId = this.ConnectionId,
             ConnectionString = this.ConnectionString,
-            CreatedAt = this.createdAt
+            CreatedAt = DateTime.Now
         });
         return theaTransaction;
     }
@@ -202,7 +200,7 @@ class PostgreSqlTheaConnection : ITheaConnection
                 TransactionId = theaTransaction.TransactionId,
                 ConnectionId = this.ConnectionId,
                 ConnectionString = this.ConnectionString,
-                CreatedAt = this.createdAt
+                CreatedAt = DateTime.Now
             });
         }
         return result;

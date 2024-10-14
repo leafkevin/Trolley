@@ -148,6 +148,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
 #if NET6_0_OR_GREATER
         castTos[typeof(DateOnly?)] = "DATE";
         castTos[typeof(TimeOnly?)] = "TIME";
+        AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 #endif
     }
 
@@ -634,8 +635,8 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
         bool isSuccess = true;
         Exception exception = null;
         try
-        { 
-            using var writer = await dbConnection.BeginBinaryImportAsync(builder.ToString(), cancellationToken); 
+        {
+            using var writer = await dbConnection.BeginBinaryImportAsync(builder.ToString(), cancellationToken);
             foreach (var insertObj in insertObjs)
             {
                 await writer.StartRowAsync(cancellationToken);

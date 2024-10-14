@@ -62,10 +62,7 @@ public class UnitTest2 : UnitTestBase
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();
-         this.dbFactory = serviceProvider.GetService<IOrmDbFactory>();
-
-        AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
-        AppContext.SetSwitch("Npgsql.DisableDateTimeInfinityConversions", true);
+        this.dbFactory = serviceProvider.GetService<IOrmDbFactory>();
     }
     [Fact]
     public async Task QueryFirst()
@@ -647,8 +644,8 @@ SELECT a.""MenuId"",a.""ParentId"",a.""Url"" FROM ""menuPageList"" a WHERE a.""P
         Assert.NotNull(result[0].Order.Details);
         Assert.NotEmpty(result[0].Order.Details);
         Assert.Equal(3, result[0].Order.Details.Count);
-		
-		result = repository.From<Order>()
+
+        result = repository.From<Order>()
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
             .IncludeMany((x, y) => x.Details)
             .Where((a, b) => a.TotalAmount > 300 && Sql.In(a.Id, new string[] { "1", "2", "3" }))

@@ -19,7 +19,7 @@ public class DateOnlyUnitTest : UnitTestBase
         this.output = output;
         var services = new ServiceCollection();
         services.AddSingleton(f =>
-        {            
+        {
             var builder = new OrmDbFactoryBuilder()
                 .Register(OrmProviderType.PostgreSql, "fengling", "Host=localhost;Database=fengling;Username=postgres;Password=123456;SearchPath=public", true)
                 .Configure<ModelConfiguration>("fengling")
@@ -71,9 +71,6 @@ public class DateOnlyUnitTest : UnitTestBase
         });
         var serviceProvider = services.BuildServiceProvider();
         this.dbFactory = serviceProvider.GetService<IOrmDbFactory>();
-
-        AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
-        AppContext.SetSwitch("Npgsql.DisableDateTimeInfinityConversions", true);
     }
     [Fact]
     public async Task MemberAccess()

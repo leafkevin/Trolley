@@ -62,9 +62,6 @@ public class DateTimeUnitTest : UnitTestBase
         });
         var serviceProvider = services.BuildServiceProvider();
         this.dbFactory = serviceProvider.GetService<IOrmDbFactory>();
-
-        AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
-        AppContext.SetSwitch("Npgsql.DisableDateTimeInfinityConversions", true);
     }
     [Fact]
     public async Task MemberAccess()
