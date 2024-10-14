@@ -1,8 +1,13 @@
-﻿using System;
+﻿using Microsoft.Data.SqlClient;
+using MySqlConnector;
+using Npgsql;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Data;
 using System.Reflection;
+using System.Text;
 
 namespace Trolley.Test;
 
@@ -36,5 +41,41 @@ public static class Extensions
             enumDescriptions.TryAdd(enumType, descriptions);
         }
         return descriptions[enumValue];
+    }
+    public static string ToMySqlParametersString(this IDataParameterCollection dbParameters)
+    {
+        if (dbParameters == null || dbParameters.Count == 0)
+            return string.Empty;
+        var builder = new StringBuilder();
+        foreach (var parameter in dbParameters)
+        {
+            var dbParameter = parameter as MySqlParameter;
+            builder.Append($"{dbParameter.ParameterName}:{{MySqlDbType={dbParameter.MySqlDbType}, Value={dbParameter.Value}}};  ");
+        }
+        return builder.ToString();
+    }
+    public static string ToPostgreSqlParametersString(this IDataParameterCollection dbParameters)
+    {
+        if (dbParameters == null || dbParameters.Count == 0)
+            return string.Empty;
+        var builder = new StringBuilder();
+        foreach (var parameter in dbParameters)
+        {
+            var dbParameter = parameter as NpgsqlParameter;
+            builder.Append($"{dbParameter.ParameterName}:{{NpgsqlDbType={dbParameter.NpgsqlDbType}, Value={dbParameter.Value}}};  ");
+        }
+        return builder.ToString();
+    }
+    public static string ToSqlServerParametersString(this IDataParameterCollection dbParameters)
+    {
+        if (dbParameters == null || dbParameters.Count == 0)
+            return string.Empty;
+        var builder = new StringBuilder();
+        foreach (var parameter in dbParameters)
+        {
+            var dbParameter = parameter as SqlParameter;
+            builder.Append($"{dbParameter.ParameterName}:{{SqlDbType={dbParameter.SqlDbType}, Value={dbParameter.Value}}};  ");
+        }
+        return builder.ToString();
     }
 }

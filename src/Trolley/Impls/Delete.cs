@@ -112,7 +112,7 @@ public class Deleted<TEntity> : IDeleted<TEntity>
         command.CommandText = this.Visitor.BuildCommand(this.DbContext, command.BaseCommand);
         connection.Open();
         var result = command.ExecuteNonQuery(CommandSqlType.Delete);
-        command.Parameters.Clear();
+
         command.Dispose();
         if (isNeedClose) connection.Close();
         return result;
@@ -128,7 +128,7 @@ public class Deleted<TEntity> : IDeleted<TEntity>
         command.CommandText = this.Visitor.BuildCommand(this.DbContext, command.BaseCommand);
         await connection.OpenAsync(cancellationToken);
         var result = await command.ExecuteNonQueryAsync(CommandSqlType.Delete, cancellationToken);
-        command.Parameters.Clear();
+
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         return result;

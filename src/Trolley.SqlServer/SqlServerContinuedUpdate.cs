@@ -241,7 +241,7 @@ public class SqlServerContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqlS
                 }
                 break;
         }
-        command.Parameters.Clear();
+
         command.Dispose();
         if (isNeedClose) connection.Close();
         return result;
@@ -393,7 +393,6 @@ public class SqlServerContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqlS
                         result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkUpdate, cancellationToken);
                     }
                     builder.Clear();
-                    builder = null;
                 }
                 break;
             default:
@@ -409,7 +408,7 @@ public class SqlServerContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqlS
                 }
                 break;
         }
-        command.Parameters.Clear();
+
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         return result;

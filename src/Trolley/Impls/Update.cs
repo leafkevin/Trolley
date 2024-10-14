@@ -250,7 +250,6 @@ public class Updated<TEntity> : IUpdated<TEntity>
                     result += command.ExecuteNonQuery(CommandSqlType.BulkUpdate);
                 }
                 builder.Clear();
-                builder = null;
                 break;
             default:
                 if (!this.Visitor.HasWhere)
@@ -260,7 +259,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
                 result = command.ExecuteNonQuery(CommandSqlType.Update);
                 break;
         }
-        command.Parameters.Clear();
+
         command.Dispose();
         if (isNeedClose) connection.Close();
         return result;
@@ -332,7 +331,6 @@ public class Updated<TEntity> : IUpdated<TEntity>
                     result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkUpdate, cancellationToken);
                 }
                 builder.Clear();
-                builder = null;
                 break;
             default:
                 if (!this.Visitor.HasWhere)
@@ -342,7 +340,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
                 result = await command.ExecuteNonQueryAsync(CommandSqlType.Update, cancellationToken);
                 break;
         }
-        command.Parameters.Clear();
+
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         return result;

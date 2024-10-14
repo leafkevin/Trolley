@@ -356,6 +356,8 @@ public class Repository : IRepository
                 {
                     command.CommandText = builder.ToString();
                     count += command.ExecuteNonQuery(sqlType);
+                    builder.Clear();
+                    command.Parameters.Clear();
                 }
                 return count;
             }
@@ -368,8 +370,6 @@ public class Repository : IRepository
                 {
                     firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
                     result += executor(tabledInsertObj.Key, tabledInsertObj.Value);
-                    builder.Clear();
-                    command.Parameters.Clear();
                 }
             }
             else
@@ -380,7 +380,6 @@ public class Repository : IRepository
                 result = executor(tableName, entities);
             }
             builder.Clear();
-            builder = null;
         }
         else
         {
@@ -388,7 +387,7 @@ public class Repository : IRepository
             connection.Open();
             result = command.ExecuteNonQuery(sqlType);
         }
-        command.Parameters.Clear();
+
         command.Dispose();
         if (isNeedClose) connection.Close();
         return result;
@@ -489,6 +488,8 @@ public class Repository : IRepository
                 {
                     command.CommandText = builder.ToString();
                     count += await command.ExecuteNonQueryAsync(sqlType, cancellationToken);
+                    builder.Clear();
+                    command.Parameters.Clear();
                 }
                 return count;
             }
@@ -500,8 +501,6 @@ public class Repository : IRepository
                 {
                     firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
                     result += await executor(tabledInsertObj.Key, tabledInsertObj.Value);
-                    builder.Clear();
-                    command.Parameters.Clear();
                 }
             }
             else
@@ -520,7 +519,7 @@ public class Repository : IRepository
             await connection.OpenAsync(cancellationToken);
             result = await command.ExecuteNonQueryAsync(sqlType, cancellationToken);
         }
-        command.Parameters.Clear();
+
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         return result;
@@ -637,7 +636,7 @@ public class Repository : IRepository
             result = command.ExecuteNonQuery(CommandSqlType.Update);
         }
         builder.Clear();
-        command.Parameters.Clear();
+
         command.Dispose();
         if (isNeedClose) connection.Close();
         return result;
@@ -699,7 +698,7 @@ public class Repository : IRepository
             result = await command.ExecuteNonQueryAsync(CommandSqlType.Update, cancellationToken);
         }
         builder.Clear();
-        command.Parameters.Clear();
+
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         return result;
@@ -718,7 +717,7 @@ public class Repository : IRepository
         this.BuildDeleteCommand(command.BaseCommand, entityType, whereKeys);
         connection.Open();
         var result = command.ExecuteNonQuery(CommandSqlType.Delete);
-        command.Parameters.Clear();
+
         command.Dispose();
         if (isNeedClose) connection.Close();
         return result;
@@ -734,7 +733,6 @@ public class Repository : IRepository
         await connection.OpenAsync(cancellationToken);
         var result = await command.ExecuteNonQueryAsync(CommandSqlType.Delete, cancellationToken);
 
-        command.Parameters.Clear();
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         return result;
@@ -945,7 +943,7 @@ public class Repository : IRepository
         command.CommandText = sqlBuilder.ToString();
         connection.Open();
         var result = command.ExecuteNonQuery(CommandSqlType.MultiCommand);
-        command.Parameters.Clear();
+
         command.Dispose();
         if (isNeedClose) connection.Close();
         return result;
@@ -997,7 +995,7 @@ public class Repository : IRepository
         command.CommandText = sqlBuilder.ToString();
         await connection.OpenAsync(cancellationToken);
         var result = await command.ExecuteNonQueryAsync(CommandSqlType.MultiCommand, cancellationToken);
-        command.Parameters.Clear();
+
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         return result;

@@ -80,6 +80,8 @@ public sealed class DbContext
         connection.OnOpened = this.DbInterceptors.OnConnectionOpened;
         connection.OnClosing = this.DbInterceptors.OnConnectionClosing;
         connection.OnClosed = this.DbInterceptors.OnConnectionClosed;
+        connection.OnTransactionCreated = this.DbInterceptors.OnTransactionCreated;
+        connection.OnTransactionCompleted = this.DbInterceptors.OnTransactionCompleted;
 
         this.DbInterceptors.OnConnectionCreated?.Invoke(new ConectionEventArgs
         {
@@ -111,7 +113,6 @@ public sealed class DbContext
         }
 
         reader.Dispose();
-        command.Parameters.Clear();
         command.Dispose();
         if (isNeedClose) connection.Close();
         return result;
@@ -134,7 +135,6 @@ public sealed class DbContext
         }
 
         await reader.DisposeAsync();
-        command.Parameters.Clear();
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         return result;
@@ -173,8 +173,7 @@ public sealed class DbContext
             visitor.SetIncludeValues(entityType, result, reader, true);
         }
 
-        reader.Close();
-        command.Parameters.Clear();
+        reader.Dispose();
         command.Dispose();
         if (isNeedClose) connection.Close();
         visitor.Dispose();
@@ -213,8 +212,7 @@ public sealed class DbContext
             await visitor.SetIncludeValuesAsync(entityType, result, reader, true, cancellationToken);
         }
 
-        await reader.CloseAsync();
-        command.Parameters.Clear();
+        await reader.DisposeAsync();
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         visitor.Dispose();
@@ -249,7 +247,6 @@ public sealed class DbContext
         }
 
         reader.Dispose();
-        command.Parameters.Clear();
         command.Dispose();
         if (isNeedClose) connection.Close();
         return result;
@@ -280,7 +277,6 @@ public sealed class DbContext
         }
 
         await reader.DisposeAsync();
-        command.Parameters.Clear();
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         return result;
@@ -328,7 +324,6 @@ public sealed class DbContext
         }
 
         reader.Dispose();
-        command.Parameters.Clear();
         command.Dispose();
         if (isNeedClose) connection.Close();
         visitor.Dispose();
@@ -378,7 +373,6 @@ public sealed class DbContext
         }
 
         await reader.DisposeAsync();
-        command.Parameters.Clear();
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         visitor.Dispose();
@@ -433,7 +427,6 @@ public sealed class DbContext
         }
 
         reader.Dispose();
-        command.Parameters.Clear();
         command.Dispose();
         if (isNeedClose) connection.Close();
         visitor.Dispose();
@@ -487,7 +480,6 @@ public sealed class DbContext
         }
 
         await reader.DisposeAsync();
-        command.Parameters.Clear();
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         visitor.Dispose();
@@ -516,7 +508,6 @@ public sealed class DbContext
             result = reader.ToEntity<TEntity>(this);
 
         reader.Dispose();
-        command.Parameters.Clear();
         command.Dispose();
         if (isNeedClose) connection.Close();
         return result;
@@ -541,7 +532,6 @@ public sealed class DbContext
             result = reader.ToEntity<TEntity>(this);
 
         await reader.DisposeAsync();
-        command.Parameters.Clear();
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         return result;
@@ -565,7 +555,6 @@ public sealed class DbContext
         }
 
         reader.Dispose();
-        command.Parameters.Clear();
         command.Dispose();
         if (isNeedClose) connection.Close();
         return result;
@@ -586,7 +575,6 @@ public sealed class DbContext
         }
 
         await reader.DisposeAsync();
-        command.Parameters.Clear();
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         return result;
@@ -603,7 +591,6 @@ public sealed class DbContext
             result.Add(reader.ToEntity<TResult>(this, readerFields, true));
         }
         reader.Dispose();
-        command.Parameters.Clear();
         command.Dispose();
         if (isNeedClose) connection.Close();
         return result;
@@ -620,7 +607,6 @@ public sealed class DbContext
             result.Add(reader.ToEntity<TResult>(this, readerFields, true));
         }
         await reader.DisposeAsync();
-        command.Parameters.Clear();
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         visitor.Dispose();
@@ -701,7 +687,6 @@ public sealed class DbContext
         if (!commandInitializer.Invoke(command.BaseCommand))
             connection.Open();
         var result = command.ExecuteNonQuery(CommandSqlType.RawExecute);
-        command.Parameters.Clear();
         command.Dispose();
         if (isNeedClose) connection.Close();
         return result;
@@ -712,7 +697,6 @@ public sealed class DbContext
         if (!commandInitializer.Invoke(command.BaseCommand))
             await connection.OpenAsync(cancellationToken);
         var result = await command.ExecuteNonQueryAsync(CommandSqlType.RawExecute, cancellationToken);
-        command.Parameters.Clear();
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         return result;
@@ -734,40 +718,47 @@ public sealed class DbContext
             throw new Exception("上一个事务还没有完成，无法开启新事务");
         this.Connection ??= this.CreateConnection(this.Database.ConnectionString);
         await this.Connection.OpenAsync(cancellationToken);
-        this.Transaction = await this.Connection.BeginTransactionAsync(IsolationLevel.Unspecified, cancellationToken);
+        this.Transaction = await this.Connection.BeginTransactionAsync(cancellationToken);
     }
     public void Commit()
     {
-        this.Transaction?.Commit();
+        if (this.Transaction == null)
+            throw new Exception("还没有开启事务，无法完成提交");
+        this.Transaction.Commit();
         this.Connection.Close();
         this.Transaction = null;
         this.Connection = null;
     }
     public async Task CommitAsync(CancellationToken cancellationToken = default)
     {
-        if (this.Transaction != null)
-            await this.Transaction.CommitAsync(cancellationToken);
+        if (this.Transaction == null)
+            throw new Exception("还没有开启事务，无法完成提交");
+        await this.Transaction.CommitAsync(cancellationToken);
         await this.Connection.CloseAsync();
         this.Transaction = null;
         this.Connection = null;
     }
     public void Rollback()
     {
-        this.Transaction?.Rollback();
+        if (this.Transaction == null)
+            throw new Exception("还没有开启事务，无法完成回滚");
+        this.Transaction.Rollback();
         this.Connection.Close();
         this.Transaction = null;
         this.Connection = null;
     }
     public async Task RollbackAsync(CancellationToken cancellationToken = default)
     {
-        if (this.Transaction != null)
-            await this.Transaction.RollbackAsync(null, cancellationToken);
+        if (this.Transaction == null)
+            throw new Exception("还没有开启事务，无法完成回滚");
+        await this.Transaction.RollbackAsync(cancellationToken);
         await this.Connection.CloseAsync();
         this.Transaction = null;
         this.Connection = null;
     }
     #endregion
 
+    #region Sharding
     public string BuildSql(IQueryVisitor visitor, string formatSql, string jointMark)
     {
         var sql = formatSql;
@@ -790,7 +781,6 @@ public sealed class DbContext
         visitor.SetShardingTables(shardingTables);
 
         reader.Dispose();
-        command.Parameters.Clear();
         command.Dispose();
         if (isNeedClose) connection.Close();
     }
@@ -810,7 +800,6 @@ public sealed class DbContext
         visitor.SetShardingTables(shardingTables);
 
         await reader.DisposeAsync();
-        command.Parameters.Clear();
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
     }
@@ -895,4 +884,5 @@ public sealed class DbContext
         }
         return true;
     }
+    #endregion
 }

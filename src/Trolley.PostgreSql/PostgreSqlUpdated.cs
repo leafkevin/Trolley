@@ -187,7 +187,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                 }
                 break;
         }
-        command.Parameters.Clear();
+
         command.Dispose();
         if (isNeedClose) connection.Close();
         return result;
@@ -339,7 +339,6 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                         result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkUpdate, cancellationToken);
                     }
                     builder.Clear();
-                    builder = null;
                 }
                 break;
             default:
@@ -356,7 +355,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                 }
                 break;
         }
-        command.Parameters.Clear();
+
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         return result;

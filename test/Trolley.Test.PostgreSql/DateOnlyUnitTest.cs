@@ -1,6 +1,8 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
 using System;
 using System.Globalization;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Trolley.PostgreSql;
@@ -11,15 +13,13 @@ namespace Trolley.Test.PostgreSql;
 
 public class DateOnlyUnitTest : UnitTestBase
 {
-    private static int connTotal = 0;
-    private static int connOpenTotal = 0;
     private readonly ITestOutputHelper output;
     public DateOnlyUnitTest(ITestOutputHelper output)
     {
         this.output = output;
         var services = new ServiceCollection();
         services.AddSingleton(f =>
-        {
+        {            
             var builder = new OrmDbFactoryBuilder()
                 .Register(OrmProviderType.PostgreSql, "fengling", "Host=localhost;Database=fengling;Username=postgres;Password=123456;SearchPath=public", true)
                 .Configure<ModelConfiguration>("fengling")
@@ -28,26 +28,43 @@ public class DateOnlyUnitTest : UnitTestBase
                     df.OnConnectionCreated += evt =>
                     {
                         Interlocked.Increment(ref connTotal);
-                        this.output.WriteLine($"{evt.ConnectionId} Created, Total:{Volatile.Read(ref connTotal)}");
+                        this.output.WriteLine($"Connection {evt.ConnectionId} Created, Total:{Volatile.Read(ref connTotal)}");
                     };
                     df.OnConnectionOpened += evt =>
                     {
                         Interlocked.Increment(ref connOpenTotal);
-                        this.output.WriteLine($"{evt.ConnectionId} Opened, Total:{Volatile.Read(ref connOpenTotal)}");
+                        this.output.WriteLine($"Connection {evt.ConnectionId} Opened, Total:{Volatile.Read(ref connOpenTotal)}");
                     };
                     df.OnConnectionClosed += evt =>
                     {
                         Interlocked.Decrement(ref connOpenTotal);
                         Interlocked.Decrement(ref connTotal);
-                        this.output.WriteLine($"{evt.ConnectionId} Closed, Total:{Volatile.Read(ref connOpenTotal)}");
+                        this.output.WriteLine($"Connection {evt.ConnectionId} Closed, Total:{Volatile.Read(ref connOpenTotal)}");
                     };
                     df.OnCommandExecuting += evt =>
                     {
-                        this.output.WriteLine($"{evt.SqlType} Begin, Sql: {evt.Sql}");
+                        var builder = new StringBuilder();
+                        foreach (var parameter in evt.DbParameters)
+                        {
+                            var dbParameter = parameter as NpgsqlParameter;
+                            builder.Append($"{dbParameter.ParameterName}={dbParameter.Value},DbType={dbParameter.NpgsqlDbType}; ");
+                        }
+                        var parameters = builder.ToString();
+                        this.output.WriteLine($"{evt.SqlType} Begin, TransactionId:{evt.TransactionId} Sql: {evt.Sql}, Parameters: {evt.DbParameters.ToPostgreSqlParametersString()}");
                     };
                     df.OnCommandExecuted += evt =>
                     {
-                        this.output.WriteLine($"{evt.SqlType} End, Elapsed: {evt.Elapsed} ms, Sql: {evt.Sql}");
+                        this.output.WriteLine($"{evt.SqlType} End, TransactionId:{evt.TransactionId} Elapsed: {evt.Elapsed} ms, Sql: {evt.Sql}, Parameters: {evt.DbParameters.ToPostgreSqlParametersString()}");
+                    };
+                    df.OnTransactionCreated += evt =>
+                    {
+                        Interlocked.Increment(ref tranTotal);
+                        this.output.WriteLine($"Transaction {evt.TransactionId} Created, Total:{Volatile.Read(ref tranTotal)}");
+                    };
+                    df.OnTransactionCompleted += evt =>
+                    {
+                        Interlocked.Decrement(ref tranTotal);
+                        this.output.WriteLine($"Transaction {evt.TransactionId} {evt.Action} Completed, Transaction Total:{Volatile.Read(ref tranTotal)}");
                     };
                 });
             return builder.Build();

@@ -1,9 +1,6 @@
 ﻿using Npgsql;
 using System;
 using System.Data;
-#if NET6_0_OR_GREATER
-using System.Data.Common;
-#endif
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,25 +12,19 @@ class PostgreSqlTheaConnection : ITheaConnection
 
     public string DbKey { get; private set; }
     public string ConnectionId { get; private set; }
-
     public string ConnectionString { get; set; }
     public int ConnectionTimeout => this.connection.ConnectionTimeout;
     public string Database => this.connection.Database;
-    public string DataSource => this.connection.DataSource;
     public string ServerVersion => this.connection.ServerVersion;
-#if NET6_0_OR_GREATER
-    public bool CanCreateBatch => this.connection.CanCreateBatch;
-#else
-    public bool CanCreateBatch => false;
-#endif
     public ConnectionState State => this.connection.State;
     public IDbConnection BaseConnection => this.connection;
 
-    public Action<ConectionEventArgs> OnCreated { get; set; }
     public Action<ConectionEventArgs> OnOpening { get; set; }
     public Action<ConectionEventArgs> OnOpened { get; set; }
     public Action<ConectionEventArgs> OnClosing { get; set; }
     public Action<ConectionEventArgs> OnClosed { get; set; }
+    public Action<TransactionEventArgs> OnTransactionCreated { get; set; }
+    public Action<TransactionCompletedEventArgs> OnTransactionCompleted { get; set; }
 
     public PostgreSqlTheaConnection(string dbKey, string connectionString)
         : this(dbKey, new NpgsqlConnection(connectionString)) { }
@@ -44,21 +35,7 @@ class PostgreSqlTheaConnection : ITheaConnection
         this.ConnectionString = connection.ConnectionString;
         this.connection = connection;
     }
-    public void ChangeDatabase(string databaseName) => this.connection.ChangeDatabase(databaseName);
-    public Task ChangeDatabaseAsync(string databaseName, CancellationToken cancellationToken = default)
-    {
-        if (cancellationToken.IsCancellationRequested)
-            return Task.FromCanceled(cancellationToken);
-        try
-        {
-            this.connection.ChangeDatabase(databaseName);
-            return Task.CompletedTask;
-        }
-        catch (Exception e)
-        {
-            return Task.FromException(e);
-        }
-    }
+
     public void Close()
     {
         if (this.connection == null || this.State == ConnectionState.Closed) return;
@@ -157,71 +134,76 @@ class PostgreSqlTheaConnection : ITheaConnection
         return new PostgreSqlTheaCommand(myCommand, this, null);
     }
 
-#if NET6_0_OR_GREATER
-    public DbBatch CreateBatch() => this.connection.CreateBatch();
-#endif
     public ITheaTransaction BeginTransaction()
     {
         var transaction = this.connection.BeginTransaction();
-        return new PostgreSqlTheaTransaction(this, transaction);
+        var theaTransaction = new PostgreSqlTheaTransaction(this, transaction)
+        {
+            OnCreated = this.OnTransactionCreated,
+            OnCompleted = this.OnTransactionCompleted
+        };
+        this.OnTransactionCreated?.Invoke(new TransactionEventArgs
+        {
+            DbKey = this.DbKey,
+            TransactionId = theaTransaction.TransactionId,
+            ConnectionId = this.ConnectionId,
+            ConnectionString = this.ConnectionString,
+            CreatedAt = DateTime.Now
+        });
+        return theaTransaction;
     }
-    public ITheaTransaction BeginTransaction(IsolationLevel il)
-    {
-        var transaction = this.connection.BeginTransaction(il);
-        return new PostgreSqlTheaTransaction(this, transaction);
-    }
-#if NETSTANDARD2_1_OR_GREATER
+#if NETSTANDARD2_1_OR_GREATER || NET3_0_OR_GREATER
     public async ValueTask<ITheaTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
     {
         var transaction = await this.connection.BeginTransactionAsync(cancellationToken);
-        return new PostgreSqlTheaTransaction(this, transaction);
-    }
-    public async ValueTask<ITheaTransaction> BeginTransactionAsync(IsolationLevel isolationLevel, CancellationToken cancellationToken = default)
-    {
-        var transaction = await this.connection.BeginTransactionAsync(isolationLevel, cancellationToken);
-        return new PostgreSqlTheaTransaction(this, transaction);
+        var theaTransaction = new PostgreSqlTheaTransaction(this, transaction)
+        {
+            OnCreated = this.OnTransactionCreated,
+            OnCompleted = this.OnTransactionCompleted
+        };
+        this.OnTransactionCreated?.Invoke(new TransactionEventArgs
+        {
+            DbKey = this.DbKey,
+            TransactionId = theaTransaction.TransactionId,
+            ConnectionId = this.ConnectionId,
+            ConnectionString = this.ConnectionString,
+            CreatedAt = DateTime.Now
+        });
+        return theaTransaction;
     }
 #else
     public ValueTask<ITheaTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
     {
-        var transaction = this.connection.BeginTransaction();
-        return new ValueTask<ITheaTransaction>(new PostgreSqlTheaTransaction(this, transaction));
-    }
-    public ValueTask<ITheaTransaction> BeginTransactionAsync(IsolationLevel isolationLevel = IsolationLevel.Unspecified, CancellationToken cancellationToken = default)
-    {
-        var transaction = this.connection.BeginTransaction(isolationLevel);
-        return new ValueTask<ITheaTransaction>(new PostgreSqlTheaTransaction(this, transaction));
-    }
-#endif
-    public void EnlistTransaction(System.Transactions.Transaction transaction)
-        => this.connection.EnlistTransaction(transaction);
-    public DataTable GetSchema() => this.connection.GetSchema();
-    public DataTable GetSchema(string collectionName) => this.connection.GetSchema(collectionName);
-    public DataTable GetSchema(string collectionName, string[] restrictionValues = default)
-        => this.connection.GetSchema(collectionName, restrictionValues);
-
-#if NETSTANDARD2_1_OR_GREATER
-    public Task<DataTable> GetSchemaAsync(CancellationToken cancellationToken = default)
-        => this.connection.GetSchemaAsync(cancellationToken);
-    public Task<DataTable> GetSchemaAsync(string collectionName, CancellationToken cancellationToken = default)
-        => this.connection.GetSchemaAsync(collectionName, cancellationToken);
-    public Task<DataTable> GetSchemaAsync(string collectionName, string[] restrictionValues, CancellationToken cancellationToken = default)
-        => this.connection.GetSchemaAsync(collectionName, restrictionValues, cancellationToken);
-#else
-    public Task<DataTable> GetSchemaAsync(CancellationToken cancellationToken = default)
-    {
-        var schema = this.connection.GetSchema("MetaDataCollections", null);
-        return Task.FromResult(schema);
-    }
-    public Task<DataTable> GetSchemaAsync(string collectionName, CancellationToken cancellationToken = default)
-    {
-        var schema = this.connection.GetSchema(collectionName, null);
-        return Task.FromResult(schema);
-    }
-    public Task<DataTable> GetSchemaAsync(string collectionName, string[] restrictionValues, CancellationToken cancellationToken = default)
-    {
-        var schema = this.connection.GetSchema(collectionName, restrictionValues);
-        return Task.FromResult(schema);
+        ValueTask<ITheaTransaction> result = default;
+        if (cancellationToken.IsCancellationRequested)
+            result = new ValueTask<ITheaTransaction>(Task.FromCanceled<ITheaTransaction>(cancellationToken));
+        else
+        {
+            PostgreSqlTheaTransaction theaTransaction = null;
+            try
+            {
+                var transaction = this.connection.BeginTransaction();
+                theaTransaction = new PostgreSqlTheaTransaction(this, transaction)
+                {
+                    OnCreated = this.OnTransactionCreated,
+                    OnCompleted = this.OnTransactionCompleted
+                };
+                result = new ValueTask<ITheaTransaction>(theaTransaction);
+            }
+            catch (Exception e)
+            {
+                result = new ValueTask<ITheaTransaction>(Task.FromException<ITheaTransaction>(e));
+            }
+            this.OnTransactionCreated?.Invoke(new TransactionEventArgs
+            {
+                DbKey = this.DbKey,
+                TransactionId = theaTransaction.TransactionId,
+                ConnectionId = this.ConnectionId,
+                ConnectionString = this.ConnectionString,
+                CreatedAt = DateTime.Now
+            });
+        }
+        return result;
     }
 #endif
     public void Dispose() => this.connection.Dispose();

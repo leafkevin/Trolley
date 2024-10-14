@@ -181,7 +181,7 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                 }
                 break;
         }
-        command.Parameters.Clear();
+
         command.Dispose();
         if (isNeedClose) connection.Close();
         return result;
@@ -256,7 +256,7 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                 }
                 break;
         }
-        command.Parameters.Clear();
+
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         return result;

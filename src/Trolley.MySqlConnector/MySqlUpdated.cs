@@ -185,7 +185,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                 }
                 break;
         }
-        command.Parameters.Clear();
+
         command.Dispose();
         if (isNeedClose) connection.Close();
         return result;
@@ -337,7 +337,6 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                         result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkUpdate, cancellationToken);
                     }
                     builder.Clear();
-                    builder = null;
                 }
                 break;
             default:
@@ -353,7 +352,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                 }
                 break;
         }
-        command.Parameters.Clear();
+
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         return result;

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -187,7 +188,7 @@ public class SqlServerBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, I
                 else result = await dialectOrmProvider.ExecuteBulkCopyAsync(false, this.DbContext, sqlVisitor, connection, insertObjType, insertObjs, timeoutSeconds, cancellationToken);
                 break;
             case ActionMode.Bulk:
-                var sqlBuilder = new StringBuilder();
+                var builder = new StringBuilder();
                 (isNeedSplit, var tableName, insertObjs, var bulkCount,
                     var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command.BaseCommand);
                 async Task<int> executor(string tableName, IEnumerable insertObjs)
@@ -195,15 +196,15 @@ public class SqlServerBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, I
                     int count = 0, index = 0;
                     foreach (var insertObj in insertObjs)
                     {
-                        if (index > 0) sqlBuilder.Append(',');
-                        loopSqlSetter.Invoke(command.Parameters, sqlBuilder, insertObj, index.ToString());
+                        if (index > 0) builder.Append(',');
+                        loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
                         if (index >= bulkCount)
                         {
-                            command.CommandText = sqlBuilder.ToString();
+                            command.CommandText = builder.ToString();
                             count += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
-                            sqlBuilder.Clear();
+                            builder.Clear();
                             command.Parameters.Clear();
-                            firstSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName);
+                            firstSqlSetter.Invoke(command.Parameters, builder, tableName);
                             index = 0;
                             continue;
                         }
@@ -211,9 +212,9 @@ public class SqlServerBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, I
                     }
                     if (index > 0)
                     {
-                        command.CommandText = sqlBuilder.ToString();
+                        command.CommandText = builder.ToString();
                         count += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
-                        sqlBuilder.Clear();
+                        builder.Clear();
                         command.Parameters.Clear();
                     }
                     return count;
@@ -224,17 +225,16 @@ public class SqlServerBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, I
                     var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
                     foreach (var tabledInsertObj in tabledInsertObjs)
                     {
-                        firstSqlSetter.Invoke(command.Parameters, sqlBuilder, tabledInsertObj.Key);
+                        firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
                         result += await executor(tabledInsertObj.Key, tabledInsertObj.Value);
                     }
                 }
                 else
                 {
-                    firstSqlSetter.Invoke(command.Parameters, sqlBuilder, tableName);
+                    firstSqlSetter.Invoke(command.Parameters, builder, tableName);
                     result = await executor(tableName, insertObjs);
                 }
-                sqlBuilder.Clear();
-                sqlBuilder = null;
+                builder.Clear();
                 break;
             default:
                 //默认单条
@@ -243,7 +243,7 @@ public class SqlServerBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, I
                 result = await command.ExecuteNonQueryAsync(CommandSqlType.Insert, cancellationToken);
                 break;
         }
-        command.Parameters.Clear();
+
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         return result;

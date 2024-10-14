@@ -36,7 +36,6 @@ public class FromCommand : QueryInternal, IFromCommand
         dbParameters.CopyTo(command.Parameters);
         connection.Open();
         var result = command.ExecuteNonQuery(CommandSqlType.Insert);
-        command.Parameters.Clear();
         command.Dispose();
         if (isNeedClose) connection.Close();
         return result;
@@ -51,7 +50,6 @@ public class FromCommand : QueryInternal, IFromCommand
         dbParameters.CopyTo(command.Parameters);
         await connection.OpenAsync(cancellationToken);
         var result = await command.ExecuteNonQueryAsync(CommandSqlType.Insert, cancellationToken);
-        command.Parameters.Clear();
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         return result;

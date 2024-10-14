@@ -10,8 +10,6 @@ namespace Trolley.Test.PostgreSql;
 
 public class UnitTest7 : UnitTestBase
 {
-    private static int connTotal = 0;
-    private static int connOpenTotal = 0;
     private readonly ITestOutputHelper output;
     public UnitTest7(ITestOutputHelper output)
     {
@@ -35,26 +33,36 @@ public class UnitTest7 : UnitTestBase
                     df.OnConnectionCreated += evt =>
                     {
                         Interlocked.Increment(ref connTotal);
-                        this.output.WriteLine($"{evt.ConnectionId} Created, Total:{Volatile.Read(ref connTotal)}");
+                        this.output.WriteLine($"Connection {evt.ConnectionId} Created, Total:{Volatile.Read(ref connTotal)}");
                     };
                     df.OnConnectionOpened += evt =>
                     {
                         Interlocked.Increment(ref connOpenTotal);
-                        this.output.WriteLine($"{evt.ConnectionId} Opened, Total:{Volatile.Read(ref connOpenTotal)}");
+                        this.output.WriteLine($"Connection {evt.ConnectionId} Opened, Total:{Volatile.Read(ref connOpenTotal)}");
                     };
                     df.OnConnectionClosed += evt =>
                     {
                         Interlocked.Decrement(ref connOpenTotal);
                         Interlocked.Decrement(ref connTotal);
-                        this.output.WriteLine($"{evt.ConnectionId} Closed, Total:{Volatile.Read(ref connOpenTotal)}");
+                        this.output.WriteLine($"Connection {evt.ConnectionId} Closed, Total:{Volatile.Read(ref connOpenTotal)}");
                     };
                     df.OnCommandExecuting += evt =>
                     {
-                        this.output.WriteLine($"{evt.SqlType} Begin, ConnectionString: {evt.ConnectionString},  Sql: {evt.Sql}");
+                        this.output.WriteLine($"{evt.SqlType} Begin, TransactionId:{evt.TransactionId} Sql: {evt.Sql}, Parameters: {evt.DbParameters.ToPostgreSqlParametersString()}");
                     };
                     df.OnCommandExecuted += evt =>
                     {
-                        this.output.WriteLine($"{evt.SqlType} End, ConnectionString: {evt.ConnectionString}, Elapsed: {evt.Elapsed} ms, Sql: {evt.Sql}");
+                        this.output.WriteLine($"{evt.SqlType} End, TransactionId:{evt.TransactionId} Elapsed: {evt.Elapsed} ms, Sql: {evt.Sql}, Parameters: {evt.DbParameters.ToPostgreSqlParametersString()}");
+                    };
+                    df.OnTransactionCreated += evt =>
+                    {
+                        Interlocked.Increment(ref tranTotal);
+                        this.output.WriteLine($"Transaction {evt.TransactionId} Created, Total:{Volatile.Read(ref tranTotal)}");
+                    };
+                    df.OnTransactionCompleted += evt =>
+                    {
+                        Interlocked.Decrement(ref tranTotal);
+                        this.output.WriteLine($"Transaction {evt.TransactionId} {evt.Action} Completed, Transaction Total:{Volatile.Read(ref tranTotal)}");
                     };
                 });
             return builder.Build();

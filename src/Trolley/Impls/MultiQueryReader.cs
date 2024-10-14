@@ -193,10 +193,9 @@ class MultiQueryReader : IMultiQueryReader
         }
         await this.reader.DisposeAsync();
         this.reader = null;
-        this.command.Parameters.Clear();
         await this.command.DisposeAsync();
         this.command = null;
-        if (this.isNeedClose && this.connection != null)
+        if (this.isNeedClose)
             await this.connection.CloseAsync();
     }
     private void NextReader()

@@ -372,20 +372,16 @@ class SqlServerTheaCommand : ITheaCommand
         return result;
     }
 
-    public void Prepare() => this.command.Prepare();
-    public Task PrepareAsync(CancellationToken cancellationToken = default)
-    {
-        this.command.Prepare();
-        return Task.CompletedTask;
-    }
     public void Dispose() => this.command.Dispose();
     public ValueTask DisposeAsync()
-#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-        => this.command.DisposeAsync();
-#else
     {
+        this.command.CommandText = null;
+        this.command.Parameters.Clear();
+#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+        return this.command.DisposeAsync();
+#else
         this.transaction.Dispose();
         return default;
-    }
 #endif
+    }
 }

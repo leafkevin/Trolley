@@ -6,6 +6,9 @@ namespace Trolley.Test;
 public class UnitTestBase
 {
     public IOrmDbFactory dbFactory;
+    public static int connTotal = 0;
+    public static int connOpenTotal = 0;
+    public static int tranTotal = 0;
 
     public void Initialize()
     {
@@ -426,7 +429,7 @@ public class UnitTestBase
             }
         });
         repository.Commit();
-    }
+    }    
     public interface IPassport
     {
         //只用于演示，实际使用中要与ASP.NET CORE中间件或是IOC组件相结合，赋值此对象
@@ -437,5 +440,5 @@ public class UnitTestBase
     {
         public string TenantId { get; set; }
         public string UserId { get; set; }
-    }   
+    }
 }
