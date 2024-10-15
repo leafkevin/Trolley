@@ -87,8 +87,7 @@ public sealed class DbContext
         {
             DbKey = this.DbKey,
             ConnectionId = connection.ConnectionId,
-            ConnectionString = connectionString,
-            CreatedAt = DateTime.Now
+            ConnectionString = connectionString
         });
         return connection;
     }

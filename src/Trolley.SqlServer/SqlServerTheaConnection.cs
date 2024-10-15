@@ -45,16 +45,14 @@ class SqlServerTheaConnection : ITheaConnection
         {
             DbKey = this.DbKey,
             ConnectionId = this.ConnectionId,
-            ConnectionString = this.ConnectionString,
-            CreatedAt = DateTime.Now
+            ConnectionString = this.ConnectionString
         });
         this.connection.Close();
         this.OnClosed?.Invoke(new ConectionEventArgs
         {
             DbKey = this.DbKey,
             ConnectionId = this.ConnectionId,
-            ConnectionString = this.ConnectionString,
-            CreatedAt = DateTime.Now
+            ConnectionString = this.ConnectionString
         });
     }
 #if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
@@ -72,8 +70,7 @@ class SqlServerTheaConnection : ITheaConnection
         {
             DbKey = this.DbKey,
             ConnectionId = this.ConnectionId,
-            ConnectionString = this.ConnectionString,
-            CreatedAt = DateTime.Now
+            ConnectionString = this.ConnectionString
         });
 #if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
         await this.connection.CloseAsync();
@@ -84,8 +81,7 @@ class SqlServerTheaConnection : ITheaConnection
         {
             DbKey = this.DbKey,
             ConnectionId = this.ConnectionId,
-            ConnectionString = this.ConnectionString,
-            CreatedAt = DateTime.Now
+            ConnectionString = this.ConnectionString
         });
 #if !NETCOREAPP3_0_OR_GREATER && !NETSTANDARD2_1_OR_GREATER
         return Task.CompletedTask;
@@ -101,8 +97,7 @@ class SqlServerTheaConnection : ITheaConnection
             {
                 DbKey = this.DbKey,
                 ConnectionId = this.ConnectionId,
-                ConnectionString = this.ConnectionString,
-                CreatedAt = DateTime.Now
+                ConnectionString = this.ConnectionString
             });
         }
         if (this.State == ConnectionState.Closed)
@@ -113,16 +108,14 @@ class SqlServerTheaConnection : ITheaConnection
             {
                 DbKey = this.DbKey,
                 ConnectionId = this.ConnectionId,
-                ConnectionString = this.ConnectionString,
-                CreatedAt = DateTime.Now
+                ConnectionString = this.ConnectionString
             });
             this.connection.Open();
             this.OnOpened?.Invoke(new ConectionEventArgs
             {
                 DbKey = this.DbKey,
                 ConnectionId = this.ConnectionId,
-                ConnectionString = this.ConnectionString,
-                CreatedAt = DateTime.Now
+                ConnectionString = this.ConnectionString
             });
         }
     }
@@ -139,16 +132,14 @@ class SqlServerTheaConnection : ITheaConnection
             {
                 DbKey = this.DbKey,
                 ConnectionId = this.ConnectionId,
-                ConnectionString = this.ConnectionString,
-                CreatedAt = DateTime.Now
+                ConnectionString = this.ConnectionString
             });
             await this.connection.OpenAsync(cancellationToken);
             this.OnOpened?.Invoke(new ConectionEventArgs
             {
                 DbKey = this.DbKey,
                 ConnectionId = this.ConnectionId,
-                ConnectionString = this.ConnectionString,
-                CreatedAt = DateTime.Now
+                ConnectionString = this.ConnectionString
             });
         }
     }
@@ -172,8 +163,7 @@ class SqlServerTheaConnection : ITheaConnection
             DbKey = this.DbKey,
             TransactionId = theaTransaction.TransactionId,
             ConnectionId = this.ConnectionId,
-            ConnectionString = this.ConnectionString,
-            CreatedAt = DateTime.Now
+            ConnectionString = this.ConnectionString
         });
         return theaTransaction;
     }
@@ -194,8 +184,7 @@ class SqlServerTheaConnection : ITheaConnection
                 DbKey = this.DbKey,
                 TransactionId = theaTransaction.TransactionId,
                 ConnectionId = this.ConnectionId,
-                ConnectionString = this.ConnectionString,
-                CreatedAt = DateTime.Now
+                ConnectionString = this.ConnectionString
             });
             return new ValueTask<ITheaTransaction>(new SqlServerTheaTransaction(this, transaction));
         }

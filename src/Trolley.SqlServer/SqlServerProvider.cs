@@ -476,8 +476,7 @@ on e.id = c.default_object_id left join sys.index_columns f on f.object_id=a.obj
         {
             DbKey = dbContext.DbKey,
             ConnectionString = connection.ConnectionString,
-            SqlType = CommandSqlType.BulkCopyInsert,
-            CreatedAt = createdAt
+            SqlType = CommandSqlType.BulkCopyInsert
         });
         int recordsAffected = 0;
         bool isSuccess = true;
@@ -502,8 +501,7 @@ on e.id = c.default_object_id left join sys.index_columns f on f.object_id=a.obj
                 SqlType = CommandSqlType.BulkCopyInsert,
                 IsSuccess = isSuccess,
                 Exception = exception,
-                Elapsed = (int)elapsed,
-                CreatedAt = createdAt
+                Elapsed = (int)elapsed
             });
         }
         if (!isSuccess)
@@ -536,8 +534,7 @@ on e.id = c.default_object_id left join sys.index_columns f on f.object_id=a.obj
         {
             DbKey = dbContext.DbKey,
             ConnectionString = connection.ConnectionString,
-            SqlType = CommandSqlType.BulkCopyInsert,
-            CreatedAt = createdAt
+            SqlType = CommandSqlType.BulkCopyInsert
         });
         int recordsAffected = 0;
         bool isSuccess = true;
@@ -562,8 +559,7 @@ on e.id = c.default_object_id left join sys.index_columns f on f.object_id=a.obj
                 SqlType = CommandSqlType.BulkCopyInsert,
                 IsSuccess = isSuccess,
                 Exception = exception,
-                Elapsed = (int)elapsed,
-                CreatedAt = createdAt
+                Elapsed = (int)elapsed
             });
         }
         if (!isSuccess)

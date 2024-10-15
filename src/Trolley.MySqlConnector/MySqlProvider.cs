@@ -457,8 +457,7 @@ public partial class MySqlProvider : BaseOrmProvider
         {
             DbKey = dbContext.DbKey,
             ConnectionString = connection.ConnectionString,
-            SqlType = CommandSqlType.BulkCopyInsert,
-            CreatedAt = createdAt
+            SqlType = CommandSqlType.BulkCopyInsert
         });
         int recordsAffected = 0;
         bool isSuccess = true;
@@ -483,8 +482,7 @@ public partial class MySqlProvider : BaseOrmProvider
                 SqlType = CommandSqlType.BulkCopyInsert,
                 IsSuccess = isSuccess,
                 Exception = exception,
-                Elapsed = (int)elapsed,
-                CreatedAt = createdAt
+                Elapsed = (int)elapsed
             });
         }
         if (!isSuccess)
@@ -517,8 +515,7 @@ public partial class MySqlProvider : BaseOrmProvider
         {
             DbKey = dbContext.DbKey,
             ConnectionString = connection.ConnectionString,
-            SqlType = CommandSqlType.BulkCopyInsert,
-            CreatedAt = createdAt
+            SqlType = CommandSqlType.BulkCopyInsert
         });
         int recordsAffected = 0;
         bool isSuccess = true;
@@ -543,8 +540,7 @@ public partial class MySqlProvider : BaseOrmProvider
                 SqlType = CommandSqlType.BulkCopyInsert,
                 IsSuccess = isSuccess,
                 Exception = exception,
-                Elapsed = (int)elapsed,
-                CreatedAt = createdAt
+                Elapsed = (int)elapsed
             });
         }
         if (!isSuccess)

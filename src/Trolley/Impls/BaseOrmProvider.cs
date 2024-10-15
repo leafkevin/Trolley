@@ -737,14 +737,14 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                     if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                     {
                         typedValueExpr = Expression.Convert(valueExpr, underlyingType);
-                        methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.ToUtc), BindingFlags.NonPublic | BindingFlags.Static, null, [underlyingType], null);
+                        methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.ToUtc), BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static, null, [underlyingType], null);
                         typedValueExpr = Expression.Call(methodInfo, typedValueExpr);
                         typedValueExpr = Expression.Convert(typedValueExpr, typeof(object));
                     }
                     else if (options.DefaultDateTimeKind == DateTimeKind.Local)
                     {
                         typedValueExpr = Expression.Convert(valueExpr, underlyingType);
-                        methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.ToLocal), BindingFlags.NonPublic | BindingFlags.Static, null, [underlyingType], null);
+                        methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.ToLocal), BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static, null, [underlyingType], null);
                         typedValueExpr = Expression.Call(methodInfo, typedValueExpr);
                         typedValueExpr = Expression.Convert(typedValueExpr, typeof(object));
                     }
@@ -1570,7 +1570,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                             else
                             {
                                 if (options.DefaultDateTimeKind == DateTimeKind.Utc)
-                                { 
+                                {
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return TimeOnly.MinValue;
@@ -1600,7 +1600,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                             if (isNullableType)
                             {
                                 if (options.DefaultDateTimeKind == DateTimeKind.Utc)
-                                {                                    
+                                {
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return null;

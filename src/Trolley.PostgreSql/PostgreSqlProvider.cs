@@ -554,8 +554,7 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
         {
             DbKey = dbContext.DbKey,
             ConnectionString = connection.ConnectionString,
-            SqlType = CommandSqlType.BulkCopyInsert,
-            CreatedAt = createdAt
+            SqlType = CommandSqlType.BulkCopyInsert
         });
         int recordsAffected = 0;
         bool isSuccess = true;
@@ -590,8 +589,7 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
                 SqlType = CommandSqlType.BulkCopyInsert,
                 IsSuccess = isSuccess,
                 Exception = exception,
-                Elapsed = (int)elapsed,
-                CreatedAt = createdAt
+                Elapsed = (int)elapsed
             });
             builder.Clear();
         }
@@ -628,8 +626,7 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
         {
             DbKey = dbContext.DbKey,
             ConnectionString = connection.ConnectionString,
-            SqlType = CommandSqlType.BulkCopyInsert,
-            CreatedAt = createdAt
+            SqlType = CommandSqlType.BulkCopyInsert
         });
         int recordsAffected = 0;
         bool isSuccess = true;
@@ -664,8 +661,7 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
                 SqlType = CommandSqlType.BulkCopyInsert,
                 IsSuccess = isSuccess,
                 Exception = exception,
-                Elapsed = (int)elapsed,
-                CreatedAt = createdAt
+                Elapsed = (int)elapsed
             });
             builder.Clear();
         }

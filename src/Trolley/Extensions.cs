@@ -71,9 +71,7 @@ public static class Extensions
         }
         return mapper;
     }
-    public static T Parse<T>(this ITypeHandler typeHandler, IOrmProvider ormProvider, object value)
-        => (T)typeHandler.Parse(ormProvider, typeof(T), value);
-    public static bool IsNullableType(this Type type, out Type underlyingType)
+    internal static bool IsNullableType(this Type type, out Type underlyingType)
     {
         if (type.IsValueType)
         {
@@ -88,8 +86,8 @@ public static class Extensions
         underlyingType = type;
         return false;
     }
-    public static Type ToUnderlyingType(this Type type) => Nullable.GetUnderlyingType(type) ?? type;
-    public static bool IsEnumType(this Type type, out Type underlyingType, out Type enumUnderlyingType)
+    internal static Type ToUnderlyingType(this Type type) => Nullable.GetUnderlyingType(type) ?? type;
+    internal static bool IsEnumType(this Type type, out Type underlyingType, out Type enumUnderlyingType)
     {
         type.IsNullableType(out underlyingType);
         if (underlyingType.IsEnum)

@@ -69,8 +69,7 @@ class SqlServerTheaCommand : ITheaCommand
             Sql = this.CommandText,
             DbParameters = this.Parameters,
             Index = this.index,
-            SqlType = sqlType,
-            CreatedAt = createdAt
+            SqlType = sqlType
         });
         int recordsAffected = 0;
         bool isSuccess = true;
@@ -98,8 +97,7 @@ class SqlServerTheaCommand : ITheaCommand
                 SqlType = sqlType,
                 IsSuccess = isSuccess,
                 Exception = exception,
-                Elapsed = (int)elapsed,
-                CreatedAt = createdAt
+                Elapsed = (int)elapsed
             });
         }
         if (!isSuccess)
@@ -121,8 +119,7 @@ class SqlServerTheaCommand : ITheaCommand
             Sql = this.CommandText,
             DbParameters = this.Parameters,
             Index = this.index,
-            SqlType = sqlType,
-            CreatedAt = createdAt
+            SqlType = sqlType
         });
         int recordsAffected = 0;
         bool isSuccess = true;
@@ -150,8 +147,7 @@ class SqlServerTheaCommand : ITheaCommand
                 SqlType = sqlType,
                 IsSuccess = isSuccess,
                 Exception = exception,
-                Elapsed = (int)elapsed,
-                CreatedAt = createdAt
+                Elapsed = (int)elapsed
             });
         }
         if (!isSuccess)
@@ -175,8 +171,7 @@ class SqlServerTheaCommand : ITheaCommand
             Sql = this.CommandText,
             DbParameters = this.Parameters,
             Index = this.index,
-            SqlType = sqlType,
-            CreatedAt = createdAt
+            SqlType = sqlType
         });
         SqlDataReader reader = null;
         bool isSuccess = true;
@@ -204,8 +199,7 @@ class SqlServerTheaCommand : ITheaCommand
                 SqlType = sqlType,
                 IsSuccess = isSuccess,
                 Exception = exception,
-                Elapsed = (int)elapsed,
-                CreatedAt = createdAt
+                Elapsed = (int)elapsed
             });
         }
         if (!isSuccess)
@@ -227,8 +221,7 @@ class SqlServerTheaCommand : ITheaCommand
             Sql = this.CommandText,
             DbParameters = this.Parameters,
             Index = this.index,
-            SqlType = sqlType,
-            CreatedAt = createdAt
+            SqlType = sqlType
         });
         SqlDataReader reader = null;
         bool isSuccess = true;
@@ -256,8 +249,7 @@ class SqlServerTheaCommand : ITheaCommand
                 SqlType = sqlType,
                 IsSuccess = isSuccess,
                 Exception = exception,
-                Elapsed = (int)elapsed,
-                CreatedAt = createdAt
+                Elapsed = (int)elapsed
             });
         }
         if (!isSuccess)
@@ -279,8 +271,7 @@ class SqlServerTheaCommand : ITheaCommand
             Sql = this.CommandText,
             DbParameters = this.Parameters,
             Index = this.index,
-            SqlType = sqlType,
-            CreatedAt = createdAt
+            SqlType = sqlType
         });
         object result = null;
         bool isSuccess = true;
@@ -308,8 +299,7 @@ class SqlServerTheaCommand : ITheaCommand
                 SqlType = sqlType,
                 IsSuccess = isSuccess,
                 Exception = exception,
-                Elapsed = (int)elapsed,
-                CreatedAt = createdAt
+                Elapsed = (int)elapsed
             });
         }
         if (!isSuccess)
@@ -331,8 +321,7 @@ class SqlServerTheaCommand : ITheaCommand
             Sql = this.CommandText,
             DbParameters = this.Parameters,
             Index = this.index,
-            SqlType = sqlType,
-            CreatedAt = createdAt
+            SqlType = sqlType
         });
         object result = null;
         bool isSuccess = true;
@@ -360,8 +349,7 @@ class SqlServerTheaCommand : ITheaCommand
                 SqlType = sqlType,
                 IsSuccess = isSuccess,
                 Exception = exception,
-                Elapsed = (int)elapsed,
-                CreatedAt = createdAt
+                Elapsed = (int)elapsed
             });
         }
         if (!isSuccess)
@@ -371,7 +359,6 @@ class SqlServerTheaCommand : ITheaCommand
         }
         return result;
     }
-
     public void Dispose()
     {
         this.command.CommandText = null;

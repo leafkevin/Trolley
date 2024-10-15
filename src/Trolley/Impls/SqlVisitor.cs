@@ -943,13 +943,6 @@ public class SqlVisitor : ISqlVisitor
                     sqlSegment = this.VisitAndDeferred(sqlSegment.Next(methodCallExpr.Arguments[0]));
                 }
                 break;
-            case "CastAsString":
-                var fieldValueSegment = this.Visit(new SqlFieldSegment { Expression = methodCallExpr.Arguments[0] });
-                var characterSetOrCollation = this.Evaluate<string>(methodCallExpr.Arguments[1]);
-                var body = this.GetQuotedValue(fieldValueSegment);
-                body = this.OrmProvider.CastTo(typeof(string), body, characterSetOrCollation);
-                sqlSegment.Change(body, false, true);
-                break;
             case "ToParameter":
                 sqlSegment.IsParameterized = true;
                 sqlSegment.ParameterName = this.Evaluate<string>(methodCallExpr.Arguments[1]);

@@ -43,16 +43,14 @@ class PostgreSqlTheaConnection : ITheaConnection
         {
             DbKey = this.DbKey,
             ConnectionId = this.ConnectionId,
-            ConnectionString = this.ConnectionString,
-            CreatedAt = DateTime.Now
+            ConnectionString = this.ConnectionString
         });
         this.connection.Close();
         this.OnClosed?.Invoke(new ConectionEventArgs
         {
             DbKey = this.DbKey,
             ConnectionId = this.ConnectionId,
-            ConnectionString = this.ConnectionString,
-            CreatedAt = DateTime.Now
+            ConnectionString = this.ConnectionString
         });
     }
     public async Task CloseAsync()
@@ -62,16 +60,14 @@ class PostgreSqlTheaConnection : ITheaConnection
         {
             DbKey = this.DbKey,
             ConnectionId = this.ConnectionId,
-            ConnectionString = this.ConnectionString,
-            CreatedAt = DateTime.Now
+            ConnectionString = this.ConnectionString
         });
         await this.connection.CloseAsync();
         this.OnClosed?.Invoke(new ConectionEventArgs
         {
             DbKey = this.DbKey,
             ConnectionId = this.ConnectionId,
-            ConnectionString = this.ConnectionString,
-            CreatedAt = DateTime.Now
+            ConnectionString = this.ConnectionString
         });
     }
     public void Open()
@@ -87,16 +83,14 @@ class PostgreSqlTheaConnection : ITheaConnection
             {
                 DbKey = this.DbKey,
                 ConnectionId = this.ConnectionId,
-                ConnectionString = this.ConnectionString,
-                CreatedAt = DateTime.Now
+                ConnectionString = this.ConnectionString
             });
             this.connection.Open();
             this.OnOpened?.Invoke(new ConectionEventArgs
             {
                 DbKey = this.DbKey,
                 ConnectionId = this.ConnectionId,
-                ConnectionString = this.ConnectionString,
-                CreatedAt = DateTime.Now
+                ConnectionString = this.ConnectionString
             });
         }
     }
@@ -113,16 +107,14 @@ class PostgreSqlTheaConnection : ITheaConnection
             {
                 DbKey = this.DbKey,
                 ConnectionId = this.ConnectionId,
-                ConnectionString = this.ConnectionString,
-                CreatedAt = DateTime.Now
+                ConnectionString = this.ConnectionString
             });
             await this.connection.OpenAsync(cancellationToken);
             this.OnOpened?.Invoke(new ConectionEventArgs
             {
                 DbKey = this.DbKey,
                 ConnectionId = this.ConnectionId,
-                ConnectionString = this.ConnectionString,
-                CreatedAt = DateTime.Now
+                ConnectionString = this.ConnectionString
             });
         }
     }
@@ -147,8 +139,7 @@ class PostgreSqlTheaConnection : ITheaConnection
             DbKey = this.DbKey,
             TransactionId = theaTransaction.TransactionId,
             ConnectionId = this.ConnectionId,
-            ConnectionString = this.ConnectionString,
-            CreatedAt = DateTime.Now
+            ConnectionString = this.ConnectionString
         });
         return theaTransaction;
     }
@@ -166,8 +157,7 @@ class PostgreSqlTheaConnection : ITheaConnection
             DbKey = this.DbKey,
             TransactionId = theaTransaction.TransactionId,
             ConnectionId = this.ConnectionId,
-            ConnectionString = this.ConnectionString,
-            CreatedAt = DateTime.Now
+            ConnectionString = this.ConnectionString
         });
         return theaTransaction;
     }
@@ -199,8 +189,7 @@ class PostgreSqlTheaConnection : ITheaConnection
                 DbKey = this.DbKey,
                 TransactionId = theaTransaction.TransactionId,
                 ConnectionId = this.ConnectionId,
-                ConnectionString = this.ConnectionString,
-                CreatedAt = DateTime.Now
+                ConnectionString = this.ConnectionString
             });
         }
         return result;

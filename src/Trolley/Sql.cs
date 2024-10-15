@@ -63,18 +63,6 @@ public static class Sql
         throw new NotImplementedException();
     }
     /// <summary>
-    /// 将当前字段值强制转换为字符串，并使用characterSetOrCollation设置的字符集和排序规则，MySql、Mariadb数据库专用，如: CHARACTER SET utf8mb4，或是COLLATE utf8mb4_unicode_ci，或是CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
-    /// </summary>
-    /// <typeparam name="TField">字段类型</typeparam>
-    /// <param name="fieldValue"></param>
-    /// <param name="characterSetOrCollation"></param>
-    /// <returns></returns>
-    /// <exception cref="NotImplementedException"></exception>
-    public static string CastAsString<TField>(this TField fieldValue, string characterSetOrCollation)
-    {
-        throw new NotImplementedException();
-    }
-    /// <summary>
     /// 数据分组后，把字段field的多行数据，用separator字符分割拼接在一起，行转列操作
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>

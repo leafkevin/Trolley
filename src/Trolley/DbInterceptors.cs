@@ -34,7 +34,6 @@ public class ConectionEventArgs : EventArgs
     public string ConnectionId { get; set; }
     public string DbKey { get; set; }
     public string ConnectionString { get; set; }
-    public DateTime CreatedAt { get; set; }
 }
 public class CommandEventArgs : EventArgs
 {
@@ -47,7 +46,6 @@ public class CommandEventArgs : EventArgs
     public int Index { get; set; }
     public string Sql { get; set; }
     public IDataParameterCollection DbParameters { get; set; }
-    public DateTime CreatedAt { get; set; }
 }
 public class CommandCompletedEventArgs : CommandEventArgs
 {
@@ -61,7 +59,6 @@ public class TransactionEventArgs : EventArgs
     public string ConnectionId { get; set; }
     public string DbKey { get; set; }
     public string ConnectionString { get; set; }
-    public DateTime CreatedAt { get; set; }
 }
 public enum TransactionAction
 {

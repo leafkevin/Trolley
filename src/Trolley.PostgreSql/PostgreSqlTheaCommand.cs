@@ -65,8 +65,7 @@ class PostgreSqlTheaCommand : ITheaCommand
             Sql = this.CommandText,
             DbParameters = this.Parameters,
             Index = this.index,
-            SqlType = sqlType,
-            CreatedAt = createdAt
+            SqlType = sqlType
         });
         int recordsAffected = 0;
         bool isSuccess = true;
@@ -96,8 +95,7 @@ class PostgreSqlTheaCommand : ITheaCommand
                 SqlType = sqlType,
                 IsSuccess = isSuccess,
                 Exception = exception,
-                Elapsed = (int)elapsed,
-                CreatedAt = createdAt
+                Elapsed = (int)elapsed
             });
         }
         if (!isSuccess)
@@ -122,8 +120,7 @@ class PostgreSqlTheaCommand : ITheaCommand
             Sql = this.CommandText,
             DbParameters = this.Parameters,
             Index = this.index,
-            SqlType = sqlType,
-            CreatedAt = createdAt
+            SqlType = sqlType
         });
         int recordsAffected = 0;
         bool isSuccess = true;
@@ -153,8 +150,7 @@ class PostgreSqlTheaCommand : ITheaCommand
                 SqlType = sqlType,
                 IsSuccess = isSuccess,
                 Exception = exception,
-                Elapsed = (int)elapsed,
-                CreatedAt = createdAt
+                Elapsed = (int)elapsed
             });
         }
         if (!isSuccess)
@@ -180,8 +176,7 @@ class PostgreSqlTheaCommand : ITheaCommand
             Sql = this.CommandText,
             DbParameters = this.Parameters,
             Index = this.index,
-            SqlType = sqlType,
-            CreatedAt = createdAt
+            SqlType = sqlType
         });
         NpgsqlDataReader reader = null;
         bool isSuccess = true;
@@ -211,8 +206,7 @@ class PostgreSqlTheaCommand : ITheaCommand
                 SqlType = sqlType,
                 IsSuccess = isSuccess,
                 Exception = exception,
-                Elapsed = (int)elapsed,
-                CreatedAt = createdAt
+                Elapsed = (int)elapsed
             });
         }
         if (!isSuccess)
@@ -237,8 +231,7 @@ class PostgreSqlTheaCommand : ITheaCommand
             Sql = this.CommandText,
             DbParameters = this.Parameters,
             Index = this.index,
-            SqlType = sqlType,
-            CreatedAt = createdAt
+            SqlType = sqlType
         });
         NpgsqlDataReader reader = null;
         bool isSuccess = true;
@@ -268,8 +261,7 @@ class PostgreSqlTheaCommand : ITheaCommand
                 SqlType = sqlType,
                 IsSuccess = isSuccess,
                 Exception = exception,
-                Elapsed = (int)elapsed,
-                CreatedAt = createdAt
+                Elapsed = (int)elapsed
             });
         }
         if (!isSuccess)
@@ -294,8 +286,7 @@ class PostgreSqlTheaCommand : ITheaCommand
             Sql = this.CommandText,
             DbParameters = this.Parameters,
             Index = this.index,
-            SqlType = sqlType,
-            CreatedAt = createdAt
+            SqlType = sqlType
         });
         object result = null;
         bool isSuccess = true;
@@ -325,8 +316,7 @@ class PostgreSqlTheaCommand : ITheaCommand
                 SqlType = sqlType,
                 IsSuccess = isSuccess,
                 Exception = exception,
-                Elapsed = (int)elapsed,
-                CreatedAt = createdAt
+                Elapsed = (int)elapsed
             });
         }
         if (!isSuccess)
@@ -351,8 +341,7 @@ class PostgreSqlTheaCommand : ITheaCommand
             Sql = this.CommandText,
             DbParameters = this.Parameters,
             Index = this.index,
-            SqlType = sqlType,
-            CreatedAt = createdAt
+            SqlType = sqlType
         });
         object result = null;
         bool isSuccess = true;
@@ -382,8 +371,7 @@ class PostgreSqlTheaCommand : ITheaCommand
                 SqlType = sqlType,
                 IsSuccess = isSuccess,
                 Exception = exception,
-                Elapsed = (int)elapsed,
-                CreatedAt = createdAt
+                Elapsed = (int)elapsed
             });
         }
         if (!isSuccess)
