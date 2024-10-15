@@ -7,7 +7,7 @@
 		<Authors>leaf kevin</Authors>
 		<Copyright>2022 leafkevin</Copyright>
 		<TargetFrameworks>netstandard2.0;netstandard2.1;net6.0;net7.0;net8.0</TargetFrameworks>
-		<Version>2.0.6</Version>
+		<Version>2.0.7</Version>
 		<LangVersion>12.0</LangVersion>
 		<PackageTags>orm;trolley;postgresql;npgsql</PackageTags>
 		<PublishRepositoryUrl>true</PublishRepositoryUrl>
@@ -29,6 +29,6 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<ProjectReference Include="..\Trolley\Trolley.csproj" />
-		<PackageReference Include="Npgsql" Version="8.0.4" />
+		<PackageReference Include="Npgsql" Version="8.0.5" />
 	</ItemGroup>
 </Project>
