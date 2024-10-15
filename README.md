@@ -4,8 +4,8 @@ Trolley - 一个轻量级高性能的.NET ORM框架
 
 框架特点
 ------------------------------------------------------------
-强类型的DDD仓储操作，基本可以不用写SQL，支持多种数据库终端，目前是在.NET 6 基础上开发的。
-目前支持：`MySql`,`PostgreSql`,`SqlSever`,其他的`OrmProvider`会稍后慢慢提供。
+强类型的DDD仓储操作，基本可以不用写SQL，支持多种数据库终端。
+目前支持：`MySql`,`Mariadb`,`PostgreSql`,`SqlSever`,其他的`OrmProvider`会稍后慢慢提供。
 
 支持`Page`分页查询  
 支持`Join`，`GroupBy`，`OrderBy`等操作  
@@ -2879,20 +2879,6 @@ DELETE FROM `sys_product` WHERE `Id` IN (@p0_m0,@p1_m0,@p2_m0,@p3_m0);INSERT INT
 
 
 
-
-### 命令超时时间
-`Timeout`方法设置超时时间，单位秒
-```csharp
-repository.Timeout(60);
-```
-### 参数化设置
-表达式解析中，所有变量都会参数化，常量不会参数化。如果设置为true，所有常量也将都会参数化
-```csharp
-repository.WithParameterized(true);
-```
-
-
-
 ### 分库分表支持
 `Trolley`对分库分表的支持，非常灵活，完全依赖规则，可以按租户、时间、租户+时间、任何自定义规则来分库分表。  
 在配置数据库时，调用`UseSharding`方法，实现分库分表规则的配置
@@ -3268,7 +3254,6 @@ var count = await repository.Create<User>()
 //有指定分表，根据租户ID 104，执行分表规则确定分表sys_user_104分表
 //INSERT INTO `sys_user_104` (`Id`,`TenantId`,`Name`,`Age`,`CompanyId`,`Gender`,`GuidField`,`SomeTimes`,`SourceType`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id,@TenantId,@Name,@Age,@CompanyId,@Gender,@GuidField,@SomeTimes,@SourceType,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)
 ```
-#### 
 
 
 
@@ -3353,9 +3338,10 @@ public Action<ConectionEventArgs> OnConnectionClosing { get; set; }
 public Action<ConectionEventArgs> OnConnectionClosed { get; set; }
 public Action<CommandEventArgs> OnCommandExecuting { get; set; }
 public Action<CommandCompletedEventArgs> OnCommandExecuted { get; set; }
-public Action<CommandCompletedEventArgs> OnCommandFailed { get; set; }
+public Action<TransactionEventArgs> OnTransactionCreated { get; set; }
+public Action<TransactionCompletedEventArgs> OnTransactionCompleted { get; set; }
 ```
-可以根据需要设置拦截处理程序，事件参数中的`ConnectionId`、`CommandId`是每次创建对象的的唯一ID，ConnectionId不一定是ADO.NET中真实的链接ID，可以跟踪到创建的每个链接、打开关闭状态
+可以根据需要设置拦截处理程序，事件参数中的`ConnectionId`、`CommandId`、`TransactionId`是每次创建对象的的唯一ID，可以根据这些ID跟踪连接、事务等相关状态，以及调用链等相关信息
 
 
 
