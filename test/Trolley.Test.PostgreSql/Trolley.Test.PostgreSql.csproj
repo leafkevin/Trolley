@@ -22,7 +22,7 @@
 		<ProjectReference Include="..\..\src\Trolley.PostgreSql\Trolley.PostgreSql.csproj" />
 		<ProjectReference Include="..\Trolley.Test\Trolley.Test.csproj" />
 	</ItemGroup>
-	<ItemGroup Condition="'$(TargetFramework)'=='netstandard2.0' OR '$(TargetFramework)'=='net462' OR '$(TargetFramework)'=='net471' OR '$(TargetFramework)'=='net472' OR '$(TargetFramework)'=='net48'">
+	<ItemGroup Condition="'$(TargetFramework)'=='net462'">
 		<PackageReference Include="IndexRange" Version="1.0.3" />
 	</ItemGroup>
 </Project>
