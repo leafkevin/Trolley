@@ -82,7 +82,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             builder.Append(this.UnionSql);
             sql = builder.ToString();
             builder.Clear();
-            builder = null;
             return sql;
         }
         var headSql = builder.ToString();
@@ -239,7 +238,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             builder.Append(this.UnionSql);
             sql = builder.ToString();
             builder.Clear();
-            builder = null;
             return sql;
         }
         var headSql = builder.ToString();
@@ -381,7 +379,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.SelfRefQueryObj = null;
         var sql = builder.ToString();
         builder.Clear();
-        builder = null;
         return sql;
     }
     public virtual void From(char tableAsStart = 'a', params Type[] entityTypes)
