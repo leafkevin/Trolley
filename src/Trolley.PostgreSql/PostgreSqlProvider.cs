@@ -150,7 +150,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
         castTos[typeof(DateTime?)] = "TIMESTAMP";
 #if NET6_0_OR_GREATER
         castTos[typeof(DateOnly?)] = "DATE";
-        castTos[typeof(TimeOnly?)] = "TIME";        
+        castTos[typeof(TimeOnly?)] = "TIME";
 #endif
         AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
     }
