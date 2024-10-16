@@ -24,7 +24,11 @@ public class User
     public Gender Gender { get; set; }
     public int Age { get; set; }
     public int CompanyId { get; set; }
+#if NET6_0_OR_GREATER
     public TimeOnly? SomeTimes { get; set; }
+#else
+    public TimeSpan? SomeTimes { get; set; }
+#endif
     public Guid? GuidField { get; set; }
     public UserSourceType? SourceType { get; set; }
     public bool IsEnabled { get; set; }
@@ -205,8 +209,16 @@ public class UpdateEntity
     public Gender EnumField { get; set; }
     public Guid GuidField { get; set; }
     public DateTime DateTimeField { get; set; }
+#if NET6_0_OR_GREATER
     public DateOnly DateOnlyField { get; set; }
+#else
+    public DateTime DateOnlyField { get; set; }
+#endif
     public DateTimeOffset DateTimeOffsetField { get; set; }
     public TimeSpan TimeSpanField { get; set; }
+#if NET6_0_OR_GREATER
     public TimeOnly TimeOnlyField { get; set; }
+#else
+    public TimeSpan TimeOnlyField { get; set; }
+#endif
 }

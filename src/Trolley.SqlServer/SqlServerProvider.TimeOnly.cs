@@ -175,6 +175,11 @@ partial class SqlServerProvider
                             return targetSegment.MergeValue(rightSegment, ((TimeOnly)targetSegment.Value).Add((TimeSpan)rightSegment.Value));
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
+                        if (rightSegment.IsConstant || rightSegment.IsVariable)
+                        {
+                            var timeSpan = (TimeSpan)rightSegment.Value;
+                            return targetSegment.Merge(rightSegment, $"CAST(DATEADD(MILLISECOND,{timeSpan.TotalMilliseconds},{targetArgument}) AS TIME)", false, true);
+                        }
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
                         return targetSegment.Merge(rightSegment, $"CAST(DATEADD(SECOND,DATEDIFF(SECOND,'00:00:00',{targetArgument})+DATEDIFF(SECOND,'00:00:00',{rightArgument}),'00:00:00') AS TIME)", false, true);
                     });

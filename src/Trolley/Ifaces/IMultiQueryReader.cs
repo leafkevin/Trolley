@@ -6,10 +6,7 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-public interface IMultiQueryReader : IDisposable
-#if !NET45
-    , IAsyncDisposable
-#endif
+public interface IMultiQueryReader : IDisposable, IAsyncDisposable
 {
     /// <summary>
     /// 读取单个T类型对象或值，记录不存在时返回T类型的默认值

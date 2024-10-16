@@ -369,12 +369,8 @@ public struct ObjectId : IComparable<ObjectId>, IEquatable<ObjectId>, IConvertib
     // internal static methods
     internal static long CalculateRandomValue()
     {
-#if NET472_OR_GREATER
-            var seed = (int)DateTime.UtcNow.Ticks ^ GetMachineHash() ^ GetPid();
-            var random = new Random(seed);
-#else
-        var random = new Random();
-#endif
+        var seed = (int)DateTime.UtcNow.Ticks ^ GetMachineHash() ^ GetPid();
+        var random = new Random(seed);
         var high = random.Next();
         var low = random.Next();
         var combined = (long)((ulong)(uint)high << 32 | (ulong)(uint)low);

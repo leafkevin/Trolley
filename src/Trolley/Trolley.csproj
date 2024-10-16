@@ -4,6 +4,7 @@
 		<PackageId>$(AssemblyName)</PackageId>
 		<Title>$(AssemblyName)</Title>
 		<Description>一款轻量级高性能的ORM，可以不用写SQL语句，支持多结果集，多命令执行，模型映射，导航属性，CTE，批量插入、批量更新，分库分表，读写分离等，各种复杂SQL场景等。</Description>
+		<PackageDescription>一款轻量级高性能的ORM，可以不用写SQL语句，支持多结果集，多命令执行，模型映射，导航属性，CTE，批量插入、批量更新，分库分表，读写分离等，各种复杂SQL场景等。</PackageDescription>
 		<Authors>leaf kevin</Authors>
 		<Copyright>2022 leafkevin</Copyright>
 		<TargetFrameworks>netstandard2.0;netstandard2.1;net6.0;net7.0;net8.0</TargetFrameworks>
@@ -26,7 +27,7 @@
 		<None Include="README.md" Pack="true" PackagePath="\" />
 		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0">
 			<PrivateAssets>all</PrivateAssets>
-			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>			
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="System.Text.Json" Version="8.0.5" />
 		<Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />

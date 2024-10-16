@@ -43,6 +43,9 @@ public partial class PostgreSqlProvider : BaseOrmProvider
 #if NET6_0_OR_GREATER
         defaultMapTypes[NpgsqlDbType.Date] = typeof(DateOnly);
         defaultMapTypes[NpgsqlDbType.Time] = typeof(TimeOnly);
+#else
+        defaultMapTypes[NpgsqlDbType.Date] = typeof(DateTime);
+        defaultMapTypes[NpgsqlDbType.Time] = typeof(TimeSpan);
 #endif
         defaultMapTypes[NpgsqlDbType.Interval] = typeof(TimeSpan);
         defaultMapTypes[NpgsqlDbType.Bytea] = typeof(byte[]);
@@ -147,9 +150,9 @@ public partial class PostgreSqlProvider : BaseOrmProvider
         castTos[typeof(DateTime?)] = "TIMESTAMP";
 #if NET6_0_OR_GREATER
         castTos[typeof(DateOnly?)] = "DATE";
-        castTos[typeof(TimeOnly?)] = "TIME";
-        AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+        castTos[typeof(TimeOnly?)] = "TIME";        
 #endif
+        AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
     }
 
     public override ITheaConnection CreateConnection(string dbKey, string connectionString)

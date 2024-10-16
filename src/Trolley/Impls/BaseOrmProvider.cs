@@ -1688,7 +1688,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                     else if (underlyingType == typeof(byte[]))
                     {
                         Type[] supportedTypes = [ typeof(bool), typeof(char), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(float), typeof(double)
-    #if NET6_0_OR_GREATER
+#if NET6_0_OR_GREATER
                             , typeof(Half) 
 #endif
                         ];

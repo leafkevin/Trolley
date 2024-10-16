@@ -9,6 +9,11 @@ public class UnitTestBase
     public static int connTotal = 0;
     public static int connOpenTotal = 0;
     public static int tranTotal = 0;
+#if NETSTANDARD2_1_OR_GREATER
+    public DateTime UnixEpoch = DateTime.UnixEpoch;
+#else
+    public DateTime UnixEpoch = new DateTime(1970, 1, 1);
+#endif
 
     public void Initialize()
     {
@@ -26,7 +31,11 @@ public class UnitTestBase
                 CompanyId = 1,
                 Gender = Gender.Male,
                 GuidField = Guid.NewGuid(),
+#if NET6_0_OR_GREATER
                 SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
+#else
+                SomeTimes = TimeSpan.FromSeconds(4769),
+#endif
                 SourceType = UserSourceType.Douyin,
                 IsEnabled = true,
                 CreatedAt = DateTime.Parse("2023-03-10 06:07:08"),
@@ -42,8 +51,12 @@ public class UnitTestBase
                 Age = 21,
                 CompanyId = 2,
                 Gender = Gender.Male,
-                GuidField= Guid.NewGuid(),
-                SomeTimes= TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+                GuidField = Guid.NewGuid(),
+#if NET6_0_OR_GREATER
+                SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+#else
+                SomeTimes = TimeSpan.FromSeconds(5730),
+#endif
                 SourceType = UserSourceType.Taobao,
                 IsEnabled = true,
                 CreatedAt = DateTime.Parse($"{DateTime.Today.AddDays(-1):yyyy-MM-dd} 06:07:08"),
@@ -407,29 +420,45 @@ public class UnitTestBase
             {
                 Id = 1,
                 BooleanField = true,
+#if NET6_0_OR_GREATER
                 DateOnlyField = DateOnly.FromDateTime(DateTime.Now),
+#else
+                DateOnlyField = DateTime.Now,
+#endif
                 DateTimeField = DateTime.Now,
                 DateTimeOffsetField = DateTimeOffset.UtcNow,
                 EnumField = Gender.Male,
                 GuidField = Guid.NewGuid(),
+#if NET6_0_OR_GREATER
                 TimeOnlyField = TimeOnly.FromDateTime(DateTime.Now),
+#else
+                TimeOnlyField =  DateTime.Now.TimeOfDay,
+#endif
                 TimeSpanField = TimeSpan.FromMinutes(350)
             },
             new UpdateEntity
             {
                Id = 2,
                 BooleanField = false ,
+#if NET6_0_OR_GREATER
                 DateOnlyField = DateOnly.Parse("2024-07-07"),
+#else
+                DateOnlyField = DateTime.Parse("2024-07-07"),
+#endif
                 DateTimeField = DateTime.Now,
                 DateTimeOffsetField = DateTimeOffset.UtcNow,
                 EnumField = Gender.Male,
                 GuidField = Guid.NewGuid(),
+#if NET6_0_OR_GREATER
                 TimeOnlyField = TimeOnly.FromDateTime(DateTime.Now),
+#else
+                TimeOnlyField = DateTime.Now.TimeOfDay,
+#endif
                 TimeSpanField = TimeSpan.FromMinutes(350)
             }
         });
         repository.Commit();
-    }    
+    }
     public interface IPassport
     {
         //只用于演示，实际使用中要与ASP.NET CORE中间件或是IOC组件相结合，赋值此对象

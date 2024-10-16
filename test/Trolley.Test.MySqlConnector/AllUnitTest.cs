@@ -107,7 +107,11 @@ public class AllUnitTest : UnitTestBase
                 CompanyId = 1,
                 Gender = Gender.Male,
                 GuidField = Guid.NewGuid(),
+#if NET6_0_OR_GREATER
                 SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
+#else
+                SomeTimes = TimeSpan.FromSeconds(4769),
+#endif
                 SourceType = UserSourceType.Douyin,
                 IsEnabled = true,
                 CreatedAt = DateTime.Parse("2023-03-10 06:07:08"),
@@ -123,8 +127,12 @@ public class AllUnitTest : UnitTestBase
                 Age = 21,
                 CompanyId = 2,
                 Gender = Gender.Female,
-                GuidField= Guid.NewGuid(),
-                SomeTimes= TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+                GuidField = Guid.NewGuid(),
+#if NET6_0_OR_GREATER
+                SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+#else
+                SomeTimes = TimeSpan.FromSeconds(5730),
+#endif
                 SourceType = UserSourceType.Taobao,
                 IsEnabled = true,
                 CreatedAt = DateTime.Parse($"{DateTime.Today.AddDays(-1):yyyy-MM-dd} 06:07:08"),
@@ -140,8 +148,12 @@ public class AllUnitTest : UnitTestBase
                 Age = 17,
                 CompanyId = 3,
                 Gender = Gender.Female,
-                GuidField= Guid.NewGuid(),
-                SomeTimes= TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+                GuidField = Guid.NewGuid(),
+#if NET6_0_OR_GREATER
+                SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+#else
+                SomeTimes = TimeSpan.FromSeconds(5730),
+#endif
                 SourceType = UserSourceType.Taobao,
                 IsEnabled = true,
                 CreatedAt = DateTime.Parse($"{DateTime.Today.AddDays(-1):yyyy-MM-dd} 06:07:08"),
@@ -292,7 +304,7 @@ public class AllUnitTest : UnitTestBase
             .ExecuteAsync();
         await repository.CommitAsync();
     }
-
+#if NET6_0_OR_GREATER
     [Fact]
     public async Task MemberAccess()
     {
@@ -399,7 +411,7 @@ public class AllUnitTest : UnitTestBase
         Assert.Equal(DateOnly.Parse(localDate.ToString("yyyy-MM-dd")), result.Parse);
         Assert.Equal(DateOnly.ParseExact("05-07/2023", "MM-dd/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None), result.ParseExact);
     }
-
+#endif
 
 
 
@@ -418,7 +430,7 @@ public class AllUnitTest : UnitTestBase
                 DateTime.MaxValue,
                 DateTime.UtcNow,
                 DateTime.Today,
-                DateTime.UnixEpoch,
+                this.UnixEpoch,
                 DateTime.Parse("2023-05-06").Date,
                 CurrentDate = DateTime.Now.Date,
                 localDate,
@@ -426,12 +438,14 @@ public class AllUnitTest : UnitTestBase
                 IsEquals1 = f.UpdatedAt.Equals(localDate)
             })
             .ToSql(out var dbParameters);
-        Assert.Equal("SELECT NOW() AS `Now`,'0001-01-01 00:00:00.000' AS `MinValue`,'9999-12-31 23:59:59.999' AS `MaxValue`,UTC_TIMESTAMP() AS `UtcNow`,CURDATE() AS `Today`,'1970-01-01 00:00:00.000' AS `UnixEpoch`,'2023-05-06 00:00:00.000' AS `Date`,CONVERT(NOW(),DATE) AS `CurrentDate`,@p0 AS `localDate`,(a.`UpdatedAt`='2023-03-25 00:00:00.000') AS `IsEquals`,(a.`UpdatedAt`=@p1) AS `IsEquals1` FROM `sys_user` a WHERE a.`Id`=1", sql);
-        Assert.Equal(2, dbParameters.Count);
+        Assert.Equal("SELECT NOW() AS `Now`,'0001-01-01 00:00:00.000' AS `MinValue`,'9999-12-31 23:59:59.999' AS `MaxValue`,UTC_TIMESTAMP() AS `UtcNow`,CURDATE() AS `Today`,@p0 AS `UnixEpoch`,'2023-05-06 00:00:00.000' AS `Date`,CONVERT(NOW(),DATE) AS `CurrentDate`,@p1 AS `localDate`,(a.`UpdatedAt`='2023-03-25 00:00:00.000') AS `IsEquals`,(a.`UpdatedAt`=@p2) AS `IsEquals1` FROM `sys_user` a WHERE a.`Id`=1", sql);
+        Assert.Equal(3, dbParameters.Count);
         Assert.Equal(typeof(DateTime), dbParameters[0].Value.GetType());
         Assert.Equal(typeof(DateTime), dbParameters[1].Value.GetType());
-        Assert.Equal(localDate, (DateTime)dbParameters[0].Value);
+        Assert.Equal(typeof(DateTime), dbParameters[2].Value.GetType());
+        Assert.Equal(this.UnixEpoch, (DateTime)dbParameters[0].Value);
         Assert.Equal(localDate, (DateTime)dbParameters[1].Value);
+        Assert.Equal(localDate, (DateTime)dbParameters[2].Value);
 
         var result = await repository.From<User>()
             .Where(f => f.Id == 1)
@@ -443,7 +457,7 @@ public class AllUnitTest : UnitTestBase
                 DateTime.MaxValue,
                 DateTime.UtcNow,
                 DateTime.Today,
-                DateTime.UnixEpoch,
+                this.UnixEpoch,
                 DateTime.Parse("2023-05-06").Date,
                 CurrentDate = DateTime.Now.Date,
                 localDate,
@@ -456,7 +470,7 @@ public class AllUnitTest : UnitTestBase
         //Assert.True(result.MaxValue == DateTime.MaxValue);
         //取决于时区的设置
         Assert.Equal(DateTime.Now.Date, result.Today);
-        Assert.Equal(DateTime.UnixEpoch, result.UnixEpoch);
+        Assert.Equal(this.UnixEpoch, result.UnixEpoch);
         Assert.Equal(DateTime.Parse("2023-05-06").Date, result.Date);
         Assert.Equal(localDate, result.localDate);
         Assert.Equal(result.UpdatedAt.Equals(DateTime.Parse("2023-03-25")), result.IsEquals);
@@ -586,9 +600,15 @@ public class AllUnitTest : UnitTestBase
                 AddOp1 = f.SomeTimes.Value.Add(TimeSpan.FromMinutes(25)),
                 SubOp1 = TimeSpan.FromHours(30) - TimeSpan.FromMinutes(15),
                 SubOp2 = f.UpdatedAt - f.CreatedAt,
+#if NETCOREAPP2_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
                 MulOp = TimeSpan.FromMinutes(25) * 3,
                 DivOp1 = TimeSpan.FromHours(30) / 5,
                 DivOp2 = TimeSpan.FromHours(30) / TimeSpan.FromHours(3)
+#else
+                MulOp = TimeSpan.FromMinutes(25 * 3),
+                DivOp1 = TimeSpan.FromHours(30 / 5),
+                DivOp2 = 10
+#endif
             })
             .ToSql(out _);
         Assert.Equal("SELECT '05:06:07.000000' AS `DateSub`,ADDTIME(a.`CreatedAt`,'05:00:00.000000') AS `AddOp`,SUBTIME(a.`CreatedAt`,'10:00:00.000000') AS `SubOp`,ADDTIME(a.`SomeTimes`,'00:25:00.000000') AS `AddOp1`,'1.05:45:00.000000' AS `SubOp1`,TIMEDIFF(a.`UpdatedAt`,a.`CreatedAt`) AS `SubOp2`,'01:15:00.000000' AS `MulOp`,'06:00:00.000000' AS `DivOp1`,10 AS `DivOp2` FROM `sys_user` a WHERE (CASE WHEN a.`UpdatedAt`='2023-03-20 00:00:00.000' THEN 0 WHEN a.`UpdatedAt`>'2023-03-20 00:00:00.000' THEN 1 ELSE -1 END)>0", sql);
@@ -605,9 +625,15 @@ public class AllUnitTest : UnitTestBase
                 AddOp1 = f.SomeTimes.Value.Add(TimeSpan.FromMinutes(25)),
                 SubOp1 = TimeSpan.FromHours(30) - TimeSpan.FromMinutes(15),
                 SubOp2 = f.UpdatedAt - f.CreatedAt,
+#if NETCOREAPP2_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
                 MulOp = TimeSpan.FromMinutes(25) * 3,
                 DivOp1 = TimeSpan.FromHours(30) / 5,
                 DivOp2 = TimeSpan.FromHours(30) / TimeSpan.FromHours(3)
+#else
+                MulOp = TimeSpan.FromMinutes(25 * 3),
+                DivOp1 = TimeSpan.FromHours(30 / 5),
+                DivOp2 = 10
+#endif
             })
             .FirstAsync();
         Assert.Equal(result.DateSub, DateTime.Parse("2022-01-01 05:06:07") - DateTime.Parse("2022-01-01"));
@@ -616,9 +642,15 @@ public class AllUnitTest : UnitTestBase
         Assert.Equal(result.AddOp1, result.SomeTimes.Value.Add(TimeSpan.FromMinutes(25)));
         Assert.Equal(result.SubOp1, TimeSpan.FromHours(30) - TimeSpan.FromMinutes(15));
         Assert.Equal(result.SubOp2, result.UpdatedAt - result.CreatedAt);
+#if NETCOREAPP2_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
         Assert.Equal(result.MulOp, TimeSpan.FromMinutes(25) * 3);
         Assert.Equal(result.DivOp1, TimeSpan.FromHours(30) / 5);
         Assert.Equal(result.DivOp2, TimeSpan.FromHours(30) / TimeSpan.FromHours(3));
+#else
+        Assert.Equal(result.MulOp, TimeSpan.FromMinutes(25 * 3));
+        Assert.Equal(result.DivOp1, TimeSpan.FromHours(30 / 5));
+        Assert.Equal(10, result.DivOp2);
+#endif
     }
 
 
@@ -6022,7 +6054,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
                 OrderNo = x.OrderNo + "-111",
                 BuyerSource = y.SourceType
             })
-            .Set(x => x.Products, new List<int> { 1, 2, 3 })
+            .Set(x => x.Products, [1, 2, 3])
             .Where((a, b) => a.BuyerId == 1)
           .ToSql(out var dbParameters);
         Assert.Equal("UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@p0,a.`OrderNo`=CONCAT(a.`OrderNo`,'-111'),a.`BuyerSource`=b.`SourceType`,a.`Products`=@Products WHERE a.`BuyerId`=1", sql);
@@ -6124,7 +6156,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
                 OrderNo = x.OrderNo + "-111",
                 BuyerSource = y.SourceType
             })
-            .Set(x => x.Products, new List<int> { 1, 2, 3 })
+            .Set(x => x.Products, [1, 2, 3])
             .Where((a, b) => a.BuyerId == 1)
             .ToSql(out var dbParameters);
         Assert.Equal("UPDATE `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` SET a.`TotalAmount`=@p0,a.`OrderNo`=CONCAT(a.`OrderNo`,'-111'),a.`BuyerSource`=b.`SourceType`,a.`Products`=@Products WHERE a.`BuyerId`=1", sql);
@@ -6770,12 +6802,20 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             Id = 1,
             BooleanField = true,
             TimeSpanField = TimeSpan.FromSeconds(456),
+#if NET6_0_OR_GREATER
             DateOnlyField = new DateOnly(2022, 05, 06),
+#else
+            DateOnlyField = new DateTime(2022, 05, 06),
+#endif
             DateTimeField = DateTime.Now,
             DateTimeOffsetField = new DateTimeOffset(DateTime.Parse("2022-01-02 03:04:05")),
             EnumField = Gender.Male,
             GuidField = Guid.NewGuid(),
+#if NET6_0_OR_GREATER
             TimeOnlyField = new TimeOnly(3, 5, 7)
+#else
+            TimeOnlyField = new TimeSpan(3, 5, 7)
+#endif
         });
         var sql1 = repository.Update<User>()
             .Set(new { SomeTimes = timeSpan })
@@ -6783,8 +6823,14 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .ToSql(out var parameters1);
         Assert.Equal("UPDATE `sys_user` SET `SomeTimes`=@SomeTimes WHERE `Id`=@kId", sql1);
         Assert.Equal("@SomeTimes", parameters1[0].ParameterName);
+
+#if NET6_0_OR_GREATER
         Assert.True(parameters1[0].Value.GetType() == typeof(TimeOnly));
         Assert.True((TimeOnly)parameters1[0].Value == TimeOnly.FromTimeSpan(timeSpan));
+#else
+        Assert.True(parameters1[0].Value.GetType() == typeof(TimeSpan));
+        Assert.True((TimeSpan)parameters1[0].Value == timeSpan);
+#endif
 
         var sql2 = repository.Update<User>()
             .Set(f => new { SomeTimes = timeSpan })
@@ -6792,9 +6838,13 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .ToSql(out var parameters2);
         Assert.Equal("UPDATE `sys_user` SET `SomeTimes`=@p0 WHERE `Id`=1", sql2);
         Assert.Equal("@p0", parameters2[0].ParameterName);
+#if NET6_0_OR_GREATER
         Assert.True(parameters2[0].Value.GetType() == typeof(TimeOnly));
         Assert.True((TimeOnly)parameters2[0].Value == TimeOnly.FromTimeSpan(timeSpan));
-
+#else
+        Assert.True(parameters2[0].Value.GetType() == typeof(TimeSpan));
+        Assert.True((TimeSpan)parameters2[0].Value == timeSpan);
+#endif
         repository.BeginTransaction();
         await repository.Update<User>()
             .Set(new { SomeTimes = timeSpan })
@@ -6802,7 +6852,11 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .ExecuteAsync();
         var userInfo = repository.Get<User>(1);
         repository.Commit();
+#if NET6_0_OR_GREATER
         Assert.True(userInfo.SomeTimes.Value == TimeOnly.FromTimeSpan(timeSpan));
+#else
+        Assert.True(userInfo.SomeTimes.Value == timeSpan);
+#endif
     }
     [Fact]
     public async Task Update_BulkCopy()
@@ -7385,7 +7439,11 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
                 CompanyId = 1,
                 Gender = Gender.Male,
                 GuidField = Guid.NewGuid(),
+#if NET6_0_OR_GREATER
                 SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
+#else
+                SomeTimes = TimeSpan.FromSeconds(4769),
+#endif
                 SourceType = UserSourceType.Douyin,
                 IsEnabled = true,
                 CreatedAt = DateTime.Parse("2024-05-10 06:07:08"),
@@ -7426,7 +7484,11 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
                 CompanyId = 1,
                 Gender = Gender.Male,
                 GuidField = Guid.NewGuid(),
+#if NET6_0_OR_GREATER
                 SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
+#else
+                SomeTimes = TimeSpan.FromSeconds(4769),
+#endif
                 SourceType = UserSourceType.Douyin,
                 IsEnabled = true,
                 CreatedAt = DateTime.Parse("2023-03-10 06:07:08"),
@@ -7467,7 +7529,11 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
                 CompanyId = 1,
                 Gender = Gender.Male,
                 GuidField = Guid.NewGuid(),
+#if NET6_0_OR_GREATER
                 SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
+#else
+                SomeTimes = TimeSpan.FromSeconds(4769),
+#endif
                 SourceType = UserSourceType.Douyin,
                 IsEnabled = true,
                 CreatedAt = DateTime.Parse("2023-03-10 06:07:08"),
@@ -7501,7 +7567,11 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             CompanyId = 2,
             Gender = Gender.Female,
             GuidField = Guid.NewGuid(),
+#if NET6_0_OR_GREATER
             SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+#else
+            SomeTimes = TimeSpan.FromSeconds(5730),
+#endif
             SourceType = UserSourceType.Taobao,
             IsEnabled = true,
             CreatedAt = DateTime.Parse($"{DateTime.Today.AddDays(-1):yyyy-MM-dd} 06:07:08"),
@@ -7521,7 +7591,11 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
                 CompanyId = 1,
                 Gender = Gender.Male,
                 GuidField = Guid.NewGuid(),
-                SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
+#if NET6_0_OR_GREATER
+            SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
+#else
+            SomeTimes = TimeSpan.FromSeconds(4769),
+#endif
                 SourceType = UserSourceType.Douyin,
                 IsEnabled = true,
                 CreatedAt = DateTime.Parse("2023-03-10 06:07:08"),
@@ -7537,8 +7611,12 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
                 Age = 17,
                 CompanyId = 3,
                 Gender = Gender.Female,
-                GuidField= Guid.NewGuid(),
-                SomeTimes= TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+                GuidField = Guid.NewGuid(),
+#if NET6_0_OR_GREATER
+            SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+#else
+            SomeTimes = TimeSpan.FromSeconds(5730),
+#endif
                 SourceType = UserSourceType.Taobao,
                 IsEnabled = true,
                 CreatedAt = DateTime.Parse($"{DateTime.Today.AddDays(-1):yyyy-MM-dd} 06:07:08"),
@@ -7589,7 +7667,11 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
                     CompanyId = 1,
                     Gender = Gender.Male,
                     GuidField = Guid.NewGuid(),
+#if NET6_0_OR_GREATER
                     SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
+#else
+                    SomeTimes = TimeSpan.FromSeconds(4769),
+#endif
                     SourceType = UserSourceType.Douyin,
                     IsEnabled = true,
                     CreatedAt = DateTime.Parse("2023-03-10 06:07:08"),
@@ -7605,8 +7687,12 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
                     Age = 21,
                     CompanyId = 2,
                     Gender = Gender.Female,
-                    GuidField= Guid.NewGuid(),
-                    SomeTimes= TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+                    GuidField = Guid.NewGuid(),
+#if NET6_0_OR_GREATER
+                    SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+#else
+                    SomeTimes = TimeSpan.FromSeconds(5730),
+#endif
                     SourceType = UserSourceType.Taobao,
                     IsEnabled = true,
                     CreatedAt = DateTime.Parse($"{DateTime.Today.AddDays(-1):yyyy-MM-dd} 06:07:08"),
@@ -7622,8 +7708,12 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
                     Age = 17,
                     CompanyId = 3,
                     Gender = Gender.Female,
-                    GuidField= Guid.NewGuid(),
-                    SomeTimes= TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+                    GuidField = Guid.NewGuid(),
+#if NET6_0_OR_GREATER
+                    SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+#else
+                    SomeTimes = TimeSpan.FromSeconds(5730),
+#endif
                     SourceType = UserSourceType.Taobao,
                     IsEnabled = true,
                     CreatedAt = DateTime.Parse($"{DateTime.Today.AddDays(-1):yyyy-MM-dd} 06:07:08"),
@@ -8813,7 +8903,11 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
                 CompanyId = 1,
                 Gender = Gender.Male,
                 GuidField = Guid.NewGuid(),
+#if NET6_0_OR_GREATER
                 SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
+#else
+                SomeTimes = TimeSpan.FromSeconds(4769),
+#endif
                 SourceType = UserSourceType.Douyin,
                 IsEnabled = true,
                 CreatedAt = DateTime.Parse("2024-05-10 06:07:08"),

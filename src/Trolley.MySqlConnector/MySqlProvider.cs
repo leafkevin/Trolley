@@ -53,6 +53,9 @@ public partial class MySqlProvider : BaseOrmProvider
 #if NET6_0_OR_GREATER
         defaultMapTypes[MySqlDbType.Date] = typeof(DateOnly);
         defaultMapTypes[MySqlDbType.Time] = typeof(TimeOnly);
+#else
+        defaultMapTypes[MySqlDbType.Date] = typeof(DateTime);
+        defaultMapTypes[MySqlDbType.Time] = typeof(TimeSpan);
 #endif
         defaultMapTypes[MySqlDbType.TinyBlob] = typeof(byte[]);
         defaultMapTypes[MySqlDbType.MediumBlob] = typeof(byte[]);

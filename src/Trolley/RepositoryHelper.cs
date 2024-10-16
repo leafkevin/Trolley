@@ -1370,7 +1370,7 @@ public class RepositoryHelper
         {
             foreach (var parameter in parameters)
             {
-                hashCode = hashCode * 23 + parameter.GetHashCode();
+                hashCode = hashCode * 23 + (parameter?.GetHashCode()??0);
             }
         }
         return hashCode;

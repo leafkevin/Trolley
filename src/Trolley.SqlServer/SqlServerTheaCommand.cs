@@ -372,7 +372,7 @@ class SqlServerTheaCommand : ITheaCommand
 #if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
         return this.command.DisposeAsync();
 #else
-        this.transaction.Dispose();
+        this.command.Dispose();
         return default;
 #endif
     }

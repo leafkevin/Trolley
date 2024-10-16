@@ -78,7 +78,7 @@ public class DateTimeUnitTest : UnitTestBase
                 DateTime.MaxValue,
                 DateTime.UtcNow,
                 DateTime.Today,
-                DateTime.UnixEpoch,
+                this.UnixEpoch,
                 DateTime.Parse("2023-05-06").Date,
                 CurrentDate = DateTime.Now.Date,
                 localDate,
@@ -86,12 +86,14 @@ public class DateTimeUnitTest : UnitTestBase
                 IsEquals1 = f.UpdatedAt.Equals(localDate)
             })
             .ToSql(out var dbParameters);
-        Assert.Equal("SELECT GETDATE() AS [Now],'0001-01-01 00:00:00.000' AS [MinValue],'9999-12-31 23:59:59.999' AS [MaxValue],GETUTCDATE() AS [UtcNow],CONVERT(DATE,GETDATE()) AS [Today],'1970-01-01 00:00:00.000' AS [UnixEpoch],'2023-05-06 00:00:00.000' AS [Date],CONVERT(DATE,GETDATE()) AS [CurrentDate],@p0 AS [localDate],(CASE WHEN a.[UpdatedAt]='2023-03-25 00:00:00.000' THEN 1 ELSE 0 END) AS [IsEquals],(CASE WHEN a.[UpdatedAt]=@p1 THEN 1 ELSE 0 END) AS [IsEquals1] FROM [sys_user] a WHERE a.[Id]=1", sql);
-        Assert.Equal(2, dbParameters.Count);
+        Assert.Equal("SELECT GETDATE() AS [Now],'0001-01-01 00:00:00.000' AS [MinValue],'9999-12-31 23:59:59.999' AS [MaxValue],GETUTCDATE() AS [UtcNow],CONVERT(DATE,GETDATE()) AS [Today],@p0 AS [UnixEpoch],'2023-05-06 00:00:00.000' AS [Date],CONVERT(DATE,GETDATE()) AS [CurrentDate],@p1 AS [localDate],(CASE WHEN a.[UpdatedAt]='2023-03-25 00:00:00.000' THEN 1 ELSE 0 END) AS [IsEquals],(CASE WHEN a.[UpdatedAt]=@p2 THEN 1 ELSE 0 END) AS [IsEquals1] FROM [sys_user] a WHERE a.[Id]=1", sql);
+        Assert.Equal(3, dbParameters.Count);
         Assert.Equal(typeof(DateTime), dbParameters[0].Value.GetType());
         Assert.Equal(typeof(DateTime), dbParameters[1].Value.GetType());
-        Assert.Equal(localDate, (DateTime)dbParameters[0].Value);
+        Assert.Equal(typeof(DateTime), dbParameters[2].Value.GetType());
+        Assert.Equal(this.UnixEpoch, (DateTime)dbParameters[0].Value);
         Assert.Equal(localDate, (DateTime)dbParameters[1].Value);
+        Assert.Equal(localDate, (DateTime)dbParameters[2].Value);
 
         var lastNow = DateTime.Parse("2024-10-10 05:06:07.123");
         var result = await repository.From<User>()
@@ -105,7 +107,7 @@ public class DateTimeUnitTest : UnitTestBase
                 DateTime.MaxValue,
                 DateTime.UtcNow,
                 DateTime.Today,
-                DateTime.UnixEpoch,
+                this.UnixEpoch,
                 DateTime.Parse("2023-05-06").Date,
                 CurrentDate = DateTime.Now.Date,
                 localDate,
@@ -119,7 +121,7 @@ public class DateTimeUnitTest : UnitTestBase
         //取决于时区的设置
         //Assert.Equal(now, result.Now);
         Assert.Equal(lastNow, result.lastNow);
-        Assert.Equal(DateTime.UnixEpoch, result.UnixEpoch);
+        Assert.Equal(this.UnixEpoch, result.UnixEpoch);
         Assert.Equal(DateTime.Parse("2023-05-06").Date, result.Date);
         Assert.Equal(localDate, result.localDate);
         Assert.Equal(result.UpdatedAt.Equals(DateTime.Parse("2023-03-25")), result.IsEquals);
@@ -250,12 +252,22 @@ public class DateTimeUnitTest : UnitTestBase
                 AddOp1 = f.SomeTimes.Value.Add(TimeSpan.FromMinutes(25)),
                 SubOp1 = TimeSpan.FromHours(30) - TimeSpan.FromMinutes(15),
                 SubOp2 = f.UpdatedAt - f.CreatedAt,
+#if NETCOREAPP2_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
                 MulOp = TimeSpan.FromMinutes(25) * 3,
                 DivOp1 = TimeSpan.FromHours(30) / 5,
                 DivOp2 = TimeSpan.FromHours(30) / TimeSpan.FromHours(3)
+#else
+                MulOp = TimeSpan.FromMinutes(25 * 3),
+                DivOp1 = TimeSpan.FromHours(30 / 5),
+                DivOp2 = 10
+#endif
             })
             .ToSql(out _);
-        Assert.Equal("SELECT '05:06:07.000000' AS [DateSub],DATEADD(MILLISECOND,18000000,a.[CreatedAt]) AS [AddOp],(DATEADD(MILLISECOND,-36000000,a.[CreatedAt])) AS [SubOp],CAST(DATEADD(SECOND,DATEDIFF(SECOND,'00:00:00',a.[SomeTimes])+DATEDIFF(SECOND,'00:00:00','00:25:00.000000'),'00:00:00') AS TIME) AS [AddOp1],'1.05:45:00.000000' AS [SubOp1],(CASE WHEN DATEDIFF(SECOND,a.[CreatedAt],a.[UpdatedAt])>0 THEN CAST(DATEDIFF(DAY,a.[CreatedAt],a.[UpdatedAt]) AS VARCHAR)+'.'+CAST(CONVERT(TIME,DATEADD(SECOND,DATEDIFF(SECOND,a.[CreatedAt],a.[UpdatedAt])%86400,'00:00:00')) AS VARCHAR) ELSE CAST(DATEDIFF(DAY,a.[CreatedAt],a.[UpdatedAt])+1 AS VARCHAR)+'.'+CAST(CONVERT(TIME,DATEADD(SECOND,86400-DATEDIFF(SECOND,a.[CreatedAt],a.[UpdatedAt])%86400,'00:00:00')) AS VARCHAR) END) AS [SubOp2],'01:15:00.000000' AS [MulOp],'06:00:00.000000' AS [DivOp1],10 AS [DivOp2] FROM [sys_user] a WHERE (CASE WHEN a.[UpdatedAt]='2023-03-20 00:00:00.000' THEN 0 WHEN a.[UpdatedAt]>'2023-03-20 00:00:00.000' THEN 1 ELSE -1 END)>0", sql);
+#if NET6_0_OR_GREATER
+        Assert.Equal("SELECT '05:06:07.000000' AS [DateSub],DATEADD(MILLISECOND,18000000,a.[CreatedAt]) AS [AddOp],(DATEADD(MILLISECOND,-36000000,a.[CreatedAt])) AS [SubOp],CAST(DATEADD(MILLISECOND,1500000,a.[SomeTimes]) AS TIME) AS [AddOp1],'1.05:45:00.000000' AS [SubOp1],(CASE WHEN DATEDIFF(SECOND,a.[CreatedAt],a.[UpdatedAt])>0 THEN CAST(DATEDIFF(DAY,a.[CreatedAt],a.[UpdatedAt]) AS VARCHAR)+'.'+CAST(CONVERT(TIME,DATEADD(SECOND,DATEDIFF(SECOND,a.[CreatedAt],a.[UpdatedAt])%86400,'00:00:00')) AS VARCHAR) ELSE CAST(DATEDIFF(DAY,a.[CreatedAt],a.[UpdatedAt])+1 AS VARCHAR)+'.'+CAST(CONVERT(TIME,DATEADD(SECOND,86400-DATEDIFF(SECOND,a.[CreatedAt],a.[UpdatedAt])%86400,'00:00:00')) AS VARCHAR) END) AS [SubOp2],'01:15:00.000000' AS [MulOp],'06:00:00.000000' AS [DivOp1],10 AS [DivOp2] FROM [sys_user] a WHERE (CASE WHEN a.[UpdatedAt]='2023-03-20 00:00:00.000' THEN 0 WHEN a.[UpdatedAt]>'2023-03-20 00:00:00.000' THEN 1 ELSE -1 END)>0", sql);
+#else
+        Assert.Equal("SELECT '05:06:07.000000' AS [DateSub],DATEADD(MILLISECOND,18000000,a.[CreatedAt]) AS [AddOp],(DATEADD(MILLISECOND,-36000000,a.[CreatedAt])) AS [SubOp],DATEADD(MILLISECOND,1500000,a.[SomeTimes]) AS [AddOp1],'1.05:45:00.000000' AS [SubOp1],(CASE WHEN DATEDIFF(SECOND,a.[CreatedAt],a.[UpdatedAt])>0 THEN CAST(DATEDIFF(DAY,a.[CreatedAt],a.[UpdatedAt]) AS VARCHAR)+'.'+CAST(CONVERT(TIME,DATEADD(SECOND,DATEDIFF(SECOND,a.[CreatedAt],a.[UpdatedAt])%86400,'00:00:00')) AS VARCHAR) ELSE CAST(DATEDIFF(DAY,a.[CreatedAt],a.[UpdatedAt])+1 AS VARCHAR)+'.'+CAST(CONVERT(TIME,DATEADD(SECOND,86400-DATEDIFF(SECOND,a.[CreatedAt],a.[UpdatedAt])%86400,'00:00:00')) AS VARCHAR) END) AS [SubOp2],'01:15:00.000000' AS [MulOp],'06:00:00.000000' AS [DivOp1],10 AS [DivOp2] FROM [sys_user] a WHERE (CASE WHEN a.[UpdatedAt]='2023-03-20 00:00:00.000' THEN 0 WHEN a.[UpdatedAt]>'2023-03-20 00:00:00.000' THEN 1 ELSE -1 END)>0", sql);
+#endif
         var result = await repository.From<User>()
             .Where(f => f.Id == 1)
             .Select(f => new
@@ -269,9 +281,15 @@ public class DateTimeUnitTest : UnitTestBase
                 AddOp1 = f.SomeTimes.Value.Add(TimeSpan.FromMinutes(25)),
                 SubOp1 = TimeSpan.FromHours(30) - TimeSpan.FromMinutes(15),
                 SubOp2 = f.UpdatedAt - f.CreatedAt,
+#if NETCOREAPP2_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
                 MulOp = TimeSpan.FromMinutes(25) * 3,
                 DivOp1 = TimeSpan.FromHours(30) / 5,
                 DivOp2 = TimeSpan.FromHours(30) / TimeSpan.FromHours(3)
+#else
+                MulOp = TimeSpan.FromMinutes(25 * 3),
+                DivOp1 = TimeSpan.FromHours(30 / 5),
+                DivOp2 = 10
+#endif
             })
             .FirstAsync();
         Assert.Equal(result.DateSub, DateTime.Parse("2022-01-01 05:06:07") - DateTime.Parse("2022-01-01"));
@@ -280,8 +298,14 @@ public class DateTimeUnitTest : UnitTestBase
         Assert.Equal(result.AddOp1, result.SomeTimes.Value.Add(TimeSpan.FromMinutes(25)));
         Assert.Equal(result.SubOp1, TimeSpan.FromHours(30) - TimeSpan.FromMinutes(15));
         Assert.Equal(result.SubOp2, result.UpdatedAt - result.CreatedAt);
+#if NETCOREAPP2_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
         Assert.Equal(result.MulOp, TimeSpan.FromMinutes(25) * 3);
         Assert.Equal(result.DivOp1, TimeSpan.FromHours(30) / 5);
         Assert.Equal(result.DivOp2, TimeSpan.FromHours(30) / TimeSpan.FromHours(3));
+#else
+        Assert.Equal(result.MulOp, TimeSpan.FromMinutes(25 * 3));
+        Assert.Equal(result.DivOp1, TimeSpan.FromHours(30 / 5));
+        Assert.Equal(10, result.DivOp2);
+#endif
     }
 }

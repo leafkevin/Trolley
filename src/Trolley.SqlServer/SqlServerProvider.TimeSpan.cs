@@ -338,7 +338,7 @@ partial class SqlServerProvider
                                 else builder.Append($"DATEADD(MILLISECOND,{timeSpan.TotalMilliseconds},");
                                 builder.Append($"{targetArgument})");
                             }
-                            return targetSegment.Merge(rightSegment, builder.ToString());
+                            return targetSegment.Merge(rightSegment, builder.ToString(), false, true);
                         }
                         var rightArgument = $"DATEDIFF_BIG(MILLISECOND,'00:00:00',{rightSegment.Body})";
                         return targetSegment.Merge(rightSegment, $"DATEADD(MILLISECOND,-{rightArgument},{targetArgument})", false, true);

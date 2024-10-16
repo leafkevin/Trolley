@@ -85,8 +85,12 @@ public class UnitTest1 : UnitTestBase
             CreatedAt = DateTime.Now,
             CreatedBy = 1,
             UpdatedAt = DateTime.Now,
-            UpdatedBy = 1,
-            SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(35)),
+            UpdatedBy = 1,            
+#if NET6_0_OR_GREATER
+            SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(35)),
+#else
+            SomeTimes = TimeSpan.FromSeconds(35),
+#endif
             GuidField = Guid.NewGuid()
         });
         repository.Commit();

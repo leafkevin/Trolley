@@ -571,8 +571,15 @@ partial class PostgreSqlProvider
                             var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
                                 && (rightSegment.IsConstant || rightSegment.IsVariable))
+                            {
+                                //.NET Standard 2.0 framework场景会走到这里
+                                if (rightSegment.Value is List<object> charArray && charArray.Count == 0)
+                                    return targetSegment.MergeValue(rightSegment, ((string)targetSegment.Value).TrimStart());
                                 return targetSegment.MergeValue(rightSegment, ((string)targetSegment.Value).TrimStart((char[])rightSegment.Value));
-
+                            }
+                            //.NET Standard 2.0 framework场景会走到这里
+                            else if (rightSegment.Value is List<object> charArray && charArray.Count == 0)
+                                return targetSegment.Change($"LTRIM({targetSegment.Body})", false, true);
                             throw new NotSupportedException("暂时只支持TrimStart方法的参数是常量或变量的表达式解析");
                         });
                         result = true;
@@ -615,8 +622,15 @@ partial class PostgreSqlProvider
                             var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
                             if ((targetSegment.IsConstant || targetSegment.IsVariable)
                                 && (rightSegment.IsConstant || rightSegment.IsVariable))
+                            {
+                                //.NET Standard 2.0 framework场景会走到这里
+                                if (rightSegment.Value is List<object> charArray && charArray.Count == 0)
+                                    return targetSegment.MergeValue(rightSegment, ((string)targetSegment.Value).TrimEnd());
                                 return targetSegment.MergeValue(rightSegment, ((string)targetSegment.Value).TrimEnd((char[])rightSegment.Value));
-
+                            }
+                            //.NET Standard 2.0 framework场景会走到这里
+                            else if (rightSegment.Value is List<object> charArray && charArray.Count == 0)
+                                return targetSegment.Change($"RTRIM({targetSegment.Body})", false, true);
                             throw new NotSupportedException("暂时只支持TrimEnd方法的参数是常量或变量的表达式解析");
                         });
                         result = true;

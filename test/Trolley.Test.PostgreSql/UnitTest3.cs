@@ -1390,12 +1390,20 @@ public class UnitTest3 : UnitTestBase
             Id = 1,
             BooleanField = true,
             TimeSpanField = TimeSpan.FromSeconds(456),
+#if NET6_0_OR_GREATER
             DateOnlyField = new DateOnly(2022, 05, 06),
+#else
+            DateOnlyField = new DateTime(2022, 05, 06),
+#endif
             DateTimeField = DateTime.Now,
             DateTimeOffsetField = new DateTimeOffset(DateTime.Parse("2022-01-02 03:04:05")).ToUniversalTime(),
             EnumField = Gender.Male,
             GuidField = Guid.NewGuid(),
+#if NET6_0_OR_GREATER
             TimeOnlyField = new TimeOnly(3, 5, 7)
+#else
+            TimeOnlyField = new TimeSpan(3, 5, 7)
+#endif
         });
         var sql1 = repository.Update<User>()
             .Set(new { SomeTimes = timeSpan })
@@ -1403,8 +1411,13 @@ public class UnitTest3 : UnitTestBase
             .ToSql(out var parameters1);
         Assert.Equal("UPDATE \"sys_user\" SET \"SomeTimes\"=@SomeTimes WHERE \"Id\"=@kId", sql1);
         Assert.Equal("@SomeTimes", parameters1[0].ParameterName);
+#if NET6_0_OR_GREATER
         Assert.True(parameters1[0].Value.GetType() == typeof(TimeOnly));
         Assert.True((TimeOnly)parameters1[0].Value == TimeOnly.FromTimeSpan(timeSpan));
+#else
+        Assert.True(parameters1[0].Value.GetType() == typeof(TimeSpan));
+        Assert.True((TimeSpan)parameters1[0].Value == timeSpan);
+#endif
 
         var sql2 = repository.Update<User>()
             .Set(f => new { SomeTimes = timeSpan })
@@ -1412,8 +1425,13 @@ public class UnitTest3 : UnitTestBase
             .ToSql(out var parameters2);
         Assert.Equal("UPDATE \"sys_user\" SET \"SomeTimes\"=@p0 WHERE \"Id\"=1", sql2);
         Assert.Equal("@p0", parameters2[0].ParameterName);
+#if NET6_0_OR_GREATER
         Assert.True(parameters2[0].Value.GetType() == typeof(TimeOnly));
         Assert.True((TimeOnly)parameters2[0].Value == TimeOnly.FromTimeSpan(timeSpan));
+#else
+        Assert.True(parameters2[0].Value.GetType() == typeof(TimeSpan));
+        Assert.True((TimeSpan)parameters2[0].Value == timeSpan);
+#endif
 
         repository.BeginTransaction();
         await repository.Update<User>()
@@ -1422,7 +1440,11 @@ public class UnitTest3 : UnitTestBase
             .ExecuteAsync();
         var userInfo = repository.Get<User>(1);
         repository.Commit();
+#if NET6_0_OR_GREATER
         Assert.True(userInfo.SomeTimes.Value == TimeOnly.FromTimeSpan(timeSpan));
+#else
+        Assert.True(userInfo.SomeTimes.Value == timeSpan);
+#endif
     }
     [Fact]
     public async Task Update_BulkCopy()

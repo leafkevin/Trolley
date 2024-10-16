@@ -78,7 +78,7 @@ public class DateTimeUnitTest : UnitTestBase
                 DateTime.MaxValue,
                 DateTime.UtcNow,
                 DateTime.Today,
-                DateTime.UnixEpoch,
+                this.UnixEpoch,
                 DateTime.Parse("2023-05-06").Date,
                 CurrentDate = DateTime.Now.Date,
                 localDate,
@@ -86,12 +86,14 @@ public class DateTimeUnitTest : UnitTestBase
                 IsEquals1 = f.UpdatedAt.Equals(localDate)
             })
             .ToSql(out var dbParameters);
-        Assert.Equal("SELECT CURRENT_TIMESTAMP AS \"Now\",TIMESTAMP '0001-01-01 00:00:00.000' AS \"MinValue\",TIMESTAMP '9999-12-31 23:59:59.999' AS \"MaxValue\",(CURRENT_TIMESTAMP AT TIME ZONE 'UTC') AS \"UtcNow\",CURRENT_DATE AS \"Today\",TIMESTAMP '1970-01-01 00:00:00.000' AS \"UnixEpoch\",TIMESTAMP '2023-05-06 00:00:00.000' AS \"Date\",CURRENT_TIMESTAMP::DATE AS \"CurrentDate\",@p0 AS \"localDate\",(a.\"UpdatedAt\"=TIMESTAMP '2023-03-25 00:00:00.000') AS \"IsEquals\",(a.\"UpdatedAt\"=@p1) AS \"IsEquals1\" FROM \"sys_user\" a WHERE a.\"Id\"=1", sql);
-        Assert.Equal(2, dbParameters.Count);
+        Assert.Equal("SELECT CURRENT_TIMESTAMP AS \"Now\",TIMESTAMP '0001-01-01 00:00:00.000' AS \"MinValue\",TIMESTAMP '9999-12-31 23:59:59.999' AS \"MaxValue\",(CURRENT_TIMESTAMP AT TIME ZONE 'UTC') AS \"UtcNow\",CURRENT_DATE AS \"Today\",@p0 AS \"UnixEpoch\",TIMESTAMP '2023-05-06 00:00:00.000' AS \"Date\",CURRENT_TIMESTAMP::DATE AS \"CurrentDate\",@p1 AS \"localDate\",(a.\"UpdatedAt\"=TIMESTAMP '2023-03-25 00:00:00.000') AS \"IsEquals\",(a.\"UpdatedAt\"=@p2) AS \"IsEquals1\" FROM \"sys_user\" a WHERE a.\"Id\"=1", sql);
+        Assert.Equal(3, dbParameters.Count);
         Assert.Equal(typeof(DateTime), dbParameters[0].Value.GetType());
         Assert.Equal(typeof(DateTime), dbParameters[1].Value.GetType());
-        Assert.Equal(localDate, (DateTime)dbParameters[0].Value);
+        Assert.Equal(typeof(DateTime), dbParameters[2].Value.GetType());
+        Assert.Equal(this.UnixEpoch, (DateTime)dbParameters[0].Value);
         Assert.Equal(localDate, (DateTime)dbParameters[1].Value);
+        Assert.Equal(localDate, (DateTime)dbParameters[2].Value);
 
         var lastNow = DateTime.Parse("2024-10-10 05:06:07.123");
         var result = await repository.From<User>()
@@ -105,7 +107,7 @@ public class DateTimeUnitTest : UnitTestBase
                 DateTime.MaxValue,
                 DateTime.UtcNow,
                 DateTime.Today,
-                DateTime.UnixEpoch,
+                this.UnixEpoch,
                 DateTime.Parse("2023-05-06").Date,
                 CurrentDate = DateTime.Now.Date,
                 localDate,
@@ -119,7 +121,7 @@ public class DateTimeUnitTest : UnitTestBase
         //取决于时区的设置
         //Assert.Equal(now, result.Now);
         Assert.Equal(lastNow, result.lastNow);
-        Assert.Equal(DateTime.UnixEpoch, result.UnixEpoch);
+        Assert.Equal(this.UnixEpoch, result.UnixEpoch);
         Assert.Equal(DateTime.Parse("2023-05-06").Date, result.Date);
         Assert.Equal(localDate, result.localDate);
         Assert.Equal(result.UpdatedAt.Equals(DateTime.Parse("2023-03-25")), result.IsEquals);
@@ -249,9 +251,15 @@ public class DateTimeUnitTest : UnitTestBase
                 AddOp1 = f.SomeTimes.Value.Add(TimeSpan.FromMinutes(25)),
                 SubOp1 = TimeSpan.FromHours(30) - TimeSpan.FromMinutes(15),
                 SubOp2 = f.UpdatedAt - f.CreatedAt,
+#if NETCOREAPP2_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
                 MulOp = TimeSpan.FromMinutes(25) * 3,
                 DivOp1 = TimeSpan.FromHours(30) / 5,
                 DivOp2 = TimeSpan.FromHours(30) / TimeSpan.FromHours(3)
+#else
+                MulOp = TimeSpan.FromMinutes(25 * 3),
+                DivOp1 = TimeSpan.FromHours(30 / 5),
+                DivOp2 = 10
+#endif
             })
             .ToSql(out _);
         Assert.Equal("SELECT INTERVAL '05:06:07.000000' AS \"DateSub\",(a.\"CreatedAt\"+ INTERVAL '05:00:00.000000') AS \"AddOp\",(a.\"CreatedAt\"-INTERVAL '10:00:00.000000') AS \"SubOp\",(a.\"SomeTimes\"+INTERVAL '00:25:00.000000') AS \"AddOp1\",INTERVAL '1D 05:45:00.000000' AS \"SubOp1\",(a.\"UpdatedAt\"-a.\"CreatedAt\") AS \"SubOp2\",INTERVAL '01:15:00.000000' AS \"MulOp\",INTERVAL '06:00:00.000000' AS \"DivOp1\",10 AS \"DivOp2\" FROM \"sys_user\" a WHERE (CASE WHEN a.\"UpdatedAt\"=TIMESTAMP '2023-03-20 00:00:00.000' THEN 0 WHEN a.\"UpdatedAt\">TIMESTAMP '2023-03-20 00:00:00.000' THEN 1 ELSE -1 END)>0", sql);
@@ -268,9 +276,15 @@ public class DateTimeUnitTest : UnitTestBase
                 AddOp1 = f.SomeTimes.Value.Add(TimeSpan.FromMinutes(25)),
                 SubOp1 = TimeSpan.FromHours(30) - TimeSpan.FromMinutes(15),
                 SubOp2 = f.UpdatedAt - f.CreatedAt,
+#if NETCOREAPP2_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
                 MulOp = TimeSpan.FromMinutes(25) * 3,
                 DivOp1 = TimeSpan.FromHours(30) / 5,
                 DivOp2 = TimeSpan.FromHours(30) / TimeSpan.FromHours(3)
+#else
+                MulOp = TimeSpan.FromMinutes(25 * 3),
+                DivOp1 = TimeSpan.FromHours(30 / 5),
+                DivOp2 = 10
+#endif
             })
             .FirstAsync();
         Assert.Equal(result.DateSub, DateTime.Parse("2022-01-01 05:06:07") - DateTime.Parse("2022-01-01"));
@@ -279,8 +293,14 @@ public class DateTimeUnitTest : UnitTestBase
         Assert.Equal(result.AddOp1, result.SomeTimes.Value.Add(TimeSpan.FromMinutes(25)));
         Assert.Equal(result.SubOp1, TimeSpan.FromHours(30) - TimeSpan.FromMinutes(15));
         Assert.Equal(result.SubOp2, result.UpdatedAt - result.CreatedAt);
+#if NETCOREAPP2_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
         Assert.Equal(result.MulOp, TimeSpan.FromMinutes(25) * 3);
         Assert.Equal(result.DivOp1, TimeSpan.FromHours(30) / 5);
         Assert.Equal(result.DivOp2, TimeSpan.FromHours(30) / TimeSpan.FromHours(3));
+#else
+        Assert.Equal(result.MulOp, TimeSpan.FromMinutes(25 * 3));
+        Assert.Equal(result.DivOp1, TimeSpan.FromHours(30 / 5));
+        Assert.Equal(10, result.DivOp2);
+#endif
     }
 }

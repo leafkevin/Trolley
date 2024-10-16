@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿#if NET6_0_OR_GREATER
+using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using System;
 using System.Globalization;
@@ -179,3 +180,4 @@ public class DateOnlyUnitTest : UnitTestBase
         Assert.True(result.ParseExact == DateOnly.ParseExact("05-07/2023", "MM-dd/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None));
     }
 }
+#endif

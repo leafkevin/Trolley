@@ -104,7 +104,11 @@ public class UnitTest6 : UnitTestBase
                 CompanyId = 1,
                 Gender = Gender.Male,
                 GuidField = Guid.NewGuid(),
+#if NET6_0_OR_GREATER
                 SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
+#else
+                SomeTimes = TimeSpan.FromSeconds(4769),
+#endif
                 SourceType = UserSourceType.Douyin,
                 IsEnabled = true,
                 CreatedAt = DateTime.Parse("2023-03-10 06:07:08"),
@@ -120,8 +124,12 @@ public class UnitTest6 : UnitTestBase
                 Age = 21,
                 CompanyId = 2,
                 Gender = Gender.Female,
-                GuidField= Guid.NewGuid(),
-                SomeTimes= TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+                GuidField = Guid.NewGuid(),
+#if NET6_0_OR_GREATER
+                SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+#else
+                SomeTimes = TimeSpan.FromSeconds(5730),
+#endif
                 SourceType = UserSourceType.Taobao,
                 IsEnabled = true,
                 CreatedAt = DateTime.Parse($"{DateTime.Today.AddDays(-1):yyyy-MM-dd} 06:07:08"),
@@ -137,8 +145,12 @@ public class UnitTest6 : UnitTestBase
                 Age = 17,
                 CompanyId = 3,
                 Gender = Gender.Female,
-                GuidField= Guid.NewGuid(),
-                SomeTimes= TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+                GuidField = Guid.NewGuid(),
+#if NET6_0_OR_GREATER
+                SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+#else
+                SomeTimes = TimeSpan.FromSeconds(5730),
+#endif
                 SourceType = UserSourceType.Taobao,
                 IsEnabled = true,
                 CreatedAt = DateTime.Parse($"{DateTime.Today.AddDays(-1):yyyy-MM-dd} 06:07:08"),
@@ -314,7 +326,11 @@ public class UnitTest6 : UnitTestBase
                 CompanyId = 1,
                 Gender = Gender.Male,
                 GuidField = Guid.NewGuid(),
+#if NET6_0_OR_GREATER
                 SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
+#else
+                SomeTimes = TimeSpan.FromSeconds(4769),
+#endif
                 SourceType = UserSourceType.Douyin,
                 IsEnabled = true,
                 CreatedAt = DateTime.Parse("2024-05-10 06:07:08"),
@@ -354,7 +370,11 @@ public class UnitTest6 : UnitTestBase
                 CompanyId = 1,
                 Gender = Gender.Male,
                 GuidField = Guid.NewGuid(),
+#if NET6_0_OR_GREATER
                 SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
+#else
+                SomeTimes = TimeSpan.FromSeconds(4769),
+#endif
                 SourceType = UserSourceType.Douyin,
                 IsEnabled = true,
                 CreatedAt = DateTime.Parse("2023-03-10 06:07:08"),
@@ -395,7 +415,11 @@ public class UnitTest6 : UnitTestBase
                 CompanyId = 1,
                 Gender = Gender.Male,
                 GuidField = Guid.NewGuid(),
+#if NET6_0_OR_GREATER
                 SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
+#else
+                SomeTimes = TimeSpan.FromSeconds(4769),
+#endif
                 SourceType = UserSourceType.Douyin,
                 IsEnabled = true,
                 CreatedAt = DateTime.Parse("2023-03-10 06:07:08"),
@@ -429,7 +453,11 @@ public class UnitTest6 : UnitTestBase
             CompanyId = 2,
             Gender = Gender.Female,
             GuidField = Guid.NewGuid(),
+#if NET6_0_OR_GREATER
             SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+#else
+            SomeTimes = TimeSpan.FromSeconds(5730),
+#endif
             SourceType = UserSourceType.Taobao,
             IsEnabled = true,
             CreatedAt = DateTime.Parse($"{DateTime.Today.AddDays(-1):yyyy-MM-dd} 06:07:08"),
@@ -449,7 +477,11 @@ public class UnitTest6 : UnitTestBase
                 CompanyId = 1,
                 Gender = Gender.Male,
                 GuidField = Guid.NewGuid(),
+#if NET6_0_OR_GREATER
                 SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
+#else
+                SomeTimes = TimeSpan.FromSeconds(4769),
+#endif
                 SourceType = UserSourceType.Douyin,
                 IsEnabled = true,
                 CreatedAt = DateTime.Parse("2023-03-10 06:07:08"),
@@ -465,8 +497,12 @@ public class UnitTest6 : UnitTestBase
                 Age = 17,
                 CompanyId = 3,
                 Gender = Gender.Female,
-                GuidField= Guid.NewGuid(),
-                SomeTimes= TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+                GuidField = Guid.NewGuid(),
+#if NET6_0_OR_GREATER
+                SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+#else
+                SomeTimes = TimeSpan.FromSeconds(5730),
+#endif
                 SourceType = UserSourceType.Taobao,
                 IsEnabled = true,
                 CreatedAt = DateTime.Parse($"{DateTime.Today.AddDays(-1):yyyy-MM-dd} 06:07:08"),
@@ -516,7 +552,11 @@ public class UnitTest6 : UnitTestBase
                 CompanyId = 1,
                 Gender = Gender.Male,
                 GuidField = Guid.NewGuid(),
+#if NET6_0_OR_GREATER
                 SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
+#else
+                SomeTimes = TimeSpan.FromSeconds(4769),
+#endif
                 SourceType = UserSourceType.Douyin,
                 IsEnabled = true,
                 CreatedAt = DateTime.Parse("2023-03-10 06:07:08"),
@@ -532,8 +572,12 @@ public class UnitTest6 : UnitTestBase
                 Age = 21,
                 CompanyId = 2,
                 Gender = Gender.Female,
-                GuidField= Guid.NewGuid(),
-                SomeTimes= TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+                GuidField = Guid.NewGuid(),
+#if NET6_0_OR_GREATER
+                SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+#else
+                SomeTimes = TimeSpan.FromSeconds(5730),
+#endif
                 SourceType = UserSourceType.Taobao,
                 IsEnabled = true,
                 CreatedAt = DateTime.Parse($"{DateTime.Today.AddDays(-1):yyyy-MM-dd} 06:07:08"),
@@ -549,8 +593,12 @@ public class UnitTest6 : UnitTestBase
                 Age = 17,
                 CompanyId = 3,
                 Gender = Gender.Female,
-                GuidField= Guid.NewGuid(),
-                SomeTimes= TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+                GuidField = Guid.NewGuid(),
+#if NET6_0_OR_GREATER
+                SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+#else
+                SomeTimes = TimeSpan.FromSeconds(5730),
+#endif
                 SourceType = UserSourceType.Taobao,
                 IsEnabled = true,
                 CreatedAt = DateTime.Parse($"{DateTime.Today.AddDays(-1):yyyy-MM-dd} 06:07:08"),
@@ -1739,7 +1787,11 @@ public class UnitTest6 : UnitTestBase
                 CompanyId = 1,
                 Gender = Gender.Male,
                 GuidField = Guid.NewGuid(),
+#if NET6_0_OR_GREATER
                 SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
+#else
+                SomeTimes = TimeSpan.FromSeconds(4769),
+#endif
                 SourceType = UserSourceType.Douyin,
                 IsEnabled = true,
                 CreatedAt = DateTime.Parse("2024-05-10 06:07:08"),

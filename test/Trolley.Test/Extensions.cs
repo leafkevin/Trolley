@@ -77,5 +77,5 @@ public static class Extensions
             builder.Append($"{dbParameter.ParameterName}:{{SqlDbType={dbParameter.SqlDbType}, Value={dbParameter.Value}}};  ");
         }
         return builder.ToString();
-    }
+    } 
 }

@@ -48,6 +48,9 @@ public partial class SqlServerProvider : BaseOrmProvider
 #if NET6_0_OR_GREATER
         defaultMapTypes[SqlDbType.Date] = typeof(DateOnly);
         defaultMapTypes[SqlDbType.Time] = typeof(TimeOnly);
+#else
+        defaultMapTypes[SqlDbType.Date] = typeof(DateTime);
+        defaultMapTypes[SqlDbType.Time] = typeof(TimeSpan);
 #endif
         defaultMapTypes[SqlDbType.Image] = typeof(byte[]);
         defaultMapTypes[SqlDbType.Binary] = typeof(byte[]);

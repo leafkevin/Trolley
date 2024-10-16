@@ -4,6 +4,7 @@
 		<PackageId>$(AssemblyName)</PackageId>
 		<Title>$(AssemblyName)</Title>
 		<Description>Trolley的MySql、Mariadb数据库提供程序</Description>
+		<PackageDescription>Trolley的MySql、Mariadb数据库提供程序</PackageDescription>
 		<Authors>leaf kevin</Authors>
 		<Copyright>2022 leafkevin</Copyright>
 		<TargetFrameworks>netstandard2.0;netstandard2.1;net6.0;net7.0;net8.0</TargetFrameworks>
