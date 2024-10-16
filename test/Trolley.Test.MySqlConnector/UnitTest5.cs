@@ -99,8 +99,8 @@ public class UnitTest5 : UnitTestBase
         var isExists = await reader.ReadFirstAsync<bool>();
         var orderInfo = await reader.ReadFirstAsync<dynamic>();
         var userInfo2 = await reader.ReadFirstAsync<User>();
-        //var products = await reader.ReadAsync<Product>();
-        //var groupedOrderInfo = await reader.ReadFirstAsync<dynamic>();
+        var products = await reader.ReadAsync<Product>();
+        var groupedOrderInfo = await reader.ReadFirstAsync<dynamic>();
         //Assert.Null(userInfo);
         //Assert.False(isExists);
         //Assert.Null(orderInfo);
