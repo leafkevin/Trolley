@@ -937,6 +937,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             fromSegment = tableSegment;
             fromType = memberMapper.NavigationType;
         }
+        builder.Clear();
         return (tableSegment, isIncludeMany);
     }
     private (string, Action<StringBuilder, IOrmProvider, object>) BuildIncludeSqlGetter(Type targetType, MemberInfo firstMember, TableSegment includeSegment)

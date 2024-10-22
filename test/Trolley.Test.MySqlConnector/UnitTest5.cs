@@ -86,6 +86,10 @@ public class UnitTest5 : UnitTestBase
                 .Include(f => f.Brand)
                 .Where(f => f.ProductNo.Contains("PN-00"))
                 .ToList()
+            .From<Order>()
+                .Include(t => t.Details)
+                .Where(t => new[] { "1", "2", "3" }.Contains(t.Id))
+                .ToList()
             .From(f => f.From<Order, OrderDetail>('a')
                     .Where((a, b) => a.Id == b.OrderId && a.Id == "1")
                     .GroupBy((a, b) => new { a.BuyerId, OrderId = a.Id })
@@ -93,14 +97,19 @@ public class UnitTest5 : UnitTestBase
                     .Select((x, a, b) => new { a.Id, x.Grouping, ProductTotal = Sql.CountDistinct(b.ProductId), BuyerId1 = x.Grouping.BuyerId }))
                 .InnerJoin<User>((x, y) => x.Grouping.BuyerId == y.Id)
                 .Select((x, y) => new { x.Id, x.Grouping, x.Grouping.BuyerId, x.ProductTotal, BuyerName = y.Name, BuyerId2 = x.BuyerId1 })
-                .First());
+                .First()
+             .From<Brand>()
+                .Include(f => f.Products)
+                .ToList());
         var sql = reader.ToSql(out var dbParameters);
         var userInfo = await reader.ReadFirstAsync<User>();
         var isExists = await reader.ReadFirstAsync<bool>();
         var orderInfo = await reader.ReadFirstAsync<dynamic>();
         var userInfo2 = await reader.ReadFirstAsync<User>();
         var products = await reader.ReadAsync<Product>();
+        var orders = await reader.ReadAsync<Order>();
         var groupedOrderInfo = await reader.ReadFirstAsync<dynamic>();
+        var brands = await reader.ReadAsync<Brand>();
         //Assert.Null(userInfo);
         //Assert.False(isExists);
         //Assert.Null(orderInfo);

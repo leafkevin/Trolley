@@ -53,6 +53,33 @@ public partial class PostgreSqlProvider : BaseOrmProvider
         defaultMapTypes[NpgsqlDbType.Uuid] = typeof(Guid);
         defaultMapTypes[NpgsqlDbType.Hstore] = typeof(Dictionary<string, string>);
 
+        defaultMapTypes[NpgsqlDbType.Bit | NpgsqlDbType.Array] = typeof(byte[][]);
+        defaultMapTypes[NpgsqlDbType.Boolean | NpgsqlDbType.Array] = typeof(bool[]);
+        defaultMapTypes[NpgsqlDbType.Smallint | NpgsqlDbType.Array] = typeof(short[]);
+        defaultMapTypes[NpgsqlDbType.Integer | NpgsqlDbType.Array] = typeof(int[]);
+        defaultMapTypes[NpgsqlDbType.Bigint | NpgsqlDbType.Array] = typeof(long[]);
+        defaultMapTypes[NpgsqlDbType.Real | NpgsqlDbType.Array] = typeof(float[]);
+        defaultMapTypes[NpgsqlDbType.Double | NpgsqlDbType.Array] = typeof(double[]);
+        defaultMapTypes[NpgsqlDbType.Money | NpgsqlDbType.Array] = typeof(decimal[]);
+        defaultMapTypes[NpgsqlDbType.Numeric | NpgsqlDbType.Array] = typeof(decimal[]);
+        defaultMapTypes[NpgsqlDbType.Varchar | NpgsqlDbType.Array] = typeof(string[]);
+        defaultMapTypes[NpgsqlDbType.Text | NpgsqlDbType.Array] = typeof(string[]);
+
+        defaultMapTypes[NpgsqlDbType.Timestamp | NpgsqlDbType.Array] = typeof(DateTime[]);
+        defaultMapTypes[NpgsqlDbType.TimestampTz | NpgsqlDbType.Array] = typeof(DateTimeOffset[]);
+#if NET6_0_OR_GREATER
+        defaultMapTypes[NpgsqlDbType.Date | NpgsqlDbType.Array] = typeof(DateOnly[]);
+        defaultMapTypes[NpgsqlDbType.Time | NpgsqlDbType.Array] = typeof(TimeOnly[]);
+#else
+        defaultMapTypes[NpgsqlDbType.Date | NpgsqlDbType.Array] = typeof(DateTime[]);
+        defaultMapTypes[NpgsqlDbType.Time | NpgsqlDbType.Array] = typeof(TimeSpan[]);
+#endif
+        defaultMapTypes[NpgsqlDbType.Interval | NpgsqlDbType.Array] = typeof(TimeSpan[]);
+        defaultMapTypes[NpgsqlDbType.Bytea | NpgsqlDbType.Array] = typeof(byte[][]);
+        defaultMapTypes[NpgsqlDbType.Varbit | NpgsqlDbType.Array] = typeof(byte[][]);
+        defaultMapTypes[NpgsqlDbType.Uuid | NpgsqlDbType.Array] = typeof(Guid[]);
+        defaultMapTypes[NpgsqlDbType.Hstore | NpgsqlDbType.Array] = typeof(Dictionary<string, string>[]);
+
         defaultDbTypes[typeof(bool)] = NpgsqlDbType.Boolean;
         defaultDbTypes[typeof(sbyte)] = NpgsqlDbType.Smallint;
         defaultDbTypes[typeof(byte)] = NpgsqlDbType.Smallint;
@@ -99,23 +126,22 @@ public partial class PostgreSqlProvider : BaseOrmProvider
         defaultDbTypes[typeof(Guid?)] = NpgsqlDbType.Uuid;
         defaultDbTypes[typeof(byte[])] = NpgsqlDbType.Bytea;
 
-        //PostgreSql支持数据类型，值为各自值|int.MinValue
-        //如, int[]类型: int.MinValue | NpgsqlDbType.Integer
-        defaultDbTypes[typeof(long[])] = NpgsqlDbType.Bigint | NpgsqlDbType.Range;
-        defaultDbTypes[typeof(bool[])] = NpgsqlDbType.Boolean | NpgsqlDbType.Range;
-        defaultDbTypes[typeof(short[])] = NpgsqlDbType.Smallint | NpgsqlDbType.Range;
-        defaultDbTypes[typeof(int[])] = NpgsqlDbType.Integer | NpgsqlDbType.Range;
-        defaultDbTypes[typeof(float[])] = NpgsqlDbType.Real | NpgsqlDbType.Range;
-        defaultDbTypes[typeof(double[])] = NpgsqlDbType.Double | NpgsqlDbType.Range;
-        defaultDbTypes[typeof(decimal[])] = NpgsqlDbType.Numeric | NpgsqlDbType.Range;
+        defaultDbTypes[typeof(bool[])] = NpgsqlDbType.Boolean | NpgsqlDbType.Array;
+        defaultDbTypes[typeof(short[])] = NpgsqlDbType.Smallint | NpgsqlDbType.Array;
+        defaultDbTypes[typeof(int[])] = NpgsqlDbType.Integer | NpgsqlDbType.Array;
+        defaultDbTypes[typeof(long[])] = NpgsqlDbType.Bigint | NpgsqlDbType.Array;
+        defaultDbTypes[typeof(float[])] = NpgsqlDbType.Real | NpgsqlDbType.Array;
+        defaultDbTypes[typeof(double[])] = NpgsqlDbType.Double | NpgsqlDbType.Array;
+        defaultDbTypes[typeof(decimal[])] = NpgsqlDbType.Numeric | NpgsqlDbType.Array;
 #if NET6_0_OR_GREATER
-        defaultDbTypes[typeof(DateOnly[])] = NpgsqlDbType.DateRange;
-        defaultDbTypes[typeof(TimeOnly[])] = NpgsqlDbType.Time | NpgsqlDbType.Range;
+        defaultDbTypes[typeof(DateOnly[])] = NpgsqlDbType.Date | NpgsqlDbType.Array;
+        defaultDbTypes[typeof(TimeOnly[])] = NpgsqlDbType.Time | NpgsqlDbType.Array;
 #endif
-        defaultDbTypes[typeof(TimeSpan[])] = NpgsqlDbType.Interval | NpgsqlDbType.Range;
-        defaultDbTypes[typeof(string[])] = NpgsqlDbType.Varchar | NpgsqlDbType.Range;
-        defaultDbTypes[typeof(DateTimeOffset[])] = NpgsqlDbType.TimestampTz | NpgsqlDbType.Range;
-        defaultDbTypes[typeof(Guid[])] = NpgsqlDbType.Uuid | NpgsqlDbType.Range;
+        defaultDbTypes[typeof(DateTime[])] = NpgsqlDbType.Timestamp | NpgsqlDbType.Array;
+        defaultDbTypes[typeof(TimeSpan[])] = NpgsqlDbType.Interval | NpgsqlDbType.Array;
+        defaultDbTypes[typeof(string[])] = NpgsqlDbType.Varchar | NpgsqlDbType.Array;
+        defaultDbTypes[typeof(DateTimeOffset[])] = NpgsqlDbType.TimestampTz | NpgsqlDbType.Array;
+        defaultDbTypes[typeof(Guid[])] = NpgsqlDbType.Uuid | NpgsqlDbType.Array;
 
         castTos[typeof(string)] = "VARCHAR";
         castTos[typeof(sbyte)] = "SMALLINT";
@@ -192,9 +218,18 @@ public partial class PostgreSqlProvider : BaseOrmProvider
     }
     public override Type MapDefaultType(object nativeDbType)
     {
+        if (nativeDbType == null)
+            throw new ArgumentNullException(nameof(nativeDbType));
+
         if (defaultMapTypes.TryGetValue(nativeDbType, out var result))
             return result;
-        return typeof(object);
+        if (nativeDbType is NpgsqlDbType dbType)
+        {
+            var elementDbType = dbType & ~NpgsqlDbType.Array;
+            if (defaultMapTypes.TryGetValue(elementDbType, out var elementType))
+                return elementType.MakeArrayType();
+        }
+        throw new NotSupportedException($"不支持的NpgsqlDbType, nativeDbType: {nativeDbType}");
     }
     public override string CastTo(Type type, object value, string characterSetOrCollation = null)
         => $"CAST({value} AS {castTos[type]})";

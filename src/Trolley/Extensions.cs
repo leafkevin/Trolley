@@ -55,20 +55,13 @@ public static class Extensions
     public static EntityMap GetEntityMap(this IEntityMapProvider mapProvider, Type entityType)
     {
         if (!mapProvider.TryGetEntityMap(entityType, out var mapper))
-        {
-            mapper = EntityMap.CreateDefaultMap(entityType);
-            mapProvider.AddEntityMap(entityType, mapper);
-        }
+            throw new Exception($"实体类型{entityType.FullName}没有配置映射，请在IModelConfiguration.OnModelCreating方法中配置映射");
         return mapper;
     }
     public static EntityMap GetEntityMap(this IEntityMapProvider mapProvider, Type entityType, Type mapToType)
     {
         if (!mapProvider.TryGetEntityMap(entityType, out var mapper))
-        {
-            var mapToMapper = mapProvider.GetEntityMap(mapToType);
-            mapper = EntityMap.CreateDefaultMap(entityType, mapToMapper);
-            mapProvider.AddEntityMap(entityType, mapper);
-        }
+            throw new Exception($"实体类型{entityType.FullName}没有配置映射，请在IModelConfiguration.OnModelCreating方法中配置映射");
         return mapper;
     }
     internal static bool IsNullableType(this Type type, out Type underlyingType)

@@ -57,6 +57,7 @@ public partial class MySqlProvider : BaseOrmProvider
         defaultMapTypes[MySqlDbType.Date] = typeof(DateTime);
         defaultMapTypes[MySqlDbType.Time] = typeof(TimeSpan);
 #endif
+        defaultMapTypes[MySqlDbType.Year] = typeof(int);
         defaultMapTypes[MySqlDbType.TinyBlob] = typeof(byte[]);
         defaultMapTypes[MySqlDbType.MediumBlob] = typeof(byte[]);
         defaultMapTypes[MySqlDbType.LongBlob] = typeof(byte[]);

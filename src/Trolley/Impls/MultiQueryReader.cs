@@ -233,6 +233,9 @@ class MultiQueryReader : IMultiQueryReader
                     if (builder.Length > 0) builder.Append(';');
                     builder.Append(nextAfter.Sql);
                 }
+                //先关闭reader，才能继续查询
+                this.reader.Dispose();
+
                 this.command.CommandText = builder.ToString();
                 this.command.Parameters.Clear();
                 visitor.NextDbParameters.CopyTo(this.command.Parameters);
@@ -281,6 +284,9 @@ class MultiQueryReader : IMultiQueryReader
                     if (builder.Length > 0) builder.Append(';');
                     builder.Append(nextAfter.Sql);
                 }
+                //先关闭reader，才能继续查询
+                await this.reader.DisposeAsync();
+
                 this.command.CommandText = builder.ToString();
                 this.command.Parameters.Clear();
                 visitor.NextDbParameters.CopyTo(this.command.Parameters);
