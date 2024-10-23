@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace Trolley.Test;
@@ -221,4 +222,6 @@ public class UpdateEntity
 #else
     public TimeSpan TimeOnlyField { get; set; }
 #endif
+    public byte[] ByteArrayField { get; set; }
+    public BitArray BitArrayField { get; set; }
 }

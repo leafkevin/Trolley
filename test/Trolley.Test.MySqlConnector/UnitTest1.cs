@@ -1,8 +1,10 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using MySqlConnector;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Trolley.MySqlConnector;
@@ -1601,5 +1603,45 @@ public class UnitTest1 : UnitTestBase
             .ExecuteAsync();
         await repository.CommitAsync();
         Assert.Equal(orders.Count, count);
+    }
+    [Fact]
+    public async Task BitArrayTest()
+    {
+        var repository = this.dbFactory.Create();
+        var timeSpan = TimeSpan.FromMinutes(455);
+        await repository.DeleteAsync<UpdateEntity>(1);
+        byte[] bytes = [68];
+        await repository.CreateAsync<UpdateEntity>(new UpdateEntity
+        {
+            Id = 1,
+            BooleanField = true,
+            TimeSpanField = TimeSpan.FromSeconds(456),
+#if NET6_0_OR_GREATER
+            DateOnlyField = new DateOnly(2022, 05, 06),
+#else
+            DateOnlyField = new DateTime(2022, 05, 06),
+#endif
+            DateTimeField = DateTime.Now,
+            DateTimeOffsetField = new DateTimeOffset(DateTime.Parse("2022-01-02 03:04:05")).ToUniversalTime(),
+            EnumField = Gender.Male,
+            GuidField = Guid.NewGuid(),
+#if NET6_0_OR_GREATER
+            TimeOnlyField = new TimeOnly(3, 5, 7),
+#else
+            TimeOnlyField = new TimeSpan(3, 5, 7),
+#endif
+            ByteArrayField = Encoding.ASCII.GetBytes("ByteArry"),
+            BitArrayField = new BitArray(bytes)
+        });
+        var entity = await repository.GetAsync<UpdateEntity>(1);
+        Assert.Equal(entity.ByteArrayField, Encoding.ASCII.GetBytes("ByteArry"));
+        Assert.False(entity.BitArrayField.Get(0));
+        Assert.False(entity.BitArrayField.Get(1));
+        Assert.True(entity.BitArrayField.Get(2));
+        Assert.False(entity.BitArrayField.Get(3));
+        Assert.False(entity.BitArrayField.Get(4));
+        Assert.False(entity.BitArrayField.Get(5));
+        Assert.True(entity.BitArrayField.Get(6));
+        Assert.False(entity.BitArrayField.Get(7));
     }
 }

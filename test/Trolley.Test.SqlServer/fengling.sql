@@ -262,6 +262,8 @@ CREATE TABLE [dbo].[sys_update_entity](
 	[DateTimeOffsetField] [datetimeoffset] NULL DEFAULT NULL,
 	[TimeSpanField] [time] NULL DEFAULT NULL,
 	[TimeOnlyField] [time] NULL DEFAULT NULL,
+	[ByteArrayField] varbinary(100) NULL DEFAULT NULL,
+	[BitArrayField] binary(8) NULL DEFAULT NULL,
  	CONSTRAINT [pk_sys_update_entity] PRIMARY KEY CLUSTERED([Id] ASC)
 );
 GO
@@ -535,6 +537,8 @@ CREATE TABLE [myschema].[sys_update_entity](
 	[DateTimeOffsetField] [datetimeoffset] NULL DEFAULT NULL,
 	[TimeSpanField] [time] NULL DEFAULT NULL,
 	[TimeOnlyField] [time] NULL DEFAULT NULL,
+	[ByteArrayField] varbinary(100) NULL DEFAULT NULL,
+	[BitArrayField] binary(8) NULL DEFAULT NULL,
  	CONSTRAINT [pk_sys_update_entity] PRIMARY KEY CLUSTERED([Id] ASC)
 );
 GO

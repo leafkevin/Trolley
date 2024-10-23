@@ -104,6 +104,7 @@ class MultiQueryReader : IMultiQueryReader
         return new PagedList<T>
         {
             Data = dataList,
+            Count = dataList.Count,
             TotalCount = totalCount,
             PageNumber = pageIndex,
             PageSize = pageSize
@@ -169,6 +170,10 @@ class MultiQueryReader : IMultiQueryReader
         }
         if (this.nextAfters != null)
         {
+            foreach (var nextAfter in this.nextAfters)
+            {
+                nextAfter.Visitor.Dispose();
+            }
             this.nextAfters.Clear();
             this.nextAfters = null;
         }
@@ -188,6 +193,10 @@ class MultiQueryReader : IMultiQueryReader
         }
         if (this.nextAfters != null)
         {
+            foreach (var nextAfter in this.nextAfters)
+            {
+                nextAfter.Visitor.Dispose();
+            }
             this.nextAfters.Clear();
             this.nextAfters = null;
         }

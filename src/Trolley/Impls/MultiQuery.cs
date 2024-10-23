@@ -502,7 +502,7 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
         IQueryVisitor queryVisitor = null;
         if (this.Visitor.HasIncludeTables())
             queryVisitor = this.Visitor;
-        this.MultipleQuery.AddReader(targetType, sql, readerGetter, isSingle, queryVisitor, this.pageNumber, this.pageSize);
+        this.MultipleQuery.AddReader(targetType, sql, readerGetter, isSingle, queryVisitor, this.Visitor.PageNumber, this.Visitor.PageSize);
         return this.MultipleQuery;
     }
     #endregion

@@ -313,6 +313,8 @@ CREATE TABLE "public"."sys_update_entity" (
   "DateTimeOffsetField" timestamptz(6) NULL DEFAULT NULL,
   "TimeSpanField" interval(6) NULL DEFAULT NULL,
   "TimeOnlyField" time(6) NULL DEFAULT NULL,
+  "ByteArrayField" bytea NULL DEFAULT NULL,
+  "BitArrayField" bit(8) NULL DEFAULT NULL,
   CONSTRAINT "pk_sys_update_entity" PRIMARY KEY("Id")
 );
 
@@ -620,5 +622,7 @@ CREATE TABLE "myschema"."sys_update_entity" (
   "DateTimeOffsetField" timestamptz(6) NULL DEFAULT NULL,
   "TimeSpanField" interval(6) NULL DEFAULT NULL,
   "TimeOnlyField" time(6) NULL DEFAULT NULL,
+  "ByteArrayField" bytea NULL DEFAULT NULL,
+  "BitArrayField" bit(8) NULL DEFAULT NULL,
   CONSTRAINT "pk_sys_update_entity" PRIMARY KEY("Id")
 );

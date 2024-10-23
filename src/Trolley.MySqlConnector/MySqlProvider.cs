@@ -23,7 +23,7 @@ public partial class MySqlProvider : BaseOrmProvider
 
     static MySqlProvider()
     {
-        defaultMapTypes[MySqlDbType.Bit] = typeof(bool);
+        defaultMapTypes[MySqlDbType.Bit] = typeof(BitArray);
         defaultMapTypes[MySqlDbType.Bool] = typeof(bool);
         defaultMapTypes[MySqlDbType.Byte] = typeof(sbyte);
         defaultMapTypes[MySqlDbType.UByte] = typeof(byte);
@@ -66,6 +66,7 @@ public partial class MySqlProvider : BaseOrmProvider
         defaultMapTypes[MySqlDbType.VarBinary] = typeof(byte[]);
         defaultMapTypes[MySqlDbType.Guid] = typeof(Guid);
         defaultMapTypes[MySqlDbType.Enum] = typeof(string);
+        defaultMapTypes[MySqlDbType.Set] = typeof(string);
 
         defaultDbTypes[typeof(bool)] = MySqlDbType.Bool;
         defaultDbTypes[typeof(sbyte)] = MySqlDbType.Byte;

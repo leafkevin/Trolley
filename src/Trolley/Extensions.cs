@@ -18,7 +18,7 @@ public static class Extensions
 #if NET6_0_OR_GREATER
         typeof(DateOnly),typeof(TimeOnly),
 #endif
-        typeof(DBNull)];
+        typeof(BitArray),typeof(DBNull)];
     private static readonly ConcurrentDictionary<int, Delegate> typeReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<int, Delegate> valueTupleReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<int, Delegate> queryReaderDeserializerCache = new();

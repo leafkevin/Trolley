@@ -313,5 +313,7 @@ CREATE TABLE `sys_update_entity`  (
   `DateTimeOffsetField` timestamp NULL DEFAULT NULL,
   `TimeSpanField` time NULL DEFAULT NULL,
   `TimeOnlyField` time NULL DEFAULT NULL,
+  `ByteArrayField` varbinary(100) NULL DEFAULT NULL,
+  `BitArrayField` bit(8) NULL DEFAULT NULL,
   CONSTRAINT `pk_sys_update_entity` PRIMARY KEY (`Id`)
 );

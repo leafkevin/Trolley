@@ -1,7 +1,10 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -1400,10 +1403,12 @@ public class UnitTest3 : UnitTestBase
             EnumField = Gender.Male,
             GuidField = Guid.NewGuid(),
 #if NET6_0_OR_GREATER
-            TimeOnlyField = new TimeOnly(3, 5, 7)
+            TimeOnlyField = new TimeOnly(3, 5, 7),
 #else
-            TimeOnlyField = new TimeSpan(3, 5, 7)
+            TimeOnlyField = new TimeSpan(3, 5, 7),
 #endif
+            ByteArrayField = Convert.FromBase64String("ByteArrayField"),
+            BitArrayField = new BitArray(Convert.FromBase64String("BitArrayField"))
         });
         var sql1 = repository.Update<User>()
             .Set(new { SomeTimes = timeSpan })
@@ -1499,7 +1504,7 @@ public class UnitTest3 : UnitTestBase
             .ExecuteAsync();
 
         Assert.True(count == orders.Count);
-    }
+    }    
     private double CalcAmount(double price, double amount) => price * amount - 150;
     private int[] GetProducts() => new int[] { 1, 2, 3 };
 }
