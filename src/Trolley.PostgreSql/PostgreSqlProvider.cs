@@ -20,6 +20,10 @@ public partial class PostgreSqlProvider : BaseOrmProvider
     private readonly static Dictionary<object, Type> defaultMapTypes = new();
     private readonly static Dictionary<Type, object> defaultDbTypes = new();
     private readonly static Dictionary<Type, string> castTos = new();
+    private readonly static List<Type> selfTypes = new() { typeof(NpgsqlInet), typeof(IPAddress),
+        typeof(PhysicalAddress), typeof(NpgsqlPoint), typeof(NpgsqlLine), typeof(NpgsqlLSeg),
+        typeof(NpgsqlBox), typeof(NpgsqlPath), typeof(NpgsqlPolygon), typeof(NpgsqlCircle) };
+
 
     public override OrmProviderType OrmProviderType => OrmProviderType.PostgreSql;
     public override Type NativeDbTypeType => typeof(NpgsqlDbType);
@@ -107,6 +111,33 @@ public partial class PostgreSqlProvider : BaseOrmProvider
         defaultMapTypes[NpgsqlDbType.Uuid | NpgsqlDbType.Array] = typeof(Guid[]);
         defaultMapTypes[NpgsqlDbType.Hstore | NpgsqlDbType.Array] = typeof(Dictionary<string, string>[]);
 
+        defaultMapTypes[NpgsqlDbType.Cidr | NpgsqlDbType.Array] = typeof(NpgsqlInet[]);
+        defaultMapTypes[NpgsqlDbType.Inet | NpgsqlDbType.Array] = typeof(IPAddress[]);
+        defaultMapTypes[NpgsqlDbType.MacAddr | NpgsqlDbType.Array] = typeof(PhysicalAddress[]);
+
+        defaultMapTypes[NpgsqlDbType.Point | NpgsqlDbType.Array] = typeof(NpgsqlPoint[]);
+        defaultMapTypes[NpgsqlDbType.Line | NpgsqlDbType.Array] = typeof(NpgsqlLine[]);
+        defaultMapTypes[NpgsqlDbType.LSeg | NpgsqlDbType.Array] = typeof(NpgsqlLSeg[]);
+        defaultMapTypes[NpgsqlDbType.Box | NpgsqlDbType.Array] = typeof(NpgsqlBox[]);
+        defaultMapTypes[NpgsqlDbType.Path | NpgsqlDbType.Array] = typeof(NpgsqlPath[]);
+        defaultMapTypes[NpgsqlDbType.Polygon | NpgsqlDbType.Array] = typeof(NpgsqlPolygon[]);
+        defaultMapTypes[NpgsqlDbType.Circle | NpgsqlDbType.Array] = typeof(NpgsqlCircle[]);
+
+        defaultMapTypes[NpgsqlDbType.Integer | NpgsqlDbType.Range] = typeof(NpgsqlRange<int>);
+        defaultMapTypes[NpgsqlDbType.Bigint | NpgsqlDbType.Range] = typeof(NpgsqlRange<long>);
+        defaultMapTypes[NpgsqlDbType.Numeric | NpgsqlDbType.Range] = typeof(NpgsqlRange<decimal>);
+        defaultMapTypes[NpgsqlDbType.Date | NpgsqlDbType.Range] = typeof(NpgsqlRange<DateTime>);
+        defaultMapTypes[NpgsqlDbType.Timestamp | NpgsqlDbType.Range] = typeof(NpgsqlRange<DateTime>);
+        defaultMapTypes[NpgsqlDbType.TimestampTz | NpgsqlDbType.Range] = typeof(NpgsqlRange<DateTime>);
+
+        defaultMapTypes[NpgsqlDbType.Integer | NpgsqlDbType.Range | NpgsqlDbType.Array] = typeof(NpgsqlRange<int>[]);
+        defaultMapTypes[NpgsqlDbType.Bigint | NpgsqlDbType.Range | NpgsqlDbType.Array] = typeof(NpgsqlRange<long>[]);
+        defaultMapTypes[NpgsqlDbType.Numeric | NpgsqlDbType.Range | NpgsqlDbType.Array] = typeof(NpgsqlRange<decimal>[]);
+        defaultMapTypes[NpgsqlDbType.Date | NpgsqlDbType.Range | NpgsqlDbType.Array] = typeof(NpgsqlRange<DateTime>[]);
+        defaultMapTypes[NpgsqlDbType.Timestamp | NpgsqlDbType.Range | NpgsqlDbType.Array] = typeof(NpgsqlRange<DateTime>[]);
+        defaultMapTypes[NpgsqlDbType.TimestampTz | NpgsqlDbType.Range | NpgsqlDbType.Array] = typeof(NpgsqlRange<DateTime>[]);
+
+
         defaultDbTypes[typeof(bool)] = NpgsqlDbType.Boolean;
         defaultDbTypes[typeof(sbyte)] = NpgsqlDbType.Smallint;
         defaultDbTypes[typeof(byte)] = NpgsqlDbType.Smallint;
@@ -169,6 +200,32 @@ public partial class PostgreSqlProvider : BaseOrmProvider
         defaultDbTypes[typeof(string[])] = NpgsqlDbType.Varchar | NpgsqlDbType.Array;
         defaultDbTypes[typeof(DateTimeOffset[])] = NpgsqlDbType.TimestampTz | NpgsqlDbType.Array;
         defaultDbTypes[typeof(Guid[])] = NpgsqlDbType.Uuid | NpgsqlDbType.Array;
+        defaultDbTypes[typeof(BitArray[])] = NpgsqlDbType.Varbit | NpgsqlDbType.Array;
+        defaultDbTypes[typeof(Dictionary<string, string>[])] = NpgsqlDbType.Hstore | NpgsqlDbType.Array;
+        defaultDbTypes[typeof(byte[][])] = NpgsqlDbType.Bytea | NpgsqlDbType.Array;
+
+        defaultDbTypes[typeof(NpgsqlInet[])] = NpgsqlDbType.Cidr | NpgsqlDbType.Array;
+        defaultDbTypes[typeof(IPAddress[])] = NpgsqlDbType.Inet | NpgsqlDbType.Array;
+        defaultDbTypes[typeof(PhysicalAddress[])] = NpgsqlDbType.MacAddr | NpgsqlDbType.Array;
+        defaultDbTypes[typeof(NpgsqlPoint[])] = NpgsqlDbType.Point | NpgsqlDbType.Array;
+        defaultDbTypes[typeof(NpgsqlLine[])] = NpgsqlDbType.Line | NpgsqlDbType.Array;
+        defaultDbTypes[typeof(NpgsqlLSeg[])] = NpgsqlDbType.LSeg | NpgsqlDbType.Array;
+        defaultDbTypes[typeof(NpgsqlBox[])] = NpgsqlDbType.Box | NpgsqlDbType.Array;
+        defaultDbTypes[typeof(NpgsqlPath[])] = NpgsqlDbType.Path | NpgsqlDbType.Array;
+        defaultDbTypes[typeof(NpgsqlPolygon[])] = NpgsqlDbType.Polygon | NpgsqlDbType.Array;
+        defaultDbTypes[typeof(NpgsqlCircle[])] = NpgsqlDbType.Circle | NpgsqlDbType.Array;
+
+
+        defaultDbTypes[typeof(NpgsqlRange<int>)] = NpgsqlDbType.Integer | NpgsqlDbType.Range;
+        defaultDbTypes[typeof(NpgsqlRange<long>)] = NpgsqlDbType.Bigint | NpgsqlDbType.Range;
+        defaultDbTypes[typeof(NpgsqlRange<decimal>)] = NpgsqlDbType.Numeric | NpgsqlDbType.Range;
+        defaultDbTypes[typeof(NpgsqlRange<DateTime>)] = NpgsqlDbType.Timestamp | NpgsqlDbType.Range;
+
+        defaultDbTypes[typeof(NpgsqlRange<int>[])] = NpgsqlDbType.Integer | NpgsqlDbType.Range | NpgsqlDbType.Array; ;
+        defaultDbTypes[typeof(NpgsqlRange<long>[])] = NpgsqlDbType.Bigint | NpgsqlDbType.Range | NpgsqlDbType.Array;
+        defaultDbTypes[typeof(NpgsqlRange<decimal>[])] = NpgsqlDbType.Numeric | NpgsqlDbType.Range | NpgsqlDbType.Array;
+        defaultDbTypes[typeof(NpgsqlRange<DateTime>[])] = NpgsqlDbType.Timestamp | NpgsqlDbType.Range | NpgsqlDbType.Array;
+
 
         castTos[typeof(string)] = "VARCHAR";
         castTos[typeof(sbyte)] = "SMALLINT";
@@ -297,6 +354,25 @@ public partial class PostgreSqlProvider : BaseOrmProvider
 #if NET6_0_OR_GREATER
             case Type factType when factType == typeof(TimeOnly): return $"TIME '{(TimeOnly)value:hh\\:mm\\:ss\\.ffffff}'";
 #endif
+            case Type factType when factType == typeof(BitArray):
+                {
+                    var bitArray = value as BitArray;
+                    if (bitArray.Length > 0)
+                    {
+                        var builder = new StringBuilder("'");
+                        int index = 0;
+                        while (index < bitArray.Length)
+                        {
+                            var bitValue = bitArray.Get(index);
+                            builder.Append(bitValue ? "1" : "0");
+                        }
+                        builder.Append("'::bit");
+                        return builder.ToString();
+                    }
+                    return null;
+                }
+            case Type factType when selfTypes.Contains(factType):
+                return $"'{value}'";
             case Type factType when factType == typeof(SqlFieldSegment):
                 {
                     var sqlSegment = value as SqlFieldSegment;
@@ -336,20 +412,17 @@ public partial class PostgreSqlProvider : BaseOrmProvider
             case "timestamptz": result = NpgsqlDbType.TimestampTz; break;
 
             case "time": result = NpgsqlDbType.Time; break;
-            case "timetz":
-                result = NpgsqlDbType.TimeTz; break;
+            case "timetz": result = NpgsqlDbType.TimeTz; break;
             case "interval": result = NpgsqlDbType.Interval; break;
 
             case "bit": result = NpgsqlDbType.Bit; break;
-            case "bytea":
-                result = NpgsqlDbType.Bytea; break;
+            case "bytea": result = NpgsqlDbType.Bytea; break;
             case "varbit": result = NpgsqlDbType.Varbit; break;
 
             case "point": result = NpgsqlDbType.Point; break;
             case "line": result = NpgsqlDbType.Line; break;
             case "lseg": result = NpgsqlDbType.LSeg; break;
-            case "box":
-                result = NpgsqlDbType.Box; break;
+            case "box": result = NpgsqlDbType.Box; break;
             case "path": result = NpgsqlDbType.Path; break;
             case "polygon": result = NpgsqlDbType.Polygon; break;
             case "circle": result = NpgsqlDbType.Circle; break;
@@ -375,7 +448,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
             case "geometry": result = NpgsqlDbType.Geometry; break;
         }
         if (columnInfo.ArrayDimens > 0)
-            result = (NpgsqlDbType)(result | NpgsqlDbType.Array);
+            result = result | NpgsqlDbType.Array;
         return result;
     }
     public override void MapTables(string connectionString, IEntityMapProvider mapProvider)
