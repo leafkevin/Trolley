@@ -67,7 +67,7 @@ public class UnitTest5 : UnitTestBase
     [Fact]
     public async Task MultipleQuery()
     {
-        Initialize();
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         using var reader = await repository.QueryMultipleAsync(f => f
             .Get<User>(new { Id = 1 })
@@ -115,7 +115,7 @@ public class UnitTest5 : UnitTestBase
     [Fact]
     public async Task MultipleQuery_UseMaster()
     {
-        Initialize();
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         using var reader = await repository.QueryMultipleAsync(f => f
             .UseMaster()

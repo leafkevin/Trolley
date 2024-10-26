@@ -203,7 +203,29 @@ public class Function
     public int UpdatedBy { get; set; }
     public DateTime UpdatedAt { get; set; }
 }
-public class UpdateEntity
+public class UpdateEntity1
+{
+    public int Id { get; set; }
+    public bool BooleanField { get; set; }
+    public Gender EnumField { get; set; }
+    public Guid GuidField { get; set; }
+    public DateTime DateTimeField { get; set; }
+#if NET6_0_OR_GREATER
+    public DateOnly DateOnlyField { get; set; }
+#else
+    public DateTime DateOnlyField { get; set; }
+#endif
+    public DateTimeOffset DateTimeOffsetField { get; set; }
+    public TimeSpan TimeSpanField { get; set; }
+#if NET6_0_OR_GREATER
+    public TimeOnly TimeOnlyField { get; set; }
+#else
+    public TimeSpan TimeOnlyField { get; set; }
+#endif
+    public byte[] ByteArrayField { get; set; }
+    public ulong BitArrayField { get; set; }
+}
+public class UpdateEntity2
 {
     public int Id { get; set; }
     public bool BooleanField { get; set; }
@@ -224,4 +246,26 @@ public class UpdateEntity
 #endif
     public byte[] ByteArrayField { get; set; }
     public BitArray BitArrayField { get; set; }
+}
+public class UpdateEntity3
+{
+    public int Id { get; set; }
+    public bool BooleanField { get; set; }
+    public Gender EnumField { get; set; }
+    public Guid GuidField { get; set; }
+    public DateTime DateTimeField { get; set; }
+#if NET6_0_OR_GREATER
+    public DateOnly DateOnlyField { get; set; }
+#else
+    public DateTime DateOnlyField { get; set; }
+#endif
+    public DateTimeOffset DateTimeOffsetField { get; set; }
+    public TimeSpan TimeSpanField { get; set; }
+#if NET6_0_OR_GREATER
+    public TimeOnly TimeOnlyField { get; set; }
+#else
+    public TimeSpan TimeOnlyField { get; set; }
+#endif
+    public byte[] ByteArrayField { get; set; }
+    public byte[] BitArrayField { get; set; }
 }

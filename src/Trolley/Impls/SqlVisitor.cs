@@ -1820,8 +1820,7 @@ public class SqlVisitor : ISqlVisitor
             //Select参数时，Flatten实体表
             foreach (var memberMapper in tableSegment.Mapper.MemberMaps)
             {
-                if (memberMapper.IsIgnore || memberMapper.IsNavigation
-                    || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
+                if (memberMapper.IsIgnore || memberMapper.IsNavigation)
                     continue;
                 targetFields.Add(new SqlFieldSegment
                 {
@@ -1954,7 +1953,7 @@ public class SqlVisitor : ISqlVisitor
         foreach (var memberMapper in memberMappers)
         {
             (var refMemberMapper, _) = memberMapper;
-            var targetType = this.OrmProvider.MapDefaultType(refMemberMapper.NativeDbType);
+            var targetType = this.OrmProvider.MapDefaultType(refMemberMapper);
             result.Columns.Add(refMemberMapper.FieldName, targetType);
         }
         foreach (var entity in entities)
@@ -1985,7 +1984,7 @@ public class SqlVisitor : ISqlVisitor
                 continue;
 
             Func<object, object> valueGetter = null;
-            var targetType = this.OrmProvider.MapDefaultType(refMemberMapper.NativeDbType);
+            var targetType = this.OrmProvider.MapDefaultType(refMemberMapper);
             if (memberInfo == null) valueGetter = value => DBNull.Value;
             else
             {

@@ -60,9 +60,11 @@ public static class Extensions
     }
     public static EntityMap GetEntityMap(this IEntityMapProvider mapProvider, Type entityType, Type mapToType)
     {
-        if (!mapProvider.TryGetEntityMap(entityType, out var mapper))
-            throw new Exception($"实体类型{entityType.FullName}没有配置映射，请在IModelConfiguration.OnModelCreating方法中配置映射");
-        return mapper;
+        if (!mapProvider.TryGetEntityMap(mapToType, out var mapper))
+            throw new Exception($"实体类型{mapToType.FullName}没有配置映射，请在IModelConfiguration.OnModelCreating方法中配置映射");
+        var entityMapper = mapper.CreateDefaultMap(entityType);
+        mapProvider.AddEntityMap(entityType, entityMapper);
+        return entityMapper;
     }
     internal static bool IsNullableType(this Type type, out Type underlyingType)
     {
@@ -219,24 +221,17 @@ public static class Extensions
         var dbReader = reader.BaseDataReader;
         var entityType = typeof(TEntity);
         var ormProviderType = dbContext.OrmProvider.OrmProviderType;
-        var isValueTuple = entityType.FullName.StartsWith("System.ValueTuple`");
-
-        int cacheKey;
-        ConcurrentDictionary<int, Delegate> deserializerCache;
-        if (isValueTuple)
+        var cacheKey = GetTypeReaderKey(entityType, ormProviderType, dbReader);
+        Delegate deserializer = null;
+        if (entityType.FullName.StartsWith("System.ValueTuple`"))
         {
-            cacheKey = GetTypeReaderKey(entityType, ormProviderType, dbReader);
-            deserializerCache = valueTupleReaderDeserializerCache;
+            if (!valueTupleReaderDeserializerCache.TryGetValue(cacheKey, out deserializer))
+                valueTupleReaderDeserializerCache.TryAdd(cacheKey, deserializer = CreateReaderValueTupleDeserializer(dbContext, dbReader, entityType));
         }
         else
         {
-            cacheKey = GetTypeReaderKey(entityType, ormProviderType, dbReader);
-            deserializerCache = typeReaderDeserializerCache;
-        }
-        if (!deserializerCache.TryGetValue(cacheKey, out var deserializer))
-        {
-            deserializer = CreateReaderDeserializer(dbContext, dbReader, entityType, isValueTuple);
-            deserializerCache.TryAdd(cacheKey, deserializer);
+            if (!typeReaderDeserializerCache.TryGetValue(cacheKey, out deserializer))
+                typeReaderDeserializerCache.TryAdd(cacheKey, deserializer = CreateReaderEntityDeserializer(dbContext, dbReader, entityType));
         }
         return ((Func<IDataReader, TEntity>)deserializer).Invoke(dbReader);
     }
@@ -342,31 +337,7 @@ public static class Extensions
         return false;
     }
 #endif
-    internal static DateTime ToUtc(this DateTime dateTime)
-    {
-        if (dateTime.Kind == DateTimeKind.Local)
-            return dateTime.ToUniversalTime();
-        return dateTime;
-    }
-    internal static DateTimeOffset ToUtc(this DateTimeOffset dateTimeOffset)
-    {
-        if (dateTimeOffset.DateTime.Kind == DateTimeKind.Local)
-            return dateTimeOffset.ToUniversalTime();
-        return dateTimeOffset;
-    }
-    internal static DateTime ToLocal(this DateTime dateTime)
-    {
-        if (dateTime.Kind == DateTimeKind.Utc)
-            return dateTime.ToLocalTime();
-        return dateTime;
-    }
-    internal static DateTimeOffset ToLocal(this DateTimeOffset dateTimeOffset)
-    {
-        if (dateTimeOffset.DateTime.Kind == DateTimeKind.Utc)
-            return dateTimeOffset.ToLocalTime();
-        return dateTimeOffset;
-    }
-    private static Delegate CreateReaderDeserializer(DbContext dbContext, IDataReader reader, Type entityType, bool isValueTuple)
+    private static Delegate CreateReaderEntityDeserializer(DbContext dbContext, IDataReader reader, Type entityType)
     {
         var readerExpr = Expression.Parameter(typeof(IDataReader), "reader");
         var ormProviderExpr = Expression.Constant(dbContext.OrmProvider);
@@ -378,17 +349,49 @@ public static class Extensions
 
         while (index < reader.FieldCount)
         {
-            var memberName = isValueTuple ? $"Item{index + 1}" : reader.GetName(index);
+            var memberName = reader.GetName(index);
             //使用原始SQL才有可能SQL中的字段名与成员名不一致，或是没有加 AS成员名
             if (!entityMapper.TryGetMemberMap(memberName, out var memberMapper))
                 throw new Exception($"SQL中字段{memberName}映射不到模型{entityType.FullName}任何栏位,或者没有添加AS子句");
 
             var fieldType = reader.GetFieldType(index);
             var readerValueExpr = GetReaderValue(dbContext, ormProviderExpr, readerExpr, Expression.Constant(index),
-                memberMapper.MemberType, fieldType, memberMapper.TypeHandler, blockParameters, blockBodies);
+                  memberMapper.MemberType, fieldType, memberMapper.TypeHandler, blockParameters, blockBodies);
 
             if (target.IsDefault)
                 target.Bindings.Add(Expression.Bind(memberMapper.Member, readerValueExpr));
+            else target.Arguments.Add(readerValueExpr);
+            index++;
+        }
+        var resultLabelExpr = Expression.Label(entityType);
+        Expression returnExpr;
+        if (target.IsDefault) returnExpr = Expression.MemberInit(Expression.New(target.Constructor), target.Bindings);
+        else returnExpr = Expression.New(target.Constructor, target.Arguments);
+
+        blockBodies.Add(Expression.Return(resultLabelExpr, returnExpr));
+        blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(entityType)));
+        return Expression.Lambda(Expression.Block(blockParameters, blockBodies), readerExpr).Compile();
+    }
+    private static Delegate CreateReaderValueTupleDeserializer(DbContext dbContext, IDataReader reader, Type entityType)
+    {
+        var readerExpr = Expression.Parameter(typeof(IDataReader), "reader");
+        var ormProviderExpr = Expression.Constant(dbContext.OrmProvider);
+        var index = 0;
+        var target = NewBuildInfo(entityType);
+        var blockParameters = new List<ParameterExpression>();
+        var blockBodies = new List<Expression>();
+
+        while (index < reader.FieldCount)
+        {
+            //使用原始SQL才有可能SQL中的字段名与成员名不一致，或是没有加 AS成员名
+            var fieldType = reader.GetFieldType(index);
+            var memberInfo = entityType.GetMember($"Item{index + 1}")[0];
+            var memberType = memberInfo.GetMemberType();
+            var readerValueExpr = GetReaderValue(dbContext, ormProviderExpr, readerExpr,
+                Expression.Constant(index), memberType, fieldType, null, blockParameters, blockBodies);
+
+            if (target.IsDefault)
+                target.Bindings.Add(Expression.Bind(memberInfo, readerValueExpr));
             else target.Arguments.Add(readerValueExpr);
             index++;
         }

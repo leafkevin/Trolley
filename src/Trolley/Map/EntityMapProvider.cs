@@ -6,7 +6,6 @@ namespace Trolley;
 
 public class EntityMapProvider : IEntityMapProvider
 {
-    private bool isUseAutoMap = false;
     private readonly IFieldMapHandler defaultFieldMapHandler;
     private readonly ConcurrentDictionary<Type, EntityMap> entityMappers = new();
     private IFieldMapHandler fieldMapHandler;
@@ -25,11 +24,9 @@ public class EntityMapProvider : IEntityMapProvider
         => this.entityMappers.TryGetValue(entityType, out entityMapper);
     public void UseDefaultFieldMapHandler() => this.fieldMapHandler = this.defaultFieldMapHandler;
     public void UseFieldMapHandler(IFieldMapHandler fieldMapHandler) => this.fieldMapHandler = fieldMapHandler;
-    public void UseAutoMap() => this.isUseAutoMap = true;
     public void Build(TheaDatabase database)
     {
-        if (this.isUseAutoMap)
-            database.OrmProvider.MapTables(database.ConnectionString, this);
+        database.OrmProvider.MapTables(database.ConnectionString, this);
         foreach (var entityMapper in this.EntityMaps)
             entityMapper.Build(database.OrmProvider);
     }

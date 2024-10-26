@@ -61,7 +61,7 @@ public class RepositoryHelper
         else
         {
             var ormProvider = dbContext.OrmProvider;
-            var targetType = ormProvider.MapDefaultType(memberMapper.NativeDbType);
+            var targetType = ormProvider.MapDefaultType(memberMapper);
             var valueGetter = ormProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, dbContext.Options);
             if (fieldValueType != typeof(object))
                 fieldValueExpr = Expression.Convert(fieldValueExpr, typeof(object));
@@ -108,8 +108,7 @@ public class RepositoryHelper
         foreach (var memberInfo in memberInfos)
         {
             if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper)
-                || memberMapper.IsIgnore || memberMapper.IsNavigation
-                || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
+                || memberMapper.IsIgnore || memberMapper.IsNavigation)
                 continue;
 
             if (index > 0) builder.Append(',');
@@ -272,11 +271,11 @@ public class RepositoryHelper
                 }
 
                 //|| (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
-                methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.IsEntityType));
-                var memberTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.MemberType));
-                var isEntityTypeExpr = Expression.Call(methodInfo, memberTypeExpr, outTypeExpr);
-                var isNullExpr = Expression.Equal(Expression.Property(memberMapperExpr, nameof(MemberMap.TypeHandler)), Expression.Constant(null));
-                isContinueExpr = Expression.OrElse(isContinueExpr, Expression.AndAlso(isEntityTypeExpr, isNullExpr));
+                //methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.IsEntityType));
+                //var memberTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.MemberType));
+                //var isEntityTypeExpr = Expression.Call(methodInfo, memberTypeExpr, outTypeExpr);
+                //var isNullExpr = Expression.Equal(Expression.Property(memberMapperExpr, nameof(MemberMap.TypeHandler)), Expression.Constant(null));
+                //isContinueExpr = Expression.OrElse(isContinueExpr, Expression.AndAlso(isEntityTypeExpr, isNullExpr));
                 //if(isContinue)continue;
                 loopBodies.Add(Expression.IfThen(isContinueExpr, Expression.Continue(continueLabel)));
 
@@ -310,11 +309,10 @@ public class RepositoryHelper
                     //  dbFieldValue = memberMapper.TypeHandler.ToFieldValue(ormProvider, dbFieldValue);
                     //else
                     //{
-                    //    var targetType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);
+                    //    var targetType = this.OrmProvider.MapDefaultType(memberMapper);
                     //    var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, false, dbContext.Options);
                     //    dbFieldValue = valueGetter.Invoke(dbFieldValue);
                     //}
-                    Expression nativeDbTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.NativeDbType));
                     var typeHandlerExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.TypeHandler));
                     methodInfo = typeof(ITypeHandler).GetMethod(nameof(ITypeHandler.ToFieldValue));
                     Expression myFieldValueExpr = fieldValueExpr;
@@ -322,10 +320,8 @@ public class RepositoryHelper
                         myFieldValueExpr = Expression.Convert(fieldValueExpr, typeof(object));
                     var typeHandlerValueExpr = Expression.Call(typeHandlerExpr, methodInfo, ormProviderExpr, myFieldValueExpr);
 
-                    nativeDbTypeExpr = Expression.Convert(nativeDbTypeExpr, typeof(object));
-
-                    methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.MapDefaultType));
-                    var targetTypeExpr = Expression.Call(ormProviderExpr, methodInfo, nativeDbTypeExpr);
+                    methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.MapDefaultType), [typeof(MemberMap)]);
+                    var targetTypeExpr = Expression.Call(ormProviderExpr, methodInfo, memberMapperExpr);
                     methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.GetParameterValueGetter));
 
                     var fieldValueTypeExpr = Expression.Call(fieldValueExpr, typeof(object).GetMethod(nameof(object.GetType)));
@@ -346,6 +342,7 @@ public class RepositoryHelper
 
                     //dbParameters.Add(ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue);
                     methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), [typeof(string), typeof(object), typeof(object)]);
+                    var nativeDbTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.NativeDbType));
                     var dbParameterExpr = Expression.Call(ormProviderExpr, methodInfo, parameterNameExpr, nativeDbTypeExpr, dbFieldValueExpr);
                     methodInfo = typeof(IList).GetMethod(nameof(IDataParameterCollection.Add), [typeof(object)]);
                     blockBodies.Add(Expression.Call(dbParametersExpr, methodInfo, dbParameterExpr));
@@ -391,8 +388,7 @@ public class RepositoryHelper
             {
                 if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper)
                     || memberMapper.IsIgnore || memberMapper.IsNavigation
-                    || (isUpdate && (memberMapper.IsIgnoreUpdate || memberMapper.IsRowVersion))
-                    || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
+                    || (isUpdate && (memberMapper.IsIgnoreUpdate || memberMapper.IsRowVersion)))
                     continue;
 
                 if (isUseKey && memberMapper.IsKey && isEntityType && !targetMemberInfos.Exists(f => f.Name == memberMapper.MemberName))
@@ -438,6 +434,8 @@ public class RepositoryHelper
                 }
                 index++;
             }
+            if (index <= 0)
+                throw new Exception("没有找到where条件或是忽略了字段大小写，无法识别到字段名称");
         }
 
         //isFunc通常是查询的where场景
@@ -621,8 +619,7 @@ public class RepositoryHelper
                         {
                             if (!entityMapper.TryGetMemberMap(item.Key, out var memberMapper)
                                 || memberMapper.IsIgnore || memberMapper.IsIgnoreInsert
-                                || memberMapper.IsNavigation || memberMapper.IsAutoIncrement || memberMapper.IsRowVersion
-                                || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
+                                || memberMapper.IsNavigation || memberMapper.IsAutoIncrement || memberMapper.IsRowVersion)
                                 continue;
 
                             if (ignoreFieldNames != null && ignoreFieldNames.Contains(item.Key))
@@ -652,8 +649,7 @@ public class RepositoryHelper
                 {
                     if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper)
                         || memberMapper.IsIgnore || memberMapper.IsIgnoreInsert
-                        || memberMapper.IsNavigation || memberMapper.IsAutoIncrement || memberMapper.IsRowVersion
-                        || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
+                        || memberMapper.IsNavigation || memberMapper.IsAutoIncrement || memberMapper.IsRowVersion)
                         continue;
 
                     if (ignoreFieldNames != null && ignoreFieldNames.Contains(memberInfo.Name))
@@ -757,11 +753,11 @@ public class RepositoryHelper
                 //  dbFieldValue = memberMapper.TypeHandler.ToFieldValue(ormProvider, dbFieldValue);
                 //else
                 //{
-                //    var targetType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);
+                //    var targetType = this.OrmProvider.MapDefaultType(memberMapper);
                 //    var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, false, dbContext.Options);
                 //    dbFieldValue = valueGetter.Invoke(dbFieldValue);
                 //}
-                Expression nativeDbTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.NativeDbType));
+
                 var typeHandlerExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.TypeHandler));
                 methodInfo = typeof(ITypeHandler).GetMethod(nameof(ITypeHandler.ToFieldValue));
                 Expression myFieldValueExpr = fieldValueExpr;
@@ -769,10 +765,8 @@ public class RepositoryHelper
                     myFieldValueExpr = Expression.Convert(fieldValueExpr, typeof(object));
                 var typeHandlerValueExpr = Expression.Call(typeHandlerExpr, methodInfo, ormProviderExpr, myFieldValueExpr);
 
-                nativeDbTypeExpr = Expression.Convert(nativeDbTypeExpr, typeof(object));
-
-                methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.MapDefaultType));
-                var targetTypeExpr = Expression.Call(ormProviderExpr, methodInfo, nativeDbTypeExpr);
+                methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.MapDefaultType), [typeof(MemberMap)]);
+                var targetTypeExpr = Expression.Call(ormProviderExpr, methodInfo, memberMapperExpr);
                 methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.GetParameterValueGetter));
 
                 var fieldValueTypeExpr = Expression.Call(fieldValueExpr, typeof(object).GetMethod(nameof(object.GetType)));
@@ -793,6 +787,7 @@ public class RepositoryHelper
 
                 //dbParameters.Add(ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue);
                 methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), [typeof(string), typeof(object), typeof(object)]);
+                var nativeDbTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.NativeDbType));
                 var dbParameterExpr = Expression.Call(ormProviderExpr, methodInfo, parameterNameExpr, nativeDbTypeExpr, dbFieldValueExpr);
                 methodInfo = typeof(IList).GetMethod(nameof(IDataParameterCollection.Add), [typeof(object)]);
                 loopBodies.Add(Expression.Call(dbParametersExpr, methodInfo, dbParameterExpr));
@@ -830,8 +825,7 @@ public class RepositoryHelper
                 {
                     if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper)
                         || memberMapper.IsIgnore || memberMapper.IsIgnoreInsert
-                        || memberMapper.IsNavigation || memberMapper.IsAutoIncrement || memberMapper.IsRowVersion
-                        || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
+                        || memberMapper.IsNavigation || memberMapper.IsAutoIncrement || memberMapper.IsRowVersion)
                         continue;
 
                     if (ignoreFieldNames != null && ignoreFieldNames.Contains(memberInfo.Name))
@@ -1008,11 +1002,11 @@ public class RepositoryHelper
                 isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsRowVersion)));
 
                 //|| (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
-                methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.IsEntityType));
-                var memberTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.MemberType));
-                var isEntityTypeExpr = Expression.Call(methodInfo, memberTypeExpr, outTypeExpr);
-                var isNullExpr = Expression.Equal(Expression.Property(memberMapperExpr, nameof(MemberMap.TypeHandler)), Expression.Constant(null));
-                isContinueExpr = Expression.OrElse(isContinueExpr, Expression.AndAlso(isEntityTypeExpr, isNullExpr));
+                //methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.IsEntityType));
+                //var memberTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.MemberType));
+                //var isEntityTypeExpr = Expression.Call(methodInfo, memberTypeExpr, outTypeExpr);
+                //var isNullExpr = Expression.Equal(Expression.Property(memberMapperExpr, nameof(MemberMap.TypeHandler)), Expression.Constant(null));
+                //isContinueExpr = Expression.OrElse(isContinueExpr, Expression.AndAlso(isEntityTypeExpr, isNullExpr));
 
                 //if (isContinue) continue;
                 loopBodies.Add(Expression.IfThen(isContinueExpr, Expression.Continue(continueLabel)));
@@ -1037,19 +1031,18 @@ public class RepositoryHelper
                 //  dbFieldValue = memberMapper.TypeHandler.ToFieldValue(ormProvider, dbFieldValue);
                 //else
                 //{
-                //    var targetType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);
+                //    var targetType = this.OrmProvider.MapDefaultType(memberMapper);
                 //    var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, false, dbContext.Options);
                 //    dbFieldValue = valueGetter.Invoke(dbFieldValue);
-                //}
-                Expression nativeDbTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.NativeDbType));
+                //}               
                 var typeHandlerExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.TypeHandler));
                 methodInfo = typeof(ITypeHandler).GetMethod(nameof(ITypeHandler.ToFieldValue));
 
                 loopBodies.Add(Expression.Assign(fieldValueExpr, Expression.Property(currentExpr, nameof(KeyValuePair<string, object>.Value))));
                 var typeHandlerValueExpr = Expression.Call(typeHandlerExpr, methodInfo, ormProviderExpr, fieldValueExpr);
 
-                methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.MapDefaultType));
-                var targetTypeExpr = Expression.Call(ormProviderExpr, methodInfo, nativeDbTypeExpr);
+                methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.MapDefaultType), [typeof(MemberMap)]);
+                var targetTypeExpr = Expression.Call(ormProviderExpr, methodInfo, memberMapperExpr);
                 methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.GetParameterValueGetter));
 
                 var fieldValueTypeExpr = Expression.Call(fieldValueExpr, typeof(object).GetMethod(nameof(object.GetType)));
@@ -1064,6 +1057,7 @@ public class RepositoryHelper
 
                 //dbParameters.Add(ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue);
                 methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.CreateParameter), [typeof(string), typeof(object), typeof(object)]);
+                var nativeDbTypeExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.NativeDbType));
                 var dbParameterExpr = Expression.Call(ormProviderExpr, methodInfo, parameterNameExpr, nativeDbTypeExpr, fieldValueExpr);
                 methodInfo = typeof(IList).GetMethod(nameof(IDataParameterCollection.Add), [typeof(object)]);
                 var addParameterExpr = Expression.Call(dbParametersExpr, methodInfo, dbParameterExpr);
@@ -1103,8 +1097,7 @@ public class RepositoryHelper
                 {
                     if (!entityMapper.TryGetMemberMap(memberInfo.Name, out var memberMapper)
                         || memberMapper.IsIgnore || memberMapper.IsIgnoreUpdate
-                        || memberMapper.IsNavigation || memberMapper.IsRowVersion
-                        || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
+                        || memberMapper.IsNavigation || memberMapper.IsRowVersion)
                         continue;
                     if (memberMapper.IsKey) continue;
                     if (ignoreFieldNames != null && ignoreFieldNames.Contains(memberInfo.Name))
@@ -1354,7 +1347,30 @@ public class RepositoryHelper
         });
         return toArrayGetter.Invoke(parameters);
     }
-
+    public static DateTime ToUtcTime(DateTime dateTime)
+    {
+        if (dateTime.Kind == DateTimeKind.Local)
+            return dateTime.ToUniversalTime();
+        return dateTime;
+    }
+    public static DateTimeOffset ToUtcTime(DateTimeOffset dateTimeOffset)
+    {
+        if (dateTimeOffset.DateTime.Kind == DateTimeKind.Local)
+            return dateTimeOffset.ToUniversalTime();
+        return dateTimeOffset;
+    }
+    public static DateTime ToLocalTime(DateTime dateTime)
+    {
+        if (dateTime.Kind == DateTimeKind.Utc)
+            return dateTime.ToLocalTime();
+        return dateTime;
+    }
+    public static DateTimeOffset ToLocalTime(DateTimeOffset dateTimeOffset)
+    {
+        if (dateTimeOffset.DateTime.Kind == DateTimeKind.Utc)
+            return dateTimeOffset.ToLocalTime();
+        return dateTimeOffset;
+    }
     public static int GetCacheKey(params object[] parameters)
     {
 #if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
@@ -1370,7 +1386,7 @@ public class RepositoryHelper
         {
             foreach (var parameter in parameters)
             {
-                hashCode = hashCode * 23 + (parameter?.GetHashCode()??0);
+                hashCode = hashCode * 23 + (parameter?.GetHashCode() ?? 0);
             }
         }
         return hashCode;

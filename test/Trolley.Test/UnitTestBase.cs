@@ -15,7 +15,7 @@ public class UnitTestBase
     public DateTime UnixEpoch = new DateTime(1970, 1, 1);
 #endif
 
-    public void Initialize()
+    public void Initialize(int type)
     {
         var repository = this.dbFactory.CreateRepository();
         repository.BeginTransaction();
@@ -412,51 +412,147 @@ public class UnitTestBase
                 UpdatedBy = 1
             }
         });
-
-        repository.Delete<UpdateEntity>(new[] { 1, 2 });
-        repository.Create<UpdateEntity>(new UpdateEntity[]
+        switch (type)
         {
-            new UpdateEntity
-            {
-                Id = 1,
-                BooleanField = true,
-#if NET6_0_OR_GREATER
-                DateOnlyField = DateOnly.FromDateTime(DateTime.Now),
-#else
-                DateOnlyField = DateTime.Now,
-#endif
-                DateTimeField = DateTime.Now,
-                DateTimeOffsetField = DateTimeOffset.UtcNow,
-                EnumField = Gender.Male,
-                GuidField = Guid.NewGuid(),
-#if NET6_0_OR_GREATER
-                TimeOnlyField = TimeOnly.FromDateTime(DateTime.Now),
-#else
-                TimeOnlyField =  DateTime.Now.TimeOfDay,
-#endif
-                TimeSpanField = TimeSpan.FromMinutes(350)
-            },
-            new UpdateEntity
-            {
-               Id = 2,
-                BooleanField = false ,
-#if NET6_0_OR_GREATER
-                DateOnlyField = DateOnly.Parse("2024-07-07"),
-#else
-                DateOnlyField = DateTime.Parse("2024-07-07"),
-#endif
-                DateTimeField = DateTime.Now,
-                DateTimeOffsetField = DateTimeOffset.UtcNow,
-                EnumField = Gender.Male,
-                GuidField = Guid.NewGuid(),
-#if NET6_0_OR_GREATER
-                TimeOnlyField = TimeOnly.FromDateTime(DateTime.Now),
-#else
-                TimeOnlyField = DateTime.Now.TimeOfDay,
-#endif
-                TimeSpanField = TimeSpan.FromMinutes(350)
-            }
-        });
+            case 1:
+                repository.Delete<UpdateEntity1>(new[] { 1, 2 });
+                repository.Create<UpdateEntity1>(new UpdateEntity1[]
+                {
+                    new UpdateEntity1
+                    {
+                        Id = 1,
+                        BooleanField = true,
+        #if NET6_0_OR_GREATER
+                        DateOnlyField = DateOnly.FromDateTime(DateTime.Now),
+        #else
+                        DateOnlyField = DateTime.Now,
+        #endif
+                        DateTimeField = DateTime.Now,
+                        DateTimeOffsetField = DateTimeOffset.UtcNow,
+                        EnumField = Gender.Male,
+                        GuidField = Guid.NewGuid(),
+        #if NET6_0_OR_GREATER
+                        TimeOnlyField = TimeOnly.FromDateTime(DateTime.Now),
+        #else
+                        TimeOnlyField =  DateTime.Now.TimeOfDay,
+        #endif
+                        TimeSpanField = TimeSpan.FromMinutes(350)
+                    },
+                    new UpdateEntity1
+                    {
+                       Id = 2,
+                        BooleanField = false ,
+        #if NET6_0_OR_GREATER
+                        DateOnlyField = DateOnly.Parse("2024-07-07"),
+        #else
+                        DateOnlyField = DateTime.Parse("2024-07-07"),
+        #endif
+                        DateTimeField = DateTime.Now,
+                        DateTimeOffsetField = DateTimeOffset.UtcNow,
+                        EnumField = Gender.Male,
+                        GuidField = Guid.NewGuid(),
+        #if NET6_0_OR_GREATER
+                        TimeOnlyField = TimeOnly.FromDateTime(DateTime.Now),
+        #else
+                        TimeOnlyField = DateTime.Now.TimeOfDay,
+        #endif
+                        TimeSpanField = TimeSpan.FromMinutes(350)
+                    }
+               });
+                break;
+            case 2:
+                repository.Delete<UpdateEntity2>(new[] { 1, 2 });
+                repository.Create<UpdateEntity2>(new UpdateEntity2[]
+                {
+                    new UpdateEntity2
+                    {
+                        Id = 1,
+                        BooleanField = true,
+        #if NET6_0_OR_GREATER
+                        DateOnlyField = DateOnly.FromDateTime(DateTime.Now),
+        #else
+                        DateOnlyField = DateTime.Now,
+        #endif
+                        DateTimeField = DateTime.Now,
+                        DateTimeOffsetField = DateTimeOffset.UtcNow,
+                        EnumField = Gender.Male,
+                        GuidField = Guid.NewGuid(),
+        #if NET6_0_OR_GREATER
+                        TimeOnlyField = TimeOnly.FromDateTime(DateTime.Now),
+        #else
+                        TimeOnlyField =  DateTime.Now.TimeOfDay,
+        #endif
+                        TimeSpanField = TimeSpan.FromMinutes(350)
+                    },
+                    new UpdateEntity2
+                    {
+                       Id = 2,
+                        BooleanField = false ,
+        #if NET6_0_OR_GREATER
+                        DateOnlyField = DateOnly.Parse("2024-07-07"),
+        #else
+                        DateOnlyField = DateTime.Parse("2024-07-07"),
+        #endif
+                        DateTimeField = DateTime.Now,
+                        DateTimeOffsetField = DateTimeOffset.UtcNow,
+                        EnumField = Gender.Male,
+                        GuidField = Guid.NewGuid(),
+        #if NET6_0_OR_GREATER
+                        TimeOnlyField = TimeOnly.FromDateTime(DateTime.Now),
+        #else
+                        TimeOnlyField = DateTime.Now.TimeOfDay,
+        #endif
+                        TimeSpanField = TimeSpan.FromMinutes(350)
+                    }
+                });
+                break;
+            case 3:
+                repository.Delete<UpdateEntity3>(new[] { 1, 2 });
+                repository.Create<UpdateEntity3>(new UpdateEntity3[]
+                {
+                    new UpdateEntity3
+                    {
+                        Id = 1,
+                        BooleanField = true,
+        #if NET6_0_OR_GREATER
+                        DateOnlyField = DateOnly.FromDateTime(DateTime.Now),
+        #else
+                        DateOnlyField = DateTime.Now,
+        #endif
+                        DateTimeField = DateTime.Now,
+                        DateTimeOffsetField = DateTimeOffset.UtcNow,
+                        EnumField = Gender.Male,
+                        GuidField = Guid.NewGuid(),
+        #if NET6_0_OR_GREATER
+                        TimeOnlyField = TimeOnly.FromDateTime(DateTime.Now),
+        #else
+                        TimeOnlyField =  DateTime.Now.TimeOfDay,
+        #endif
+                        TimeSpanField = TimeSpan.FromMinutes(350)
+                    },
+                    new UpdateEntity3
+                    {
+                       Id = 2,
+                        BooleanField = false ,
+        #if NET6_0_OR_GREATER
+                        DateOnlyField = DateOnly.Parse("2024-07-07"),
+        #else
+                        DateOnlyField = DateTime.Parse("2024-07-07"),
+        #endif
+                        DateTimeField = DateTime.Now,
+                        DateTimeOffsetField = DateTimeOffset.UtcNow,
+                        EnumField = Gender.Male,
+                        GuidField = Guid.NewGuid(),
+        #if NET6_0_OR_GREATER
+                        TimeOnlyField = TimeOnly.FromDateTime(DateTime.Now),
+        #else
+                        TimeOnlyField = DateTime.Now.TimeOfDay,
+        #endif
+                        TimeSpanField = TimeSpan.FromMinutes(350)
+                    }
+                });
+                break;
+        }
         repository.Commit();
     }
     public interface IPassport

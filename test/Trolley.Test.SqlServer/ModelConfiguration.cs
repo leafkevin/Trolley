@@ -1,4 +1,4 @@
-﻿namespace Trolley.Test;
+﻿namespace Trolley.Test.SqlServer;
 
 public class ModelConfiguration : IModelConfiguration
 {
@@ -40,13 +40,12 @@ public class ModelConfiguration : IModelConfiguration
                 f.HasOne(t => t.Brand).HasForeignKey(t => t.BrandId).MapTo<Brand>();
                 f.HasOne(t => t.Company).HasForeignKey(t => t.CompanyId).MapTo<Company>();
             })
-            .Entity<UpdateEntity>(f => f.ToTable("sys_update_entity"))
+            .Entity<UpdateEntity3>(f => f.ToTable("sys_update_entity"))
             .Entity<User>(f =>
             {
                 f.ToTable("sys_user");
                 f.HasOne(t => t.Company).HasForeignKey(t => t.CompanyId).MapTo<Company>();
                 f.HasMany(t => t.Orders).HasForeignKey(t => t.BuyerId);
-            })
-            .UseAutoMap();
+            });
     }
 }

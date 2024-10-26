@@ -67,7 +67,7 @@ public class MethodCallUnitTest : UnitTestBase
     [Fact]
     public async Task Contains()
     {
-        this.Initialize();
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         var sql = repository.From<User>()
             .Where(f => new int[] { 1, 2 }.Contains(f.Id))
@@ -495,7 +495,7 @@ public class MethodCallUnitTest : UnitTestBase
     [Fact]
     public void Update_Contains()
     {
-        this.Initialize();
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         int id = 1;
         var orderNos = new string[] { "ON_001", "ON_002", "ON_003" };
@@ -513,7 +513,7 @@ public class MethodCallUnitTest : UnitTestBase
     [Fact]
     public void Method_Convert1()
     {
-        Initialize();
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         int age = 23;
         var sql = repository.From<User>()
@@ -545,7 +545,7 @@ public class MethodCallUnitTest : UnitTestBase
         Assert.NotNull(result);
         Assert.True(result.Count > 0);
 
-        var sql1 = repository.From<UpdateEntity>()
+        var sql1 = repository.From<UpdateEntity3>()
             .Where(f => f.Id == 1)
             .Select(f => new
             {
@@ -555,7 +555,7 @@ public class MethodCallUnitTest : UnitTestBase
             })
             .ToSql(out _);
         Assert.Equal("SELECT a.[EnumField],(CASE a.[EnumField] WHEN 0 THEN N'Unknown' WHEN 1 THEN N'Female' WHEN 2 THEN N'Male' END) AS [EnumField1],(CASE a.[EnumField] WHEN 0 THEN N'Unknown' WHEN 1 THEN N'Female' WHEN 2 THEN N'Male' END) AS [EnumField2] FROM [sys_update_entity] a WHERE a.[Id]=1", sql1);
-        var result1 = repository.From<UpdateEntity>()
+        var result1 = repository.From<UpdateEntity3>()
             .Where(f => f.Id == 1)
             .Select(f => new
             {
@@ -571,7 +571,7 @@ public class MethodCallUnitTest : UnitTestBase
     [Fact]
     public async Task Method_Convert2()
     {
-        this.Initialize();
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         byte id = 1;
         await repository.From<User>()
@@ -582,7 +582,7 @@ public class MethodCallUnitTest : UnitTestBase
     [Fact]
     public void SqlIn()
     {
-        Initialize();
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         var sql = repository.From<User>()
             .Where(f => Sql.In(f.Id, new int[] { 1, 2, 3 }))
@@ -663,7 +663,7 @@ public class MethodCallUnitTest : UnitTestBase
         age = result1.Age == 0 ? 20 : result.Age;
         Assert.True(result1.NewField == $"{age}-{result1.Gender.ToDescription()}");
 
-        sql = repository.From<UpdateEntity>()
+        sql = repository.From<UpdateEntity3>()
             .Where(f => f.Id == 1)
             .Select(f => new
             {
@@ -672,7 +672,7 @@ public class MethodCallUnitTest : UnitTestBase
             .ToSql(out _);
         Assert.Equal("SELECT (CASE a.[EnumField] WHEN 0 THEN N'Unknown' WHEN 1 THEN N'Female' WHEN 2 THEN N'Male' END) AS [NewField] FROM [sys_update_entity] a WHERE a.[Id]=1", sql);
 
-        var result2 = await repository.From<UpdateEntity>()
+        var result2 = await repository.From<UpdateEntity3>()
             .Where(f => f.Id == 1)
             .Select(f => new
             {

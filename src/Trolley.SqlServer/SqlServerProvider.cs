@@ -200,6 +200,8 @@ public partial class SqlServerProvider : BaseOrmProvider
             return result;
         return typeof(object);
     }
+    public override Type MapDefaultType(MemberMap memberMappper)
+        => this.MapDefaultType(memberMappper.NativeDbType);
     public override string GetIdentitySql(string keyField) => ";SELECT SCOPE_IDENTITY()";
     public override string CastTo(Type type, object value, string characterSetOrCollation = null)
         => $"CAST({value} AS {castTos[type]})";
@@ -376,6 +378,7 @@ on e.id = c.default_object_id left join sys.index_columns f on f.object_id=a.obj
             var memberInfos = entityMapper.EntityType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
                 .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
 
+            var mappedMappers = new List<MemberMap>();
             foreach (var columnInfo in tableInfo.Columns)
             {
                 if (fieldMapHandler.TryFindMember(columnInfo.FieldName, entityMapper.MemberMaps, out var memberMapper))
@@ -418,13 +421,24 @@ on e.id = c.default_object_id left join sys.index_columns f on f.object_id=a.obj
                 if (memberMapper.TypeHandlerType != null && memberMapper.TypeHandler == null)
                     memberMapper.TypeHandler = this.GetTypeHandler(memberMapper.TypeHandlerType);
                 //object类型
-                if (memberMapper.MemberType == typeof(object) && this.MapDefaultType(memberMapper.NativeDbType) == typeof(string))
+                if (memberMapper.MemberType == typeof(object) && this.MapDefaultType(memberMapper) == typeof(string))
                 {
                     memberMapper.TypeHandlerType = typeof(ToStringTypeHandler);
                     memberMapper.TypeHandler = this.GetTypeHandler(memberMapper.TypeHandlerType);
                 }
                 if (memberMapper.DbColumnType.ToLower() == "timestamp")
                     memberMapper.IsRowVersion = true;
+                mappedMappers.Add(memberMapper);
+            }
+            var ignoreMappers = entityMapper.MemberMaps.Except(mappedMappers).ToList();
+            if (ignoreMappers.Count > 0)
+            {
+                foreach (var memberMapper in ignoreMappers)
+                {
+                    if (memberMapper.IsNavigation || memberMapper.IsRowVersion)
+                        continue;
+                    memberMapper.IsIgnore = true;
+                }
             }
 
             //非默认TableSchema表名就不变更了

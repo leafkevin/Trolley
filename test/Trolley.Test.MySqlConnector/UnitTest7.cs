@@ -121,7 +121,7 @@ public class UnitTest7 : UnitTestBase
     [Fact]
     public async Task Query_WithNextCte()
     {
-        this.Initialize();
+        this.Initialize(1);
         int rootId = 1;
         var repository = this.dbFactory.Create();
         var myCteTable1 = repository
@@ -258,7 +258,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `MenuList` a INNER JOIN `MenuPa
     [Fact]
     public async Task Update_SetBulk_OnlyFields()
     {
-        Initialize();
+        this.Initialize(1);
         var repository = this.dbFactory.Create();
         var orderDetails = await repository.From<OrderDetail>()
            .OrderBy(f => f.Id)

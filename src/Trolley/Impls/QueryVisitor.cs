@@ -200,8 +200,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             var memberName = readerField.TargetMember.Name;
             if (!entityMapper.TryGetMemberMap(memberName, out var memberMapper)
                 || memberMapper.IsIgnore || memberMapper.IsIgnoreInsert
-                || memberMapper.IsNavigation || memberMapper.IsAutoIncrement || memberMapper.IsRowVersion
-                || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
+                || memberMapper.IsNavigation || memberMapper.IsAutoIncrement || memberMapper.IsRowVersion)
                 continue;
             if (index > 0) builder.Append(',');
             builder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}");

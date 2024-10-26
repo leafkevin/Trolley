@@ -11,6 +11,5 @@ public interface IEntityMapProvider
     bool TryGetEntityMap(Type entityType, out EntityMap entityMapper);
     void UseDefaultFieldMapHandler();
     void UseFieldMapHandler(IFieldMapHandler fieldMapHandler);
-    void UseAutoMap();
     void Build(TheaDatabase database);
 }

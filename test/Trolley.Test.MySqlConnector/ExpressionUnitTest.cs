@@ -67,7 +67,7 @@ public class ExpressionUnitTest : UnitTestBase
     [Fact]
     public void Coalesce()
     {
-        this.Initialize();
+        this.Initialize(1);
         var repository = this.dbFactory.Create();
         string firstName = "kevin", lastName = null;
         var sql = repository.From<User>()
@@ -86,7 +86,7 @@ public class ExpressionUnitTest : UnitTestBase
     [Fact]
     public void Conditional()
     {
-        this.Initialize();
+        this.Initialize(1);
         var repository = this.dbFactory.Create();
         var sql = repository.From<User>()
             .Where(f => (f.IsEnabled ? "Enabled" : "Disabled") == "Enabled"
@@ -139,7 +139,7 @@ public class ExpressionUnitTest : UnitTestBase
     [Fact]
     public async Task WhereCoalesceConditional()
     {
-        this.Initialize();
+        this.Initialize(1);
         var repository = this.dbFactory.Create();
         var sql1 = repository.From<Company>()
             .Where(f => (f.Nature ?? CompanyNature.Internet) == CompanyNature.Internet)
@@ -173,7 +173,7 @@ public class ExpressionUnitTest : UnitTestBase
     [Fact]
     public void Index()
     {
-        this.Initialize();
+        this.Initialize(1);
         string[] strArray = { "True", "False", "Unknown" };
         var strCollection = new ReadOnlyCollection<string>(strArray);
         var dict = new Dictionary<string, string>

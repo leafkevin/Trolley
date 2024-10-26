@@ -762,7 +762,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             fieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, fieldValue);
         else
         {
-            var targetType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);
+            var targetType = this.OrmProvider.MapDefaultType(memberMapper);
             var valueGetter = this.OrmProvider.GetParameterValueGetter(memberValue.GetType(), targetType, false, this.Options);
             fieldValue = valueGetter.Invoke(fieldValue);
         }
@@ -785,7 +785,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                 fieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, fieldValue);
             else
             {
-                var targetType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);
+                var targetType = this.OrmProvider.MapDefaultType(memberMapper);
                 var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, false, this.Options);
                 fieldValue = valueGetter.Invoke(fieldValue);
             }

@@ -153,50 +153,50 @@ public class EntityMap
         this.memberMappers.Sort((x, y) => x.Position.CompareTo(y.Position));
         this.isBuild = true;
     }
-    public static EntityMap CreateDefaultMap(Type entityType)
+    //public static EntityMap CreateDefaultMap(Type entityType)
+    //{
+    //    var mapper = new EntityMap(entityType) { TableName = entityType.Name };
+
+    //    bool isValueTuple = false;
+    //    if (entityType.IsValueType)
+    //    {
+    //        mapper.UnderlyingType = Nullable.GetUnderlyingType(entityType);
+    //        mapper.IsNullable = mapper.UnderlyingType != null;
+    //        if (!mapper.IsNullable)
+    //            mapper.UnderlyingType = entityType;
+
+    //        isValueTuple = mapper.UnderlyingType.FullName.StartsWith("System.ValueTuple`");
+    //    }
+    //    MemberInfo[] memberInfos = null;
+    //    if (isValueTuple)
+    //        memberInfos = mapper.UnderlyingType.GetFields(BindingFlags.Public | BindingFlags.Instance);
+    //    else
+    //    {
+    //        memberInfos = mapper.EntityType.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+    //            .Where(p => p.GetIndexParameters().Length == 0).ToArray();
+    //    }
+
+    //    if (memberInfos != null && memberInfos.Length > 0)
+    //    {
+    //        foreach (var memberInfo in memberInfos)
+    //        {
+    //            var memberMapper = new MemberMap(mapper, memberInfo);
+    //            mapper.AddMemberMap(memberMapper.MemberName, memberMapper);
+    //        }
+    //    }
+    //    return mapper;
+    //}
+    public EntityMap CreateDefaultMap(Type entityType)
     {
-        var mapper = new EntityMap(entityType) { TableName = entityType.Name };
-
-        bool isValueTuple = false;
-        if (entityType.IsValueType)
-        {
-            mapper.UnderlyingType = Nullable.GetUnderlyingType(entityType);
-            mapper.IsNullable = mapper.UnderlyingType != null;
-            if (!mapper.IsNullable)
-                mapper.UnderlyingType = entityType;
-
-            isValueTuple = mapper.UnderlyingType.FullName.StartsWith("System.ValueTuple`");
-        }
-        MemberInfo[] memberInfos = null;
-        if (isValueTuple)
-            memberInfos = mapper.UnderlyingType.GetFields(BindingFlags.Public | BindingFlags.Instance);
-        else
-        {
-            memberInfos = mapper.EntityType.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
-                .Where(p => p.GetIndexParameters().Length == 0).ToArray();
-        }
-
-        if (memberInfos != null && memberInfos.Length > 0)
-        {
-            foreach (var memberInfo in memberInfos)
-            {
-                var memberMapper = new MemberMap(mapper, memberInfo);
-                mapper.AddMemberMap(memberMapper.MemberName, memberMapper);
-            }
-        }
-        return mapper;
-    }
-    public static EntityMap CreateDefaultMap(Type entityType, EntityMap mapTo)
-    {
-        if (entityType == mapTo.EntityType)
-            return mapTo;
+        if (entityType == this.EntityType)
+            return this;
 
         var mapper = new EntityMap(entityType)
         {
-            TableName = mapTo.TableName,
-            IsAutoIncrement = mapTo.IsAutoIncrement,
-            KeyMembers = mapTo.KeyMembers,
-            AutoIncrementField = mapTo.AutoIncrementField
+            TableName = this.TableName,
+            IsAutoIncrement = this.IsAutoIncrement,
+            KeyMembers = this.KeyMembers,
+            AutoIncrementField = this.AutoIncrementField
         };
 
         bool isValueTuple = false;
@@ -222,7 +222,7 @@ public class EntityMap
         {
             foreach (var memberInfo in memberInfos)
             {
-                var mapToMemberMapper = mapTo.GetMemberMap(memberInfo.Name);
+                var mapToMemberMapper = this.GetMemberMap(memberInfo.Name);
                 var memberMapper = mapToMemberMapper.Clone(mapper, memberInfo);
                 mapper.AddMemberMap(memberMapper.MemberName, memberMapper);
             }

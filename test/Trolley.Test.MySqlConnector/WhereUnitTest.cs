@@ -66,7 +66,7 @@ public class WhereUnitTest : UnitTestBase
     [Fact]
     public async Task WhereBoolean()
     {
-        this.Initialize();
+        this.Initialize(1);
         var repository = this.dbFactory.Create();
         var result1 = await repository.QueryAsync<User>(f => f.IsEnabled);
         Assert.True(result1.Count > 0);
@@ -77,7 +77,7 @@ public class WhereUnitTest : UnitTestBase
     [Fact]
     public async Task WhereMemberVisit()
     {
-        this.Initialize();
+        this.Initialize(1);
         var repository = this.dbFactory.Create();
         var result1 = await repository.QueryAsync<User>(f => !(f.IsEnabled == false) && f.Id > 0);
         Assert.True(result1.Count > 0);
@@ -88,7 +88,7 @@ public class WhereUnitTest : UnitTestBase
     [Fact]
     public async Task WhereStringEnum()
     {
-        this.Initialize();
+        this.Initialize(1);
         var repository = this.dbFactory.Create();
         var sql1 = repository.From<Company>()
             .Where(f => f.Nature == CompanyNature.Internet)
@@ -159,7 +159,7 @@ public class WhereUnitTest : UnitTestBase
     [Fact]
     public async Task WhereIsNull()
     {
-        this.Initialize();
+        this.Initialize(1);
         var repository = this.dbFactory.Create();
         var sql1 = repository.From<Order>()
            .Where(f => f.BuyerId.IsNull())

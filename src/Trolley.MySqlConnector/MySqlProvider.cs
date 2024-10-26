@@ -23,7 +23,7 @@ public partial class MySqlProvider : BaseOrmProvider
 
     static MySqlProvider()
     {
-        defaultMapTypes[MySqlDbType.Bit] = typeof(BitArray);
+        defaultMapTypes[MySqlDbType.Bit] = typeof(ulong);
         defaultMapTypes[MySqlDbType.Bool] = typeof(bool);
         defaultMapTypes[MySqlDbType.Byte] = typeof(sbyte);
         defaultMapTypes[MySqlDbType.UByte] = typeof(byte);
@@ -182,6 +182,16 @@ public partial class MySqlProvider : BaseOrmProvider
             return result;
         return typeof(object);
     }
+    public override Type MapDefaultType(MemberMap memberMappper)
+    {
+        if (memberMappper.NativeDbType is MySqlDbType nativeDbType && nativeDbType == MySqlDbType.Bit)
+        {
+            if (memberMappper.MaxLength > 1)
+                return typeof(ulong);
+            else return typeof(bool);
+        }
+        return this.MapDefaultType(memberMappper.NativeDbType);
+    }
     public override string CastTo(Type type, object value, string characterSetOrCollation = null)
     {
         if (string.IsNullOrEmpty(characterSetOrCollation))
@@ -302,7 +312,7 @@ public partial class MySqlProvider : BaseOrmProvider
                 };
                 tableInfos.Add(tableInfo);
             }
-            tableInfo.Columns.Add(new DbColumnInfo
+            var conlumnInfo = new DbColumnInfo
             {
                 FieldName = reader.ToFieldValue<string>(2),
                 DataType = reader.ToFieldValue<string>(3),
@@ -316,7 +326,17 @@ public partial class MySqlProvider : BaseOrmProvider
                 IsAutoIncrement = reader.ToFieldValue<bool>(11),
                 IsNullable = reader.ToFieldValue<bool>(12),
                 Position = reader.ToFieldValue<int>(13)
-            });
+            };
+            tableInfo.Columns.Add(conlumnInfo);
+
+            var lengthTypes = new[] { "bit", "binary", "varbinary" };
+            if (lengthTypes.Contains(conlumnInfo.DataType))
+            {
+                var beginIndex = conlumnInfo.DbColumnType.IndexOf('(') + 1;
+                var endIndex = conlumnInfo.DbColumnType.IndexOf(')');
+                var length = conlumnInfo.DbColumnType.Substring(beginIndex, endIndex - beginIndex);
+                conlumnInfo.MaxLength = int.Parse(length);
+            }
         }
         reader.Close();
         connection.Close();
@@ -333,6 +353,7 @@ public partial class MySqlProvider : BaseOrmProvider
             var memberInfos = entityMapper.EntityType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
                 .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
 
+            var mappedMappers = new List<MemberMap>();
             foreach (var columnInfo in tableInfo.Columns)
             {
                 if (fieldMapHandler.TryFindMember(columnInfo.FieldName, entityMapper.MemberMaps, out var memberMapper))
@@ -373,10 +394,21 @@ public partial class MySqlProvider : BaseOrmProvider
                 if (memberMapper.TypeHandlerType != null && memberMapper.TypeHandler == null)
                     memberMapper.TypeHandler = this.GetTypeHandler(memberMapper.TypeHandlerType);
                 //object类型
-                if (memberMapper.MemberType == typeof(object) && this.MapDefaultType(memberMapper.NativeDbType) == typeof(string))
+                if (memberMapper.MemberType == typeof(object) && this.MapDefaultType(memberMapper) == typeof(string))
                 {
                     memberMapper.TypeHandlerType = typeof(ToStringTypeHandler);
                     memberMapper.TypeHandler = this.GetTypeHandler(memberMapper.TypeHandlerType);
+                }
+                mappedMappers.Add(memberMapper);
+            }
+            var ignoreMappers = entityMapper.MemberMaps.Except(mappedMappers).ToList();
+            if (ignoreMappers.Count > 0)
+            {
+                foreach (var memberMapper in ignoreMappers)
+                {
+                    if (memberMapper.IsNavigation || memberMapper.IsRowVersion)
+                        continue;
+                    memberMapper.IsIgnore = true;
                 }
             }
 

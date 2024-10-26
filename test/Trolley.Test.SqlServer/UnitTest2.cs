@@ -67,7 +67,7 @@ public class UnitTest2 : UnitTestBase
     [Fact]
     public async Task QueryFirst()
     {
-        Initialize();
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         var result = repository.QueryFirst<User>(f => f.Id == 1);
         if (result != null)
@@ -90,7 +90,7 @@ public class UnitTest2 : UnitTestBase
     [Fact]
     public async Task Get()
     {
-        Initialize();
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         var result = repository.Get<User>(1);
         Assert.Equal("leafkevin", result.Name);
@@ -100,7 +100,7 @@ public class UnitTest2 : UnitTestBase
     [Fact]
     public async Task Query()
     {
-        Initialize();
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         var result = await repository.QueryAsync<Product>(f => f.ProductNo.Contains("PN-00"));
         Assert.True(result.Count >= 3);
@@ -108,7 +108,7 @@ public class UnitTest2 : UnitTestBase
     [Fact]
     public async Task QueryPage()
     {
-        Initialize();
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         var result = repository.From<OrderDetail>()
             .Where(f => f.ProductId == 1)
@@ -125,7 +125,7 @@ public class UnitTest2 : UnitTestBase
     [Fact]
     public async Task QueryDictionary()
     {
-        Initialize();
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         var result = await repository.QueryDictionaryAsync<Product, int, string>(f => f.ProductNo.Contains("PN-00"), f => f.Id, f => f.Name);
         Assert.True(result.Count >= 3);
@@ -141,7 +141,7 @@ public class UnitTest2 : UnitTestBase
     [Fact]
     public async Task QueryRawSql()
     {
-        this.Initialize();
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         var result = await repository.QueryAsync<Product>("SELECT * FROM sys_product where Id=@ProductId", new { ProductId = 1 });
         Assert.NotNull(result);
@@ -150,7 +150,7 @@ public class UnitTest2 : UnitTestBase
     [Fact]
     public void FromQuery_SubQuery()
     {
-        Initialize();
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         var sql = repository
             .From(f => f.From<OrderDetail>()
@@ -207,7 +207,7 @@ public class UnitTest2 : UnitTestBase
     [Fact]
     public void FromQuery_SubQuery1()
     {
-        this.Initialize();
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         var sql = repository.From(f => f.From<Page, Menu>('o')
                 .Where((a, b) => a.Id == b.PageId)
@@ -441,7 +441,7 @@ public class UnitTest2 : UnitTestBase
     [Fact]
     public void FromQuery_InnerJoin()
     {
-        this.Initialize();
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         var sql = repository.From<User>()
            .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
@@ -523,7 +523,7 @@ public class UnitTest2 : UnitTestBase
     [Fact]
     public void Join_Cte()
     {
-        this.Initialize();
+        this.Initialize(3);
         var menuId = 1;
         var pageId = 1;
         var repository = this.dbFactory.Create();
@@ -594,7 +594,7 @@ SELECT a.[MenuId],a.[ParentId],a.[Url] FROM [menuPageList] a WHERE a.[ParentId]<
     [Fact]
     public async Task FromQuery_Include()
     {
-        Initialize();
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         var sql = repository.From<Product>()
             .Include(f => f.Brand)
@@ -622,7 +622,7 @@ SELECT a.[MenuId],a.[ParentId],a.[Url] FROM [menuPageList] a WHERE a.[ParentId]<
     [Fact]
     public void FromQuery_IncludeMany()
     {
-        Initialize();
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         var result = repository.From<Order>()
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
@@ -673,7 +673,7 @@ SELECT a.[MenuId],a.[ParentId],a.[Url] FROM [menuPageList] a WHERE a.[ParentId]<
     [Fact]
     public void FromQuery_IncludeMany_Filter()
     {
-        Initialize();
+        this.Initialize(3);
         int productId = 1;
         var repository = this.dbFactory.Create();
         var result = repository.From<Order>()
@@ -695,7 +695,7 @@ SELECT a.[MenuId],a.[ParentId],a.[Url] FROM [menuPageList] a WHERE a.[ParentId]<
     [Fact]
     public async Task FromQuery_Include_ThenInclude()
     {
-        Initialize();
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         var result = await repository.From<Order>()
             .InnerJoin<User>((a, b) => a.SellerId == b.Id)
@@ -734,7 +734,7 @@ SELECT a.[MenuId],a.[ParentId],a.[Url] FROM [menuPageList] a WHERE a.[ParentId]<
     [Fact]
     public void QueryPage_Include()
     {
-        Initialize();
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         var result = repository.From<OrderDetail>()
             .Include(f => f.Product)
@@ -804,7 +804,7 @@ SELECT a.[MenuId],a.[ParentId],a.[Url] FROM [menuPageList] a WHERE a.[ParentId]<
     [Fact]
     public void FromQuery_Groupby()
     {
-        Initialize();
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         var sql = repository.From<Order>()
            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
@@ -863,7 +863,7 @@ SELECT a.[MenuId],a.[ParentId],a.[Url] FROM [menuPageList] a WHERE a.[ParentId]<
     [Fact]
     public void FromQuery_Groupby_Fields()
     {
-        Initialize();
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         var sql = repository.From<User>()
             .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
@@ -1084,7 +1084,7 @@ SELECT a.[MenuId],a.[ParentId],a.[Url] FROM [menuPageList] a WHERE a.[ParentId]<
     [Fact]
     public void FromQuery_Groupby_Having_OrderBy()
     {
-        this.Initialize();
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         var sql = repository.From<User>()
             .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
@@ -1307,7 +1307,7 @@ SELECT a.[MenuId],a.[ParentId],a.[Url] FROM [menuPageList] a WHERE a.[ParentId]<
     [Fact]
     public void CteTable_Exists()
     {
-        this.Initialize();
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         var myOrders = repository.From<OrderDetail, Order>()
             .Where((a, b) => a.OrderId == b.Id)
@@ -1576,7 +1576,7 @@ SELECT a.[Id],a.[Name],b.[Name] AS [CompanyName] FROM [sys_user] a INNER JOIN [s
     [Fact]
     public void Query_Count()
     {
-        Initialize();
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         var count = repository.From<User>().Count();
         var count1 = repository.From<User>().Select(f => Sql.Count()).First();
@@ -1587,7 +1587,7 @@ SELECT a.[Id],a.[Name],b.[Name] AS [CompanyName] FROM [sys_user] a INNER JOIN [s
     [Fact]
     public void Query_Where_Count()
     {
-        Initialize();
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         var result = repository.From<User>()
             .Where(t => Sql.Exists(f =>
@@ -1609,7 +1609,7 @@ SELECT a.[Id],a.[Name],b.[Name] AS [CompanyName] FROM [sys_user] a INNER JOIN [s
     [Fact]
     public void Query_Max()
     {
-        Initialize();
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         var count = repository.From<Order>().Max(f => f.TotalAmount);
         var count1 = repository.From<Order>().Select(f => Sql.Max(f.TotalAmount)).First();
@@ -1620,7 +1620,7 @@ SELECT a.[Id],a.[Name],b.[Name] AS [CompanyName] FROM [sys_user] a INNER JOIN [s
     [Fact]
     public void Query_Min()
     {
-        Initialize();
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         var count = repository.From<Order>().Min(f => f.TotalAmount);
         var count1 = repository.From<Order>().Select(f => Sql.Min(f.TotalAmount)).First();
@@ -1631,7 +1631,7 @@ SELECT a.[Id],a.[Name],b.[Name] AS [CompanyName] FROM [sys_user] a INNER JOIN [s
     [Fact]
     public void Query_Avg()
     {
-        Initialize();
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         var value1 = repository.From<Order>().Avg(f => f.TotalAmount);
         var value2 = repository.From<Order>().Select(f => Sql.Avg(f.TotalAmount)).First();
@@ -1642,7 +1642,7 @@ SELECT a.[Id],a.[Name],b.[Name] AS [CompanyName] FROM [sys_user] a INNER JOIN [s
     [Fact]
     public void Query_ValueTuple()
     {
-        Initialize();
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         var sql = "SELECT Id,OrderNo,TotalAmount FROM sys_order";
         var result = repository.Query<(string OrderId, string OrderNo, double TotalAmount)>(sql);
@@ -1651,7 +1651,7 @@ SELECT a.[Id],a.[Name],b.[Name] AS [CompanyName] FROM [sys_user] a INNER JOIN [s
     [Fact]
     public void Query_Json()
     {
-        this.Initialize();
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         var result = repository.Get<Order>("1");
         Assert.NotNull(result);
@@ -1687,7 +1687,7 @@ SELECT a.[Id],a.[Name],b.[Name] AS [CompanyName] FROM [sys_user] a INNER JOIN [s
     [Fact]
     public async Task Query_Where_IsNull()
     {
-        this.Initialize();
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         var sql = repository.From<Order>()
             .Where(x => x.ProductCount == null || x.BuyerId.IsNull())
@@ -1790,7 +1790,7 @@ SELECT a.[Id],a.[OrderNo],a.[SellerId],a.[BuyerId] FROM [sys_order] a WHERE a.[I
     [Fact]
     public async Task Query_Union_Take()
     {
-        this.Initialize();
+        this.Initialize(3);
         string id1 = "3", id2 = "2";
         var repository = this.dbFactory.Create();
         var sql = repository
@@ -1915,7 +1915,7 @@ SELECT a.[Id],a.[OrderNo],a.[SellerId],a.[BuyerId] FROM [sys_order] a INNER JOIN
     [Fact]
     public async Task FromQuery_Union_Limit()
     {
-        this.Initialize();
+        this.Initialize(3);
         string id1 = "4", id2 = "2";
         var repository = this.dbFactory.Create();
         var sql = repository.From<Order>()
@@ -1977,7 +1977,7 @@ SELECT * FROM (SELECT TOP 1 a.[Id],a.[OrderNo],a.[SellerId],a.[BuyerId] FROM [sy
     [Fact]
     public void FromQuery_Union_SubQuery_Limit()
     {
-        this.Initialize();
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         var sql = repository.From(f => f.From<Order>()
                 .Where(x => x.Id != "3")
@@ -2033,7 +2033,7 @@ SELECT * FROM (SELECT TOP 1 a.[Id],a.[OrderNo],a.[SellerId],a.[BuyerId] FROM [sy
     [Fact]
     public async Task FromQuery_Union_SubQuery_OrderBy()
     {
-        this.Initialize();
+        this.Initialize(3);
         string id1 = "4", id2 = "2";
         var repository = this.dbFactory.Create();
         var sql = repository.From<Order>()
@@ -2097,7 +2097,7 @@ SELECT * FROM (SELECT TOP 1 a.[Id],a.[OrderNo],a.[SellerId],a.[BuyerId] FROM [sy
     [Fact]
     public void Union_Take()
     {
-        this.Initialize();
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         var sql = repository
             .From(f => f.From<Menu>()
@@ -2142,7 +2142,7 @@ SELECT * FROM (SELECT TOP 1 a.[BuyerId] AS [Id],a.[OrderNo] AS [Name],a.[SellerI
     [Fact]
     public async Task Query_WithCte_SelfRef()
     {
-        this.Initialize();
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         int menuId = 2;
         int pageId = 1;
@@ -2180,7 +2180,7 @@ SELECT a.[Id],a.[Name],a.[ParentId],b.[Url] FROM [MenuList] a INNER JOIN [sys_pa
     [Fact]
     public async Task Query_WithNextCte()
     {
-        this.Initialize();
+        this.Initialize(3);
         int rootId = 1;
         var repository = this.dbFactory.Create();
         var myCteTable1 = repository

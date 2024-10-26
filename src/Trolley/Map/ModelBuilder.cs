@@ -31,5 +31,4 @@ public class ModelBuilder
         this.mapProvider.UseFieldMapHandler(fieldMapHandler);
         return this;
     }
-    public void UseAutoMap() => this.mapProvider.UseAutoMap();
 }

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.Common;
 using System.Linq.Expressions;
 
 namespace Trolley;
@@ -172,6 +171,7 @@ public interface IOrmProvider
     string GetPagingTemplate(int? skip, int? limit, string orderBy = null);
     object GetNativeDbType(Type type);
     Type MapDefaultType(object nativeDbType);
+    Type MapDefaultType(MemberMap memberMappper);
     string GetIdentitySql(string keyField);
     string CastTo(Type type, object value, string characterSetOrCollation = null);
     string GetQuotedValue(Type expectType, object value);

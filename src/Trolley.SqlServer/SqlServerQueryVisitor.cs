@@ -155,8 +155,7 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
             //Union后，如果没有select语句时，通常实体类型或是select分组对象
             if (!entityMapper.TryGetMemberMap(readerField.TargetMember.Name, out var memberMapper)
                 || memberMapper.IsIgnore || memberMapper.IsIgnoreInsert
-                || memberMapper.IsNavigation || memberMapper.IsAutoIncrement || memberMapper.IsRowVersion
-                || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
+                || memberMapper.IsNavigation || memberMapper.IsAutoIncrement || memberMapper.IsRowVersion)
                 continue;
             if (index > 0) builder.Append(',');
             builder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}");

@@ -69,7 +69,7 @@ public class UnitTest3 : UnitTestBase
     [Fact]
     public void Update_AnonymousObject()
     {
-        Initialize();
+        this.Initialize(1);
         var repository = this.dbFactory.Create();
         var user = repository.Get<User>(1);
         user.Name = "kevin";
@@ -98,7 +98,7 @@ public class UnitTest3 : UnitTestBase
     [Fact]
     public async Task Update_AnonymousObjects()
     {
-        Initialize();
+        this.Initialize(1);
         var repository = this.dbFactory.Create();
         repository.BeginTransaction();
         var parameters = await repository.From<OrderDetail>()
@@ -125,7 +125,7 @@ public class UnitTest3 : UnitTestBase
     [Fact]
     public async Task Update_SetBulk()
     {
-        Initialize();
+        this.Initialize(1);
         var repository = this.dbFactory.Create();
         var parameters = await repository.From<OrderDetail>()
            .GroupBy(f => f.OrderId)
@@ -149,7 +149,7 @@ public class UnitTest3 : UnitTestBase
     [Fact]
     public async Task Update_SetBulk_OnlyFields()
     {
-        Initialize();
+        this.Initialize(1);
         var repository = this.dbFactory.Create();
         var orderDetails = await repository.From<OrderDetail>()
            .OrderBy(f => f.Id)
@@ -207,7 +207,7 @@ public class UnitTest3 : UnitTestBase
     [Fact]
     public async Task Update_SetBulk_IgnoreFields()
     {
-        Initialize();
+        this.Initialize(1);
         var repository = this.dbFactory.Create();
         var orderDetails = await repository.From<OrderDetail>()
             .OrderBy(f => f.Id)
@@ -256,7 +256,7 @@ public class UnitTest3 : UnitTestBase
     [Fact]
     public async Task Update_SetBulk_SetFields()
     {
-        Initialize();
+        this.Initialize(1);
         var repository = this.dbFactory.Create();
         var orderDetails = await repository.From<OrderDetail>()
             .OrderBy(f => f.Id)
@@ -300,7 +300,7 @@ public class UnitTest3 : UnitTestBase
     [Fact]
     public void Update_Fields_Where()
     {
-        Initialize();
+        this.Initialize(1);
         var repository = this.dbFactory.Create();
         var result = repository.Update<User>(f => new
         {
@@ -330,7 +330,7 @@ public class UnitTest3 : UnitTestBase
     [Fact]
     public void Update_Set_Fields_Where()
     {
-        Initialize();
+        this.Initialize(1);
         var repository = this.dbFactory.Create();
         var result = repository.Update<User>()
             .Set(f => new
@@ -351,7 +351,7 @@ public class UnitTest3 : UnitTestBase
     [Fact]
     public void Update_Fields_Parameters()
     {
-        Initialize();
+        this.Initialize(1);
         var repository = this.dbFactory.Create();
         var result = repository.Update<User>(new { Id = 1, Name = "leafkevin11" });
         var result1 = repository.Get<User>(1);
@@ -362,7 +362,7 @@ public class UnitTest3 : UnitTestBase
     [Fact]
     public void Update_Set_AnonymousObject_Where()
     {
-        Initialize();
+        this.Initialize(1);
         var repository = this.dbFactory.Create();
         var sql = repository.Update<User>()
             .Set(new
@@ -396,7 +396,7 @@ public class UnitTest3 : UnitTestBase
     [Fact]
     public void Update_Set_AnonymousObject_Where_OnlyFields()
     {
-        Initialize();
+        this.Initialize(1);
         var repository = this.dbFactory.Create();
         var user = repository.Get<User>(1);
         var sql = repository.Update<User>()
@@ -431,7 +431,7 @@ public class UnitTest3 : UnitTestBase
     [Fact]
     public void Update_Set_AnonymousObject_Where_IgnoreFields()
     {
-        Initialize();
+        this.Initialize(1);
         var repository = this.dbFactory.Create();
         var sql = repository.Update<User>()
             .Set(new
@@ -466,7 +466,7 @@ public class UnitTest3 : UnitTestBase
     [Fact]
     public void Update_SetWith_Parameters()
     {
-        Initialize();
+        this.Initialize(1);
         var repository = this.dbFactory.Create();
         repository.BeginTransaction();
         var result = repository.Update<Order>(new
@@ -518,7 +518,7 @@ public class UnitTest3 : UnitTestBase
     [Fact]
     public async Task Update_MultiParameters()
     {
-        this.Initialize();
+        this.Initialize(1);
         var repository = this.dbFactory.Create();
         repository.BeginTransaction();
         var parameters = await repository.From<OrderDetail>()
@@ -544,7 +544,7 @@ public class UnitTest3 : UnitTestBase
     [Fact]
     public void Update_Set_MethodCall()
     {
-        this.Initialize();
+        this.Initialize(1);
         var repository = this.dbFactory.Create();
         repository.BeginTransaction();
         var parameter = repository.Get<Order>("1");
@@ -633,7 +633,7 @@ public class UnitTest3 : UnitTestBase
     [Fact]
     public void Update_Set_FromQuery_Multi()
     {
-        this.Initialize();
+        this.Initialize(1);
         var repository = this.dbFactory.Create();
         var sql = repository.Update<Order>()
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
@@ -695,7 +695,7 @@ public class UnitTest3 : UnitTestBase
     [Fact]
     public async Task Update_SetFrom()
     {
-        Initialize();
+        this.Initialize(1);
         var repository = this.dbFactory.Create();
         var sql = repository.Update<Order>()
             .SetFrom((a, b) => new
@@ -735,7 +735,7 @@ public class UnitTest3 : UnitTestBase
     [Fact]
     public void Update_Set_Join()
     {
-        this.Initialize();
+        this.Initialize(1);
         var repository = this.dbFactory.Create();
         var sql = repository.Update<Order>()
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
@@ -797,7 +797,7 @@ public class UnitTest3 : UnitTestBase
     [Fact]
     public async Task Update_Set_FromQuery_One()
     {
-        Initialize();
+        this.Initialize(1);
         var repository = this.dbFactory.Create();
         var order = repository.Get<Order>("1");
         var totalAmount = await repository.From<OrderDetail>()
@@ -859,7 +859,7 @@ public class UnitTest3 : UnitTestBase
     [Fact]
     public void Update_Set_FromQuery_One_Enum()
     {
-        this.Initialize();
+        this.Initialize(1);
         var repository = this.dbFactory.Create();
         var sql = repository.Update<Company>()
             .SetFrom((a, b) => new
@@ -899,7 +899,7 @@ public class UnitTest3 : UnitTestBase
     [Fact]
     public async Task Update_Set_FromQuery_Fields()
     {
-        this.Initialize();
+        this.Initialize(1);
         var repository = this.dbFactory.Create();
         var sql = repository.Update<Order>()
             .SetFrom((x, y) => new
@@ -951,7 +951,7 @@ public class UnitTest3 : UnitTestBase
     [Fact]
     public void Update_InnerJoin_One()
     {
-        this.Initialize();
+        this.Initialize(1);
         var repository = this.dbFactory.Create();
         var sql = repository.Update<Order>()
             .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
@@ -979,7 +979,7 @@ public class UnitTest3 : UnitTestBase
     [Fact]
     public async Task Update_InnerJoin_Multi()
     {
-        this.Initialize();
+        this.Initialize(1);
         var repository = this.dbFactory.Create();
         var sql = repository.Update<Order>()
             .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
@@ -1030,7 +1030,7 @@ public class UnitTest3 : UnitTestBase
     [Fact]
     public async Task Update_InnerJoin_Fields()
     {
-        this.Initialize();
+        this.Initialize(1);
         var repository = this.dbFactory.Create();
         var sql = repository.Update<Order>()
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
@@ -1254,7 +1254,7 @@ public class UnitTest3 : UnitTestBase
     [Fact]
     public void Update_Enum_Fields()
     {
-        this.Initialize();
+        this.Initialize(1);
         var repository = this.dbFactory.Create();
         var sql = repository.Update<Order>()
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
@@ -1385,8 +1385,8 @@ public class UnitTest3 : UnitTestBase
     {
         var repository = this.dbFactory.Create();
         var timeSpan = TimeSpan.FromMinutes(455);
-        await repository.DeleteAsync<UpdateEntity>(1);
-        await repository.CreateAsync<UpdateEntity>(new UpdateEntity
+        await repository.DeleteAsync<UpdateEntity1>(1);
+        await repository.CreateAsync<UpdateEntity1>(new UpdateEntity1
         {
             Id = 1,
             BooleanField = true,

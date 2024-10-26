@@ -512,7 +512,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             fieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, fieldValue);
         else
         {
-            var targetType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);
+            var targetType = this.OrmProvider.MapDefaultType(memberMapper);
             var valueGetter = this.OrmProvider.GetParameterValueGetter(fieldValue.GetType(), targetType, false, this.Options);
             fieldValue = valueGetter.Invoke(fieldValue);
         }

@@ -48,6 +48,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
     }
     public abstract object GetNativeDbType(Type type);
     public abstract Type MapDefaultType(object nativeDbType);
+    public abstract Type MapDefaultType(MemberMap memberMappper);
     public abstract string CastTo(Type type, object value, string characterSetOrCollation = null);
     public virtual string GetIdentitySql(string keyField) => ";SELECT @@IDENTITY";
     public virtual string GetQuotedValue(Type expectType, object value)
@@ -737,14 +738,14 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                     if (options.DefaultDateTimeKind == DateTimeKind.Utc)
                     {
                         typedValueExpr = Expression.Convert(valueExpr, underlyingType);
-                        methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.ToUtc), BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static, null, [underlyingType], null);
+                        methodInfo = typeof(RepositoryHelper).GetMethod(nameof(RepositoryHelper.ToUtcTime), [underlyingType]);
                         typedValueExpr = Expression.Call(methodInfo, typedValueExpr);
                         typedValueExpr = Expression.Convert(typedValueExpr, typeof(object));
                     }
                     else if (options.DefaultDateTimeKind == DateTimeKind.Local)
                     {
                         typedValueExpr = Expression.Convert(valueExpr, underlyingType);
-                        methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.ToLocal), BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static, null, [underlyingType], null);
+                        methodInfo = typeof(RepositoryHelper).GetMethod(nameof(RepositoryHelper.ToLocalTime), [underlyingType]);
                         typedValueExpr = Expression.Call(methodInfo, typedValueExpr);
                         typedValueExpr = Expression.Convert(typedValueExpr, typeof(object));
                     }
@@ -920,7 +921,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return null;
-                                        return DateTimeOffset.Parse((string)value).ToUtc();
+                                        return RepositoryHelper.ToUtcTime(DateTimeOffset.Parse((string)value));
                                     };
                                 }
                                 else if (options.DefaultDateTimeKind == DateTimeKind.Local)
@@ -928,7 +929,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return null;
-                                        return DateTimeOffset.Parse((string)value).ToLocal();
+                                        return RepositoryHelper.ToLocalTime(DateTimeOffset.Parse((string)value));
                                     };
                                 }
                                 else
@@ -947,7 +948,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return DateTimeOffset.MinValue;
-                                        return DateTimeOffset.Parse((string)value).ToUtc();
+                                        return RepositoryHelper.ToUtcTime(DateTimeOffset.Parse((string)value));
                                     };
                                 }
                                 else if (options.DefaultDateTimeKind == DateTimeKind.Local)
@@ -955,7 +956,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return DateTimeOffset.MinValue;
-                                        return DateTimeOffset.Parse((string)value).ToLocal();
+                                        return RepositoryHelper.ToLocalTime(DateTimeOffset.Parse((string)value));
                                     };
                                 }
                                 else
@@ -977,7 +978,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return null;
-                                        return new DateTimeOffset(((DateTime)value).ToUtc());
+                                        return RepositoryHelper.ToUtcTime(new DateTimeOffset(((DateTime)value)));
                                     };
                                 }
                                 else if (options.DefaultDateTimeKind == DateTimeKind.Local)
@@ -985,7 +986,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return null;
-                                        return new DateTimeOffset(((DateTime)value).ToLocal());
+                                        return RepositoryHelper.ToLocalTime(new DateTimeOffset((DateTime)value));
                                     };
                                 }
                                 else
@@ -1004,7 +1005,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return DateTimeOffset.MinValue;
-                                        return new DateTimeOffset(((DateTime)value).ToUtc());
+                                        return RepositoryHelper.ToUtcTime(new DateTimeOffset(((DateTime)value)));
                                     };
                                 }
                                 else if (options.DefaultDateTimeKind == DateTimeKind.Local)
@@ -1012,7 +1013,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return DateTimeOffset.MinValue;
-                                        return new DateTimeOffset(((DateTime)value).ToLocal());
+                                        return new DateTimeOffset(RepositoryHelper.ToLocalTime((DateTime)value));
                                     };
                                 }
                                 else
@@ -1037,7 +1038,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return null;
-                                        return DateTime.Parse((string)value).ToUtc();
+                                        return RepositoryHelper.ToUtcTime(DateTime.Parse((string)value));
                                     };
                                 }
                                 else if (options.DefaultDateTimeKind == DateTimeKind.Local)
@@ -1045,7 +1046,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return null;
-                                        return DateTime.Parse((string)value).ToLocal();
+                                        return RepositoryHelper.ToLocalTime(DateTime.Parse((string)value));
                                     };
                                 }
                                 else
@@ -1064,7 +1065,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return DateTime.MinValue;
-                                        return DateTime.Parse((string)value).ToUtc();
+                                        return RepositoryHelper.ToUtcTime(DateTime.Parse((string)value));
                                     };
                                 }
                                 else if (options.DefaultDateTimeKind == DateTimeKind.Utc)
@@ -1072,7 +1073,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return DateTime.MinValue;
-                                        return DateTime.Parse((string)value).ToLocal();
+                                        return RepositoryHelper.ToLocalTime(DateTime.Parse((string)value));
                                     };
                                 }
                                 else
@@ -1115,7 +1116,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return null;
-                                        return ((DateTimeOffset)value).ToUtc();
+                                        return RepositoryHelper.ToUtcTime((DateTimeOffset)value);
                                     };
                                 }
                                 else if (options.DefaultDateTimeKind == DateTimeKind.Local)
@@ -1123,7 +1124,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return null;
-                                        return ((DateTimeOffset)value).ToLocal();
+                                        return RepositoryHelper.ToLocalTime((DateTimeOffset)value);
                                     };
                                 }
                                 else
@@ -1142,7 +1143,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return DateTime.MinValue;
-                                        return ((DateTimeOffset)value).ToUtc();
+                                        return RepositoryHelper.ToUtcTime((DateTimeOffset)value);
                                     };
                                 }
                                 else if (options.DefaultDateTimeKind == DateTimeKind.Local)
@@ -1150,7 +1151,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return DateTime.MinValue;
-                                        return ((DateTimeOffset)value).ToLocal();
+                                        return RepositoryHelper.ToLocalTime((DateTimeOffset)value);
                                     };
                                 }
                                 else
@@ -1195,7 +1196,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return null;
-                                        return DateOnly.FromDateTime(((DateTime)value).ToUtc());
+                                        return DateOnly.FromDateTime(RepositoryHelper.ToUtcTime((DateTime)value));
                                     };
                                 }
                                 else if (options.DefaultDateTimeKind == DateTimeKind.Local)
@@ -1203,7 +1204,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return null;
-                                        return DateOnly.FromDateTime(((DateTime)value).ToLocal());
+                                        return DateOnly.FromDateTime(RepositoryHelper.ToLocalTime((DateTime)value));
                                     };
                                 }
                                 else
@@ -1222,7 +1223,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return DateOnly.MinValue;
-                                        return DateOnly.FromDateTime(((DateTime)value).ToUtc());
+                                        return DateOnly.FromDateTime(RepositoryHelper.ToUtcTime((DateTime)value));
                                     };
                                 }
                                 else if (options.DefaultDateTimeKind == DateTimeKind.Local)
@@ -1230,7 +1231,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return DateOnly.MinValue;
-                                        return DateOnly.FromDateTime(((DateTime)value).ToLocal());
+                                        return DateOnly.FromDateTime(RepositoryHelper.ToLocalTime((DateTime)value));
                                     };
                                 }
                                 else
@@ -1252,7 +1253,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return null;
-                                        return DateOnly.FromDateTime(((DateTimeOffset)value).ToUtc().DateTime);
+                                        return DateOnly.FromDateTime(RepositoryHelper.ToUtcTime((DateTimeOffset)value).DateTime);
                                     };
                                 }
                                 else if (options.DefaultDateTimeKind == DateTimeKind.Local)
@@ -1260,7 +1261,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return null;
-                                        return DateOnly.FromDateTime(((DateTimeOffset)value).ToLocal().DateTime);
+                                        return DateOnly.FromDateTime(RepositoryHelper.ToLocalTime((DateTimeOffset)value).DateTime);
                                     };
                                 }
                                 else
@@ -1279,7 +1280,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return DateOnly.MinValue;
-                                        return DateOnly.FromDateTime(((DateTimeOffset)value).ToUtc().DateTime);
+                                        return DateOnly.FromDateTime(RepositoryHelper.ToUtcTime((DateTimeOffset)value).DateTime);
                                     };
                                 }
                                 else if (options.DefaultDateTimeKind == DateTimeKind.Local)
@@ -1287,7 +1288,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return DateOnly.MinValue;
-                                        return DateOnly.FromDateTime(((DateTimeOffset)value).ToLocal().DateTime);
+                                        return DateOnly.FromDateTime(RepositoryHelper.ToLocalTime((DateTimeOffset)value).DateTime);
                                     };
                                 }
                                 else
@@ -1372,7 +1373,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return null;
-                                        return ((DateTime)value).ToUtc().TimeOfDay;
+                                        return RepositoryHelper.ToUtcTime((DateTime)value).TimeOfDay;
                                     };
                                 }
                                 else if (options.DefaultDateTimeKind == DateTimeKind.Local)
@@ -1380,7 +1381,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return null;
-                                        return ((DateTime)value).ToLocal().TimeOfDay;
+                                        return RepositoryHelper.ToLocalTime((DateTime)value).TimeOfDay;
                                     };
                                 }
                                 else
@@ -1399,7 +1400,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return TimeSpan.MinValue;
-                                        return ((DateTime)value).ToUtc().TimeOfDay;
+                                        return RepositoryHelper.ToUtcTime((DateTime)value).TimeOfDay;
                                     };
                                 }
                                 else if (options.DefaultDateTimeKind == DateTimeKind.Local)
@@ -1407,7 +1408,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return TimeSpan.MinValue;
-                                        return ((DateTime)value).ToLocal().TimeOfDay;
+                                        return RepositoryHelper.ToLocalTime((DateTime)value).TimeOfDay;
                                     };
                                 }
                                 else
@@ -1429,7 +1430,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return null;
-                                        return ((DateTimeOffset)value).ToUtc().TimeOfDay;
+                                        return RepositoryHelper.ToUtcTime((DateTimeOffset)value).TimeOfDay;
                                     };
                                 }
                                 else if (options.DefaultDateTimeKind == DateTimeKind.Local)
@@ -1437,7 +1438,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return null;
-                                        return ((DateTimeOffset)value).ToLocal().TimeOfDay;
+                                        return RepositoryHelper.ToLocalTime((DateTimeOffset)value).TimeOfDay;
                                     };
                                 }
                                 else
@@ -1456,7 +1457,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return TimeSpan.MinValue;
-                                        return ((DateTimeOffset)value).ToUtc().TimeOfDay;
+                                        return RepositoryHelper.ToUtcTime((DateTimeOffset)value).TimeOfDay;
                                     };
                                 }
                                 else if (options.DefaultDateTimeKind == DateTimeKind.Local)
@@ -1464,7 +1465,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return TimeSpan.MinValue;
-                                        return ((DateTimeOffset)value).ToLocal().TimeOfDay;
+                                        return RepositoryHelper.ToLocalTime((DateTimeOffset)value).TimeOfDay;
                                     };
                                 }
                                 else
@@ -1547,7 +1548,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return null;
-                                        return TimeOnly.FromTimeSpan(((DateTime)value).ToUtc().TimeOfDay);
+                                        return TimeOnly.FromTimeSpan(RepositoryHelper.ToUtcTime((DateTime)value).TimeOfDay);
                                     };
                                 }
                                 else if (options.DefaultDateTimeKind == DateTimeKind.Local)
@@ -1555,7 +1556,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return null;
-                                        return TimeOnly.FromTimeSpan(((DateTime)value).ToLocal().TimeOfDay);
+                                        return TimeOnly.FromTimeSpan(RepositoryHelper.ToLocalTime((DateTime)value).TimeOfDay);
                                     };
                                 }
                                 else
@@ -1574,7 +1575,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return TimeOnly.MinValue;
-                                        return TimeOnly.FromTimeSpan(((DateTime)value).ToUtc().TimeOfDay);
+                                        return TimeOnly.FromTimeSpan(RepositoryHelper.ToUtcTime((DateTime)value).TimeOfDay);
                                     };
                                 }
                                 else if (options.DefaultDateTimeKind == DateTimeKind.Local)
@@ -1582,7 +1583,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return TimeOnly.MinValue;
-                                        return TimeOnly.FromTimeSpan(((DateTime)value).ToLocal().TimeOfDay);
+                                        return TimeOnly.FromTimeSpan(RepositoryHelper.ToLocalTime((DateTime)value).TimeOfDay);
                                     };
                                 }
                                 else
@@ -1604,7 +1605,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return null;
-                                        return TimeOnly.FromTimeSpan(((DateTimeOffset)value).ToUtc().TimeOfDay);
+                                        return TimeOnly.FromTimeSpan(RepositoryHelper.ToUtcTime((DateTimeOffset)value).TimeOfDay);
                                     };
                                 }
                                 else if (options.DefaultDateTimeKind == DateTimeKind.Local)
@@ -1612,7 +1613,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return null;
-                                        return TimeOnly.FromTimeSpan(((DateTimeOffset)value).ToLocal().TimeOfDay);
+                                        return TimeOnly.FromTimeSpan(RepositoryHelper.ToLocalTime((DateTimeOffset)value).TimeOfDay);
                                     };
                                 }
                                 else
@@ -1631,7 +1632,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return TimeOnly.MinValue;
-                                        return TimeOnly.FromTimeSpan(((DateTimeOffset)value).ToUtc().TimeOfDay);
+                                        return TimeOnly.FromTimeSpan(RepositoryHelper.ToUtcTime((DateTimeOffset)value).TimeOfDay);
                                     };
                                 }
                                 else if (options.DefaultDateTimeKind == DateTimeKind.Local)
@@ -1639,7 +1640,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                                     typeHandler = value =>
                                     {
                                         if (value is DBNull) return TimeOnly.MinValue;
-                                        return TimeOnly.FromTimeSpan(((DateTimeOffset)value).ToLocal().TimeOfDay);
+                                        return TimeOnly.FromTimeSpan(RepositoryHelper.ToLocalTime((DateTimeOffset)value).TimeOfDay);
                                     };
                                 }
                                 else
@@ -1689,7 +1690,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                     {
                         Type[] supportedTypes = [ typeof(bool), typeof(char), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong), typeof(float), typeof(double)
 #if NET6_0_OR_GREATER
-                            , typeof(Half) 
+                            , typeof(Half)
 #endif
                         ];
                         if (supportedTypes.Contains(fieldType))

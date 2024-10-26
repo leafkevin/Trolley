@@ -637,7 +637,7 @@ public class MySqlCreateVisitor : CreateVisitor
                 dbFieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, dbFieldValue);
             else
             {
-                var targetType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);
+                var targetType = this.OrmProvider.MapDefaultType(memberMapper);
                 var valueGetter = this.OrmProvider.GetParameterValueGetter(dbFieldValue.GetType(), targetType, false, this.Options);
                 dbFieldValue = valueGetter.Invoke(dbFieldValue);
             }
@@ -671,7 +671,7 @@ public class MySqlCreateVisitor : CreateVisitor
                 fieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, fieldValue);
             else
             {
-                var targetType = this.OrmProvider.MapDefaultType(memberMapper.NativeDbType);
+                var targetType = this.OrmProvider.MapDefaultType(memberMapper);
                 var valueGetter = this.OrmProvider.GetParameterValueGetter(fieldValue.GetType(), targetType, false, this.Options);
                 fieldValue = valueGetter.Invoke(fieldValue);
             }
@@ -709,8 +709,7 @@ public class MySqlCreateVisitor : CreateVisitor
             {
                 foreach (var memberMapper in entityMapper.MemberMaps)
                 {
-                    if (memberMapper.IsIgnore || memberMapper.IsNavigation
-                        || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
+                    if (memberMapper.IsIgnore || memberMapper.IsNavigation)
                         continue;
                     addReaderField(memberMapper);
                 }

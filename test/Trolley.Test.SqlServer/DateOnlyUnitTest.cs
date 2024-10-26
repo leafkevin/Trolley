@@ -67,7 +67,7 @@ public class DateOnlyUnitTest : UnitTestBase
     [Fact]
     public async Task MemberAccess()
     {
-        this.Initialize();
+        this.Initialize(3);
         var localDate = DateOnly.FromDateTime(DateTime.Parse("2023-05-06"));
         var repository = this.dbFactory.Create();
         var sql = repository.From<User>()
@@ -132,10 +132,10 @@ public class DateOnlyUnitTest : UnitTestBase
     [Fact]
     public async Task AddCompareTo()
     {
-        this.Initialize();
+        this.Initialize(3);
         var localDate = DateOnly.FromDateTime(DateTime.Parse("2023-05-06"));
         var repository = this.dbFactory.Create();
-        var sql = repository.From<UpdateEntity>()
+        var sql = repository.From<UpdateEntity3>()
             .Where(f => f.Id == 1)
             .Select(f => new
             {
@@ -150,7 +150,7 @@ public class DateOnlyUnitTest : UnitTestBase
         Assert.Equal("SELECT DATEADD(DAY,30,a.[DateOnlyField]) AS [AddDays],DATEADD(MONTH,5,a.[DateOnlyField]) AS [AddMonths],DATEADD(YEAR,2,a.[DateOnlyField]) AS [AddYears],(CASE WHEN a.[DateOnlyField]=@p0 THEN 0 WHEN a.[DateOnlyField]>@p0 THEN 1 ELSE -1 END) AS [CompareTo],@p1 AS [Parse],'2023-05-07' AS [ParseExact] FROM [sys_update_entity] a WHERE a.[Id]=1", sql);
 
         var now = DateTime.Now;
-        var result = await repository.From<UpdateEntity>()
+        var result = await repository.From<UpdateEntity3>()
             .Where(f => f.Id == 1)
             .Select(f => new
             {

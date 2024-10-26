@@ -87,7 +87,7 @@ public class UnitTest1 : UnitTestBase
             CreatedAt = DateTime.Now,
             CreatedBy = 1,
             UpdatedAt = DateTime.Now,
-            UpdatedBy = 1,            
+            UpdatedBy = 1,
 #if NET6_0_OR_GREATER
             SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(35)),
 #else
@@ -377,7 +377,7 @@ public class UnitTest1 : UnitTestBase
     [Fact]
     public async Task Insert_WithBy_Condition()
     {
-        this.Initialize();
+        this.Initialize(3);
         Guid? guidField = Guid.NewGuid();
         var repository = this.dbFactory.Create();
         repository.BeginTransaction();
@@ -428,7 +428,7 @@ public class UnitTest1 : UnitTestBase
     [Fact]
     public async Task Insert_WithBy_AnonymousObject_Condition()
     {
-        this.Initialize();
+        this.Initialize(3);
         Guid? guidField = Guid.NewGuid();
         var repository = this.dbFactory.Create();
         var user = repository.Get<User>(1);
@@ -1083,7 +1083,7 @@ public class UnitTest1 : UnitTestBase
     [Fact]
     public async Task Insert_OnlyFields()
     {
-        this.Initialize();
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         var sql = repository.Create<User>()
             .WithBy(new
@@ -1348,9 +1348,9 @@ public class UnitTest1 : UnitTestBase
     {
         var repository = this.dbFactory.Create();
         var timeSpan = TimeSpan.FromMinutes(455);
-        await repository.DeleteAsync<UpdateEntity>(1);
+        await repository.DeleteAsync<UpdateEntity3>(1);
         byte[] bytes = [68];
-        await repository.CreateAsync<UpdateEntity>(new UpdateEntity
+        await repository.CreateAsync<UpdateEntity3>(new UpdateEntity3
         {
             Id = 1,
             BooleanField = true,
@@ -1370,17 +1370,10 @@ public class UnitTest1 : UnitTestBase
             TimeOnlyField = new TimeSpan(3, 5, 7),
 #endif
             ByteArrayField = Encoding.ASCII.GetBytes("ByteArry"),
-            BitArrayField = new BitArray(bytes)
+            BitArrayField = Encoding.ASCII.GetBytes("BitArray")
         });
-        var entity = await repository.GetAsync<UpdateEntity>(1);
+        var entity = await repository.GetAsync<UpdateEntity3>(1);
         Assert.Equal(entity.ByteArrayField, Encoding.ASCII.GetBytes("ByteArry"));
-        Assert.False(entity.BitArrayField.Get(0));
-        Assert.False(entity.BitArrayField.Get(1));
-        Assert.True(entity.BitArrayField.Get(2));
-        Assert.False(entity.BitArrayField.Get(3));
-        Assert.False(entity.BitArrayField.Get(4));
-        Assert.False(entity.BitArrayField.Get(5));
-        Assert.True(entity.BitArrayField.Get(6));
-        Assert.False(entity.BitArrayField.Get(7));
+        Assert.Equal(entity.BitArrayField, Encoding.ASCII.GetBytes("BitArray"));
     }
 }

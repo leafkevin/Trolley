@@ -307,7 +307,7 @@ CREATE TABLE `sys_update_entity`  (
   `Id` int NOT NULL,
   `BooleanField` tinyint(1) NULL DEFAULT NULL,
   `EnumField` tinyint NULL DEFAULT NULL,
-  `GuidField` varchar(50) NULL DEFAULT NULL,
+  `GuidField` char(36) NULL DEFAULT NULL,
   `DateTimeField` datetime NULL DEFAULT NULL,
   `DateOnlyField` date NULL DEFAULT NULL,
   `DateTimeOffsetField` timestamp NULL DEFAULT NULL,

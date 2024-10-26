@@ -389,8 +389,7 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
             {
                 foreach (var memberMapper in entityMapper.MemberMaps)
                 {
-                    if (memberMapper.IsIgnore || memberMapper.IsNavigation
-                        || (memberMapper.MemberType.IsEntityType(out _) && memberMapper.TypeHandler == null))
+                    if (memberMapper.IsIgnore || memberMapper.IsNavigation)
                         continue;
                     addReaderField(memberMapper);
                 }
