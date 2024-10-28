@@ -20,11 +20,10 @@ public class EntityMap
     public string TableName { get; set; }
     public bool IsNullable { get; set; }
     public Type UnderlyingType { get; set; }
-    public bool IsAutoIncrement { get; set; }
+    public bool IsAutoIncrementKey { get; set; }
 
     public List<MemberMap> KeyMembers { get; set; }
     public List<MemberMap> MemberMaps => this.memberMappers;
-    public string AutoIncrementField { get; set; }
 
     public bool IsMapped { get; set; }
 
@@ -143,49 +142,14 @@ public class EntityMap
                 var fieldName = memberMapper.FieldName;
                 if (!this.KeyMembers.Contains(memberMapper))
                     this.KeyMembers.Add(memberMapper);
-                if (memberMapper.IsAutoIncrement)
-                    this.AutoIncrementField = fieldName;
             }
             if (this.KeyMembers.Count == 1 && this.KeyMembers[0].IsAutoIncrement)
-                this.IsAutoIncrement = true;
+                this.IsAutoIncrementKey = true;
         }
         //按照数据库的字段顺序排序，保证Returning *时，返回的字段顺序与接收实体字段顺序一致
         this.memberMappers.Sort((x, y) => x.Position.CompareTo(y.Position));
         this.isBuild = true;
     }
-    //public static EntityMap CreateDefaultMap(Type entityType)
-    //{
-    //    var mapper = new EntityMap(entityType) { TableName = entityType.Name };
-
-    //    bool isValueTuple = false;
-    //    if (entityType.IsValueType)
-    //    {
-    //        mapper.UnderlyingType = Nullable.GetUnderlyingType(entityType);
-    //        mapper.IsNullable = mapper.UnderlyingType != null;
-    //        if (!mapper.IsNullable)
-    //            mapper.UnderlyingType = entityType;
-
-    //        isValueTuple = mapper.UnderlyingType.FullName.StartsWith("System.ValueTuple`");
-    //    }
-    //    MemberInfo[] memberInfos = null;
-    //    if (isValueTuple)
-    //        memberInfos = mapper.UnderlyingType.GetFields(BindingFlags.Public | BindingFlags.Instance);
-    //    else
-    //    {
-    //        memberInfos = mapper.EntityType.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
-    //            .Where(p => p.GetIndexParameters().Length == 0).ToArray();
-    //    }
-
-    //    if (memberInfos != null && memberInfos.Length > 0)
-    //    {
-    //        foreach (var memberInfo in memberInfos)
-    //        {
-    //            var memberMapper = new MemberMap(mapper, memberInfo);
-    //            mapper.AddMemberMap(memberMapper.MemberName, memberMapper);
-    //        }
-    //    }
-    //    return mapper;
-    //}
     public EntityMap CreateDefaultMap(Type entityType)
     {
         if (entityType == this.EntityType)
@@ -194,9 +158,8 @@ public class EntityMap
         var mapper = new EntityMap(entityType)
         {
             TableName = this.TableName,
-            IsAutoIncrement = this.IsAutoIncrement,
-            KeyMembers = this.KeyMembers,
-            AutoIncrementField = this.AutoIncrementField
+            IsAutoIncrementKey = this.IsAutoIncrementKey,
+            KeyMembers = this.KeyMembers
         };
 
         bool isValueTuple = false;

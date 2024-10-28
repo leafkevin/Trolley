@@ -412,19 +412,20 @@ on e.id = c.default_object_id left join sys.index_columns f on f.object_id=a.obj
                         Position = columnInfo.Position
                     });
                 }
-
-                //允许自定义TypeHandlerType设置，默认设置
-                if ((memberMapper.UnderlyingType.IsClass && memberMapper.UnderlyingType != typeof(string) || memberMapper.UnderlyingType.IsEntityType(out _))
-                    && this.MapDefaultType(memberMapper.NativeDbType) == typeof(string) && memberMapper.TypeHandlerType == null)
-                    memberMapper.TypeHandlerType = typeof(JsonTypeHandler);
-
-                if (memberMapper.TypeHandlerType != null && memberMapper.TypeHandler == null)
-                    memberMapper.TypeHandler = this.GetTypeHandler(memberMapper.TypeHandlerType);
-                //object类型
-                if (memberMapper.MemberType == typeof(object) && this.MapDefaultType(memberMapper) == typeof(string))
+                if (memberMapper.TypeHandler == null && !memberMapper.IsIgnore)
                 {
-                    memberMapper.TypeHandlerType = typeof(ToStringTypeHandler);
-                    memberMapper.TypeHandler = this.GetTypeHandler(memberMapper.TypeHandlerType);
+                    //允许自定义TypeHandlerType设置，默认设置
+                    if ((memberMapper.UnderlyingType.IsClass && memberMapper.UnderlyingType != typeof(string)
+                        || memberMapper.UnderlyingType.IsEntityType(out _))
+                        && this.MapDefaultType(memberMapper.NativeDbType) == typeof(string))
+                        memberMapper.TypeHandlerType = typeof(JsonTypeHandler);
+
+                    //object类型
+                    if (memberMapper.MemberType == typeof(object) && this.MapDefaultType(memberMapper) == typeof(string))
+                        memberMapper.TypeHandlerType = typeof(ToStringTypeHandler);
+
+                    if (memberMapper.TypeHandlerType != null)
+                        memberMapper.TypeHandler = this.GetTypeHandler(memberMapper.TypeHandlerType);
                 }
                 if (memberMapper.DbColumnType.ToLower() == "timestamp")
                     memberMapper.IsRowVersion = true;

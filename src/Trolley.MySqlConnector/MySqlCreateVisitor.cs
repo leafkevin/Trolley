@@ -104,7 +104,7 @@ public class MySqlCreateVisitor : CreateVisitor
         }
         if (this.IsReturnIdentity)
         {
-            if (!entityMapper.IsAutoIncrement)
+            if (!entityMapper.IsAutoIncrementKey)
                 throw new NotSupportedException($"实体{entityMapper.EntityType.FullName}表未配置自增长字段，无法返回Identity值");
             if (hasUpdateFields) throw new NotSupportedException("包含更新子句，不支持返回Identity");
             valuesBuilder.Append(this.OrmProvider.GetIdentitySql(null));

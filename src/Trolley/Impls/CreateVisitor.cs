@@ -132,7 +132,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
 
         if (this.IsReturnIdentity)
         {
-            if (!entityMapper.IsAutoIncrement)
+            if (!entityMapper.IsAutoIncrementKey)
                 throw new Exception($"实体{entityMapper.EntityType.FullName}表未配置自增长字段，无法返回Identity值");
             var keyFieldName = this.OrmProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName);
             valuesBuilder.Append(this.OrmProvider.GetIdentitySql(keyFieldName));
