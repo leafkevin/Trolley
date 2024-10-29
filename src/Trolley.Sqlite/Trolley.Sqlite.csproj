@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<AssemblyName>Trolley.Sqlite</AssemblyName>
+		<PackageId>$(AssemblyName)</PackageId>
+		<Title>$(AssemblyName)</Title>
+		<Description>Trolley的Sqlite数据库提供程序</Description>
+		<PackageDescription>Trolley的Sqlite数据库提供程序</PackageDescription>
+		<Authors>leaf kevin</Authors>
+		<Copyright>2022 leafkevin</Copyright>
+		<TargetFrameworks>netstandard2.0;netstandard2.1;net6.0;net7.0;net8.0</TargetFrameworks>
+		<Version>2.0.7</Version>
+		<LangVersion>12.0</LangVersion>
+		<PackageTags>orm;trolley;sqlite;npgsql</PackageTags>
+		<PublishRepositoryUrl>true</PublishRepositoryUrl>
+		<PackageProjectUrl>https://github.com/leafkevin/Trolley</PackageProjectUrl>
+		<RepositoryType>git</RepositoryType>
+		<RepositoryUrl>https://github.com/leafkevin/Trolley</RepositoryUrl>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<DebugSymbols>true</DebugSymbols>
+		<SignAssembly>true</SignAssembly>
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<AssemblyOriginatorKeyFile>key.snk</AssemblyOriginatorKeyFile>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+	</PropertyGroup>
+	<ItemGroup>
+	  <PackageReference Include="System.Data.SQLite.Core" Version="1.0.119" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\Trolley\Trolley.csproj" />
+	</ItemGroup>
+</Project>

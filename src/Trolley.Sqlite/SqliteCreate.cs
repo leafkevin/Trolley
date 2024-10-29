@@ -1,0 +1,66 @@
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
+
+namespace Trolley.Sqlite;
+
+public class SqliteCreate<TEntity> : Create<TEntity>, ISqliteCreate<TEntity>
+{
+    #region Properties
+    public SqliteCreateVisitor DialectVisitor { get; private set; }
+    #endregion
+
+    #region Constructor
+    public SqliteCreate(DbContext dbContext) : base(dbContext)
+    {
+        this.DialectVisitor = this.Visitor as SqliteCreateVisitor;
+    }
+    #endregion
+
+    #region Sharding
+    public new ISqliteCreate<TEntity> UseTable(string tableName)
+        => base.UseTable(tableName) as ISqliteCreate<TEntity>;
+    public new ISqliteCreate<TEntity> UseTableBy(object field1Value, object field2Value = null)
+        => base.UseTableBy(field1Value, field2Value) as ISqliteCreate<TEntity>;
+    #endregion
+
+    #region WithLock
+    public ISqliteCreate<TEntity> WithLock(string lockName)
+    {
+        this.DialectVisitor.WithLock(lockName);
+        return this;
+    }
+    #endregion
+
+    #region WithBy
+    public new ISqliteContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj)
+        => base.WithBy(insertObj) as ISqliteContinuedCreate<TEntity>;
+    #endregion
+
+    #region WithBulk
+    public new ISqliteBulkContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount)
+        => base.WithBulk(insertObjs, bulkCount) as ISqliteBulkContinuedCreate<TEntity>;
+    #endregion
+
+    #region WithBulkCopy
+    public ISqliteCreated<TEntity> WithBulkCopy(IEnumerable insertObjs, int? timeoutSeconds = null)
+    {
+        if (insertObjs == null)
+            throw new ArgumentNullException(nameof(insertObjs));
+
+        if (insertObjs is IDictionary<string, object>)
+            throw new NotSupportedException("批量插入，单个对象类型只支持命名对象、匿名对象或是字典对象");
+
+        bool isEmpty = true;
+        foreach (var insertObj in insertObjs)
+        {
+            isEmpty = false;
+            break;
+        }
+        if (isEmpty) throw new Exception("批量更新，insertObjs参数至少要有一条数据");
+
+        this.DialectVisitor.WithBulkCopy(insertObjs, timeoutSeconds);
+        return this.OrmProvider.NewCreated<TEntity>(this.DbContext, this.Visitor) as ISqliteCreated<TEntity>;
+    }
+    #endregion
+}

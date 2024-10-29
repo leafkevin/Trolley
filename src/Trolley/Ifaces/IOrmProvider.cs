@@ -13,7 +13,8 @@ public enum OrmProviderType
     Basic,
     MySql,
     SqlServer,
-    PostgreSql
+    PostgreSql,
+    Sqlite
 }
 public interface IOrmProvider
 {
