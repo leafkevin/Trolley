@@ -24,15 +24,15 @@ public partial class SqliteProvider : BaseOrmProvider
 
     static SqliteProvider()
     {
-        defaultMapTypes[DbType.Boolean] = typeof(bool);
-        defaultMapTypes[DbType.Byte] = typeof(byte);
-        defaultMapTypes[DbType.SByte] = typeof(sbyte);
-        defaultMapTypes[DbType.Int16] = typeof(short);
-        defaultMapTypes[DbType.UInt16] = typeof(ushort);
+        defaultMapTypes[DbType.Boolean] = typeof(int);
+        defaultMapTypes[DbType.Byte] = typeof(int);
+        defaultMapTypes[DbType.SByte] = typeof(int);
+        defaultMapTypes[DbType.Int16] = typeof(int);
+        defaultMapTypes[DbType.UInt16] = typeof(int);
         defaultMapTypes[DbType.Int32] = typeof(int);
-        defaultMapTypes[DbType.UInt16] = typeof(uint);
+        defaultMapTypes[DbType.UInt32] = typeof(long);
         defaultMapTypes[DbType.Int64] = typeof(long);
-        defaultMapTypes[DbType.UInt64] = typeof(ulong);
+        defaultMapTypes[DbType.UInt64] = typeof(decimal);
         defaultMapTypes[DbType.Single] = typeof(float);
         defaultMapTypes[DbType.Double] = typeof(double);
         defaultMapTypes[DbType.Currency] = typeof(decimal);
@@ -40,98 +40,98 @@ public partial class SqliteProvider : BaseOrmProvider
         defaultMapTypes[DbType.AnsiStringFixedLength] = typeof(string);
         defaultMapTypes[DbType.AnsiString] = typeof(string);
         defaultMapTypes[DbType.String] = typeof(string);
-        defaultMapTypes[DbType.DateTime] = typeof(DateTime);
-        defaultMapTypes[DbType.DateTime2] = typeof(DateTime);
-        defaultMapTypes[DbType.DateTimeOffset] = typeof(DateTimeOffset);
-        defaultMapTypes[DbType.Time] = typeof(TimeSpan);
-        defaultMapTypes[DbType.Guid] = typeof(Guid);
+        defaultMapTypes[DbType.DateTime] = typeof(string);
+        defaultMapTypes[DbType.DateTime2] = typeof(string);
+        defaultMapTypes[DbType.DateTimeOffset] = typeof(string);
+        defaultMapTypes[DbType.Time] = typeof(string);
+        defaultMapTypes[DbType.Guid] = typeof(string);
         defaultMapTypes[DbType.Binary] = typeof(byte[]);
-        defaultMapTypes[DbType.DateTimeOffset] = typeof(DateTime);
+        defaultMapTypes[DbType.DateTimeOffset] = typeof(string);
         defaultMapTypes[DbType.VarNumeric] = typeof(decimal);
         defaultMapTypes[DbType.Xml] = typeof(string);
 
-        defaultDbTypes[typeof(bool)] = DbType.Boolean;
-        defaultDbTypes[typeof(byte)] = DbType.Byte;
-        defaultDbTypes[typeof(sbyte)] = DbType.SByte;
-        defaultDbTypes[typeof(short)] = DbType.Int16;
-        defaultDbTypes[typeof(ushort)] = DbType.UInt16;
+        defaultDbTypes[typeof(bool)] = DbType.Int32;
+        defaultDbTypes[typeof(byte)] = DbType.Int32;
+        defaultDbTypes[typeof(sbyte)] = DbType.Int32;
+        defaultDbTypes[typeof(short)] = DbType.Int32;
+        defaultDbTypes[typeof(ushort)] = DbType.Int32;
         defaultDbTypes[typeof(int)] = DbType.Int32;
-        defaultDbTypes[typeof(uint)] = DbType.UInt32;
+        defaultDbTypes[typeof(uint)] = DbType.Int64;
         defaultDbTypes[typeof(long)] = DbType.Int64;
-        defaultDbTypes[typeof(ulong)] = DbType.UInt64;
+        defaultDbTypes[typeof(ulong)] = DbType.Decimal;
         defaultDbTypes[typeof(float)] = DbType.Single;
         defaultDbTypes[typeof(double)] = DbType.Double;
         defaultDbTypes[typeof(decimal)] = DbType.Decimal;
         defaultDbTypes[typeof(string)] = DbType.String;
-        defaultDbTypes[typeof(DateTime)] = DbType.DateTime;
-        defaultDbTypes[typeof(DateTimeOffset)] = DbType.DateTimeOffset;
+        defaultDbTypes[typeof(DateTime)] = DbType.String;
+        defaultDbTypes[typeof(DateTimeOffset)] = DbType.String;
 #if NET6_0_OR_GREATER
-        defaultDbTypes[typeof(DateOnly)] = DbType.DateTime;
-        defaultDbTypes[typeof(TimeOnly)] = DbType.Time;
+        defaultDbTypes[typeof(DateOnly)] = DbType.String;
+        defaultDbTypes[typeof(TimeOnly)] = DbType.String;
 #endif
         defaultDbTypes[typeof(byte[])] = DbType.Binary;
-        defaultDbTypes[typeof(Guid)] = DbType.Guid;
+        defaultDbTypes[typeof(Guid)] = DbType.String;
 
-        defaultDbTypes[typeof(bool?)] = DbType.Boolean;
-        defaultDbTypes[typeof(byte?)] = DbType.Byte;
-        defaultDbTypes[typeof(sbyte?)] = DbType.SByte;
-        defaultDbTypes[typeof(short?)] = DbType.Int16;
-        defaultDbTypes[typeof(ushort?)] = DbType.UInt16;
+        defaultDbTypes[typeof(bool?)] = DbType.Int32;
+        defaultDbTypes[typeof(byte?)] = DbType.Int32;
+        defaultDbTypes[typeof(sbyte?)] = DbType.Int32;
+        defaultDbTypes[typeof(short?)] = DbType.Int32;
+        defaultDbTypes[typeof(ushort?)] = DbType.Int32;
         defaultDbTypes[typeof(int?)] = DbType.Int32;
-        defaultDbTypes[typeof(uint?)] = DbType.UInt32;
+        defaultDbTypes[typeof(uint?)] = DbType.Int64;
         defaultDbTypes[typeof(long?)] = DbType.Int64;
-        defaultDbTypes[typeof(ulong?)] = DbType.UInt64;
+        defaultDbTypes[typeof(ulong?)] = DbType.Decimal;
         defaultDbTypes[typeof(float?)] = DbType.Single;
         defaultDbTypes[typeof(double?)] = DbType.Double;
         defaultDbTypes[typeof(decimal?)] = DbType.Decimal;
-        defaultDbTypes[typeof(DateTime?)] = DbType.DateTime;
-        defaultDbTypes[typeof(DateTimeOffset?)] = DbType.DateTimeOffset;
+        defaultDbTypes[typeof(DateTime?)] = DbType.String;
+        defaultDbTypes[typeof(DateTimeOffset?)] = DbType.String;
 #if NET6_0_OR_GREATER
-        defaultDbTypes[typeof(DateOnly?)] = DbType.Date;
-        defaultDbTypes[typeof(TimeOnly?)] = DbType.Time;
+        defaultDbTypes[typeof(DateOnly?)] = DbType.String;
+        defaultDbTypes[typeof(TimeOnly?)] = DbType.String;
 #endif
-        defaultDbTypes[typeof(Guid?)] = DbType.Guid;
+        defaultDbTypes[typeof(Guid?)] = DbType.String;
 
 
-        castTos[typeof(string)] = "CHARACTER";
-        castTos[typeof(byte)] = "TINYINT";
-        castTos[typeof(sbyte)] = "SMALLINT";
-        castTos[typeof(short)] = "SMALLINT";
-        castTos[typeof(ushort)] = "UNSIGNED";
+        castTos[typeof(string)] = "TEXT";
+        castTos[typeof(byte)] = "INTEGER";
+        castTos[typeof(sbyte)] = "INTEGER";
+        castTos[typeof(short)] = "INTEGER";
+        castTos[typeof(ushort)] = "INTEGER";
         castTos[typeof(int)] = "INTEGER";
-        castTos[typeof(uint)] = "DECIMAL(10,0)";
-        castTos[typeof(long)] = "BIGINT";
-        castTos[typeof(ulong)] = "DECIMAL(21,0)";
-        castTos[typeof(float)] = "FLOAT";
-        castTos[typeof(double)] = "DOUBLE";
-        castTos[typeof(decimal)] = "DECIMAL(36,18)";
-        castTos[typeof(bool)] = "BIT";
-        castTos[typeof(DateTime)] = "DATETIME";
+        castTos[typeof(uint)] = "INTEGER";
+        castTos[typeof(long)] = "INTEGER";
+        castTos[typeof(ulong)] = "REAL";
+        castTos[typeof(float)] = "REAL";
+        castTos[typeof(double)] = "REAL";
+        castTos[typeof(decimal)] = "REAL";
+        castTos[typeof(bool)] = "INTEGER";
+        castTos[typeof(DateTime)] = "TEXT";
 #if NET6_0_OR_GREATER
-        castTos[typeof(DateOnly)] = "DATE";
-        castTos[typeof(TimeOnly)] = "TIME";
+        castTos[typeof(DateOnly)] = "TEXT";
+        castTos[typeof(TimeOnly)] = "TEXT";
 #endif
-        castTos[typeof(Guid)] = "UNIQUEIDENTIFIER";
+        castTos[typeof(Guid)] = "TEXT";
 
-        castTos[typeof(string)] = "CHARACTER";
-        castTos[typeof(byte?)] = "TINYINT";
-        castTos[typeof(sbyte?)] = "SMALLINT";
-        castTos[typeof(short?)] = "SMALLINT";
-        castTos[typeof(ushort?)] = "UNSIGNED";
-        castTos[typeof(int?)] = "INT";
-        castTos[typeof(uint?)] = "DECIMAL(10,0)";
-        castTos[typeof(long?)] = "BIGINT";
-        castTos[typeof(ulong?)] = "DECIMAL(21,0)";
-        castTos[typeof(float?)] = "FLOAT";
-        castTos[typeof(double?)] = "DOUBLE";
-        castTos[typeof(decimal?)] = "DECIMAL(36,18)";
-        castTos[typeof(bool?)] = "BIT";
-        castTos[typeof(DateTime?)] = "DATETIME";
+        castTos[typeof(string)] = "TEXT";
+        castTos[typeof(byte?)] = "INTEGER";
+        castTos[typeof(sbyte?)] = "INTEGER";
+        castTos[typeof(short?)] = "INTEGER";
+        castTos[typeof(ushort?)] = "INTEGER";
+        castTos[typeof(int?)] = "INTEGER";
+        castTos[typeof(uint?)] = "INTEGER";
+        castTos[typeof(long?)] = "INTEGER";
+        castTos[typeof(ulong?)] = "REAL";
+        castTos[typeof(float?)] = "REAL";
+        castTos[typeof(double?)] = "REAL";
+        castTos[typeof(decimal?)] = "REAL";
+        castTos[typeof(bool?)] = "INTEGER";
+        castTos[typeof(DateTime?)] = "TEXT";
 #if NET6_0_OR_GREATER
-        castTos[typeof(DateOnly?)] = "DATE";
-        castTos[typeof(TimeOnly?)] = "TIME";
+        castTos[typeof(DateOnly?)] = "TEXT";
+        castTos[typeof(TimeOnly?)] = "TEXT";
 #endif
-        castTos[typeof(Guid?)] = "UNIQUEIDENTIFIER";
+        castTos[typeof(Guid?)] = "TEXT";
     }
     public override ITheaConnection CreateConnection(string dbKey, string connectionString)
         => new SqliteTheaConnection(dbKey, connectionString);
@@ -197,12 +197,11 @@ public partial class SqliteProvider : BaseOrmProvider
             case Type factType when factType == typeof(string):
                 return $"'{Convert.ToString(value).Replace("'", @"\'")}'";
             case Type factType when factType == typeof(Guid):
-                var guidValue = (Guid)value;
-                return "x'" + BitConverter.ToString(guidValue.ToByteArray()).Replace("-", "") + "'";
+                return $"'{(Guid)value}'";
             case Type factType when factType == typeof(DateTime):
                 return $"'{Convert.ToDateTime(value):yyyy\\-MM\\-dd\\ HH\\:mm\\:ss\\.fff}'";
             case Type factType when factType == typeof(DateTimeOffset):
-                return $"'{(DateTimeOffset)value:o}'";
+                return $"'{(DateTimeOffset)value:yyyy\\-MM\\-dd\\ HH\\:mm\\:ss\\.fffZ}'";
 #if NET6_0_OR_GREATER
             case Type factType when factType == typeof(DateOnly):
                 return $"'{(DateOnly)value:yyyy\\-MM\\-dd}'";
@@ -231,50 +230,44 @@ public partial class SqliteProvider : BaseOrmProvider
     {
         switch (columnInfo.DataType)
         {
-            case "bit":
             case "boolean": return DbType.Boolean;
 
             case "int2":
-            case "tinyint": return DbType.Byte;
-            case "smallint": return DbType.Int16;
+            case "tinyint":
+            case "smallint":
             case "mediumint":
             case "integer": return DbType.Int32;
+
             case "int8":
             case "bigint": return DbType.Int64;
 
-            case "unsigned": return DbType.UInt16;
-            case "decimal(10,0)": return DbType.UInt32;
-            case "unsigned big int":
-            case "decimal(21,0)": return DbType.UInt64;
+            case "unsigned big int": return DbType.Decimal;
 
             case "float": return DbType.Single;
             case "double precision":
             case "double": return DbType.Double;
-            case "real":
-            case "numeric":
-            case "money":
-            case "smallmoney": return DbType.Decimal;
-            case "decimal(10,2)": return DbType.Decimal;
+            case "real": return DbType.Decimal;
 
-            case "smalldatetime":
-            case "datetime": return DbType.DateTime;
+            case "date":
+            case "datetime": return DbType.String;
 
-            case "image":
-            case "binary":
-            case "varbinary":
             case "blob": return DbType.Binary;
 
             case "character(20)":
             case "varchar(255)":
-            case "varchar":
             case "varying character(255)":
             case "nchar(55)":
-            case "nvarchar(255)":
+            case "native character(70)":
+            case "nvarchar(100)":
+
+            case "varchar":
+            case "varying character":
+            case "nchar":
+            case "nvarchar":
             case "text":
             case "clob": return DbType.String;
 
-            case "character(36)": return DbType.Guid;
-            default: return DbType.Variant;
+            default: return DbType.Object;
         }
     }
     public override void MapTables(string connectionString, IEntityMapProvider mapProvider)
@@ -282,77 +275,47 @@ public partial class SqliteProvider : BaseOrmProvider
         var tableNames = mapProvider.EntityMaps.Where(f => !f.IsMapped).Select(f => f.TableName).ToList();
         if (tableNames == null || tableNames.Count == 0)
             return;
-        var sql = @"SELECT * FROM sqlite_schema where tbl_name in ('sys_user')";
-        var tableBuilders = new Dictionary<string, StringBuilder>();
+        var builder = new StringBuilder();
         foreach (var tableName in tableNames)
         {
-            StringBuilder builder = null;
-            string myTableName = null;
-            if (tableName.Contains('.'))
-            {
-                var myTableNames = tableName.Split('.');
-                var tableSchema = myTableNames[0];
-                myTableName = myTableNames[1];
-                if (!tableBuilders.TryGetValue(tableSchema, out builder))
-                    tableBuilders.Add(tableSchema, builder = new StringBuilder());
-            }
-            else
-            {
-                var tableSchema = this.DefaultTableSchema;
-                if (!tableBuilders.TryGetValue(tableSchema, out builder))
-                    tableBuilders.Add(tableSchema, builder = new StringBuilder());
-                myTableName = tableName;
-            }
-            if (builder.Length > 0)
-                builder.Append(',');
-            builder.Append($"'{myTableName}'");
+            builder.Append($"PRAGMA table_info({tableName});");
         }
-        var sqlBuilder = new StringBuilder();
-        foreach (var tableBuilder in tableBuilders)
-        {
-            if (sqlBuilder.Length > 0)
-                sqlBuilder.Append(" OR ");
-
-            sqlBuilder.Append($"b.name='{tableBuilder.Key}' AND a.name IN ({tableBuilder.Value.ToString()})");
-        }
-        sql = string.Format(sql, sqlBuilder.ToString());
+        builder.Append("select name from sqlite_sequence");
+        var sql = builder.ToString();
         var entityMappers = mapProvider.EntityMaps.ToList();
         var tableInfos = new List<DbTableInfo>();
-        using var connection = new SqlConnection(connectionString);
-        using var command = new SqlCommand(sql, connection);
+        using var connection = new SQLiteConnection(connectionString);
+        using var command = new SQLiteCommand(sql, connection);
         connection.Open();
         using var reader = command.ExecuteReader(CommandBehavior.SequentialAccess);
 
         DbTableInfo tableInfo = null;
-        while (reader.Read())
+        foreach (var tableName in tableNames)
         {
-            var tableSchema = reader.ToFieldValue<string>(0);
-            var tableName = reader.ToFieldValue<string>(1);
-            if (tableInfo == null || tableInfo.TableSchema != tableSchema || tableInfo.TableName != tableName)
+            tableInfo = new DbTableInfo
             {
-                tableInfo = new DbTableInfo
+                TableName = tableName,
+                Columns = new List<DbColumnInfo>()
+            };
+            tableInfos.Add(tableInfo);
+            while (reader.Read())
+            {
+                tableInfo.Columns.Add(new DbColumnInfo
                 {
-                    TableSchema = tableSchema,
-                    TableName = tableName,
-                    Columns = new List<DbColumnInfo>()
-                };
-                tableInfos.Add(tableInfo);
+                    Position = reader.ToFieldValue<int>(0),
+                    FieldName = reader.ToFieldValue<string>(1),
+                    DbColumnType = reader.ToFieldValue<string>(2),
+                    IsNullable = !reader.ToFieldValue<bool>(3),
+                    DefaultValue = reader.ToFieldValue<string>(4),
+                    IsPrimaryKey = reader.ToFieldValue<bool>(5)
+                });
             }
-            tableInfo.Columns.Add(new DbColumnInfo
-            {
-                FieldName = reader.ToFieldValue<string>(2),
-                DataType = reader.ToFieldValue<string>(3),
-                DbColumnType = reader.ToFieldValue<string>(4),
-                MaxLength = (int)reader.ToFieldValue<ulong>(5),
-                Scale = reader.ToFieldValue<int>(6),
-                Precision = reader.ToFieldValue<int>(7),
-                Description = reader.ToFieldValue<string>(8),
-                DefaultValue = reader.ToFieldValue<string>(9),
-                IsPrimaryKey = reader.ToFieldValue<bool>(10),
-                IsAutoIncrement = reader.ToFieldValue<bool>(11),
-                IsNullable = reader.ToFieldValue<bool>(12),
-                Position = reader.ToFieldValue<int>(13)
-            });
+            reader.NextResult();
+        }
+        var identityTables = new List<string>();
+        if (reader.Read())
+        {
+            identityTables.Add(reader.ToFieldValue<string>(0));
         }
         reader.Close();
         connection.Close();
@@ -368,8 +331,20 @@ public partial class SqliteProvider : BaseOrmProvider
                 .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
 
             var mappedMappers = new List<MemberMap>();
+            bool isAutoIncrement = identityTables.Contains(tableName);
             foreach (var columnInfo in tableInfo.Columns)
             {
+                var intTypes = new string[] { "int", "int2", "tinyint", "smallint", "mediumint", "integer", "int8", "bigint", "unsigned big int" };
+                if (columnInfo.IsPrimaryKey && intTypes.Contains(columnInfo.DbColumnType.ToLower()))
+                    columnInfo.IsAutoIncrement = identityTables.Contains(tableName);
+                var index = columnInfo.DbColumnType.IndexOf('(');
+                if (index >= 0)
+                {
+                    var endIndex = columnInfo.DbColumnType.IndexOf(')', index + 1);
+                    columnInfo.MaxLength = int.Parse(columnInfo.DbColumnType.Substring(index + 1, endIndex - index));
+                }
+                columnInfo.DataType = columnInfo.DbColumnType.Substring(0, index).ToLower();
+
                 if (fieldMapHandler.TryFindMember(columnInfo.FieldName, entityMapper.MemberMaps, out var memberMapper))
                 {
                     memberMapper.DbColumnType = columnInfo.DbColumnType;
@@ -384,7 +359,7 @@ public partial class SqliteProvider : BaseOrmProvider
                 {
                     if (!fieldMapHandler.TryFindMember(columnInfo.FieldName, memberInfos, out var memberInfo))
                     {
-                        if (columnInfo.IsNullable || memberMapper.DbColumnType.ToLower() == "timestamp")
+                        if (columnInfo.IsNullable)
                             continue;
                         throw new Exception($"表{tableName}非空字段{columnInfo.FieldName}在实体{entityMapper.EntityType.FullName}中没有对应映射成员或是不满足默认字段映射处理器DefaultFieldMapHandler规则，可手动配置映射字段如：.Member(f => f.XxxMember).Field(\"xxxField\")");
                     }
@@ -416,8 +391,6 @@ public partial class SqliteProvider : BaseOrmProvider
                     if (memberMapper.TypeHandlerType != null)
                         memberMapper.TypeHandler = this.GetTypeHandler(memberMapper.TypeHandlerType);
                 }
-                if (memberMapper.DbColumnType.ToLower() == "timestamp")
-                    memberMapper.IsRowVersion = true;
                 mappedMappers.Add(memberMapper);
             }
             var ignoreMappers = entityMapper.MemberMaps.Except(mappedMappers).ToList();
@@ -430,11 +403,9 @@ public partial class SqliteProvider : BaseOrmProvider
                     memberMapper.IsIgnore = true;
                 }
             }
-
-            //非默认TableSchema表名就不变更了
-            if (tableSchema != this.DefaultTableSchema)
-                entityMapper.TableSchema = tableSchema;
-            else entityMapper.TableName = tableName;
+            //if (tableSchema != this.DefaultTableSchema)
+            //    entityMapper.TableSchema = tableSchema;
+            //else entityMapper.TableName = tableName;
             entityMapper.IsMapped = true;
         }
     }
@@ -453,127 +424,128 @@ public partial class SqliteProvider : BaseOrmProvider
                     var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[1] });
                     var targetArgument = visitor.GetQuotedValue(targetSegment);
                     var rightArgument = visitor.GetQuotedValue(rightSegment);
-                    return targetSegment.Merge(rightSegment, $"ISNULL({targetArgument},{rightArgument})", false, true);
+                    return targetSegment.Merge(rightSegment, $"IFNULL({targetArgument},{rightArgument})", false, true);
                 });
                 return true;
         }
         formatter = null;
         return false;
     }
-    public int ExecuteBulkCopy(bool isUpdate, DbContext dbContext, SqlVisitor visitor, ITheaConnection connection, Type insertObjType, IEnumerable insertObjs, int? timeoutSeconds, string tableName = null)
-    {
-        var entityMapper = visitor.Tables[0].Mapper;
-        var memberMappers = visitor.GetRefMemberMappers(insertObjType, entityMapper, isUpdate);
-        var dataTable = visitor.ToDataTable(insertObjType, insertObjs, memberMappers, tableName ?? entityMapper.TableName);
-        if (dataTable.Rows.Count == 0) return 0;
+    //public int ExecuteBulkCopy(bool isUpdate, DbContext dbContext, SqlVisitor visitor, ITheaConnection connection, Type insertObjType, IEnumerable insertObjs, int? timeoutSeconds, string tableName = null)
+    //{
+    //    var entityMapper = visitor.Tables[0].Mapper;
+    //    var memberMappers = visitor.GetRefMemberMappers(insertObjType, entityMapper, isUpdate);
+    //    var dataTable = visitor.ToDataTable(insertObjType, insertObjs, memberMappers, tableName ?? entityMapper.TableName);
+    //    if (dataTable.Rows.Count == 0) return 0;
 
-        connection.Open();
-        var dbConnection = connection.BaseConnection as SqlConnection;
-        var transaction = dbContext.Transaction?.BaseTransaction as SqlTransaction;
-        var bulkCopy = new SqlBulkCopy(dbConnection, SqlBulkCopyOptions.Default, transaction);
-        if (timeoutSeconds.HasValue) bulkCopy.BulkCopyTimeout = timeoutSeconds.Value;
-        bulkCopy.DestinationTableName = dataTable.TableName;
-        for (int i = 0; i < dataTable.Columns.Count; i++)
-        {
-            bulkCopy.ColumnMappings.Add(new SqlBulkCopyColumnMapping(i, dataTable.Columns[i].ColumnName));
-        }
+    //    connection.Open();
+    //    var dbConnection = connection.BaseConnection as SQLiteConnection;
+    //    var transaction = dbContext.Transaction?.BaseTransaction as SQLiteTransaction;
 
-        var createdAt = DateTime.Now;
-        dbContext.DbInterceptors.OnCommandExecuting?.Invoke(new CommandEventArgs
-        {
-            DbKey = dbContext.DbKey,
-            ConnectionString = connection.ConnectionString,
-            SqlType = CommandSqlType.BulkCopyInsert
-        });
-        int recordsAffected = 0;
-        bool isSuccess = true;
-        Exception exception = null;
-        try
-        {
-            bulkCopy.WriteToServer(dataTable);
-            recordsAffected = dataTable.Rows.Count;
-        }
-        catch (Exception ex)
-        {
-            exception = ex;
-            isSuccess = false;
-        }
-        finally
-        {
-            var elapsed = DateTime.Now.Subtract(createdAt).TotalMilliseconds;
-            dbContext.DbInterceptors.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs
-            {
-                DbKey = dbContext.DbKey,
-                ConnectionString = connection.ConnectionString,
-                SqlType = CommandSqlType.BulkCopyInsert,
-                IsSuccess = isSuccess,
-                Exception = exception,
-                Elapsed = (int)elapsed
-            });
-        }
-        if (!isSuccess)
-        {
-            if (transaction == null) connection.Close();
-            throw exception;
-        }
-        return recordsAffected;
-    }
-    public async Task<int> ExecuteBulkCopyAsync(bool isUpdate, DbContext dbContext, SqlVisitor visitor, ITheaConnection connection, Type insertObjType, IEnumerable insertObjs, int? timeoutSeconds, CancellationToken cancellationToken = default, string tableName = null)
-    {
-        var entityMapper = visitor.Tables[0].Mapper;
-        var memberMappers = visitor.GetRefMemberMappers(insertObjType, entityMapper, isUpdate);
-        var dataTable = visitor.ToDataTable(insertObjType, insertObjs, memberMappers, tableName ?? entityMapper.TableName);
-        if (dataTable.Rows.Count == 0) return 0;
+    //    var bulkCopy = new SQLiteBulkCopy(dbConnection, SqlBulkCopyOptions.Default, transaction);
+    //    if (timeoutSeconds.HasValue) bulkCopy.BulkCopyTimeout = timeoutSeconds.Value;
+    //    bulkCopy.DestinationTableName = dataTable.TableName;
+    //    for (int i = 0; i < dataTable.Columns.Count; i++)
+    //    {
+    //        bulkCopy.ColumnMappings.Add(new SqlBulkCopyColumnMapping(i, dataTable.Columns[i].ColumnName));
+    //    }
 
-        await connection.OpenAsync(cancellationToken);
-        var dbConnection = connection.BaseConnection as SqlConnection;
-        var transaction = dbContext.Transaction?.BaseTransaction as SqlTransaction;
-        var bulkCopy = new SqlBulkCopy(dbConnection, SqlBulkCopyOptions.Default, transaction);
-        if (timeoutSeconds.HasValue) bulkCopy.BulkCopyTimeout = timeoutSeconds.Value;
-        bulkCopy.DestinationTableName = dataTable.TableName;
-        for (int i = 0; i < dataTable.Columns.Count; i++)
-        {
-            bulkCopy.ColumnMappings.Add(new SqlBulkCopyColumnMapping(i, dataTable.Columns[i].ColumnName));
-        }
+    //    var createdAt = DateTime.Now;
+    //    dbContext.DbInterceptors.OnCommandExecuting?.Invoke(new CommandEventArgs
+    //    {
+    //        DbKey = dbContext.DbKey,
+    //        ConnectionString = connection.ConnectionString,
+    //        SqlType = CommandSqlType.BulkCopyInsert
+    //    });
+    //    int recordsAffected = 0;
+    //    bool isSuccess = true;
+    //    Exception exception = null;
+    //    try
+    //    {
+    //        bulkCopy.WriteToServer(dataTable);
+    //        recordsAffected = dataTable.Rows.Count;
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        exception = ex;
+    //        isSuccess = false;
+    //    }
+    //    finally
+    //    {
+    //        var elapsed = DateTime.Now.Subtract(createdAt).TotalMilliseconds;
+    //        dbContext.DbInterceptors.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs
+    //        {
+    //            DbKey = dbContext.DbKey,
+    //            ConnectionString = connection.ConnectionString,
+    //            SqlType = CommandSqlType.BulkCopyInsert,
+    //            IsSuccess = isSuccess,
+    //            Exception = exception,
+    //            Elapsed = (int)elapsed
+    //        });
+    //    }
+    //    if (!isSuccess)
+    //    {
+    //        if (transaction == null) connection.Close();
+    //        throw exception;
+    //    }
+    //    return recordsAffected;
+    //}
+    //public async Task<int> ExecuteBulkCopyAsync(bool isUpdate, DbContext dbContext, SqlVisitor visitor, ITheaConnection connection, Type insertObjType, IEnumerable insertObjs, int? timeoutSeconds, CancellationToken cancellationToken = default, string tableName = null)
+    //{
+    //    var entityMapper = visitor.Tables[0].Mapper;
+    //    var memberMappers = visitor.GetRefMemberMappers(insertObjType, entityMapper, isUpdate);
+    //    var dataTable = visitor.ToDataTable(insertObjType, insertObjs, memberMappers, tableName ?? entityMapper.TableName);
+    //    if (dataTable.Rows.Count == 0) return 0;
 
-        var createdAt = DateTime.Now;
-        dbContext.DbInterceptors.OnCommandExecuting?.Invoke(new CommandEventArgs
-        {
-            DbKey = dbContext.DbKey,
-            ConnectionString = connection.ConnectionString,
-            SqlType = CommandSqlType.BulkCopyInsert
-        });
-        int recordsAffected = 0;
-        bool isSuccess = true;
-        Exception exception = null;
-        try
-        {
-            await bulkCopy.WriteToServerAsync(dataTable);
-            recordsAffected = dataTable.Rows.Count;
-        }
-        catch (Exception ex)
-        {
-            exception = ex;
-            isSuccess = false;
-        }
-        finally
-        {
-            var elapsed = DateTime.Now.Subtract(createdAt).TotalMilliseconds;
-            dbContext.DbInterceptors.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs
-            {
-                DbKey = dbContext.DbKey,
-                ConnectionString = connection.ConnectionString,
-                SqlType = CommandSqlType.BulkCopyInsert,
-                IsSuccess = isSuccess,
-                Exception = exception,
-                Elapsed = (int)elapsed
-            });
-        }
-        if (!isSuccess)
-        {
-            if (transaction == null) await connection.CloseAsync();
-            throw exception;
-        }
-        return recordsAffected;
-    }
+    //    await connection.OpenAsync(cancellationToken);
+    //    var dbConnection = connection.BaseConnection as SqlConnection;
+    //    var transaction = dbContext.Transaction?.BaseTransaction as SqlTransaction;
+    //    var bulkCopy = new SqlBulkCopy(dbConnection, SqlBulkCopyOptions.Default, transaction);
+    //    if (timeoutSeconds.HasValue) bulkCopy.BulkCopyTimeout = timeoutSeconds.Value;
+    //    bulkCopy.DestinationTableName = dataTable.TableName;
+    //    for (int i = 0; i < dataTable.Columns.Count; i++)
+    //    {
+    //        bulkCopy.ColumnMappings.Add(new SqlBulkCopyColumnMapping(i, dataTable.Columns[i].ColumnName));
+    //    }
+
+    //    var createdAt = DateTime.Now;
+    //    dbContext.DbInterceptors.OnCommandExecuting?.Invoke(new CommandEventArgs
+    //    {
+    //        DbKey = dbContext.DbKey,
+    //        ConnectionString = connection.ConnectionString,
+    //        SqlType = CommandSqlType.BulkCopyInsert
+    //    });
+    //    int recordsAffected = 0;
+    //    bool isSuccess = true;
+    //    Exception exception = null;
+    //    try
+    //    {
+    //        await bulkCopy.WriteToServerAsync(dataTable);
+    //        recordsAffected = dataTable.Rows.Count;
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        exception = ex;
+    //        isSuccess = false;
+    //    }
+    //    finally
+    //    {
+    //        var elapsed = DateTime.Now.Subtract(createdAt).TotalMilliseconds;
+    //        dbContext.DbInterceptors.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs
+    //        {
+    //            DbKey = dbContext.DbKey,
+    //            ConnectionString = connection.ConnectionString,
+    //            SqlType = CommandSqlType.BulkCopyInsert,
+    //            IsSuccess = isSuccess,
+    //            Exception = exception,
+    //            Elapsed = (int)elapsed
+    //        });
+    //    }
+    //    if (!isSuccess)
+    //    {
+    //        if (transaction == null) await connection.CloseAsync();
+    //        throw exception;
+    //    }
+    //    return recordsAffected;
+    //}
 }
