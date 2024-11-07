@@ -20,8 +20,12 @@ public interface ISqliteCreate<TEntity> : ICreate<TEntity>
     new ISqliteCreate<TEntity> UseTableBy(object field1Value, object field2Value = null);
     #endregion
 
-    #region WithLock
-    ISqliteCreate<TEntity> WithLock(string lockName);
+    #region OrIgnore/OrReplace/OrAbort/OrFail/OrRollback
+    ISqliteCreate<TEntity> OrIgnore();
+    ISqliteCreate<TEntity> OrReplace();
+    ISqliteCreate<TEntity> OrAbort();
+    ISqliteCreate<TEntity> OrFail();
+    ISqliteCreate<TEntity> OrRollback();
     #endregion
 
     #region WithBy
@@ -37,7 +41,7 @@ public interface ISqliteCreate<TEntity> : ICreate<TEntity>
     ///         ...
     ///     })
     ///     .Execute();
-    /// SQL: INSERT INTO [sys_user] ([Name],[Age], ...) VALUES(@Name,@Age, ...)
+    /// SQL: INSERT INTO "sys_user" ("Name","Age", ...) VALUES(@Name,@Age, ...)
     /// </code>
     /// </summary>
     /// <typeparam name="TInsertObject">插入对象类型</typeparam>
@@ -50,7 +54,7 @@ public interface ISqliteCreate<TEntity> : ICreate<TEntity>
     /// <summary>
     /// 批量插入，采用多表值方式，生成的SQL:
     /// <code>
-    /// INSERT INTO [sys_product] ([ProductNo],[Name], ...) VALUES (@ProductNo0,@Name0, ...),(@ProductNo1,@Name1, ...),(@ProductNo2,@Name2, ...)
+    /// INSERT INTO "sys_product" ("ProductNo","Name", ...) VALUES (@ProductNo0,@Name0, ...),(@ProductNo1,@Name1, ...),(@ProductNo2,@Name2, ...)
     /// </code>
     /// </summary>
     /// <param name="insertObjs">插入的对象集合</param>
@@ -59,13 +63,13 @@ public interface ISqliteCreate<TEntity> : ICreate<TEntity>
     new ISqliteBulkContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount = 500);
     #endregion
 
-    #region WithBulkCopy
-    /// <summary>
-    /// 批量插入，采用SqlBulkCopy方式，不生成SQL
-    /// </summary>
-    /// <param name="insertObjs">插入的对象集合</param>
-    /// <param name="timeoutSeconds">超时时间，单位秒</param>
-    /// <returns>返回插入对象</returns>
-    ISqliteCreated<TEntity> WithBulkCopy(IEnumerable insertObjs, int? timeoutSeconds = null);
-    #endregion
+    //#region WithBulkCopy
+    ///// <summary>
+    ///// 批量插入，采用SqlBulkCopy方式，不生成SQL
+    ///// </summary>
+    ///// <param name="insertObjs">插入的对象集合</param>
+    ///// <param name="timeoutSeconds">超时时间，单位秒</param>
+    ///// <returns>返回插入对象</returns>
+    //ISqliteCreated<TEntity> WithBulkCopy(IEnumerable insertObjs, int? timeoutSeconds = null);
+    //#endregion
 }

@@ -62,7 +62,7 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
 
         var builder = new StringBuilder($"INSERT INTO {tableName} ");
         if (!string.IsNullOrEmpty(this.LockName))
-            builder.Append($"WITH {this.LockName} ");
+            builder.Append($"WITH ({this.LockName}) ");
 
         builder.Append('(');
         for (int i = 0; i < this.InsertFields.Count; i++)

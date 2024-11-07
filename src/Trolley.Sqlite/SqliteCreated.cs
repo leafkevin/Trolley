@@ -30,34 +30,34 @@ public class SqliteCreated<TEntity> : Created<TEntity>, ISqliteCreated<TEntity>
         var entityType = typeof(TEntity);
         switch (this.Visitor.ActionMode)
         {
-            case ActionMode.BulkCopy:
-                (var insertObjs, var timeoutSeconds) = this.DialectVisitor.BuildWithBulkCopy();
-                Type insertObjType = null;
-                foreach (var insertObj in insertObjs)
-                {
-                    insertObjType = insertObj.GetType();
-                    break;
-                }
-                var dialectOrmProvider = this.OrmProvider as SqliteProvider;
-                var sqlVisitor = this.Visitor as SqlVisitor;
-                if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out var shardingTable))
-                {
-                    isNeedSplit = this.Visitor.Tables[0].Body == null;
-                    if (isNeedSplit)
-                    {
-                        var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
-                        foreach (var tabledInsertObj in tabledInsertObjs)
-                        {
-                            result += dialectOrmProvider.ExecuteBulkCopy(true, this.DbContext, sqlVisitor, connection, insertObjType, tabledInsertObj.Value, timeoutSeconds, tabledInsertObj.Key);
-                        }
-                    }
-                    else result = dialectOrmProvider.ExecuteBulkCopy(true, this.DbContext, sqlVisitor, connection, insertObjType, insertObjs, timeoutSeconds, this.Visitor.Tables[0].Body);
-                }
-                else result = dialectOrmProvider.ExecuteBulkCopy(true, this.DbContext, sqlVisitor, connection, insertObjType, insertObjs, timeoutSeconds);
-                break;
+            //case ActionMode.BulkCopy:
+            //    (var insertObjs, var timeoutSeconds) = this.DialectVisitor.BuildWithBulkCopy();
+            //    Type insertObjType = null;
+            //    foreach (var insertObj in insertObjs)
+            //    {
+            //        insertObjType = insertObj.GetType();
+            //        break;
+            //    }
+            //    var dialectOrmProvider = this.OrmProvider as SqliteProvider;
+            //    var sqlVisitor = this.Visitor as SqlVisitor;
+            //    if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out var shardingTable))
+            //    {
+            //        isNeedSplit = this.Visitor.Tables[0].Body == null;
+            //        if (isNeedSplit)
+            //        {
+            //            var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
+            //            foreach (var tabledInsertObj in tabledInsertObjs)
+            //            {
+            //                result += dialectOrmProvider.ExecuteBulkCopy(true, this.DbContext, sqlVisitor, connection, insertObjType, tabledInsertObj.Value, timeoutSeconds, tabledInsertObj.Key);
+            //            }
+            //        }
+            //        else result = dialectOrmProvider.ExecuteBulkCopy(true, this.DbContext, sqlVisitor, connection, insertObjType, insertObjs, timeoutSeconds, this.Visitor.Tables[0].Body);
+            //    }
+            //    else result = dialectOrmProvider.ExecuteBulkCopy(true, this.DbContext, sqlVisitor, connection, insertObjType, insertObjs, timeoutSeconds);
+            //    break;
             case ActionMode.Bulk:
                 var builder = new StringBuilder();
-                (isNeedSplit, var tableName, insertObjs, var bulkCount,
+                (isNeedSplit, var tableName, var insertObjs, var bulkCount,
                     var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command.BaseCommand);
                 int executor(string tableName, IEnumerable insertObjs)
                 {
@@ -123,34 +123,34 @@ public class SqliteCreated<TEntity> : Created<TEntity>, ISqliteCreated<TEntity>
         var entityType = typeof(TEntity);
         switch (this.Visitor.ActionMode)
         {
-            case ActionMode.BulkCopy:
-                (var insertObjs, var timeoutSeconds) = this.DialectVisitor.BuildWithBulkCopy();
-                Type insertObjType = null;
-                foreach (var insertObj in insertObjs)
-                {
-                    insertObjType = insertObj.GetType();
-                    break;
-                }
-                var dialectOrmProvider = this.OrmProvider as SqliteProvider;
-                var sqlVisitor = this.Visitor as SqlVisitor;
-                if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out var shardingTable))
-                {
-                    isNeedSplit = this.Visitor.Tables[0].Body == null;
-                    if (isNeedSplit)
-                    {
-                        var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
-                        foreach (var tabledInsertObj in tabledInsertObjs)
-                        {
-                            result += await dialectOrmProvider.ExecuteBulkCopyAsync(true, this.DbContext, sqlVisitor, connection, insertObjType, tabledInsertObj.Value, timeoutSeconds, cancellationToken, tabledInsertObj.Key);
-                        }
-                    }
-                    else result = await dialectOrmProvider.ExecuteBulkCopyAsync(true, this.DbContext, sqlVisitor, connection, insertObjType, insertObjs, timeoutSeconds, cancellationToken, this.Visitor.Tables[0].Body);
-                }
-                else result = await dialectOrmProvider.ExecuteBulkCopyAsync(true, this.DbContext, sqlVisitor, connection, insertObjType, insertObjs, timeoutSeconds, cancellationToken);
-                break;
+            //case ActionMode.BulkCopy:
+            //    (var insertObjs, var timeoutSeconds) = this.DialectVisitor.BuildWithBulkCopy();
+            //    Type insertObjType = null;
+            //    foreach (var insertObj in insertObjs)
+            //    {
+            //        insertObjType = insertObj.GetType();
+            //        break;
+            //    }
+            //    var dialectOrmProvider = this.OrmProvider as SqliteProvider;
+            //    var sqlVisitor = this.Visitor as SqlVisitor;
+            //    if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out var shardingTable))
+            //    {
+            //        isNeedSplit = this.Visitor.Tables[0].Body == null;
+            //        if (isNeedSplit)
+            //        {
+            //            var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
+            //            foreach (var tabledInsertObj in tabledInsertObjs)
+            //            {
+            //                result += await dialectOrmProvider.ExecuteBulkCopyAsync(true, this.DbContext, sqlVisitor, connection, insertObjType, tabledInsertObj.Value, timeoutSeconds, cancellationToken, tabledInsertObj.Key);
+            //            }
+            //        }
+            //        else result = await dialectOrmProvider.ExecuteBulkCopyAsync(true, this.DbContext, sqlVisitor, connection, insertObjType, insertObjs, timeoutSeconds, cancellationToken, this.Visitor.Tables[0].Body);
+            //    }
+            //    else result = await dialectOrmProvider.ExecuteBulkCopyAsync(true, this.DbContext, sqlVisitor, connection, insertObjType, insertObjs, timeoutSeconds, cancellationToken);
+            //    break;
             case ActionMode.Bulk:
                 var builder = new StringBuilder();
-                (isNeedSplit, var tableName, insertObjs, var bulkCount,
+                (isNeedSplit, var tableName, var insertObjs, var bulkCount,
                     var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command.BaseCommand);
                 async Task<int> executor(string tableName, IEnumerable insertObjs)
                 {

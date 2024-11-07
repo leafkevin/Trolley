@@ -24,10 +24,30 @@ public class SqliteCreate<TEntity> : Create<TEntity>, ISqliteCreate<TEntity>
         => base.UseTableBy(field1Value, field2Value) as ISqliteCreate<TEntity>;
     #endregion
 
-    #region WithLock
-    public ISqliteCreate<TEntity> WithLock(string lockName)
+    #region OrIgnore/OrReplace/OrAbort/OrFail/OrRollback
+    public ISqliteCreate<TEntity> OrIgnore()
     {
-        this.DialectVisitor.WithLock(lockName);
+        this.DialectVisitor.OrExpression(" OR IGNORE");
+        return this;
+    }
+    public ISqliteCreate<TEntity> OrReplace()
+    {
+        this.DialectVisitor.OrExpression(" OR REPLACE");
+        return this;
+    }
+    public ISqliteCreate<TEntity> OrAbort()
+    {
+        this.DialectVisitor.OrExpression(" OR ABORT");
+        return this;
+    }
+    public ISqliteCreate<TEntity> OrFail()
+    {
+        this.DialectVisitor.OrExpression(" OR FAIL");
+        return this;
+    }
+    public ISqliteCreate<TEntity> OrRollback()
+    {
+        this.DialectVisitor.OrExpression(" OR ROLLBACK");
         return this;
     }
     #endregion
@@ -41,26 +61,25 @@ public class SqliteCreate<TEntity> : Create<TEntity>, ISqliteCreate<TEntity>
     public new ISqliteBulkContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount)
         => base.WithBulk(insertObjs, bulkCount) as ISqliteBulkContinuedCreate<TEntity>;
     #endregion
+    //#region WithBulkCopy
+    //public ISqliteCreated<TEntity> WithBulkCopy(IEnumerable insertObjs, int? timeoutSeconds = null)
+    //{
+    //    if (insertObjs == null)
+    //        throw new ArgumentNullException(nameof(insertObjs));
 
-    #region WithBulkCopy
-    public ISqliteCreated<TEntity> WithBulkCopy(IEnumerable insertObjs, int? timeoutSeconds = null)
-    {
-        if (insertObjs == null)
-            throw new ArgumentNullException(nameof(insertObjs));
+    //    if (insertObjs is IDictionary<string, object>)
+    //        throw new NotSupportedException("批量插入，单个对象类型只支持命名对象、匿名对象或是字典对象");
 
-        if (insertObjs is IDictionary<string, object>)
-            throw new NotSupportedException("批量插入，单个对象类型只支持命名对象、匿名对象或是字典对象");
+    //    bool isEmpty = true;
+    //    foreach (var insertObj in insertObjs)
+    //    {
+    //        isEmpty = false;
+    //        break;
+    //    }
+    //    if (isEmpty) throw new Exception("批量更新，insertObjs参数至少要有一条数据");
 
-        bool isEmpty = true;
-        foreach (var insertObj in insertObjs)
-        {
-            isEmpty = false;
-            break;
-        }
-        if (isEmpty) throw new Exception("批量更新，insertObjs参数至少要有一条数据");
-
-        this.DialectVisitor.WithBulkCopy(insertObjs, timeoutSeconds);
-        return this.OrmProvider.NewCreated<TEntity>(this.DbContext, this.Visitor) as ISqliteCreated<TEntity>;
-    }
-    #endregion
+    //    this.DialectVisitor.WithBulkCopy(insertObjs, timeoutSeconds);
+    //    return this.OrmProvider.NewCreated<TEntity>(this.DbContext, this.Visitor) as ISqliteCreated<TEntity>;
+    //}
+    //#endregion
 }

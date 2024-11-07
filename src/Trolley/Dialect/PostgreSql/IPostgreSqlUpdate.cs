@@ -50,7 +50,7 @@ public interface IPostgreSqlUpdate<TEntity> : IUpdate<TEntity>
     /// <summary>
     /// 部分字段更新，updateObj对象中除主键、OnlyFields、IgnoreFields方法筛选后的剩下所有字段都将参与更新，匿名、命名对象都可以，需要配合where条件使用，用法：
     /// <code>.Set(new { Name = "kevin", SourceType = DBNull.Value }).Where(f =&gt; f.Id = 1); .Set(new User { Name = "kevin", SourceType = null });
-    /// SQL: SET `Name`=@Name,SourceType=@SourceType WHERE `Id`=@kId</code>
+    /// SQL: SET "Name"=@Name,SourceType=@SourceType WHERE "Id"=@kId</code>
     /// </summary>
     /// <typeparam name="TUpdateObj">更新对象类型</typeparam>
     /// <param name="updateObj">部分字段更新对象参数，包含想要更新的必需栏位值，updateObj对象内的栏位都将参与更新，可以是字典或是匿名对象或是现有命名对象</param>
@@ -59,7 +59,7 @@ public interface IPostgreSqlUpdate<TEntity> : IUpdate<TEntity>
     /// <summary>
     /// 判断condition布尔值，如果为true，使用更新对象updateObj部分字段更新，updateObj对象中除主键、OnlyFields、IgnoreFields方法筛选后的剩下所有字段都将参与更新，匿名、命名对象都可以，需要配合where条件使用，为false不更新，用法：
     /// <code>.Set(true, new { Id = 1, Name = "kevin", SourceType = DBNull.Value }).Where(f =&gt; f.Id = 1); .Set(true, new User { Name = "kevin", SourceType = null });
-    /// SQL: SET `Name`=@Name,SourceType=@SourceType WHERE `Id`=@kId</code>
+    /// SQL: SET "Name"=@Name,SourceType=@SourceType WHERE "Id"=@kId</code>
     /// </summary>
     /// <typeparam name="TUpdateObj">更新对象类型</typeparam>
     /// <param name="condition">判断条件</param>
@@ -69,7 +69,7 @@ public interface IPostgreSqlUpdate<TEntity> : IUpdate<TEntity>
     /// <summary>
     /// 部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个字段，支持New、MemberInit表达式访问，用法：
     /// <code>.Set(f => new { Description = DBNull.Value, Price = f.Price + 50 ... }) 或.Set(f => new Product { Description = DBNull.Value, Price = f.Price + 50 ... })
-    /// SQL: UPDATE `sys_product` SET `Description`=NULL,`Price`=Price+50,`Field`=@Field ...</code>
+    /// SQL: UPDATE "sys_product" SET "Description"=NULL,"Price"=Price+50,"Field"=@Field ...</code>
     /// </summary>
     /// <typeparam name="TFields">一个或是多个字段</typeparam>
     /// <param name="fieldsAssignment">更新字段表达式，一个或是多个字段成员访问表达式，同名字段省略赋值字段，如：parameter.TotalAmount</param>
@@ -78,7 +78,7 @@ public interface IPostgreSqlUpdate<TEntity> : IUpdate<TEntity>
     /// <summary>
     /// 判断condition布尔值，如果为true，使用表达式fieldsAssignment部分字段更新，表达式fieldsAssignment的字段可以是一个或是多个，支持New、MemberInit表达式访问，如果为false，则不生成更新语句，用法：
     /// <code>.Set(true, f => new { Description = DBNull.Value, Price = f.Price + 50 ... }) 或.Set(true, f => new Product { Description = DBNull.Value, Price = f.Price + 50 ... })
-    /// SQL: UPDATE `sys_product` SET `Description`=NULL,`Price`=Price+50,`Field`=@Field ...</code>
+    /// SQL: UPDATE "sys_product" SET "Description"=NULL,"Price"=Price+50,"Field"=@Field ...</code>
     /// </summary>
     /// <typeparam name="TFields">一个或是多个字段</typeparam>
     /// <param name="condition">更新条件</param>
@@ -113,7 +113,7 @@ public interface IPostgreSqlUpdate<TEntity> : IUpdate<TEntity>
     ///     .From&lt;OrderDetail&gt;('c')
     ///     .Where(f =&gt; f.OrderId == y.Id)
     ///     .Select(t =&gt; Sql.Sum(t.Amount))) ...
-    /// SQL: SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`) ...
+    /// SQL: SET a."TotalAmount"=(SELECT SUM(c."Amount") FROM "sys_order_detail" c WHERE c."OrderId"=a."Id") ...
     /// </code>
     /// </summary>
     /// <typeparam name="TField">子查询返回的单个字段类型</typeparam>
@@ -128,7 +128,7 @@ public interface IPostgreSqlUpdate<TEntity> : IUpdate<TEntity>
     ///     .From&lt;OrderDetail&gt;('c')
     ///     .Where(f =&gt; f.OrderId == y.Id)
     ///     .Select(t =&gt; Sql.Sum(t.Amount))) ...
-    /// SQL: SET a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`) ...
+    /// SQL: SET a."TotalAmount"=(SELECT SUM(c."Amount") FROM "sys_order_detail" c WHERE c."OrderId"=a."Id") ...
     /// </code>
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -150,7 +150,7 @@ public interface IPostgreSqlUpdate<TEntity> : IUpdate<TEntity>
     ///     OrderNo = "ON-001",
     ///     BuyerSource = DBNull.Value,
     /// })
-    /// SQL: SET a.`Disputes`=@Disputes,a.`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`='ON-001',a.`BuyerSource`=NULL ...
+    /// SQL: SET a."Disputes"=@Disputes,a."TotalAmount"=(SELECT SUM(c."Amount") FROM "sys_order_detail" c WHERE c."OrderId"=a."Id"),a."OrderNo"='ON-001',a."BuyerSource"=NULL ...
     /// </code>
     /// </summary>
     /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
@@ -170,7 +170,7 @@ public interface IPostgreSqlUpdate<TEntity> : IUpdate<TEntity>
     ///     OrderNo = "ON-001",
     ///     BuyerSource = DBNull.Value,
     /// })
-    /// SQL: SET a.`Disputes`=@Disputes,`TotalAmount`=(SELECT SUM(c.`Amount`) FROM `sys_order_detail` c WHERE c.`OrderId`=a.`Id`),a.`OrderNo`='ON-001',a.`BuyerSource`=NULL ...
+    /// SQL: SET a."Disputes"=@Disputes,"TotalAmount"=(SELECT SUM(c."Amount") FROM "sys_order_detail" c WHERE c."OrderId"=a."Id"),a."OrderNo"='ON-001',a."BuyerSource"=NULL ...
     /// </code>
     /// </summary>
     /// <typeparam name="TFields">子查询返回的字段类型</typeparam>
@@ -187,7 +187,7 @@ public interface IPostgreSqlUpdate<TEntity> : IUpdate<TEntity>
     /// <code>
     /// var updateObjs = new Order[]{ ... ...};
     /// .SetBulk(updateObjs).Set(new { Name = "kevin"}).IgnoreFields(...) ...
-    /// SQL: UPDATE `sys_order` SET ...Name=@Name0 WHERE `Id`=@kId0;UPDATE `sys_order` SET ...Name=@Name1 WHERE `Id`=@kId1; ...
+    /// SQL: UPDATE "sys_order" SET ...Name=@Name0 WHERE "Id"=@kId0;UPDATE "sys_order" SET ...Name=@Name1 WHERE "Id"=@kId1; ...
     /// </code>
     /// </summary>
     /// <typeparam name="TUpdateObj">要更新的字段类型</typeparam>
@@ -199,7 +199,7 @@ public interface IPostgreSqlUpdate<TEntity> : IUpdate<TEntity>
 
     #region InnerJoin
     /// <summary>
-    /// InnerJoin内连接表TSource部分字段数据，更新当前表TEntity数据，仅限PostgreSql,MariaDB,PostgreSql数据库使用
+    /// InnerJoin内连接表TSource部分字段数据，更新当前表TEntity数据
     /// </summary>
     /// <typeparam name="TSource">数据来源表TSource实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
@@ -209,7 +209,7 @@ public interface IPostgreSqlUpdate<TEntity> : IUpdate<TEntity>
 
     #region LeftJoin
     /// <summary>
-    /// LeftJoin左连接表TSource部分字段数据，更新当前表TEntity数据，仅限PostgreSql,MariaDB,PostgreSql数据库使用
+    /// LeftJoin左连接表TSource部分字段数据，更新当前表TEntity数据
     /// </summary>
     /// <typeparam name="TSource">数据来源表TSource实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>

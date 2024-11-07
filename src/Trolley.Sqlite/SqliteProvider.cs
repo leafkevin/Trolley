@@ -391,6 +391,8 @@ public partial class SqliteProvider : BaseOrmProvider
                     if (memberMapper.TypeHandlerType != null)
                         memberMapper.TypeHandler = this.GetTypeHandler(memberMapper.TypeHandlerType);
                 }
+                if (memberMapper.DbColumnType.ToLower() == "timestamp")
+                    memberMapper.IsRowVersion = true;
                 mappedMappers.Add(memberMapper);
             }
             var ignoreMappers = entityMapper.MemberMaps.Except(mappedMappers).ToList();

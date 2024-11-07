@@ -10,7 +10,9 @@ namespace Trolley.Sqlite;
 
 public class SqliteCreateVisitor : CreateVisitor, ICreateVisitor
 {
-    public string LockName { get; set; }
+    public string OrExpr { get; set; }
+    public StringBuilder UpdateFields { get; set; }
+    public bool IsUpdate { get; set; }
     public List<string> OutputFieldNames { get; set; }
     public SqliteCreateVisitor(DbContext dbContext, char tableAsStart = 'a')
         : base(dbContext, tableAsStart) { }
@@ -33,6 +35,14 @@ public class SqliteCreateVisitor : CreateVisitor, ICreateVisitor
                         break;
                     case "WithByField":
                         this.VisitWithByField(deferredSegment.Value);
+                        break;
+                    case "SetObject":
+                        this.UpdateFields ??= new();
+                        this.VisitSetObject(deferredSegment.Value);
+                        break;
+                    case "SetExpression":
+                        this.UpdateFields ??= new();
+                        this.VisitSetExpression(deferredSegment.Value as LambdaExpression);
                         break;
                 }
             }
@@ -60,11 +70,11 @@ public class SqliteCreateVisitor : CreateVisitor, ICreateVisitor
             tableName = tableSegment.TableSchema + "." + tableName;
         tableName = this.OrmProvider.GetTableName(tableName);
 
-        var builder = new StringBuilder($"INSERT INTO {tableName} ");
-        if (!string.IsNullOrEmpty(this.LockName))
-            builder.Append($"WITH {this.LockName} ");
+        var builder = new StringBuilder("INSERT");
+        if (!string.IsNullOrEmpty(this.OrExpr))
+            builder.Append(this.OrExpr);
 
-        builder.Append('(');
+        builder.Append($" INTO {tableName} (");
         for (int i = 0; i < this.InsertFields.Count; i++)
         {
             var insertField = this.InsertFields[i];
@@ -341,13 +351,161 @@ public class SqliteCreateVisitor : CreateVisitor, ICreateVisitor
         }
         return (isNeedSplit, tableName, insertObjs, bulkCount, firstSqlSetter, loopSqlSetter, readerFields);
     }
-    public void WithLock(string lockName) => this.LockName = lockName;
-    public void Output(params string[] fieldNames)
+    public void OrExpression(string orExpr) => this.OrExpr = orExpr;
+    public void OnConflict(Expression updateExpr)
+    {
+        this.deferredSegments.Add(new CommandSegment
+        {
+            Type = "SetExpression",
+            Value = updateExpr
+        });
+    }
+    public void VisitSetObject(object updateObj)
+    {
+        var entityType = this.Tables[0].EntityType;
+        var updateObjType = updateObj.GetType();
+        (var isDictionary, var setFieldsInitializer) = RepositoryHelper.BuildSqlParametersPart(this.DbContext, entityType, updateObjType, true, false, true, false, false, false, this.IsMultiple, false, this.OnlyFieldNames, this.IgnoreFieldNames, ",", null);
+        if (isDictionary)
+        {
+            var entityMapper = this.Tables[0].Mapper;
+            if (this.IsMultiple)
+            {
+                var typedSetFieldsInitializer = setFieldsInitializer as Action<StringBuilder, DbContext, EntityMap, object, string>;
+                typedSetFieldsInitializer.Invoke(this.UpdateFields, this.DbContext, entityMapper, updateObj, $"_m{this.CommandIndex}");
+            }
+            else
+            {
+                var typedSetFieldsInitializer = setFieldsInitializer as Action<StringBuilder, DbContext, EntityMap, object>;
+                typedSetFieldsInitializer.Invoke(this.UpdateFields, this.DbContext, entityMapper, updateObj);
+            }
+        }
+        else
+        {
+            if (this.IsMultiple)
+            {
+                var typedSetFieldsInitializer = setFieldsInitializer as Action<StringBuilder, DbContext, object, string>;
+                typedSetFieldsInitializer.Invoke(this.UpdateFields, this.DbContext, updateObj, $"_m{this.CommandIndex}");
+            }
+            else
+            {
+                var typedSetFieldsInitializer = setFieldsInitializer as Action<StringBuilder, DbContext, object>;
+                typedSetFieldsInitializer.Invoke(this.UpdateFields, this.DbContext, updateObj);
+            }
+        }
+    }
+    public void VisitSetExpression(LambdaExpression lambdaExpr)
+    {
+        var currentExpr = lambdaExpr.Body;
+        var callStack = new Stack<MethodCallExpression>();
+        while (true)
+        {
+            if (currentExpr.NodeType == ExpressionType.Parameter)
+                break;
+
+            if (currentExpr is MethodCallExpression callExpr)
+            {
+                callStack.Push(callExpr);
+                currentExpr = callExpr.Object;
+            }
+        }
+        this.InitTableAlias(lambdaExpr);
+        var builder = new StringBuilder(" ON CONFLICT ");
+        while (callStack.TryPop(out var callExpr))
+        {
+            switch (callExpr.Method.Name)
+            {
+                case "DoNothing":
+                    builder.Append("DO NOTHING");
+                    break;
+                case "UseKeys":
+                    builder.Append('(');
+                    foreach (var keyMapper in this.Tables[0].Mapper.KeyMembers)
+                    {
+                        builder.Append(this.OrmProvider.GetFieldName(keyMapper.FieldName));
+                    }
+                    builder.Append(") DO UPDATE SET ");
+                    break;
+                case "UseConstraint":
+                    var constraintName = this.Evaluate<string>(callExpr.Arguments[0]);
+                    if (string.IsNullOrEmpty(constraintName))
+                        throw new ArgumentNullException("参数constraintName不能为null");
+                    builder.Append($" {constraintName} DO UPDATE SET ");
+                    break;
+                case "Set":
+                    //var genericType = genericArguments[0].DeclaringType;
+                    if (callExpr.Arguments.Count == 1)
+                    {
+                        this.IsUpdate = true;
+                        //Set<TFields>(Expression<Func<TEntity, TFields>> fieldsAssignment)
+                        if (callExpr.Arguments[0].Type.BaseType == typeof(LambdaExpression))
+                        {
+                            this.VisitAndDeferred(new SqlFieldSegment { Expression = callExpr.Arguments[0] });
+                        }
+                        //Set<TUpdateObj>(TUpdateObj updateObj), 走参数
+                        else this.VisitSetObject(this.Evaluate(callExpr.Arguments[0]));
+                        this.IsUpdate = false;
+                    }
+                    else if (callExpr.Arguments.Count == 2)
+                    {
+                        //Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment)
+                        if (callExpr.Arguments[1].Type.BaseType == typeof(LambdaExpression))
+                        {
+                            if (callExpr.Arguments[0].Type == typeof(bool))
+                            {
+                                var condition = this.Evaluate<bool>(callExpr.Arguments[0]);
+                                if (condition)
+                                {
+                                    this.IsUpdate = true;
+                                    this.VisitAndDeferred(new SqlFieldSegment { Expression = callExpr.Arguments[1] });
+                                    this.IsUpdate = false;
+                                }
+                            }
+                            else
+                            {
+                                //Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<TEntity, TField>> fieldValueSelector)
+                                this.VisitSetFieldExpression(callExpr.Arguments[0], callExpr.Arguments[1]);
+                            }
+                        }
+                        else
+                        {
+                            //Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
+                            if (callExpr.Arguments[0].Type == typeof(bool))
+                            {
+                                var condition = this.Evaluate<bool>(callExpr.Arguments[0]);
+                                if (condition) this.VisitSetObject(this.Evaluate(callExpr.Arguments[1]));
+                            }
+                            //Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
+                            else this.VisitWithSetField(callExpr.Arguments[0], this.Evaluate(callExpr.Arguments[1]));
+                        }
+                    }
+                    //Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
+                    //Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<TEntity, TField>> fieldValueSelector)
+                    else
+                    {
+                        var condition = this.Evaluate<bool>(callExpr.Arguments[0]);
+                        if (condition)
+                        {
+                            if (callExpr.Arguments[2].Type.BaseType == typeof(LambdaExpression))
+                                this.VisitSetFieldExpression(callExpr.Arguments[1], callExpr.Arguments[2]);
+                            else
+                            {
+                                this.VisitWithSetField(callExpr.Arguments[1], this.Evaluate(callExpr.Arguments[2]));
+                            }
+                        }
+                    }
+                    break;
+            }
+        }
+        this.UpdateFields.Insert(0, builder.ToString());
+        builder.Clear();
+        this.IsUpdate = false;
+    }
+    public void Returning(params string[] fieldNames)
     {
         this.OutputFieldNames ??= new();
         this.OutputFieldNames.AddRange(fieldNames);
     }
-    public virtual void Output(Expression fieldsSelector)
+    public virtual void Returning(Expression fieldsSelector)
         => this.OutputFieldNames = this.VisitFields(fieldsSelector);
     public void WithBulkCopy(IEnumerable insertObjs, int? timeoutSeconds)
     {
@@ -359,7 +517,54 @@ public class SqliteCreateVisitor : CreateVisitor, ICreateVisitor
         });
     }
     public (IEnumerable, int?) BuildWithBulkCopy() => ((IEnumerable, int?))this.deferredSegments[0].Value;
-
+    public void InitTableAlias(LambdaExpression lambdaExpr)
+    {
+        this.TableAliases.Clear();
+        lambdaExpr.Body.GetParameters(out var parameters);
+        if (parameters == null || parameters.Count == 0)
+            return;
+        foreach (var parameterExpr in parameters)
+        {
+            if (parameterExpr.Type == typeof(ISqliteCreateConflictDoUpdate<>).MakeGenericType(this.Tables[0].EntityType))
+                continue;
+            if (this.TableAliases.ContainsKey(parameterExpr.Name))
+                continue;
+            this.TableAliases.Add(parameterExpr.Name, this.Tables[0]);
+        }
+    }
+    public void VisitSetFieldExpression(Expression fieldSelector, Expression fieldValueSelector)
+    {
+        var fieldSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = fieldSelector });
+        this.IsUpdate = true;
+        var valueSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = fieldValueSelector });
+        this.IsUpdate = false;
+        if (this.UpdateFields.Length > 0) this.UpdateFields.Append(',');
+        this.UpdateFields.Append($"{fieldSegment.Body}={valueSegment.Body}");
+    }
+    public void VisitWithSetField(Expression fieldSelector, object fieldValue)
+    {
+        var lambdaExpr = this.EnsureLambda(fieldSelector);
+        var memberExpr = this.EnsureMemberVisit(lambdaExpr.Body) as MemberExpression;
+        var entityMapper = this.Tables[0].Mapper;
+        var memberMapper = entityMapper.GetMemberMap(memberExpr.Member.Name);
+        var parameterName = this.OrmProvider.ParameterPrefix + memberMapper.MemberName;
+        if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
+        //在前面insert的时候，参数有可能已经添加过了，此处需要判断是否需要添加
+        if (!this.DbParameters.Contains(parameterName))
+        {
+            if (memberMapper.TypeHandler != null)
+                fieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, fieldValue);
+            else
+            {
+                var targetType = this.OrmProvider.MapDefaultType(memberMapper);
+                var valueGetter = this.OrmProvider.GetParameterValueGetter(fieldValue.GetType(), targetType, false, this.Options);
+                fieldValue = valueGetter.Invoke(fieldValue);
+            }
+            this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
+        }
+        if (this.UpdateFields.Length > 0) this.UpdateFields.Append(',');
+        this.UpdateFields.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
+    }
     private (string, List<SqlFieldSegment>) BuildOutputSqlReaderFields()
     {
         var readerFields = new List<SqlFieldSegment>();

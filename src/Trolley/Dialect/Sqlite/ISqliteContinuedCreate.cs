@@ -12,7 +12,7 @@ public interface ISqliteContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     /// repository.Create&lt;User&gt;()
     ///     .WithBy(new { ... })
     ///     .WithBy(new { Name = "kevin", Age = 25 }) ...
-    /// SQL: INSERT INTO [sys_user] ( ..., [Name],[Age], ... ) VALUES(..., @Name,@Age, ... )
+    /// SQL: INSERT INTO "sys_user" ( ..., "Name","Age", ... ) VALUES(..., @Name,@Age, ... )
     /// </code>
     /// </summary>
     /// <typeparam name="TInsertObject">插入数据的对象类型</typeparam>
@@ -26,7 +26,7 @@ public interface ISqliteContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     ///     .WithBy(new { Name = "kevin", Age = 25 })
     ///     .WithBy(true, new { Gender = Gender.Male, ... })
     ///     .Execute();
-    /// SQL: INSERT INTO [sys_user] ([Name],[Age],[Gender], ... ) VALUES(@Name,@Age,@Gender, ... )
+    /// SQL: INSERT INTO "sys_user" ("Name","Age","Gender", ... ) VALUES(@Name,@Age,@Gender, ... )
     /// </code>
     /// </summary>
     /// <typeparam name="TInsertObject">插入数据的对象类型</typeparam>
@@ -42,7 +42,7 @@ public interface ISqliteContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     ///     .WithBy(true, f =&gt; f.Gender, Gender.Female)
     ///     ...
     ///     .Execute();
-    /// SQL: INSERT INTO [sys_user] ([Name],[Age],[Gender], ... ) VALUES(@Name,@Age,@Gender, ... )
+    /// SQL: INSERT INTO "sys_user" ("Name","Age","Gender", ... ) VALUES(@Name,@Age,@Gender, ... )
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="condition">判断条件</param>
@@ -84,20 +84,20 @@ public interface ISqliteContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     new ISqliteContinuedCreate<TEntity> OnlyFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector);
     #endregion
 
-    #region Output
+    #region Returning
     /// <summary>
     /// 返回插入后想要返回字段的内容
     /// </summary>
     /// <typeparam name="TResult">返回类型</typeparam>
     /// <param name="fieldNames">字段名称列表</param>
     /// <returns>返回插入的部分字段</returns>
-    ISqliteCreated<TEntity, TResult> Output<TResult>(params string[] fieldNames);
+    ISqliteCreated<TEntity, TResult> Returning<TResult>(params string[] fieldNames);
     /// <summary>
     /// 返回插入后想要返回字段的内容
     /// </summary>
     /// <typeparam name="TResult">返回类型</typeparam>
     /// <param name="fieldsSelector">字段筛选表达式</param>
     /// <returns>返回插入的部分字段</returns>
-    ISqliteCreated<TEntity, TResult> Output<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector);
+    ISqliteCreated<TEntity, TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector);
     #endregion
 }
