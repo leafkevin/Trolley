@@ -51,7 +51,7 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
             tableName = tableSegment.Body;
         else
         {
-            if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
+            if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out _))
                 tableName = this.GetShardingTableName();
             else tableName = entityMapper.TableName;
         }

@@ -71,6 +71,7 @@ public partial class SqlServerProvider : BaseOrmProvider
         defaultDbTypes[typeof(decimal)] = SqlDbType.Decimal;
         defaultDbTypes[typeof(string)] = SqlDbType.NVarChar;
         defaultDbTypes[typeof(DateTime)] = SqlDbType.DateTime;
+        defaultDbTypes[typeof(TimeSpan)] = SqlDbType.Time;
         defaultDbTypes[typeof(DateTimeOffset)] = SqlDbType.DateTimeOffset;
 #if NET6_0_OR_GREATER
         defaultDbTypes[typeof(DateOnly)] = SqlDbType.Date;
@@ -92,6 +93,7 @@ public partial class SqlServerProvider : BaseOrmProvider
         defaultDbTypes[typeof(double?)] = SqlDbType.Float;
         defaultDbTypes[typeof(decimal?)] = SqlDbType.Decimal;
         defaultDbTypes[typeof(DateTime?)] = SqlDbType.DateTime;
+        defaultDbTypes[typeof(TimeSpan?)] = SqlDbType.Time;
         defaultDbTypes[typeof(DateTimeOffset?)] = SqlDbType.DateTimeOffset;
 #if NET6_0_OR_GREATER
         defaultDbTypes[typeof(DateOnly?)] = SqlDbType.Date;
@@ -99,21 +101,21 @@ public partial class SqlServerProvider : BaseOrmProvider
 #endif
         defaultDbTypes[typeof(Guid?)] = SqlDbType.UniqueIdentifier;
 
-
         castTos[typeof(string)] = "NVARCHAR(MAX)";
         castTos[typeof(byte)] = "TINYINT";
         castTos[typeof(sbyte)] = "TINYINT";
         castTos[typeof(short)] = "SMALLINT";
-        castTos[typeof(ushort)] = "SMALLINT";
+        castTos[typeof(ushort)] = "INT";
         castTos[typeof(int)] = "INT";
-        castTos[typeof(uint)] = "INT";
+        castTos[typeof(uint)] = "BIGINT";
         castTos[typeof(long)] = "BIGINT";
-        castTos[typeof(ulong)] = "BIGINT";
+        castTos[typeof(ulong)] = "DECIMAL(36,0)";
         castTos[typeof(float)] = "REAL";
         castTos[typeof(double)] = "FLOAT";
         castTos[typeof(decimal)] = "DECIMAL(36,18)";
         castTos[typeof(bool)] = "BIT";
         castTos[typeof(DateTime)] = "DATETIME";
+        castTos[typeof(TimeSpan)] = "TIME";
 #if NET6_0_OR_GREATER
         castTos[typeof(DateOnly)] = "DATE";
         castTos[typeof(TimeOnly)] = "TIME";
@@ -124,16 +126,17 @@ public partial class SqlServerProvider : BaseOrmProvider
         castTos[typeof(byte?)] = "TINYINT";
         castTos[typeof(sbyte?)] = "TINYINT";
         castTos[typeof(short?)] = "SMALLINT";
-        castTos[typeof(ushort?)] = "SMALLINT";
+        castTos[typeof(ushort?)] = "INT";
         castTos[typeof(int?)] = "INT";
-        castTos[typeof(uint?)] = "INT";
+        castTos[typeof(uint?)] = "BIGINT";
         castTos[typeof(long?)] = "BIGINT";
-        castTos[typeof(ulong?)] = "BIGINT";
+        castTos[typeof(ulong?)] = "DECIMAL(36,0)";
         castTos[typeof(float?)] = "REAL";
         castTos[typeof(double?)] = "FLOAT";
         castTos[typeof(decimal?)] = "DECIMAL(36,18)";
         castTos[typeof(bool?)] = "BIT";
         castTos[typeof(DateTime?)] = "DATETIME";
+        castTos[typeof(TimeSpan?)] = "TIME";
 #if NET6_0_OR_GREATER
         castTos[typeof(DateOnly?)] = "DATE";
         castTos[typeof(TimeOnly?)] = "TIME";

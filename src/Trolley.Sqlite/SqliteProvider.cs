@@ -24,15 +24,15 @@ public partial class SqliteProvider : BaseOrmProvider
 
     static SqliteProvider()
     {
-        defaultMapTypes[DbType.Boolean] = typeof(int);
-        defaultMapTypes[DbType.Byte] = typeof(int);
-        defaultMapTypes[DbType.SByte] = typeof(int);
-        defaultMapTypes[DbType.Int16] = typeof(int);
-        defaultMapTypes[DbType.UInt16] = typeof(int);
+        defaultMapTypes[DbType.Boolean] = typeof(bool);
+        defaultMapTypes[DbType.Byte] = typeof(byte);
+        defaultMapTypes[DbType.SByte] = typeof(sbyte);
+        defaultMapTypes[DbType.Int16] = typeof(short);
+        defaultMapTypes[DbType.UInt16] = typeof(ushort);
         defaultMapTypes[DbType.Int32] = typeof(int);
-        defaultMapTypes[DbType.UInt32] = typeof(long);
+        defaultMapTypes[DbType.UInt32] = typeof(uint);
         defaultMapTypes[DbType.Int64] = typeof(long);
-        defaultMapTypes[DbType.UInt64] = typeof(decimal);
+        defaultMapTypes[DbType.UInt64] = typeof(ulong);
         defaultMapTypes[DbType.Single] = typeof(float);
         defaultMapTypes[DbType.Double] = typeof(double);
         defaultMapTypes[DbType.Currency] = typeof(decimal);
@@ -40,34 +40,41 @@ public partial class SqliteProvider : BaseOrmProvider
         defaultMapTypes[DbType.AnsiStringFixedLength] = typeof(string);
         defaultMapTypes[DbType.AnsiString] = typeof(string);
         defaultMapTypes[DbType.String] = typeof(string);
-        defaultMapTypes[DbType.DateTime] = typeof(string);
-        defaultMapTypes[DbType.DateTime2] = typeof(string);
-        defaultMapTypes[DbType.DateTimeOffset] = typeof(string);
-        defaultMapTypes[DbType.Time] = typeof(string);
-        defaultMapTypes[DbType.Guid] = typeof(string);
-        defaultMapTypes[DbType.Binary] = typeof(byte[]);
-        defaultMapTypes[DbType.DateTimeOffset] = typeof(string);
+        defaultMapTypes[DbType.DateTime] = typeof(DateTime);
+        defaultMapTypes[DbType.DateTime2] = typeof(DateTime);
+        defaultMapTypes[DbType.DateTimeOffset] = typeof(DateTimeOffset);
+#if NET6_0_OR_GREATER
+        defaultMapTypes[DbType.Date] = typeof(DateOnly);
+        defaultMapTypes[DbType.Time] = typeof(TimeOnly);
+#else
+        defaultMapTypes[DbType.Date] = typeof(DateTime);
+        defaultMapTypes[DbType.Time] = typeof(TimeSpan);
+#endif
+        defaultMapTypes[DbType.Guid] = typeof(Guid);
+        defaultMapTypes[DbType.Binary] = typeof(byte[]); 
         defaultMapTypes[DbType.VarNumeric] = typeof(decimal);
         defaultMapTypes[DbType.Xml] = typeof(string);
 
-        defaultDbTypes[typeof(bool)] = DbType.Int32;
-        defaultDbTypes[typeof(byte)] = DbType.Int32;
-        defaultDbTypes[typeof(sbyte)] = DbType.Int32;
-        defaultDbTypes[typeof(short)] = DbType.Int32;
-        defaultDbTypes[typeof(ushort)] = DbType.Int32;
+        defaultDbTypes[typeof(bool)] = DbType.Boolean;
+        defaultDbTypes[typeof(byte)] = DbType.Byte;
+        defaultDbTypes[typeof(sbyte)] = DbType.SByte;
+        defaultDbTypes[typeof(short)] = DbType.Int16;
+        defaultDbTypes[typeof(ushort)] = DbType.UInt16;
         defaultDbTypes[typeof(int)] = DbType.Int32;
-        defaultDbTypes[typeof(uint)] = DbType.Int64;
+        defaultDbTypes[typeof(uint)] = DbType.UInt32;
         defaultDbTypes[typeof(long)] = DbType.Int64;
-        defaultDbTypes[typeof(ulong)] = DbType.Decimal;
+        defaultDbTypes[typeof(ulong)] = DbType.UInt64;
         defaultDbTypes[typeof(float)] = DbType.Single;
         defaultDbTypes[typeof(double)] = DbType.Double;
         defaultDbTypes[typeof(decimal)] = DbType.Decimal;
         defaultDbTypes[typeof(string)] = DbType.String;
-        defaultDbTypes[typeof(DateTime)] = DbType.String;
+        defaultDbTypes[typeof(DateTime)] = DbType.DateTime;
+        defaultDbTypes[typeof(TimeSpan)] = DbType.Time;
         defaultDbTypes[typeof(DateTimeOffset)] = DbType.String;
+        
 #if NET6_0_OR_GREATER
-        defaultDbTypes[typeof(DateOnly)] = DbType.String;
-        defaultDbTypes[typeof(TimeOnly)] = DbType.String;
+        defaultDbTypes[typeof(DateOnly)] = DbType.Date;
+        defaultDbTypes[typeof(TimeOnly)] = DbType.Time;
 #endif
         defaultDbTypes[typeof(byte[])] = DbType.Binary;
         defaultDbTypes[typeof(Guid)] = DbType.String;
@@ -84,7 +91,8 @@ public partial class SqliteProvider : BaseOrmProvider
         defaultDbTypes[typeof(float?)] = DbType.Single;
         defaultDbTypes[typeof(double?)] = DbType.Double;
         defaultDbTypes[typeof(decimal?)] = DbType.Decimal;
-        defaultDbTypes[typeof(DateTime?)] = DbType.String;
+        defaultDbTypes[typeof(DateTime?)] = DbType.DateTime;
+        defaultDbTypes[typeof(TimeSpan?)] = DbType.Time;
         defaultDbTypes[typeof(DateTimeOffset?)] = DbType.String;
 #if NET6_0_OR_GREATER
         defaultDbTypes[typeof(DateOnly?)] = DbType.String;
@@ -94,19 +102,19 @@ public partial class SqliteProvider : BaseOrmProvider
 
 
         castTos[typeof(string)] = "TEXT";
-        castTos[typeof(byte)] = "INTEGER";
-        castTos[typeof(sbyte)] = "INTEGER";
-        castTos[typeof(short)] = "INTEGER";
+        castTos[typeof(byte)] = "TINYINT";
+        castTos[typeof(sbyte)] = "TINYINT";
+        castTos[typeof(short)] = "SMALLINT";
         castTos[typeof(ushort)] = "INTEGER";
         castTos[typeof(int)] = "INTEGER";
-        castTos[typeof(uint)] = "INTEGER";
-        castTos[typeof(long)] = "INTEGER";
-        castTos[typeof(ulong)] = "REAL";
-        castTos[typeof(float)] = "REAL";
-        castTos[typeof(double)] = "REAL";
-        castTos[typeof(decimal)] = "REAL";
-        castTos[typeof(bool)] = "INTEGER";
-        castTos[typeof(DateTime)] = "TEXT";
+        castTos[typeof(uint)] = "BIGINT";
+        castTos[typeof(long)] = "BIGINT";
+        castTos[typeof(ulong)] = "DECIMAL(36,0)";
+        castTos[typeof(float)] = "FLOAT";
+        castTos[typeof(double)] = "DOUBLE";
+        castTos[typeof(decimal)] = "DECIMAL";
+        castTos[typeof(bool)] = "BOOLEAN";
+        castTos[typeof(DateTime)] = "DATETIME";
 #if NET6_0_OR_GREATER
         castTos[typeof(DateOnly)] = "TEXT";
         castTos[typeof(TimeOnly)] = "TEXT";

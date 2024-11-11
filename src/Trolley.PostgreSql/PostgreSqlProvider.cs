@@ -152,7 +152,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
         defaultDbTypes[typeof(sbyte)] = NpgsqlDbType.Smallint;
         defaultDbTypes[typeof(byte)] = NpgsqlDbType.Smallint;
         defaultDbTypes[typeof(short)] = NpgsqlDbType.Smallint;
-        defaultDbTypes[typeof(ushort)] = NpgsqlDbType.Smallint;
+        defaultDbTypes[typeof(ushort)] = NpgsqlDbType.Integer;
         defaultDbTypes[typeof(int)] = NpgsqlDbType.Integer;
         defaultDbTypes[typeof(uint)] = NpgsqlDbType.Bigint;
         defaultDbTypes[typeof(long)] = NpgsqlDbType.Bigint;
@@ -162,12 +162,12 @@ public partial class PostgreSqlProvider : BaseOrmProvider
         defaultDbTypes[typeof(decimal)] = NpgsqlDbType.Numeric;
         defaultDbTypes[typeof(string)] = NpgsqlDbType.Varchar;
         defaultDbTypes[typeof(DateTime)] = NpgsqlDbType.Timestamp;
+        defaultDbTypes[typeof(TimeSpan)] = NpgsqlDbType.Interval;
         defaultDbTypes[typeof(DateTimeOffset)] = NpgsqlDbType.TimestampTz;
 #if NET6_0_OR_GREATER
         defaultDbTypes[typeof(DateOnly)] = NpgsqlDbType.Date;
         defaultDbTypes[typeof(TimeOnly)] = NpgsqlDbType.Time;
-#endif
-        defaultDbTypes[typeof(TimeSpan)] = NpgsqlDbType.Interval;
+#endif        
         defaultDbTypes[typeof(Guid)] = NpgsqlDbType.Uuid;
         defaultDbTypes[typeof(byte[])] = NpgsqlDbType.Bytea;
 
@@ -175,7 +175,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
         defaultDbTypes[typeof(sbyte?)] = NpgsqlDbType.Smallint;
         defaultDbTypes[typeof(byte?)] = NpgsqlDbType.Smallint;
         defaultDbTypes[typeof(short?)] = NpgsqlDbType.Smallint;
-        defaultDbTypes[typeof(ushort?)] = NpgsqlDbType.Smallint;
+        defaultDbTypes[typeof(ushort?)] = NpgsqlDbType.Integer;
         defaultDbTypes[typeof(int?)] = NpgsqlDbType.Integer;
         defaultDbTypes[typeof(uint?)] = NpgsqlDbType.Bigint;
         defaultDbTypes[typeof(long?)] = NpgsqlDbType.Bigint;
@@ -185,12 +185,12 @@ public partial class PostgreSqlProvider : BaseOrmProvider
         defaultDbTypes[typeof(double?)] = NpgsqlDbType.Double;
         defaultDbTypes[typeof(decimal?)] = NpgsqlDbType.Numeric;
         defaultDbTypes[typeof(DateTime?)] = NpgsqlDbType.Timestamp;
+        defaultDbTypes[typeof(TimeSpan?)] = NpgsqlDbType.Interval;
         defaultDbTypes[typeof(DateTimeOffset?)] = NpgsqlDbType.TimestampTz;
 #if NET6_0_OR_GREATER
         defaultDbTypes[typeof(DateOnly?)] = NpgsqlDbType.Date;
         defaultDbTypes[typeof(TimeOnly?)] = NpgsqlDbType.Time;
 #endif
-        defaultDbTypes[typeof(TimeSpan?)] = NpgsqlDbType.Interval;
         defaultDbTypes[typeof(Guid?)] = NpgsqlDbType.Uuid;
         defaultDbTypes[typeof(byte[])] = NpgsqlDbType.Bytea;
 
@@ -241,16 +241,17 @@ public partial class PostgreSqlProvider : BaseOrmProvider
         castTos[typeof(sbyte)] = "SMALLINT";
         castTos[typeof(byte)] = "SMALLINT";
         castTos[typeof(short)] = "SMALLINT";
-        castTos[typeof(ushort)] = "SMALLINT";
+        castTos[typeof(ushort)] = "INTEGER";
         castTos[typeof(int)] = "INTEGER";
-        castTos[typeof(uint)] = "INTEGER";
+        castTos[typeof(uint)] = "BIGINT";
         castTos[typeof(long)] = "BIGINT";
-        castTos[typeof(ulong)] = "BIGINT";
-        castTos[typeof(float)] = "DECIMAL";
-        castTos[typeof(double)] = "DECIMAL";
+        castTos[typeof(ulong)] = "DECIMAL";
+        castTos[typeof(float)] = "REAL";
+        castTos[typeof(double)] = "FLOAT";
         castTos[typeof(decimal)] = "DECIMAL";
         castTos[typeof(bool)] = "BOOLEAN";
         castTos[typeof(DateTime)] = "TIMESTAMP";
+        castTos[typeof(TimeSpan)] = "INTERVAL";
 #if NET6_0_OR_GREATER
         castTos[typeof(DateOnly)] = "DATE";
         castTos[typeof(TimeOnly)] = "TIME";
@@ -258,16 +259,17 @@ public partial class PostgreSqlProvider : BaseOrmProvider
         castTos[typeof(sbyte?)] = "SMALLINT";
         castTos[typeof(byte?)] = "SMALLINT";
         castTos[typeof(short?)] = "SMALLINT";
-        castTos[typeof(ushort?)] = "SMALLINT";
+        castTos[typeof(ushort?)] = "INTEGER";
         castTos[typeof(int?)] = "INTEGER";
         castTos[typeof(uint?)] = "INTEGER";
         castTos[typeof(long?)] = "BIGINT";
-        castTos[typeof(ulong?)] = "BIGINT";
-        castTos[typeof(float?)] = "DECIMAL";
-        castTos[typeof(double?)] = "DECIMAL";
+        castTos[typeof(ulong?)] = "DECIMAL";
+        castTos[typeof(float?)] = "REAL";
+        castTos[typeof(double?)] = "FLOAT";
         castTos[typeof(decimal?)] = "DECIMAL";
         castTos[typeof(bool?)] = "BOOLEAN";
         castTos[typeof(DateTime?)] = "TIMESTAMP";
+        castTos[typeof(TimeSpan?)] = "INTERVAL";
 #if NET6_0_OR_GREATER
         castTos[typeof(DateOnly?)] = "DATE";
         castTos[typeof(TimeOnly?)] = "TIME";

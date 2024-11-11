@@ -82,6 +82,7 @@ public partial class MySqlProvider : BaseOrmProvider
         defaultDbTypes[typeof(decimal)] = MySqlDbType.Decimal;
         defaultDbTypes[typeof(string)] = MySqlDbType.VarChar;
         defaultDbTypes[typeof(DateTime)] = MySqlDbType.DateTime;
+        defaultDbTypes[typeof(TimeSpan)] = MySqlDbType.Time;
         defaultDbTypes[typeof(DateTimeOffset)] = MySqlDbType.Timestamp;
 #if NET6_0_OR_GREATER
         defaultDbTypes[typeof(DateOnly)] = MySqlDbType.Date;
@@ -103,6 +104,7 @@ public partial class MySqlProvider : BaseOrmProvider
         defaultDbTypes[typeof(double?)] = MySqlDbType.Double;
         defaultDbTypes[typeof(decimal?)] = MySqlDbType.Decimal;
         defaultDbTypes[typeof(DateTime?)] = MySqlDbType.DateTime;
+        defaultDbTypes[typeof(TimeSpan?)] = MySqlDbType.Time;
         defaultDbTypes[typeof(DateTimeOffset?)] = MySqlDbType.Timestamp;
 #if NET6_0_OR_GREATER
         defaultDbTypes[typeof(DateOnly?)] = MySqlDbType.Date;
