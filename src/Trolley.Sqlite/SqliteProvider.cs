@@ -70,7 +70,7 @@ public partial class SqliteProvider : BaseOrmProvider
         defaultDbTypes[typeof(string)] = DbType.String;
         defaultDbTypes[typeof(DateTime)] = DbType.DateTime;
         defaultDbTypes[typeof(TimeSpan)] = DbType.Time;
-        defaultDbTypes[typeof(DateTimeOffset)] = DbType.String;
+        defaultDbTypes[typeof(DateTimeOffset)] = DbType.DateTimeOffset;
         
 #if NET6_0_OR_GREATER
         defaultDbTypes[typeof(DateOnly)] = DbType.Date;
@@ -93,15 +93,15 @@ public partial class SqliteProvider : BaseOrmProvider
         defaultDbTypes[typeof(decimal?)] = DbType.Decimal;
         defaultDbTypes[typeof(DateTime?)] = DbType.DateTime;
         defaultDbTypes[typeof(TimeSpan?)] = DbType.Time;
-        defaultDbTypes[typeof(DateTimeOffset?)] = DbType.String;
+        defaultDbTypes[typeof(DateTimeOffset?)] = DbType.DateTimeOffset;
 #if NET6_0_OR_GREATER
-        defaultDbTypes[typeof(DateOnly?)] = DbType.String;
-        defaultDbTypes[typeof(TimeOnly?)] = DbType.String;
+        defaultDbTypes[typeof(DateOnly?)] = DbType.Date;
+        defaultDbTypes[typeof(TimeOnly?)] = DbType.Time;
 #endif
         defaultDbTypes[typeof(Guid?)] = DbType.String;
 
 
-        castTos[typeof(string)] = "TEXT";
+        castTos[typeof(string)] = "CHARACTER";
         castTos[typeof(byte)] = "TINYINT";
         castTos[typeof(sbyte)] = "TINYINT";
         castTos[typeof(short)] = "SMALLINT";
@@ -112,34 +112,34 @@ public partial class SqliteProvider : BaseOrmProvider
         castTos[typeof(ulong)] = "DECIMAL(36,0)";
         castTos[typeof(float)] = "FLOAT";
         castTos[typeof(double)] = "DOUBLE";
-        castTos[typeof(decimal)] = "DECIMAL";
+        castTos[typeof(decimal)] = "DECIMAL(36,18)";
         castTos[typeof(bool)] = "BOOLEAN";
         castTos[typeof(DateTime)] = "DATETIME";
 #if NET6_0_OR_GREATER
-        castTos[typeof(DateOnly)] = "TEXT";
+        castTos[typeof(DateOnly)] = "DATE";
         castTos[typeof(TimeOnly)] = "TEXT";
 #endif
-        castTos[typeof(Guid)] = "TEXT";
+        castTos[typeof(Guid)] = "CHARACTER";
 
-        castTos[typeof(string)] = "TEXT";
-        castTos[typeof(byte?)] = "INTEGER";
-        castTos[typeof(sbyte?)] = "INTEGER";
-        castTos[typeof(short?)] = "INTEGER";
+        castTos[typeof(string)] = "CHARACTER";
+        castTos[typeof(byte?)] = "TINYINT";
+        castTos[typeof(sbyte?)] = "TINYINT";
+        castTos[typeof(short?)] = "SMALLINT";
         castTos[typeof(ushort?)] = "INTEGER";
         castTos[typeof(int?)] = "INTEGER";
-        castTos[typeof(uint?)] = "INTEGER";
-        castTos[typeof(long?)] = "INTEGER";
-        castTos[typeof(ulong?)] = "REAL";
-        castTos[typeof(float?)] = "REAL";
-        castTos[typeof(double?)] = "REAL";
-        castTos[typeof(decimal?)] = "REAL";
+        castTos[typeof(uint?)] = "BIGINT";
+        castTos[typeof(long?)] = "BIGINT";
+        castTos[typeof(ulong?)] = "DECIMAL(36,0)";
+        castTos[typeof(float?)] = "FLOAT";
+        castTos[typeof(double?)] = "DOUBLE";
+        castTos[typeof(decimal?)] = "DECIMAL(36,18)";
         castTos[typeof(bool?)] = "INTEGER";
         castTos[typeof(DateTime?)] = "TEXT";
 #if NET6_0_OR_GREATER
-        castTos[typeof(DateOnly?)] = "TEXT";
+        castTos[typeof(DateOnly?)] = "DATE";
         castTos[typeof(TimeOnly?)] = "TEXT";
 #endif
-        castTos[typeof(Guid?)] = "TEXT";
+        castTos[typeof(Guid?)] = "CHARACTER";
     }
     public override ITheaConnection CreateConnection(string dbKey, string connectionString)
         => new SqliteTheaConnection(dbKey, connectionString);

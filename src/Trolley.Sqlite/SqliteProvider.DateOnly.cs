@@ -47,7 +47,7 @@ partial class SqliteProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.ChangeValue(((DateOnly)targetSegment.Value).Day);
 
-                        return targetSegment.Change($"DATEPART(DAY,{targetSegment.Body})", false, true);
+                        return targetSegment.Change($"CAST(STRFTIME('%d',{targetSegment.Body}) AS INTEGER)", false, true);
                     });
                     result = true;
                     break;
@@ -63,7 +63,7 @@ partial class SqliteProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.ChangeValue(((DateOnly)targetSegment.Value).DayOfWeek);
 
-                        return targetSegment.Change($"DATEPART(WEEKDAY,{targetSegment.Body})-1");
+                        return targetSegment.Change($"CAST(STRFTIME('%w',{targetSegment.Body}) AS INTEGER)", false, true);
                     });
                     result = true;
                     break;
@@ -79,7 +79,7 @@ partial class SqliteProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.ChangeValue(((DateOnly)targetSegment.Value).DayOfYear);
 
-                        return targetSegment.Change($"DATEPART(DAYOFYEAR,{targetSegment.Body})", false, true);
+                        return targetSegment.Change($"CAST(STRFTIME('%j',{targetSegment.Body}) AS INTEGER)", false, true);
                     });
                     result = true;
                     break;
@@ -95,7 +95,7 @@ partial class SqliteProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.ChangeValue(((DateOnly)targetSegment.Value).Month);
 
-                        return targetSegment.Change($"DATEPART(MONTH,{targetSegment.Body})", false, true);
+                        return targetSegment.Change($"CAST(STRFTIME('%m',{targetSegment.Body}) AS INTEGER)", false, true);
                     });
                     result = true;
                     break;
@@ -111,7 +111,7 @@ partial class SqliteProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.ChangeValue(((DateOnly)targetSegment.Value).Year);
 
-                        return targetSegment.Change($"DATEPART(YEAR,{targetSegment.Body})", false, true);
+                        return targetSegment.Change($"CAST(STRFTIME('%Y',{targetSegment.Body}) AS INTEGER)", false, true);
                     });
                     result = true;
                     break;
@@ -127,7 +127,7 @@ partial class SqliteProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.ChangeValue(((DateOnly)targetSegment.Value).DayNumber);
 
-                        return targetSegment.Change($"DATEDIFF(DAY,'0001-01-01',{targetSegment.Body})", false, true);
+                        return targetSegment.Change($"CAST(JULIANDAY({targetSegment.Body})-JULIANDAY('0001-01-01') AS INTEGET)", false, true);
                     });
                     result = true;
                     break;
@@ -166,7 +166,7 @@ partial class SqliteProvider
                         if (valueSegment.IsConstant || valueSegment.IsVariable)
                             return valueSegment.ChangeValue(DateOnly.FromDayNumber(Convert.ToInt32(valueSegment.Value)));
 
-                        return valueSegment.Change($"CAST(DATEADD(DAY,{valueSegment.Body},'0001-01-01') AS DATE)", false, true);
+                        return valueSegment.Change($"DATE('0001-01-01','{valueSegment.Body} days')", false, true);
                     });
                     result = true;
                     break;
@@ -230,27 +230,14 @@ partial class SqliteProvider
                             && (providerSegment.IsConstant || providerSegment.IsVariable))
                             return valueSegment.MergeValue(formatSegment, DateOnly.ParseExact(valueSegment.Value.ToString(), formatSegment.Value.ToString(), (IFormatProvider)providerSegment.Value));
 
-                        if (!(formatSegment.IsConstant || formatSegment.IsVariable))
-                            throw new NotSupportedException($"方法DateOnly.{methodInfo.Name}格式化字符串，暂时不支持非常量、变量的解析");
+                        if (!formatSegment.IsConstant && !formatSegment.IsVariable)
+                            throw new NotSupportedException($"DateOnly.{methodInfo.Name}方法暂时仅支持第二个参数是常量或是变量的解析");
+                        string formatArgument = visitor.GetQuotedValue(formatSegment);
+                        if (formatArgument != "%Y-%m-%d")
+                            throw new NotSupportedException($"DateOnly.{methodInfo.Name}方法暂时不支持除yyyy-MM-dd以外的格式");
 
                         var valueArgument = visitor.GetQuotedValue(valueSegment);
-                        var format = formatSegment.Value.ToString();
-                        string formatValue = null;
-                        switch (format)
-                        {
-                            case "mm/dd/yyyy": formatValue = $"CONVERT(DATE,{valueArgument},101)"; break;
-                            case "yyyy.mm.dd": formatValue = $"CONVERT(DATE,{valueArgument},102)"; break;
-                            case "dd/mm/yyyy": formatValue = $"CONVERT(DATE,{valueArgument},103)"; break;
-                            case "dd.mm.yyyy": formatValue = $"CONVERT(DATE,{valueArgument},104)"; break;
-                            case "dd-mm-yyyy": formatValue = $"CONVERT(DATE,{valueArgument},105)"; break;
-                            case "dd mon yyyy": formatValue = $"CONVERT(DATE,{valueArgument},106)"; break;
-                            case "mon dd, yyyy": formatValue = $"CONVERT(DATE,{valueArgument},107)"; break;
-                            case "mm-dd-yyyy": formatValue = $"CONVERT(DATE,{valueArgument},110)"; break;
-                            case "yyyy/mm/dd": formatValue = $"CONVERT(DATE,{valueArgument},111)"; break;
-                            case "yyyymmdd": formatValue = $"CONVERT(DATE,{valueArgument},112)"; break;
-                            default: formatValue = $"CAST({valueArgument} AS DATE)"; break;
-                        }
-                        return valueSegment.Merge(formatSegment, formatValue, false, true);
+                        return valueSegment.Merge(formatSegment, $"DATE({valueArgument},{formatArgument})", false, true);
                     });
                     result = true;
                     if (methodInfo.IsStatic && parameterInfos.Length >= 1 && parameterInfos[0].ParameterType == typeof(ReadOnlySpan<char>))
@@ -282,10 +269,12 @@ partial class SqliteProvider
                         if ((targetSegment.IsConstant || targetSegment.IsVariable)
                             && (rightSegment.IsConstant || rightSegment.IsVariable))
                             return targetSegment.MergeValue(rightSegment, ((DateOnly)targetSegment.Value).AddDays(Convert.ToInt32(rightSegment.Value)));
+                        if (!rightSegment.IsConstant && !rightSegment.IsVariable)
+                            throw new NotSupportedException($"DateOnly.{methodInfo.Name}方法暂时仅支持第二个参数是常量或是变量的解析");
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"DATEADD(DAY,{rightArgument},{targetArgument})", false, true);
+                        return targetSegment.Merge(rightSegment, $"DATE({rightArgument},'{targetArgument} days')", false, true);
                     });
                     result = true;
                     break;
@@ -297,10 +286,12 @@ partial class SqliteProvider
                         if ((targetSegment.IsConstant || targetSegment.IsVariable)
                             && (rightSegment.IsConstant || rightSegment.IsVariable))
                             return targetSegment.MergeValue(rightSegment, ((DateOnly)targetSegment.Value).AddMonths(Convert.ToInt32(rightSegment.Value)));
+                        if (!rightSegment.IsConstant && !rightSegment.IsVariable)
+                            throw new NotSupportedException($"DateOnly.{methodInfo.Name}方法暂时仅支持第二个参数是常量或是变量的解析");
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"DATEADD(MONTH,{rightArgument},{targetArgument})", false, true);
+                        return targetSegment.Merge(rightSegment, $"DATE({rightArgument},'{targetArgument} months')", false, true);
                     });
                     result = true;
                     break;
@@ -312,10 +303,12 @@ partial class SqliteProvider
                         if ((targetSegment.IsConstant || targetSegment.IsVariable)
                             && (rightSegment.IsConstant || rightSegment.IsVariable))
                             return targetSegment.MergeValue(rightSegment, ((DateOnly)targetSegment.Value).AddDays(Convert.ToInt32(rightSegment.Value)));
+                        if (!rightSegment.IsConstant && !rightSegment.IsVariable)
+                            throw new NotSupportedException($"DateOnly.{methodInfo.Name}方法暂时仅支持第二个参数是常量或是变量的解析");
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"DATEADD(YEAR,{rightArgument},{targetArgument})", false, true);
+                        return targetSegment.Merge(rightSegment, $"DATE({rightArgument},'{targetArgument} years')", false, true);
                     });
                     result = true;
                     break;
