@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Trolley.SqlServer;
@@ -247,5 +248,27 @@ public class WhereUnitTest : UnitTestBase
             .ToList();
         Assert.NotNull(result3);
         Assert.True(result3.Count > 0);
+    }
+    [Fact]
+    public async Task WhereLinqExpr()
+    {
+        var repository = this.dbFactory.Create();
+        var users = await repository.QueryAsync<User>(f => f.IsEnabled);
+        var sql = repository.From<Order>()
+            .Where(f => users.Select(t => t.Id).Distinct().ToList().Contains(f.BuyerId))
+            .Select(f => f.Id)
+            .ToSql(out var parameters);
+        Assert.Equal("SELECT a.[Id] FROM [sys_order] a WHERE a.[BuyerId] IN (@p0,@p1,@p2)", sql);
+        var userIds = users.Select(t => t.Id).Distinct().ToList();
+        Assert.Equal(parameters.Count, userIds.Count);
+        var userIdValues = parameters.Select(f => f.Value).ToList();
+        Assert.Equal(new JsonTypeHandler().ToFieldValue(null, userIdValues), new JsonTypeHandler().ToFieldValue(null, userIds));
+
+        var result = await repository.From<Order>()
+            .Where(f => users.Select(t => t.Id).ToList().Contains(f.BuyerId))
+            .Select(f => f.Id)
+            .ToListAsync();
+        Assert.NotNull(result);
+        Assert.True(result.Count > 0);
     }
 }

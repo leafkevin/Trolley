@@ -2188,31 +2188,6 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                     return true;
                 }
                 break;
-                //case "Exists":
-                //    if (parameterInfos.Length == 1 && methodInfo.DeclaringType.GenericTypeArguments.Length > 0
-                //        && parameterInfos[0].ParameterType == typeof(Predicate<>).MakeGenericType(methodInfo.DeclaringType.GenericTypeArguments[0]))
-                //    {
-                //        formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
-                //        {
-                //            args[0].GetParameters(out var parameters);
-                //            var lambdaExpr = args[0] as LambdaExpression;
-                //            var targetSegment = visitor.VisitAndDeferred(new SqlSegment { Expression = target });
-                //            if (!targetSegment.IsConstant && !targetSegment.IsVariable)
-                //                throw new NotSupportedException($"不支持的表达式访问，Exists方法只支持常量和变量的解析，Path:{orgExpr}");
-                //            if (parameters.Count > 1)
-                //            {
-                //                lambdaExpr = Expression.Lambda(lambdaExpr.Body, parameters);
-                //                var targetArray = targetSegment.Value as IEnumerable;                            
-                //            }
-
-                //            var args0Segment = visitor.VisitAndDeferred(new SqlSegment { Expression = args[0] });
-                //            if (args0Segment.IsConstant || args0Segment.IsVariable)
-                //                return args0Segment.Change(methodInfo.Invoke(args0Segment.Value, null));
-                //            return args0Segment.Change($"REVERSE({args0Segment})", false, false, false, true);
-                //        });
-                //        result = true;
-                //    }
-                //    break;
         }
         return false;
     }

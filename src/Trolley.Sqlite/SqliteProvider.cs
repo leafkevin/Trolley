@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SQLite;
@@ -7,8 +6,6 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Trolley.Sqlite;
 
@@ -117,7 +114,7 @@ public partial class SqliteProvider : BaseOrmProvider
         castTos[typeof(DateTime)] = "DATETIME";
 #if NET6_0_OR_GREATER
         castTos[typeof(DateOnly)] = "DATE";
-        castTos[typeof(TimeOnly)] = "TEXT";
+        castTos[typeof(TimeOnly)] = "BIGINT";
 #endif
         castTos[typeof(Guid)] = "CHARACTER";
 
@@ -137,7 +134,7 @@ public partial class SqliteProvider : BaseOrmProvider
         castTos[typeof(DateTime?)] = "TEXT";
 #if NET6_0_OR_GREATER
         castTos[typeof(DateOnly?)] = "DATE";
-        castTos[typeof(TimeOnly?)] = "TEXT";
+        castTos[typeof(TimeOnly?)] = "BIGINT";
 #endif
         castTos[typeof(Guid?)] = "CHARACTER";
     }

@@ -756,8 +756,12 @@ public class SqlVisitor : ISqlVisitor
                 return sqlSegment;
             }
         }
+
         sqlSegment = this.Evaluate(sqlSegment);
         sqlSegment.SegmentType = methodCallExpr.Type;
+        //如果未指定常量和变量，当作变量处理，通常是常量或是变量经过一系列Linq操作得到的结果值
+        if (!sqlSegment.IsConstant && !sqlSegment.IsVariable)
+            sqlSegment.IsVariable = true;
         return sqlSegment;
     }
     public virtual SqlFieldSegment VisitParameter(SqlFieldSegment sqlSegment)

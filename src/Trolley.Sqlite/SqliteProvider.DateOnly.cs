@@ -155,7 +155,7 @@ partial class SqliteProvider
                         if (valueSegment.IsConstant || valueSegment.IsVariable)
                             return valueSegment.ChangeValue(DateOnly.FromDateTime((DateTime)valueSegment.Value));
 
-                        return valueSegment.Change($"CAST({valueSegment.Body} AS DATE)", false, true);
+                        return valueSegment.Change($"DATE({valueSegment.Body})", false, true);
                     });
                     result = true;
                     break;
@@ -185,7 +185,7 @@ partial class SqliteProvider
                                 && (styleSegment.IsConstant || styleSegment.IsVariable))
                                 return valueSegment.ChangeValue(DateOnly.Parse(valueSegment.Value.ToString(), (IFormatProvider)providerSegment.Value, (DateTimeStyles)styleSegment.Value));
 
-                            return valueSegment.Change($"CAST({valueSegment.Body} AS DATE)", false, true);
+                            return valueSegment.Change($"DATE({valueSegment.Body})", false, true);
                         });
                     }
                     else if (parameterInfos.Length == 2)
@@ -199,7 +199,7 @@ partial class SqliteProvider
                                 && (providerSegment.IsConstant || providerSegment.IsVariable))
                                 return valueSegment.ChangeValue(DateOnly.Parse(valueSegment.Value.ToString(), (IFormatProvider)providerSegment.Value));
 
-                            return valueSegment.Change($"CAST({valueSegment.Body} AS DATE)", false, true);
+                            return valueSegment.Change($"DATE({valueSegment.Body})", false, true);
                         });
                     }
                     else
@@ -210,7 +210,7 @@ partial class SqliteProvider
                             if (valueSegment.IsConstant || valueSegment.IsVariable)
                                 return valueSegment.ChangeValue(DateOnly.Parse(valueSegment.Value.ToString()));
 
-                            return valueSegment.Change($"CAST({valueSegment.Body} AS DATE)", false, true);
+                            return valueSegment.Change($"DATE({valueSegment.Body})", false, true);
                         });
                     }
                     result = true;
@@ -234,10 +234,10 @@ partial class SqliteProvider
                             throw new NotSupportedException($"DateOnly.{methodInfo.Name}方法暂时仅支持第二个参数是常量或是变量的解析");
                         string formatArgument = visitor.GetQuotedValue(formatSegment);
                         if (formatArgument != "%Y-%m-%d")
-                            throw new NotSupportedException($"DateOnly.{methodInfo.Name}方法暂时不支持除yyyy-MM-dd以外的格式");
+                            throw new NotSupportedException($"DateOnly.{methodInfo.Name}方法暂时不支持除'yyyy-MM-dd'以外的格式");
 
                         var valueArgument = visitor.GetQuotedValue(valueSegment);
-                        return valueSegment.Merge(formatSegment, $"DATE({valueArgument},{formatArgument})", false, true);
+                        return valueSegment.Merge(formatSegment, $"DATE({valueArgument})", false, true);
                     });
                     result = true;
                     if (methodInfo.IsStatic && parameterInfos.Length >= 1 && parameterInfos[0].ParameterType == typeof(ReadOnlySpan<char>))
