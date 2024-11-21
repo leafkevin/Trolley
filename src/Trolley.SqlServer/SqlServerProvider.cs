@@ -292,11 +292,12 @@ public partial class SqlServerProvider : BaseOrmProvider
         var tableNames = mapProvider.EntityMaps.Where(f => !f.IsMapped).Select(f => f.TableName).ToList();
         if (tableNames == null || tableNames.Count == 0)
             return;
-        var sql = @"select b.name,a.name,c.name,d.name,(d.name+case when d.name in ('char','varchar','nchar','nvarchar','binary','varbinary') then '('+ case when c.max_length = -1 then 'MAX' when d.name in ('nchar','nvarchar') then
-cast(c.max_length/2 as varchar) else cast(c.max_length as varchar) end+')' when d.name in ('numeric','decimal') then '('+cast(c.precision as varchar)+','+ cast(c.scale as varchar)+')' else '' end),case when d.name in ('nchar','nvarchar')
-then c.max_length/2 else c.max_length end,c.scale,c.precision,(select value from sys.extended_properties where major_id=c.object_id AND minor_id=c.column_id AND name = 'MS_Description'and class=1),e.text,g.is_primary_key,c.is_identity,
-c.is_nullable,c.column_id from sys.tables a inner join sys.schemas b on a.schema_id=b.schema_id inner join sys.columns c on a.object_id=c.object_id inner join sys.types d on d.user_type_id=c.user_type_id left join syscomments e
-on e.id = c.default_object_id left join sys.index_columns f on f.object_id=a.object_id and f.column_id=c.column_id left join sys.indexes g on g.object_id=a.object_id and g.index_id=f.index_id WHERE {0} order by b.name,a.name,c.column_id";
+        var sql = @"select b.name,a.name,c.name,d.name,(d.name+case when d.name in ('char','varchar','nchar','nvarchar','binary','varbinary') then '('+ case when c.max_length = -1 then 'MAX' when d.name
+in ('nchar','nvarchar') then cast(c.max_length/2 as varchar) else cast(c.max_length as varchar) end+')' when d.name in ('numeric','decimal') then '('+cast(c.precision as varchar)+','+ cast(c.scale as varchar)
++')' else '' end),case when d.name in ('nchar','nvarchar') then c.max_length/2 else c.max_length end,c.scale,c.precision,(select value from sys.extended_properties where major_id=c.object_id AND minor_id=c.column_id 
+AND name = 'MS_Description'and class=1),e.text,isnull(f.is_primary_key,0),c.is_identity,c.is_nullable,c.column_id from sys.tables a inner join sys.schemas b on a.schema_id=b.schema_id inner join sys.columns c
+on a.object_id=c.object_id inner join sys.types d on d.user_type_id=c.user_type_id left join syscomments e on e.id = c.default_object_id left join (select ic.object_id,ic.column_id,i.is_primary_key from
+sys.index_columns ic,sys.indexes i where ic.object_id=i.object_id and ic.index_id=i.index_id and i.is_primary_key=1) f on a.object_id=f.object_id and c.column_id=f.column_id WHERE {0} order by b.name,a.name,c.column_id";
         var tableBuilders = new Dictionary<string, StringBuilder>();
         foreach (var tableName in tableNames)
         {
