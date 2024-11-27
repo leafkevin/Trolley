@@ -542,12 +542,78 @@ public class Query<T> : QueryBase, IQuery<T>
     #endregion
 
     #region First/ToList/ToPageList/ToDictionary
-    public virtual T First() => this.DbContext.QueryFirst<T>(this.Visitor);
+    public virtual T First()
+    {
+        return this.DbContext.Query<T, T>(this.Visitor, true, (entityType, reader, readerFields) =>
+        {
+            T result = default;
+            if (reader.Read())
+            {
+                if (entityType.IsEntityType(out _))
+                    result = reader.ToEntity<T>(this.DbContext, readerFields);
+                else result = reader.ToValue<T>(this.DbContext);
+            }
+            return result;
+        });
+    }
     public virtual async Task<T> FirstAsync(CancellationToken cancellationToken = default)
-        => await this.DbContext.QueryFirstAsync<T>(this.Visitor, cancellationToken);
-    public virtual List<T> ToList() => this.DbContext.Query<T>(this.Visitor);
+    {
+        return await this.DbContext.QueryAsync<T, T>(this.Visitor, true, (entityType, reader, readerFields) =>
+        {
+            T result = default;
+            if (reader.Read())
+            {
+                if (entityType.IsEntityType(out _))
+                    result = reader.ToEntity<T>(this.DbContext, readerFields);
+                else result = reader.ToValue<T>(this.DbContext);
+            }
+            return result;
+        }, cancellationToken);
+    }
+    public virtual List<T> ToList()
+    {
+        return this.DbContext.Query<T, List<T>>(this.Visitor, false, (entityType, reader, readerFields) =>
+        {
+            var result = new List<T>();
+            if (entityType.IsEntityType(out _))
+            {
+                while (reader.Read())
+                {
+                    result.Add(reader.ToEntity<T>(this.DbContext));
+                }
+            }
+            else
+            {
+                while (reader.Read())
+                {
+                    result.Add(reader.ToValue<T>(this.DbContext));
+                }
+            }
+            return result;
+        });
+    }
     public virtual async Task<List<T>> ToListAsync(CancellationToken cancellationToken = default)
-        => await this.DbContext.QueryAsync<T>(this.Visitor, cancellationToken);
+    {
+        return await this.DbContext.QueryAsync<T, List<T>>(this.Visitor, false, (entityType, reader, readerFields) =>
+        {
+            var result = new List<T>();
+            if (entityType.IsEntityType(out _))
+            {
+                while (reader.Read())
+                {
+                    result.Add(reader.ToEntity<T>(this.DbContext, readerFields));
+                }
+            }
+            else
+            {
+                while (reader.Read())
+                {
+                    result.Add(reader.ToValue<T>(this.DbContext));
+                }
+            }
+            return result;
+        }, cancellationToken);
+    }
     public virtual IPagedList<T> ToPageList() => this.DbContext.QueryPage<T>(this.Visitor);
     public virtual async Task<IPagedList<T>> ToPageListAsync(CancellationToken cancellationToken = default)
         => await this.DbContext.QueryPageAsync<T>(this.Visitor, cancellationToken);

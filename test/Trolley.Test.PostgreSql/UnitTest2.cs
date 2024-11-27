@@ -91,9 +91,9 @@ public class UnitTest2 : UnitTestBase
     {
         this.Initialize(2);
         var repository = this.dbFactory.Create();
-        var result = repository.Get<User>(1);
+        var result = repository.GetById<User>(1);
         Assert.Equal("leafkevin", result.Name);
-        var user = await repository.GetAsync<User>(new { Id = 1 });
+        var user = await repository.GetByIdAsync<User>(new { Id = 1 });
         Assert.True(user.Name == result.Name);
     }
     [Fact]
@@ -1637,7 +1637,7 @@ SELECT a.""Id"",a.""Name"",b.""Name"" AS ""CompanyName"" FROM ""sys_user"" a INN
     {
         this.Initialize(2);
         var repository = this.dbFactory.Create();
-        var result = repository.Get<Order>("1");
+        var result = repository.GetById<Order>("1");
         Assert.NotNull(result);
         Assert.NotNull(result.Products);
         Assert.NotNull(result.Disputes);

@@ -169,7 +169,7 @@ public class WhereUnitTest : UnitTestBase
         Assert.Equal("SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_order` a WHERE a.`BuyerId` IS NULL", sql1);
         repository.BeginTransaction();
         repository.Update<Order>(f => new { BuyerId = DBNull.Value }, f => f.Id == "1");
-        var result1 = repository.Get<Order>("1");
+        var result1 = repository.GetById<Order>("1");
         repository.Commit();
         Assert.Equal(0, result1.BuyerId);
         var result2 = await repository.QueryAsync<Company>(f => (f.Nature ?? CompanyNature.Internet) == CompanyNature.Internet);

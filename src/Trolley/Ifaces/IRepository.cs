@@ -269,7 +269,7 @@ public interface IRepository
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="whereObj">主键值或是包含主键的匿名对象或是已有对象，如：1，2或new { Id = 1}或是已有对象userInfo(包含主键栏位Id) </param>
     /// <returns>返回实体对象或是TEntity类型默认值</returns>
-    TEntity Get<TEntity>(object whereObj);
+    TEntity GetById<TEntity>(object whereObj);
     /// <summary>
     /// 根据主键信息查询表TEntity中数据，记录不存在时返回TEntity类型的默认值，不支持分表，用法：
     /// <code>
@@ -284,7 +284,7 @@ public interface IRepository
     /// <param name="whereObj">主键值或是包含主键的匿名对象或是已有对象，如：1，2或new { Id = 1}或是已有对象userInfo(包含主键栏位Id) </param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回实体对象或是TEntity类型默认值</returns>
-    Task<TEntity> GetAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default);
+    Task<TEntity> GetByIdAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default);
     #endregion
 
     #region Exists

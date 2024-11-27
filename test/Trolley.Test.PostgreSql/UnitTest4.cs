@@ -389,7 +389,7 @@ public class UnitTest4 : UnitTestBase
                 UpdatedAt = DateTime.Parse("2023-03-15 16:27:38"),
                 UpdatedBy = 1
             });
-        var user = await repository.GetAsync<User>(1);
+        var user = await repository.GetByIdAsync<User>(1);
         Assert.NotNull(user);
     }
 }

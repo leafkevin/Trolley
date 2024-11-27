@@ -15,7 +15,7 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
     public SqlServerCreateVisitor(DbContext dbContext, char tableAsStart = 'a')
         : base(dbContext, tableAsStart) { }
 
-    public override string BuildCommand(IDbCommand command, bool isReturnIdentity, out List<SqlFieldSegment> readerFields)
+    public override string BuildCommand(ITheaCommand command, bool isReturnIdentity, out List<SqlFieldSegment> readerFields)
     {
         string sql = null;
         this.IsReturnIdentity = isReturnIdentity;
@@ -60,9 +60,9 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
             tableName = tableSegment.TableSchema + "." + tableName;
         tableName = this.OrmProvider.GetTableName(tableName);
 
-        var builder = new StringBuilder($"INSERT INTO {tableName} ");
+        var builder = new StringBuilder($"INSERT INTO {tableName}");
         if (!string.IsNullOrEmpty(this.LockName))
-            builder.Append($"WITH ({this.LockName}) ");
+            builder.Append($" WITH ({this.LockName})");
 
         builder.Append('(');
         for (int i = 0; i < this.InsertFields.Count; i++)

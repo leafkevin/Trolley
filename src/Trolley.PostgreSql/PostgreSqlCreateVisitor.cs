@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 
@@ -9,7 +10,7 @@ namespace Trolley.PostgreSql;
 
 public class PostgreSqlCreateVisitor : CreateVisitor
 {
-    public StringBuilder UpdateFields { get; set; }
+    public StringBuilder UpdateBuilder { get; set; }
     public bool IsUpdate { get; set; }
     public bool IsUseTableAlias { get; set; }
     public List<string> OutputFieldNames { get; set; }
@@ -17,7 +18,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
     public PostgreSqlCreateVisitor(DbContext dbContext, char tableAsStart = 'a')
         : base(dbContext, tableAsStart) { }
 
-    public override string BuildCommand(IDbCommand command, bool isReturnIdentity, out List<SqlFieldSegment> readerFields)
+    public override string BuildCommand(ITheaCommand command, bool isReturnIdentity, out List<SqlFieldSegment> readerFields)
     {
         string sql;
         this.IsReturnIdentity = isReturnIdentity;
@@ -37,11 +38,11 @@ public class PostgreSqlCreateVisitor : CreateVisitor
                         this.VisitWithByField(deferredSegment.Value);
                         break;
                     case "SetObject":
-                        this.UpdateFields ??= new();
+                        this.UpdateBuilder ??= new();
                         this.VisitSetObject(deferredSegment.Value);
                         break;
                     case "SetExpression":
-                        this.UpdateFields ??= new();
+                        this.UpdateBuilder ??= new();
                         this.VisitSetExpression(deferredSegment.Value as LambdaExpression);
                         break;
                 }
@@ -90,10 +91,10 @@ public class PostgreSqlCreateVisitor : CreateVisitor
         valuesBuilder.Append(')');
 
         bool hasUpdateFields = false;
-        if (this.UpdateFields != null && this.UpdateFields.Length > 0)
+        if (this.UpdateBuilder != null && this.UpdateBuilder.Length > 0)
         {
-            valuesBuilder.Append(this.UpdateFields);
-            this.UpdateFields = null;
+            valuesBuilder.Append(this.UpdateBuilder);
+            this.UpdateBuilder = null;
             hasUpdateFields = true;
         }
         string outputSql;
@@ -117,7 +118,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
         fieldsBuilder.Clear();
         return sql;
     }
-    public override string BuildWithBulkSql(IDbCommand command, out List<SqlFieldSegment> readerFields)
+    public override string BuildWithBulkSql(ITheaCommand command, out List<SqlFieldSegment> readerFields)
     {
         //多命令查询或是ToSql才会走到此分支
         //多语句执行，一次性不分批次
@@ -129,14 +130,14 @@ public class PostgreSqlCreateVisitor : CreateVisitor
         if (this.OutputFieldNames != null && this.OutputFieldNames.Count > 0)
             (outputSql, readerFields) = this.BuildOutputSqlReaderFields();
 
-        void executor(string tableName, IEnumerable insertObjs)
+        void Execute(string tableName, IEnumerable insertObjs)
         {
             firstSqlSetter.Invoke(command.Parameters, builder, tableName);
             int index = 0;
             foreach (var insertObj in insertObjs)
             {
                 if (index > 0) builder.Append(',');
-                loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
+                loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
                 index++;
             }
             if (outputSql != null)
@@ -150,15 +151,103 @@ public class PostgreSqlCreateVisitor : CreateVisitor
             foreach (var tabledInsertObj in tabledInsertObjs)
             {
                 if (index > 0) builder.Append(';');
-                executor(tabledInsertObj.Key, tabledInsertObj.Value);
+                Execute(tabledInsertObj.Key, tabledInsertObj.Value);
                 index++;
             }
         }
-        else executor(tableName, insertObjs);
+        else Execute(tableName, insertObjs);
         var sql = builder.ToString();
         builder.Clear();
         return sql;
     }
+    public override (bool, string, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
+    Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command)
+    {
+        bool isNeedSplit = false;
+        object firstInsertObj = null;
+        Type insertObjType = null;
+        (var insertObjs, var bulkCount) = ((IEnumerable, int))this.deferredSegments[0].Value;
+        foreach (var entity in insertObjs)
+        {
+            firstInsertObj = entity;
+            insertObjType = entity.GetType();
+            break;
+        }
+        var tableSegment = this.Tables[0];
+        var tableName = tableSegment.Mapper.TableName;
+        var entityType = tableSegment.EntityType;
+
+        if (tableSegment.IsSharding)
+            tableName = tableSegment.Body;
+        else isNeedSplit = this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out _);
+
+        List<IDbDataParameter> fixedDbParameters = null;
+        if (this.deferredSegments.Count > 1)
+        {
+            this.DbParameters = new TheaDbParameterCollection();
+            for (int i = 1; i < this.deferredSegments.Count; i++)
+            {
+                var deferredSegment = this.deferredSegments[i];
+                switch (deferredSegment.Type)
+                {
+                    case "WithBy":
+                        this.VisitWithBy(deferredSegment.Value);
+                        break;
+                    case "WithByField":
+                        this.VisitWithByField(deferredSegment.Value);
+                        break;
+                    case "SetObject":
+                        this.UpdateBuilder ??= new();
+                        this.VisitSetObject(deferredSegment.Value);
+                        break;
+                    case "SetExpression":
+                        this.UpdateBuilder ??= new();
+                        this.VisitSetExpression(deferredSegment.Value as LambdaExpression);
+                        break;
+                    default: throw new NotSupportedException("批量插入后，只支持WithBy/IgnoreFields/OnlyFields/OnDuplicateKeyUpdate操作");
+                }
+                fixedDbParameters = this.DbParameters.Cast<IDbDataParameter>().ToList();
+            }
+        }
+
+        var entityMapper = tableSegment.Mapper;
+        var fieldsSetter = this.GetFieldsSetter(entityType, insertObjType);
+        var valuesSetter = this.GetValuesSetter(entityType, insertObjType, true);
+        var typedValuesSetter = valuesSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
+
+        string headSql = this.BuildHeadSql();
+        if (!string.IsNullOrEmpty(tableSegment.TableSchema))
+            headSql = $"{this.BuildHeadSql()} {this.OrmProvider.GetTableName(tableSegment.TableSchema)}";
+
+        fieldsSetter.Invoke(this.FieldsBuilder, this.DbContext, firstInsertObj);
+        var fieldsSql = $"({this.FieldsBuilder}) VALUES({this.ValuesBuilder})";
+        this.FieldsBuilder.Clear();
+        this.ValuesBuilder.Clear();
+
+        Action<IDataParameterCollection, StringBuilder, string> firstSqlSetter = null;
+        if (this.deferredSegments.Count > 1)
+        {
+            firstSqlSetter = (dbParameters, builder, tableName) =>
+            {
+                builder.Append(headSql);
+                builder.Append(this.OrmProvider.GetTableName(tableName));
+                builder.Append(fieldsSql);
+                fixedDbParameters.ForEach(f => dbParameters.Add(f));
+            };
+        }
+        else
+        {
+            firstSqlSetter = (dbParameters, builder, tableName) =>
+            {
+                builder.Append(headSql);
+                builder.Append(this.OrmProvider.GetTableName(tableName));
+                builder.Append(fieldsSql);
+            };
+        }
+        this.DbParameters = command.Parameters;
+        return (isNeedSplit, tableName, insertObjs, bulkCount, firstSqlSetter, typedValuesSetter, default);
+    }
+
     public void Returning(params string[] fieldNames)
     {
         this.OutputFieldNames ??= new();
@@ -195,12 +284,12 @@ public class PostgreSqlCreateVisitor : CreateVisitor
             if (this.IsMultiple)
             {
                 var typedSetFieldsInitializer = setFieldsInitializer as Action<StringBuilder, DbContext, EntityMap, object, string>;
-                typedSetFieldsInitializer.Invoke(this.UpdateFields, this.DbContext, entityMapper, updateObj, $"_m{this.CommandIndex}");
+                typedSetFieldsInitializer.Invoke(this.UpdateBuilder, this.DbContext, entityMapper, updateObj, $"_m{this.CommandIndex}");
             }
             else
             {
                 var typedSetFieldsInitializer = setFieldsInitializer as Action<StringBuilder, DbContext, EntityMap, object>;
-                typedSetFieldsInitializer.Invoke(this.UpdateFields, this.DbContext, entityMapper, updateObj);
+                typedSetFieldsInitializer.Invoke(this.UpdateBuilder, this.DbContext, entityMapper, updateObj);
             }
         }
         else
@@ -208,12 +297,12 @@ public class PostgreSqlCreateVisitor : CreateVisitor
             if (this.IsMultiple)
             {
                 var typedSetFieldsInitializer = setFieldsInitializer as Action<StringBuilder, DbContext, object, string>;
-                typedSetFieldsInitializer.Invoke(this.UpdateFields, this.DbContext, updateObj, $"_m{this.CommandIndex}");
+                typedSetFieldsInitializer.Invoke(this.UpdateBuilder, this.DbContext, updateObj, $"_m{this.CommandIndex}");
             }
             else
             {
                 var typedSetFieldsInitializer = setFieldsInitializer as Action<StringBuilder, DbContext, object>;
-                typedSetFieldsInitializer.Invoke(this.UpdateFields, this.DbContext, updateObj);
+                typedSetFieldsInitializer.Invoke(this.UpdateBuilder, this.DbContext, updateObj);
             }
         }
     }
@@ -320,7 +409,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
                     break;
             }
         }
-        this.UpdateFields.Insert(0, builder.ToString());
+        this.UpdateBuilder.Insert(0, builder.ToString());
         builder.Clear();
         this.IsUpdate = false;
     }
@@ -420,11 +509,11 @@ public class PostgreSqlCreateVisitor : CreateVisitor
     }
     public void AddMemberElement(SqlFieldSegment sqlSegment, MemberMap memberMapper)
     {
-        if (this.UpdateFields.Length > 0) this.UpdateFields.Append(',');
+        if (this.UpdateBuilder.Length > 0) this.UpdateBuilder.Append(',');
         var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
 
         if (sqlSegment == SqlFieldSegment.Null)
-            this.UpdateFields.Append($"{fieldName}=NULL");
+            this.UpdateBuilder.Append($"{fieldName}=NULL");
         else if (sqlSegment.IsConstant || sqlSegment.IsVariable)
         {
             var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.DbParameters.Count.ToString();
@@ -441,12 +530,12 @@ public class PostgreSqlCreateVisitor : CreateVisitor
             }
 
             this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue));
-            this.UpdateFields.Append($"{fieldName}={parameterName}");
+            this.UpdateBuilder.Append($"{fieldName}={parameterName}");
         }
         //带有参数或字段的表达式或函数调用、或是只有参数或字段
         //.Set(true, f => f.TotalAmount))
         //.Set(f => new { TotalAmount = x.Values(f.TotalAmount) })
-        else this.UpdateFields.Append($"{fieldName}={sqlSegment.Body}");
+        else this.UpdateBuilder.Append($"{fieldName}={sqlSegment.Body}");
     }
     public void VisitSetFieldExpression(Expression fieldSelector, Expression fieldValueSelector)
     {
@@ -454,8 +543,8 @@ public class PostgreSqlCreateVisitor : CreateVisitor
         this.IsUpdate = true;
         var valueSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = fieldValueSelector });
         this.IsUpdate = false;
-        if (this.UpdateFields.Length > 0) this.UpdateFields.Append(',');
-        this.UpdateFields.Append($"{fieldSegment.Body}={valueSegment.Body}");
+        if (this.UpdateBuilder.Length > 0) this.UpdateBuilder.Append(',');
+        this.UpdateBuilder.Append($"{fieldSegment.Body}={valueSegment.Body}");
     }
     public void VisitWithSetField(Expression fieldSelector, object fieldValue)
     {
@@ -478,8 +567,8 @@ public class PostgreSqlCreateVisitor : CreateVisitor
             }
             this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
         }
-        if (this.UpdateFields.Length > 0) this.UpdateFields.Append(',');
-        this.UpdateFields.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
+        if (this.UpdateBuilder.Length > 0) this.UpdateBuilder.Append(',');
+        this.UpdateBuilder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
     }
     private (string, List<SqlFieldSegment>) BuildOutputSqlReaderFields()
     {

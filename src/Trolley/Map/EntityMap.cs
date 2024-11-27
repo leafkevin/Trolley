@@ -78,11 +78,12 @@ public class EntityMap
             return mapper;
         var memberInfos = this.EntityType.GetMember(memberName, BindingFlags.Public | BindingFlags.Instance);
         if (memberInfos == null || memberInfos.Length <= 0)
-            throw new Exception($"不存在名为{memberName}的成员");
+            throw new KeyNotFoundException($"不存在名为{memberName}的成员");
         this.AddMemberMap(memberName, mapper = new MemberMap(this, memberInfos[0]));
         return mapper;
     }
-
+    public bool ContainsMemberMap(string memberName) => this.memberMaps.ContainsKey(memberName);
+    public bool ContainsMemberMapByField(string fieldName) => this.fieldMaps.ContainsKey(fieldName);
     public void AddMemberMap(string memberName, MemberMap mapper)
     {
         if (this.memberMaps.TryAdd(memberName, mapper))

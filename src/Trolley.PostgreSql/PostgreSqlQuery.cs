@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace Trolley.PostgreSql;
 
@@ -140,6 +143,84 @@ public class PostgreSqlQuery<T> : Query<T>, IPostgreSqlQuery<T>
         => base.Take(limit) as IPostgreSqlQuery<T>;
     public new IPostgreSqlQuery<T> Page(int pageNumber, int pageSize)
         => base.Page(pageNumber, pageSize) as IPostgreSqlQuery<T>;
+    #endregion
+
+    #region First/ToList/ToPageList/ToDictionary
+    public override T First()
+    {
+        return this.DbContext.Query<T, T>(this.Visitor, true, (entityType, reader, readerFields) =>
+        {
+            T result = default;
+            if (reader.Read())
+            {
+                if (entityType.IsEntityType(out _))
+                    result = reader.ToEntity<T>(this.DbContext, readerFields, true);
+                else result = reader.ToValue<T>(this.DbContext);
+            }
+            return result;
+        });
+    }
+    public override async Task<T> FirstAsync(CancellationToken cancellationToken = default)
+    {
+        return await this.DbContext.QueryAsync<T, T>(this.Visitor, true, (entityType, reader, readerFields) =>
+        {
+            T result = default;
+            if (reader.Read())
+            {
+                if (entityType.IsEntityType(out _))
+                    result = reader.ToEntity<T>(this.DbContext, readerFields, true);
+                else result = reader.ToValue<T>(this.DbContext);
+            }
+            return result;
+        }, cancellationToken);
+    }
+    public override List<T> ToList()
+    {
+        return this.DbContext.Query<T, List<T>>(this.Visitor, false, (entityType, reader, readerFields) =>
+        {
+            var result = new List<T>();
+            if (entityType.IsEntityType(out _))
+            {
+                while (reader.Read())
+                {
+                    result.Add(reader.ToEntity<T>(this.DbContext, readerFields, true));
+                }
+            }
+            else
+            {
+                while (reader.Read())
+                {
+                    result.Add(reader.ToValue<T>(this.DbContext));
+                }
+            }
+            return result;
+        });
+    }
+    public override async Task<List<T>> ToListAsync(CancellationToken cancellationToken = default)
+    {
+        return await this.DbContext.QueryAsync<T, List<T>>(this.Visitor, false, (entityType, reader, readerFields) =>
+        {
+            var result = new List<T>();
+            if (entityType.IsEntityType(out _))
+            {
+                while (reader.Read())
+                {
+                    result.Add(reader.ToEntity<T>(this.DbContext, readerFields, true));
+                }
+            }
+            else
+            {
+                while (reader.Read())
+                {
+                    result.Add(reader.ToValue<T>(this.DbContext));
+                }
+            }
+            return result;
+        }, cancellationToken);
+    }
+    public override IPagedList<T> ToPageList() => this.DbContext.QueryPage<T>(this.Visitor, true);
+    public override async Task<IPagedList<T>> ToPageListAsync(CancellationToken cancellationToken = default)
+        => await this.DbContext.QueryPageAsync<T>(this.Visitor, true, cancellationToken);
     #endregion
 }
 public class PostgreSqlQuery<T1, T2> : Query<T1, T2>, IPostgreSqlQuery<T1, T2>

@@ -122,7 +122,7 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                 {
                     var builder = new StringBuilder();
                     (var isNeedSplit, var tableName, var insertObjs, var bulkCount,
-                        var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command.BaseCommand);
+                        var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
 
                     int executor(string tableName, IEnumerable insertObjs)
                     {
@@ -130,7 +130,7 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                         foreach (var insertObj in insertObjs)
                         {
                             if (index > 0) builder.Append(',');
-                            loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
+                            loopSqlSetter.Invoke(command.Parameters, builder,this.DbContext, insertObj, index.ToString());
                             if (index >= bulkCount)
                             {
                                 command.CommandText = builder.ToString();
@@ -175,7 +175,7 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
             default:
                 {
                     //默认单条
-                    command.CommandText = this.Visitor.BuildCommand(command.BaseCommand, false, out _);
+                    command.CommandText = this.Visitor.BuildCommand(command, false, out _);
                     connection.Open();
                     result = command.ExecuteNonQuery(CommandSqlType.Insert);
                 }
@@ -196,7 +196,7 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                 {
                     var builder = new StringBuilder();
                     (var isNeedSplit, var tableName, var insertObjs, var bulkCount,
-                        var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command.BaseCommand);
+                        var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
 
                     async Task<int> executor(string tableName, IEnumerable insertObjs)
                     {
@@ -204,7 +204,7 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                         foreach (var insertObj in insertObjs)
                         {
                             if (index > 0) builder.Append(',');
-                            loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
+                            loopSqlSetter.Invoke(command.Parameters, builder,this.DbContext, insertObj, index.ToString());
                             if (index >= bulkCount)
                             {
                                 command.CommandText = builder.ToString();
@@ -250,7 +250,7 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
             default:
                 {
                     //默认单条
-                    command.CommandText = this.Visitor.BuildCommand(command.BaseCommand, false, out _);
+                    command.CommandText = this.Visitor.BuildCommand(command, false, out _);
                     await connection.OpenAsync(cancellationToken);
                     result = await command.ExecuteNonQueryAsync(CommandSqlType.Insert, cancellationToken);
                 }
@@ -264,28 +264,12 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
     #endregion
 
     #region ExecuteIdentity
-    public virtual int ExecuteIdentity() => this.DbContext.CreateResult<int>((command, dbContext) =>
-    {
-        command.CommandText = this.Visitor.BuildCommand(command, true, out var readerFields);
-        return readerFields;
-    });
+    public virtual int ExecuteIdentity() => this.DbContext.CreateIdentity<int>(this.Visitor);
     public virtual async Task<int> ExecuteIdentityAsync(CancellationToken cancellationToken = default)
-        => await this.DbContext.CreateResultAsync<int>((command, dbContext) =>
-        {
-            command.CommandText = this.Visitor.BuildCommand(command, true, out var readerFields);
-            return readerFields;
-        }, cancellationToken);
-    public virtual long ExecuteIdentityLong() => this.DbContext.CreateResult<long>((command, dbContext) =>
-    {
-        command.CommandText = this.Visitor.BuildCommand(command, true, out var readerFields);
-        return readerFields;
-    });
+        => await this.DbContext.CreateIdentityAsync<int>(this.Visitor, cancellationToken);
+    public virtual long ExecuteIdentityLong() => this.DbContext.CreateIdentity<long>(this.Visitor);
     public virtual async Task<long> ExecuteIdentityLongAsync(CancellationToken cancellationToken = default)
-        => await this.DbContext.CreateResultAsync<long>((command, dbContext) =>
-        {
-            command.CommandText = this.Visitor.BuildCommand(command, true, out var readerFields);
-            return readerFields;
-        }, cancellationToken);
+        => await this.DbContext.CreateIdentityAsync<long>(this.Visitor, cancellationToken);
     #endregion
 
     #region ToMultipleCommand
@@ -302,7 +286,7 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        var sql = this.Visitor.BuildCommand(command.BaseCommand, false, out _);
+        var sql = this.Visitor.BuildCommand(command, false, out _);
         dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
         if (isNeedClose) connection.Close();

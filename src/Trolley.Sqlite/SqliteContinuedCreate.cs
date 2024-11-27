@@ -111,7 +111,7 @@ public class SqliteContinuedCreate<TEntity> : ContinuedCreate<TEntity>, ISqliteC
                     foreach (var insertObj in insertObjs)
                     {
                         if (index > 0) builder.Append(',');
-                        loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
+                        loopSqlSetter.Invoke(command.Parameters, builder,this.DbContext, insertObj, index.ToString());
                         if (index >= bulkCount)
                         {
                             command.CommandText = builder.ToString();
@@ -204,7 +204,7 @@ public class SqliteContinuedCreate<TEntity> : ContinuedCreate<TEntity>, ISqliteC
                     foreach (var insertObj in insertObjs)
                     {
                         if (index > 0) builder.Append(',');
-                        loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
+                        loopSqlSetter.Invoke(command.Parameters, builder,this.DbContext, insertObj, index.ToString());
                         if (index >= bulkCount)
                         {
                             command.CommandText = builder.ToString();

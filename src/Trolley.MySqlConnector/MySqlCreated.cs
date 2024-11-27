@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -61,16 +62,17 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                 {
                     var builder = new StringBuilder();
                     (isNeedSplit, var tableName, var insertObjs, var bulkCount,
-                        var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command.BaseCommand);
-                    int executor(string tableName, IEnumerable insertObjs)
+                        var firstSqlSetter, var loopSqlSetter, var tailSql, _) = this.Visitor.BuildWithBulk(command);
+                    int Execute(string tableName, IEnumerable insertObjs)
                     {
                         int count = 0, index = 0;
                         foreach (var insertObj in insertObjs)
                         {
                             if (index > 0) builder.Append(',');
-                            loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
+                            loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
                             if (index >= bulkCount)
                             {
+                                if (tailSql != null) builder.Append(tailSql);
                                 command.CommandText = builder.ToString();
                                 count += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
                                 builder.Clear();
@@ -83,6 +85,7 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                         }
                         if (index > 0)
                         {
+                            if (tailSql != null) builder.Append(tailSql);
                             command.CommandText = builder.ToString();
                             count += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
                             builder.Clear();
@@ -97,20 +100,20 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                         foreach (var tabledInsertObj in tabledInsertObjs)
                         {
                             firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
-                            result += executor(tabledInsertObj.Key, tabledInsertObj.Value);
+                            result += Execute(tabledInsertObj.Key, tabledInsertObj.Value);
                         }
                     }
                     else
                     {
                         firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                        result = executor(tableName, insertObjs);
+                        result = Execute(tableName, insertObjs);
                     }
                     builder.Clear();
                     break;
                 }
             default:
                 //默认单条
-                command.CommandText = this.Visitor.BuildCommand(command.BaseCommand, false, out _);
+                command.CommandText = this.Visitor.BuildCommand(command, false, out _);
                 connection.Open();
                 result = command.ExecuteNonQuery(CommandSqlType.Insert);
                 break;
@@ -158,16 +161,17 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                 {
                     var builder = new StringBuilder();
                     (isNeedSplit, var tableName, var insertObjs, var bulkCount,
-                        var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command.BaseCommand);
+                        var firstSqlSetter, var loopSqlSetter, var tailSql, _) = this.Visitor.BuildWithBulk(command);
                     async Task<int> executor(string tableName, IEnumerable insertObjs)
                     {
                         int count = 0, index = 0;
                         foreach (var insertObj in insertObjs)
                         {
                             if (index > 0) builder.Append(',');
-                            loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
+                            loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
                             if (index >= bulkCount)
                             {
+                                if (tailSql != null) builder.Append(tailSql);
                                 command.CommandText = builder.ToString();
                                 count += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
                                 builder.Clear();
@@ -180,6 +184,7 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                         }
                         if (index > 0)
                         {
+                            if (tailSql != null) builder.Append(tailSql);
                             command.CommandText = builder.ToString();
                             count += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
                             builder.Clear();
@@ -207,7 +212,7 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                 }
             default:
                 //默认单条
-                command.CommandText = this.Visitor.BuildCommand(command.BaseCommand, false, out _);
+                command.CommandText = this.Visitor.BuildCommand(command, false, out _);
                 await connection.OpenAsync(cancellationToken);
                 result = await command.ExecuteNonQueryAsync(CommandSqlType.Insert, cancellationToken);
                 break;
@@ -227,45 +232,38 @@ public class MySqlCreated<TEntity, TResult> : Created<TEntity>, IMySqlCreated<TE
     #endregion
 
     #region Execute
-    public new TResult Execute() => this.DbContext.CreateResult<TResult>((command, dbContext) =>
-    {
-        command.CommandText = this.Visitor.BuildCommand(command, false, out var readerFields);
-        return readerFields;
-    });
-    public new async Task<TResult> ExecuteAsync(CancellationToken cancellationToken) => await this.DbContext.CreateResultAsync<TResult>((command, dbContext) =>
-    {
-        command.CommandText = this.Visitor.BuildCommand(command, false, out var readerFields);
-        return readerFields;
-    }, cancellationToken);
+    public new TResult Execute() => this.DbContext.CreateResult<TResult>(this.Visitor);
+    public new async Task<TResult> ExecuteAsync(CancellationToken cancellationToken)
+        => await this.DbContext.CreateResultAsync<TResult>(this.Visitor, cancellationToken);
     #endregion
 
     #region ExecuteIdentity
     /// <summary>
-    /// 不支持的方法调用，调用Outpt方法后此方法无效，请使用Execute方法
+    /// 不支持的方法调用，调用Returning方法后此方法无效，请使用Execute方法
     /// </summary>
     /// <returns>返回自增长主键值</returns>
     public override int ExecuteIdentity()
-        => throw new NotSupportedException("不支持的方法调用，调用Outpt方法后此方法无效，请使用Execute方法");
+        => throw new NotSupportedException("不支持的方法调用，调用Returning方法后此方法无效，请使用Execute方法");
     /// <summary>
-    /// 不支持的方法调用，调用Outpt方法后此方法无效，请使用ExecuteAsync方法
+    /// 不支持的方法调用，调用Returning方法后此方法无效，请使用ExecuteAsync方法
     /// </summary>
     /// <param name="cancellationToken">取消token</param>
     /// <returns>返回自增长主键值</returns>
     public override Task<int> ExecuteIdentityAsync(CancellationToken cancellationToken = default)
-        => throw new NotSupportedException("不支持的方法调用，调用Outpt方法后此方法无效，请使用ExecuteAsync方法");
+        => throw new NotSupportedException("不支持的方法调用，调用Returning方法后此方法无效，请使用ExecuteAsync方法");
     /// <summary>
-    /// 不支持的方法调用，调用Outpt方法后此方法无效，请使用Execute方法
+    /// 不支持的方法调用，调用Returning方法后此方法无效，请使用Execute方法
     /// </summary>
     /// <returns>返回自增长主键值</returns>
     public override long ExecuteIdentityLong()
-        => throw new NotSupportedException("不支持的方法调用，调用Outpt方法后此方法无效，请使用Execute方法");
+        => throw new NotSupportedException("不支持的方法调用，调用Returning方法后此方法无效，请使用Execute方法");
     /// <summary>
-    /// 不支持的方法调用，调用Outpt方法后此方法无效，请使用ExecuteAsync方法
+    /// 不支持的方法调用，调用Returning方法后此方法无效，请使用ExecuteAsync方法
     /// </summary>
     /// <param name="cancellationToken">取消token</param>
     /// <returns>返回自增长主键值</returns>
     public override Task<long> ExecuteIdentityLongAsync(CancellationToken cancellationToken = default)
-        => throw new NotSupportedException("不支持的方法调用，调用Outpt方法后此方法无效，请使用ExecuteAsync方法");
+        => throw new NotSupportedException("不支持的方法调用，调用Returning方法后此方法无效，请使用ExecuteAsync方法");
     #endregion
 }
 public class MySqlBulkCreated<TEntity, TResult> : Created<TEntity>, IMySqlBulkCreated<TEntity, TResult>
@@ -276,37 +274,208 @@ public class MySqlBulkCreated<TEntity, TResult> : Created<TEntity>, IMySqlBulkCr
     #endregion
 
     #region Execute
-    public new List<TResult> Execute() => this.DbContext.CreateResult<TResult>(this.Visitor);
+    public new List<TResult> Execute()
+    {
+        var result = new List<TResult>();
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        bool isNeedSplit = false;
+        var entityType = typeof(TEntity);
+        var resultType = typeof(TResult);
+
+        var builder = new StringBuilder();
+        (isNeedSplit, var tableName, var insertObjs, var bulkCount, var firstSqlSetter,
+            var loopSqlSetter, var tailSql, var readerFields) = this.Visitor.BuildWithBulk(command);
+
+        Action<DbContext, List<TResult>, ITheaDataReader> initializer = null;
+        if (resultType.IsEntityType(out _))
+        {
+            initializer = (dbContext, result, reader) =>
+            {
+                while (reader.Read())
+                {
+                    result.Add(reader.ToEntity<TResult>(dbContext, readerFields));
+                }
+            };
+        }
+        else
+        {
+            initializer = (dbContext, result, reader) =>
+            {
+                while (reader.Read())
+                {
+                    result.Add(reader.ToValue<TResult>(dbContext));
+                }
+            };
+        }
+
+        void Execute(string tableName, IEnumerable insertObjs)
+        {
+            int index = 0;
+            foreach (var insertObj in insertObjs)
+            {
+                if (index > 0) builder.Append(',');
+                loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
+                if (index >= bulkCount)
+                {
+                    if (index > 0) builder.Append(tailSql);
+                    command.CommandText = builder.ToString();
+                    using var reader = command.ExecuteReader(CommandSqlType.BulkInsert, CommandBehavior.SequentialAccess);
+                    initializer.Invoke(this.DbContext, result, reader);
+                    reader.Dispose();
+                    builder.Clear();
+                    command.Parameters.Clear();
+                    firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                    index = 0;
+                    continue;
+                }
+                index++;
+            }
+            if (index > 0)
+            {
+                if (index > 0) builder.Append(tailSql);
+                command.CommandText = builder.ToString();
+                using var reader = command.ExecuteReader(CommandSqlType.BulkInsert, CommandBehavior.SequentialAccess);
+                initializer.Invoke(this.DbContext, result, reader);
+                reader.Dispose();
+                builder.Clear();
+                command.Parameters.Clear();
+            }
+        };
+        connection.Open();
+        if (isNeedSplit)
+        {
+            var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
+            foreach (var tabledInsertObj in tabledInsertObjs)
+            {
+                firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
+                Execute(tabledInsertObj.Key, tabledInsertObj.Value);
+            }
+        }
+        else
+        {
+            firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+            Execute(tableName, insertObjs);
+        }
+        builder.Clear();
+        command.Dispose();
+        if (isNeedClose) connection.Close();
+        return result;
+    }
     public new async Task<List<TResult>> ExecuteAsync(CancellationToken cancellationToken)
-        => await this.DbContext.CreateResultAsync<TResult>(this.Visitor, cancellationToken);
+    {
+        var result = new List<TResult>();
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        bool isNeedSplit = false;
+        var entityType = typeof(TEntity);
+        var resultType = typeof(TResult);
+
+        var builder = new StringBuilder();
+        (isNeedSplit, var tableName, var insertObjs, var bulkCount, var firstSqlSetter,
+            var loopSqlSetter, var tailSql, var readerFields) = this.Visitor.BuildWithBulk(command);
+
+        Func<DbContext, List<TResult>, ITheaDataReader, CancellationToken, Task> initializer = null;
+        if (resultType.IsEntityType(out _))
+        {
+            initializer = async (dbContext, result, reader, cancellationToken) =>
+            {
+                while (await reader.ReadAsync(cancellationToken))
+                {
+                    result.Add(reader.ToEntity<TResult>(dbContext, readerFields));
+                }
+            };
+        }
+        else
+        {
+            initializer = async (dbContext, result, reader, cancellationToken) =>
+            {
+                while (await reader.ReadAsync(cancellationToken))
+                {
+                    result.Add(reader.ToValue<TResult>(dbContext));
+                }
+            };
+        }
+
+        async Task Execute(string tableName, IEnumerable insertObjs)
+        {
+            int index = 0;
+            foreach (var insertObj in insertObjs)
+            {
+                if (index > 0) builder.Append(',');
+                loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
+                if (index >= bulkCount)
+                {
+                    if (index > 0) builder.Append(tailSql);
+                    command.CommandText = builder.ToString();
+                    using var reader = await command.ExecuteReaderAsync(CommandSqlType.BulkInsert, CommandBehavior.SequentialAccess, cancellationToken);
+                    await initializer.Invoke(this.DbContext, result, reader, cancellationToken);
+                    await reader.DisposeAsync();
+                    builder.Clear();
+                    command.Parameters.Clear();
+                    firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                    index = 0;
+                    continue;
+                }
+                index++;
+            }
+            if (index > 0)
+            {
+                if (index > 0) builder.Append(tailSql);
+                command.CommandText = builder.ToString();
+                using var reader = await command.ExecuteReaderAsync(CommandSqlType.BulkInsert, CommandBehavior.SequentialAccess, cancellationToken);
+                await initializer.Invoke(this.DbContext, result, reader, cancellationToken);
+                await reader.DisposeAsync();
+                builder.Clear();
+                command.Parameters.Clear();
+            }
+        };
+        await connection.OpenAsync(cancellationToken);
+        if (isNeedSplit)
+        {
+            var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
+            foreach (var tabledInsertObj in tabledInsertObjs)
+            {
+                firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
+                await Execute(tabledInsertObj.Key, tabledInsertObj.Value);
+            }
+        }
+        else
+        {
+            firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+            await Execute(tableName, insertObjs);
+        }
+        builder.Clear();
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
+        return result;
+    }
     #endregion
 
     #region ExecuteIdentity
     /// <summary>
-    /// 不支持的方法调用，调用Outpt方法后此方法无效，请使用Execute方法
+    /// 不支持的方法调用，调用Returning方法后此方法无效，请使用Execute方法
     /// </summary>
     /// <returns>返回自增长主键值</returns>
     public override int ExecuteIdentity()
-        => throw new NotSupportedException("不支持的方法调用，调用Outpt方法后此方法无效，请使用Execute方法");
+        => throw new NotSupportedException("不支持的方法调用，调用Returning方法后此方法无效，请使用Execute方法");
     /// <summary>
-    /// 不支持的方法调用，调用Outpt方法后此方法无效，请使用ExecuteAsync方法
+    /// 不支持的方法调用，调用Returning方法后此方法无效，请使用ExecuteAsync方法
     /// </summary>
     /// <param name="cancellationToken">取消token</param>
     /// <returns>返回自增长主键值</returns>
     public override Task<int> ExecuteIdentityAsync(CancellationToken cancellationToken = default)
-        => throw new NotSupportedException("不支持的方法调用，调用Outpt方法后此方法无效，请使用ExecuteAsync方法");
+        => throw new NotSupportedException("不支持的方法调用，调用Returning方法后此方法无效，请使用ExecuteAsync方法");
     /// <summary>
-    /// 不支持的方法调用，调用Outpt方法后此方法无效，请使用Execute方法
+    /// 不支持的方法调用，调用Returning方法后此方法无效，请使用Execute方法
     /// </summary>
     /// <returns>返回自增长主键值</returns>
     public override long ExecuteIdentityLong()
-        => throw new NotSupportedException("不支持的方法调用，调用Outpt方法后此方法无效，请使用Execute方法");
+        => throw new NotSupportedException("不支持的方法调用，调用Returning方法后此方法无效，请使用Execute方法");
     /// <summary>
-    /// 不支持的方法调用，调用Outpt方法后此方法无效，请使用ExecuteAsync方法
+    /// 不支持的方法调用，调用Returning方法后此方法无效，请使用ExecuteAsync方法
     /// </summary>
     /// <param name="cancellationToken">取消token</param>
     /// <returns>返回自增长主键值</returns>
     public override Task<long> ExecuteIdentityLongAsync(CancellationToken cancellationToken = default)
-        => throw new NotSupportedException("不支持的方法调用，调用Outpt方法后此方法无效，请使用ExecuteAsync方法");
+        => throw new NotSupportedException("不支持的方法调用，调用Returning方法后此方法无效，请使用ExecuteAsync方法");
     #endregion
 }

@@ -186,6 +186,7 @@ public partial class MySqlProvider : BaseOrmProvider
     }
     public override Type MapDefaultType(MemberMap memberMappper)
     {
+        //bit(n)，会映射为ulong类型，bit(1)映射为bool类型
         if (memberMappper.NativeDbType is MySqlDbType nativeDbType && nativeDbType == MySqlDbType.Bit)
         {
             if (memberMappper.MaxLength > 1)
@@ -391,7 +392,7 @@ public partial class MySqlProvider : BaseOrmProvider
                 if (memberMapper.TypeHandler == null && !memberMapper.IsIgnore)
                 {
                     //允许自定义TypeHandlerType设置，默认设置
-                    if ((memberMapper.UnderlyingType.IsClass && memberMapper.UnderlyingType != typeof(string) 
+                    if ((memberMapper.UnderlyingType.IsClass && memberMapper.UnderlyingType != typeof(string)
                         || memberMapper.UnderlyingType.IsEntityType(out _))
                         && this.MapDefaultType(memberMapper.NativeDbType) == typeof(string))
                         memberMapper.TypeHandlerType = typeof(JsonTypeHandler);

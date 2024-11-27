@@ -1,6 +1,4 @@
-﻿using Npgsql;
-using NpgsqlTypes;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
@@ -63,14 +61,14 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                 {
                     var builder = new StringBuilder();
                     (isNeedSplit, var tableName, var insertObjs, var bulkCount,
-                        var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command.BaseCommand);
+                        var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
                     int executor(string tableName, IEnumerable insertObjs)
                     {
                         int count = 0, index = 0;
                         foreach (var insertObj in insertObjs)
                         {
                             if (index > 0) builder.Append(',');
-                            loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
+                            loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
                             if (index >= bulkCount)
                             {
                                 command.CommandText = builder.ToString();
@@ -112,7 +110,7 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                 }
             default:
                 //默认单条
-                command.CommandText = this.Visitor.BuildCommand(command.BaseCommand, false, out _);
+                command.CommandText = this.Visitor.BuildCommand(command, false, out _);
                 connection.Open();
                 result = command.ExecuteNonQuery(CommandSqlType.Insert);
                 break;
@@ -161,14 +159,14 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                 {
                     var builder = new StringBuilder();
                     (isNeedSplit, var tableName, var insertObjs, var bulkCount,
-                        var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command.BaseCommand);
+                        var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
                     async Task<int> executor(string tableName, IEnumerable insertObjs)
                     {
                         int count = 0, index = 0;
                         foreach (var insertObj in insertObjs)
                         {
                             if (index > 0) builder.Append(',');
-                            loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
+                            loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
                             if (index >= bulkCount)
                             {
                                 command.CommandText = builder.ToString();
@@ -210,7 +208,7 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                 }
             default:
                 //默认单条
-                command.CommandText = this.Visitor.BuildCommand(command.BaseCommand, false, out _);
+                command.CommandText = this.Visitor.BuildCommand(command, false, out _);
                 await connection.OpenAsync(cancellationToken);
                 result = await command.ExecuteNonQueryAsync(CommandSqlType.Insert, cancellationToken);
                 break;
@@ -230,45 +228,38 @@ public class PostgreSqlCreated<TEntity, TResult> : Created<TEntity>, IPostgreSql
     #endregion
 
     #region Execute
-    public new TResult Execute() => this.DbContext.CreateResult<TResult>((command, dbContext) =>
-    {
-        command.CommandText = this.Visitor.BuildCommand(command, false, out var readerFields);
-        return readerFields;
-    });
-    public new async Task<TResult> ExecuteAsync(CancellationToken cancellationToken) => await this.DbContext.CreateResultAsync<TResult>((command, dbContext) =>
-    {
-        command.CommandText = this.Visitor.BuildCommand(command, false, out var readerFields);
-        return readerFields;
-    }, cancellationToken);
+    public new TResult Execute() => this.DbContext.CreateResult<TResult>(this.Visitor);
+    public new async Task<TResult> ExecuteAsync(CancellationToken cancellationToken)
+        => await this.DbContext.CreateResultAsync<TResult>(this.Visitor, cancellationToken);
     #endregion
 
     #region ExecuteIdentity
     /// <summary>
-    /// 不支持的方法调用，调用Outpt方法后此方法无效，请使用Execute方法
+    /// 不支持的方法调用，调用Returning方法后此方法无效，请使用Execute方法
     /// </summary>
     /// <returns>返回自增长主键值</returns>
     public override int ExecuteIdentity()
-        => throw new NotSupportedException("不支持的方法调用，调用Outpt方法后此方法无效，请使用Execute方法");
+        => throw new NotSupportedException("不支持的方法调用，调用Returning方法后此方法无效，请使用Execute方法");
     /// <summary>
-    /// 不支持的方法调用，调用Outpt方法后此方法无效，请使用ExecuteAsync方法
+    /// 不支持的方法调用，调用Returning方法后此方法无效，请使用ExecuteAsync方法
     /// </summary>
     /// <param name="cancellationToken">取消token</param>
     /// <returns>返回自增长主键值</returns>
     public override Task<int> ExecuteIdentityAsync(CancellationToken cancellationToken = default)
-        => throw new NotSupportedException("不支持的方法调用，调用Outpt方法后此方法无效，请使用ExecuteAsync方法");
+        => throw new NotSupportedException("不支持的方法调用，调用Returning方法后此方法无效，请使用ExecuteAsync方法");
     /// <summary>
-    /// 不支持的方法调用，调用Outpt方法后此方法无效，请使用Execute方法
+    /// 不支持的方法调用，调用Returning方法后此方法无效，请使用Execute方法
     /// </summary>
     /// <returns>返回自增长主键值</returns>
     public override long ExecuteIdentityLong()
-        => throw new NotSupportedException("不支持的方法调用，调用Outpt方法后此方法无效，请使用Execute方法");
+        => throw new NotSupportedException("不支持的方法调用，调用Returning方法后此方法无效，请使用Execute方法");
     /// <summary>
-    /// 不支持的方法调用，调用Outpt方法后此方法无效，请使用ExecuteAsync方法
+    /// 不支持的方法调用，调用Returning方法后此方法无效，请使用ExecuteAsync方法
     /// </summary>
     /// <param name="cancellationToken">取消token</param>
     /// <returns>返回自增长主键值</returns>
     public override Task<long> ExecuteIdentityLongAsync(CancellationToken cancellationToken = default)
-        => throw new NotSupportedException("不支持的方法调用，调用Outpt方法后此方法无效，请使用ExecuteAsync方法");
+        => throw new NotSupportedException("不支持的方法调用，调用Returning方法后此方法无效，请使用ExecuteAsync方法");
     #endregion
 }
 public class PostgreSqlBulkCreated<TEntity, TResult> : Created<TEntity>, IPostgreSqlBulkCreated<TEntity, TResult>
@@ -279,37 +270,37 @@ public class PostgreSqlBulkCreated<TEntity, TResult> : Created<TEntity>, IPostgr
     #endregion
 
     #region Execute
-    public new List<TResult> Execute() => this.DbContext.CreateResult<TResult>(this.Visitor);
+    public new List<TResult> Execute() => this.DbContext.CreateResults<TResult>(this.Visitor);
     public new async Task<List<TResult>> ExecuteAsync(CancellationToken cancellationToken)
-        => await this.DbContext.CreateResultAsync<TResult>(this.Visitor, cancellationToken);
+        => await this.DbContext.CreateResultsAsync<TResult>(this.Visitor, cancellationToken);
     #endregion
 
     #region ExecuteIdentity
     /// <summary>
-    /// 不支持的方法调用，调用Outpt方法后此方法无效，请使用Execute方法
+    /// 不支持的方法调用，调用Returning方法后此方法无效，请使用Execute方法
     /// </summary>
     /// <returns>返回自增长主键值</returns>
     public override int ExecuteIdentity()
-        => throw new NotSupportedException("不支持的方法调用，调用Outpt方法后此方法无效，请使用Execute方法");
+        => throw new NotSupportedException("不支持的方法调用，调用Returning方法后此方法无效，请使用Execute方法");
     /// <summary>
-    /// 不支持的方法调用，调用Outpt方法后此方法无效，请使用ExecuteAsync方法
+    /// 不支持的方法调用，调用Returning方法后此方法无效，请使用ExecuteAsync方法
     /// </summary>
     /// <param name="cancellationToken">取消token</param>
     /// <returns>返回自增长主键值</returns>
     public override Task<int> ExecuteIdentityAsync(CancellationToken cancellationToken = default)
-        => throw new NotSupportedException("不支持的方法调用，调用Outpt方法后此方法无效，请使用ExecuteAsync方法");
+        => throw new NotSupportedException("不支持的方法调用，调用Returning方法后此方法无效，请使用ExecuteAsync方法");
     /// <summary>
-    /// 不支持的方法调用，调用Outpt方法后此方法无效，请使用Execute方法
+    /// 不支持的方法调用，调用Returning方法后此方法无效，请使用Execute方法
     /// </summary>
     /// <returns>返回自增长主键值</returns>
     public override long ExecuteIdentityLong()
-        => throw new NotSupportedException("不支持的方法调用，调用Outpt方法后此方法无效，请使用Execute方法");
+        => throw new NotSupportedException("不支持的方法调用，调用Returning方法后此方法无效，请使用Execute方法");
     /// <summary>
-    /// 不支持的方法调用，调用Outpt方法后此方法无效，请使用ExecuteAsync方法
+    /// 不支持的方法调用，调用Returning方法后此方法无效，请使用ExecuteAsync方法
     /// </summary>
     /// <param name="cancellationToken">取消token</param>
     /// <returns>返回自增长主键值</returns>
     public override Task<long> ExecuteIdentityLongAsync(CancellationToken cancellationToken = default)
-        => throw new NotSupportedException("不支持的方法调用，调用Outpt方法后此方法无效，请使用ExecuteAsync方法");
+        => throw new NotSupportedException("不支持的方法调用，调用Returning方法后此方法无效，请使用ExecuteAsync方法");
     #endregion
 }

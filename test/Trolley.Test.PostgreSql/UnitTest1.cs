@@ -321,7 +321,7 @@ public class UnitTest1 : UnitTestBase
             })
             .IgnoreFields("CompanyId", "SourceType")
             .Execute();
-        var user = repository.Get<User>(1);
+        var user = repository.GetById<User>(1);
         repository.Commit();
         Assert.Equal(Gender.Male, user.Gender);
         Assert.Equal(0, user.CompanyId);
@@ -365,7 +365,7 @@ public class UnitTest1 : UnitTestBase
             })
             .IgnoreFields(f => new { f.Gender, f.CompanyId })
             .Execute();
-        user = repository.Get<User>(1);
+        user = repository.GetById<User>(1);
         repository.Commit();
         Assert.Equal(Gender.Unknown, user.Gender);
         Assert.Equal(0, user.CompanyId);
@@ -377,7 +377,7 @@ public class UnitTest1 : UnitTestBase
         Guid? guidField = Guid.NewGuid();
         var repository = this.dbFactory.Create();
         repository.BeginTransaction();
-        var user = repository.Get<User>(1);
+        var user = repository.GetById<User>(1);
         var count = repository.Delete<User>().Where(f => f.Id == 1).Execute();
         var sql = repository.Create<User>()
             .WithBy(new
@@ -427,7 +427,7 @@ public class UnitTest1 : UnitTestBase
         this.Initialize(2);
         Guid? guidField = Guid.NewGuid();
         var repository = this.dbFactory.Create();
-        var user = repository.Get<User>(1);
+        var user = repository.GetById<User>(1);
         var sql = repository.Create<User>()
             .WithBy(new
             {
@@ -769,7 +769,7 @@ public class UnitTest1 : UnitTestBase
         var brandId = 1;
         var name = "雪中飞羽绒裤";
         int categoryId = 1;
-        var brand = repository.Get<Brand>(brandId);
+        var brand = repository.GetById<Brand>(brandId);
         var sql = repository.Create<Product>()
             .From<Brand>()
             .Where(f => f.Id == brandId)
@@ -812,7 +812,7 @@ public class UnitTest1 : UnitTestBase
                 UpdatedAt = DateTime.Now
             })
            .Execute();
-        var product = repository.Get<Product>(id);
+        var product = repository.GetById<Product>(id);
         repository.Commit();
         Assert.True(count > 0);
         Assert.NotNull(product);
@@ -865,8 +865,8 @@ public class UnitTest1 : UnitTestBase
                 UpdatedAt = x.UpdatedAt
             })
            .ExecuteAsync();
-        var orderDetail = repository.Get<OrderDetail>("7");
-        var product = repository.Get<Product>(1);
+        var orderDetail = repository.GetById<OrderDetail>("7");
+        var product = repository.GetById<Product>(1);
         await repository.CommitAsync();
         Assert.True(result > 0);
         Assert.NotNull(orderDetail);
@@ -962,7 +962,7 @@ public class UnitTest1 : UnitTestBase
             UpdatedAt = DateTime.Now,
             UpdatedBy = 1
         });
-        var result = repository.Get<Order>("1");
+        var result = repository.GetById<Order>("1");
         repository.Commit();
         if (count > 0)
         {
@@ -1027,7 +1027,7 @@ public class UnitTest1 : UnitTestBase
                 UpdatedBy = 1
             })
             .Execute();
-        var order = repository.Get<Order>("4");
+        var order = repository.GetById<Order>("4");
         repository.Commit();
         Assert.NotEmpty(order.Products);
         Assert.NotNull(order.Disputes);
@@ -1163,7 +1163,7 @@ public class UnitTest1 : UnitTestBase
             .OnlyFields(f => new { f.Id, f.TenantId, f.Name, f.IsEnabled, f.CreatedBy, f.CreatedAt, f.UpdatedAt, f.UpdatedBy })
             .OnConflict(f => f.DoNothing())
             .ExecuteAsync();
-        var user = repository.Get<User>(1);
+        var user = repository.GetById<User>(1);
         repository.Commit();
         Assert.Equal(1, count);
         Assert.Equal(0, user.CompanyId);
@@ -1263,7 +1263,7 @@ public class UnitTest1 : UnitTestBase
                 })
                 .Set(buyerSource.HasValue, f => f.BuyerSource, buyerSource))
             .ExecuteAsync();
-        var order = await repository.GetAsync<Order>("9");
+        var order = await repository.GetByIdAsync<Order>("9");
         await repository.CommitAsync();
         Assert.Equal(1, count);
         Assert.Equal(500, order.TotalAmount);
@@ -1335,7 +1335,7 @@ public class UnitTest1 : UnitTestBase
                 })
                 .Set(buyerSource.HasValue, f => f.BuyerSource, buyerSource))
             .ExecuteAsync();
-        order = await repository.GetAsync<Order>("9");
+        order = await repository.GetByIdAsync<Order>("9");
         await repository.CommitAsync();
         Assert.Equal(1, count);
         Assert.Equal(1000, order.TotalAmount);
@@ -1374,7 +1374,7 @@ public class UnitTest1 : UnitTestBase
         Assert.Equal("INSERT INTO \"sys_order\" AS a (\"Id\",\"TenantId\",\"OrderNo\",\"BuyerId\",\"SellerId\",\"BuyerSource\",\"TotalAmount\",\"Products\",\"Disputes\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\") VALUES (@Id,@TenantId,@OrderNo,@BuyerId,@SellerId,@BuyerSource,@TotalAmount,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) ON CONFLICT (\"Id\") DO UPDATE SET \"TotalAmount\"=a.\"TotalAmount\"+EXCLUDED.\"TotalAmount\",\"Products\"=EXCLUDED.\"Products\"", sql3);
 
         await repository.BeginTransactionAsync();
-        order = await repository.GetAsync<Order>("9");
+        order = await repository.GetByIdAsync<Order>("9");
         count = await repository.Create<Order>()
             .WithBy(new
             {
@@ -1404,7 +1404,7 @@ public class UnitTest1 : UnitTestBase
                 .Set(f => new { TotalAmount = f.TotalAmount + x.Excluded(f.TotalAmount) })
                 .Set(f => f.Products, f => x.Excluded(f.Products)))
             .ExecuteAsync();
-        var updatedOrder = await repository.GetAsync<Order>("9");
+        var updatedOrder = await repository.GetByIdAsync<Order>("9");
         await repository.CommitAsync();
         Assert.Equal(1, count);
         Assert.Equal(order.TotalAmount + 500, updatedOrder.TotalAmount);
@@ -1652,7 +1652,7 @@ public class UnitTest1 : UnitTestBase
             ByteArrayField = Encoding.ASCII.GetBytes("ByteArry"),
             BitArrayField = new BitArray(bytes)
         });
-        var entity = await repository.GetAsync<UpdateEntity2>(1);
+        var entity = await repository.GetByIdAsync<UpdateEntity2>(1);
         Assert.Equal(entity.ByteArrayField, Encoding.ASCII.GetBytes("ByteArry"));
         Assert.False(entity.BitArrayField.Get(0));
         Assert.False(entity.BitArrayField.Get(1));
