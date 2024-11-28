@@ -122,7 +122,7 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                 {
                     var builder = new StringBuilder();
                     (var isNeedSplit, var tableName, var insertObjs, var bulkCount,
-                        var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
+                        var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
 
                     int executor(string tableName, IEnumerable insertObjs)
                     {
@@ -130,7 +130,7 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                         foreach (var insertObj in insertObjs)
                         {
                             if (index > 0) builder.Append(',');
-                            loopSqlSetter.Invoke(command.Parameters, builder,this.DbContext, insertObj, index.ToString());
+                            loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
                             if (index >= bulkCount)
                             {
                                 command.CommandText = builder.ToString();
@@ -169,7 +169,6 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                         result = executor(tableName, insertObjs);
                     }
                     builder.Clear();
-                    builder = null;
                 }
                 break;
             default:
@@ -196,7 +195,7 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                 {
                     var builder = new StringBuilder();
                     (var isNeedSplit, var tableName, var insertObjs, var bulkCount,
-                        var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
+                        var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
 
                     async Task<int> executor(string tableName, IEnumerable insertObjs)
                     {
@@ -204,7 +203,7 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                         foreach (var insertObj in insertObjs)
                         {
                             if (index > 0) builder.Append(',');
-                            loopSqlSetter.Invoke(command.Parameters, builder,this.DbContext, insertObj, index.ToString());
+                            loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
                             if (index >= bulkCount)
                             {
                                 command.CommandText = builder.ToString();

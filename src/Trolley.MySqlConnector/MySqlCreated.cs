@@ -120,6 +120,7 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
         }
         command.Dispose();
         if (isNeedClose) connection.Close();
+        this.Visitor.Dispose();
         return result;
     }
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
@@ -220,6 +221,7 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
 
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
+        this.Visitor.Dispose();
         return result;
     }
     #endregion
@@ -359,6 +361,7 @@ public class MySqlBulkCreated<TEntity, TResult> : Created<TEntity>, IMySqlBulkCr
         builder.Clear();
         command.Dispose();
         if (isNeedClose) connection.Close();
+        this.Visitor.Dispose();
         return result;
     }
     public new async Task<List<TResult>> ExecuteAsync(CancellationToken cancellationToken)
@@ -446,6 +449,7 @@ public class MySqlBulkCreated<TEntity, TResult> : Created<TEntity>, IMySqlBulkCr
         builder.Clear();
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
+        this.Visitor.Dispose();
         return result;
     }
     #endregion

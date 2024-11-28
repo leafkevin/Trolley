@@ -504,6 +504,7 @@ public sealed class DbContext
         reader.Dispose();
         command.Dispose();
         if (isNeedClose) connection.Close();
+        visitor.Dispose();
         return result;
     }
     public async Task<TResult> CreateIdentityAsync<TResult>(ICreateVisitor visitor, CancellationToken cancellationToken = default)
@@ -520,6 +521,7 @@ public sealed class DbContext
         await reader.DisposeAsync();
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
+        visitor.Dispose();
         return result;
     }
 
@@ -542,6 +544,7 @@ public sealed class DbContext
         reader.Dispose();
         command.Dispose();
         if (isNeedClose) connection.Close();
+        visitor.Dispose();
         return result;
     }
     public async Task<TResult> CreateResultAsync<TResult>(ICreateVisitor visitor, CancellationToken cancellationToken = default)

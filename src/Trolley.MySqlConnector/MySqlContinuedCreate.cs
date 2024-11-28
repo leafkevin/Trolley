@@ -108,8 +108,8 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCre
                 break;
             case ActionMode.Bulk:
                 var builder = new StringBuilder();
-                (isNeedSplit, var tableName, insertObjs, var bulkCount,
-                    var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
+                (isNeedSplit, var tableName, insertObjs, var bulkCount, var firstSqlSetter,
+                    var loopSqlSetter, var tailSql, _) = this.Visitor.BuildWithBulk(command);
                 int executor(string tableName, IEnumerable insertObjs)
                 {
                     int count = 0, index = 0;
@@ -119,6 +119,7 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCre
                         loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
                         if (index >= bulkCount)
                         {
+                            if (tailSql != null) builder.Append(tailSql);
                             command.CommandText = builder.ToString();
                             count += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
                             builder.Clear();
@@ -164,6 +165,7 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCre
         }
         command.Dispose();
         if (isNeedClose) connection.Close();
+        his.Visitor.Dispose();
         return result;
     }
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
@@ -202,7 +204,7 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCre
             case ActionMode.Bulk:
                 var builder = new StringBuilder();
                 (isNeedSplit, var tableName, insertObjs, var bulkCount,
-                    var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
+                    var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
                 async Task<int> executor(string tableName, IEnumerable insertObjs)
                 {
                     int count = 0, index = 0;
@@ -258,6 +260,7 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCre
 
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
+        this.Visitor.Dispose();
         return result;
     }
     #endregion
@@ -367,7 +370,7 @@ public class MySqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySq
                 {
                     var builder = new StringBuilder();
                     (isNeedSplit, var tableName, var insertObjs, var bulkCount,
-                        var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
+                        var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
                     int executor(string tableName, IEnumerable insertObjs)
                     {
                         int count = 0, index = 0;
@@ -423,6 +426,7 @@ public class MySqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySq
         }
         command.Dispose();
         if (isNeedClose) connection.Close();
+        this.Visitor.Dispose();
         return result;
     }
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
@@ -464,7 +468,7 @@ public class MySqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySq
                 {
                     var sqlBuilder = new StringBuilder();
                     (isNeedSplit, var tableName, var insertObjs, var bulkCount,
-                        var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
+                        var firstSqlSetter, var loopSqlSetter, var tailSql, _) = this.Visitor.BuildWithBulk(command);
                     async Task<int> executor(string tableName, IEnumerable insertObjs)
                     {
                         int count = 0, index = 0;

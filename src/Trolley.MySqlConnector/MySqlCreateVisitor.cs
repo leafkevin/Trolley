@@ -1,11 +1,9 @@
-﻿using Microsoft.Extensions.Logging.Abstractions;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Text;
 
 namespace Trolley.MySqlConnector;
@@ -75,40 +73,28 @@ public class MySqlCreateVisitor : CreateVisitor
             tableName = $"{this.OrmProvider.GetTableName(tableSegment.TableSchema)}.{this.OrmProvider.GetTableName(tableName)}";
         tableName = this.OrmProvider.GetTableName(tableName);
 
-        if (this.UpdateBuilder != null || this.OutputFieldNames != null || this.IsReturnIdentity)
+        if (this.UpdateBuilder != null && this.OutputFieldNames != null || this.UpdateBuilder != null && this.IsReturnIdentity
+            || this.OutputFieldNames != null && this.IsReturnIdentity)
             throw new NotSupportedException("不支持同时OnDuplicateKeyUpdate、Returning、Identity操作，只能选择一种操作");
 
-        bool hasUpdateFields = false;
-        if (this.UpdateBuilder != null && this.UpdateBuilder.Length > 0)
-        {
-            this.ValuesBuilder.Append(this.UpdateBuilder);
-            this.UpdateBuilder.Clear();
-            hasUpdateFields = true;
-        }
         this.FieldsBuilder.Append(") VALUES(");
         this.ValuesBuilder.Append(')');
-        bool hasOutput = false;
-        if (this.OutputFieldNames != null && this.OutputFieldNames.Count > 0)
-        {
-            if (hasUpdateFields) throw new NotSupportedException("不支持同时OnDuplicateKeyUpdate、Returning、Identity操作，只能选择一种操作");
-            readerFields = this.BuildOutputSql(this.ValuesBuilder);
-            hasOutput = true;
-        }
+
+        string tailSql = null;
+        if (this.UpdateBuilder != null)
+            tailSql = this.UpdateBuilder.ToString();
+
+        if (this.OutputFieldNames != null)
+            tailSql = this.BuildOutputSql(out readerFields);
 
         if (this.IsReturnIdentity)
         {
             if (!entityMapper.IsAutoIncrementKey)
                 throw new NotSupportedException($"实体{entityMapper.EntityType.FullName}表未配置自增长字段，无法返回Identity值");
-            if (hasUpdateFields || hasOutput) throw new NotSupportedException("不支持同时OnDuplicateKeyUpdate、Returning、Identity操作，只能选择一种操作");
-            this.ValuesBuilder.Append(this.OrmProvider.GetIdentitySql(null));
+            tailSql = this.OrmProvider.GetIdentitySql(null);
         }
-        this.FieldsBuilder.Insert(0, $"{this.BuildHeadSql()} {tableName}(");
         this.FieldsBuilder.Append(this.ValuesBuilder);
-        var sql = this.FieldsBuilder.ToString();
-
-        this.FieldsBuilder.Clear();
-        this.ValuesBuilder.Clear();
-        return sql;
+        return $"{this.BuildHeadSql()} {tableName}({this.FieldsBuilder}) VALUES({this.ValuesBuilder}){tailSql}";
     }
     public override string BuildWithBulkSql(ITheaCommand command, out List<SqlFieldSegment> readerFields)
     {
@@ -220,10 +206,10 @@ public class MySqlCreateVisitor : CreateVisitor
                 throw new NotSupportedException("不支持同时OnDuplicateKeyUpdate和Returning操作，只能选择一种操作");
 
             var builder = new StringBuilder();
-            if (this.UpdateBuilder != null && this.UpdateBuilder.Length > 0)
+            if (this.UpdateBuilder != null)
                 tailSql = this.UpdateBuilder.ToString();
             this.ValuesBuilder.Append(')');
-            if (this.OutputFieldNames != null && this.OutputFieldNames.Count > 0)
+            if (this.OutputFieldNames != null)
                 tailSql = this.BuildOutputSql(out readerFields);
         }
         var fieldsSql = $"({this.FieldsBuilder}) VALUES";
@@ -593,5 +579,11 @@ public class MySqlCreateVisitor : CreateVisitor
         var sql = builder.ToString();
         builder.Clear();
         return sql;
+    }
+    public override void Dispose()
+    {
+        base.Dispose();
+        this.UpdateBuilder = null;
+        this.OutputFieldNames = null;
     }
 }

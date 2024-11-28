@@ -20,7 +20,6 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
 
     public List<string> OnlyFieldNames { get; set; }
     public List<string> IgnoreFieldNames { get; set; }
-    //public List<FieldsSegment> InsertFields { get; set; } = new();
     public ActionMode ActionMode { get; set; }
     public bool IsReturnIdentity { get; set; }
 
@@ -180,7 +179,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         //多语句执行，一次性不分批次
         var builder = new StringBuilder();
         (var isNeedSplit, var tableName, var insertObjs, _, var firstSqlSetter,
-            var loopSqlSetter, readerFields) = this.BuildWithBulk(command);
+            var loopSqlSetter, _, readerFields) = this.BuildWithBulk(command);
 
         void Execute(string tableName, IEnumerable insertObjs)
         {

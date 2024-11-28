@@ -61,7 +61,7 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                 {
                     var builder = new StringBuilder();
                     (isNeedSplit, var tableName, var insertObjs, var bulkCount,
-                        var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
+                        var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
                     int executor(string tableName, IEnumerable insertObjs)
                     {
                         int count = 0, index = 0;
@@ -159,7 +159,7 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                 {
                     var builder = new StringBuilder();
                     (isNeedSplit, var tableName, var insertObjs, var bulkCount,
-                        var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command);
+                        var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
                     async Task<int> executor(string tableName, IEnumerable insertObjs)
                     {
                         int count = 0, index = 0;
@@ -216,6 +216,7 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
 
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
+        this.Visitor.Dispose();
         return result;
     }
     #endregion
