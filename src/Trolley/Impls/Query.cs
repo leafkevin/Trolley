@@ -156,12 +156,32 @@ public class QueryBase : QueryInternal, IQueryBase
     protected TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
     {
         this.Visitor.Select(sqlFormat, fieldExpr);
-        return this.DbContext.QueryFirst<TTarget>(this.Visitor);
+        return this.DbContext.QueryFrom<TTarget, TTarget>(this.Visitor, true, (entityType, reader, readerFields) =>
+        {
+            TTarget result = default;
+            if (reader.Read())
+            {
+                if (entityType.IsEntityType(out _))
+                    result = reader.ToEntity<TTarget>(this.DbContext, readerFields);
+                else result = reader.ToValue<TTarget>(this.DbContext);
+            }
+            return result;
+        });
     }
     protected async Task<TTarget> QueryFirstValueAsync<TTarget>(string sqlFormat, Expression fieldExpr = null, CancellationToken cancellationToken = default)
     {
         this.Visitor.Select(sqlFormat, fieldExpr);
-        return await this.DbContext.QueryFirstAsync<TTarget>(this.Visitor, cancellationToken);
+        return await this.DbContext.QueryFromAsync<TTarget, TTarget>(this.Visitor, true, (entityType, reader, readerFields) =>
+        {
+            TTarget result = default;
+            if (reader.Read())
+            {
+                if (entityType.IsEntityType(out _))
+                    result = reader.ToEntity<TTarget>(this.DbContext, readerFields);
+                else result = reader.ToValue<TTarget>(this.DbContext);
+            }
+            return result;
+        }, cancellationToken);
     }
     #endregion
 }
@@ -544,7 +564,7 @@ public class Query<T> : QueryBase, IQuery<T>
     #region First/ToList/ToPageList/ToDictionary
     public virtual T First()
     {
-        return this.DbContext.Query<T, T>(this.Visitor, true, (entityType, reader, readerFields) =>
+        return this.DbContext.QueryFrom<T, T>(this.Visitor, true, (entityType, reader, readerFields) =>
         {
             T result = default;
             if (reader.Read())
@@ -558,7 +578,7 @@ public class Query<T> : QueryBase, IQuery<T>
     }
     public virtual async Task<T> FirstAsync(CancellationToken cancellationToken = default)
     {
-        return await this.DbContext.QueryAsync<T, T>(this.Visitor, true, (entityType, reader, readerFields) =>
+        return await this.DbContext.QueryFromAsync<T, T>(this.Visitor, true, (entityType, reader, readerFields) =>
         {
             T result = default;
             if (reader.Read())
@@ -572,14 +592,14 @@ public class Query<T> : QueryBase, IQuery<T>
     }
     public virtual List<T> ToList()
     {
-        return this.DbContext.Query<T, List<T>>(this.Visitor, false, (entityType, reader, readerFields) =>
+        return this.DbContext.QueryFrom<T, List<T>>(this.Visitor, false, (entityType, reader, readerFields) =>
         {
             var result = new List<T>();
             if (entityType.IsEntityType(out _))
             {
                 while (reader.Read())
                 {
-                    result.Add(reader.ToEntity<T>(this.DbContext));
+                    result.Add(reader.ToEntity<T>(this.DbContext, readerFields));
                 }
             }
             else
@@ -594,7 +614,7 @@ public class Query<T> : QueryBase, IQuery<T>
     }
     public virtual async Task<List<T>> ToListAsync(CancellationToken cancellationToken = default)
     {
-        return await this.DbContext.QueryAsync<T, List<T>>(this.Visitor, false, (entityType, reader, readerFields) =>
+        return await this.DbContext.QueryFromAsync<T, List<T>>(this.Visitor, false, (entityType, reader, readerFields) =>
         {
             var result = new List<T>();
             if (entityType.IsEntityType(out _))
@@ -616,7 +636,7 @@ public class Query<T> : QueryBase, IQuery<T>
     }
     public virtual IPagedList<T> ToPageList() => this.DbContext.QueryPage<T>(this.Visitor);
     public virtual async Task<IPagedList<T>> ToPageListAsync(CancellationToken cancellationToken = default)
-        => await this.DbContext.QueryPageAsync<T>(this.Visitor, cancellationToken);
+        => await this.DbContext.QueryPageAsync<T>(this.Visitor, false, cancellationToken);
     public virtual Dictionary<TKey, TValue> ToDictionary<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector) where TKey : notnull
     {
         if (keySelector == null)

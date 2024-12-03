@@ -148,7 +148,7 @@ public class PostgreSqlQuery<T> : Query<T>, IPostgreSqlQuery<T>
     #region First/ToList/ToPageList/ToDictionary
     public override T First()
     {
-        return this.DbContext.Query<T, T>(this.Visitor, true, (entityType, reader, readerFields) =>
+        return this.DbContext.QueryFrom<T, T>(this.Visitor, true, (entityType, reader, readerFields) =>
         {
             T result = default;
             if (reader.Read())
@@ -162,7 +162,7 @@ public class PostgreSqlQuery<T> : Query<T>, IPostgreSqlQuery<T>
     }
     public override async Task<T> FirstAsync(CancellationToken cancellationToken = default)
     {
-        return await this.DbContext.QueryAsync<T, T>(this.Visitor, true, (entityType, reader, readerFields) =>
+        return await this.DbContext.QueryFromAsync<T, T>(this.Visitor, true, (entityType, reader, readerFields) =>
         {
             T result = default;
             if (reader.Read())
@@ -176,7 +176,7 @@ public class PostgreSqlQuery<T> : Query<T>, IPostgreSqlQuery<T>
     }
     public override List<T> ToList()
     {
-        return this.DbContext.Query<T, List<T>>(this.Visitor, false, (entityType, reader, readerFields) =>
+        return this.DbContext.QueryFrom<T, List<T>>(this.Visitor, false, (entityType, reader, readerFields) =>
         {
             var result = new List<T>();
             if (entityType.IsEntityType(out _))
@@ -198,7 +198,7 @@ public class PostgreSqlQuery<T> : Query<T>, IPostgreSqlQuery<T>
     }
     public override async Task<List<T>> ToListAsync(CancellationToken cancellationToken = default)
     {
-        return await this.DbContext.QueryAsync<T, List<T>>(this.Visitor, false, (entityType, reader, readerFields) =>
+        return await this.DbContext.QueryFromAsync<T, List<T>>(this.Visitor, false, (entityType, reader, readerFields) =>
         {
             var result = new List<T>();
             if (entityType.IsEntityType(out _))

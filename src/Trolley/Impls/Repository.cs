@@ -113,15 +113,30 @@ public class Repository : IRepository
                 throw new NotSupportedException("不支持的参数类型，QueryFirst方法的parameters参数，支持实体类型参数，命名、匿名对象或是字典对象");
         }
 
-        return this.DbContext.QueryFirst<TEntity>(f =>
+        var entityType = typeof(TEntity);
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
+        if (parameters != null)
         {
-            f.CommandText = rawSql;
-            if (parameters != null)
-            {
-                var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.OrmProvider, rawSql, parameters);
-                commandInitializer.Invoke(f.Parameters, this.OrmProvider, parameters);
-            }
-        });
+            var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.OrmProvider, rawSql, parameters);
+            commandInitializer.Invoke(command.Parameters, this.OrmProvider, parameters);
+        }
+        command.CommandText = rawSql;
+
+        connection.Open();
+        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+        using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
+        TEntity result = default;
+        if (reader.Read())
+        {
+            if (entityType.IsEntityType(out _))
+                result = reader.ToEntity<TEntity>(this.DbContext);
+            else result = reader.ToValue<TEntity>(this.DbContext);
+        }
+
+        reader.Dispose();
+        command.Dispose();
+        if (isNeedClose) connection.Close();
+        return result;
     }
     public virtual async Task<TEntity> QueryFirstAsync<TEntity>(string rawSql, object parameters = null, CancellationToken cancellationToken = default)
     {
@@ -134,15 +149,30 @@ public class Repository : IRepository
                 throw new NotSupportedException("不支持的参数类型，QueryFirstAsync方法的parameters参数，支持实体类型参数，命名、匿名对象或是字典对象");
         }
 
-        return await this.DbContext.QueryFirstAsync<TEntity>(f =>
+        var entityType = typeof(TEntity);
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
+        if (parameters != null)
         {
-            f.CommandText = rawSql;
-            if (parameters != null)
-            {
-                var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.OrmProvider, rawSql, parameters);
-                commandInitializer.Invoke(f.Parameters, this.OrmProvider, parameters);
-            }
-        }, cancellationToken);
+            var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.OrmProvider, rawSql, parameters);
+            commandInitializer.Invoke(command.Parameters, this.OrmProvider, parameters);
+        }
+        command.CommandText = rawSql;
+
+        await connection.OpenAsync(cancellationToken);
+        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+        using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
+        TEntity result = default;
+        if (await reader.ReadAsync(cancellationToken))
+        {
+            if (entityType.IsEntityType(out _))
+                result = reader.ToEntity<TEntity>(this.DbContext);
+            else result = reader.ToValue<TEntity>(this.DbContext);
+        }
+
+        await reader.DisposeAsync();
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
+        return result;
     }
     public virtual TEntity QueryFirst<TEntity>(object whereObj)
     {
@@ -183,15 +213,38 @@ public class Repository : IRepository
                 throw new NotSupportedException("不支持的参数类型，Query方法的parameters参数，支持实体类型参数，命名、匿名对象或是字典对象");
         }
 
-        return this.DbContext.Query<TEntity>(f =>
+        var entityType = typeof(TEntity);
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
+        if (parameters != null)
         {
-            f.CommandText = rawSql;
-            if (parameters != null)
+            var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.OrmProvider, rawSql, parameters);
+            commandInitializer.Invoke(command.Parameters, this.OrmProvider, parameters);
+        }
+        command.CommandText = rawSql;
+
+        connection.Open();
+        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+        using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
+        var result = new List<TEntity>();
+        if (entityType.IsEntityType(out _))
+        {
+            while (reader.Read())
             {
-                var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.OrmProvider, rawSql, parameters);
-                commandInitializer.Invoke(f.Parameters, this.OrmProvider, parameters);
+                result.Add(reader.ToEntity<TEntity>(this.DbContext));
             }
-        });
+        }
+        else
+        {
+            while (reader.Read())
+            {
+                result.Add(reader.ToValue<TEntity>(this.DbContext));
+            }
+        }
+
+        reader.Dispose();
+        command.Dispose();
+        if (isNeedClose) connection.Close();
+        return result;
     }
     public virtual async Task<List<TEntity>> QueryAsync<TEntity>(string rawSql, object parameters = null, CancellationToken cancellationToken = default)
     {
@@ -204,15 +257,38 @@ public class Repository : IRepository
                 throw new NotSupportedException("不支持的参数类型，QueryAsync方法的parameters参数，支持实体类型参数，命名、匿名对象或是字典对象");
         }
 
-        return await this.DbContext.QueryAsync<TEntity>(f =>
+        var entityType = typeof(TEntity);
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
+        if (parameters != null)
         {
-            f.CommandText = rawSql;
-            if (parameters != null)
+            var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.OrmProvider, rawSql, parameters);
+            commandInitializer.Invoke(command.Parameters, this.OrmProvider, parameters);
+        }
+        command.CommandText = rawSql;
+
+        await connection.OpenAsync(cancellationToken);
+        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+        using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
+        var result = new List<TEntity>();
+        if (entityType.IsEntityType(out _))
+        {
+            while (await reader.ReadAsync(cancellationToken))
             {
-                var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.OrmProvider, rawSql, parameters);
-                commandInitializer.Invoke(f.Parameters, this.OrmProvider, parameters);
+                result.Add(reader.ToEntity<TEntity>(this.DbContext));
             }
-        }, cancellationToken);
+        }
+        else
+        {
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                result.Add(reader.ToValue<TEntity>(this.DbContext));
+            }
+        }
+
+        await reader.DisposeAsync();
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
+        return result;
     }
     public virtual List<TEntity> Query<TEntity>(object whereObj)
     {
@@ -425,6 +501,8 @@ public class Repository : IRepository
                 updateObjType = updateObj.GetType();
                 break;
             }
+            var fieldsSqlSetter = RepositoryHelper.BuildFieldsSqlParametersPart(this.DbContext, entityType, updateObjType, 4, false, false, true, false, null, null);
+            var whereSqlSetter = RepositoryHelper.BuildWhereSqlParametersPart(this.DbContext, entityType, updateObjType, false, true, true, false, true);
             (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.DbContext, entityType, updateObjType, true, null, null);
             var typedSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
 
@@ -615,7 +693,6 @@ public class Repository : IRepository
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
 
-        TEntity result = default;
         var entityType = typeof(TEntity);
         bool isBulk = whereObj is IEnumerable && whereObj is not string && whereObj is not IDictionary<string, object>;
         var whereObjType = whereObj.GetType();
@@ -623,41 +700,20 @@ public class Repository : IRepository
             throw new NotSupportedException("不支持的参数类型，Exists方法的whereObj参数，支持实体类型参数，命名、匿名对象或是字典对象");
 
         (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
-        var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.DbContext, entityType, whereObjType, false, false);
+        var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.DbContext, entityType, whereObjType, whereObj, false, isBulk);
         var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
         command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this.DbContext, whereObj);
-
-        var entityType = typeof(TEntity);
-        var whereObjType = whereObj.GetType();
-        var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.DbContext, entityType, whereObjType, false, isBulk);
-        var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
-        f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.DbContext, whereObj);
-
 
         connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
+        int result = 0;
         if (reader.Read())
-        {
-            if (entityType.IsEntityType(out _))
-                result = reader.ToEntity<TEntity>(this.DbContext);
-            else result = reader.ToValue<TEntity>(this.DbContext);
-        }
+            result = reader.ToValue<int>(this.DbContext);
 
         reader.Dispose();
         command.Dispose();
         if (isNeedClose) connection.Close();
-        return result;
-
-
-        var result = this.DbContext.QueryFirst<int>(f =>
-        {
-            var entityType = typeof(TEntity);
-            var whereObjType = whereObj.GetType();
-            var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.DbContext, entityType, whereObjType, false);
-            var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
-            f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.DbContext, whereObj);
-        });
         return result > 0;
     }
     public virtual async Task<bool> ExistsAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default)
@@ -665,14 +721,27 @@ public class Repository : IRepository
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
 
-        var result = await this.DbContext.QueryFirstAsync<int>(f =>
-        {
-            var entityType = typeof(TEntity);
-            var whereObjType = whereObj.GetType();
-            var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.DbContext, entityType, whereObjType, false);
-            var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
-            f.CommandText = typedCommandInitializer.Invoke(f.Parameters, this.DbContext, whereObj);
-        }, cancellationToken);
+        var entityType = typeof(TEntity);
+        bool isBulk = whereObj is IEnumerable && whereObj is not string && whereObj is not IDictionary<string, object>;
+        var whereObjType = whereObj.GetType();
+        if (!whereObjType.IsEntityType(out _))
+            throw new NotSupportedException("不支持的参数类型，ExistsAsync方法的whereObj参数，支持实体类型参数，命名、匿名对象或是字典对象");
+
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
+        var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.DbContext, entityType, whereObjType, whereObj, false, isBulk);
+        var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
+        command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this.DbContext, whereObj);
+
+        await connection.OpenAsync(cancellationToken);
+        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+        var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
+        int result = 0;
+        if (await reader.ReadAsync(cancellationToken))
+            result = reader.ToValue<int>(this.DbContext);
+
+        await reader.DisposeAsync();
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
         return result > 0;
     }
     public virtual bool Exists<TEntity>(Expression<Func<TEntity, bool>> wherePredicate = null)

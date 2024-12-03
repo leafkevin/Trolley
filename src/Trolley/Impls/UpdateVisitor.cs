@@ -635,40 +635,22 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     {
         var entityType = this.Tables[0].EntityType;
         var whereObjType = whereObj.GetType();
-        (var isDictionary, var whereSqlParametersSetter) = RepositoryHelper.BuildSqlParametersPart(this.DbContext, entityType, whereObjType, false, false, false, true, true, false, this.IsMultiple, false, null, null, " AND ", null);
         var builder = new StringBuilder();
+        var whereSqlParameters = RepositoryHelper.BuildWhereSqlParametersPart(this.DbContext, entityType, whereObjType, true, false, true, this.IsMultiple, false);
         if (!string.IsNullOrEmpty(this.WhereSql))
             builder.Append($"{this.WhereSql} AND ");
-        if (isDictionary)
+        if (this.IsMultiple)
         {
-            var entityMapper = this.Tables[0].Mapper;
-            if (this.IsMultiple)
-            {
-                var typedWhereSqlParametersSetter = whereSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, DbContext, EntityMap, object, string>;
-                typedWhereSqlParametersSetter.Invoke(this.DbParameters, builder, this.DbContext, entityMapper, whereObj, $"_m{this.CommandIndex}");
-            }
-            else
-            {
-                var typedWhereSqlParametersSetter = whereSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, DbContext, EntityMap, object>;
-                typedWhereSqlParametersSetter.Invoke(this.DbParameters, builder, this.DbContext, entityMapper, whereObj);
-            }
+            var typedWhereSqlParameters = whereSqlParameters as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
+            typedWhereSqlParameters.Invoke(this.DbParameters, builder, this.DbContext, whereObj, $"_m{this.CommandIndex}");
         }
         else
         {
-            if (this.IsMultiple)
-            {
-                var typedWhereSqlParametersSetter = whereSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
-                typedWhereSqlParametersSetter.Invoke(this.DbParameters, builder, this.DbContext, whereObj, $"_m{this.CommandIndex}");
-            }
-            else
-            {
-                var typedWhereSqlParametersSetter = whereSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
-                typedWhereSqlParametersSetter.Invoke(this.DbParameters, builder, this.DbContext, whereObj);
-            }
+            var typedWhereSqlParameters = whereSqlParameters as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
+            typedWhereSqlParameters.Invoke(this.DbParameters, builder, this.DbContext, whereObj);
         }
         this.WhereSql = builder.ToString();
         builder.Clear();
-        builder = null;
     }
     protected virtual void VisitWhere(Expression whereExpr)
     {

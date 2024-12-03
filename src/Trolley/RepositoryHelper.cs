@@ -1485,7 +1485,7 @@ public class RepositoryHelper
 
                     var fieldValueExpr = Expression.PropertyOrField(typedInsertObjExpr, memberMapper.MemberName);
                     var fieldValueType = memberInfo.GetMemberType();
-                    AddValueParameter(dbContext, dbParametersExpr, ormProviderExpr, myParameterNameExpr, fieldValueType, fieldValueExpr, memberMapper, blockParameters, blockBodies);
+                    AddValueParameter(dbContext, dbParametersExpr, ormProviderExpr, myParameterNameExpr, fieldValueType, fieldValueExpr, memberMapper, blockBodies);
                     index++;
                 }
 
@@ -1498,19 +1498,18 @@ public class RepositoryHelper
             }
         });
     }
-    public static (string, Action<StringBuilder, string>, object, object) BuildUpdateSqlParameters(DbContext dbContext, Type entityType, Type updateObjType, bool hasSuffix, List<string> onlyFieldNames, List<string> ignoreFieldNames)
+    public static (string, Action<StringBuilder, string>, object, object) BuildUpdateSqlParameters(DbContext dbContext, Type entityType, Type updateObjType, bool isMultiple, bool isBulk, List<string> onlyFieldNames, List<string> ignoreFieldNames)
     {
         var ormProvider = dbContext.OrmProvider;
         var mapProvider = dbContext.MapProvider;
+        var hasSuffix = isMultiple || isBulk;
         var cacheKey = RepositoryHelper.GetCacheKey(ormProvider.OrmProviderType, mapProvider, entityType, updateObjType, hasSuffix, onlyFieldNames, ignoreFieldNames);
         var cache = hasSuffix ? updateMultiCommandInitializerCache : updateCommandInitializerCache;
         return cache.GetOrAdd(cacheKey, f =>
         {
             var entityMapper = mapProvider.GetEntityMap(entityType);
-            (bool isDictionary, var setSqlParametersSetter) = BuildSqlParametersPart(dbContext, entityType, updateObjType, true, false, false, false, false, false, hasSuffix, true, onlyFieldNames, ignoreFieldNames, ",", null);
-            (_, var whereSqlParametersSetter) = BuildSqlParametersPart(dbContext, entityType, updateObjType, false, false, false, true, true, false, hasSuffix, false, null, null, " AND ", null);
-            (_, var setSqlSetter) = BuildSqlParametersPart(dbContext, entityType, updateObjType, true, false, true, false, false, false, hasSuffix, true, onlyFieldNames, ignoreFieldNames, ",", null);
-            (_, var whereSqlSetter) = BuildSqlParametersPart(dbContext, entityType, updateObjType, false, false, true, true, true, false, hasSuffix, false, null, null, " AND ", null);
+            var fieldsSqlSetter = BuildFieldsSqlParametersPart(dbContext, entityType, updateObjType, 4, false, false, hasSuffix, false, onlyFieldNames, ignoreFieldNames);
+            var whereSqlSetter = BuildWhereSqlParametersPart(dbContext, entityType, updateObjType, false, true, true, isMultiple, isBulk);
             object firstSqlParametersSetter = null, sqlSetter = null;
 
             string tableName = entityMapper.TableName;
@@ -1521,16 +1520,14 @@ public class RepositoryHelper
             {
                 Action<IDataParameterCollection, StringBuilder, DbContext, object, string> typedFirstSqlParametersSetter = null;
                 Action<StringBuilder, DbContext, object, string> typedSqlSetter = null;
-                var typedSetSqlParametersSetter = setSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
-                var typedWhereSqlParametersSetter = whereSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
-                var typedSetSqlSetter = setSqlSetter as Action<StringBuilder, DbContext, object, string>;
-                var typedWhereSqlSetter = whereSqlSetter as Action<StringBuilder, DbContext, object, string>;
+                var typedFieldsSqlSetter = fieldsSqlSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
+                var typedWhereSqlSetter = whereSqlSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
 
                 typedFirstSqlParametersSetter = (dbParameters, builder, dbContext, parameters, suffix) =>
                 {
-                    typedSetSqlParametersSetter.Invoke(dbParameters, builder, dbContext, parameters, suffix);
+                    typedFieldsSqlSetter.Invoke(dbParameters, builder, dbContext, parameters, suffix);
                     builder.Append(" WHERE ");
-                    typedWhereSqlParametersSetter.Invoke(dbParameters, builder, dbContext, parameters, suffix);
+                    typedWhereSqlSetter.Invoke(dbParameters, builder, dbContext, parameters, suffix);
                 };
                 typedSqlSetter = (builder, ormProvider, parameters, suffix) =>
                 {

@@ -165,7 +165,7 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCre
         }
         command.Dispose();
         if (isNeedClose) connection.Close();
-        his.Visitor.Dispose();
+        this.Visitor.Dispose();
         return result;
     }
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)

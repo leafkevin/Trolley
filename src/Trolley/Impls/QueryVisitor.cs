@@ -978,7 +978,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             blockBodies.Add(Expression.Call(builderExpr, methedInfo, foreignKeyValueExpr));
 
             var foreignKey = this.OrmProvider.GetFieldName(includeSegment.FromMember.ForeignKey);
-            var fields = RepositoryHelper.BuildFieldsSqlPart(this.OrmProvider, includeSegment.Mapper, includeSegment.EntityType, true);
+            var fields = RepositoryHelper.BuildSelectFieldsSqlPart(this.OrmProvider, includeSegment.Mapper, includeSegment.EntityType);
             var headSql = $"SELECT {fields} FROM {{0}} WHERE {foreignKey} IN (";
             var sqlInitializer = Expression.Lambda<Action<StringBuilder, IOrmProvider, object>>(Expression.Block(blockParameters, blockBodies), builderExpr, ormProviderExpr, targetExpr).Compile();
             return (headSql, sqlInitializer);
