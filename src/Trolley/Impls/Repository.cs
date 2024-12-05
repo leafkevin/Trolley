@@ -427,7 +427,7 @@ public class Repository : IRepository
             var entities = insertObjs as IEnumerable;
             var commandExecutor = RepositoryHelper.BuildCreateBulkCommandExecutor(this.DbContext, entityType, entities);
             connection.Open();
-            return commandExecutor.Invoke(this.DbContext, command, entities, bulkCount);
+            result = commandExecutor.Invoke(this.DbContext, command, entities, bulkCount);
         }
         else
         {
@@ -456,7 +456,7 @@ public class Repository : IRepository
             var entities = insertObjs as IEnumerable;
             var commandExecutor = RepositoryHelper.BuildCreateBulkAsyncCommandExecutor(this.DbContext, entityType, entities);
             await connection.OpenAsync(cancellationToken);
-            return await commandExecutor.Invoke(this.DbContext, command, entities, bulkCount, cancellationToken);
+            result = await commandExecutor.Invoke(this.DbContext, command, entities, bulkCount, cancellationToken);
         }
         else
         {
@@ -490,7 +490,7 @@ public class Repository : IRepository
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         bool isBulk = updateObjs is IEnumerable && updateObjs is not string && updateObjs is not IDictionary<string, object>;
         var entityType = typeof(TEntity);
-        var builder = new StringBuilder();
+
         if (isBulk)
         {
             int index = 0;
@@ -501,17 +501,16 @@ public class Repository : IRepository
                 updateObjType = updateObj.GetType();
                 break;
             }
-            var fieldsSqlSetter = RepositoryHelper.BuildFieldsSqlParametersPart(this.DbContext, entityType, updateObjType, 4, false, false, true, false, null, null);
-            var whereSqlSetter = RepositoryHelper.BuildWhereSqlParametersPart(this.DbContext, entityType, updateObjType, false, true, true, false, true);
-            (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.DbContext, entityType, updateObjType, true, null, null);
-            var typedSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
+
+            var commandInitializer = RepositoryHelper.BuildUpdateCommandInitializer(this.DbContext, entityType, updateObjType, true, false, null, null);
+            var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
+            var builder = new StringBuilder();
 
             connection.Open();
             foreach (var updateObj in entities)
             {
                 if (index > 0) builder.Append(';');
-                headSqlSetter.Invoke(builder, tableName);
-                typedSqlSetter.Invoke(command.Parameters, builder, this.DbContext, updateObj, index.ToString());
+                typedCommandInitializer.Invoke(command.Parameters, builder, this.DbContext, updateObj, index.ToString());
                 if (index >= bulkCount)
                 {
                     command.CommandText = builder.ToString();
@@ -528,19 +527,17 @@ public class Repository : IRepository
                 command.CommandText = builder.ToString();
                 result += command.ExecuteNonQuery(CommandSqlType.BulkUpdate);
             }
+            builder.Clear();
         }
         else
         {
             var updateObjType = updateObjs.GetType();
-            (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.DbContext, entityType, updateObjType, false, null, null);
-            headSqlSetter.Invoke(builder, tableName);
-            var typedSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
-            typedSqlSetter.Invoke(command.Parameters, builder, this.DbContext, updateObjs);
-            command.CommandText = builder.ToString();
+            var commandInitializer = RepositoryHelper.BuildUpdateCommandInitializer(this.DbContext, entityType, updateObjType, false, false, null, null);
+            var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
+            command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this.DbContext, updateObjs);
             connection.Open();
             result = command.ExecuteNonQuery(CommandSqlType.Update);
         }
-        builder.Clear();
 
         command.Dispose();
         if (isNeedClose) connection.Close();
@@ -555,7 +552,7 @@ public class Repository : IRepository
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         bool isBulk = updateObjs is IEnumerable && updateObjs is not string && updateObjs is not IDictionary<string, object>;
         var entityType = typeof(TEntity);
-        var builder = new StringBuilder();
+
         if (isBulk)
         {
             int index = 0;
@@ -566,14 +563,15 @@ public class Repository : IRepository
                 updateObjType = updateObj.GetType();
                 break;
             }
-            (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.DbContext, entityType, updateObjType, true, null, null);
-            var typedSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
+            var commandInitializer = RepositoryHelper.BuildUpdateCommandInitializer(this.DbContext, entityType, updateObjType, true, false, null, null);
+            var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
+            var builder = new StringBuilder();
+
             await connection.OpenAsync(cancellationToken);
             foreach (var updateObj in entities)
             {
                 if (index > 0) builder.Append(';');
-                headSqlSetter.Invoke(builder, tableName);
-                typedSqlSetter.Invoke(command.Parameters, builder, this.DbContext, updateObj, index.ToString());
+                typedCommandInitializer.Invoke(command.Parameters, builder, this.DbContext, updateObj, index.ToString());
                 if (index >= bulkCount)
                 {
                     command.CommandText = builder.ToString();
@@ -590,19 +588,18 @@ public class Repository : IRepository
                 command.CommandText = builder.ToString();
                 result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkUpdate, cancellationToken);
             }
+            builder.Clear();
         }
         else
         {
             var updateObjType = updateObjs.GetType();
-            (var tableName, var headSqlSetter, var sqlSetter, _) = RepositoryHelper.BuildUpdateSqlParameters(this.DbContext, entityType, updateObjType, false, null, null);
-            headSqlSetter.Invoke(builder, tableName);
-            var typedSqlSetter = sqlSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
-            typedSqlSetter.Invoke(command.Parameters, builder, this.DbContext, updateObjs);
-            command.CommandText = builder.ToString();
+            var commandInitializer = RepositoryHelper.BuildUpdateCommandInitializer(this.DbContext, entityType, updateObjType, true, false, null, null);
+            var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
+            command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this.DbContext, updateObjs);
+
             await connection.OpenAsync(cancellationToken);
             result = await command.ExecuteNonQueryAsync(CommandSqlType.Update, cancellationToken);
         }
-        builder.Clear();
 
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
@@ -656,7 +653,7 @@ public class Repository : IRepository
             }
         }
         else whereObjType = whereKeys.GetType();
-        (var isMultiKeys, var tableName, var whereSqlParametersSetter, var sqlSetter) = RepositoryHelper.BuildDeleteCommandInitializer(this.DbContext, entityType, whereObjType, isBulk, isBulk);
+        (var isMultiKeys, var tableName, var headSqlSetter, var whereSqlParametersSetter) = RepositoryHelper.BuildDeleteCommandInitializer(this.DbContext, entityType, whereObjType, false, isBulk);
 
         int index = 0;
         var builder = new StringBuilder();
@@ -679,7 +676,7 @@ public class Repository : IRepository
             var typedWhereSqlParametersSetter = whereSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
             typedWhereSqlParametersSetter.Invoke(command.Parameters, whereSqlBuilder, this.DbContext, whereKeys);
         }
-        sqlSetter.Invoke(builder, tableName);
+        headSqlSetter.Invoke(builder, tableName);
         builder.Append(whereSqlBuilder);
         command.CommandText = builder.ToString();
         builder.Clear();
@@ -865,12 +862,12 @@ public class Repository : IRepository
                 case MultipleCommandType.Update:
                     var updateVisitor = visitor as IUpdateVisitor;
                     updateVisitor.Initialize(multiCcommand.EntityType, true, isFirst);
-                    updateVisitor.BuildMultiCommand(this.DbContext, command.BaseCommand, sqlBuilder, multiCcommand, commandIndex);
+                    updateVisitor.BuildMultiCommand(this.DbContext, command, sqlBuilder, multiCcommand, commandIndex);
                     break;
                 case MultipleCommandType.Delete:
                     var deleteVisitor = visitor as IDeleteVisitor;
                     deleteVisitor.Initialize(multiCcommand.EntityType, true, isFirst);
-                    deleteVisitor.BuildMultiCommand(this.DbContext, command.BaseCommand, sqlBuilder, multiCcommand, commandIndex);
+                    deleteVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
                     break;
             }
             commandIndex++;
@@ -917,12 +914,12 @@ public class Repository : IRepository
                 case MultipleCommandType.Update:
                     var updateVisitor = visitor as IUpdateVisitor;
                     updateVisitor.Initialize(multiCcommand.EntityType, true, isFirst);
-                    updateVisitor.BuildMultiCommand(this.DbContext, command.BaseCommand, sqlBuilder, multiCcommand, commandIndex);
+                    updateVisitor.BuildMultiCommand(this.DbContext, command, sqlBuilder, multiCcommand, commandIndex);
                     break;
                 case MultipleCommandType.Delete:
                     var deleteVisitor = visitor as IDeleteVisitor;
                     deleteVisitor.Initialize(multiCcommand.EntityType, true, isFirst);
-                    deleteVisitor.BuildMultiCommand(this.DbContext, command.BaseCommand, sqlBuilder, multiCcommand, commandIndex);
+                    deleteVisitor.BuildMultiCommand(command, sqlBuilder, multiCcommand, commandIndex);
                     break;
             }
             commandIndex++;

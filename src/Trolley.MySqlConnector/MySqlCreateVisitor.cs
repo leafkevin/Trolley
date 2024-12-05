@@ -75,10 +75,7 @@ public class MySqlCreateVisitor : CreateVisitor
 
         if (this.UpdateBuilder != null && this.OutputFieldNames != null || this.UpdateBuilder != null && this.IsReturnIdentity
             || this.OutputFieldNames != null && this.IsReturnIdentity)
-            throw new NotSupportedException("不支持同时OnDuplicateKeyUpdate、Returning、Identity操作，只能选择一种操作");
-
-        this.FieldsBuilder.Append(") VALUES(");
-        this.ValuesBuilder.Append(')');
+            throw new NotSupportedException("不支持同时OnDuplicateKeyUpdate、Returning、Identity操作，只能选择一种操作");       
 
         string tailSql = null;
         if (this.UpdateBuilder != null)
@@ -103,19 +100,35 @@ public class MySqlCreateVisitor : CreateVisitor
         var builder = new StringBuilder();
         (var isNeedSplit, var tableName, var insertObjs, _, var firstSqlSetter,
             var loopSqlSetter, var tailSql, readerFields) = this.BuildWithBulk(command);
-
-        void Execute(string tableName, IEnumerable insertObjs)
+        Action<string, IEnumerable> executor = null;
+        if (tailSql != null)
         {
-            firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-            int index = 0;
-            foreach (var insertObj in insertObjs)
+            executor = (tableName, insertObjs) =>
             {
-                if (index > 0) builder.Append(',');
-                loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
-                index++;
-            }
-            if (tailSql != null)
+                firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                int index = 0;
+                foreach (var insertObj in insertObjs)
+                {
+                    if (index > 0) builder.Append(',');
+                    loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
+                    index++;
+                }
                 builder.Append(tailSql);
+            };
+        }
+        else
+        {
+            executor = (tableName, insertObjs) =>
+            {
+                firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                int index = 0;
+                foreach (var insertObj in insertObjs)
+                {
+                    if (index > 0) builder.Append(',');
+                    loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
+                    index++;
+                }
+            };
         }
         if (isNeedSplit)
         {
@@ -125,11 +138,11 @@ public class MySqlCreateVisitor : CreateVisitor
             foreach (var tabledInsertObj in tabledInsertObjs)
             {
                 if (index > 0) builder.Append(';');
-                Execute(tabledInsertObj.Key, tabledInsertObj.Value);
+                executor(tabledInsertObj.Key, tabledInsertObj.Value);
                 index++;
             }
         }
-        else Execute(tableName, insertObjs);
+        else executor(tableName, insertObjs);
         var sql = builder.ToString();
         builder.Clear();
         return sql;
@@ -205,10 +218,8 @@ public class MySqlCreateVisitor : CreateVisitor
             if (this.UpdateBuilder != null && this.OutputFieldNames != null)
                 throw new NotSupportedException("不支持同时OnDuplicateKeyUpdate和Returning操作，只能选择一种操作");
 
-            var builder = new StringBuilder();
             if (this.UpdateBuilder != null)
                 tailSql = this.UpdateBuilder.ToString();
-            this.ValuesBuilder.Append(')');
             if (this.OutputFieldNames != null)
                 tailSql = this.BuildOutputSql(out readerFields);
         }
@@ -290,7 +301,7 @@ public class MySqlCreateVisitor : CreateVisitor
     {
         var entityType = this.Tables[0].EntityType;
         var updateObjType = updateObj.GetType();
-        var setFieldsSetter = RepositoryHelper.BuildFieldsSqlParametersPart(this.DbContext, entityType, updateObjType, 3, false, false, this.IsMultiple, false, this.OnlyFieldNames, this.IgnoreFieldNames);
+        var setFieldsSetter = RepositoryHelper.BuildFieldsSqlParametersPart(this.DbContext, entityType, updateObjType, 3, false, false, false, this.IsMultiple, false, this.OnlyFieldNames, this.IgnoreFieldNames);
         var entityMapper = this.Tables[0].Mapper;
         if (this.IsMultiple)
         {

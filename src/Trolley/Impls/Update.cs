@@ -148,7 +148,7 @@ public class Update<TEntity> : IUpdate<TEntity>
     #endregion
 
     #region SetBulk
-    public virtual IContinuedUpdate<TEntity> SetBulk<TUpdateObj>(IEnumerable<TUpdateObj> updateObjs, int bulkCount = 500)
+    public virtual IBulkContinuedUpdate<TEntity> SetBulk<TUpdateObj>(IEnumerable<TUpdateObj> updateObjs, int bulkCount = 500)
     {
         if (updateObjs == null)
             throw new ArgumentNullException(nameof(updateObjs));
@@ -164,7 +164,7 @@ public class Update<TEntity> : IUpdate<TEntity>
         if (isEmpty) throw new Exception("批量更新，updateObjs参数至少要有一条数据");
 
         this.Visitor.SetBulk(updateObjs, bulkCount);
-        return this.OrmProvider.NewContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewBulkContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
     }
     #endregion
 }
@@ -194,8 +194,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
         {
             case ActionMode.Bulk:
                 var builder = new StringBuilder();
-                (var updateObjs, var bulkCount, var tableName, var firstParametersSetter,
-                    var firstSqlParametersSetter, var headSqlSetter, var sqlSetter) = this.Visitor.BuildWithBulk(command.BaseCommand);
+                (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter) = this.Visitor.BuildWithBulk(command);
                 Func<int, string> suffixGetter = index => this.Visitor.IsMultiple ? $"_m{this.Visitor.CommandIndex}{index}" : $"{index}";
 
                 Action<object, int> sqlExecuter = null;
@@ -205,14 +204,11 @@ public class Updated<TEntity> : IUpdated<TEntity>
                     {
                         if (index > 0) builder.Append(';');
                         var tableNames = this.Visitor.ShardingTables[0].TableNames;
-                        headSqlSetter.Invoke(builder, tableNames[0]);
-                        firstSqlParametersSetter.Invoke(command.Parameters, builder, this.DbContext, updateObj, suffixGetter.Invoke(index));
-
+                        firstSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableNames[0], updateObj, suffixGetter.Invoke(index));
                         for (int i = 1; i < tableNames.Count; i++)
                         {
                             builder.Append(';');
-                            headSqlSetter.Invoke(builder, tableNames[i]);
-                            sqlSetter.Invoke(builder, this.DbContext, updateObj, suffixGetter.Invoke(index));
+                            sqlSetter.Invoke(builder, this.DbContext, tableNames[i], updateObj, suffixGetter.Invoke(index));
                         }
                     };
                 }
@@ -221,13 +217,12 @@ public class Updated<TEntity> : IUpdated<TEntity>
                     sqlExecuter = (updateObj, index) =>
                     {
                         if (index > 0) builder.Append(';');
-                        headSqlSetter.Invoke(builder, tableName);
-                        firstSqlParametersSetter.Invoke(command.Parameters, builder, this.DbContext, updateObj, suffixGetter.Invoke(index));
+                        firstSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableName, updateObj, suffixGetter.Invoke(index));
                     };
                 }
 
                 int index = 0;
-                firstParametersSetter?.Invoke(command.Parameters);
+                fixedParameterSetter?.Invoke(command.Parameters);
                 connection.Open();
                 foreach (var updateObj in updateObjs)
                 {
@@ -237,7 +232,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
                         command.CommandText = builder.ToString();
                         result += command.ExecuteNonQuery(CommandSqlType.BulkUpdate);
                         command.Parameters.Clear();
-                        firstParametersSetter?.Invoke(command.Parameters);
+                        fixedParameterSetter?.Invoke(command.Parameters);
                         builder.Clear();
                         index = 0;
                         continue;
@@ -254,7 +249,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
             default:
                 if (!this.Visitor.HasWhere)
                     throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
-                command.CommandText = this.Visitor.BuildCommand(this.DbContext, command.BaseCommand);
+                command.CommandText = this.Visitor.BuildCommand(this.DbContext, command);
                 connection.Open();
                 result = command.ExecuteNonQuery(CommandSqlType.Update);
                 break;
@@ -275,8 +270,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
         {
             case ActionMode.Bulk:
                 var builder = new StringBuilder();
-                (var updateObjs, var bulkCount, var tableName, var firstParametersSetter,
-                    var firstSqlParametersSetter, var headSqlSetter, var sqlSetter) = this.Visitor.BuildWithBulk(command.BaseCommand);
+                (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter) = this.Visitor.BuildWithBulk(command);
                 Func<int, string> suffixGetter = index => this.Visitor.IsMultiple ? $"_m{this.Visitor.CommandIndex}{index}" : $"{index}";
 
                 Action<object, int> sqlExecuter = null;
@@ -286,14 +280,11 @@ public class Updated<TEntity> : IUpdated<TEntity>
                     {
                         if (index > 0) builder.Append(';');
                         var tableNames = this.Visitor.ShardingTables[0].TableNames;
-                        headSqlSetter.Invoke(builder, tableNames[0]);
-                        firstSqlParametersSetter.Invoke(command.Parameters, builder, this.DbContext, updateObj, suffixGetter.Invoke(index));
-
+                        firstSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableNames[0], updateObj, suffixGetter.Invoke(index));
                         for (int i = 1; i < tableNames.Count; i++)
                         {
                             builder.Append(';');
-                            headSqlSetter.Invoke(builder, tableNames[i]);
-                            sqlSetter.Invoke(builder, this.DbContext, updateObj, suffixGetter.Invoke(index));
+                            sqlSetter.Invoke(builder, this.DbContext, tableNames[i], updateObj, suffixGetter.Invoke(index));
                         }
                     };
                 }
@@ -302,13 +293,12 @@ public class Updated<TEntity> : IUpdated<TEntity>
                     sqlExecuter = (updateObj, index) =>
                     {
                         if (index > 0) builder.Append(';');
-                        headSqlSetter.Invoke(builder, tableName);
-                        firstSqlParametersSetter.Invoke(command.Parameters, builder, this.DbContext, updateObj, suffixGetter.Invoke(index));
+                        firstSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableName, updateObj, suffixGetter.Invoke(index));
                     };
                 }
 
                 int index = 0;
-                firstParametersSetter?.Invoke(command.Parameters);
+                fixedParameterSetter?.Invoke(command.Parameters);
                 await connection.OpenAsync(cancellationToken);
                 foreach (var updateObj in updateObjs)
                 {
@@ -318,7 +308,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
                         command.CommandText = builder.ToString();
                         result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkUpdate, cancellationToken);
                         command.Parameters.Clear();
-                        firstParametersSetter?.Invoke(command.Parameters);
+                        fixedParameterSetter?.Invoke(command.Parameters);
                         builder.Clear();
                         index = 0;
                         continue;
@@ -335,7 +325,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
             default:
                 if (!this.Visitor.HasWhere)
                     throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
-                command.CommandText = this.Visitor.BuildCommand(this.DbContext, command.BaseCommand);
+                command.CommandText = this.Visitor.BuildCommand(this.DbContext, command);
                 await connection.OpenAsync(cancellationToken);
                 result = await command.ExecuteNonQueryAsync(CommandSqlType.Update, cancellationToken);
                 break;
@@ -357,7 +347,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         if (this.Visitor.IsNeedFetchShardingTables)
             this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
-        var sql = this.Visitor.BuildCommand(this.DbContext, command.BaseCommand);
+        var sql = this.Visitor.BuildCommand(this.DbContext, command);
         dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
         if (isNeedClose) connection.Close();
@@ -520,6 +510,138 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
     public virtual IContinuedUpdate<TEntity> And(Expression<Func<TEntity, bool>> predicate)
         => this.And(true, predicate);
     public virtual IContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
+    {
+        if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
+            this.Visitor.And(ifPredicate);
+        }
+        else if (elsePredicate != null) this.Visitor.And(elsePredicate);
+        return this;
+    }
+    #endregion
+}
+public class BulkContinuedUpdate<TEntity> : Updated<TEntity>, IBulkContinuedUpdate<TEntity>
+{
+    #region Constructor
+    public BulkContinuedUpdate(DbContext dbContext, IUpdateVisitor visitor)
+        : base(dbContext, visitor) { }
+    #endregion
+
+    #region Set
+    public virtual IBulkContinuedUpdate<TEntity> Set<TUpdateObj>(TUpdateObj updateObj)
+       => this.Set(true, updateObj);
+    public virtual IBulkContinuedUpdate<TEntity> Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
+    {
+        if (condition)
+        {
+            if (updateObj == null)
+                throw new ArgumentNullException(nameof(updateObj));
+            this.Visitor.SetWith(updateObj);
+        }
+        return this;
+    }
+    public virtual IBulkContinuedUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
+        => this.Set(true, fieldSelector, fieldValue);
+    public virtual IBulkContinuedUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
+    {
+        if (condition)
+        {
+            if (fieldSelector == null)
+                throw new ArgumentNullException(nameof(fieldSelector));
+            if (fieldValue == null)
+                throw new ArgumentNullException(nameof(fieldValue));
+            if (!this.Visitor.IsMemberVisit(fieldSelector.Body))
+                throw new NotSupportedException($"不支持的表达式{nameof(fieldSelector)},只支持MemberAccess类型表达式");
+
+            this.Visitor.SetField(fieldSelector, fieldValue);
+        }
+        return this;
+    }
+    public virtual IBulkContinuedUpdate<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsAssignment)
+       => this.Set(true, fieldsAssignment);
+    public virtual IBulkContinuedUpdate<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment)
+    {
+        if (condition)
+        {
+            if (fieldsAssignment == null)
+                throw new ArgumentNullException(nameof(fieldsAssignment));
+            if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
+                throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
+
+            this.Visitor.Set(fieldsAssignment);
+        }
+        return this;
+    }
+    #endregion
+
+    #region IgnoreFields
+    public virtual IBulkContinuedUpdate<TEntity> IgnoreFields(params string[] fieldNames)
+    {
+        if (fieldNames == null)
+            throw new ArgumentNullException(nameof(fieldNames));
+
+        this.Visitor.IgnoreFields(fieldNames);
+        return this;
+    }
+    public virtual IBulkContinuedUpdate<TEntity> IgnoreFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector)
+    {
+        if (fieldsSelector == null)
+            throw new ArgumentNullException(nameof(fieldsSelector));
+        if (fieldsSelector.Body.NodeType != ExpressionType.MemberAccess && fieldsSelector.Body.NodeType != ExpressionType.New && fieldsSelector.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelector)},只支持MemberAccess、New或MemberInit类型表达式");
+
+        this.Visitor.IgnoreFields(fieldsSelector);
+        return this;
+    }
+    #endregion
+
+    #region OnlyFields
+    public virtual IBulkContinuedUpdate<TEntity> OnlyFields(params string[] fieldNames)
+    {
+        if (fieldNames == null)
+            throw new ArgumentNullException(nameof(fieldNames));
+
+        this.Visitor.OnlyFields(fieldNames);
+        return this;
+    }
+    public virtual IBulkContinuedUpdate<TEntity> OnlyFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector)
+    {
+        if (fieldsSelector == null)
+            throw new ArgumentNullException(nameof(fieldsSelector));
+        if (fieldsSelector.Body.NodeType != ExpressionType.MemberAccess && fieldsSelector.Body.NodeType != ExpressionType.New && fieldsSelector.Body.NodeType != ExpressionType.MemberInit)
+            throw new NotSupportedException($"不支持的表达式{nameof(fieldsSelector)},只支持MemberAccess、New或MemberInit类型表达式");
+
+        this.Visitor.OnlyFields(fieldsSelector);
+        return this;
+    }
+    #endregion
+
+    #region Where/And
+    public virtual IUpdated<TEntity> Where<TWhereObj>(TWhereObj whereObj)
+    {
+        if (whereObj == null)
+            throw new ArgumentNullException(nameof(whereObj));
+        this.Visitor.WhereWith(whereObj);
+        return this;
+    }
+    public virtual IBulkContinuedUpdate<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
+        => this.Where(true, predicate);
+    public virtual IBulkContinuedUpdate<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
+    {
+        if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
+            this.Visitor.Where(ifPredicate);
+        }
+        else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
+        return this;
+    }
+    public virtual IBulkContinuedUpdate<TEntity> And(Expression<Func<TEntity, bool>> predicate)
+        => this.And(true, predicate);
+    public virtual IBulkContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
     {
         if (condition)
         {

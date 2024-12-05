@@ -21,8 +21,8 @@ public interface IDeleteVisitor : IDisposable
 
     void Initialize(Type entityType, bool isMultiple = false, bool isFirst = true);
     MultipleCommand CreateMultipleCommand();
-    string BuildCommand(DbContext dbContext, IDbCommand command);
-    void BuildMultiCommand(DbContext dbContext, IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex);
+    string BuildCommand(ITheaCommand command);
+    void BuildMultiCommand(ITheaCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex);
 
     void UseTable(bool isIncludeMany, params string[] tableNames);
     void UseTable(bool isIncludeMany, Func<string, bool> tableNamePredicate);

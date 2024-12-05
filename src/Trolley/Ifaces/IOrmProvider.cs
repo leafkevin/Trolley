@@ -152,6 +152,7 @@ public interface IOrmProvider
     IUpdate<TEntity> NewUpdate<TEntity>(DbContext dbContext);
     IUpdated<TEntity> NewUpdated<TEntity>(DbContext dbContext, IUpdateVisitor visitor);
     IContinuedUpdate<TEntity> NewContinuedUpdate<TEntity>(DbContext dbContext, IUpdateVisitor visitor);
+    IBulkContinuedUpdate<TEntity> NewBulkContinuedUpdate<TEntity>(DbContext dbContext, IUpdateVisitor visitor);
     IUpdateJoin<TEntity, T1> NewUpdateJoin<TEntity, T1>(DbContext dbContext, IUpdateVisitor visitor);
     IUpdateJoin<TEntity, T1, T2> NewUpdateJoin<TEntity, T1, T2>(DbContext dbContext, IUpdateVisitor visitor);
     IUpdateJoin<TEntity, T1, T2, T3> NewUpdateJoin<TEntity, T1, T2, T3>(DbContext dbContext, IUpdateVisitor visitor);

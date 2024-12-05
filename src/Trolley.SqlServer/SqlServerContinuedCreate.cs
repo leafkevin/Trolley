@@ -99,14 +99,15 @@ public class SqlServerContinuedCreate<TEntity> : ContinuedCreate<TEntity>, ISqlS
                 {
                     var builder = new StringBuilder();
                     (isNeedSplit, var tableName, var insertObjs, var bulkCount,
-                        var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command.BaseCommand);
+                        var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
+
                     int executor(string tableName, IEnumerable insertObjs)
                     {
                         int count = 0, index = 0;
                         foreach (var insertObj in insertObjs)
                         {
                             if (index > 0) builder.Append(',');
-                            loopSqlSetter.Invoke(command.Parameters, builder,this.DbContext, insertObj, index.ToString());
+                            loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
                             if (index >= bulkCount)
                             {
                                 command.CommandText = builder.ToString();
@@ -148,7 +149,7 @@ public class SqlServerContinuedCreate<TEntity> : ContinuedCreate<TEntity>, ISqlS
                 }
             default:
                 //默认单条
-                command.CommandText = this.Visitor.BuildCommand(command.BaseCommand, false, out _);
+                command.CommandText = this.Visitor.BuildCommand(command, false, out _);
                 connection.Open();
                 result = command.ExecuteNonQuery(CommandSqlType.Insert);
                 break;
@@ -196,14 +197,14 @@ public class SqlServerContinuedCreate<TEntity> : ContinuedCreate<TEntity>, ISqlS
                 {
                     var builder = new StringBuilder();
                     (isNeedSplit, var tableName, var insertObjs, var bulkCount,
-                        var firstSqlSetter, var loopSqlSetter, _) = this.Visitor.BuildWithBulk(command.BaseCommand);
+                        var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
                     async Task<int> executor(string tableName, IEnumerable insertObjs)
                     {
                         int count = 0, index = 0;
                         foreach (var insertObj in insertObjs)
                         {
                             if (index > 0) builder.Append(',');
-                            loopSqlSetter.Invoke(command.Parameters, builder,this.DbContext, insertObj, index.ToString());
+                            loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
                             if (index >= bulkCount)
                             {
                                 command.CommandText = builder.ToString();
@@ -245,7 +246,7 @@ public class SqlServerContinuedCreate<TEntity> : ContinuedCreate<TEntity>, ISqlS
                 }
             default:
                 //默认单条
-                command.CommandText = this.Visitor.BuildCommand(command.BaseCommand, false, out _);
+                command.CommandText = this.Visitor.BuildCommand(command, false, out _);
                 await connection.OpenAsync(cancellationToken);
                 result = await command.ExecuteNonQueryAsync(CommandSqlType.Insert, cancellationToken);
                 break;

@@ -247,9 +247,12 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                         break;
                     default: throw new NotSupportedException("批量插入后，只支持WithBy/IgnoreFields/OnlyFields操作");
                 }
-                fixedDbParameters = this.DbParameters.Cast<IDbDataParameter>().ToList();
             }
+            fixedDbParameters = this.DbParameters.Cast<IDbDataParameter>().ToList();
+            this.DbParameters = command.Parameters;
         }
+        //多命令查询时，第二次以后，DbParameters有值，不能再赋值
+        else this.DbParameters ??= command.Parameters;
 
         var entityMapper = tableSegment.Mapper;
         var fieldsSetter = this.GetFieldsSetter(entityType, insertObjType);
@@ -285,7 +288,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 builder.Append(fieldsSql);
             };
         }
-        this.DbParameters = command.Parameters;
+
         return (isNeedSplit, tableName, insertObjs, bulkCount, firstSqlSetter, typedValuesSetter, null, null);
     }
     public virtual void VisitWithBy(object insertObj)
@@ -414,18 +417,18 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     }
     public virtual Action<StringBuilder, DbContext, object> GetFieldsSetter(Type entityType, Type insertObjType)
     {
-        var cacheKey = RepositoryHelper.GetCacheKey(this.OrmProvider.OrmProviderType, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames);
+        var cacheKey = RepositoryHelper.GetCacheKey(this.OrmProvider.OrmProviderType, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames);
         return withByFieldsCache.GetOrAdd(cacheKey, f =>
         {
-            var fieldsSetter = RepositoryHelper.BuildFieldsSqlParametersPart(this.DbContext, entityType, insertObjType, 1, false, false, false, false, this.OnlyFieldNames, this.IgnoreFieldNames);
+            var fieldsSetter = RepositoryHelper.BuildFieldsSqlParametersPart(this.DbContext, entityType, insertObjType, 1, false, false, false, false, false, this.OnlyFieldNames, this.IgnoreFieldNames);
             return fieldsSetter as Action<StringBuilder, DbContext, object>;
         });
     }
     public virtual object GetValuesSetter(Type entityType, Type insertObjType, bool hasSuffix)
     {
-        var cacheKey = RepositoryHelper.GetCacheKey(this.OrmProvider.OrmProviderType, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames);
+        var cacheKey = RepositoryHelper.GetCacheKey(this.OrmProvider.OrmProviderType, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames);
         return withByValuesCache.GetOrAdd(cacheKey, f => RepositoryHelper.BuildFieldsSqlParametersPart(
-            this.DbContext, entityType, insertObjType, 2, false, false, hasSuffix, false, this.OnlyFieldNames, this.IgnoreFieldNames));
+            this.DbContext, entityType, insertObjType, 2, false, false, false, hasSuffix, false, this.OnlyFieldNames, this.IgnoreFieldNames));
     }
     public virtual void Clear()
     {

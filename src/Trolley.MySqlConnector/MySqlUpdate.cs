@@ -46,7 +46,7 @@ public class MySqlUpdate<TEntity> : Update<TEntity>, IMySqlUpdate<TEntity>
         => base.Set(condition, fieldsAssignment) as IMySqlContinuedUpdate<TEntity>;
     #endregion
 
-    #region SetFrom    
+    #region SetFrom
     public new IMySqlContinuedUpdate<TEntity> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
         => this.SetFrom(true, fieldSelector, valueSelector);
     public new IMySqlContinuedUpdate<TEntity> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
@@ -58,8 +58,8 @@ public class MySqlUpdate<TEntity> : Update<TEntity>, IMySqlUpdate<TEntity>
     #endregion
 
     #region SetBulk
-    public new IMySqlContinuedUpdate<TEntity> SetBulk<TUpdateObj>(IEnumerable<TUpdateObj> updateObjs, int bulkCount = 500)
-        => base.SetBulk(updateObjs, bulkCount) as IMySqlContinuedUpdate<TEntity>;
+    public new IMySqlBulkContinuedUpdate<TEntity> SetBulk<TUpdateObj>(IEnumerable<TUpdateObj> updateObjs, int bulkCount = 500)
+        => base.SetBulk(updateObjs, bulkCount) as IMySqlBulkContinuedUpdate<TEntity>;
     #endregion
 
     #region Join

@@ -24,8 +24,8 @@ public interface IUpdateVisitor : IDisposable
 
     void Initialize(Type entityType, bool isMultiple = false, bool isFirst = true);
     MultipleCommand CreateMultipleCommand();
-    string BuildCommand(DbContext dbContext, IDbCommand command);
-    void BuildMultiCommand(DbContext dbContext, IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex);
+    string BuildCommand(DbContext dbContext, ITheaCommand command);
+    void BuildMultiCommand(DbContext dbContext, ITheaCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex);
 
     void UseTable(bool isIncludeMany, params string[] tableNames);
     void UseTable(bool isIncludeMany, Func<string, bool> tableNamePredicate);
@@ -46,8 +46,8 @@ public interface IUpdateVisitor : IDisposable
     void OnlyFields(params string[] fieldNames);
     void OnlyFields(Expression fieldsSelector);
     void SetBulk(IEnumerable updateObjs, int bulkCount);
-    (IEnumerable, int, string, Action<IDataParameterCollection>, Action<IDataParameterCollection, StringBuilder, DbContext, object, string>,
-        Action<StringBuilder, string>, Action<StringBuilder, DbContext, object, string>) BuildWithBulk(IDbCommand command);
+    (IEnumerable, int, string, Action<IDataParameterCollection>, Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>,
+        Action<StringBuilder, DbContext, string, object, string>) BuildWithBulk(ITheaCommand command);
     void WhereWith(object whereObj);
     void Where(Expression whereExpr);
     void And(Expression whereExpr);

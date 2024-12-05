@@ -127,6 +127,7 @@ partial class BaseOrmProvider
     public virtual IUpdate<TEntity> NewUpdate<TEntity>(DbContext dbContext) => new Update<TEntity>(dbContext);
     public virtual IUpdated<TEntity> NewUpdated<TEntity>(DbContext dbContext, IUpdateVisitor visitor) => new Updated<TEntity>(dbContext, visitor);
     public virtual IContinuedUpdate<TEntity> NewContinuedUpdate<TEntity>(DbContext dbContext, IUpdateVisitor visitor) => new ContinuedUpdate<TEntity>(dbContext, visitor);
+    public virtual IBulkContinuedUpdate<TEntity> NewBulkContinuedUpdate<TEntity>(DbContext dbContext, IUpdateVisitor visitor) => new BulkContinuedUpdate<TEntity>(dbContext, visitor);
     public virtual IUpdateJoin<TEntity, T1> NewUpdateJoin<TEntity, T1>(DbContext dbContext, IUpdateVisitor visitor) => new UpdateJoin<TEntity, T1>(dbContext, visitor);
     public virtual IUpdateJoin<TEntity, T1, T2> NewUpdateJoin<TEntity, T1, T2>(DbContext dbContext, IUpdateVisitor visitor) => new UpdateJoin<TEntity, T1, T2>(dbContext, visitor);
     public virtual IUpdateJoin<TEntity, T1, T2, T3> NewUpdateJoin<TEntity, T1, T2, T3>(DbContext dbContext, IUpdateVisitor visitor) => new UpdateJoin<TEntity, T1, T2, T3>(dbContext, visitor);

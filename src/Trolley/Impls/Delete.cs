@@ -109,7 +109,7 @@ public class Deleted<TEntity> : IDeleted<TEntity>
             this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
 
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        command.CommandText = this.Visitor.BuildCommand(this.DbContext, command.BaseCommand);
+        command.CommandText = this.Visitor.BuildCommand(command);
         connection.Open();
         var result = command.ExecuteNonQuery(CommandSqlType.Delete);
 
@@ -125,7 +125,7 @@ public class Deleted<TEntity> : IDeleted<TEntity>
             await this.DbContext.FetchShardingTablesAsync(this.Visitor as SqlVisitor, cancellationToken);
 
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        command.CommandText = this.Visitor.BuildCommand(this.DbContext, command.BaseCommand);
+        command.CommandText = this.Visitor.BuildCommand(command);
         await connection.OpenAsync(cancellationToken);
         var result = await command.ExecuteNonQueryAsync(CommandSqlType.Delete, cancellationToken);
 
@@ -143,7 +143,7 @@ public class Deleted<TEntity> : IDeleted<TEntity>
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        var sql = this.Visitor.BuildCommand(this.DbContext, command.BaseCommand);
+        var sql = this.Visitor.BuildCommand(command);
         dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
         if (isNeedClose) connection.Close();

@@ -34,7 +34,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         }
         if (!isFirst) this.Clear();
     }
-    public virtual string BuildCommand(DbContext dbContext, IDbCommand command)
+    public virtual string BuildCommand(ITheaCommand command)
     {
         string sql = null;
         this.DbParameters ??= command.Parameters;
@@ -55,7 +55,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
                 }
             }
             else whereObjType = whereKeys.GetType();
-            (var isMultiKeys, var origName, var whereSqlSetter, var headSqlSetter) = RepositoryHelper.BuildDeleteCommandInitializer(this.DbContext, entityType, whereObjType, isBulk, isBulk || this.IsMultiple);
+            (var isMultiKeys, var origName, var headSqlSetter, var whereSqlSetter) = RepositoryHelper.BuildDeleteCommandInitializer(this.DbContext, entityType, whereObjType, this.IsMultiple, isBulk);
 
             int index = 0;
             var builder = new StringBuilder();
@@ -79,8 +79,16 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
             }
             else
             {
-                var typedWhereSqlSetter = whereSqlSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
-                sqlExecuter = () => typedWhereSqlSetter.Invoke(command.Parameters, whereSqlBuilder, this.DbContext, whereKeys);
+                if (this.IsMultiple)
+                {
+                    var typedWhereSqlSetter = whereSqlSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
+                    sqlExecuter = () => typedWhereSqlSetter.Invoke(command.Parameters, whereSqlBuilder, this.DbContext, whereKeys, $"_m{this.CommandIndex}");
+                }
+                else
+                {
+                    var typedWhereSqlSetter = whereSqlSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
+                    sqlExecuter = () => typedWhereSqlSetter.Invoke(command.Parameters, whereSqlBuilder, this.DbContext, whereKeys);
+                }
             }
             if (!string.IsNullOrEmpty(this.Tables[0].TableSchema))
                 headSqlSetter = (builder, tableName) => headSqlSetter.Invoke(builder, this.Tables[0].TableSchema + "." + tableName);
@@ -103,9 +111,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
             }
             sql = builder.ToString();
             builder.Clear();
-            builder = null;
             whereSqlBuilder.Clear();
-            whereSqlBuilder = null;
         }
         else
         {
@@ -157,7 +163,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
             IsNeedTableAlias = this.IsNeedTableAlias
         };
     }
-    public virtual void BuildMultiCommand(DbContext dbContext, IDbCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex)
+    public virtual void BuildMultiCommand(ITheaCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex)
     {
         this.IsMultiple = true;
         this.CommandIndex = commandIndex;
@@ -166,7 +172,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         this.RefQueries = multiCommand.RefQueries;
         this.IsNeedTableAlias = multiCommand.IsNeedTableAlias;
         if (sqlBuilder.Length > 0) sqlBuilder.Append(';');
-        sqlBuilder.Append(this.BuildCommand(dbContext, command));
+        sqlBuilder.Append(this.BuildCommand(command));
     }
     public virtual IDeleteVisitor WhereWith(object wherKeys)
     {
