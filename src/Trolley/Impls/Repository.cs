@@ -431,8 +431,7 @@ public class Repository : IRepository
         }
         else
         {
-            var insertObjType = insertObjs.GetType();
-            var commandInitializer = RepositoryHelper.BuildCreateCommandInitializer(this.DbContext, entityType, insertObjType, false);
+            var commandInitializer = RepositoryHelper.BuildCreateCommandInitializer(this.DbContext, entityType, insertObjs, false);
             commandInitializer.Invoke(this.DbContext, command, insertObjs);
             connection.Open();
             result = command.ExecuteNonQuery(CommandSqlType.Insert);
@@ -460,8 +459,7 @@ public class Repository : IRepository
         }
         else
         {
-            var insertObjType = insertObjs.GetType();
-            var commandInitializer = RepositoryHelper.BuildCreateCommandInitializer(this.DbContext, entityType, insertObjType, false);
+            var commandInitializer = RepositoryHelper.BuildCreateCommandInitializer(this.DbContext, entityType, insertObjs, false);
             commandInitializer.Invoke(this.DbContext, command, insertObjs);
             await connection.OpenAsync(cancellationToken);
             result = await command.ExecuteNonQueryAsync(CommandSqlType.Insert, cancellationToken);

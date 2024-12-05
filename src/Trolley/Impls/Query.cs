@@ -156,32 +156,12 @@ public class QueryBase : QueryInternal, IQueryBase
     protected TTarget QueryFirstValue<TTarget>(string sqlFormat, Expression fieldExpr = null)
     {
         this.Visitor.Select(sqlFormat, fieldExpr);
-        return this.DbContext.QueryFrom<TTarget, TTarget>(this.Visitor, true, (entityType, reader, readerFields) =>
-        {
-            TTarget result = default;
-            if (reader.Read())
-            {
-                if (entityType.IsEntityType(out _))
-                    result = reader.ToEntity<TTarget>(this.DbContext, readerFields);
-                else result = reader.ToValue<TTarget>(this.DbContext);
-            }
-            return result;
-        });
+        return this.DbContext.QueryValue<TTarget, TTarget>(this.Visitor);
     }
     protected async Task<TTarget> QueryFirstValueAsync<TTarget>(string sqlFormat, Expression fieldExpr = null, CancellationToken cancellationToken = default)
     {
         this.Visitor.Select(sqlFormat, fieldExpr);
-        return await this.DbContext.QueryFromAsync<TTarget, TTarget>(this.Visitor, true, (entityType, reader, readerFields) =>
-        {
-            TTarget result = default;
-            if (reader.Read())
-            {
-                if (entityType.IsEntityType(out _))
-                    result = reader.ToEntity<TTarget>(this.DbContext, readerFields);
-                else result = reader.ToValue<TTarget>(this.DbContext);
-            }
-            return result;
-        }, cancellationToken);
+        return await this.DbContext.QueryValueAsync<TTarget, TTarget>(this.Visitor, cancellationToken);
     }
     #endregion
 }

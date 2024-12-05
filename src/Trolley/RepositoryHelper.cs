@@ -630,7 +630,7 @@ public class RepositoryHelper
         var entityMapper = mapProvider.GetEntityMap(entityType);
         foreach (var memberMapper in entityMapper.MemberMaps)
         {
-            if (!isDictionary && !targetMemberInfos.Contains(memberMapper.Member))
+            if (!isDictionary && !targetMemberInfos.Exists(f => f.Name == memberMapper.MemberName))
                 continue;
             if (memberMapper.IsIgnore || memberMapper.IsNavigation || (isIgnoreKeys && memberMapper.IsKey))
                 continue;
@@ -778,6 +778,8 @@ public class RepositoryHelper
         {
             builderExpr = Expression.Variable(typeof(StringBuilder), "builder");
             blockParameters.Add(builderExpr);
+            var constructorInfo = typeof(StringBuilder).GetConstructor(Type.EmptyTypes);
+            blockBodies.Add(Expression.Assign(builderExpr, Expression.New(constructorInfo)));
         }
         else builderExpr = Expression.Parameter(typeof(StringBuilder), "builder");
 
@@ -789,7 +791,7 @@ public class RepositoryHelper
             blockParameters.Add(parameterNameExpr);
         }
         blockBodies.Add(Expression.Assign(ormProviderExpr, Expression.Property(dbContextExpr, nameof(DbContext.OrmProvider))));
-        if (!isBulk && !string.IsNullOrEmpty(headSql))
+        if (!string.IsNullOrEmpty(headSql))
             blockBodies.Add(Expression.Call(builderExpr, appendMethodInfo, Expression.Constant(headSql)));
 
         var isEntityType = whereObjType.IsEntityType(out _);
@@ -963,7 +965,7 @@ public class RepositoryHelper
         string tableName = ormProvider.GetTableName(entityMapper.TableName);
         string fieldsSql = null;
         if (isExists) fieldsSql = "COUNT(1)";
-        else fieldsSql = BuildSelectFieldsSqlPart(ormProvider, entityMapper, whereObjType);
+        else fieldsSql = BuildSelectFieldsSqlPart(ormProvider, entityMapper, entityType);
 
         var headSql = $"SELECT {fieldsSql} FROM {tableName} WHERE ";
         if (isBulk)

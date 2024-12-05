@@ -75,7 +75,7 @@ public class MySqlCreateVisitor : CreateVisitor
 
         if (this.UpdateBuilder != null && this.OutputFieldNames != null || this.UpdateBuilder != null && this.IsReturnIdentity
             || this.OutputFieldNames != null && this.IsReturnIdentity)
-            throw new NotSupportedException("不支持同时OnDuplicateKeyUpdate、Returning、Identity操作，只能选择一种操作");       
+            throw new NotSupportedException("不支持同时OnDuplicateKeyUpdate、Returning、Identity操作，只能选择一种操作");
 
         string tailSql = null;
         if (this.UpdateBuilder != null)
@@ -204,9 +204,9 @@ public class MySqlCreateVisitor : CreateVisitor
         var valuesSetter = this.GetValuesSetter(entityType, insertObjType, true);
         var typedValuesSetter = valuesSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
 
-        string headSql = this.BuildHeadSql();
+        string headSql = $"{this.BuildHeadSql()} ";
         if (!string.IsNullOrEmpty(tableSegment.TableSchema))
-            headSql = $"{this.BuildHeadSql()} {this.OrmProvider.GetTableName(tableSegment.TableSchema)}";
+            headSql = $"{this.BuildHeadSql()} {this.OrmProvider.GetTableName(tableSegment.TableSchema)}.";
 
         //生成批量Fields SQL
         fieldsSetter.Invoke(this.FieldsBuilder, this.DbContext, firstInsertObj);
@@ -223,7 +223,7 @@ public class MySqlCreateVisitor : CreateVisitor
             if (this.OutputFieldNames != null)
                 tailSql = this.BuildOutputSql(out readerFields);
         }
-        var fieldsSql = $"({this.FieldsBuilder}) VALUES";
+        var fieldsSql = $" ({this.FieldsBuilder}) VALUES ";
         this.FieldsBuilder.Clear();
         this.ValuesBuilder.Clear();
 
@@ -232,21 +232,12 @@ public class MySqlCreateVisitor : CreateVisitor
         {
             firstSqlSetter = (dbParameters, builder, tableName) =>
             {
-                builder.Append(headSql);
-                builder.Append(this.OrmProvider.GetTableName(tableName));
-                builder.Append(fieldsSql);
+                builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)}{fieldsSql}");
                 fixedDbParameters.ForEach(f => dbParameters.Add(f));
             };
         }
-        else
-        {
-            firstSqlSetter = (dbParameters, builder, tableName) =>
-            {
-                builder.Append(headSql);
-                builder.Append(this.OrmProvider.GetTableName(tableName));
-                builder.Append(fieldsSql);
-            };
-        }
+        else firstSqlSetter = (dbParameters, builder, tableName) => builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)}{fieldsSql}");
+
         Action<IDataParameterCollection, StringBuilder, DbContext, object, string> loopSqlSetter = null;
         loopSqlSetter = (dbParameters, builder, dbContext, insertObj, suffix) =>
         {
