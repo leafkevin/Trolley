@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -11,9 +10,6 @@ namespace Trolley;
 
 public class CreateVisitor : SqlVisitor, ICreateVisitor
 {
-    private static ConcurrentDictionary<int, Action<StringBuilder, DbContext, object>> withByFieldsCache = new();
-    private static ConcurrentDictionary<int, object> withByValuesCache = new();
-
     protected List<CommandSegment> deferredSegments = new();
     public StringBuilder FieldsBuilder { get; set; } = new();
     public StringBuilder ValuesBuilder { get; set; } = new();
@@ -126,7 +122,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             this.ValuesBuilder.Append(this.OrmProvider.GetIdentitySql(keyFieldName));
         }
 
-        var sql = $"INSERT INTO {tableName}({this.FieldsBuilder}) VALUES({this.ValuesBuilder})";
+        var sql = $"INSERT INTO {tableName} ({this.FieldsBuilder}) VALUES ({this.ValuesBuilder})";
         this.FieldsBuilder.Clear();
         this.ValuesBuilder.Clear();
         return sql;
@@ -255,8 +251,8 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         else this.DbParameters ??= command.Parameters;
 
         var entityMapper = tableSegment.Mapper;
-        var fieldsSetter = this.GetFieldsSetter(entityType, insertObjType);
-        var valuesSetter = this.GetValuesSetter(entityType, insertObjType, true);
+        var fieldsSetter = RepositoryHelper.BuildCreateFieldsSqlPart(this.DbContext, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames);
+        var valuesSetter = RepositoryHelper.BuildCreateValuesSqlPart(this.DbContext, entityType, insertObjType, true, this.OnlyFieldNames, this.IgnoreFieldNames);
         var typedValuesSetter = valuesSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
 
         string headSql = "INSERT INTO ";
@@ -295,8 +291,8 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     {
         var entityType = this.Tables[0].EntityType;
         var insertObjType = insertObj.GetType();
-        var fielsSetter = this.GetFieldsSetter(entityType, insertObjType);
-        var valuesSetter = this.GetValuesSetter(entityType, insertObjType, this.IsMultiple);
+        var fielsSetter = RepositoryHelper.BuildCreateFieldsSqlPart(this.DbContext, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames);
+        var valuesSetter = RepositoryHelper.BuildCreateValuesSqlPart(this.DbContext, entityType, insertObjType, this.IsMultiple, this.OnlyFieldNames, this.IgnoreFieldNames);
         if (this.FieldsBuilder.Length > 0)
         {
             this.FieldsBuilder.Append(',');
@@ -414,21 +410,6 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 return shardingRule.Invoke(origTableName, memberValue);
             }
         }
-    }
-    public virtual Action<StringBuilder, DbContext, object> GetFieldsSetter(Type entityType, Type insertObjType)
-    {
-        var cacheKey = RepositoryHelper.GetCacheKey(this.OrmProvider.OrmProviderType, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames);
-        return withByFieldsCache.GetOrAdd(cacheKey, f =>
-        {
-            var fieldsSetter = RepositoryHelper.BuildFieldsSqlParametersPart(this.DbContext, entityType, insertObjType, 1, false, false, false, false, false, this.OnlyFieldNames, this.IgnoreFieldNames);
-            return fieldsSetter as Action<StringBuilder, DbContext, object>;
-        });
-    }
-    public virtual object GetValuesSetter(Type entityType, Type insertObjType, bool hasSuffix)
-    {
-        var cacheKey = RepositoryHelper.GetCacheKey(this.OrmProvider.OrmProviderType, this.MapProvider, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames);
-        return withByValuesCache.GetOrAdd(cacheKey, f => RepositoryHelper.BuildFieldsSqlParametersPart(
-            this.DbContext, entityType, insertObjType, 2, false, false, false, hasSuffix, false, this.OnlyFieldNames, this.IgnoreFieldNames));
     }
     public virtual void Clear()
     {

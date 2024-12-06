@@ -431,8 +431,7 @@ public class Repository : IRepository
         }
         else
         {
-            var insertObjType = insertObjs.GetType();
-            var commandInitializer = RepositoryHelper.BuildCreateCommandInitializer(this.DbContext, entityType, insertObjType, false);
+            var commandInitializer = RepositoryHelper.BuildCreateCommandInitializer(this.DbContext, entityType, insertObjs, false);
             commandInitializer.Invoke(this.DbContext, command, insertObjs);
             connection.Open();
             result = command.ExecuteNonQuery(CommandSqlType.Insert);
@@ -460,8 +459,7 @@ public class Repository : IRepository
         }
         else
         {
-            var insertObjType = insertObjs.GetType();
-            var commandInitializer = RepositoryHelper.BuildCreateCommandInitializer(this.DbContext, entityType, insertObjType, false);
+            var commandInitializer = RepositoryHelper.BuildCreateCommandInitializer(this.DbContext, entityType, insertObjs, false);
             commandInitializer.Invoke(this.DbContext, command, insertObjs);
             await connection.OpenAsync(cancellationToken);
             result = await command.ExecuteNonQueryAsync(CommandSqlType.Insert, cancellationToken);
@@ -502,7 +500,7 @@ public class Repository : IRepository
                 break;
             }
 
-            var commandInitializer = RepositoryHelper.BuildUpdateCommandInitializer(this.DbContext, entityType, updateObjType, true, false, null, null);
+            var commandInitializer = RepositoryHelper.BuildUpdateCommandInitializer(this.DbContext, entityType, updateObjType, true, false);
             var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
             var builder = new StringBuilder();
 
@@ -532,7 +530,7 @@ public class Repository : IRepository
         else
         {
             var updateObjType = updateObjs.GetType();
-            var commandInitializer = RepositoryHelper.BuildUpdateCommandInitializer(this.DbContext, entityType, updateObjType, false, false, null, null);
+            var commandInitializer = RepositoryHelper.BuildUpdateCommandInitializer(this.DbContext, entityType, updateObjType, false, false);
             var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
             command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this.DbContext, updateObjs);
             connection.Open();
@@ -563,7 +561,7 @@ public class Repository : IRepository
                 updateObjType = updateObj.GetType();
                 break;
             }
-            var commandInitializer = RepositoryHelper.BuildUpdateCommandInitializer(this.DbContext, entityType, updateObjType, true, false, null, null);
+            var commandInitializer = RepositoryHelper.BuildUpdateCommandInitializer(this.DbContext, entityType, updateObjType, true, false);
             var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
             var builder = new StringBuilder();
 
@@ -593,7 +591,7 @@ public class Repository : IRepository
         else
         {
             var updateObjType = updateObjs.GetType();
-            var commandInitializer = RepositoryHelper.BuildUpdateCommandInitializer(this.DbContext, entityType, updateObjType, true, false, null, null);
+            var commandInitializer = RepositoryHelper.BuildUpdateCommandInitializer(this.DbContext, entityType, updateObjType, false, false);
             var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
             command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this.DbContext, updateObjs);
 

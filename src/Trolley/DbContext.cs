@@ -264,6 +264,60 @@ public sealed class DbContext
         if (isNeedClose) await connection.CloseAsync();
         return result;
     }
+    public TResult QueryValue<TEntity, TResult>(IQueryVisitor visitor)
+    {
+        var entityType = typeof(TEntity);
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.IsUseMaster);
+        if (visitor.IsNeedFetchShardingTables)
+            this.FetchShardingTables(visitor as SqlVisitor);
+
+        Expression<Func<TEntity, TEntity>> defaultExpr = f => f;
+        visitor.SelectDefault(defaultExpr);
+        var sql = visitor.BuildSql(out var readerFields);
+        sql = this.BuildSql(visitor, sql, " UNION ALL ");
+        command.CommandText = sql;
+        visitor.DbParameters.CopyTo(command.Parameters);
+
+        connection.Open();
+        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+        var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
+        TResult result = default;
+        if (reader.Read())
+            result = reader.ToValue<TResult>(this);
+
+        reader.Dispose();
+        command.Dispose();
+        if (isNeedClose) connection.Close();
+        visitor.Dispose();
+        return result;
+    }
+    public async Task<TResult> QueryValueAsync<TEntity, TResult>(IQueryVisitor visitor, CancellationToken cancellationToken = default)
+    {
+        var entityType = typeof(TEntity);
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.IsUseMaster);
+        if (visitor.IsNeedFetchShardingTables)
+            await this.FetchShardingTablesAsync(visitor as SqlVisitor, cancellationToken);
+
+        Expression<Func<TEntity, TEntity>> defaultExpr = f => f;
+        visitor.SelectDefault(defaultExpr);
+        var sql = visitor.BuildSql(out var readerFields);
+        sql = this.BuildSql(visitor, sql, " UNION ALL ");
+        command.CommandText = sql;
+        visitor.DbParameters.CopyTo(command.Parameters);
+
+        await connection.OpenAsync(cancellationToken);
+        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+        var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
+        TResult result = default;
+        if (reader.Read())
+            result = reader.ToValue<TResult>(this);
+
+        await reader.DisposeAsync();
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
+        visitor.Dispose();
+        return result;
+    }
     public TResult QueryFrom<TEntity, TResult>(IQueryVisitor visitor, bool isSingle, Func<Type, ITheaDataReader, List<SqlFieldSegment>, TResult> readerInitializer)
     {
         var entityType = typeof(TEntity);
@@ -316,14 +370,14 @@ public sealed class DbContext
         var behavior = isSingle ? CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow : CommandBehavior.SequentialAccess;
         var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
         var result = readerInitializer.Invoke(entityType, reader, readerFields);
-        if (visitor.BuildIncludeSql(entityType, result, false, out sql))
+        if (visitor.BuildIncludeSql(entityType, result, isSingle, out sql))
         {
             await reader.DisposeAsync();
             command.CommandText = sql;
             command.Parameters.Clear();
             visitor.NextDbParameters.CopyTo(command.Parameters);
             reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
-            await visitor.SetIncludeValuesAsync(entityType, result, reader, false, cancellationToken);
+            await visitor.SetIncludeValuesAsync(entityType, result, reader, isSingle, cancellationToken);
         }
 
         await reader.DisposeAsync();
@@ -452,8 +506,7 @@ public sealed class DbContext
         TResult result = default;
         (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         var entityType = typeof(TEntity);
-        var insertObjType = insertObj.GetType();
-        var commandInitializer = RepositoryHelper.BuildCreateCommandInitializer(this, entityType, insertObjType, true);
+        var commandInitializer = RepositoryHelper.BuildCreateCommandInitializer(this, entityType, insertObj, true);
         commandInitializer.Invoke(this, command, insertObj);
 
         connection.Open();
@@ -476,8 +529,7 @@ public sealed class DbContext
         TResult result = default;
         (var isNeedClose, var connection, var command) = this.UseMasterCommand();
         var entityType = typeof(TEntity);
-        var insertObjType = insertObj.GetType();
-        var commandInitializer = RepositoryHelper.BuildCreateCommandInitializer(this, entityType, insertObjType, true);
+        var commandInitializer = RepositoryHelper.BuildCreateCommandInitializer(this, entityType, insertObj, true);
         commandInitializer.Invoke(this, command, insertObj);
 
         await connection.OpenAsync(cancellationToken);
