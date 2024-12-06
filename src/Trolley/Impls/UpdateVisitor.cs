@@ -287,7 +287,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         //多命令查询时，第二次以后，DbParameters有值，不能再赋值
         else this.DbParameters ??= command.Parameters;
 
-        builder.Append("UPDATE");
+        builder.Append("UPDATE ");
         var tableSegment = this.Tables[0];
         if (!string.IsNullOrEmpty(tableSegment.TableSchema))
             builder.Append($" {this.OrmProvider.GetTableName(tableSegment.TableSchema)}.");
@@ -302,12 +302,12 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         Action<StringBuilder, DbContext, string, object, string> sqlSetter = null;
         firstSqlSetter = (dbParameters, builder, dbContext, tableName, updateObj, suffix) =>
         {
-            builder.Append($"{headSql}{tableName} {fixedSql}");
+            builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)} {fixedSql}");
             firstSqlParameters.Invoke(dbParameters, builder, dbContext, updateObj, suffix);
         };
         sqlSetter = (builder, dbContext, tableName, updateObj, suffix) =>
         {
-            builder.Append($"{headSql}{tableName} {fixedSql}");
+            builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)} {fixedSql}");
             sqlSqlParameters.Invoke(builder, dbContext, updateObj, suffix);
         };
         var tableName = tableSegment.Mapper.TableName;
@@ -615,7 +615,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     {
         var entityType = this.Tables[0].EntityType;
         var whereObjType = whereObj.GetType();
-        var whereSqlParameters = RepositoryHelper.BuildWhereSqlParametersPart(this.DbContext, entityType, whereObjType, true, false, false, true, this.IsMultiple, false);
+        var whereSqlParameters = RepositoryHelper.BuildWhereSqlParametersPart(this.DbContext, entityType, whereObjType, true, false, false, true, false, this.IsMultiple, false);
         if (this.IsMultiple)
         {
             var typedWhereSqlParameters = whereSqlParameters as Func<IDataParameterCollection, DbContext, object, string, string>;
