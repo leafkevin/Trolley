@@ -199,8 +199,8 @@ public class MySqlCreateVisitor : CreateVisitor
         }
 
         var entityMapper = tableSegment.Mapper;
-        var fieldsSetter = RepositoryHelper.BuildCreateFieldsSqlPart(this.DbContext, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames);
-        var valuesSetter = RepositoryHelper.BuildCreateValuesSqlPart(this.DbContext, entityType, insertObjType, true, this.OnlyFieldNames, this.IgnoreFieldNames);
+        var fieldsSetter = RepositoryHelper.BuildCreateFieldsSqlPart(this.DbContext, entityType, insertObjType, false, this.OnlyFieldNames, this.IgnoreFieldNames);
+        var valuesSetter = RepositoryHelper.BuildCreateValuesSqlPart(this.DbContext, entityType, insertObjType, true, false, this.OnlyFieldNames, this.IgnoreFieldNames);
         var typedValuesSetter = valuesSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
 
         string headSql = $"{this.BuildHeadSql()} ";
@@ -267,7 +267,7 @@ public class MySqlCreateVisitor : CreateVisitor
     public void OnDuplicateKeyUpdate(object updateObj)
     {
         if (this.ActionMode == ActionMode.Bulk)
-            throw new NotSupportedException("批量插入时，不支持OnDuplicateKeyUpdate<TUpdateFields>(TUpdateFields updateObj)方法调用，请使用OnDuplicateKeyUpdate<TUpdateFields>(Expression<Func<IMySqlCreateDuplicateKeyUpdate<TEntity>, TUpdateFields>> fieldsAssignment)方法");
+            throw new NotSupportedException("批量插入时，不支持此方法的调用，请使用OnDuplicateKeyUpdate<TUpdateFields>(Expression<Func<IMySqlCreateDuplicateKeyUpdate<TEntity>, TUpdateFields>> fieldsAssignment)方法");
         this.deferredSegments.Add(new CommandSegment
         {
             Type = "SetObject",
@@ -289,10 +289,12 @@ public class MySqlCreateVisitor : CreateVisitor
     }
     public void VisitSetObject(object updateObj)
     {
+        if (this.ActionMode == ActionMode.Bulk)
+            throw new NotSupportedException("批量插入时，不支持此方法的调用，请使用OnDuplicateKeyUpdate<TUpdateFields>(Expression<Func<IMySqlCreateDuplicateKeyUpdate<TEntity>, TUpdateFields>> fieldsAssignment)方法");
+
         var entityType = this.Tables[0].EntityType;
         var updateObjType = updateObj.GetType();
-        var setFieldsSetter = RepositoryHelper.BuildFieldsSqlParametersPart(this.DbContext, entityType, updateObjType, 3, false, false, false, this.IsMultiple, false, this.OnlyFieldNames, this.IgnoreFieldNames);
-        var entityMapper = this.Tables[0].Mapper;
+        var setFieldsSetter = RepositoryHelper.BuildFieldsSqlParametersPart(this.DbContext, entityType, updateObjType, 3, 1, 0, false, this.IsMultiple, false, this.OnlyFieldNames, this.IgnoreFieldNames);
         if (this.IsMultiple)
         {
             var typedSetFieldsSetter = setFieldsSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;

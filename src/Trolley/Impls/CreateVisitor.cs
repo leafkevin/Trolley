@@ -251,8 +251,8 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         else this.DbParameters ??= command.Parameters;
 
         var entityMapper = tableSegment.Mapper;
-        var fieldsSetter = RepositoryHelper.BuildCreateFieldsSqlPart(this.DbContext, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames);
-        var valuesSetter = RepositoryHelper.BuildCreateValuesSqlPart(this.DbContext, entityType, insertObjType, true, this.OnlyFieldNames, this.IgnoreFieldNames);
+        var fieldsSetter = RepositoryHelper.BuildCreateFieldsSqlPart(this.DbContext, entityType, insertObjType, false, this.OnlyFieldNames, this.IgnoreFieldNames);
+        var valuesSetter = RepositoryHelper.BuildCreateValuesSqlPart(this.DbContext, entityType, insertObjType, true, false, this.OnlyFieldNames, this.IgnoreFieldNames);
         var typedValuesSetter = valuesSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
 
         string headSql = "INSERT INTO ";
@@ -291,8 +291,8 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     {
         var entityType = this.Tables[0].EntityType;
         var insertObjType = insertObj.GetType();
-        var fielsSetter = RepositoryHelper.BuildCreateFieldsSqlPart(this.DbContext, entityType, insertObjType, this.OnlyFieldNames, this.IgnoreFieldNames);
-        var valuesSetter = RepositoryHelper.BuildCreateValuesSqlPart(this.DbContext, entityType, insertObjType, this.IsMultiple, this.OnlyFieldNames, this.IgnoreFieldNames);
+        var fielsSetter = RepositoryHelper.BuildCreateFieldsSqlPart(this.DbContext, entityType, insertObjType, false, this.OnlyFieldNames, this.IgnoreFieldNames);
+        var valuesSetter = RepositoryHelper.BuildCreateValuesSqlPart(this.DbContext, entityType, insertObjType, this.IsMultiple, false, this.OnlyFieldNames, this.IgnoreFieldNames);
         if (this.FieldsBuilder.Length > 0)
         {
             this.FieldsBuilder.Append(',');

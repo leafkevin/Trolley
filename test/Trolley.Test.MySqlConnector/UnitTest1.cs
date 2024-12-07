@@ -215,17 +215,17 @@ public class UnitTest1 : UnitTestBase
                 { "UpdatedBy", 1}
             })
           .ToSql(out dbParameters);
-        Assert.Equal("INSERT INTO `sys_user` (`Id`,`TenantId`,`Name`,`Gender`,`Age`,`CompanyId`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id,@TenantId,@Name,@Gender,@Age,@CompanyId,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)", sql);
+        Assert.Equal("INSERT INTO `sys_user` (`Id`,`TenantId`,`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id,@TenantId,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)", sql);
         Assert.Equal(1, (int)dbParameters[0].Value);
         Assert.Equal("1", (string)dbParameters[1].Value);
         Assert.Equal("leafkevin", (string)dbParameters[2].Value);
-        if (dbParameters[3] is MySqlParameter dbParameter1)
+        Assert.Equal(25, (int)dbParameters[3].Value);
+        Assert.Equal(1, (int)dbParameters[4].Value);
+        if (dbParameters[5] is MySqlParameter dbParameter1)
         {
             Assert.Equal(MySqlDbType.Enum, dbParameter1.MySqlDbType);
             Assert.True((string)dbParameter1.Value == Gender.Male.ToString());
-        }
-        Assert.Equal(25, (int)dbParameters[4].Value);
-        Assert.Equal(1, (int)dbParameters[5].Value);
+        }    
         Assert.True((bool)dbParameters[6].Value);
         Assert.True((DateTime)dbParameters[7].Value == now);
         Assert.Equal(1, (int)dbParameters[8].Value);

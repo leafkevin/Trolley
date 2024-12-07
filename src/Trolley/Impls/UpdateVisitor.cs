@@ -294,7 +294,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var headSql = builder.ToString();
 
         var entityType = tableSegment.EntityType;
-        (var firstSqlParameters, var sqlSqlParameters) = RepositoryHelper.BuildUpdateBulkSetWithSqlParametersPart(this.DbContext, entityType, updateObjType, this.OnlyFieldNames, this.IgnoreFieldNames, this.IsMultiple);
+        (var bulkSqlSetter, var shardingSqlSetter) = RepositoryHelper.BuildUpdateBulkSetWithSqlParametersPart(this.DbContext, entityType, updateObjType, this.IsMultiple, false, this.OnlyFieldNames, this.IgnoreFieldNames);
 
         //处理有tableSchema的场景
         Action<IDataParameterCollection> fixedParametersSetter = dbParameters => fixedDbParameters.ForEach(f => dbParameters.Add(f)); ;
@@ -303,12 +303,12 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         firstSqlSetter = (dbParameters, builder, dbContext, tableName, updateObj, suffix) =>
         {
             builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)} {fixedSql}");
-            firstSqlParameters.Invoke(dbParameters, builder, dbContext, updateObj, suffix);
+            bulkSqlSetter.Invoke(dbParameters, builder, dbContext, updateObj, suffix);
         };
         sqlSetter = (builder, dbContext, tableName, updateObj, suffix) =>
         {
             builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)} {fixedSql}");
-            sqlSqlParameters.Invoke(builder, dbContext, updateObj, suffix);
+            shardingSqlSetter.Invoke(builder, dbContext, updateObj, suffix);
         };
         var tableName = tableSegment.Mapper.TableName;
         return (updateObjs, bulkCount, tableName, fixedParametersSetter, firstSqlSetter, sqlSetter);
@@ -519,6 +519,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     {
         var entityType = this.Tables[0].Mapper.EntityType;
         var updateObjType = updateObj.GetType();
+        var isBulk = this.ActionMode == ActionMode.Bulk;
         var commandInitializer = RepositoryHelper.BuildUpdateSetWithSqlParametersPart(this.DbContext, entityType, updateObjType, this.OnlyFieldNames, this.IgnoreFieldNames, this.IsMultiple, false);
         if (this.IsMultiple)
         {
@@ -615,7 +616,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     {
         var entityType = this.Tables[0].EntityType;
         var whereObjType = whereObj.GetType();
-        var whereSqlParameters = RepositoryHelper.BuildWhereSqlParametersPart(this.DbContext, entityType, whereObjType, true, false, false, true, false, this.IsMultiple, false);
+        var whereSqlParameters = RepositoryHelper.BuildWhereSqlParametersPart(this.DbContext, entityType, whereObjType,1, true, false, true, false, this.IsMultiple, false);
         if (this.IsMultiple)
         {
             var typedWhereSqlParameters = whereSqlParameters as Func<IDataParameterCollection, DbContext, object, string, string>;
