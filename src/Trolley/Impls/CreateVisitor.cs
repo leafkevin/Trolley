@@ -175,18 +175,36 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         //多语句执行，一次性不分批次
         var builder = new StringBuilder();
         (var isNeedSplit, var tableName, var insertObjs, _, var firstSqlSetter,
-            var loopSqlSetter, _, readerFields) = this.BuildWithBulk(command);
-
-        void Execute(string tableName, IEnumerable insertObjs)
+            var loopSqlSetter, var tailSql, readerFields) = this.BuildWithBulk(command);
+        Action<string, IEnumerable> executor = null;
+        if (tailSql != null)
         {
-            firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-            int index = 0;
-            foreach (var insertObj in insertObjs)
+            executor = (tableName, insertObjs) =>
             {
-                if (index > 0) builder.Append(',');
-                loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
-                index++;
-            }
+                firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                int index = 0;
+                foreach (var insertObj in insertObjs)
+                {
+                    if (index > 0) builder.Append(',');
+                    loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
+                    index++;
+                }
+                builder.Append(tailSql);
+            };
+        }
+        else
+        {
+            executor = (tableName, insertObjs) =>
+            {
+                firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                int index = 0;
+                foreach (var insertObj in insertObjs)
+                {
+                    if (index > 0) builder.Append(',');
+                    loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
+                    index++;
+                }
+            };
         }
         if (isNeedSplit)
         {
@@ -196,11 +214,11 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             foreach (var tabledInsertObj in tabledInsertObjs)
             {
                 if (index > 0) builder.Append(';');
-                Execute(tabledInsertObj.Key, tabledInsertObj.Value);
+                executor(tabledInsertObj.Key, tabledInsertObj.Value);
                 index++;
             }
         }
-        else Execute(tableName, insertObjs);
+        else executor(tableName, insertObjs);
         var sql = builder.ToString();
         builder.Clear();
         return sql;

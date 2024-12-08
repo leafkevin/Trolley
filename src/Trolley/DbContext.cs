@@ -577,7 +577,7 @@ public sealed class DbContext
         return result;
     }
 
-    public TResult CreateResult<TResult>(ICreateVisitor visitor)
+    public TResult CreateResult<TResult>(ICreateVisitor visitor, bool isUseReaderOrder = false)
     {
         TResult result = default;
         (var isNeedClose, var connection, var command) = this.UseMasterCommand();
@@ -589,7 +589,7 @@ public sealed class DbContext
         {
             var resultType = typeof(TResult);
             if (resultType.IsEntityType(out _))
-                result = reader.ToEntity<TResult>(this, readerFields, true);
+                result = reader.ToEntity<TResult>(this, readerFields, isUseReaderOrder);
             else result = reader.ToValue<TResult>(this);
         }
 
@@ -599,7 +599,7 @@ public sealed class DbContext
         visitor.Dispose();
         return result;
     }
-    public async Task<TResult> CreateResultAsync<TResult>(ICreateVisitor visitor, CancellationToken cancellationToken = default)
+    public async Task<TResult> CreateResultAsync<TResult>(ICreateVisitor visitor, bool isUseReaderOrder = false, CancellationToken cancellationToken = default)
     {
         TResult result = default;
         (var isNeedClose, var connection, var command) = this.UseMasterCommand();
@@ -611,7 +611,7 @@ public sealed class DbContext
         {
             var resultType = typeof(TResult);
             if (resultType.IsEntityType(out _))
-                result = reader.ToEntity<TResult>(this, readerFields, true);
+                result = reader.ToEntity<TResult>(this, readerFields, isUseReaderOrder);
             else result = reader.ToValue<TResult>(this);
         }
 
@@ -621,68 +621,66 @@ public sealed class DbContext
         visitor.Dispose();
         return result;
     }
-    public List<TResult> CreateResults<TResult>(ICreateVisitor visitor)
-    {
-        var result = new List<TResult>();
-        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
-        command.CommandText = visitor.BuildCommand(command, false, out var readerFields);
+    //public List<TResult> CreateResults<TResult>(ICreateVisitor visitor)
+    //{
+    //    var result = new List<TResult>();
+    //    (var isNeedClose, var connection, var command) = this.UseMasterCommand();
+    //    command.CommandText = visitor.BuildCommand(command, false, out var readerFields);
 
-        connection.Open();
-        using var reader = command.ExecuteReader(CommandSqlType.Insert, CommandBehavior.SequentialAccess);
-        var resultType = typeof(TResult);
-        if (resultType.IsEntityType(out _))
-        {
-            while (reader.Read())
-            {
-                result.Add(reader.ToEntity<TResult>(this, readerFields, true));
-            }
-        }
-        else
-        {
-            while (reader.Read())
-            {
-                result.Add(reader.ToValue<TResult>(this));
-            }
-        }
+    //    connection.Open();
+    //    using var reader = command.ExecuteReader(CommandSqlType.Insert, CommandBehavior.SequentialAccess);
+    //    var resultType = typeof(TResult);
+    //    if (resultType.IsEntityType(out _))
+    //    {
+    //        while (reader.Read())
+    //        {
+    //            result.Add(reader.ToEntity<TResult>(this, readerFields, true));
+    //        }
+    //    }
+    //    else
+    //    {
+    //        while (reader.Read())
+    //        {
+    //            result.Add(reader.ToValue<TResult>(this));
+    //        }
+    //    }
 
-        reader.Dispose();
-        command.Dispose();
-        if (isNeedClose) connection.Close();
-        return result;
-    }
-    public async Task<List<TResult>> CreateResultsAsync<TResult>(ICreateVisitor visitor, CancellationToken cancellationToken = default)
-    {
-        var result = new List<TResult>();
-        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
-        command.CommandText = visitor.BuildCommand(command, false, out var readerFields);
+    //    reader.Dispose();
+    //    command.Dispose();
+    //    if (isNeedClose) connection.Close();
+    //    return result;
+    //}
+    //public async Task<List<TResult>> CreateResultsAsync<TResult>(ICreateVisitor visitor, CancellationToken cancellationToken = default)
+    //{
+    //    var result = new List<TResult>();
+    //    (var isNeedClose, var connection, var command) = this.UseMasterCommand();
+    //    command.CommandText = visitor.BuildCommand(command, false, out var readerFields);
 
-        await connection.OpenAsync(cancellationToken);
-        using var reader = await command.ExecuteReaderAsync(CommandSqlType.Insert, CommandBehavior.SequentialAccess, cancellationToken);
+    //    await connection.OpenAsync(cancellationToken);
+    //    using var reader = await command.ExecuteReaderAsync(CommandSqlType.Insert, CommandBehavior.SequentialAccess, cancellationToken);
 
-        var resultType = typeof(TResult);
-        if (resultType.IsEntityType(out _))
-        {
-            while (await reader.ReadAsync(cancellationToken))
-            {
-                result.Add(reader.ToEntity<TResult>(this, readerFields, true));
-            }
-        }
-        else
-        {
-            while (await reader.ReadAsync(cancellationToken))
-            {
-                result.Add(reader.ToValue<TResult>(this));
-            }
-        }
+    //    var resultType = typeof(TResult);
+    //    if (resultType.IsEntityType(out _))
+    //    {
+    //        while (await reader.ReadAsync(cancellationToken))
+    //        {
+    //            result.Add(reader.ToEntity<TResult>(this, readerFields, true));
+    //        }
+    //    }
+    //    else
+    //    {
+    //        while (await reader.ReadAsync(cancellationToken))
+    //        {
+    //            result.Add(reader.ToValue<TResult>(this));
+    //        }
+    //    }
 
-        await reader.DisposeAsync();
-        await command.DisposeAsync();
-        if (isNeedClose) await connection.CloseAsync();
-        visitor.Dispose();
-        return result;
-    }
-
-
+    //    await reader.DisposeAsync();
+    //    await command.DisposeAsync();
+    //    if (isNeedClose) await connection.CloseAsync();
+    //    visitor.Dispose();
+    //    return result;
+    //}
     //public void BuildCreateCommand(IDbCommand command, Type entityType, object insertObj, bool isReturnIdentity)
     //{
     //    var insertObjType = insertObj.GetType();
@@ -727,7 +725,7 @@ public sealed class DbContext
     //    }
     //    command.CommandText = sqlBuilder.ToString();
     //}
-    #endregion     
+    #endregion
 
     #region Others   
     public void BeginTransaction()

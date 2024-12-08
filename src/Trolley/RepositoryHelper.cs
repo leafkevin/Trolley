@@ -586,17 +586,14 @@ public class RepositoryHelper
             blockBodies.Add(Expression.Assign(ormProviderExpr, Expression.Property(dbContextExpr, nameof(DbContext.OrmProvider))));
             blockBodies.Add(Expression.Assign(typedParametersExpr, Expression.Convert(parametersExpr, parametersType)));
         }
-        if (sqlType != 3)
+        if (isFunc)
         {
-            if (isFunc)
-            {
-                builderExpr = Expression.Variable(typeof(StringBuilder), "builder");
-                blockParameters.Add(builderExpr);
-                var constructorInfo = typeof(StringBuilder).GetConstructor(Type.EmptyTypes);
-                blockBodies.Add(Expression.Assign(builderExpr, Expression.New(constructorInfo)));
-            }
-            else builderExpr = Expression.Parameter(typeof(StringBuilder), "builder");
+            builderExpr = Expression.Variable(typeof(StringBuilder), "builder");
+            blockParameters.Add(builderExpr);
+            var constructorInfo = typeof(StringBuilder).GetConstructor(Type.EmptyTypes);
+            blockBodies.Add(Expression.Assign(builderExpr, Expression.New(constructorInfo)));
         }
+        else if (sqlType != 3) builderExpr = Expression.Parameter(typeof(StringBuilder), "builder");
         if (commandType > 1 && hasSuffix)
         {
             suffixExpr = Expression.Parameter(typeof(string), "suffix");
@@ -764,9 +761,19 @@ public class RepositoryHelper
             var index = 0;
             foreach (var memberMapper in filterMemberMaps)
             {
-                if (!isDictionary && !targetMemberInfos.Exists(f => f.Name == memberMapper.MemberName))
-                    continue;
-                if (memberMapper.IsIgnore || memberMapper.IsNavigation)
+                if (keyType == 1 && isDictionary)
+                {
+                    var isContainsKeyExpr = Expression.Call(typedParametersExpr, containsKeyMethodInfo, Expression.Constant(memberMapper.MemberName));
+                    var exception = new KeyNotFoundException($"字典参数中{parametersType.FullName}缺少Key:{memberMapper.MemberName}的成员");
+                    blockBodies.Add(Expression.IfThen(Expression.IsFalse(isContainsKeyExpr), Expression.Throw(Expression.Constant(exception))));
+                }
+                else if (!targetMemberInfos.Exists(f => f.Name == memberMapper.MemberName))
+                {
+                    if (keyType == 1) throw new KeyNotFoundException($"参数类型{parametersType.FullName}缺少{memberMapper.MemberName}的成员");
+                    else continue;
+                }
+
+                if (memberMapper.IsIgnore || memberMapper.IsNavigation || (keyType == 2 && memberMapper.IsKey))
                     continue;
                 if (onlyFieldNames != null && !onlyFieldNames.Contains(memberMapper.MemberName))
                     continue;
@@ -780,17 +787,6 @@ public class RepositoryHelper
                 //Update
                 if (commandType > 2 && memberMapper.IsIgnoreUpdate)
                     continue;
-
-                if (keyType == 1)
-                {
-                    if (isDictionary)
-                    {
-                        var isContainsKeyExpr = Expression.Call(typedParametersExpr, containsKeyMethodInfo, Expression.Constant(memberMapper.MemberName));
-                        var exception = new KeyNotFoundException($"字典参数中{parametersType.FullName}缺少Key:{memberMapper.MemberName}的成员");
-                        blockBodies.Add(Expression.IfThen(Expression.IsFalse(isContainsKeyExpr), Expression.Throw(Expression.Constant(exception))));
-                    }
-                    else throw new KeyNotFoundException($"参数类型{parametersType.FullName}缺少{memberMapper.MemberName}的成员");
-                }
 
                 var parameterName = ormProvider.ParameterPrefix + (commandType == 3 ? "p" : "") + memberMapper.MemberName;
                 Expression myParameterNameExpr = Expression.Constant(parameterName);
@@ -945,7 +941,7 @@ public class RepositoryHelper
             var constructorInfo = typeof(StringBuilder).GetConstructor(Type.EmptyTypes);
             blockBodies.Add(Expression.Assign(builderExpr, Expression.New(constructorInfo)));
         }
-        else builderExpr = Expression.Parameter(typeof(StringBuilder), "builder");
+        else if (sqlType != 3) builderExpr = Expression.Parameter(typeof(StringBuilder), "builder");
 
         var hasSuffix = isMultiple || isBulk;
         if (hasSuffix)
@@ -1078,24 +1074,21 @@ public class RepositoryHelper
             var filterMemberMappers = isUseKey ? entityMapper.KeyMembers : entityMapper.MemberMaps;
             foreach (var memberMapper in filterMemberMappers)
             {
-                if (memberMapper.IsIgnore || memberMapper.IsNavigation)
-                    continue;
+                if (isDictionary && isUseKey)
+                {
+                    var isContainsKeyExpr = Expression.Call(typedWhereObjExpr, containsKeyMethodInfo, Expression.Constant(memberMapper.MemberName));
+                    var exception = new KeyNotFoundException($"字典参数中{whereObjType.FullName}缺少Key:{memberMapper.MemberName}的成员");
+                    blockBodies.Add(Expression.IfThen(Expression.IsFalse(isContainsKeyExpr), Expression.Throw(Expression.Constant(exception))));
+                }
+                else if (isEntityType)
+                {
+                    if (isUseKey && !targetMemberInfos.Exists(f => f.Name == memberMapper.MemberName))
+                        throw new KeyNotFoundException($"参数类型{whereObjType.FullName}缺少{memberMapper.MemberName}的成员");
+                    if (memberMapper.IsIgnore || memberMapper.IsNavigation || !targetMemberInfos.Exists(f => f.Name == memberMapper.MemberName))
+                        continue;
+                }
 
                 var memberNameExpr = Expression.Constant(memberMapper.MemberName);
-                if (isUseKey)
-                {
-                    if (isDictionary)
-                    {
-                        var isContainsKeyExpr = Expression.Call(typedWhereObjExpr, containsKeyMethodInfo, Expression.Constant(memberMapper.MemberName));
-                        var exception = new KeyNotFoundException($"字典参数中{whereObjType.FullName}缺少Key:{memberMapper.MemberName}的成员");
-                        blockBodies.Add(Expression.IfThen(Expression.IsFalse(isContainsKeyExpr), Expression.Throw(Expression.Constant(exception))));
-                    }
-                    if (isEntityType && !targetMemberInfos.Exists(f => f.Name == memberMapper.MemberName))
-                        throw new KeyNotFoundException($"参数类型{whereObjType.FullName}缺少{memberMapper.MemberName}的成员");
-                }
-                else if (!targetMemberInfos.Exists(f => f.Name == memberMapper.MemberName))
-                    continue;
-
                 Expression myParameterNameExpr = Expression.Constant(ormProvider.ParameterPrefix + (isWithKey ? "k" : "") + memberMapper.MemberName);
                 if (hasSuffix)
                 {
@@ -1197,7 +1190,16 @@ public class RepositoryHelper
         var entityMapper = dbContext.MapProvider.GetEntityMap(entityType);
         string tableName = ormProvider.GetTableName(entityMapper.TableName);
         string fieldsSql = null;
-        if (isExists) fieldsSql = "COUNT(1)";
+        if (isExists)
+        {
+            fieldsSql = "COUNT(1)";
+            if (!whereObjType.IsEntityType(out _))
+            {
+                if (entityMapper.KeyMembers.Count > 1)
+                    throw new NotSupportedException($"Exists方法的参数类型不正确，实体类型{entityType.FullName}表有多个主键字段，当前参数只有1个");
+                else isUseKey = true;
+            }
+        }
         else fieldsSql = BuildSelectFieldsSqlPart(ormProvider, entityMapper, entityType);
 
         var headSql = $"SELECT {fieldsSql} FROM {tableName} WHERE ";
@@ -1583,7 +1585,7 @@ public class RepositoryHelper
             object commandInitializer = null;
             if (isDictionary || isBulk)
             {
-                var fieldsSqlSetter = BuildFieldsSqlParametersPart(dbContext, entityType, updateObjType, 4, 1, 3, false, isBulk, isUpdateRowVersion, null, null, headSql) as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
+                var fieldsSqlSetter = BuildFieldsSqlParametersPart(dbContext, entityType, updateObjType, 4, 1, 2, false, isBulk, isUpdateRowVersion, null, null, headSql) as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
                 var whereSqlSetter = BuildWhereSqlParametersPart(dbContext, entityType, updateObjType, 1, false, true, true, false, false, isBulk, " WHERE ") as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
                 Action<IDataParameterCollection, StringBuilder, DbContext, object, string> typedCommandInitializer = (dbParameters, builder, dbContext, updateObj, suffix) =>
                 {
@@ -1594,8 +1596,8 @@ public class RepositoryHelper
             }
             else
             {
-                var fieldsSqlSetter = BuildFieldsSqlParametersPart(dbContext, entityType, updateObjType, 4, 2, 3, true, false, isUpdateRowVersion, null, null, headSql) as Func<DbContext, object, string>;
-                var fieldsParameterSetter = BuildFieldsSqlParametersPart(dbContext, entityType, updateObjType, 4, 3, 0, true, false, isUpdateRowVersion, null, null, headSql) as Action<IDataParameterCollection, DbContext, object>;
+                var fieldsSqlSetter = BuildFieldsSqlParametersPart(dbContext, entityType, updateObjType, 4, 2, 2, true, false, isUpdateRowVersion, null, null, headSql) as Func<DbContext, object, string>;
+                var fieldsParameterSetter = BuildFieldsSqlParametersPart(dbContext, entityType, updateObjType, 4, 3, 0, false, false, isUpdateRowVersion, null, null, headSql) as Action<IDataParameterCollection, DbContext, object>;
                 var whereSqlSetter = BuildWhereSqlParametersPart(dbContext, entityType, updateObjType, 2, true, true, true, false, false, isBulk, " WHERE ") as Func<DbContext, object, string>;
                 var whereParameterSetter = BuildWhereSqlParametersPart(dbContext, entityType, updateObjType, 3, false, true, true, false, false, isBulk) as Action<IDataParameterCollection, DbContext, object>;
                 var sql = fieldsSqlSetter.Invoke(dbContext, null) + whereSqlSetter.Invoke(dbContext, null);
@@ -1664,7 +1666,7 @@ public class RepositoryHelper
                 var itemValueExpr = Expression.Variable(typeof(object), "itemValue");
                 var concatMethodInfo2 = typeof(string).GetMethod(nameof(string.Concat), [typeof(string), typeof(string), typeof(string)]);
 
-                blockParameters.AddRange([indexExpr, enumeratorExpr, itemKeyExpr, itemValueExpr, memberMapperExpr]);
+                blockParameters.AddRange([indexExpr, enumeratorExpr, itemKeyExpr, itemValueExpr]);
                 var breakLabel = Expression.Label();
                 var continueLabel = Expression.Label();
 
@@ -1806,15 +1808,15 @@ public class RepositoryHelper
         var cacheKey = GetCacheKey(ormProvider.OrmProviderType, dbContext.MapProvider, entityType, updateObjType, onlyFieldNames, ignoreFieldNames);
         return updateBulkWithCommandInitializerCache.GetOrAdd(cacheKey, f =>
         {
-            var fieldsSetter = BuildFieldsSqlParametersPart(dbContext, entityType, updateObjType, 4, 2, 3, false, true, isUpdateRowVersion, onlyFieldNames, ignoreFieldNames) as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
+            var fieldsSetter = BuildFieldsSqlParametersPart(dbContext, entityType, updateObjType, 4, 1, 2, false, true, isUpdateRowVersion, onlyFieldNames, ignoreFieldNames) as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
             var whereSetter = BuildWhereSqlParametersPart(dbContext, entityType, updateObjType, 1, false, true, true, false, isMultiple, true, " WHERE ") as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
             Action<IDataParameterCollection, StringBuilder, DbContext, object, string> firstSqlSetter = (dbParameters, builder, dbContext, updateObj, suffix) =>
             {
                 fieldsSetter.Invoke(dbParameters, builder, dbContext, updateObj, suffix);
                 whereSetter.Invoke(dbParameters, builder, dbContext, updateObj, suffix);
             };
-            var fieldsSqlSetter = BuildFieldsSqlParametersPart(dbContext, entityType, updateObjType, 4, 2, 1, false, true, isUpdateRowVersion, onlyFieldNames, ignoreFieldNames) as Action<StringBuilder, DbContext, object, string>;
-            var whereSqlSetter = BuildWhereSqlParametersPart(dbContext, entityType, updateObjType, 1, false, true, true, false, isMultiple, true, " WHERE ") as Action<StringBuilder, DbContext, object, string>;
+            var fieldsSqlSetter = BuildFieldsSqlParametersPart(dbContext, entityType, updateObjType, 4, 2, 2, false, true, isUpdateRowVersion, onlyFieldNames, ignoreFieldNames) as Action<StringBuilder, DbContext, object, string>;
+            var whereSqlSetter = BuildWhereSqlParametersPart(dbContext, entityType, updateObjType, 2, false, true, true, false, isMultiple, true, " WHERE ") as Action<StringBuilder, DbContext, object, string>;
             Action<StringBuilder, DbContext, object, string> shardingSqlSetter = (builder, dbContext, updateObj, suffix) =>
             {
                 fieldsSqlSetter.Invoke(builder, dbContext, updateObj, suffix);

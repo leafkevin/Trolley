@@ -2514,8 +2514,6 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
     {
         var entityMapper = visitor.Tables[0].Mapper;
         var memberMappers = visitor.GetRefMemberMappers(insertObjType, entityMapper, isUpdate);
-        var dataTable = visitor.ToDataTable(insertObjType, insertObjs, memberMappers, tableName ?? entityMapper.TableName);
-        if (dataTable.Rows.Count == 0) return 0;
 
         connection.Open();
         var fromMapper = visitor.Tables[0].Mapper;
@@ -2586,8 +2584,6 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
     {
         var entityMapper = visitor.Tables[0].Mapper;
         var memberMappers = visitor.GetRefMemberMappers(insertObjType, entityMapper, isUpdate);
-        var dataTable = visitor.ToDataTable(insertObjType, insertObjs, memberMappers, tableName ?? entityMapper.TableName);
-        if (dataTable.Rows.Count == 0) return 0;
 
         await connection.OpenAsync(cancellationToken);
         var fromMapper = visitor.Tables[0].Mapper;

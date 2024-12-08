@@ -14,10 +14,10 @@ class PostgreSqlTheaTransaction : ITheaTransaction
     public string TransactionId { get; private set; }
     public ITheaConnection Connection { get; private set; }
     public IDbTransaction BaseTransaction { get; private set; }
+
     public Action<TransactionEventArgs> OnCreated { get; set; }
     public Action<TransactionCompletedEventArgs> OnCompleted { get; set; }
 
-    public PostgreSqlTheaTransaction(NpgsqlTransaction transaction) : this(null, transaction) { }
     public PostgreSqlTheaTransaction(ITheaConnection connection, NpgsqlTransaction transaction)
     {
         this.TransactionId = Guid.NewGuid().ToString("N");

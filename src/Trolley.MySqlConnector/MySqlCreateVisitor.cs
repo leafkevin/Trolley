@@ -12,7 +12,6 @@ public class MySqlCreateVisitor : CreateVisitor
 {
     public bool IsUseIgnoreInto { get; set; }
     public StringBuilder UpdateBuilder { get; set; }
-    public bool IsUpdate { get; set; }
     public bool IsUseSetAlias { get; set; }
     public string SetRowAlias { get; set; } = "newRow";
     public List<string> OutputFieldNames { get; set; }
@@ -91,60 +90,6 @@ public class MySqlCreateVisitor : CreateVisitor
             tailSql = this.OrmProvider.GetIdentitySql(null);
         }
         return $"{this.BuildHeadSql()} {tableName} ({this.FieldsBuilder}) VALUES ({this.ValuesBuilder}){tailSql}";
-    }
-    public override string BuildWithBulkSql(ITheaCommand command, out List<SqlFieldSegment> readerFields)
-    {
-        //多命令查询或是ToSql才会走到此分支
-        //多语句执行，一次性不分批次
-        var builder = new StringBuilder();
-        (var isNeedSplit, var tableName, var insertObjs, _, var firstSqlSetter,
-            var loopSqlSetter, var tailSql, readerFields) = this.BuildWithBulk(command);
-        Action<string, IEnumerable> executor = null;
-        if (tailSql != null)
-        {
-            executor = (tableName, insertObjs) =>
-            {
-                firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                int index = 0;
-                foreach (var insertObj in insertObjs)
-                {
-                    if (index > 0) builder.Append(',');
-                    loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
-                    index++;
-                }
-                builder.Append(tailSql);
-            };
-        }
-        else
-        {
-            executor = (tableName, insertObjs) =>
-            {
-                firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                int index = 0;
-                foreach (var insertObj in insertObjs)
-                {
-                    if (index > 0) builder.Append(',');
-                    loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
-                    index++;
-                }
-            };
-        }
-        if (isNeedSplit)
-        {
-            var entityType = this.Tables[0].EntityType;
-            var tabledInsertObjs = RepositoryHelper.SplitShardingParameters(this.MapProvider, this.ShardingProvider, entityType, insertObjs);
-            int index = 0;
-            foreach (var tabledInsertObj in tabledInsertObjs)
-            {
-                if (index > 0) builder.Append(';');
-                executor(tabledInsertObj.Key, tabledInsertObj.Value);
-                index++;
-            }
-        }
-        else executor(tableName, insertObjs);
-        var sql = builder.ToString();
-        builder.Clear();
-        return sql;
     }
     public override (bool, string, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
         Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command)
@@ -308,9 +253,7 @@ public class MySqlCreateVisitor : CreateVisitor
     }
     public void VisitSetExpression(LambdaExpression lambdaExpr)
     {
-        this.IsUpdate = true;
         var currentExpr = lambdaExpr.Body;
-        var entityType = this.Tables[0].EntityType;
         var callStack = new Stack<MethodCallExpression>();
         while (true)
         {
@@ -340,7 +283,6 @@ public class MySqlCreateVisitor : CreateVisitor
                         //Set<TFields>(Expression<Func<TEntity, TFields>> fieldsAssignment)
                         if (callExpr.Arguments[0].Type.BaseType == typeof(LambdaExpression))
                         {
-                            var argumentExpr = callExpr.Arguments[0];
                             this.VisitAndDeferred(new SqlFieldSegment { Expression = callExpr.Arguments[0] });
                             isNeedAlias = true;
                         }
@@ -350,21 +292,15 @@ public class MySqlCreateVisitor : CreateVisitor
                     else if (callExpr.Arguments.Count == 2)
                     {
                         //Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment)
+                        //Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<TEntity, TField>> fieldValueSelector)
                         if (callExpr.Arguments[1].Type.BaseType == typeof(LambdaExpression))
                         {
-                            var argumentExpr = callExpr.Arguments[1];
-                            //if (argumentExpr.NodeType != ExpressionType.New && argumentExpr.NodeType != ExpressionType.MemberAccess)
-                            //    throw new NotSupportedException($"不支持的表达式访问，类型{callExpr.Method.DeclaringType.FullName}.Set方法，只支持MemberAccess/New访问，如：.Set(true, f =&gt; f.TotalAmount) 或 .Set(true, f =&gt; new {{TotalAmount = f.TotalAmount + x.Values(f.TotalAmount)}})");
                             if (callExpr.Arguments[0].Type == typeof(bool))
                             {
                                 var condition = this.Evaluate<bool>(callExpr.Arguments[0]);
                                 if (condition) this.VisitAndDeferred(new SqlFieldSegment { Expression = callExpr.Arguments[1] });
                             }
-                            else
-                            {
-                                //Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<TEntity, TField>> fieldValueSelector)
-                                this.VisitSetFieldExpression(callExpr.Arguments[0], callExpr.Arguments[1]);
-                            }
+                            else this.VisitSetFieldExpression(callExpr.Arguments[0], callExpr.Arguments[1]);
                             isNeedAlias = true;
                         }
                         else
@@ -388,11 +324,7 @@ public class MySqlCreateVisitor : CreateVisitor
                         {
                             if (callExpr.Arguments[2].Type.BaseType == typeof(LambdaExpression))
                                 this.VisitSetFieldExpression(callExpr.Arguments[1], callExpr.Arguments[2]);
-                            else
-                            {
-                                var leftSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = callExpr.Arguments[0] });
-                                this.VisitWithSetField(callExpr.Arguments[1], this.Evaluate(callExpr.Arguments[2]));
-                            }
+                            else this.VisitWithSetField(callExpr.Arguments[1], this.Evaluate(callExpr.Arguments[2]));
                         }
                     }
                     break;
@@ -400,7 +332,6 @@ public class MySqlCreateVisitor : CreateVisitor
         }
         this.UpdateBuilder.Insert(0, " ON DUPLICATE KEY UPDATE ");
         if (this.IsUseSetAlias && isNeedAlias) this.UpdateBuilder.Insert(0, $" AS {this.SetRowAlias}");
-        this.IsUpdate = false;
     }
     public override SqlFieldSegment VisitNew(SqlFieldSegment sqlSegment)
     {
@@ -496,6 +427,7 @@ public class MySqlCreateVisitor : CreateVisitor
                 var valueGetter = this.OrmProvider.GetParameterValueGetter(dbFieldValue.GetType(), targetType, false, this.Options);
                 dbFieldValue = valueGetter.Invoke(dbFieldValue);
             }
+
             this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue));
             this.UpdateBuilder.Append($"{fieldName}={parameterName}");
         }
@@ -535,7 +467,7 @@ public class MySqlCreateVisitor : CreateVisitor
         if (this.UpdateBuilder.Length > 0) this.UpdateBuilder.Append(',');
         this.UpdateBuilder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
     }
-    protected virtual string BuildOutputSql(out List<SqlFieldSegment> readerFields)
+    public virtual string BuildOutputSql(out List<SqlFieldSegment> readerFields)
     {
         readerFields = new List<SqlFieldSegment>();
         var entityMapper = this.Tables[0].Mapper;

@@ -154,7 +154,7 @@ public class PostgreSqlQuery<T> : Query<T>, IPostgreSqlQuery<T>
             if (reader.Read())
             {
                 if (entityType.IsEntityType(out _))
-                    result = reader.ToEntity<T>(this.DbContext, readerFields, true);
+                    result = reader.ToEntity<T>(this.DbContext, readerFields);
                 else result = reader.ToValue<T>(this.DbContext);
             }
             return result;
@@ -168,7 +168,7 @@ public class PostgreSqlQuery<T> : Query<T>, IPostgreSqlQuery<T>
             if (reader.Read())
             {
                 if (entityType.IsEntityType(out _))
-                    result = reader.ToEntity<T>(this.DbContext, readerFields, true);
+                    result = reader.ToEntity<T>(this.DbContext, readerFields);
                 else result = reader.ToValue<T>(this.DbContext);
             }
             return result;
@@ -183,7 +183,7 @@ public class PostgreSqlQuery<T> : Query<T>, IPostgreSqlQuery<T>
             {
                 while (reader.Read())
                 {
-                    result.Add(reader.ToEntity<T>(this.DbContext, readerFields, true));
+                    result.Add(reader.ToEntity<T>(this.DbContext, readerFields));
                 }
             }
             else
@@ -205,7 +205,7 @@ public class PostgreSqlQuery<T> : Query<T>, IPostgreSqlQuery<T>
             {
                 while (reader.Read())
                 {
-                    result.Add(reader.ToEntity<T>(this.DbContext, readerFields, true));
+                    result.Add(reader.ToEntity<T>(this.DbContext, readerFields));
                 }
             }
             else

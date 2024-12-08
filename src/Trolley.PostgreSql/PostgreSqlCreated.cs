@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,7 +27,7 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
     {
         int result = 0;
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        bool isNeedSplit;
+        bool isNeedSplit = false;
         var entityType = typeof(TEntity);
         switch (this.Visitor.ActionMode)
         {
@@ -61,8 +62,8 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                 {
                     var builder = new StringBuilder();
                     (isNeedSplit, var tableName, var insertObjs, var bulkCount,
-                        var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
-                    int executor(string tableName, IEnumerable insertObjs)
+                        var firstSqlSetter, var loopSqlSetter, var tailSql, _) = this.Visitor.BuildWithBulk(command);
+                    int Execute(string tableName, IEnumerable insertObjs)
                     {
                         int count = 0, index = 0;
                         foreach (var insertObj in insertObjs)
@@ -71,6 +72,7 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                             loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
                             if (index >= bulkCount)
                             {
+                                if (tailSql != null) builder.Append(tailSql);
                                 command.CommandText = builder.ToString();
                                 count += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
                                 builder.Clear();
@@ -83,6 +85,7 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                         }
                         if (index > 0)
                         {
+                            if (tailSql != null) builder.Append(tailSql);
                             command.CommandText = builder.ToString();
                             count += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
                             builder.Clear();
@@ -97,13 +100,13 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                         foreach (var tabledInsertObj in tabledInsertObjs)
                         {
                             firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
-                            result += executor(tabledInsertObj.Key, tabledInsertObj.Value);
+                            result += Execute(tabledInsertObj.Key, tabledInsertObj.Value);
                         }
                     }
                     else
                     {
                         firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                        result = executor(tableName, insertObjs);
+                        result = Execute(tableName, insertObjs);
                     }
                     builder.Clear();
                     break;
@@ -118,6 +121,7 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
 
         command.Dispose();
         if (isNeedClose) connection.Close();
+        this.Visitor.Dispose();
         return result;
     }
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
@@ -159,8 +163,8 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                 {
                     var builder = new StringBuilder();
                     (isNeedSplit, var tableName, var insertObjs, var bulkCount,
-                        var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
-                    async Task<int> executor(string tableName, IEnumerable insertObjs)
+                        var firstSqlSetter, var loopSqlSetter, var tailSql, _) = this.Visitor.BuildWithBulk(command);
+                    async Task<int> Executor(string tableName, IEnumerable insertObjs)
                     {
                         int count = 0, index = 0;
                         foreach (var insertObj in insertObjs)
@@ -169,6 +173,7 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                             loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
                             if (index >= bulkCount)
                             {
+                                if (tailSql != null) builder.Append(tailSql);
                                 command.CommandText = builder.ToString();
                                 count += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
                                 builder.Clear();
@@ -181,6 +186,7 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                         }
                         if (index > 0)
                         {
+                            if (tailSql != null) builder.Append(tailSql);
                             command.CommandText = builder.ToString();
                             count += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
                             builder.Clear();
@@ -195,13 +201,13 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                         foreach (var tabledInsertObj in tabledInsertObjs)
                         {
                             firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
-                            result += await executor(tabledInsertObj.Key, tabledInsertObj.Value);
+                            result += await Executor(tabledInsertObj.Key, tabledInsertObj.Value);
                         }
                     }
                     else
                     {
                         firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                        result = await executor(tableName, insertObjs);
+                        result = await Executor(tableName, insertObjs);
                     }
                     builder.Clear();
                     break;
@@ -229,9 +235,9 @@ public class PostgreSqlCreated<TEntity, TResult> : Created<TEntity>, IPostgreSql
     #endregion
 
     #region Execute
-    public new TResult Execute() => this.DbContext.CreateResult<TResult>(this.Visitor);
+    public new TResult Execute() => this.DbContext.CreateResult<TResult>(this.Visitor, true);
     public new async Task<TResult> ExecuteAsync(CancellationToken cancellationToken)
-        => await this.DbContext.CreateResultAsync<TResult>(this.Visitor, cancellationToken);
+        => await this.DbContext.CreateResultAsync<TResult>(this.Visitor, true, cancellationToken);
     #endregion
 
     #region ExecuteIdentity
@@ -271,9 +277,182 @@ public class PostgreSqlBulkCreated<TEntity, TResult> : Created<TEntity>, IPostgr
     #endregion
 
     #region Execute
-    public new List<TResult> Execute() => this.DbContext.CreateResults<TResult>(this.Visitor);
+    public new List<TResult> Execute()
+    {
+        var result = new List<TResult>();
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        bool isNeedSplit = false;
+        var entityType = typeof(TEntity);
+        var resultType = typeof(TResult);
+
+        var builder = new StringBuilder();
+        (isNeedSplit, var tableName, var insertObjs, var bulkCount, var firstSqlSetter,
+            var loopSqlSetter, var tailSql, var readerFields) = this.Visitor.BuildWithBulk(command);
+
+        Action<DbContext, List<TResult>, ITheaDataReader> initializer = null;
+        if (resultType.IsEntityType(out _))
+        {
+            initializer = (dbContext, result, reader) =>
+            {
+                while (reader.Read())
+                {
+                    result.Add(reader.ToEntity<TResult>(dbContext, readerFields, true));
+                }
+            };
+        }
+        else
+        {
+            initializer = (dbContext, result, reader) =>
+            {
+                while (reader.Read())
+                {
+                    result.Add(reader.ToValue<TResult>(dbContext));
+                }
+            };
+        }
+
+        void Execute(string tableName, IEnumerable insertObjs)
+        {
+            int index = 0;
+            foreach (var insertObj in insertObjs)
+            {
+                if (index > 0) builder.Append(',');
+                loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
+                if (index >= bulkCount)
+                {
+                    builder.Append(tailSql);
+                    command.CommandText = builder.ToString();
+                    using var reader = command.ExecuteReader(CommandSqlType.BulkInsert, CommandBehavior.SequentialAccess);
+                    initializer.Invoke(this.DbContext, result, reader);
+                    reader.Dispose();
+                    builder.Clear();
+                    command.Parameters.Clear();
+                    firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                    index = 0;
+                    continue;
+                }
+                index++;
+            }
+            if (index > 0)
+            {
+                builder.Append(tailSql);
+                command.CommandText = builder.ToString();
+                using var reader = command.ExecuteReader(CommandSqlType.BulkInsert, CommandBehavior.SequentialAccess);
+                initializer.Invoke(this.DbContext, result, reader);
+                reader.Dispose();
+                builder.Clear();
+                command.Parameters.Clear();
+            }
+        };
+        connection.Open();
+        if (isNeedSplit)
+        {
+            var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
+            foreach (var tabledInsertObj in tabledInsertObjs)
+            {
+                firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
+                Execute(tabledInsertObj.Key, tabledInsertObj.Value);
+            }
+        }
+        else
+        {
+            firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+            Execute(tableName, insertObjs);
+        }
+        builder.Clear();
+        command.Dispose();
+        if (isNeedClose) connection.Close();
+        this.Visitor.Dispose();
+        return result;
+    }
     public new async Task<List<TResult>> ExecuteAsync(CancellationToken cancellationToken)
-        => await this.DbContext.CreateResultsAsync<TResult>(this.Visitor, cancellationToken);
+    {
+        var result = new List<TResult>();
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        bool isNeedSplit = false;
+        var entityType = typeof(TEntity);
+        var resultType = typeof(TResult);
+
+        var builder = new StringBuilder();
+        (isNeedSplit, var tableName, var insertObjs, var bulkCount, var firstSqlSetter,
+            var loopSqlSetter, var tailSql, var readerFields) = this.Visitor.BuildWithBulk(command);
+
+        Func<DbContext, List<TResult>, ITheaDataReader, CancellationToken, Task> initializer = null;
+        if (resultType.IsEntityType(out _))
+        {
+            initializer = async (dbContext, result, reader, cancellationToken) =>
+            {
+                while (await reader.ReadAsync(cancellationToken))
+                {
+                    result.Add(reader.ToEntity<TResult>(dbContext, readerFields));
+                }
+            };
+        }
+        else
+        {
+            initializer = async (dbContext, result, reader, cancellationToken) =>
+            {
+                while (await reader.ReadAsync(cancellationToken))
+                {
+                    result.Add(reader.ToValue<TResult>(dbContext));
+                }
+            };
+        }
+
+        async Task Execute(string tableName, IEnumerable insertObjs)
+        {
+            int index = 0;
+            foreach (var insertObj in insertObjs)
+            {
+                if (index > 0) builder.Append(',');
+                loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
+                if (index >= bulkCount)
+                {
+                    builder.Append(tailSql);
+                    command.CommandText = builder.ToString();
+                    using var reader = await command.ExecuteReaderAsync(CommandSqlType.BulkInsert, CommandBehavior.SequentialAccess, cancellationToken);
+                    await initializer.Invoke(this.DbContext, result, reader, cancellationToken);
+                    await reader.DisposeAsync();
+                    builder.Clear();
+                    command.Parameters.Clear();
+                    firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+                    index = 0;
+                    continue;
+                }
+                index++;
+            }
+            if (index > 0)
+            {
+                builder.Append(tailSql);
+                command.CommandText = builder.ToString();
+                using var reader = await command.ExecuteReaderAsync(CommandSqlType.BulkInsert, CommandBehavior.SequentialAccess, cancellationToken);
+                await initializer.Invoke(this.DbContext, result, reader, cancellationToken);
+                await reader.DisposeAsync();
+                builder.Clear();
+                command.Parameters.Clear();
+            }
+        };
+        await connection.OpenAsync(cancellationToken);
+        if (isNeedSplit)
+        {
+            var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
+            foreach (var tabledInsertObj in tabledInsertObjs)
+            {
+                firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
+                await Execute(tabledInsertObj.Key, tabledInsertObj.Value);
+            }
+        }
+        else
+        {
+            firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+            await Execute(tableName, insertObjs);
+        }
+        builder.Clear();
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
+        this.Visitor.Dispose();
+        return result;
+    }
     #endregion
 
     #region ExecuteIdentity

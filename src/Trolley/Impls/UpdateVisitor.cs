@@ -58,14 +58,15 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter) = this.BuildWithBulk(command);
                     Func<int, string> suffixGetter = index => this.IsMultiple ? $"_m{this.CommandIndex}{index}" : $"{index}";
 
-                    Action<object, int> sqlExecuter = null;
+                    Action<object, int> sqlExecute = null;
                     if (this.ShardingTables != null && this.ShardingTables.Count > 0)
                     {
-                        sqlExecuter = (updateObj, index) =>
+                        sqlExecute = (updateObj, index) =>
                         {
                             if (index > 0) builder.Append(';');
                             var tableNames = this.ShardingTables[0].TableNames;
                             firstSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableNames[0], updateObj, suffixGetter.Invoke(index));
+
                             for (int i = 1; i < tableNames.Count; i++)
                             {
                                 builder.Append(';');
@@ -75,7 +76,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     }
                     else
                     {
-                        sqlExecuter = (updateObj, index) =>
+                        sqlExecute = (updateObj, index) =>
                         {
                             if (index > 0) builder.Append(';');
                             firstSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableName, updateObj, suffixGetter.Invoke(index));
@@ -86,7 +87,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     fixedParameterSetter?.Invoke(command.Parameters);
                     foreach (var updateObj in updateObjs)
                     {
-                        sqlExecuter.Invoke(updateObj, index);
+                        sqlExecute.Invoke(updateObj, index);
                         index++;
                     }
                     sql = builder.ToString();
@@ -245,7 +246,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             updateObjType = updateObj.GetType();
             break;
         }
-        var builder = new StringBuilder("SET ");
+        var builder = new StringBuilder();
         List<IDbDataParameter> fixedDbParameters = null;
         string fixedSql = null;
         int index = 0;
@@ -297,17 +298,19 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         (var bulkSqlSetter, var shardingSqlSetter) = RepositoryHelper.BuildUpdateBulkSetWithSqlParametersPart(this.DbContext, entityType, updateObjType, this.IsMultiple, false, this.OnlyFieldNames, this.IgnoreFieldNames);
 
         //处理有tableSchema的场景
-        Action<IDataParameterCollection> fixedParametersSetter = dbParameters => fixedDbParameters.ForEach(f => dbParameters.Add(f)); ;
+        Action<IDataParameterCollection> fixedParametersSetter = null;
+        if (fixedDbParameters != null)
+            fixedParametersSetter = dbParameters => fixedDbParameters.ForEach(f => dbParameters.Add(f));
         Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string> firstSqlSetter = null;
         Action<StringBuilder, DbContext, string, object, string> sqlSetter = null;
         firstSqlSetter = (dbParameters, builder, dbContext, tableName, updateObj, suffix) =>
         {
-            builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)} {fixedSql}");
+            builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)} SET {fixedSql}");
             bulkSqlSetter.Invoke(dbParameters, builder, dbContext, updateObj, suffix);
         };
         sqlSetter = (builder, dbContext, tableName, updateObj, suffix) =>
         {
-            builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)} {fixedSql}");
+            builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)} SET {fixedSql}");
             shardingSqlSetter.Invoke(builder, dbContext, updateObj, suffix);
         };
         var tableName = tableSegment.Mapper.TableName;
@@ -616,7 +619,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     {
         var entityType = this.Tables[0].EntityType;
         var whereObjType = whereObj.GetType();
-        var whereSqlParameters = RepositoryHelper.BuildWhereSqlParametersPart(this.DbContext, entityType, whereObjType,1, true, false, true, false, this.IsMultiple, false);
+        var whereSqlParameters = RepositoryHelper.BuildWhereSqlParametersPart(this.DbContext, entityType, whereObjType, 1, true, false, true, false, this.IsMultiple, false);
         if (this.IsMultiple)
         {
             var typedWhereSqlParameters = whereSqlParameters as Func<IDataParameterCollection, DbContext, object, string, string>;

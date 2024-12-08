@@ -118,6 +118,7 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                 result = command.ExecuteNonQuery(CommandSqlType.Insert);
                 break;
         }
+
         command.Dispose();
         if (isNeedClose) connection.Close();
         this.Visitor.Dispose();
@@ -163,7 +164,7 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                     var builder = new StringBuilder();
                     (isNeedSplit, var tableName, var insertObjs, var bulkCount,
                         var firstSqlSetter, var loopSqlSetter, var tailSql, _) = this.Visitor.BuildWithBulk(command);
-                    async Task<int> executor(string tableName, IEnumerable insertObjs)
+                    async Task<int> Executor(string tableName, IEnumerable insertObjs)
                     {
                         int count = 0, index = 0;
                         foreach (var insertObj in insertObjs)
@@ -200,13 +201,13 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                         foreach (var tabledInsertObj in tabledInsertObjs)
                         {
                             firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
-                            result += await executor(tabledInsertObj.Key, tabledInsertObj.Value);
+                            result += await Executor(tabledInsertObj.Key, tabledInsertObj.Value);
                         }
                     }
                     else
                     {
                         firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                        result = await executor(tableName, insertObjs);
+                        result = await Executor(tableName, insertObjs);
                     }
                     builder.Clear();
                     break;
@@ -236,7 +237,7 @@ public class MySqlCreated<TEntity, TResult> : Created<TEntity>, IMySqlCreated<TE
     #region Execute
     public new TResult Execute() => this.DbContext.CreateResult<TResult>(this.Visitor);
     public new async Task<TResult> ExecuteAsync(CancellationToken cancellationToken)
-        => await this.DbContext.CreateResultAsync<TResult>(this.Visitor, cancellationToken);
+        => await this.DbContext.CreateResultAsync<TResult>(this.Visitor, false, cancellationToken);
     #endregion
 
     #region ExecuteIdentity
@@ -319,7 +320,7 @@ public class MySqlBulkCreated<TEntity, TResult> : Created<TEntity>, IMySqlBulkCr
                 loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
                 if (index >= bulkCount)
                 {
-                    if (index > 0) builder.Append(tailSql);
+                    builder.Append(tailSql);
                     command.CommandText = builder.ToString();
                     using var reader = command.ExecuteReader(CommandSqlType.BulkInsert, CommandBehavior.SequentialAccess);
                     initializer.Invoke(this.DbContext, result, reader);
@@ -334,7 +335,7 @@ public class MySqlBulkCreated<TEntity, TResult> : Created<TEntity>, IMySqlBulkCr
             }
             if (index > 0)
             {
-                if (index > 0) builder.Append(tailSql);
+                builder.Append(tailSql);
                 command.CommandText = builder.ToString();
                 using var reader = command.ExecuteReader(CommandSqlType.BulkInsert, CommandBehavior.SequentialAccess);
                 initializer.Invoke(this.DbContext, result, reader);
@@ -407,7 +408,7 @@ public class MySqlBulkCreated<TEntity, TResult> : Created<TEntity>, IMySqlBulkCr
                 loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
                 if (index >= bulkCount)
                 {
-                    if (index > 0) builder.Append(tailSql);
+                    builder.Append(tailSql);
                     command.CommandText = builder.ToString();
                     using var reader = await command.ExecuteReaderAsync(CommandSqlType.BulkInsert, CommandBehavior.SequentialAccess, cancellationToken);
                     await initializer.Invoke(this.DbContext, result, reader, cancellationToken);
@@ -422,7 +423,7 @@ public class MySqlBulkCreated<TEntity, TResult> : Created<TEntity>, IMySqlBulkCr
             }
             if (index > 0)
             {
-                if (index > 0) builder.Append(tailSql);
+                builder.Append(tailSql);
                 command.CommandText = builder.ToString();
                 using var reader = await command.ExecuteReaderAsync(CommandSqlType.BulkInsert, CommandBehavior.SequentialAccess, cancellationToken);
                 await initializer.Invoke(this.DbContext, result, reader, cancellationToken);

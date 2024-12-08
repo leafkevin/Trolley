@@ -8,6 +8,7 @@ public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
 {
     public MySqlUpdateVisitor(DbContext dbContext, char tableAsStart = 'a')
         : base(dbContext, tableAsStart) { }
+
     public override string BuildTableShardingsSql()
     {
         var builder = new StringBuilder($"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND ");

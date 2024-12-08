@@ -164,8 +164,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         foreach (var readerField in this.ReaderFields)
         {
             //Union后，如果没有select语句时，通常实体类型或是select分组对象
-            var memberName = readerField.TargetMember.Name;
-            if (!entityMapper.TryGetMemberMap(memberName, out var memberMapper)
+            if (!entityMapper.TryGetMemberMap(readerField.TargetMember.Name, out var memberMapper)
                 || memberMapper.IsIgnore || memberMapper.IsIgnoreInsert
                 || memberMapper.IsNavigation || memberMapper.IsAutoIncrement || memberMapper.IsRowVersion)
                 continue;

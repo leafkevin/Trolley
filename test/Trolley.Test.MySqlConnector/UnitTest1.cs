@@ -225,7 +225,7 @@ public class UnitTest1 : UnitTestBase
         {
             Assert.Equal(MySqlDbType.Enum, dbParameter1.MySqlDbType);
             Assert.True((string)dbParameter1.Value == Gender.Male.ToString());
-        }    
+        }
         Assert.True((bool)dbParameters[6].Value);
         Assert.True((DateTime)dbParameters[7].Value == now);
         Assert.Equal(1, (int)dbParameters[8].Value);
@@ -1281,10 +1281,10 @@ public class UnitTest1 : UnitTestBase
                  UpdatedBy = 1
              })
              .OnDuplicateKeyUpdate(x => x
-                .Set(f => new { TotalAmount = x.Values(f.TotalAmount) })
+                .Set(f => new { TotalAmount = f.TotalAmount + x.Values(f.TotalAmount) })
                 .Set(f => f.Products, f => x.Values(f.Products)))
             .ToSql(out _);
-        Assert.Equal("INSERT INTO `sys_order` (`Id`,`TenantId`,`OrderNo`,`TotalAmount`,`BuyerId`,`BuyerSource`,`SellerId`,`Products`,`Disputes`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id,@TenantId,@OrderNo,@TotalAmount,@BuyerId,@BuyerSource,@SellerId,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) ON DUPLICATE KEY UPDATE `TotalAmount`=VALUES(`TotalAmount`),`Products`=VALUES(`Products`)", sql2);
+        Assert.Equal("INSERT INTO `sys_order` (`Id`,`TenantId`,`OrderNo`,`TotalAmount`,`BuyerId`,`BuyerSource`,`SellerId`,`Products`,`Disputes`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id,@TenantId,@OrderNo,@TotalAmount,@BuyerId,@BuyerSource,@SellerId,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) ON DUPLICATE KEY UPDATE `TotalAmount`=`TotalAmount`+VALUES(`TotalAmount`),`Products`=VALUES(`Products`)", sql2);
 
         var sql3 = repository.Create<Order>()
              .WithBy(new
@@ -1355,6 +1355,7 @@ public class UnitTest1 : UnitTestBase
         Assert.Null(order.Products);
 
         await repository.BeginTransactionAsync();
+        var oldOrder = await repository.GetByIdAsync<Order>("9");
         count = await repository.Create<Order>()
             .WithBy(new
             {
@@ -1381,13 +1382,13 @@ public class UnitTest1 : UnitTestBase
                 UpdatedBy = 1
             })
             .OnDuplicateKeyUpdate(x => x
-                .Set(f => new { TotalAmount = x.Values(f.TotalAmount) })
+                .Set(f => new { TotalAmount = f.TotalAmount + x.Values(f.TotalAmount) })
                 .Set(true, f => f.Products, f => x.Values(f.Products)))
             .ExecuteAsync();
         order = await repository.GetByIdAsync<Order>("9");
         await repository.CommitAsync();
         Assert.Equal(2, count);
-        Assert.Equal(600, order.TotalAmount);
+        Assert.Equal(order.TotalAmount, oldOrder.TotalAmount + 600);
         Assert.True(new JsonTypeHandler().ToFieldValue(null, order.Products).ToString() == new JsonTypeHandler().ToFieldValue(null, new List<int> { 1, 2 }).ToString());
     }
     [Fact]

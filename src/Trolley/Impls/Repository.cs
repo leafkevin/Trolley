@@ -691,8 +691,6 @@ public class Repository : IRepository
         var entityType = typeof(TEntity);
         bool isBulk = whereObj is IEnumerable && whereObj is not string && whereObj is not IDictionary<string, object>;
         var whereObjType = whereObj.GetType();
-        if (!whereObjType.IsEntityType(out _))
-            throw new NotSupportedException("不支持的参数类型，Exists方法的whereObj参数，支持实体类型参数，命名、匿名对象或是字典对象");
 
         (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
         var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.DbContext, entityType, whereObjType, whereObj, false, isBulk);
@@ -719,8 +717,6 @@ public class Repository : IRepository
         var entityType = typeof(TEntity);
         bool isBulk = whereObj is IEnumerable && whereObj is not string && whereObj is not IDictionary<string, object>;
         var whereObjType = whereObj.GetType();
-        if (!whereObjType.IsEntityType(out _))
-            throw new NotSupportedException("不支持的参数类型，ExistsAsync方法的whereObj参数，支持实体类型参数，命名、匿名对象或是字典对象");
 
         (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
         var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.DbContext, entityType, whereObjType, whereObj, false, isBulk);

@@ -42,11 +42,11 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                     if (updateObjType == null) throw new Exception("批量更新，updateObjs参数至少要有一条数据");
                     var fromMapper = this.Visitor.Tables[0].Mapper;
                     var memberMappers = this.Visitor.GetRefMemberMappers(updateObjType, fromMapper, true);
-                    var tableName = this.OrmProvider.GetTableName($"{fromMapper.TableName}_{Guid.NewGuid():N}");
+                    var tableName = $"{fromMapper.TableName}_{Guid.NewGuid():N}";
 
                     //添加临时表
                     var builder = new StringBuilder();
-                    builder.AppendLine($"CREATE TEMPORARY TABLE {tableName}(");
+                    builder.AppendLine($"CREATE TEMPORARY TABLE {this.OrmProvider.GetTableName(tableName)}(");
                     var pkColumns = new List<string>();
                     foreach ((var refMemberMapper, _) in memberMappers)
                     {
@@ -66,9 +66,9 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                     var bulkCopySql = builder.ToString();
 
                     builder.Clear();
-                    void sqlExecutor(string target, string source)
+                    void Execute(string target, string source)
                     {
-                        builder.Append($"UPDATE {this.OrmProvider.GetTableName(target)} a INNER JOIN {source} b ON ");
+                        builder.Append($"UPDATE {this.OrmProvider.GetTableName(target)} a INNER JOIN {this.OrmProvider.GetTableName(source)} b ON ");
                         for (int i = 0; i < pkColumns.Count; i++)
                         {
                             if (i > 0) builder.Append(" AND ");
@@ -78,7 +78,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                         int setIndex = 0;
                         foreach ((var refMemberMapper, _) in memberMappers)
                         {
-                            var fieldName = this.Visitor.OrmProvider.GetFieldName(refMemberMapper.FieldName);
+                            var fieldName = this.OrmProvider.GetFieldName(refMemberMapper.FieldName);
                             if (pkColumns.Contains(fieldName)) continue;
                             if (setIndex > 0) builder.Append(',');
                             builder.Append($"a.{fieldName}=b.{fieldName}");
@@ -91,20 +91,21 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                         for (int i = 0; i < tableNames.Count; i++)
                         {
                             if (i > 0) builder.Append(';');
-                            sqlExecutor(tableNames[i], tableName);
+                            Execute(tableNames[i], tableName);
                         }
                     }
-                    else sqlExecutor(this.Visitor.Tables[0].Body ?? fromMapper.TableName, tableName);
-                    builder.Append($";DROP TABLE {tableName}");
+                    else Execute(this.Visitor.Tables[0].Body ?? fromMapper.TableName, tableName);
+                    builder.Append($";DROP TABLE {this.OrmProvider.GetTableName(tableName)}");
                     var updateSql = builder.ToString();
 
                     command.CommandText = bulkCopySql;
                     connection.Open();
                     command.ExecuteNonQuery(CommandSqlType.BulkCopyUpdate);
+
                     var dialectOrmProvider = this.OrmProvider as MySqlProvider;
                     var sqlVisitor = this.Visitor as SqlVisitor;
                     result = dialectOrmProvider.ExecuteBulkCopy(true, this.DbContext, sqlVisitor, connection, updateObjType, updateObjs, timeoutSeconds, tableName);
-                    if (result == 0) updateSql = $"DROP TABLE {tableName}";
+                    if (result == 0) updateSql = $"DROP TABLE {this.OrmProvider.GetTableName(tableName)}";
                     command.CommandText = updateSql;
                     result = command.ExecuteNonQuery(CommandSqlType.BulkCopyUpdate);
                     builder.Clear();
@@ -203,11 +204,11 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                     if (updateObjType == null) throw new Exception("批量更新，updateObjs参数至少要有一条数据");
                     var fromMapper = this.Visitor.Tables[0].Mapper;
                     var memberMappers = this.Visitor.GetRefMemberMappers(updateObjType, fromMapper, true);
-                    var tableName = this.OrmProvider.GetTableName($"{fromMapper.TableName}_{Guid.NewGuid():N}");
+                    var tableName = $"{fromMapper.TableName}_{Guid.NewGuid():N}";
 
                     //添加临时表
                     var builder = new StringBuilder();
-                    builder.AppendLine($"CREATE TEMPORARY TABLE {tableName}(");
+                    builder.AppendLine($"CREATE TEMPORARY TABLE {this.OrmProvider.GetTableName(tableName)}(");
                     var pkColumns = new List<string>();
                     foreach ((var refMemberMapper, _) in memberMappers)
                     {
@@ -227,9 +228,9 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                     var bulkCopySql = builder.ToString();
 
                     builder.Clear();
-                    void sqlExecutor(string target, string source)
+                    void Execute(string target, string source)
                     {
-                        builder.Append($"UPDATE {this.OrmProvider.GetTableName(target)} a INNER JOIN {source} b ON ");
+                        builder.Append($"UPDATE {this.OrmProvider.GetTableName(target)} a INNER JOIN {this.OrmProvider.GetTableName(source)} b ON ");
                         for (int i = 0; i < pkColumns.Count; i++)
                         {
                             if (i > 0) builder.Append(" AND ");
@@ -239,7 +240,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                         int setIndex = 0;
                         foreach ((var refMemberMapper, _) in memberMappers)
                         {
-                            var fieldName = this.Visitor.OrmProvider.GetFieldName(refMemberMapper.FieldName);
+                            var fieldName = this.OrmProvider.GetFieldName(refMemberMapper.FieldName);
                             if (pkColumns.Contains(fieldName)) continue;
                             if (setIndex > 0) builder.Append(',');
                             builder.Append($"a.{fieldName}=b.{fieldName}");
@@ -252,11 +253,11 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                         for (int i = 0; i < tableNames.Count; i++)
                         {
                             if (i > 0) builder.Append(';');
-                            sqlExecutor(tableNames[i], tableName);
+                            Execute(tableNames[i], tableName);
                         }
                     }
-                    else sqlExecutor(this.Visitor.Tables[0].Body ?? fromMapper.TableName, tableName);
-                    builder.Append($";DROP TABLE {tableName}");
+                    else Execute(this.Visitor.Tables[0].Body ?? fromMapper.TableName, tableName);
+                    builder.Append($";DROP TABLE {this.OrmProvider.GetTableName(tableName)}");
                     var updateSql = builder.ToString();
 
                     command.CommandText = bulkCopySql;
@@ -265,7 +266,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                     var dialectOrmProvider = this.OrmProvider as MySqlProvider;
                     var sqlVisitor = this.Visitor as SqlVisitor;
                     result = await dialectOrmProvider.ExecuteBulkCopyAsync(true, this.DbContext, sqlVisitor, connection, updateObjType, updateObjs, timeoutSeconds, cancellationToken, tableName);
-                    if (result == 0) updateSql = $"DROP TABLE {tableName}";
+                    if (result == 0) updateSql = $"DROP TABLE {this.OrmProvider.GetTableName(tableName)}";
                     command.CommandText = updateSql;
                     result = await command.ExecuteNonQueryAsync(CommandSqlType.BulkCopyUpdate, cancellationToken);
                     builder.Clear();
@@ -277,10 +278,10 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                     (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter) = this.Visitor.BuildWithBulk(command);
                     Func<int, string> suffixGetter = index => this.Visitor.IsMultiple ? $"_m{this.Visitor.CommandIndex}{index}" : $"{index}";
 
-                    Action<object, int> sqlExecuter = null;
+                    Action<object, int> sqlExecute = null;
                     if (this.Visitor.ShardingTables != null && this.Visitor.ShardingTables.Count > 0)
                     {
-                        sqlExecuter = (updateObj, index) =>
+                        sqlExecute = (updateObj, index) =>
                         {
                             if (index > 0) builder.Append(';');
                             var tableNames = this.Visitor.ShardingTables[0].TableNames;
@@ -294,7 +295,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                     }
                     else
                     {
-                        sqlExecuter = (updateObj, index) =>
+                        sqlExecute = (updateObj, index) =>
                         {
                             if (index > 0) builder.Append(';');
                             firstSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableName, updateObj, suffixGetter.Invoke(index));
@@ -308,7 +309,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                     await connection.OpenAsync(cancellationToken);
                     foreach (var updateObj in updateObjs)
                     {
-                        sqlExecuter.Invoke(updateObj, index);
+                        sqlExecute.Invoke(updateObj, index);
                         if (index >= bulkCount)
                         {
                             command.CommandText = builder.ToString();
@@ -357,7 +358,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
         var builder = new StringBuilder();
         if (this.Visitor.ActionMode == ActionMode.BulkCopy)
         {
-            (var updateObjs, var timeoutSeconds) = this.DialectVisitor.BuildWithBulkCopy();
+            (var updateObjs, _) = this.DialectVisitor.BuildWithBulkCopy();
             Type updateObjType = null;
             foreach (var updateObj in updateObjs)
             {
@@ -367,15 +368,14 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
             if (updateObjType == null) throw new Exception("批量更新，updateObjs参数至少要有一条数据");
             var fromMapper = this.Visitor.Tables[0].Mapper;
             var memberMappers = this.Visitor.GetRefMemberMappers(updateObjType, fromMapper, true);
-            var ormProvider = this.Visitor.OrmProvider;
-            var tableName = ormProvider.GetTableName($"{fromMapper.TableName}_{Guid.NewGuid():N}");
+            var tableName = $"{fromMapper.TableName}_{Guid.NewGuid():N}";
 
             //添加临时表
-            builder.AppendLine($"CREATE TEMPORARY TABLE {tableName}(");
+            builder.AppendLine($"CREATE TEMPORARY TABLE {this.OrmProvider.GetTableName(tableName)}(");
             var pkColumns = new List<string>();
             foreach ((var refMemberMapper, _) in memberMappers)
             {
-                var fieldName = ormProvider.GetFieldName(refMemberMapper.FieldName);
+                var fieldName = this.OrmProvider.GetFieldName(refMemberMapper.FieldName);
                 builder.Append($"{fieldName} {refMemberMapper.DbColumnType}");
                 if (refMemberMapper.IsKey)
                 {
@@ -386,15 +386,16 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
             }
             builder.AppendLine($"PRIMARY KEY({string.Join(",", pkColumns)})");
             builder.AppendLine(");");
+
             if (this.Visitor.IsNeedFetchShardingTables)
             {
                 builder.Append(this.Visitor.BuildTableShardingsSql());
                 builder.Append(';');
             }
 
-            void sqlExecutor(string target, string source)
+            void Execute(string target, string source)
             {
-                builder.Append($"UPDATE {this.OrmProvider.GetTableName(target)} a INNER JOIN {source} b ON ");
+                builder.Append($"UPDATE {this.OrmProvider.GetTableName(target)} a INNER JOIN {this.OrmProvider.GetTableName(source)} b ON ");
                 for (int i = 0; i < pkColumns.Count; i++)
                 {
                     if (i > 0) builder.Append(" AND ");
@@ -404,7 +405,7 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                 int setIndex = 0;
                 foreach ((var refMemberMapper, _) in memberMappers)
                 {
-                    var fieldName = this.Visitor.OrmProvider.GetFieldName(refMemberMapper.FieldName);
+                    var fieldName = this.OrmProvider.GetFieldName(refMemberMapper.FieldName);
                     if (pkColumns.Contains(fieldName)) continue;
                     if (setIndex > 0) builder.Append(',');
                     builder.Append($"a.{fieldName}=b.{fieldName}");
@@ -417,11 +418,11 @@ public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
                 for (int i = 0; i < tableNames.Count; i++)
                 {
                     if (i > 0) builder.Append(';');
-                    sqlExecutor(tableNames[i], tableName);
+                    Execute(tableNames[i], tableName);
                 }
             }
-            else sqlExecutor(this.Visitor.Tables[0].Body ?? fromMapper.TableName, tableName);
-            builder.Append($";DROP TABLE {tableName}");
+            else Execute(this.Visitor.Tables[0].Body ?? fromMapper.TableName, tableName);
+            builder.Append($";DROP TABLE {this.OrmProvider.GetTableName(tableName)}");
             sql = builder.ToString();
         }
         else

@@ -77,7 +77,7 @@ class MySqlTheaTransaction : ITheaTransaction
     {
         bool isSuccess = true;
         Exception exception = null;
-        try { transaction.Rollback(); }
+        try { this.transaction.Rollback(); }
         catch (Exception ex)
         {
             isSuccess = false;
