@@ -102,7 +102,7 @@ public class Repository : IRepository
     #endregion
 
     #region QueryFirst/Query
-    public virtual TEntity QueryFirst<TEntity>(string rawSql, object parameters = null)
+    public virtual TEntity QueryFirst<TEntity>(string rawSql, object parameters = null, CommandType commandType = CommandType.Text)
     {
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
@@ -121,6 +121,7 @@ public class Repository : IRepository
             commandInitializer.Invoke(command.Parameters, this.OrmProvider, parameters);
         }
         command.CommandText = rawSql;
+        command.CommandType = commandType;
 
         connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
@@ -138,7 +139,7 @@ public class Repository : IRepository
         if (isNeedClose) connection.Close();
         return result;
     }
-    public virtual async Task<TEntity> QueryFirstAsync<TEntity>(string rawSql, object parameters = null, CancellationToken cancellationToken = default)
+    public virtual async Task<TEntity> QueryFirstAsync<TEntity>(string rawSql, object parameters = null, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
@@ -157,6 +158,7 @@ public class Repository : IRepository
             commandInitializer.Invoke(command.Parameters, this.OrmProvider, parameters);
         }
         command.CommandText = rawSql;
+        command.CommandType = commandType;
 
         await connection.OpenAsync(cancellationToken);
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
@@ -202,7 +204,7 @@ public class Repository : IRepository
             return result;
         }, cancellationToken);
     }
-    public virtual List<TEntity> Query<TEntity>(string rawSql, object parameters = null)
+    public virtual List<TEntity> Query<TEntity>(string rawSql, object parameters = null, CommandType commandType = CommandType.Text)
     {
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
@@ -221,6 +223,7 @@ public class Repository : IRepository
             commandInitializer.Invoke(command.Parameters, this.OrmProvider, parameters);
         }
         command.CommandText = rawSql;
+        command.CommandType = commandType;
 
         connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
@@ -246,7 +249,7 @@ public class Repository : IRepository
         if (isNeedClose) connection.Close();
         return result;
     }
-    public virtual async Task<List<TEntity>> QueryAsync<TEntity>(string rawSql, object parameters = null, CancellationToken cancellationToken = default)
+    public virtual async Task<List<TEntity>> QueryAsync<TEntity>(string rawSql, object parameters = null, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
@@ -265,6 +268,7 @@ public class Repository : IRepository
             commandInitializer.Invoke(command.Parameters, this.OrmProvider, parameters);
         }
         command.CommandText = rawSql;
+        command.CommandType = commandType;
 
         await connection.OpenAsync(cancellationToken);
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
@@ -750,13 +754,14 @@ public class Repository : IRepository
     #endregion
 
     #region Execute
-    public virtual int Execute(string rawSql, object parameters = null)
+    public virtual int Execute(string rawSql, object parameters = null, CommandType commandType = CommandType.Text)
     {
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
 
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         command.CommandText = rawSql;
+        command.CommandType = commandType;
         if (parameters != null)
         {
             var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.OrmProvider, rawSql, parameters);
@@ -768,13 +773,14 @@ public class Repository : IRepository
         if (isNeedClose) connection.Close();
         return result;
     }
-    public virtual async Task<int> ExecuteAsync(string rawSql, object parameters = null, CancellationToken cancellationToken = default)
+    public virtual async Task<int> ExecuteAsync(string rawSql, object parameters = null, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
 
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         command.CommandText = rawSql;
+        command.CommandType = commandType;
         if (parameters != null)
         {
             var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.OrmProvider, rawSql, parameters);
