@@ -618,7 +618,7 @@ public class Repository : IRepository
 
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         var entityType = typeof(TEntity);
-        this.BuildDeleteCommand(command.BaseCommand, entityType, whereKeys);
+        this.BuildDeleteCommand(command, entityType, whereKeys);
         connection.Open();
         var result = command.ExecuteNonQuery(CommandSqlType.Delete);
 
@@ -633,7 +633,7 @@ public class Repository : IRepository
 
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         var entityType = typeof(TEntity);
-        this.BuildDeleteCommand(command.BaseCommand, entityType, whereKeys);
+        this.BuildDeleteCommand(command, entityType, whereKeys);
         await connection.OpenAsync(cancellationToken);
         var result = await command.ExecuteNonQueryAsync(CommandSqlType.Delete, cancellationToken);
 
@@ -641,7 +641,7 @@ public class Repository : IRepository
         if (isNeedClose) await connection.CloseAsync();
         return result;
     }
-    private void BuildDeleteCommand(IDbCommand command, Type entityType, object whereKeys)
+    private void BuildDeleteCommand(ITheaCommand command, Type entityType, object whereKeys)
     {
         Type whereObjType = null;
         var isBulk = whereKeys is IEnumerable && whereKeys is not string && whereKeys is not IDictionary<string, object>;
