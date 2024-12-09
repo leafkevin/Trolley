@@ -62,7 +62,7 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                 {
                     var builder = new StringBuilder();
                     (isNeedSplit, var tableName, var insertObjs, var bulkCount,
-                        var firstSqlSetter, var loopSqlSetter, var tailSql, _) = this.Visitor.BuildWithBulk(command);
+                        var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
                     int Execute(string tableName, IEnumerable insertObjs)
                     {
                         int count = 0, index = 0;
@@ -72,7 +72,6 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                             loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
                             if (index >= bulkCount)
                             {
-                                if (tailSql != null) builder.Append(tailSql);
                                 command.CommandText = builder.ToString();
                                 count += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
                                 builder.Clear();
@@ -85,7 +84,6 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                         }
                         if (index > 0)
                         {
-                            if (tailSql != null) builder.Append(tailSql);
                             command.CommandText = builder.ToString();
                             count += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
                             builder.Clear();
@@ -163,7 +161,7 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                 {
                     var builder = new StringBuilder();
                     (isNeedSplit, var tableName, var insertObjs, var bulkCount,
-                        var firstSqlSetter, var loopSqlSetter, var tailSql, _) = this.Visitor.BuildWithBulk(command);
+                        var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
                     async Task<int> Executor(string tableName, IEnumerable insertObjs)
                     {
                         int count = 0, index = 0;
@@ -173,7 +171,6 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                             loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
                             if (index >= bulkCount)
                             {
-                                if (tailSql != null) builder.Append(tailSql);
                                 command.CommandText = builder.ToString();
                                 count += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
                                 builder.Clear();
@@ -186,7 +183,6 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                         }
                         if (index > 0)
                         {
-                            if (tailSql != null) builder.Append(tailSql);
                             command.CommandText = builder.ToString();
                             count += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
                             builder.Clear();

@@ -106,9 +106,9 @@ public class PostgreSqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IPos
             case ActionMode.Bulk:
                 {
                     var builder = new StringBuilder();
-                    (isNeedSplit, var tableName, var insertObjs, var bulkCount,
-                        var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
-                    int executor(string tableName, IEnumerable insertObjs)
+                    (isNeedSplit, var tableName, var insertObjs, var bulkCount, var firstSqlSetter,
+                        var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
+                    int Execute(string tableName, IEnumerable insertObjs)
                     {
                         int count = 0, index = 0;
                         foreach (var insertObj in insertObjs)
@@ -143,13 +143,13 @@ public class PostgreSqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IPos
                         foreach (var tabledInsertObj in tabledInsertObjs)
                         {
                             firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
-                            result += executor(tabledInsertObj.Key, tabledInsertObj.Value);
+                            result += Execute(tabledInsertObj.Key, tabledInsertObj.Value);
                         }
                     }
                     else
                     {
                         firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                        result = executor(tableName, insertObjs);
+                        result = Execute(tableName, insertObjs);
                     }
                     builder.Clear();
                     break;
@@ -164,6 +164,7 @@ public class PostgreSqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IPos
 
         command.Dispose();
         if (isNeedClose) connection.Close();
+        this.Visitor.Dispose();
         return result;
     }
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
@@ -331,7 +332,7 @@ public class PostgreSqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, 
     {
         int result = 0;
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        bool isNeedSplit;
+        bool isNeedSplit = false;
         var entityType = typeof(TEntity);
         switch (this.Visitor.ActionMode)
         {
@@ -367,7 +368,7 @@ public class PostgreSqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, 
                     var builder = new StringBuilder();
                     (isNeedSplit, var tableName, var insertObjs, var bulkCount,
                         var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
-                    int executor(string tableName, IEnumerable insertObjs)
+                    int Execute(string tableName, IEnumerable insertObjs)
                     {
                         int count = 0, index = 0;
                         foreach (var insertObj in insertObjs)
@@ -402,13 +403,13 @@ public class PostgreSqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, 
                         foreach (var tabledInsertObj in tabledInsertObjs)
                         {
                             firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
-                            result += executor(tabledInsertObj.Key, tabledInsertObj.Value);
+                            result += Execute(tabledInsertObj.Key, tabledInsertObj.Value);
                         }
                     }
                     else
                     {
                         firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                        result = executor(tableName, insertObjs);
+                        result = Execute(tableName, insertObjs);
                     }
                     builder.Clear();
                     break;
@@ -423,6 +424,7 @@ public class PostgreSqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, 
 
         command.Dispose();
         if (isNeedClose) connection.Close();
+        this.Visitor.Dispose();
         return result;
     }
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
@@ -465,7 +467,7 @@ public class PostgreSqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, 
                     var builder = new StringBuilder();
                     (isNeedSplit, var tableName, var insertObjs, var bulkCount,
                         var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
-                    async Task<int> executor(string tableName, IEnumerable insertObjs)
+                    async Task<int> Execute(string tableName, IEnumerable insertObjs)
                     {
                         int count = 0, index = 0;
                         foreach (var insertObj in insertObjs)
@@ -500,13 +502,13 @@ public class PostgreSqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, 
                         foreach (var tabledInsertObj in tabledInsertObjs)
                         {
                             firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
-                            result += await executor(tabledInsertObj.Key, tabledInsertObj.Value);
+                            result += await Execute(tabledInsertObj.Key, tabledInsertObj.Value);
                         }
                     }
                     else
                     {
                         firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                        result = await executor(tableName, insertObjs);
+                        result = await Execute(tableName, insertObjs);
                     }
                     builder.Clear();
                     break;

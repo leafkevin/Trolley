@@ -17,6 +17,7 @@ class MySqlTheaCommand : ITheaCommand
     public string CommandId { get; private set; }
     public IDbCommand BaseCommand => this.command;
     public bool IsNeedClose => this.transaction == null;
+
     public string CommandText { get => this.command.CommandText; set => this.command.CommandText = value; }
     public int CommandTimeout { get => this.command.CommandTimeout; set => this.command.CommandTimeout = value; }
     public CommandType CommandType { get => this.command.CommandType; set => this.command.CommandType = value; }

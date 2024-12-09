@@ -157,6 +157,7 @@ public class MySqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IMySqlUpd
                     command.CommandText = bulkCopySql;
                     connection.Open();
                     command.ExecuteNonQuery(CommandSqlType.BulkCopyUpdate);
+
                     var dialectOrmProvider = this.OrmProvider as MySqlProvider;
                     var sqlVisitor = this.Visitor as SqlVisitor;
                     result = dialectOrmProvider.ExecuteBulkCopy(true, this.DbContext, sqlVisitor, connection, updateObjType, updateObjs, timeoutSeconds, tableName);
@@ -318,6 +319,7 @@ public class MySqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IMySqlUpd
                     command.CommandText = bulkCopySql;
                     await connection.OpenAsync(cancellationToken);
                     await command.ExecuteNonQueryAsync(CommandSqlType.BulkCopyUpdate, cancellationToken);
+
                     var dialectOrmProvider = this.OrmProvider as MySqlProvider;
                     var sqlVisitor = this.Visitor as SqlVisitor;
                     result = await dialectOrmProvider.ExecuteBulkCopyAsync(true, this.DbContext, sqlVisitor, connection, updateObjType, updateObjs, timeoutSeconds, cancellationToken, tableName);
@@ -448,7 +450,7 @@ public class MySqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IMySqlUpd
                 builder.Append(';');
             }
 
-            void sqlExecutor(string target, string source)
+            void Execute(string target, string source)
             {
                 builder.Append($"UPDATE {this.OrmProvider.GetTableName(target)} a INNER JOIN {this.OrmProvider.GetTableName(source)} b ON ");
                 for (int i = 0; i < pkColumns.Count; i++)
@@ -473,10 +475,10 @@ public class MySqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IMySqlUpd
                 for (int i = 0; i < tableNames.Count; i++)
                 {
                     if (i > 0) builder.Append(';');
-                    sqlExecutor(tableNames[i], tableName);
+                    Execute(tableNames[i], tableName);
                 }
             }
-            else sqlExecutor(this.Visitor.Tables[0].Body ?? fromMapper.TableName, tableName);
+            else Execute(this.Visitor.Tables[0].Body ?? fromMapper.TableName, tableName);
             builder.Append($";DROP TABLE {this.OrmProvider.GetTableName(tableName)}");
             sql = builder.ToString();
         }
@@ -641,6 +643,7 @@ public class MySqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity>, I
                     command.CommandText = bulkCopySql;
                     connection.Open();
                     command.ExecuteNonQuery(CommandSqlType.BulkCopyUpdate);
+
                     var dialectOrmProvider = this.OrmProvider as MySqlProvider;
                     var sqlVisitor = this.Visitor as SqlVisitor;
                     result = dialectOrmProvider.ExecuteBulkCopy(true, this.DbContext, sqlVisitor, connection, updateObjType, updateObjs, timeoutSeconds, tableName);
@@ -779,7 +782,7 @@ public class MySqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity>, I
                         int setIndex = 0;
                         foreach ((var refMemberMapper, _) in memberMappers)
                         {
-                            var fieldName = this.Visitor.OrmProvider.GetFieldName(refMemberMapper.FieldName);
+                            var fieldName = this.OrmProvider.GetFieldName(refMemberMapper.FieldName);
                             if (pkColumns.Contains(fieldName)) continue;
                             if (setIndex > 0) builder.Append(',');
                             builder.Append($"a.{fieldName}=b.{fieldName}");
@@ -802,6 +805,7 @@ public class MySqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity>, I
                     command.CommandText = bulkCopySql;
                     await connection.OpenAsync(cancellationToken);
                     await command.ExecuteNonQueryAsync(CommandSqlType.BulkCopyUpdate, cancellationToken);
+
                     var dialectOrmProvider = this.OrmProvider as MySqlProvider;
                     var sqlVisitor = this.Visitor as SqlVisitor;
                     result = await dialectOrmProvider.ExecuteBulkCopyAsync(true, this.DbContext, sqlVisitor, connection, updateObjType, updateObjs, timeoutSeconds, cancellationToken, tableName);

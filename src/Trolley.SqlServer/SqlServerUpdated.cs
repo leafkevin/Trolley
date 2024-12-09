@@ -42,7 +42,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
                     if (updateObjType == null) throw new Exception("批量更新，updateObjs参数至少要有一条数据");
                     var fromMapper = this.Visitor.Tables[0].Mapper;
                     var memberMappers = this.Visitor.GetRefMemberMappers(updateObjType, fromMapper, true);
-                    var tableName = this.OrmProvider.GetTableName($"{fromMapper.TableName}_{Guid.NewGuid():N}");
+                    var tableName = $"#{fromMapper.TableName}_{Guid.NewGuid():N}";
 
                     //添加临时表
                     var builder = new StringBuilder();
@@ -66,13 +66,13 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
                     var bulkCopySql = builder.ToString();
 
                     builder.Clear();
-                    void sqlExecutor(string target, string source)
+                    void Execute(string target, string source)
                     {
                         builder.Append($"UPDATE a SET ");
                         int setIndex = 0;
                         foreach ((var refMemberMapper, _) in memberMappers)
                         {
-                            var fieldName = this.Visitor.OrmProvider.GetFieldName(refMemberMapper.FieldName);
+                            var fieldName = this.OrmProvider.GetFieldName(refMemberMapper.FieldName);
                             if (pkColumns.Contains(fieldName)) continue;
                             if (setIndex > 0) builder.Append(',');
                             builder.Append($"a.{fieldName}=b.{fieldName}");
@@ -91,16 +91,17 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
                         for (int i = 0; i < tableNames.Count; i++)
                         {
                             if (i > 0) builder.Append(';');
-                            sqlExecutor(tableNames[i], tableName);
+                            Execute(tableNames[i], tableName);
                         }
                     }
-                    else sqlExecutor(this.Visitor.Tables[0].Body ?? fromMapper.TableName, tableName);
+                    else Execute(this.Visitor.Tables[0].Body ?? fromMapper.TableName, tableName);
                     builder.Append($";DROP TABLE {tableName}");
                     var updateSql = builder.ToString();
 
                     command.CommandText = bulkCopySql;
                     connection.Open();
                     command.ExecuteNonQuery(CommandSqlType.BulkCopyUpdate);
+
                     var dialectOrmProvider = this.OrmProvider as SqlServerProvider;
                     var sqlVisitor = this.Visitor as SqlVisitor;
                     result = dialectOrmProvider.ExecuteBulkCopy(true, this.DbContext, sqlVisitor, connection, updateObjType, updateObjs, timeoutSeconds, tableName);
@@ -113,9 +114,8 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
             case ActionMode.Bulk:
                 {
                     var builder = new StringBuilder();
-                    (var updateObjs, var bulkCount, var tableName, var firstParametersSetter,
-                        var firstSqlParametersSetter, var headSqlSetter, var sqlSetter) = this.Visitor.BuildWithBulk(command.BaseCommand);
-                    string suffixGetter(int index) => this.Visitor.IsMultiple ? $"_m{this.Visitor.CommandIndex}{index}" : $"{index}";
+                    (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter) = this.Visitor.BuildWithBulk(command);
+                    Func<int, string> suffixGetter = index => this.Visitor.IsMultiple ? $"_m{this.Visitor.CommandIndex}{index}" : $"{index}";
 
                     Action<object, int> sqlExecuter = null;
                     if (this.Visitor.ShardingTables != null && this.Visitor.ShardingTables.Count > 0)
@@ -124,14 +124,11 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
                         {
                             if (index > 0) builder.Append(';');
                             var tableNames = this.Visitor.ShardingTables[0].TableNames;
-                            headSqlSetter.Invoke(builder, tableNames[0]);
-                            firstSqlParametersSetter.Invoke(command.Parameters, builder, this.DbContext, updateObj, suffixGetter(index));
-
+                            firstSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableNames[0], updateObj, suffixGetter.Invoke(index));
                             for (int i = 1; i < tableNames.Count; i++)
                             {
                                 builder.Append(';');
-                                headSqlSetter.Invoke(builder, tableNames[i]);
-                                sqlSetter.Invoke(builder, this.DbContext, updateObj, suffixGetter(index));
+                                sqlSetter.Invoke(builder, this.DbContext, tableNames[i], updateObj, suffixGetter.Invoke(index));
                             }
                         };
                     }
@@ -140,14 +137,13 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
                         sqlExecuter = (updateObj, index) =>
                         {
                             if (index > 0) builder.Append(';');
-                            headSqlSetter.Invoke(builder, tableName);
-                            firstSqlParametersSetter.Invoke(command.Parameters, builder, this.DbContext, updateObj, suffixGetter(index));
+                            firstSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableName, updateObj, suffixGetter.Invoke(index));
                         };
                     }
                     if (this.Visitor.IsNeedFetchShardingTables)
                         this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
                     int index = 0;
-                    firstParametersSetter?.Invoke(command.Parameters);
+                    fixedParameterSetter?.Invoke(command.Parameters);
                     connection.Open();
                     foreach (var updateObj in updateObjs)
                     {
@@ -157,7 +153,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
                             command.CommandText = builder.ToString();
                             result += command.ExecuteNonQuery(CommandSqlType.BulkUpdate);
                             command.Parameters.Clear();
-                            firstParametersSetter?.Invoke(command.Parameters);
+                            fixedParameterSetter?.Invoke(command.Parameters);
                             builder.Clear();
                             index = 0;
                             continue;
@@ -179,7 +175,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
 
                     if (this.Visitor.IsNeedFetchShardingTables)
                         this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
-                    command.CommandText = this.Visitor.BuildCommand(this.DbContext, command.BaseCommand);
+                    command.CommandText = this.Visitor.BuildCommand(this.DbContext, command);
                     connection.Open();
                     result = command.ExecuteNonQuery(CommandSqlType.Update);
                 }
@@ -208,7 +204,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
                     if (updateObjType == null) throw new Exception("批量更新，updateObjs参数至少要有一条数据");
                     var fromMapper = this.Visitor.Tables[0].Mapper;
                     var memberMappers = this.Visitor.GetRefMemberMappers(updateObjType, fromMapper, true);
-                    var tableName = this.OrmProvider.GetTableName($"{fromMapper.TableName}_{Guid.NewGuid():N}");
+                    var tableName = $"#{fromMapper.TableName}_{Guid.NewGuid():N}";
 
                     //添加临时表
                     var builder = new StringBuilder();
@@ -232,13 +228,13 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
                     var bulkCopySql = builder.ToString();
 
                     builder.Clear();
-                    void sqlExecutor(string target, string source)
+                    void Execute(string target, string source)
                     {
                         builder.Append($"UPDATE a SET ");
                         int setIndex = 0;
                         foreach ((var refMemberMapper, _) in memberMappers)
                         {
-                            var fieldName = this.Visitor.OrmProvider.GetFieldName(refMemberMapper.FieldName);
+                            var fieldName = this.OrmProvider.GetFieldName(refMemberMapper.FieldName);
                             if (pkColumns.Contains(fieldName)) continue;
                             if (setIndex > 0) builder.Append(',');
                             builder.Append($"a.{fieldName}=b.{fieldName}");
@@ -257,10 +253,10 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
                         for (int i = 0; i < tableNames.Count; i++)
                         {
                             if (i > 0) builder.Append(';');
-                            sqlExecutor(tableNames[i], tableName);
+                            Execute(tableNames[i], tableName);
                         }
                     }
-                    else sqlExecutor(this.Visitor.Tables[0].Body ?? fromMapper.TableName, tableName);
+                    else Execute(this.Visitor.Tables[0].Body ?? fromMapper.TableName, tableName);
                     builder.Append($";DROP TABLE {tableName}");
                     var updateSql = builder.ToString();
 
@@ -279,52 +275,47 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
             case ActionMode.Bulk:
                 {
                     var builder = new StringBuilder();
-                    (var updateObjs, var bulkCount, var tableName, var firstParametersSetter,
-                        var firstSqlParametersSetter, var headSqlSetter, var sqlSetter) = this.Visitor.BuildWithBulk(command.BaseCommand);
-                    string suffixGetter(int index) => this.Visitor.IsMultiple ? $"_m{this.Visitor.CommandIndex}{index}" : $"{index}";
+                    (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter) = this.Visitor.BuildWithBulk(command);
+                    Func<int, string> suffixGetter = index => this.Visitor.IsMultiple ? $"_m{this.Visitor.CommandIndex}{index}" : $"{index}";
 
-                    Action<object, int> sqlExecuter = null;
+                    Action<object, int> sqlExecute = null;
                     if (this.Visitor.ShardingTables != null && this.Visitor.ShardingTables.Count > 0)
                     {
-                        sqlExecuter = (updateObj, index) =>
+                        sqlExecute = (updateObj, index) =>
                         {
                             if (index > 0) builder.Append(';');
                             var tableNames = this.Visitor.ShardingTables[0].TableNames;
-                            headSqlSetter.Invoke(builder, tableNames[0]);
-                            firstSqlParametersSetter.Invoke(command.Parameters, builder, this.DbContext, updateObj, suffixGetter(index));
-
+                            firstSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableNames[0], updateObj, suffixGetter.Invoke(index));
                             for (int i = 1; i < tableNames.Count; i++)
                             {
                                 builder.Append(';');
-                                headSqlSetter.Invoke(builder, tableNames[i]);
-                                sqlSetter.Invoke(builder, this.DbContext, updateObj, suffixGetter(index));
+                                sqlSetter.Invoke(builder, this.DbContext, tableNames[i], updateObj, suffixGetter.Invoke(index));
                             }
                         };
                     }
                     else
                     {
-                        sqlExecuter = (updateObj, index) =>
+                        sqlExecute = (updateObj, index) =>
                         {
                             if (index > 0) builder.Append(';');
-                            headSqlSetter.Invoke(builder, tableName);
-                            firstSqlParametersSetter.Invoke(command.Parameters, builder, this.DbContext, updateObj, suffixGetter(index));
+                            firstSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableName, updateObj, suffixGetter.Invoke(index));
                         };
                     }
                     if (this.Visitor.IsNeedFetchShardingTables)
                         await this.DbContext.FetchShardingTablesAsync(this.Visitor as SqlVisitor, cancellationToken);
 
                     int index = 0;
-                    firstParametersSetter?.Invoke(command.Parameters);
+                    fixedParameterSetter?.Invoke(command.Parameters);
                     await connection.OpenAsync(cancellationToken);
                     foreach (var updateObj in updateObjs)
                     {
-                        sqlExecuter.Invoke(updateObj, index);
+                        sqlExecute.Invoke(updateObj, index);
                         if (index >= bulkCount)
                         {
                             command.CommandText = builder.ToString();
                             result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkUpdate, cancellationToken);
                             command.Parameters.Clear();
-                            firstParametersSetter?.Invoke(command.Parameters);
+                            fixedParameterSetter?.Invoke(command.Parameters);
                             builder.Clear();
                             index = 0;
                             continue;
@@ -346,7 +337,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
 
                     if (this.Visitor.IsNeedFetchShardingTables)
                         this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
-                    command.CommandText = this.Visitor.BuildCommand(this.DbContext, command.BaseCommand);
+                    command.CommandText = this.Visitor.BuildCommand(this.DbContext, command);
                     await connection.OpenAsync(cancellationToken);
                     result = await command.ExecuteNonQueryAsync(CommandSqlType.Update, cancellationToken);
                 }
@@ -367,7 +358,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
         var builder = new StringBuilder();
         if (this.Visitor.ActionMode == ActionMode.BulkCopy)
         {
-            (var updateObjs, var timeoutSeconds) = this.DialectVisitor.BuildWithBulkCopy();
+            (var updateObjs, _) = this.DialectVisitor.BuildWithBulkCopy();
             Type updateObjType = null;
             foreach (var updateObj in updateObjs)
             {
@@ -377,15 +368,14 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
             if (updateObjType == null) throw new Exception("批量更新，updateObjs参数至少要有一条数据");
             var fromMapper = this.Visitor.Tables[0].Mapper;
             var memberMappers = this.Visitor.GetRefMemberMappers(updateObjType, fromMapper, true);
-            var ormProvider = this.Visitor.OrmProvider;
-            var tableName = ormProvider.GetTableName($"{fromMapper.TableName}_{Guid.NewGuid():N}");
+            var tableName = $"#{fromMapper.TableName}_{Guid.NewGuid():N}";
 
             //添加临时表
             builder.AppendLine($"CREATE TABLE {tableName}(");
             var pkColumns = new List<string>();
             foreach ((var refMemberMapper, _) in memberMappers)
             {
-                var fieldName = ormProvider.GetFieldName(refMemberMapper.FieldName);
+                var fieldName = this.OrmProvider.GetFieldName(refMemberMapper.FieldName);
                 builder.Append($"{fieldName} {refMemberMapper.DbColumnType}");
                 if (refMemberMapper.IsKey)
                 {
@@ -396,25 +386,26 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
             }
             builder.AppendLine($"PRIMARY KEY({string.Join(",", pkColumns)})");
             builder.AppendLine(");");
+
             if (this.Visitor.IsNeedFetchShardingTables)
             {
                 builder.Append(this.Visitor.BuildTableShardingsSql());
                 builder.Append(';');
             }
 
-            void sqlExecutor(string target, string source)
+            void Execute(string target, string source)
             {
                 builder.Append($"UPDATE a SET ");
                 int setIndex = 0;
                 foreach ((var refMemberMapper, _) in memberMappers)
                 {
-                    var fieldName = this.Visitor.OrmProvider.GetFieldName(refMemberMapper.FieldName);
+                    var fieldName = this.OrmProvider.GetFieldName(refMemberMapper.FieldName);
                     if (pkColumns.Contains(fieldName)) continue;
                     if (setIndex > 0) builder.Append(',');
                     builder.Append($"a.{fieldName}=b.{fieldName}");
                     setIndex++;
                 }
-                builder.Append($" FROM {this.DbContext.OrmProvider.GetTableName(target)} a INNER JOIN {source} b ON ");
+                builder.Append($" FROM {this.OrmProvider.GetTableName(target)} a INNER JOIN {source} b ON ");
                 for (int i = 0; i < pkColumns.Count; i++)
                 {
                     if (i > 0) builder.Append(" AND ");
@@ -427,10 +418,10 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
                 for (int i = 0; i < tableNames.Count; i++)
                 {
                     if (i > 0) builder.Append(';');
-                    sqlExecutor(tableNames[i], tableName);
+                    Execute(tableNames[i], tableName);
                 }
             }
-            else sqlExecutor(this.Visitor.Tables[0].Body ?? fromMapper.TableName, tableName);
+            else Execute(this.Visitor.Tables[0].Body ?? fromMapper.TableName, tableName);
             builder.Append($";DROP TABLE {tableName}");
             sql = builder.ToString();
         }
@@ -442,7 +433,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
                 builder.Append(this.Visitor.BuildTableShardingsSql());
             }
             (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-            sql = this.Visitor.BuildCommand(this.DbContext, command.BaseCommand);
+            sql = this.Visitor.BuildCommand(this.DbContext, command);
             if (this.Visitor.IsNeedFetchShardingTables)
             {
                 builder.Append(sql);

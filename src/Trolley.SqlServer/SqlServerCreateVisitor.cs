@@ -63,18 +63,18 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
         if (this.OutputFieldNames != null && this.IsReturnIdentity)
             throw new NotSupportedException("不支持同时Output、Identity操作，只能选择一种操作");
 
-        string tailSql = null;
+        string outputSql = null;
         if (this.OutputFieldNames != null)
-            tailSql = this.BuildOutputSql(out readerFields);
+            outputSql = this.BuildOutputSql(out readerFields);
 
+        string tailSql = null;
         if (this.IsReturnIdentity)
         {
             if (!entityMapper.IsAutoIncrementKey)
                 throw new NotSupportedException($"实体{entityMapper.EntityType.FullName}表未配置自增长字段，无法返回Identity值");
             tailSql = this.OrmProvider.GetIdentitySql(null);
         }
-        this.FieldsBuilder.Append(this.ValuesBuilder);
-        return $"INSERT INTO {tableName}({this.FieldsBuilder}) VALUES({this.ValuesBuilder}){tailSql}";
+        return $"INSERT INTO {tableName} ({this.FieldsBuilder}){outputSql} VALUES ({this.ValuesBuilder}){tailSql}";
     }
     public override string BuildWithBulkSql(ITheaCommand command, out List<SqlFieldSegment> readerFields)
     {
@@ -82,36 +82,17 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
         //多语句执行，一次性不分批次
         var builder = new StringBuilder();
         (var isNeedSplit, var tableName, var insertObjs, _, var firstSqlSetter,
-            var loopSqlSetter, var tailSql, readerFields) = this.BuildWithBulk(command);
-        Action<string, IEnumerable> executor = null;
-        if (tailSql != null)
+            var loopSqlSetter, _, readerFields) = this.BuildWithBulk(command);
+        void Execute(string tableName, IEnumerable insertObjs)
         {
-            executor = (tableName, insertObjs) =>
+            firstSqlSetter.Invoke(command.Parameters, builder, tableName);
+            int index = 0;
+            foreach (var insertObj in insertObjs)
             {
-                firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                int index = 0;
-                foreach (var insertObj in insertObjs)
-                {
-                    if (index > 0) builder.Append(',');
-                    loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
-                    index++;
-                }
-                builder.Append(tailSql);
-            };
-        }
-        else
-        {
-            executor = (tableName, insertObjs) =>
-            {
-                firstSqlSetter.Invoke(command.Parameters, builder, tableName);
-                int index = 0;
-                foreach (var insertObj in insertObjs)
-                {
-                    if (index > 0) builder.Append(',');
-                    loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
-                    index++;
-                }
-            };
+                if (index > 0) builder.Append(',');
+                loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
+                index++;
+            }
         }
         if (isNeedSplit)
         {
@@ -121,11 +102,11 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
             foreach (var tabledInsertObj in tabledInsertObjs)
             {
                 if (index > 0) builder.Append(';');
-                executor(tabledInsertObj.Key, tabledInsertObj.Value);
+                Execute(tabledInsertObj.Key, tabledInsertObj.Value);
                 index++;
             }
         }
-        else executor(tableName, insertObjs);
+        else Execute(tableName, insertObjs);
         var sql = builder.ToString();
         builder.Clear();
         return sql;
@@ -175,22 +156,23 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
         }
 
         var entityMapper = tableSegment.Mapper;
-        var fieldsSetter = this.GetFieldsSetter(entityType, insertObjType);
-        var valuesSetter = this.GetValuesSetter(entityType, insertObjType, true);
+        var fieldsSetter = RepositoryHelper.BuildCreateFieldsSqlPart(this.DbContext, entityType, insertObjType, false, this.OnlyFieldNames, this.IgnoreFieldNames);
+        var valuesSetter = RepositoryHelper.BuildCreateValuesSqlPart(this.DbContext, entityType, insertObjType, true, false, this.OnlyFieldNames, this.IgnoreFieldNames);
         var typedValuesSetter = valuesSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
 
-        string headSql = "INSERT INTO";
+        string headSql = "INSERT INTO ";
         if (!string.IsNullOrEmpty(tableSegment.TableSchema))
             headSql = $"INSERT INTO {this.OrmProvider.GetTableName(tableSegment.TableSchema)}";
 
         //生成批量Fields SQL
         fieldsSetter.Invoke(this.FieldsBuilder, this.DbContext, firstInsertObj);
 
-        string tailSql = null;
         List<SqlFieldSegment> readerFields = null;
+        string outputSql = null;
         if (this.OutputFieldNames != null)
-            tailSql = this.BuildOutputSql(out readerFields);
-        var fieldsSql = $"({this.FieldsBuilder}) VALUES";
+            outputSql = this.BuildOutputSql(out readerFields);
+
+        var fieldsSql = $"({this.FieldsBuilder}){outputSql} VALUES ";
         this.FieldsBuilder.Clear();
         this.ValuesBuilder.Clear();
 
@@ -199,21 +181,12 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
         {
             firstSqlSetter = (dbParameters, builder, tableName) =>
             {
-                builder.Append(headSql);
-                builder.Append(this.OrmProvider.GetTableName(tableName));
-                builder.Append(fieldsSql);
+                builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)} {fieldsSql}");
                 fixedDbParameters.ForEach(f => dbParameters.Add(f));
             };
         }
-        else
-        {
-            firstSqlSetter = (dbParameters, builder, tableName) =>
-            {
-                builder.Append(headSql);
-                builder.Append(this.OrmProvider.GetTableName(tableName));
-                builder.Append(fieldsSql);
-            };
-        }
+        else firstSqlSetter = (dbParameters, builder, tableName) => builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)} {fieldsSql}");
+
         Action<IDataParameterCollection, StringBuilder, DbContext, object, string> loopSqlSetter = null;
         loopSqlSetter = (dbParameters, builder, dbContext, insertObj, suffix) =>
         {
@@ -222,7 +195,7 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
             builder.Append(')');
         };
         this.DbParameters = command.Parameters;
-        return (isNeedSplit, tableName, insertObjs, bulkCount, firstSqlSetter, loopSqlSetter, tailSql, readerFields);
+        return (isNeedSplit, tableName, insertObjs, bulkCount, firstSqlSetter, loopSqlSetter, null, readerFields);
     }
     public void WithLock(string lockName) => this.LockName = lockName;
     public void Output(params string[] fieldNames)
@@ -244,7 +217,7 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
     public (IEnumerable, int?) BuildWithBulkCopy() => ((IEnumerable, int?))this.deferredSegments[0].Value;
 
 
-    protected virtual string BuildOutputSql(out List<SqlFieldSegment> readerFields)
+    public virtual string BuildOutputSql(out List<SqlFieldSegment> readerFields)
     {
         readerFields = new List<SqlFieldSegment>();
         var entityMapper = this.Tables[0].Mapper;

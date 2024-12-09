@@ -372,10 +372,10 @@ public class UnitTest3 : UnitTestBase
             })
             .Where(f => f.Id == 1)
             .ToSql(out var dbParameters);
-        Assert.Equal("UPDATE [sys_user] SET [Age]=@Age,[Name]=@Name,[CompanyId]=@CompanyId WHERE [Id]=1", sql);
+        Assert.Equal("UPDATE [sys_user] SET [Name]=@Name,[Age]=@Age,[CompanyId]=@CompanyId WHERE [Id]=1", sql);
         Assert.Equal(3, dbParameters.Count);
-        Assert.Equal(25, (int)dbParameters[0].Value);
-        Assert.Equal("leafkevin22", (string)dbParameters[1].Value);
+        Assert.Equal("leafkevin22", (string)dbParameters[0].Value);
+        Assert.Equal(25, (int)dbParameters[1].Value);        
         Assert.True(dbParameters[2].Value == DBNull.Value);
 
         repository.Update<User>()

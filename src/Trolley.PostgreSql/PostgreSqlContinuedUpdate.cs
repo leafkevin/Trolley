@@ -335,10 +335,10 @@ public class PostgreSqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IPos
                     (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter) = this.Visitor.BuildWithBulk(command);
                     Func<int, string> suffixGetter = index => this.Visitor.IsMultiple ? $"_m{this.Visitor.CommandIndex}{index}" : $"{index}";
 
-                    Action<object, int> sqlExecuter = null;
+                    Action<object, int> sqlExecute = null;
                     if (this.Visitor.ShardingTables != null && this.Visitor.ShardingTables.Count > 0)
                     {
-                        sqlExecuter = (updateObj, index) =>
+                        sqlExecute = (updateObj, index) =>
                         {
                             if (index > 0) builder.Append(';');
                             var tableNames = this.Visitor.ShardingTables[0].TableNames;
@@ -352,7 +352,7 @@ public class PostgreSqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IPos
                     }
                     else
                     {
-                        sqlExecuter = (updateObj, index) =>
+                        sqlExecute = (updateObj, index) =>
                         {
                             if (index > 0) builder.Append(';');
                             firstSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableName, updateObj, suffixGetter.Invoke(index));
@@ -366,7 +366,7 @@ public class PostgreSqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IPos
                     await connection.OpenAsync(cancellationToken);
                     foreach (var updateObj in updateObjs)
                     {
-                        sqlExecuter.Invoke(updateObj, index);
+                        sqlExecute.Invoke(updateObj, index);
                         if (index >= bulkCount)
                         {
                             command.CommandText = builder.ToString();
@@ -422,8 +422,9 @@ public class PostgreSqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IPos
                 updateObjType = updateObj.GetType();
                 break;
             }
+            if (updateObjType == null) throw new Exception("批量更新，updateObjs参数至少要有一条数据");
             var fromMapper = this.Visitor.Tables[0].Mapper;
-            var memberMappers = this.Visitor.GetRefMemberMappers(updateObjType, fromMapper);
+            var memberMappers = this.Visitor.GetRefMemberMappers(updateObjType, fromMapper, true);
             var tableName = $"{fromMapper.TableName}_{Guid.NewGuid():N}";
 
             //添加临时表
@@ -442,11 +443,13 @@ public class PostgreSqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IPos
             }
             builder.AppendLine($"PRIMARY KEY({string.Join(",", pkColumns)})");
             builder.AppendLine(");");
+
             if (this.Visitor.IsNeedFetchShardingTables)
             {
                 builder.Append(this.Visitor.BuildTableShardingsSql());
                 builder.Append(';');
             }
+
             void Execute(string target, string source)
             {
                 builder.Append($"UPDATE {this.OrmProvider.GetTableName(target)} a SET ");
@@ -468,12 +471,11 @@ public class PostgreSqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IPos
             }
             if (this.Visitor.ShardingTables != null && this.Visitor.ShardingTables.Count > 0)
             {
-                int index = 0;
                 var tableNames = this.Visitor.ShardingTables[0].TableNames;
-                foreach (var shardingTableName in tableNames)
+                for (int i = 0; i < tableNames.Count; i++)
                 {
-                    if (index > 0) builder.Append(';');
-                    Execute(shardingTableName, tableName);
+                    if (i > 0) builder.Append(';');
+                    Execute(tableNames[i], tableName);
                 }
             }
             else Execute(this.Visitor.Tables[0].Body ?? fromMapper.TableName, tableName);
@@ -606,7 +608,7 @@ public class PostgreSqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntit
                     var bulkCopySql = builder.ToString();
 
                     builder.Clear();
-                    void sqlExecutor(string target, string source)
+                    void Execute(string target, string source)
                     {
                         builder.Append($"UPDATE {this.OrmProvider.GetTableName(target)} a SET ");
                         int setIndex = 0;
@@ -631,10 +633,10 @@ public class PostgreSqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntit
                         for (int i = 0; i < tableNames.Count; i++)
                         {
                             if (i > 0) builder.Append(';');
-                            sqlExecutor(tableNames[i], tableName);
+                            Execute(tableNames[i], tableName);
                         }
                     }
-                    else sqlExecutor(this.Visitor.Tables[0].Body ?? fromMapper.TableName, tableName);
+                    else Execute(this.Visitor.Tables[0].Body ?? fromMapper.TableName, tableName);
                     builder.Append($";DROP TABLE {this.OrmProvider.GetTableName(tableName)}");
                     var updateSql = builder.ToString();
 
@@ -768,7 +770,7 @@ public class PostgreSqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntit
                     var bulkCopySql = builder.ToString();
 
                     builder.Clear();
-                    void sqlExecutor(string target, string source)
+                    void Execute(string target, string source)
                     {
                         builder.Append($"UPDATE {this.OrmProvider.GetTableName(target)} a SET ");
                         int setIndex = 0;
@@ -793,10 +795,10 @@ public class PostgreSqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntit
                         for (int i = 0; i < tableNames.Count; i++)
                         {
                             if (i > 0) builder.Append(';');
-                            sqlExecutor(tableNames[i], tableName);
+                            Execute(tableNames[i], tableName);
                         }
                     }
-                    else sqlExecutor(this.Visitor.Tables[0].Body ?? fromMapper.TableName, tableName);
+                    else Execute(this.Visitor.Tables[0].Body ?? fromMapper.TableName, tableName);
                     builder.Append($";DROP TABLE {this.OrmProvider.GetTableName(tableName)}");
                     var updateSql = builder.ToString();
 
@@ -819,10 +821,10 @@ public class PostgreSqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntit
                     (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter) = this.Visitor.BuildWithBulk(command);
                     Func<int, string> suffixGetter = index => this.Visitor.IsMultiple ? $"_m{this.Visitor.CommandIndex}{index}" : $"{index}";
 
-                    Action<object, int> sqlExecuter = null;
+                    Action<object, int> sqlExecute = null;
                     if (this.Visitor.ShardingTables != null && this.Visitor.ShardingTables.Count > 0)
                     {
-                        sqlExecuter = (updateObj, index) =>
+                        sqlExecute = (updateObj, index) =>
                         {
                             if (index > 0) builder.Append(';');
                             var tableNames = this.Visitor.ShardingTables[0].TableNames;
@@ -836,7 +838,7 @@ public class PostgreSqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntit
                     }
                     else
                     {
-                        sqlExecuter = (updateObj, index) =>
+                        sqlExecute = (updateObj, index) =>
                         {
                             if (index > 0) builder.Append(';');
                             firstSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableName, updateObj, suffixGetter.Invoke(index));
@@ -850,7 +852,7 @@ public class PostgreSqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntit
                     await connection.OpenAsync(cancellationToken);
                     foreach (var updateObj in updateObjs)
                     {
-                        sqlExecuter.Invoke(updateObj, index);
+                        sqlExecute.Invoke(updateObj, index);
                         if (index >= bulkCount)
                         {
                             command.CommandText = builder.ToString();
@@ -906,8 +908,9 @@ public class PostgreSqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntit
                 updateObjType = updateObj.GetType();
                 break;
             }
+            if (updateObjType == null) throw new Exception("批量更新，updateObjs参数至少要有一条数据");
             var fromMapper = this.Visitor.Tables[0].Mapper;
-            var memberMappers = this.Visitor.GetRefMemberMappers(updateObjType, fromMapper);
+            var memberMappers = this.Visitor.GetRefMemberMappers(updateObjType, fromMapper, true);
             var tableName = $"{fromMapper.TableName}_{Guid.NewGuid():N}";
 
             //添加临时表
@@ -926,11 +929,13 @@ public class PostgreSqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntit
             }
             builder.AppendLine($"PRIMARY KEY({string.Join(",", pkColumns)})");
             builder.AppendLine(");");
+
             if (this.Visitor.IsNeedFetchShardingTables)
             {
                 builder.Append(this.Visitor.BuildTableShardingsSql());
                 builder.Append(';');
             }
+
             void Execute(string target, string source)
             {
                 builder.Append($"UPDATE {this.OrmProvider.GetTableName(target)} a SET ");
@@ -952,12 +957,11 @@ public class PostgreSqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntit
             }
             if (this.Visitor.ShardingTables != null && this.Visitor.ShardingTables.Count > 0)
             {
-                int index = 0;
                 var tableNames = this.Visitor.ShardingTables[0].TableNames;
-                foreach (var shardingTableName in tableNames)
+                for (int i = 0; i < tableNames.Count; i++)
                 {
-                    if (index > 0) builder.Append(';');
-                    Execute(shardingTableName, tableName);
+                    if (i > 0) builder.Append(';');
+                    Execute(tableNames[i], tableName);
                 }
             }
             else Execute(this.Visitor.Tables[0].Body ?? fromMapper.TableName, tableName);

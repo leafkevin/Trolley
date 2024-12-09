@@ -168,7 +168,12 @@ public partial class MySqlProvider : BaseOrmProvider
         if (string.IsNullOrEmpty(tableName))
             throw new ArgumentNullException(nameof(tableName));
         if (tableName.Contains('.'))
-            tableName = tableName.Replace(".", "`.`");
+        {
+            var tableNames = tableName.Split('.');
+            if (tableNames[0] == this.DefaultTableSchema)
+                return "`" + tableNames[1] + "`";
+            return $"`{tableNames[0]}`.`{tableNames[1]}`";
+        }
         return "`" + tableName + "`";
     }
     public override string GetFieldName(string fieldName) => "`" + fieldName + "`";

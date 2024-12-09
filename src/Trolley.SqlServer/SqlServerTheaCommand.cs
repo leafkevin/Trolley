@@ -22,8 +22,6 @@ class SqlServerTheaCommand : ITheaCommand
     public int CommandTimeout { get => this.command.CommandTimeout; set => this.command.CommandTimeout = value; }
     public CommandType CommandType { get => this.command.CommandType; set => this.command.CommandType = value; }
     public IDataParameterCollection Parameters => this.command.Parameters;
-    public UpdateRowSource UpdatedRowSource { get => this.command.UpdatedRowSource; set => this.command.UpdatedRowSource = value; }
-    public bool DesignTimeVisible { get => this.command.DesignTimeVisible; set => this.command.DesignTimeVisible = value; }
     public ITheaConnection Connection
     {
         get => this.connection;
@@ -42,10 +40,10 @@ class SqlServerTheaCommand : ITheaCommand
             this.BaseCommand.Transaction = value?.BaseTransaction ?? null;
         }
     }
+
     public Action<CommandEventArgs> OnExecuting { get; set; }
     public Action<CommandCompletedEventArgs> OnExecuted { get; set; }
 
-    public SqlServerTheaCommand(SqlCommand command) : this(command, null, null) { }
     public SqlServerTheaCommand(SqlCommand command, ITheaConnection connection, ITheaTransaction transaction)
     {
         this.CommandId = Guid.NewGuid().ToString("N");
@@ -53,9 +51,6 @@ class SqlServerTheaCommand : ITheaCommand
         this.Connection = connection;
         this.transaction = transaction;
     }
-
-    public void Cancel() => this.command.Cancel();
-    public IDbDataParameter CreateParameter() => this.command.CreateParameter();
 
     public int ExecuteNonQuery(CommandSqlType sqlType)
     {
@@ -65,6 +60,8 @@ class SqlServerTheaCommand : ITheaCommand
         {
             DbKey = this.DbKey,
             CommandId = this.CommandId,
+            ConnectionId = this.connection.ConnectionId,
+            TransactionId = this.transaction?.TransactionId,
             ConnectionString = this.Connection.ConnectionString,
             Sql = this.CommandText,
             DbParameters = this.Parameters,
@@ -90,6 +87,8 @@ class SqlServerTheaCommand : ITheaCommand
             {
                 DbKey = this.DbKey,
                 CommandId = this.CommandId,
+                ConnectionId = this.connection.ConnectionId,
+                TransactionId = this.transaction?.TransactionId,
                 ConnectionString = this.Connection.ConnectionString,
                 Sql = this.CommandText,
                 DbParameters = this.Parameters,
@@ -102,6 +101,7 @@ class SqlServerTheaCommand : ITheaCommand
         }
         if (!isSuccess)
         {
+            this.Dispose();
             if (this.IsNeedClose) this.connection.Close();
             throw exception;
         }
@@ -115,6 +115,8 @@ class SqlServerTheaCommand : ITheaCommand
         {
             DbKey = this.DbKey,
             CommandId = this.CommandId,
+            ConnectionId = this.connection.ConnectionId,
+            TransactionId = this.transaction?.TransactionId,
             ConnectionString = this.Connection.ConnectionString,
             Sql = this.CommandText,
             DbParameters = this.Parameters,
@@ -140,6 +142,8 @@ class SqlServerTheaCommand : ITheaCommand
             {
                 DbKey = this.DbKey,
                 CommandId = this.CommandId,
+                ConnectionId = this.connection.ConnectionId,
+                TransactionId = this.transaction?.TransactionId,
                 ConnectionString = this.Connection.ConnectionString,
                 Sql = this.CommandText,
                 DbParameters = this.Parameters,
@@ -152,12 +156,12 @@ class SqlServerTheaCommand : ITheaCommand
         }
         if (!isSuccess)
         {
+            await this.DisposeAsync();
             if (this.IsNeedClose) await this.connection.CloseAsync();
             throw exception;
         }
         return recordsAffected;
     }
-
     public ITheaDataReader ExecuteReader(CommandSqlType sqlType, CommandBehavior behavior = default)
     {
         this.index++;
@@ -167,6 +171,8 @@ class SqlServerTheaCommand : ITheaCommand
         {
             DbKey = this.DbKey,
             CommandId = this.CommandId,
+            ConnectionId = this.connection.ConnectionId,
+            TransactionId = this.transaction?.TransactionId,
             ConnectionString = this.Connection.ConnectionString,
             Sql = this.CommandText,
             DbParameters = this.Parameters,
@@ -192,6 +198,8 @@ class SqlServerTheaCommand : ITheaCommand
             {
                 DbKey = this.DbKey,
                 CommandId = this.CommandId,
+                ConnectionId = this.connection.ConnectionId,
+                TransactionId = this.transaction?.TransactionId,
                 ConnectionString = this.Connection.ConnectionString,
                 Sql = this.CommandText,
                 DbParameters = this.Parameters,
@@ -204,6 +212,7 @@ class SqlServerTheaCommand : ITheaCommand
         }
         if (!isSuccess)
         {
+            this.Dispose();
             if (this.IsNeedClose) this.connection.Close();
             throw exception;
         }
@@ -217,6 +226,8 @@ class SqlServerTheaCommand : ITheaCommand
         {
             DbKey = this.DbKey,
             CommandId = this.CommandId,
+            ConnectionId = this.connection.ConnectionId,
+            TransactionId = this.transaction?.TransactionId,
             ConnectionString = this.Connection.ConnectionString,
             Sql = this.CommandText,
             DbParameters = this.Parameters,
@@ -242,6 +253,8 @@ class SqlServerTheaCommand : ITheaCommand
             {
                 DbKey = this.DbKey,
                 CommandId = this.CommandId,
+                ConnectionId = this.connection.ConnectionId,
+                TransactionId = this.transaction?.TransactionId,
                 ConnectionString = this.Connection.ConnectionString,
                 Sql = this.CommandText,
                 DbParameters = this.Parameters,
@@ -254,6 +267,7 @@ class SqlServerTheaCommand : ITheaCommand
         }
         if (!isSuccess)
         {
+            await this.DisposeAsync();
             if (this.IsNeedClose) await this.connection.CloseAsync();
             throw exception;
         }
@@ -267,6 +281,8 @@ class SqlServerTheaCommand : ITheaCommand
         {
             DbKey = this.DbKey,
             CommandId = this.CommandId,
+            ConnectionId = this.connection.ConnectionId,
+            TransactionId = this.transaction?.TransactionId,
             ConnectionString = this.Connection.ConnectionString,
             Sql = this.CommandText,
             DbParameters = this.Parameters,
@@ -292,6 +308,8 @@ class SqlServerTheaCommand : ITheaCommand
             {
                 DbKey = this.DbKey,
                 CommandId = this.CommandId,
+                ConnectionId = this.connection.ConnectionId,
+                TransactionId = this.transaction?.TransactionId,
                 ConnectionString = this.Connection.ConnectionString,
                 Sql = this.CommandText,
                 DbParameters = this.Parameters,
@@ -304,6 +322,7 @@ class SqlServerTheaCommand : ITheaCommand
         }
         if (!isSuccess)
         {
+            this.Dispose();
             if (this.IsNeedClose) this.connection.Close();
             throw exception;
         }
@@ -317,6 +336,8 @@ class SqlServerTheaCommand : ITheaCommand
         {
             DbKey = this.DbKey,
             CommandId = this.CommandId,
+            ConnectionId = this.connection.ConnectionId,
+            TransactionId = this.transaction?.TransactionId,
             ConnectionString = this.Connection.ConnectionString,
             Sql = this.CommandText,
             DbParameters = this.Parameters,
@@ -342,6 +363,8 @@ class SqlServerTheaCommand : ITheaCommand
             {
                 DbKey = this.DbKey,
                 CommandId = this.CommandId,
+                ConnectionId = this.connection.ConnectionId,
+                TransactionId = this.transaction?.TransactionId,
                 ConnectionString = this.Connection.ConnectionString,
                 Sql = this.CommandText,
                 DbParameters = this.Parameters,
@@ -354,6 +377,7 @@ class SqlServerTheaCommand : ITheaCommand
         }
         if (!isSuccess)
         {
+            await this.DisposeAsync();
             if (this.IsNeedClose) await this.connection.CloseAsync();
             throw exception;
         }

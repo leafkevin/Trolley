@@ -194,7 +194,7 @@ public interface ISqlServerUpdate<TEntity> : IUpdate<TEntity>
     /// <param name="updateObjs">更新对象参数集合，包含更新字段和where条件字段</param>
     /// <param name="bulkCount">单次更新的最大数据条数，默认是500</param>
     /// <returns>返回更新对象</returns>
-    new ISqlServerContinuedUpdate<TEntity> SetBulk<TUpdateObj>(IEnumerable<TUpdateObj> updateObjs, int bulkCount = 500);
+    new ISqlServerBulkContinuedUpdate<TEntity> SetBulk<TUpdateObj>(IEnumerable<TUpdateObj> updateObjs, int bulkCount = 500);
     #endregion
 
     #region InnerJoin

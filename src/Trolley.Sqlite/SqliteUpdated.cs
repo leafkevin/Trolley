@@ -72,7 +72,7 @@ public class SqliteUpdated<TEntity> : Updated<TEntity>, ISqliteUpdated<TEntity>
             //            int setIndex = 0;
             //            foreach ((var refMemberMapper, _) in memberMappers)
             //            {
-            //                var fieldName = this.Visitor.OrmProvider.GetFieldName(refMemberMapper.FieldName);
+            //                var fieldName = this.OrmProvider.GetFieldName(refMemberMapper.FieldName);
             //                if (pkColumns.Contains(fieldName)) continue;
             //                if (setIndex > 0) builder.Append(',');
             //                builder.Append($"a.{fieldName}=b.{fieldName}");
@@ -238,7 +238,7 @@ public class SqliteUpdated<TEntity> : Updated<TEntity>, ISqliteUpdated<TEntity>
             //            int setIndex = 0;
             //            foreach ((var refMemberMapper, _) in memberMappers)
             //            {
-            //                var fieldName = this.Visitor.OrmProvider.GetFieldName(refMemberMapper.FieldName);
+            //                var fieldName = this.OrmProvider.GetFieldName(refMemberMapper.FieldName);
             //                if (pkColumns.Contains(fieldName)) continue;
             //                if (setIndex > 0) builder.Append(',');
             //                builder.Append($"a.{fieldName}=b.{fieldName}");
@@ -408,13 +408,13 @@ public class SqliteUpdated<TEntity> : Updated<TEntity>, ISqliteUpdated<TEntity>
                 int setIndex = 0;
                 foreach ((var refMemberMapper, _) in memberMappers)
                 {
-                    var fieldName = this.Visitor.OrmProvider.GetFieldName(refMemberMapper.FieldName);
+                    var fieldName = this.OrmProvider.GetFieldName(refMemberMapper.FieldName);
                     if (pkColumns.Contains(fieldName)) continue;
                     if (setIndex > 0) builder.Append(',');
                     builder.Append($"a.{fieldName}=b.{fieldName}");
                     setIndex++;
                 }
-                builder.Append($" FROM {this.DbContext.OrmProvider.GetTableName(target)} a INNER JOIN {source} b ON ");
+                builder.Append($" FROM {this.OrmProvider.GetTableName(target)} a INNER JOIN {source} b ON ");
                 for (int i = 0; i < pkColumns.Count; i++)
                 {
                     if (i > 0) builder.Append(" AND ");

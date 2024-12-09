@@ -14,11 +14,10 @@ class SqlServerTheaTransaction : ITheaTransaction
     public string TransactionId { get; private set; }
     public ITheaConnection Connection { get; private set; }
     public IDbTransaction BaseTransaction { get; private set; }
-    public IsolationLevel IsolationLevel => this.transaction.IsolationLevel;
+
     public Action<TransactionEventArgs> OnCreated { get; set; }
     public Action<TransactionCompletedEventArgs> OnCompleted { get; set; }
 
-    public SqlServerTheaTransaction(SqlTransaction transaction) : this(null, transaction) { }
     public SqlServerTheaTransaction(ITheaConnection connection, SqlTransaction transaction)
     {
         this.TransactionId = Guid.NewGuid().ToString("N");
@@ -77,7 +76,7 @@ class SqlServerTheaTransaction : ITheaTransaction
     public void Dispose() => this.transaction.Dispose();
 #if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
     public async Task CommitAsync(CancellationToken cancellationToken = default)
-	{
+    {
         bool isSuccess = true;
         Exception exception = null;
         try { await this.transaction.CommitAsync(cancellationToken); }

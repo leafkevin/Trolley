@@ -21,6 +21,8 @@ partial class SqlServerProvider
     public override IUpdate<TEntity> NewUpdate<TEntity>(DbContext dbContext) => new SqlServerUpdate<TEntity>(dbContext);
     public override IContinuedUpdate<TEntity> NewContinuedUpdate<TEntity>(DbContext dbContext, IUpdateVisitor visitor)
         => new SqlServerContinuedUpdate<TEntity>(dbContext, visitor);
+    public override IBulkContinuedUpdate<TEntity> NewBulkContinuedUpdate<TEntity>(DbContext dbContext, IUpdateVisitor visitor)
+        => new SqlServerBulkContinuedUpdate<TEntity>(dbContext, visitor);
     public override IUpdated<TEntity> NewUpdated<TEntity>(DbContext dbContext, IUpdateVisitor visitor)
         => new SqlServerUpdated<TEntity>(dbContext, visitor);
     public override IUpdateVisitor NewUpdateVisitor(DbContext dbContext, char tableAsStart = 'a')

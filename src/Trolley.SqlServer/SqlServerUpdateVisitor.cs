@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq.Expressions;
 using System.Text;
 
@@ -30,7 +29,7 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
         }
         if (!isFirst) this.Clear();
     }
-    public override string BuildCommand(DbContext dbContext, IDbCommand command)
+    public override string BuildCommand(DbContext dbContext, ITheaCommand command)
     {
         string sql = null;
         var builder = new StringBuilder();
@@ -39,43 +38,39 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
             case ActionMode.Bulk:
                 {
                     //此SQL只能用在多命令查询时和返回ToSql两个场景
-                    (var updateObjs, var bulkCount, var tableName, var firstParametersSetter,
-                        var firstSqlParametersSetter, var headSqlSetter, var sqlSetter) = this.BuildWithBulk(command);
+                    (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter) = this.BuildWithBulk(command);
                     Func<int, string> suffixGetter = index => this.IsMultiple ? $"_m{this.CommandIndex}{index}" : $"{index}";
 
-                    Action<object, int> sqlExecuter = null;
+                    Action<object, int> sqlExecute = null;
                     if (this.ShardingTables != null && this.ShardingTables.Count > 0)
                     {
-                        sqlExecuter = (updateObj, index) =>
+                        sqlExecute = (updateObj, index) =>
                         {
                             if (index > 0) builder.Append(';');
                             var tableNames = this.ShardingTables[0].TableNames;
-                            headSqlSetter.Invoke(builder, tableNames[0]);
-                            firstSqlParametersSetter.Invoke(command.Parameters, builder, this.DbContext, updateObj, suffixGetter.Invoke(index));
+                            firstSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableNames[0], updateObj, suffixGetter.Invoke(index));
 
                             for (int i = 1; i < tableNames.Count; i++)
                             {
                                 builder.Append(';');
-                                headSqlSetter.Invoke(builder, tableNames[i]);
-                                sqlSetter.Invoke(builder, this.DbContext, updateObj, suffixGetter.Invoke(index));
+                                sqlSetter.Invoke(builder, this.DbContext, tableNames[i], updateObj, suffixGetter.Invoke(index));
                             }
                         };
                     }
                     else
                     {
-                        sqlExecuter = (updateObj, index) =>
+                        sqlExecute = (updateObj, index) =>
                         {
                             if (index > 0) builder.Append(';');
-                            headSqlSetter.Invoke(builder, tableName);
-                            firstSqlParametersSetter.Invoke(command.Parameters, builder, this.DbContext, updateObj, suffixGetter.Invoke(index));
+                            firstSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableName, updateObj, suffixGetter.Invoke(index));
                         };
                     }
 
                     int index = 0;
-                    firstParametersSetter?.Invoke(command.Parameters);
+                    fixedParameterSetter?.Invoke(command.Parameters);
                     foreach (var updateObj in updateObjs)
                     {
-                        sqlExecuter.Invoke(updateObj, index);
+                        sqlExecute.Invoke(updateObj, index);
                         index++;
                     }
                     sql = builder.ToString();
@@ -84,8 +79,6 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
             case ActionMode.Single:
                 {
                     this.UpdateFields = new();
-                    var entityType = this.Tables[0].EntityType;
-                    //非Bulk场景
                     this.DbParameters ??= command.Parameters;
                     foreach (var deferredSegment in this.deferredSegments)
                     {
@@ -117,6 +110,7 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
                                 break;
                         }
                     }
+
                     var aliasName = this.Tables[0].AliasName;
                     if (this.IsJoin)
                     {
@@ -175,9 +169,9 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
                     else
                     {
                         Action<string> headSqlSetter = null;
-                        var tableSegment = this.Tables[0];
-                        if (!string.IsNullOrEmpty(tableSegment.TableSchema))
-                            headSqlSetter = tableName => builder.Append($"UPDATE {this.OrmProvider.GetTableName(tableSegment.TableSchema + "." + tableName)}");
+                        var tableSchema = this.Tables[0].TableSchema;
+                        if (!string.IsNullOrEmpty(tableSchema))
+                            headSqlSetter = tableName => builder.Append($"UPDATE {this.OrmProvider.GetTableName(tableSchema + "." + tableName)}");
                         else headSqlSetter = tableName => builder.Append($"UPDATE {this.OrmProvider.GetTableName(tableName)}");
                         if (this.ShardingTables != null && this.ShardingTables.Count > 0)
                         {
@@ -201,7 +195,6 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
                 break;
         }
         builder.Clear();
-        builder = null;
         return sql;
     }
     public override string BuildTableShardingsSql()

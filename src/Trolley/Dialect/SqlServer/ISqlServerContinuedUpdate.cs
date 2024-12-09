@@ -242,7 +242,7 @@ public interface ISqlServerContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
 /// 更新数据
 /// </summary>
 /// <typeparam name="TEntity">要更新的实体类型</typeparam>
-public interface ISqlServerBulkContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
+public interface ISqlServerBulkContinuedUpdate<TEntity> : IBulkContinuedUpdate<TEntity>
 {
     #region Set
     /// <summary>

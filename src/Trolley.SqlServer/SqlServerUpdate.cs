@@ -27,7 +27,6 @@ public class SqlServerUpdate<TEntity> : Update<TEntity>, ISqlServerUpdate<TEntit
     	=> base.UseTableBy(field1Value, field2Value) as ISqlServerUpdate<TEntity>;
     public new ISqlServerUpdate<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue)
         => base.UseTableByRange(beginFieldValue, endFieldValue) as ISqlServerUpdate<TEntity>;
-
     public new ISqlServerUpdate<TEntity> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
         => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as ISqlServerUpdate<TEntity>;
     #endregion
@@ -59,8 +58,8 @@ public class SqlServerUpdate<TEntity> : Update<TEntity>, ISqlServerUpdate<TEntit
     #endregion
 
     #region SetBulk
-    public new ISqlServerContinuedUpdate<TEntity> SetBulk<TUpdateObj>(IEnumerable<TUpdateObj> updateObjs, int bulkCount = 500)
-        => base.SetBulk(updateObjs, bulkCount) as ISqlServerContinuedUpdate<TEntity>;
+    public new ISqlServerBulkContinuedUpdate<TEntity> SetBulk<TUpdateObj>(IEnumerable<TUpdateObj> updateObjs, int bulkCount = 500)
+        => base.SetBulk(updateObjs, bulkCount) as ISqlServerBulkContinuedUpdate<TEntity>;
     #endregion
 
     #region Join

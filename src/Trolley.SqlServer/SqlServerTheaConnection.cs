@@ -12,12 +12,10 @@ class SqlServerTheaConnection : ITheaConnection
 
     public string DbKey { get; private set; }
     public string ConnectionId { get; private set; }
-
     public string ConnectionString { get; set; }
     public int ConnectionTimeout => this.connection.ConnectionTimeout;
     public string Database => this.connection.Database;
     public string ServerVersion => this.connection.ServerVersion;
-
     public ConnectionState State => this.connection.State;
     public IDbConnection BaseConnection => this.connection;
 
@@ -91,15 +89,7 @@ class SqlServerTheaConnection : ITheaConnection
     {
         if (this.connection == null || this.State == ConnectionState.Open) return;
         if (this.State == ConnectionState.Broken)
-        {
-            this.connection.Close();
-            this.OnClosed?.Invoke(new ConectionEventArgs
-            {
-                DbKey = this.DbKey,
-                ConnectionId = this.ConnectionId,
-                ConnectionString = this.ConnectionString
-            });
-        }
+            this.Close();
         if (this.State == ConnectionState.Closed)
         {
             //关闭后，连接串被重置，需要重新设置
@@ -193,7 +183,6 @@ class SqlServerTheaConnection : ITheaConnection
             return new ValueTask<ITheaTransaction>(Task.FromException<ITheaTransaction>(e));
         }
     }
-
     public void Dispose() => this.connection.Dispose();
     public ValueTask DisposeAsync()
 #if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER

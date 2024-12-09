@@ -128,7 +128,7 @@ public class SqliteContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqliteU
             //            int setIndex = 0;
             //            foreach ((var refMemberMapper, _) in memberMappers)
             //            {
-            //                var fieldName = this.Visitor.OrmProvider.GetFieldName(refMemberMapper.FieldName);
+            //                var fieldName = this.OrmProvider.GetFieldName(refMemberMapper.FieldName);
             //                if (pkColumns.Contains(fieldName)) continue;
             //                if (setIndex > 0) builder.Append(',');
             //                builder.Append($"a.{fieldName}=b.{fieldName}");
@@ -294,7 +294,7 @@ public class SqliteContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqliteU
             //            int setIndex = 0;
             //            foreach ((var refMemberMapper, _) in memberMappers)
             //            {
-            //                var fieldName = this.Visitor.OrmProvider.GetFieldName(refMemberMapper.FieldName);
+            //                var fieldName = this.OrmProvider.GetFieldName(refMemberMapper.FieldName);
             //                if (pkColumns.Contains(fieldName)) continue;
             //                if (setIndex > 0) builder.Append(',');
             //                builder.Append($"a.{fieldName}=b.{fieldName}");
@@ -431,14 +431,14 @@ public class SqliteContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqliteU
         //        break;
         //    }
         //    var fromMapper = this.Visitor.Tables[0].Mapper;
-        //    var tableName = this.Visitor.OrmProvider.GetTableName($"{fromMapper.TableName}_{Guid.NewGuid():N}");
+        //    var tableName = this.OrmProvider.GetTableName($"{fromMapper.TableName}_{Guid.NewGuid():N}");
         //    var memberMappers = this.Visitor.GetRefMemberMappers(updateObjType, fromMapper);
         //    //添加临时表           
         //    builder.AppendLine($"CREATE TEMPORARY TABLE {tableName}(");
         //    var pkColumns = new List<string>();
         //    foreach ((var refMemberMapper, _) in memberMappers)
         //    {
-        //        var fieldName = this.Visitor.OrmProvider.GetFieldName(refMemberMapper.FieldName);
+        //        var fieldName = this.OrmProvider.GetFieldName(refMemberMapper.FieldName);
         //        builder.Append($"{fieldName} {refMemberMapper.DbColumnType}");
         //        if (refMemberMapper.IsKey)
         //        {
@@ -454,7 +454,7 @@ public class SqliteContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqliteU
 
         //    void sqlExecutor(StringBuilder builder, string tableName)
         //    {
-        //        builder.Append($"UPDATE {this.DbContext.OrmProvider.GetTableName(tableName)} a INNER JOIN {tableName} b ON ");
+        //        builder.Append($"UPDATE {this.OrmProvider.GetTableName(tableName)} a INNER JOIN {tableName} b ON ");
         //        for (int i = 0; i < pkColumns.Count; i++)
         //        {
         //            if (i > 0) builder.Append(" AND ");
@@ -464,7 +464,7 @@ public class SqliteContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqliteU
         //        int setIndex = 0;
         //        foreach ((var refMemberMapper, _) in memberMappers)
         //        {
-        //            var fieldName = this.Visitor.OrmProvider.GetFieldName(refMemberMapper.FieldName);
+        //            var fieldName = this.OrmProvider.GetFieldName(refMemberMapper.FieldName);
         //            if (pkColumns.Contains(fieldName)) continue;
         //            if (setIndex > 0) builder.Append(',');
         //            builder.Append($"a.{fieldName}=b.{fieldName}");
