@@ -75,7 +75,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                             var fieldName = this.OrmProvider.GetFieldName(refMemberMapper.FieldName);
                             if (pkColumns.Contains(fieldName)) continue;
                             if (setIndex > 0) builder.Append(',');
-                            builder.Append($"a.{fieldName}=b.{fieldName}");
+                            builder.Append($"{fieldName}=b.{fieldName}");
                             setIndex++;
                         }
                         builder.Append($" FROM {this.OrmProvider.GetTableName(source)} b WHERE ");
@@ -237,7 +237,7 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                             var fieldName = this.OrmProvider.GetFieldName(refMemberMapper.FieldName);
                             if (pkColumns.Contains(fieldName)) continue;
                             if (setIndex > 0) builder.Append(',');
-                            builder.Append($"a.{fieldName}=b.{fieldName}");
+                            builder.Append($"{fieldName}=b.{fieldName}");
                             setIndex++;
                         }
                         builder.Append($" FROM {this.OrmProvider.GetTableName(source)} b WHERE ");
@@ -392,24 +392,23 @@ public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<T
                 builder.Append(this.Visitor.BuildTableShardingsSql());
                 builder.Append(';');
             }
-
             void Execute(string target, string source)
             {
-                builder.Append($"UPDATE {this.OrmProvider.GetTableName(target)} a INNER JOIN {this.OrmProvider.GetTableName(source)} b ON ");
-                for (int i = 0; i < pkColumns.Count; i++)
-                {
-                    if (i > 0) builder.Append(" AND ");
-                    builder.Append($"a.{pkColumns[i]}=b.{pkColumns[i]}");
-                }
-                builder.Append(" SET ");
+                builder.Append($"UPDATE {this.OrmProvider.GetTableName(target)} a SET ");
                 int setIndex = 0;
                 foreach ((var refMemberMapper, _) in memberMappers)
                 {
                     var fieldName = this.OrmProvider.GetFieldName(refMemberMapper.FieldName);
                     if (pkColumns.Contains(fieldName)) continue;
                     if (setIndex > 0) builder.Append(',');
-                    builder.Append($"a.{fieldName}=b.{fieldName}");
+                    builder.Append($"{fieldName}=b.{fieldName}");
                     setIndex++;
+                }
+                builder.Append($" FROM {this.OrmProvider.GetTableName(source)} b WHERE ");
+                for (int i = 0; i < pkColumns.Count; i++)
+                {
+                    if (i > 0) builder.Append(" AND ");
+                    builder.Append($"a.{pkColumns[i]}=b.{pkColumns[i]}");
                 }
             }
             if (this.Visitor.ShardingTables != null && this.Visitor.ShardingTables.Count > 0)

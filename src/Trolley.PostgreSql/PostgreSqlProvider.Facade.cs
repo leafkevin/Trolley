@@ -73,6 +73,8 @@ partial class PostgreSqlProvider
     public override IUpdate<TEntity> NewUpdate<TEntity>(DbContext dbContext) => new PostgreSqlUpdate<TEntity>(dbContext);
     public override IContinuedUpdate<TEntity> NewContinuedUpdate<TEntity>(DbContext dbContext, IUpdateVisitor visitor)
         => new PostgreSqlContinuedUpdate<TEntity>(dbContext, visitor);
+    public override IBulkContinuedUpdate<TEntity> NewBulkContinuedUpdate<TEntity>(DbContext dbContext, IUpdateVisitor visitor) 
+        => new PostgreSqlBulkContinuedUpdate<TEntity>(dbContext, visitor);
     public override IUpdated<TEntity> NewUpdated<TEntity>(DbContext dbContext, IUpdateVisitor visitor)
         => new PostgreSqlUpdated<TEntity>(dbContext, visitor);
     public override IUpdateVisitor NewUpdateVisitor(DbContext dbContext, char tableAsStart = 'a')

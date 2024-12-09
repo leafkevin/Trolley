@@ -237,7 +237,7 @@ public class MySqlCreated<TEntity, TResult> : Created<TEntity>, IMySqlCreated<TE
     #region Execute
     public new TResult Execute() => this.DbContext.CreateResult<TResult>(this.Visitor);
     public new async Task<TResult> ExecuteAsync(CancellationToken cancellationToken)
-        => await this.DbContext.CreateResultAsync<TResult>(this.Visitor, false, cancellationToken);
+        => await this.DbContext.CreateResultAsync<TResult>(this.Visitor, cancellationToken);
     #endregion
 
     #region ExecuteIdentity

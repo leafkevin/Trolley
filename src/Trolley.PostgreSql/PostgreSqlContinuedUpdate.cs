@@ -423,9 +423,10 @@ public class PostgreSqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IPos
                 break;
             }
             var fromMapper = this.Visitor.Tables[0].Mapper;
-            var tableName = $"{fromMapper.TableName}_{Guid.NewGuid():N}";
             var memberMappers = this.Visitor.GetRefMemberMappers(updateObjType, fromMapper);
-            //添加临时表           
+            var tableName = $"{fromMapper.TableName}_{Guid.NewGuid():N}";
+
+            //添加临时表
             builder.AppendLine($"CREATE TEMPORARY TABLE {this.OrmProvider.GetTableName(tableName)}(");
             var pkColumns = new List<string>();
             foreach ((var refMemberMapper, _) in memberMappers)
@@ -442,25 +443,27 @@ public class PostgreSqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IPos
             builder.AppendLine($"PRIMARY KEY({string.Join(",", pkColumns)})");
             builder.AppendLine(");");
             if (this.Visitor.IsNeedFetchShardingTables)
-                builder.Append(this.Visitor.BuildTableShardingsSql());
-
-            void Execute(string target, string tableName)
             {
-                builder.Append($"UPDATE {this.OrmProvider.GetTableName(target)} a INNER JOIN {this.OrmProvider.GetTableName(tableName)} b ON ");
-                for (int i = 0; i < pkColumns.Count; i++)
-                {
-                    if (i > 0) builder.Append(" AND ");
-                    builder.Append($"a.{pkColumns[i]}=b.{pkColumns[i]}");
-                }
-                builder.Append(" SET ");
+                builder.Append(this.Visitor.BuildTableShardingsSql());
+                builder.Append(';');
+            }
+            void Execute(string target, string source)
+            {
+                builder.Append($"UPDATE {this.OrmProvider.GetTableName(target)} a SET ");
                 int setIndex = 0;
                 foreach ((var refMemberMapper, _) in memberMappers)
                 {
                     var fieldName = this.OrmProvider.GetFieldName(refMemberMapper.FieldName);
                     if (pkColumns.Contains(fieldName)) continue;
                     if (setIndex > 0) builder.Append(',');
-                    builder.Append($"a.{fieldName}=b.{fieldName}");
+                    builder.Append($"{fieldName}=b.{fieldName}");
                     setIndex++;
+                }
+                builder.Append($" FROM {this.OrmProvider.GetTableName(source)} b WHERE ");
+                for (int i = 0; i < pkColumns.Count; i++)
+                {
+                    if (i > 0) builder.Append(" AND ");
+                    builder.Append($"a.{pkColumns[i]}=b.{pkColumns[i]}");
                 }
             }
             if (this.Visitor.ShardingTables != null && this.Visitor.ShardingTables.Count > 0)
@@ -903,15 +906,16 @@ public class PostgreSqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntit
                 updateObjType = updateObj.GetType();
                 break;
             }
-            var fromMapper = this.Visitor.Tables[0].Mapper;         
+            var fromMapper = this.Visitor.Tables[0].Mapper;
             var memberMappers = this.Visitor.GetRefMemberMappers(updateObjType, fromMapper);
             var tableName = $"{fromMapper.TableName}_{Guid.NewGuid():N}";
-            //添加临时表           
+
+            //添加临时表
             builder.AppendLine($"CREATE TEMPORARY TABLE {this.OrmProvider.GetTableName(tableName)}(");
             var pkColumns = new List<string>();
             foreach ((var refMemberMapper, _) in memberMappers)
             {
-                var fieldName = this.Visitor.OrmProvider.GetFieldName(refMemberMapper.FieldName);
+                var fieldName = this.OrmProvider.GetFieldName(refMemberMapper.FieldName);
                 builder.Append($"{fieldName} {refMemberMapper.DbColumnType}");
                 if (refMemberMapper.IsKey)
                 {
@@ -923,25 +927,27 @@ public class PostgreSqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntit
             builder.AppendLine($"PRIMARY KEY({string.Join(",", pkColumns)})");
             builder.AppendLine(");");
             if (this.Visitor.IsNeedFetchShardingTables)
-                builder.Append(this.Visitor.BuildTableShardingsSql());
-
-            void Execute(StringBuilder builder, string tableName)
             {
-                builder.Append($"UPDATE {this.OrmProvider.GetTableName(tableName)} a INNER JOIN {this.OrmProvider.GetTableName(tableName)} b ON ");
+                builder.Append(this.Visitor.BuildTableShardingsSql());
+                builder.Append(';');
+            }
+            void Execute(string target, string source)
+            {
+                builder.Append($"UPDATE {this.OrmProvider.GetTableName(target)} a SET ");
+                int setIndex = 0;
+                foreach ((var refMemberMapper, _) in memberMappers)
+                {
+                    var fieldName = this.OrmProvider.GetFieldName(refMemberMapper.FieldName);
+                    if (pkColumns.Contains(fieldName)) continue;
+                    if (setIndex > 0) builder.Append(',');
+                    builder.Append($"{fieldName}=b.{fieldName}");
+                    setIndex++;
+                }
+                builder.Append($" FROM {this.OrmProvider.GetTableName(source)} b WHERE ");
                 for (int i = 0; i < pkColumns.Count; i++)
                 {
                     if (i > 0) builder.Append(" AND ");
                     builder.Append($"a.{pkColumns[i]}=b.{pkColumns[i]}");
-                }
-                builder.Append(" SET ");
-                int setIndex = 0;
-                foreach ((var refMemberMapper, _) in memberMappers)
-                {
-                    var fieldName = this.Visitor.OrmProvider.GetFieldName(refMemberMapper.FieldName);
-                    if (pkColumns.Contains(fieldName)) continue;
-                    if (setIndex > 0) builder.Append(',');
-                    builder.Append($"a.{fieldName}=b.{fieldName}");
-                    setIndex++;
                 }
             }
             if (this.Visitor.ShardingTables != null && this.Visitor.ShardingTables.Count > 0)
@@ -951,10 +957,10 @@ public class PostgreSqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntit
                 foreach (var shardingTableName in tableNames)
                 {
                     if (index > 0) builder.Append(';');
-                    Execute(builder, shardingTableName);
+                    Execute(shardingTableName, tableName);
                 }
             }
-            else Execute(builder, this.Visitor.Tables[0].Body ?? fromMapper.TableName);
+            else Execute(this.Visitor.Tables[0].Body ?? fromMapper.TableName, tableName);
             builder.Append($";DROP TABLE {this.OrmProvider.GetTableName(tableName)}");
             sql = builder.ToString();
         }

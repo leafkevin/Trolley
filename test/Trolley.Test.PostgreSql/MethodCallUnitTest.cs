@@ -528,7 +528,7 @@ public class MethodCallUnitTest : UnitTestBase
                 Age = Convert.ToString(f.Age)
             })
             .ToSql(out _);
-        Assert.Equal("SELECT CONCAT('Age-',@p0) AS \"StringAge\",CONCAT('Id-',CAST(a.\"Id\" AS VARCHAR)) AS \"StringId1\",((CAST(a.\"Age\" AS DECIMAL)*2)-10) AS \"DoubleAge\",a.\"Gender\" AS \"Gender1\",a.\"Gender\" AS \"Gender2\",CAST(a.\"Age\" AS VARCHAR) AS \"Age\" FROM \"sys_user\" a WHERE a.\"Id\"=1", sql);
+        Assert.Equal("SELECT CONCAT('Age-',@p0) AS \"StringAge\",CONCAT('Id-',CAST(a.\"Id\" AS VARCHAR)) AS \"StringId1\",((CAST(a.\"Age\" AS FLOAT)*2)-10) AS \"DoubleAge\",a.\"Gender\" AS \"Gender1\",a.\"Gender\" AS \"Gender2\",CAST(a.\"Age\" AS VARCHAR) AS \"Age\" FROM \"sys_user\" a WHERE a.\"Id\"=1", sql);
 
         var result = repository.From<User>()
             .Where(f => f.Id == 1)

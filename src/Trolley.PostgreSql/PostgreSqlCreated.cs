@@ -235,9 +235,9 @@ public class PostgreSqlCreated<TEntity, TResult> : Created<TEntity>, IPostgreSql
     #endregion
 
     #region Execute
-    public new TResult Execute() => this.DbContext.CreateResult<TResult>(this.Visitor, true);
+    public new TResult Execute() => this.DbContext.CreateResult<TResult>(this.Visitor);
     public new async Task<TResult> ExecuteAsync(CancellationToken cancellationToken)
-        => await this.DbContext.CreateResultAsync<TResult>(this.Visitor, true, cancellationToken);
+        => await this.DbContext.CreateResultAsync<TResult>(this.Visitor, cancellationToken);
     #endregion
 
     #region ExecuteIdentity

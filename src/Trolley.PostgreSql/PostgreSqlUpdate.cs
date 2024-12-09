@@ -58,8 +58,8 @@ public class PostgreSqlUpdate<TEntity> : Update<TEntity>, IPostgreSqlUpdate<TEnt
     #endregion
 
     #region SetBulk
-    public new IPostgreSqlContinuedUpdate<TEntity> SetBulk<TUpdateObj>(IEnumerable<TUpdateObj> updateObjs, int bulkCount = 500)
-        => base.SetBulk(updateObjs, bulkCount) as IPostgreSqlContinuedUpdate<TEntity>;
+    public new IPostgreSqlBulkContinuedUpdate<TEntity> SetBulk<TUpdateObj>(IEnumerable<TUpdateObj> updateObjs, int bulkCount = 500)
+        => base.SetBulk(updateObjs, bulkCount) as IPostgreSqlBulkContinuedUpdate<TEntity>;
     #endregion
 
     #region Join

@@ -616,7 +616,7 @@ public class Query<T> : QueryBase, IQuery<T>
     }
     public virtual IPagedList<T> ToPageList() => this.DbContext.QueryPage<T>(this.Visitor);
     public virtual async Task<IPagedList<T>> ToPageListAsync(CancellationToken cancellationToken = default)
-        => await this.DbContext.QueryPageAsync<T>(this.Visitor, false, cancellationToken);
+        => await this.DbContext.QueryPageAsync<T>(this.Visitor, cancellationToken);
     public virtual Dictionary<TKey, TValue> ToDictionary<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector) where TKey : notnull
     {
         if (keySelector == null)

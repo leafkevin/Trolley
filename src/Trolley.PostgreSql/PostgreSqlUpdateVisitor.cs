@@ -96,7 +96,7 @@ public class PostgreSqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
 
                     var aliasName = this.Tables[0].AliasName;
                     if (this.IsNeedTableAlias)
-                        builder.Append($"AS {aliasName} ");
+                        builder.Append($"{aliasName} ");
 
                     int index = 0;
                     builder.Append("SET ");
@@ -134,10 +134,7 @@ public class PostgreSqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
                         whereSql = whereBuildr.ToString();
                     }
                     if (!string.IsNullOrEmpty(whereSql))
-                    {
-                        builder.Append(" WHERE ");
-                        builder.Append(whereSql);
-                    }
+                        builder.Append($" WHERE {whereSql}");
                     sql = builder.ToString();
                     builder.Clear();
 
@@ -151,7 +148,7 @@ public class PostgreSqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
                     else
                     {
                         Action<string> headSqlSetter = null;
-                         var tableSchema = this.Tables[0].TableSchema;
+                        var tableSchema = this.Tables[0].TableSchema;
                         if (!string.IsNullOrEmpty(tableSchema))
                             headSqlSetter = tableName => builder.Append($"UPDATE {this.OrmProvider.GetTableName(tableSchema + "." + tableName)} ");
                         else headSqlSetter = tableName => builder.Append($"UPDATE {this.OrmProvider.GetTableName(tableName)} ");

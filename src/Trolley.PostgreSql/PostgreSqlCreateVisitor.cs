@@ -70,6 +70,8 @@ public class PostgreSqlCreateVisitor : CreateVisitor
         if (!string.IsNullOrEmpty(tableSegment.TableSchema))
             tableName = $"{this.OrmProvider.GetTableName(tableSegment.TableSchema)}.{this.OrmProvider.GetTableName(tableName)}";
         tableName = this.OrmProvider.GetTableName(tableName);
+        //Set语句中，引用了原值，就需要使用别名
+        if (this.IsUseTableAlias) tableName += $" AS {tableSegment.AliasName}";
 
         if (this.UpdateBuilder != null && this.OutputFieldNames != null || this.UpdateBuilder != null && this.IsReturnIdentity
             || this.OutputFieldNames != null && this.IsReturnIdentity)
@@ -535,12 +537,6 @@ public class PostgreSqlCreateVisitor : CreateVisitor
                 });
             }
         }
-        readerFields.Sort((x, y) =>
-        {
-            var xMemberMapper = entityMapper.GetMemberMap(x.FromMember.Name);
-            var yMemberMapper = entityMapper.GetMemberMap(y.FromMember.Name);
-            return xMemberMapper.Position.CompareTo(yMemberMapper.Position);
-        });
         var sql = builder.ToString();
         builder.Clear();
         return sql;

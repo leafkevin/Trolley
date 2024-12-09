@@ -218,9 +218,9 @@ public class PostgreSqlQuery<T> : Query<T>, IPostgreSqlQuery<T>
             return result;
         }, cancellationToken);
     }
-    public override IPagedList<T> ToPageList() => this.DbContext.QueryPage<T>(this.Visitor, true);
+    public override IPagedList<T> ToPageList() => this.DbContext.QueryPage<T>(this.Visitor);
     public override async Task<IPagedList<T>> ToPageListAsync(CancellationToken cancellationToken = default)
-        => await this.DbContext.QueryPageAsync<T>(this.Visitor, true, cancellationToken);
+        => await this.DbContext.QueryPageAsync<T>(this.Visitor, cancellationToken);
     #endregion
 }
 public class PostgreSqlQuery<T1, T2> : Query<T1, T2>, IPostgreSqlQuery<T1, T2>

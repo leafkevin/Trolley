@@ -389,7 +389,7 @@ public sealed class DbContext
     #endregion
 
     #region QueryPage
-    public IPagedList<TResult> QueryPage<TResult>(IQueryVisitor visitor, bool isUseReaderOrder = false)
+    public IPagedList<TResult> QueryPage<TResult>(IQueryVisitor visitor)
     {
         var result = new PagedList<TResult> { Data = new List<TResult>() };
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.IsUseMaster);
@@ -413,7 +413,7 @@ public sealed class DbContext
         {
             while (reader.Read())
             {
-                result.Data.Add(reader.ToEntity<TResult>(this, readerFields, isUseReaderOrder));
+                result.Data.Add(reader.ToEntity<TResult>(this, readerFields));
             }
         }
         else
@@ -440,7 +440,7 @@ public sealed class DbContext
         visitor.Dispose();
         return result;
     }
-    public async Task<IPagedList<TResult>> QueryPageAsync<TResult>(IQueryVisitor visitor, bool isUseReaderOrder = false, CancellationToken cancellationToken = default)
+    public async Task<IPagedList<TResult>> QueryPageAsync<TResult>(IQueryVisitor visitor, CancellationToken cancellationToken = default)
     {
         var result = new PagedList<TResult> { Data = new List<TResult>() };
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.IsUseMaster);
@@ -466,7 +466,7 @@ public sealed class DbContext
         {
             while (await reader.ReadAsync(cancellationToken))
             {
-                result.Data.Add(reader.ToEntity<TResult>(this, readerFields, isUseReaderOrder));
+                result.Data.Add(reader.ToEntity<TResult>(this, readerFields));
             }
         }
         else
@@ -577,7 +577,7 @@ public sealed class DbContext
         return result;
     }
 
-    public TResult CreateResult<TResult>(ICreateVisitor visitor, bool isUseReaderOrder = false)
+    public TResult CreateResult<TResult>(ICreateVisitor visitor)
     {
         TResult result = default;
         (var isNeedClose, var connection, var command) = this.UseMasterCommand();
@@ -589,7 +589,7 @@ public sealed class DbContext
         {
             var resultType = typeof(TResult);
             if (resultType.IsEntityType(out _))
-                result = reader.ToEntity<TResult>(this, readerFields, isUseReaderOrder);
+                result = reader.ToEntity<TResult>(this, readerFields, true);
             else result = reader.ToValue<TResult>(this);
         }
 
@@ -599,7 +599,7 @@ public sealed class DbContext
         visitor.Dispose();
         return result;
     }
-    public async Task<TResult> CreateResultAsync<TResult>(ICreateVisitor visitor, bool isUseReaderOrder = false, CancellationToken cancellationToken = default)
+    public async Task<TResult> CreateResultAsync<TResult>(ICreateVisitor visitor, CancellationToken cancellationToken = default)
     {
         TResult result = default;
         (var isNeedClose, var connection, var command) = this.UseMasterCommand();
@@ -611,7 +611,7 @@ public sealed class DbContext
         {
             var resultType = typeof(TResult);
             if (resultType.IsEntityType(out _))
-                result = reader.ToEntity<TResult>(this, readerFields, isUseReaderOrder);
+                result = reader.ToEntity<TResult>(this, readerFields, true);
             else result = reader.ToValue<TResult>(this);
         }
 

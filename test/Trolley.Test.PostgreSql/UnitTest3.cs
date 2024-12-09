@@ -375,10 +375,10 @@ public class UnitTest3 : UnitTestBase
             })
             .Where(f => f.Id == 1)
             .ToSql(out var dbParameters);
-        Assert.Equal("UPDATE \"sys_user\" SET \"Age\"=@Age,\"Name\"=@Name,\"CompanyId\"=@CompanyId WHERE \"Id\"=1", sql);
+        Assert.Equal("UPDATE \"sys_user\" SET \"Name\"=@Name,\"Age\"=@Age,\"CompanyId\"=@CompanyId WHERE \"Id\"=1", sql);
         Assert.Equal(3, dbParameters.Count);
-        Assert.Equal(25, (int)dbParameters[0].Value);
-        Assert.Equal("leafkevin22", (string)dbParameters[1].Value);
+        Assert.Equal("leafkevin22", (string)dbParameters[0].Value);
+        Assert.Equal(25, (int)dbParameters[1].Value);        
         Assert.True(dbParameters[2].Value == DBNull.Value);
 
         repository.Update<User>()
@@ -648,7 +648,7 @@ public class UnitTest3 : UnitTestBase
             .Set(x => x.Products, new List<int> { 1, 2, 3 })
             .Where((a, b) => a.BuyerId == 1)
           .ToSql(out var dbParameters);
-        Assert.Equal("UPDATE \"sys_order\" AS a SET \"TotalAmount\"=@p0,\"OrderNo\"=CONCAT(a.\"OrderNo\",'-111'),\"BuyerSource\"=b.\"SourceType\",\"Products\"=@Products FROM \"sys_user\" b WHERE a.\"BuyerId\"=b.\"Id\" AND a.\"BuyerId\"=1", sql);
+        Assert.Equal("UPDATE \"sys_order\" a SET \"TotalAmount\"=@p0,\"OrderNo\"=CONCAT(a.\"OrderNo\",'-111'),\"BuyerSource\"=b.\"SourceType\",\"Products\"=@Products FROM \"sys_user\" b WHERE a.\"BuyerId\"=b.\"Id\" AND a.\"BuyerId\"=1", sql);
         Assert.NotNull(dbParameters);
         Assert.Equal("@p0", dbParameters[0].ParameterName);
         Assert.Equal(200.56, (double)dbParameters[0].Value);
@@ -679,7 +679,7 @@ public class UnitTest3 : UnitTestBase
             })
             .Where(a => a.BuyerId == 1)
             .ToSql(out _);
-        Assert.Equal("UPDATE \"sys_order\" AS a SET \"TotalAmount\"=(SELECT SUM(b.\"Amount\") FROM \"sys_order_detail\" b WHERE b.\"OrderId\"=a.\"Id\"),\"OrderNo\"=CONCAT(a.\"OrderNo\",'_111'),\"BuyerId\"=NULL WHERE a.\"BuyerId\"=1", sql);
+        Assert.Equal("UPDATE \"sys_order\" a SET \"TotalAmount\"=(SELECT SUM(b.\"Amount\") FROM \"sys_order_detail\" b WHERE b.\"OrderId\"=a.\"Id\"),\"OrderNo\"=CONCAT(a.\"OrderNo\",'_111'),\"BuyerId\"=NULL WHERE a.\"BuyerId\"=1", sql);
 
         count = repository.Update<Order>()
             .SetFrom((a, b) => new
@@ -710,7 +710,7 @@ public class UnitTest3 : UnitTestBase
             })
             .Where(a => a.BuyerId == 1)
             .ToSql(out _);
-        Assert.Equal("UPDATE \"sys_order\" AS a SET \"TotalAmount\"=(SELECT SUM(b.\"Amount\") FROM \"sys_order_detail\" b WHERE b.\"OrderId\"=a.\"Id\"),\"OrderNo\"=CONCAT(a.\"OrderNo\",'_111'),\"BuyerId\"=NULL WHERE a.\"BuyerId\"=1", sql);
+        Assert.Equal("UPDATE \"sys_order\" a SET \"TotalAmount\"=(SELECT SUM(b.\"Amount\") FROM \"sys_order_detail\" b WHERE b.\"OrderId\"=a.\"Id\"),\"OrderNo\"=CONCAT(a.\"OrderNo\",'_111'),\"BuyerId\"=NULL WHERE a.\"BuyerId\"=1", sql);
 
         var count = await repository.Update<Order>()
             .SetFrom((a, b) => new
@@ -750,7 +750,7 @@ public class UnitTest3 : UnitTestBase
             .Set(x => x.Products, new List<int> { 1, 2, 3 })
             .Where((a, b) => a.BuyerId == 1)
             .ToSql(out var dbParameters);
-        Assert.Equal("UPDATE \"sys_order\" AS a SET \"TotalAmount\"=@p0,\"OrderNo\"=CONCAT(a.\"OrderNo\",'-111'),\"BuyerSource\"=b.\"SourceType\",\"Products\"=@Products FROM \"sys_user\" b WHERE a.\"BuyerId\"=b.\"Id\" AND a.\"BuyerId\"=1", sql);
+        Assert.Equal("UPDATE \"sys_order\" a SET \"TotalAmount\"=@p0,\"OrderNo\"=CONCAT(a.\"OrderNo\",'-111'),\"BuyerSource\"=b.\"SourceType\",\"Products\"=@Products FROM \"sys_user\" b WHERE a.\"BuyerId\"=b.\"Id\" AND a.\"BuyerId\"=1", sql);
         Assert.NotNull(dbParameters);
         Assert.Equal("@p0", dbParameters[0].ParameterName);
         Assert.Equal(200.56, (double)dbParameters[0].Value);
@@ -781,7 +781,7 @@ public class UnitTest3 : UnitTestBase
             })
             .Where(a => a.BuyerId == 1)
             .ToSql(out _);
-        Assert.Equal("UPDATE \"sys_order\" AS a SET \"TotalAmount\"=(SELECT SUM(b.\"Amount\") FROM \"sys_order_detail\" b WHERE b.\"OrderId\"=a.\"Id\"),\"OrderNo\"=CONCAT(a.\"OrderNo\",'_111'),\"BuyerId\"=NULL WHERE a.\"BuyerId\"=1", sql);
+        Assert.Equal("UPDATE \"sys_order\" a SET \"TotalAmount\"=(SELECT SUM(b.\"Amount\") FROM \"sys_order_detail\" b WHERE b.\"OrderId\"=a.\"Id\"),\"OrderNo\"=CONCAT(a.\"OrderNo\",'_111'),\"BuyerId\"=NULL WHERE a.\"BuyerId\"=1", sql);
 
         result = repository.Update<Order>()
             .SetFrom((a, b) => new
@@ -814,7 +814,7 @@ public class UnitTest3 : UnitTestBase
             .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.Id == "1")
             .ToSql(out var dbParameters);
-        Assert.Equal("UPDATE \"sys_order\" AS a SET \"TotalAmount\"=(SELECT SUM(b.\"Amount\") FROM \"sys_order_detail\" b WHERE b.\"OrderId\"=a.\"Id\"),\"OrderNo\"=@OrderNo,\"BuyerId\"=NULL WHERE a.\"Id\"='1'", sql);
+        Assert.Equal("UPDATE \"sys_order\" a SET \"TotalAmount\"=(SELECT SUM(b.\"Amount\") FROM \"sys_order_detail\" b WHERE b.\"OrderId\"=a.\"Id\"),\"OrderNo\"=@OrderNo,\"BuyerId\"=NULL WHERE a.\"Id\"='1'", sql);
         Assert.Single(dbParameters);
         Assert.Equal("ON_111", (string)dbParameters[0].Value);
 
@@ -843,7 +843,7 @@ public class UnitTest3 : UnitTestBase
             .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.BuyerId == 1)
             .ToSql(out _);
-        Assert.Equal("UPDATE \"sys_order\" AS a SET \"TotalAmount\"=(SELECT SUM(b.\"Amount\") FROM \"sys_order_detail\" b WHERE b.\"OrderId\"=a.\"Id\"),\"OrderNo\"=@OrderNo,\"BuyerId\"=NULL WHERE a.\"BuyerId\"=1", sql);
+        Assert.Equal("UPDATE \"sys_order\" a SET \"TotalAmount\"=(SELECT SUM(b.\"Amount\") FROM \"sys_order_detail\" b WHERE b.\"OrderId\"=a.\"Id\"),\"OrderNo\"=@OrderNo,\"BuyerId\"=NULL WHERE a.\"BuyerId\"=1", sql);
 
         count = await repository.Update<Order>()
             .SetFrom((a, b) => new
@@ -872,7 +872,7 @@ public class UnitTest3 : UnitTestBase
             })
             .Where(f => f.Nature != CompanyNature.Internet)
             .ToSql(out _);
-        Assert.Equal("UPDATE \"sys_company\" AS a SET \"Nature\"=(SELECT b.\"Nature\" FROM \"sys_company\" b WHERE b.\"Id\"=1) WHERE a.\"Nature\"<>'Internet'", sql);
+        Assert.Equal("UPDATE \"sys_company\" a SET \"Nature\"=(SELECT b.\"Nature\" FROM \"sys_company\" b WHERE b.\"Id\"=1) WHERE a.\"Nature\"<>'Internet'", sql);
         repository.BeginTransaction();
         repository.Update<Company>()
             .Set(f => f.Nature, CompanyNature.Industry)
@@ -914,7 +914,7 @@ public class UnitTest3 : UnitTestBase
             .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.BuyerId == 1)
             .ToSql(out _);
-        Assert.Equal("UPDATE \"sys_order\" AS a SET \"TotalAmount\"=(SELECT SUM(b.\"Amount\") FROM \"sys_order_detail\" b WHERE b.\"OrderId\"=a.\"Id\"),\"OrderNo\"=@OrderNo,\"BuyerId\"=NULL WHERE a.\"BuyerId\"=1", sql);
+        Assert.Equal("UPDATE \"sys_order\" a SET \"TotalAmount\"=(SELECT SUM(b.\"Amount\") FROM \"sys_order_detail\" b WHERE b.\"OrderId\"=a.\"Id\"),\"OrderNo\"=@OrderNo,\"BuyerId\"=NULL WHERE a.\"BuyerId\"=1", sql);
 
         var origValues = await repository.From<Order, OrderDetail>()
             .InnerJoin((x, y) => x.Id == y.OrderId)
@@ -965,7 +965,7 @@ public class UnitTest3 : UnitTestBase
             })
             .Where((a, b) => a.BuyerId == 1)
             .ToSql(out _);
-        Assert.Equal("UPDATE \"sys_order\" AS a SET \"TotalAmount\"=@TotalAmount,\"OrderNo\"=CONCAT(a.\"OrderNo\",'_111'),\"BuyerId\"=NULL FROM \"sys_order_detail\" b WHERE a.\"Id\"=b.\"OrderId\" AND a.\"BuyerId\"=1", sql);
+        Assert.Equal("UPDATE \"sys_order\" a SET \"TotalAmount\"=@TotalAmount,\"OrderNo\"=CONCAT(a.\"OrderNo\",'_111'),\"BuyerId\"=NULL FROM \"sys_order_detail\" b WHERE a.\"Id\"=b.\"OrderId\" AND a.\"BuyerId\"=1", sql);
         var result = repository.Update<Order>()
             .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
             .Set(x => x.TotalAmount, 200.56)
@@ -993,7 +993,7 @@ public class UnitTest3 : UnitTestBase
             })
             .Where((a, b) => a.BuyerId == 1)
             .ToSql(out _);
-        Assert.Equal("UPDATE \"sys_order\" AS a SET \"TotalAmount\"=b.\"Amount\",\"OrderNo\"=CONCAT(a.\"OrderNo\",'_111'),\"BuyerId\"=NULL FROM \"sys_order_detail\" b WHERE a.\"Id\"=b.\"OrderId\" AND a.\"BuyerId\"=1", sql);
+        Assert.Equal("UPDATE \"sys_order\" a SET \"TotalAmount\"=b.\"Amount\",\"OrderNo\"=CONCAT(a.\"OrderNo\",'_111'),\"BuyerId\"=NULL FROM \"sys_order_detail\" b WHERE a.\"Id\"=b.\"OrderId\" AND a.\"BuyerId\"=1", sql);
 
         var origValues = await repository.From<Order, OrderDetail>()
            .InnerJoin((x, y) => x.Id == y.OrderId)
@@ -1046,7 +1046,7 @@ public class UnitTest3 : UnitTestBase
             .Set((x, y) => new { BuyerId = DBNull.Value })
             .Where((a, b) => a.Id == "1")
             .ToSql(out _);
-        Assert.Equal("UPDATE \"sys_order\" AS a SET \"TotalAmount\"=(SELECT SUM(c.\"Amount\") FROM \"sys_order_detail\" c WHERE c.\"OrderId\"=a.\"Id\"),\"OrderNo\"=CONCAT(a.\"OrderNo\",' - ',CAST(b.\"Id\" AS VARCHAR)),\"BuyerId\"=NULL FROM \"sys_user\" b WHERE a.\"BuyerId\"=b.\"Id\" AND a.\"Id\"='1'", sql);
+        Assert.Equal("UPDATE \"sys_order\" a SET \"TotalAmount\"=(SELECT SUM(c.\"Amount\") FROM \"sys_order_detail\" c WHERE c.\"OrderId\"=a.\"Id\"),\"OrderNo\"=CONCAT(a.\"OrderNo\",' - ',CAST(b.\"Id\" AS VARCHAR)),\"BuyerId\"=NULL FROM \"sys_user\" b WHERE a.\"BuyerId\"=b.\"Id\" AND a.\"Id\"='1'", sql);
 
         var origValues = await repository.From<Order, User>()
             .InnerJoin((x, y) => x.BuyerId == y.Id)
@@ -1083,7 +1083,7 @@ public class UnitTest3 : UnitTestBase
             .Set((x, y) => new { BuyerId = DBNull.Value })
             .Where((x, y) => x.Id == "2")
             .ToSql(out _);
-        Assert.Equal("UPDATE \"sys_order\" AS a SET \"TotalAmount\"=(SELECT SUM(c.\"Amount\") FROM \"sys_order_detail\" c WHERE c.\"OrderId\"=a.\"Id\"),\"OrderNo\"=CONCAT(a.\"OrderNo\",' - ',CAST(b.\"Id\" AS VARCHAR)),\"BuyerId\"=NULL FROM \"sys_user\" b WHERE a.\"BuyerId\"=b.\"Id\" AND a.\"Id\"='2'", sql1);
+        Assert.Equal("UPDATE \"sys_order\" a SET \"TotalAmount\"=(SELECT SUM(c.\"Amount\") FROM \"sys_order_detail\" c WHERE c.\"OrderId\"=a.\"Id\"),\"OrderNo\"=CONCAT(a.\"OrderNo\",' - ',CAST(b.\"Id\" AS VARCHAR)),\"BuyerId\"=NULL FROM \"sys_user\" b WHERE a.\"BuyerId\"=b.\"Id\" AND a.\"Id\"='2'", sql1);
 
         origValues = await repository.From<Order, User>()
             .InnerJoin((x, y) => x.BuyerId == y.Id)
@@ -1269,7 +1269,7 @@ public class UnitTest3 : UnitTestBase
             .Set(x => x.Products, new List<int> { 1, 2, 3 })
             .Where((a, b) => a.BuyerId == 1)
             .ToSql(out var parameters);
-        Assert.Equal("UPDATE \"sys_order\" AS a SET \"TotalAmount\"=@p0,\"OrderNo\"=CONCAT(a.\"OrderNo\",'-111'),\"BuyerSource\"=b.\"SourceType\",\"Products\"=@Products FROM \"sys_user\" b WHERE a.\"BuyerId\"=b.\"Id\" AND a.\"BuyerId\"=1", sql);
+        Assert.Equal("UPDATE \"sys_order\" a SET \"TotalAmount\"=@p0,\"OrderNo\"=CONCAT(a.\"OrderNo\",'-111'),\"BuyerSource\"=b.\"SourceType\",\"Products\"=@Products FROM \"sys_user\" b WHERE a.\"BuyerId\"=b.\"Id\" AND a.\"BuyerId\"=1", sql);
         Assert.Equal("@p0", parameters[0].ParameterName);
         Assert.True(parameters[0].Value.GetType() == typeof(double));
         Assert.Equal(200.56, (double)parameters[0].Value);
