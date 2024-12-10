@@ -101,8 +101,54 @@ public class Repository : IRepository
     }
     #endregion
 
-    #region QueryFirst/Query
-    public virtual TEntity QueryFirst<TEntity>(string rawSql, object parameters = null, CommandType commandType = CommandType.Text)
+    #region GetById
+    public virtual TEntity GetById<TEntity>(object whereKey)
+    {
+        return this.DbContext.QueryById<TEntity, TEntity>(whereKey, true, reader =>
+        {
+            TEntity result = default;
+            if (reader.Read())
+                result = reader.ToEntity<TEntity>(this.DbContext);
+            return result;
+        });
+    }
+    public virtual async Task<TEntity> GetByIdAsync<TEntity>(object whereKey, CancellationToken cancellationToken = default)
+    {
+        return await this.DbContext.QueryByIdAsync<TEntity, TEntity>(whereKey, true, async reader =>
+        {
+            TEntity result = default;
+            if (await reader.ReadAsync(cancellationToken))
+                result = reader.ToEntity<TEntity>(this.DbContext);
+            return result;
+        }, cancellationToken);
+    }
+    #endregion
+
+    #region GetByIds
+    public virtual List<TEntity> GetByIds<TEntity>(IEnumerable whereKeys)
+    {
+        return this.DbContext.QueryById<TEntity, List<TEntity>>(whereKeys, false, reader =>
+        {
+            var result = new List<TEntity>();
+            while (reader.Read())
+                result.Add(reader.ToEntity<TEntity>(this.DbContext));
+            return result;
+        });
+    }
+    public virtual async Task<List<TEntity>> GetByIdsAsync<TEntity>(IEnumerable whereKeys, CancellationToken cancellationToken = default)
+    {
+        return await this.DbContext.QueryByIdAsync<TEntity, List<TEntity>>(whereKeys, false, async reader =>
+        {
+            var result = new List<TEntity>();
+            while (await reader.ReadAsync(cancellationToken))
+                result.Add(reader.ToEntity<TEntity>(this.DbContext));
+            return result;
+        }, cancellationToken);
+    }
+    #endregion
+
+    #region QueryScalar
+    public virtual TValue QueryScalar<TValue>(string rawSql, object parameters = null, CommandType commandType = CommandType.Text)
     {
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
@@ -113,7 +159,67 @@ public class Repository : IRepository
                 throw new NotSupportedException("不支持的参数类型，QueryFirst方法的parameters参数，支持实体类型参数，命名、匿名对象或是字典对象");
         }
 
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
+        if (parameters != null)
+        {
+            var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.OrmProvider, rawSql, parameters);
+            commandInitializer.Invoke(command.Parameters, this.OrmProvider, parameters);
+        }
+        command.CommandText = rawSql;
+        command.CommandType = commandType;
+
+        connection.Open();
+        var result = command.ExecuteScalar(CommandSqlType.Select);
+
+        command.Dispose();
+        if (isNeedClose) connection.Close();
+        return (TValue)result;
+    }
+    public virtual async Task<TValue> QueryScalarAsync<TValue>(string rawSql, object parameters = null, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
+        if (parameters != null)
+        {
+            var whereObjType = parameters.GetType();
+            if (!whereObjType.IsEntityType(out _))
+                throw new NotSupportedException("不支持的参数类型，QueryFirstAsync方法的parameters参数，支持实体类型参数，命名、匿名对象或是字典对象");
+        }
+
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
+        if (parameters != null)
+        {
+            var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.OrmProvider, rawSql, parameters);
+            commandInitializer.Invoke(command.Parameters, this.OrmProvider, parameters);
+        }
+        command.CommandText = rawSql;
+        command.CommandType = commandType;
+
+        await connection.OpenAsync(cancellationToken);
+        var result = await command.ExecuteScalarAsync(CommandSqlType.Select, cancellationToken);
+
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
+        return (TValue)result;
+    }
+    #endregion
+
+    #region QueryFirst
+    public virtual TEntity QueryFirst<TEntity>(string rawSql, object parameters = null, CommandType commandType = CommandType.Text)
+    {
         var entityType = typeof(TEntity);
+        if (!entityType.IsEntityType(out _))
+            return this.QueryScalar<TEntity>(rawSql, parameters, commandType);
+
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
+        if (parameters != null)
+        {
+            var whereObjType = parameters.GetType();
+            if (!whereObjType.IsEntityType(out _))
+                throw new NotSupportedException("不支持的参数类型，QueryFirst方法的parameters参数，支持实体类型参数，命名、匿名对象或是字典对象");
+        }
+
         (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
         if (parameters != null)
         {
@@ -128,11 +234,7 @@ public class Repository : IRepository
         using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
         TEntity result = default;
         if (reader.Read())
-        {
-            if (entityType.IsEntityType(out _))
-                result = reader.ToEntity<TEntity>(this.DbContext);
-            else result = reader.ToValue<TEntity>(this.DbContext);
-        }
+            result = reader.ToEntity<TEntity>(this.DbContext);
 
         reader.Dispose();
         command.Dispose();
@@ -178,32 +280,25 @@ public class Repository : IRepository
     }
     public virtual TEntity QueryFirst<TEntity>(object whereObj)
     {
-        return this.DbContext.Query<TEntity, TEntity>(whereObj, true, (entityType, reader) =>
+        return this.DbContext.Query<TEntity, TEntity>(whereObj, true, reader =>
         {
-            TEntity result = default;
             if (reader.Read())
-            {
-                if (entityType.IsEntityType(out _))
-                    result = reader.ToEntity<TEntity>(this.DbContext);
-                else result = reader.ToValue<TEntity>(this.DbContext);
-            }
-            return result;
+                return reader.ToEntity<TEntity>(this.DbContext);
+            return default;
         });
     }
     public virtual async Task<TEntity> QueryFirstAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default)
     {
-        return await this.DbContext.QueryAsync<TEntity, TEntity>(whereObj, true, (entityType, reader) =>
+        return await this.DbContext.QueryAsync<TEntity, TEntity>(whereObj, true, async reader =>
         {
-            TEntity result = default;
-            if (reader.Read())
-            {
-                if (entityType.IsEntityType(out _))
-                    result = reader.ToEntity<TEntity>(this.DbContext);
-                else result = reader.ToValue<TEntity>(this.DbContext);
-            }
-            return result;
+            if (await reader.ReadAsync(cancellationToken))
+                return reader.ToEntity<TEntity>(this.DbContext);
+            return default;
         }, cancellationToken);
     }
+    #endregion
+
+    #region Query
     public virtual List<TEntity> Query<TEntity>(string rawSql, object parameters = null, CommandType commandType = CommandType.Text)
     {
         if (string.IsNullOrEmpty(rawSql))
@@ -229,20 +324,8 @@ public class Repository : IRepository
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
         var result = new List<TEntity>();
-        if (entityType.IsEntityType(out _))
-        {
-            while (reader.Read())
-            {
-                result.Add(reader.ToEntity<TEntity>(this.DbContext));
-            }
-        }
-        else
-        {
-            while (reader.Read())
-            {
-                result.Add(reader.ToValue<TEntity>(this.DbContext));
-            }
-        }
+        while (reader.Read())
+            result.Add(reader.ToEntity<TEntity>(this.DbContext));
 
         reader.Dispose();
         command.Dispose();
@@ -274,20 +357,8 @@ public class Repository : IRepository
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
         var result = new List<TEntity>();
-        if (entityType.IsEntityType(out _))
-        {
-            while (await reader.ReadAsync(cancellationToken))
-            {
-                result.Add(reader.ToEntity<TEntity>(this.DbContext));
-            }
-        }
-        else
-        {
-            while (await reader.ReadAsync(cancellationToken))
-            {
-                result.Add(reader.ToValue<TEntity>(this.DbContext));
-            }
-        }
+        while (await reader.ReadAsync(cancellationToken))
+            result.Add(reader.ToEntity<TEntity>(this.DbContext));
 
         await reader.DisposeAsync();
         await command.DisposeAsync();
@@ -296,120 +367,21 @@ public class Repository : IRepository
     }
     public virtual List<TEntity> Query<TEntity>(object whereObj)
     {
-        return this.DbContext.Query<TEntity, List<TEntity>>(whereObj, false, (entityType, reader) =>
+        return this.DbContext.Query<TEntity, List<TEntity>>(whereObj, false, reader =>
         {
             var result = new List<TEntity>();
-            if (entityType.IsEntityType(out _))
-            {
-                while (reader.Read())
-                {
-                    result.Add(reader.ToEntity<TEntity>(this.DbContext));
-                }
-            }
-            else
-            {
-                while (reader.Read())
-                {
-                    result.Add(reader.ToValue<TEntity>(this.DbContext));
-                }
-            }
+            while (reader.Read())
+                result.Add(reader.ToEntity<TEntity>(this.DbContext));
             return result;
         });
     }
     public virtual async Task<List<TEntity>> QueryAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default)
     {
-        return await this.DbContext.QueryAsync<TEntity, List<TEntity>>(whereObj, false, (entityType, reader) =>
+        return await this.DbContext.QueryAsync<TEntity, List<TEntity>>(whereObj, false, async reader =>
         {
             var result = new List<TEntity>();
-            if (entityType.IsEntityType(out _))
-            {
-                while (reader.Read())
-                {
-                    result.Add(reader.ToEntity<TEntity>(this.DbContext));
-                }
-            }
-            else
-            {
-                while (reader.Read())
-                {
-                    result.Add(reader.ToValue<TEntity>(this.DbContext));
-                }
-            }
-            return result;
-        }, cancellationToken);
-    }
-    public virtual List<TEntity> QueryById<TEntity>(IEnumerable whereKeys)
-    {
-        return this.DbContext.QueryById<TEntity, List<TEntity>>(whereKeys, false, (entityType, reader) =>
-        {
-            var result = new List<TEntity>();
-            if (entityType.IsEntityType(out _))
-            {
-                while (reader.Read())
-                {
-                    result.Add(reader.ToEntity<TEntity>(this.DbContext));
-                }
-            }
-            else
-            {
-                while (reader.Read())
-                {
-                    result.Add(reader.ToValue<TEntity>(this.DbContext));
-                }
-            }
-            return result;
-        });
-    }
-    public virtual async Task<List<TEntity>> QueryByIdAsync<TEntity>(IEnumerable whereKeys, CancellationToken cancellationToken = default)
-    {
-        return await this.DbContext.QueryByIdAsync<TEntity, List<TEntity>>(whereKeys, false, (entityType, reader) =>
-        {
-            var result = new List<TEntity>();
-            if (entityType.IsEntityType(out _))
-            {
-                while (reader.Read())
-                {
-                    result.Add(reader.ToEntity<TEntity>(this.DbContext));
-                }
-            }
-            else
-            {
-                while (reader.Read())
-                {
-                    result.Add(reader.ToValue<TEntity>(this.DbContext));
-                }
-            }
-            return result;
-        }, cancellationToken);
-    }
-    #endregion
-
-    #region GetById
-    public virtual TEntity GetById<TEntity>(object whereKey)
-    {
-        return this.DbContext.QueryById<TEntity, TEntity>(whereKey, true, (entityType, reader) =>
-        {
-            TEntity result = default;
-            if (reader.Read())
-            {
-                if (entityType.IsEntityType(out _))
-                    result = reader.ToEntity<TEntity>(this.DbContext);
-                else result = reader.ToValue<TEntity>(this.DbContext);
-            }
-            return result;
-        });
-    }
-    public virtual async Task<TEntity> GetByIdAsync<TEntity>(object whereKey, CancellationToken cancellationToken = default)
-    {
-        return await this.DbContext.QueryByIdAsync<TEntity, TEntity>(whereKey, true, (entityType, reader) =>
-        {
-            TEntity result = default;
-            if (reader.Read())
-            {
-                if (entityType.IsEntityType(out _))
-                    result = reader.ToEntity<TEntity>(this.DbContext);
-                else result = reader.ToValue<TEntity>(this.DbContext);
-            }
+            while (await reader.ReadAsync(cancellationToken))
+                result.Add(reader.ToEntity<TEntity>(this.DbContext));
             return result;
         }, cancellationToken);
     }

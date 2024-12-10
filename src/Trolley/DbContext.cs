@@ -94,7 +94,7 @@ public sealed class DbContext
     #endregion
 
     #region Query
-    public TResult Query<TEntity, TResult>(object whereObj, bool isSingle, Func<Type, ITheaDataReader, TResult> readerInitializer)
+    public TResult Query<TEntity, TResult>(object whereObj, bool isSingle, Func<ITheaDataReader, TResult> readerInitializer)
     {
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
@@ -131,14 +131,14 @@ public sealed class DbContext
         connection.Open();
         var behavior = isSingle ? CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow : CommandBehavior.SequentialAccess;
         using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
-        var result = readerInitializer.Invoke(entityType, reader);
+        var result = readerInitializer.Invoke(reader);
 
         reader.Dispose();
         command.Dispose();
         if (isNeedClose) connection.Close();
         return result;
     }
-    public async Task<TResult> QueryAsync<TEntity, TResult>(object whereObj, bool isSingle, Func<Type, ITheaDataReader, TResult> readerInitializer, CancellationToken cancellationToken = default)
+    public async Task<TResult> QueryAsync<TEntity, TResult>(object whereObj, bool isSingle, Func<ITheaDataReader, Task<TResult>> readerInitializer, CancellationToken cancellationToken = default)
     {
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
@@ -175,14 +175,14 @@ public sealed class DbContext
         await connection.OpenAsync(cancellationToken);
         var behavior = isSingle ? CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow : CommandBehavior.SequentialAccess;
         using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
-        var result = readerInitializer.Invoke(entityType, reader);
+        var result = await readerInitializer.Invoke(reader);
 
         await reader.DisposeAsync();
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         return result;
     }
-    public TResult QueryById<TEntity, TResult>(object whereObj, bool isSingle, Func<Type, ITheaDataReader, TResult> readerInitializer)
+    public TResult QueryById<TEntity, TResult>(object whereObj, bool isSingle, Func<ITheaDataReader, TResult> readerInitializer)
     {
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
@@ -216,14 +216,14 @@ public sealed class DbContext
         connection.Open();
         var behavior = isSingle ? CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow : CommandBehavior.SequentialAccess;
         using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
-        var result = readerInitializer.Invoke(entityType, reader);
+        var result = readerInitializer.Invoke(reader);
 
         reader.Dispose();
         command.Dispose();
         if (isNeedClose) connection.Close();
         return result;
     }
-    public async Task<TResult> QueryByIdAsync<TEntity, TResult>(object whereKeys, bool isSingle, Func<Type, ITheaDataReader, TResult> readerInitializer, CancellationToken cancellationToken = default)
+    public async Task<TResult> QueryByIdAsync<TEntity, TResult>(object whereKeys, bool isSingle, Func<ITheaDataReader, Task<TResult>> readerInitializer, CancellationToken cancellationToken = default)
     {
         if (whereKeys == null)
             throw new ArgumentNullException(nameof(whereKeys));
@@ -257,7 +257,7 @@ public sealed class DbContext
         await connection.OpenAsync(cancellationToken);
         var behavior = isSingle ? CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow : CommandBehavior.SequentialAccess;
         using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
-        var result = readerInitializer.Invoke(entityType, reader);
+        var result = await readerInitializer.Invoke(reader);
 
         await reader.DisposeAsync();
         await command.DisposeAsync();
@@ -279,13 +279,10 @@ public sealed class DbContext
         visitor.DbParameters.CopyTo(command.Parameters);
 
         connection.Open();
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
         TResult result = default;
-        if (reader.Read())
-            result = reader.ToValue<TResult>(this);
+        var objResult = command.ExecuteScalar(CommandSqlType.Select);
+        if (objResult != null) result = (TResult)objResult;
 
-        reader.Dispose();
         command.Dispose();
         if (isNeedClose) connection.Close();
         visitor.Dispose();
@@ -306,13 +303,10 @@ public sealed class DbContext
         visitor.DbParameters.CopyTo(command.Parameters);
 
         await connection.OpenAsync(cancellationToken);
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
         TResult result = default;
-        if (reader.Read())
-            result = reader.ToValue<TResult>(this);
+        var objResult = await command.ExecuteScalarAsync(CommandSqlType.Select, cancellationToken);
+        if (objResult != null) result = (TResult)objResult;
 
-        await reader.DisposeAsync();
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         visitor.Dispose();
