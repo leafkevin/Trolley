@@ -1034,7 +1034,7 @@ public partial class PostgreSqlProvider : BaseOrmProvider
     }
     public override Func<object, object> GetReaderValueGetter(Type targetType, Type fieldType, OrmDbFactoryOptions options)
     {
-        var hashKey = RepositoryHelper.GetCacheKey(targetType, fieldType);
+        var hashKey = RepositoryHelper.GetCacheKey(targetType, fieldType, options.DefaultDateTimeKind);
         return readerValueGetters.GetOrAdd(hashKey, f =>
         {
             var underlyingType = Nullable.GetUnderlyingType(targetType);

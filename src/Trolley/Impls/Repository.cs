@@ -169,11 +169,13 @@ public class Repository : IRepository
         command.CommandType = commandType;
 
         connection.Open();
-        var result = command.ExecuteScalar(CommandSqlType.Select);
+        TValue result = default;
+        var objResult = command.ExecuteScalar(CommandSqlType.Select);
+        if (objResult != null) result = (TValue)objResult;
 
         command.Dispose();
         if (isNeedClose) connection.Close();
-        return (TValue)result;
+        return result;
     }
     public virtual async Task<TValue> QueryScalarAsync<TValue>(string rawSql, object parameters = null, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
     {
@@ -196,21 +198,19 @@ public class Repository : IRepository
         command.CommandType = commandType;
 
         await connection.OpenAsync(cancellationToken);
-        var result = await command.ExecuteScalarAsync(CommandSqlType.Select, cancellationToken);
+        TValue result = default;
+        var objResult = await command.ExecuteScalarAsync(CommandSqlType.Select, cancellationToken);
+        if (objResult != null) result = (TValue)objResult;
 
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
-        return (TValue)result;
+        return result;
     }
     #endregion
 
     #region QueryFirst
     public virtual TEntity QueryFirst<TEntity>(string rawSql, object parameters = null, CommandType commandType = CommandType.Text)
     {
-        var entityType = typeof(TEntity);
-        if (!entityType.IsEntityType(out _))
-            return this.QueryScalar<TEntity>(rawSql, parameters, commandType);
-
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
         if (parameters != null)
@@ -220,6 +220,7 @@ public class Repository : IRepository
                 throw new NotSupportedException("不支持的参数类型，QueryFirst方法的parameters参数，支持实体类型参数，命名、匿名对象或是字典对象");
         }
 
+        var entityType = typeof(TEntity);
         (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
         if (parameters != null)
         {
@@ -230,13 +231,21 @@ public class Repository : IRepository
         command.CommandType = commandType;
 
         connection.Open();
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
         TEntity result = default;
-        if (reader.Read())
-            result = reader.ToEntity<TEntity>(this.DbContext);
+        if (entityType.IsEntityType(out _))
+        {
+            var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+            using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
+            if (reader.Read())
+                result = reader.ToEntity<TEntity>(this.DbContext);
+            reader.Dispose();
+        }
+        else
+        {
+            var objResult = command.ExecuteScalar(CommandSqlType.Select);
+            if (objResult != null) result = (TEntity)objResult;
+        }
 
-        reader.Dispose();
         command.Dispose();
         if (isNeedClose) connection.Close();
         return result;
@@ -263,17 +272,21 @@ public class Repository : IRepository
         command.CommandType = commandType;
 
         await connection.OpenAsync(cancellationToken);
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
         TEntity result = default;
-        if (await reader.ReadAsync(cancellationToken))
+        if (entityType.IsEntityType(out _))
         {
-            if (entityType.IsEntityType(out _))
+            var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+            using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
+            if (await reader.ReadAsync(cancellationToken))
                 result = reader.ToEntity<TEntity>(this.DbContext);
-            else result = reader.ToValue<TEntity>(this.DbContext);
+            await reader.DisposeAsync();
+        }
+        else
+        {
+            var objResult = await command.ExecuteScalarAsync(CommandSqlType.Select, cancellationToken);
+            if (objResult != null) result = (TEntity)objResult;
         }
 
-        await reader.DisposeAsync();
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         return result;
@@ -310,7 +323,6 @@ public class Repository : IRepository
                 throw new NotSupportedException("不支持的参数类型，Query方法的parameters参数，支持实体类型参数，命名、匿名对象或是字典对象");
         }
 
-        var entityType = typeof(TEntity);
         (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
         if (parameters != null)
         {
@@ -324,8 +336,17 @@ public class Repository : IRepository
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
         var result = new List<TEntity>();
-        while (reader.Read())
-            result.Add(reader.ToEntity<TEntity>(this.DbContext));
+        var entityType = typeof(TEntity);
+        if (entityType.IsEntityType(out _))
+        {
+            while (reader.Read())
+                result.Add(reader.ToEntity<TEntity>(this.DbContext));
+        }
+        else
+        {
+            while (reader.Read())
+                result.Add(reader.ToValue<TEntity>(this.DbContext));
+        }
 
         reader.Dispose();
         command.Dispose();
@@ -343,7 +364,6 @@ public class Repository : IRepository
                 throw new NotSupportedException("不支持的参数类型，QueryAsync方法的parameters参数，支持实体类型参数，命名、匿名对象或是字典对象");
         }
 
-        var entityType = typeof(TEntity);
         (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
         if (parameters != null)
         {
@@ -354,11 +374,20 @@ public class Repository : IRepository
         command.CommandType = commandType;
 
         await connection.OpenAsync(cancellationToken);
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+        var behavior = CommandBehavior.SequentialAccess;
         using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
         var result = new List<TEntity>();
-        while (await reader.ReadAsync(cancellationToken))
-            result.Add(reader.ToEntity<TEntity>(this.DbContext));
+        var entityType = typeof(TEntity);
+        if (entityType.IsEntityType(out _))
+        {
+            while (await reader.ReadAsync(cancellationToken))
+                result.Add(reader.ToEntity<TEntity>(this.DbContext));
+        }
+        else
+        {
+            while (await reader.ReadAsync(cancellationToken))
+                result.Add(reader.ToValue<TEntity>(this.DbContext));
+        }
 
         await reader.DisposeAsync();
         await command.DisposeAsync();

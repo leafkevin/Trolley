@@ -716,7 +716,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
     }
     public virtual Func<object, object> GetReaderValueGetter(Type targetType, Type fieldType, OrmDbFactoryOptions options)
     {
-        var hashKey = RepositoryHelper.GetCacheKey(targetType, fieldType);
+        var hashKey = RepositoryHelper.GetCacheKey(targetType, fieldType, options.DefaultDateTimeKind);
         return readerValueGetters.GetOrAdd(hashKey, f =>
         {
             var underlyingType = Nullable.GetUnderlyingType(targetType);
