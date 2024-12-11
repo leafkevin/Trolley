@@ -198,7 +198,7 @@ public class MySqlCreateVisitor : CreateVisitor
         this.OutputFieldNames.AddRange(fieldNames);
     }
     public virtual void Returning(Expression fieldsSelector)
-        => this.OutputFieldNames = this.VisitFields(fieldsSelector);
+        => this.OutputFieldNames = this.VisitFields(fieldsSelector, false);
     public void WithBulkCopy(IEnumerable insertObjs, int? timeoutSeconds)
     {
         this.ActionMode = ActionMode.BulkCopy;

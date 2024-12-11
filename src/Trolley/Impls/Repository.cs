@@ -171,7 +171,7 @@ public class Repository : IRepository
         connection.Open();
         TValue result = default;
         var objResult = command.ExecuteScalar(CommandSqlType.Select);
-        if (objResult != null) result = (TValue)objResult;
+        if (objResult != null) result = (TValue)Convert.ChangeType(objResult, typeof(TValue));
 
         command.Dispose();
         if (isNeedClose) connection.Close();
@@ -200,7 +200,7 @@ public class Repository : IRepository
         await connection.OpenAsync(cancellationToken);
         TValue result = default;
         var objResult = await command.ExecuteScalarAsync(CommandSqlType.Select, cancellationToken);
-        if (objResult != null) result = (TValue)objResult;
+        if (objResult != null) result = (TValue)Convert.ChangeType(objResult, typeof(TValue));
 
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
@@ -243,7 +243,7 @@ public class Repository : IRepository
         else
         {
             var objResult = command.ExecuteScalar(CommandSqlType.Select);
-            if (objResult != null) result = (TEntity)objResult;
+            if (objResult != null) result = (TEntity)Convert.ChangeType(objResult, typeof(TEntity));
         }
 
         command.Dispose();
@@ -284,7 +284,7 @@ public class Repository : IRepository
         else
         {
             var objResult = await command.ExecuteScalarAsync(CommandSqlType.Select, cancellationToken);
-            if (objResult != null) result = (TEntity)objResult;
+            if (objResult != null) result = (TEntity)Convert.ChangeType(objResult, typeof(TEntity));
         }
 
         await command.DisposeAsync();

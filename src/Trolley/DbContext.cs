@@ -266,13 +266,10 @@ public sealed class DbContext
     }
     public TResult QueryValue<TEntity, TResult>(IQueryVisitor visitor)
     {
-        var entityType = typeof(TEntity);
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.IsUseMaster);
         if (visitor.IsNeedFetchShardingTables)
             this.FetchShardingTables(visitor as SqlVisitor);
 
-        Expression<Func<TEntity, TEntity>> defaultExpr = f => f;
-        visitor.SelectDefault(defaultExpr);
         var sql = visitor.BuildSql(out var readerFields);
         sql = this.BuildSql(visitor, sql, " UNION ALL ");
         command.CommandText = sql;
@@ -281,7 +278,7 @@ public sealed class DbContext
         connection.Open();
         TResult result = default;
         var objResult = command.ExecuteScalar(CommandSqlType.Select);
-        if (objResult != null) result = (TResult)objResult;
+        if (objResult != null) result = (TResult)Convert.ChangeType(objResult, typeof(TResult));
 
         command.Dispose();
         if (isNeedClose) connection.Close();
@@ -290,13 +287,10 @@ public sealed class DbContext
     }
     public async Task<TResult> QueryValueAsync<TEntity, TResult>(IQueryVisitor visitor, CancellationToken cancellationToken = default)
     {
-        var entityType = typeof(TEntity);
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.IsUseMaster);
         if (visitor.IsNeedFetchShardingTables)
             await this.FetchShardingTablesAsync(visitor as SqlVisitor, cancellationToken);
 
-        Expression<Func<TEntity, TEntity>> defaultExpr = f => f;
-        visitor.SelectDefault(defaultExpr);
         var sql = visitor.BuildSql(out var readerFields);
         sql = this.BuildSql(visitor, sql, " UNION ALL ");
         command.CommandText = sql;
@@ -305,7 +299,7 @@ public sealed class DbContext
         await connection.OpenAsync(cancellationToken);
         TResult result = default;
         var objResult = await command.ExecuteScalarAsync(CommandSqlType.Select, cancellationToken);
-        if (objResult != null) result = (TResult)objResult;
+        if (objResult != null) result = (TResult)Convert.ChangeType(objResult, typeof(TResult));
 
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();

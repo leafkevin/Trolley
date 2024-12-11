@@ -34,7 +34,6 @@ public partial class PostgreSqlProvider : BaseOrmProvider
         typeof(PhysicalAddress), typeof(NpgsqlPoint), typeof(NpgsqlLine), typeof(NpgsqlLSeg),
         typeof(NpgsqlBox), typeof(NpgsqlPath), typeof(NpgsqlPolygon), typeof(NpgsqlCircle) };
 
-
     public override OrmProviderType OrmProviderType => OrmProviderType.PostgreSql;
     public override Type NativeDbTypeType => typeof(NpgsqlDbType);
     public override string DefaultTableSchema => "public";

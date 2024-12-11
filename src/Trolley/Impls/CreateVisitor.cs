@@ -360,7 +360,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         this.ValuesBuilder.Append(parameterName);
         this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
     }
-    public virtual List<string> VisitFields(Expression fieldsSelector)
+    public virtual List<string> VisitFields(Expression fieldsSelector, bool isIgnoreCase = true)
     {
         var lambdaExpr = fieldsSelector as LambdaExpression;
         var entityMapper = this.Tables[0].Mapper;
@@ -379,7 +379,9 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
 
                     if (newExpr.Arguments[i] is not MemberExpression memberExpr)
                         throw new NotSupportedException($"不支持的表达式访问，只支持MemberAccess访问，Path:{newExpr.Arguments[i]}");
-                    fieldNames.Add(memberMapper.FieldName);
+                    var fieldName = memberMapper.FieldName;
+                    if (isIgnoreCase) fieldName = fieldName.ToLower();
+                    fieldNames.Add(fieldName);
                 }
                 break;
             case ExpressionType.MemberInit:
@@ -392,7 +394,9 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
 
                     if (memberAssignment.Expression is not MemberExpression memberExpr)
                         throw new NotSupportedException($"不支持的表达式访问，只支持MemberAccess访问，Path:{memberAssignment.Expression}");
-                    fieldNames.Add(memberMapper.FieldName);
+                    var fieldName = memberMapper.FieldName;
+                    if (isIgnoreCase) fieldName = fieldName.ToLower();
+                    fieldNames.Add(fieldName);
                 }
                 break;
         }

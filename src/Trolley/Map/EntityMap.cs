@@ -32,7 +32,7 @@ public class EntityMap
         this.KeyMembers = new List<MemberMap>();
         foreach (var memberInfo in memberInfos)
         {
-            if (!this.memberMaps.TryGetValue(memberInfo.Name, out var memberMap))
+            if (!this.TryGetMemberMap(memberInfo.Name, out var memberMap))
             {
                 memberMap = new MemberMap(this, memberInfo);
                 this.AddMemberMap(memberInfo.Name, memberMap);
@@ -43,7 +43,7 @@ public class EntityMap
     }
     public void SetAutoIncrement(MemberInfo memberInfo)
     {
-        if (!this.memberMaps.TryGetValue(memberInfo.Name, out var memberMap))
+        if (!this.TryGetMemberMap(memberInfo.Name, out var memberMap))
         {
             memberMap = new MemberMap(this, memberInfo);
             this.AddMemberMap(memberInfo.Name, memberMap);
@@ -52,13 +52,28 @@ public class EntityMap
     }
     public bool TryGetMemberMap(string memberName, out MemberMap mapper)
     {
+        //忽略大小写
+        memberName = memberName.ToLower();
         if (this.memberMaps.TryGetValue(memberName, out mapper))
             return true;
         mapper = null;
         return false;
     }
+    public MemberMap GetMemberMap(string memberName)
+    {
+        //导航属性，一定存在映射，有就直接返回了
+        if (this.TryGetMemberMap(memberName, out var mapper))
+            return mapper;
+        var memberInfos = this.EntityType.GetMember(memberName, BindingFlags.Public | BindingFlags.Instance);
+        if (memberInfos == null || memberInfos.Length <= 0)
+            throw new KeyNotFoundException($"不存在名为{memberName}的成员");
+        this.AddMemberMap(memberName, mapper = new MemberMap(this, memberInfos[0]));
+        return mapper;
+    }
     public bool TryGetMemberMapByFieldName(string fieldName, out MemberMap mapper)
     {
+        //忽略大小写
+        fieldName = fieldName.ToLower();
         if (this.fieldMaps.TryGetValue(fieldName, out mapper))
             return true;
         mapper = null;
@@ -67,25 +82,16 @@ public class EntityMap
     public MemberMap GetMemberMapByFieldName(string fieldName)
     {
         //导航属性，一定存在映射，有就直接返回了
-        if (this.fieldMaps.TryGetValue(fieldName, out var mapper))
+        if (this.TryGetMemberMapByFieldName(fieldName, out var mapper))
             return mapper;
         return mapper;
     }
-    public MemberMap GetMemberMap(string memberName)
-    {
-        //导航属性，一定存在映射，有就直接返回了
-        if (this.memberMaps.TryGetValue(memberName, out var mapper))
-            return mapper;
-        var memberInfos = this.EntityType.GetMember(memberName, BindingFlags.Public | BindingFlags.Instance);
-        if (memberInfos == null || memberInfos.Length <= 0)
-            throw new KeyNotFoundException($"不存在名为{memberName}的成员");
-        this.AddMemberMap(memberName, mapper = new MemberMap(this, memberInfos[0]));
-        return mapper;
-    }
-    public bool ContainsMemberMap(string memberName) => this.memberMaps.ContainsKey(memberName);
-    public bool ContainsMemberMapByField(string fieldName) => this.fieldMaps.ContainsKey(fieldName);
+    public bool ContainsMemberMap(string memberName) => this.TryGetMemberMap(memberName, out _);
+    public bool ContainsMemberMapByField(string fieldName) => this.TryGetMemberMapByFieldName(fieldName, out _);
     public void AddMemberMap(string memberName, MemberMap mapper)
     {
+        //忽略大小写
+        memberName = memberName.ToLower();
         if (this.memberMaps.TryAdd(memberName, mapper))
             this.memberMappers.Add(mapper);
     }
@@ -130,7 +136,7 @@ public class EntityMap
                 throw new NotSupportedException($"实体{this.EntityType.FullName}的成员{memberMapper.MemberName}的映射，配置为必须字段，但是成员类型却是可为null对象");
             if (memberMapper.TypeHandler == null && memberMapper.TypeHandlerType != null)
                 memberMapper.TypeHandler = ormProvider.GetTypeHandler(memberMapper.TypeHandlerType);
-            this.fieldMaps.TryAdd(memberMapper.FieldName, memberMapper);
+            this.AddFieldMap(memberMapper.FieldName, memberMapper);
         }
         if (!this.memberMaps.IsEmpty)
         {
@@ -163,26 +169,17 @@ public class EntityMap
             KeyMembers = this.KeyMembers
         };
 
-        bool isValueTuple = false;
         if (entityType.IsValueType)
         {
             mapper.UnderlyingType = Nullable.GetUnderlyingType(entityType);
             mapper.IsNullable = mapper.UnderlyingType != null;
             if (!mapper.IsNullable)
                 mapper.UnderlyingType = entityType;
-
-            isValueTuple = mapper.UnderlyingType.FullName.StartsWith("System.ValueTuple`");
         }
-        MemberInfo[] memberInfos = null;
-        if (isValueTuple)
-            memberInfos = mapper.UnderlyingType.GetFields(BindingFlags.Public | BindingFlags.Instance);
-        else
-        {
-            memberInfos = mapper.EntityType.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
-                .Where(p => p.GetIndexParameters().Length == 0).ToArray();
-        }
+        var memberInfos = entityType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
+            .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
 
-        if (memberInfos != null && memberInfos.Length > 0)
+        if (memberInfos != null && memberInfos.Count > 0)
         {
             foreach (var memberInfo in memberInfos)
             {
@@ -192,6 +189,11 @@ public class EntityMap
             }
         }
         return mapper;
+    }
+    private void AddFieldMap(string fieldName, MemberMap mapper)
+    {
+        fieldName = fieldName.ToLower();
+        this.fieldMaps.TryAdd(fieldName, mapper);
     }
     private List<MemberInfo> GetMembers() => this.EntityType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
         .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();

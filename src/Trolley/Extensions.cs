@@ -305,16 +305,6 @@ public static class Extensions
             return default;
         return (T)Convert.ChangeType(readerValue, typeof(T));
     }
-    internal static void CopyTo(this IDataParameterCollection dbParameters, IDataParameterCollection other)
-    {
-        if (dbParameters == null || dbParameters.Count == 0)
-            return;
-        if (dbParameters.Equals(other)) return;
-        foreach (var dbParameter in dbParameters)
-        {
-            other.Add(dbParameter);
-        }
-    }
 #if !NETCOREAPP2_0_OR_GREATER || !NETSTANDARD2_1_OR_GREATER
     public static bool TryPop<TElement>(this Stack<TElement> stack, out TElement element)
     {
@@ -337,6 +327,37 @@ public static class Extensions
         return false;
     }
 #endif
+    public static (bool, object) ContainsLowerKey(this IDictionary<string, object> dict, string lowerKey)
+    {
+        bool isContainsKey = false;
+        object value = null;
+        foreach (var dictKey in dict.Keys)
+        {
+            if (dictKey.ToLower() == lowerKey)
+            {
+                value = dict[dictKey];
+                isContainsKey = true;
+                break;
+            }
+        }
+        return (isContainsKey, value);
+    }
+    internal static void CopyTo(this IDataParameterCollection dbParameters, IDataParameterCollection other)
+    {
+        if (dbParameters == null || dbParameters.Count == 0)
+            return;
+        if (dbParameters.Equals(other)) return;
+        foreach (var dbParameter in dbParameters)
+        {
+            other.Add(dbParameter);
+        }
+    }
+    internal static string ToCamel(this string value)
+    {
+        if (string.IsNullOrEmpty(value)) return value;
+        if (value.Length > 1) return value.Substring(0, 1).ToLower() + value.Substring(1);
+        else return value.ToLower();
+    }
     private static Delegate CreateReaderEntityDeserializer(DbContext dbContext, IDataReader reader, Type entityType)
     {
         var readerExpr = Expression.Parameter(typeof(IDataReader), "reader");
