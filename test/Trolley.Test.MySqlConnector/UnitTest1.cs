@@ -1,11 +1,11 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using MySqlConnector;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using MySqlConnector;
 using Trolley.MySqlConnector;
 using Xunit;
 using Xunit.Abstractions;
@@ -76,21 +76,47 @@ public class UnitTest1 : UnitTestBase
         var count = repository.Delete<User>().Where(f => f.Id == 4).Execute();
         count = await repository.CreateAsync<User>(new
         {
-            Id = 4,
-            TenantId = "1",
-            Name = "leafkevin",
-            Age = 25,
-            CompanyId = 1,
-            Gender = Gender.Male,
-            IsEnabled = true,
-            CreatedAt = DateTime.Now,
-            CreatedBy = 1,
-            UpdatedAt = DateTime.Now,
-            UpdatedBy = 1,
-            SomeTimes = TimeSpan.FromMinutes(35),
-            GuidField = Guid.NewGuid()
+            id = 4,
+            tenantId = "1",
+            name = "leafkevin",
+            age = 25,
+            companyId = 1,
+            gender = Gender.Male,
+            isEnabled = true,
+            createdAt = DateTime.Now,
+            createdBy = 1,
+            updatedAt = DateTime.Now,
+            updatedBy = 1,
+#if NET6_0_OR_GREATER
+            someTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(35)),
+#else
+            someTimes = TimeSpan.FromSeconds(35),
+#endif
+            guidField = Guid.NewGuid()
         });
         repository.Commit();
+        Assert.Equal(1, count);
+        repository.Delete<User>().Where(f => f.Id == 5).Execute();
+        count = await repository.CreateAsync<User>(new Dictionary<string, object>()
+        {
+            {"id" , 5},
+            {"tenantId" , "1"},
+            {"name" , "leafkevin"},
+            {"age" , 25},
+            {"companyId" , 1},
+            {"gender" , Gender.Male},
+            {"isEnabled" , true},
+            {"createdAt" , DateTime.Now},
+            {"createdBy" , 1},
+            {"updatedAt" , DateTime.Now},
+            {"updatedBy" , 1},
+#if NET6_0_OR_GREATER
+            {"someTimes" , TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(35))},
+#else
+            {"someTimes" , TimeSpan.FromMinutes(35)},
+#endif
+            {"guidField" , Guid.NewGuid()}
+        });
         Assert.Equal(1, count);
     }
     [Fact]
@@ -282,20 +308,20 @@ public class UnitTest1 : UnitTestBase
         var sql = repository.Create<User>()
            .WithBy(new
            {
-               Id = 1,
-               TenantId = "1",
-               Name = "leafkevin",
-               Age = 25,
-               CompanyId = 1,
-               Gender = Gender.Male,
-               SourceType = UserSourceType.Douyin,
-               IsEnabled = true,
-               CreatedAt = now,
-               CreatedBy = 1,
-               UpdatedAt = now,
-               UpdatedBy = 1
+               id = 1,
+               tenantId = "1",
+               name = "leafkevin",
+               age = 25,
+               companyId = 1,
+               gender = Gender.Male,
+               sourceType = UserSourceType.Douyin,
+               isEnabled = true,
+               createdAt = now,
+               createdBy = 1,
+               updatedAt = now,
+               updatedBy = 1
            })
-           .IgnoreFields("CompanyId", "SourceType")
+           .IgnoreFields("CompanyId", "sourceType")
            .ToSql(out var dbParameters);
         Assert.Equal("INSERT INTO `sys_user` (`Id`,`TenantId`,`Name`,`Gender`,`Age`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id,@TenantId,@Name,@Gender,@Age,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)", sql);
         Assert.Equal(10, dbParameters.Count);
@@ -305,20 +331,20 @@ public class UnitTest1 : UnitTestBase
         repository.Create<User>()
             .WithBy(new
             {
-                Id = 1,
-                TenantId = "1",
-                Name = "leafkevin",
-                Age = 25,
-                CompanyId = 1,
-                Gender = Gender.Male,
-                SourceType = UserSourceType.Douyin,
-                IsEnabled = true,
-                CreatedAt = now,
-                CreatedBy = 1,
-                UpdatedAt = now,
-                UpdatedBy = 1
+                id = 1,
+                tenantId = "1",
+                name = "leafkevin",
+                age = 25,
+                companyId = 1,
+                gender = Gender.Male,
+                sourceType = UserSourceType.Douyin,
+                isEnabled = true,
+                createdAt = now,
+                createdBy = 1,
+                updatedAt = now,
+                updatedBy = 1
             })
-            .IgnoreFields("CompanyId", "SourceType")
+            .IgnoreFields("CompanyId", "sourceType")
             .Execute();
         var user = repository.GetById<User>(1);
         repository.Commit();
@@ -611,16 +637,16 @@ public class UnitTest1 : UnitTestBase
             {
                 new Dictionary<string,object>
                 {
-                    { "Id",1 },
-                    { "ProductNo","PN-001"},
-                    { "Name","波司登羽绒服"},
-                    { "BrandId",1},
-                    { "CategoryId",1},
-                    { "IsEnabled",true},
-                    { "CreatedAt",DateTime.Now},
-                    { "CreatedBy",1},
-                    { "UpdatedAt",DateTime.Now},
-                    { "UpdatedBy",1}
+                    { "id",1 },
+                    { "productNo","PN-001"},
+                    { "name","波司登羽绒服"},
+                    { "brandId",1},
+                    { "categoryId",1},
+                    { "isEnabled",true},
+                    { "createdAt",DateTime.Now},
+                    { "createdBy",1},
+                    { "updatedAt",DateTime.Now},
+                    { "updatedBy",1}
                 },
                 new Dictionary<string,object>
                 {
@@ -637,16 +663,16 @@ public class UnitTest1 : UnitTestBase
                 },
                 new Dictionary<string,object>
                 {
-                    { "Id",3},
-                    { "ProductNo","PN-003"},
-                    { "Name","优衣库保暖内衣"},
-                    { "BrandId",3},
-                    { "CategoryId",3},
-                    { "IsEnabled",true},
-                    { "CreatedAt",DateTime.Now},
-                    { "CreatedBy",1},
-                    { "UpdatedAt",DateTime.Now},
-                    { "UpdatedBy",1}
+                    { "id",3},
+                    { "productNo","PN-003"},
+                    { "name","优衣库保暖内衣"},
+                    { "brandId",3},
+                    { "categoryId",3},
+                    { "isEnabled",true},
+                    { "createdAt",DateTime.Now},
+                    { "createdBy",1},
+                    { "updatedAt",DateTime.Now},
+                    { "updatedBy",1}
                 }
             })
             .Execute();
@@ -851,20 +877,20 @@ public class UnitTest1 : UnitTestBase
             .IgnoreInto()
             .From<Order, Product>()
             .Where((a, b) => a.Id == "3" && b.Id == 1)
-            .Select((x, y) => new OrderDetail
+            .Select((x, y) => new
             {
-                Id = "7",
-                TenantId = "1",
-                OrderId = x.Id,
-                ProductId = y.Id,
-                Price = y.Price,
-                Quantity = 3,
-                Amount = y.Price * 3,
-                IsEnabled = x.IsEnabled,
-                CreatedBy = x.CreatedBy,
-                CreatedAt = x.CreatedAt,
-                UpdatedBy = x.UpdatedBy,
-                UpdatedAt = x.UpdatedAt
+                id = "7",
+                tenantId = "1",
+                orderId = x.Id,
+                productId = y.Id,
+                price = y.Price,
+                quantity = 3,
+                amount = y.Price * 3,
+                isEnabled = x.IsEnabled,
+                createdBy = x.CreatedBy,
+                createdAt = x.CreatedAt,
+                updatedBy = x.UpdatedBy,
+                updatedAt = x.UpdatedAt
             })
             .ToSql(out var parameters);
         Assert.Equal("INSERT IGNORE INTO `sys_order_detail` (`Id`,`TenantId`,`OrderId`,`ProductId`,`Price`,`Quantity`,`Amount`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt`) SELECT '7','1',b.`Id`,c.`Id`,c.`Price`,3,(c.`Price`*3),b.`IsEnabled`,b.`CreatedBy`,b.`CreatedAt`,b.`UpdatedBy`,b.`UpdatedAt` FROM `sys_order` b,`sys_product` c WHERE b.`Id`='3' AND c.`Id`=1", sql);

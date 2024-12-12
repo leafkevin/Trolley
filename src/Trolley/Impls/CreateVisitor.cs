@@ -158,14 +158,14 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     public virtual void IgnoreFields(string[] fieldNames)
     {
         this.IgnoreFieldNames ??= new();
-        this.IgnoreFieldNames.AddRange(fieldNames);
+        this.IgnoreFieldNames.AddRange(fieldNames.Select(f => f.ToLower()));
     }
     public virtual void IgnoreFields(Expression fieldsSelector)
         => this.IgnoreFieldNames = this.VisitFields(fieldsSelector);
     public virtual void OnlyFields(string[] fieldNames)
     {
         this.OnlyFieldNames ??= new();
-        this.OnlyFieldNames.AddRange(fieldNames);
+        this.OnlyFieldNames.AddRange(fieldNames.Select(f => f.ToLower()));
     }
     public virtual void OnlyFields(Expression fieldsSelector)
         => this.OnlyFieldNames = this.VisitFields(fieldsSelector);

@@ -381,22 +381,22 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
     public virtual void IgnoreFields(string[] fieldNames)
     {
         this.IgnoreFieldNames ??= new();
-        this.IgnoreFieldNames.AddRange(fieldNames);
+        this.IgnoreFieldNames.AddRange(fieldNames.Select(f => f.ToLower()));
     }
     public virtual void IgnoreFields(Expression fieldsSelector)
     {
         this.IgnoreFieldNames ??= new();
-        this.VisitFields(fieldsSelector, f => this.IgnoreFieldNames.Add(f.FieldName));
+        this.VisitFields(fieldsSelector, f => this.IgnoreFieldNames.Add(f.FieldName.ToLower()));
     }
     public virtual void OnlyFields(string[] fieldNames)
     {
         this.OnlyFieldNames ??= new();
-        this.OnlyFieldNames.AddRange(fieldNames);
+        this.OnlyFieldNames.AddRange(fieldNames.Select(f => f.ToLower()));
     }
     public virtual void OnlyFields(Expression fieldsSelector)
     {
         this.OnlyFieldNames ??= new();
-        this.VisitFields(fieldsSelector, f => this.OnlyFieldNames.Add(f.FieldName));
+        this.VisitFields(fieldsSelector, f => this.OnlyFieldNames.Add(f.FieldName.ToLower()));
     }
     public virtual void SetBulk(IEnumerable updateObjs, int bulkCount)
     {

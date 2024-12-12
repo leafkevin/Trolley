@@ -381,6 +381,7 @@ public class RepositoryHelper
             {
                 ParameterExpression valueTupleExpr = null;
                 MemberInfo targetMemberInfo = null;
+                var lowerMemberName = memberMapper.MemberName.ToLower();
                 if (keyType == 1 && isDictionary)
                 {
                     //var tuple = dict.ContainsLowerKey(targetMemberInfo.Name.ToLower());
@@ -388,16 +389,16 @@ public class RepositoryHelper
                     //  throw new KeyNotFoundException($"字典参数中{parametersType.FullName}缺少Key:{memberMapper.MemberName}的成员");
                     valueTupleExpr = Expression.Variable(typeof(ValueTuple<bool, object>), $"{memberMapper.MemberName.ToCamel()}Tuple");
                     blockParameters.Add(valueTupleExpr);
-                    var memberNameExpr = Expression.Constant(memberMapper.MemberName.ToLower());
+                    var lowerMemberNameExpr = Expression.Constant(lowerMemberName);
                     methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.ContainsLowerKey));
-                    var containsLowerKeyExpr = Expression.Call(typedParametersExpr, methodInfo, memberNameExpr);
+                    var containsLowerKeyExpr = Expression.Call(methodInfo, typedParametersExpr, lowerMemberNameExpr);
                     blockBodies.Add(Expression.Assign(valueTupleExpr, containsLowerKeyExpr));
                     var exception = new KeyNotFoundException($"字典参数中{parametersType.FullName}缺少Key:{memberMapper.MemberName}的成员");
                     var isContainsKeyExpr = Expression.Field(valueTupleExpr, "Item1");
                     blockBodies.Add(Expression.IfThen(Expression.IsFalse(isContainsKeyExpr), Expression.Throw(Expression.Constant(exception))));
                 }
                 //忽略大小写
-                else if (!targetMemberInfos.TryGetValue(memberMapper.MemberName.ToLower(), out targetMemberInfo))
+                else if (!targetMemberInfos.TryGetValue(lowerMemberName, out targetMemberInfo))
                 {
                     if (keyType == 1) throw new KeyNotFoundException($"参数类型{parametersType.FullName}缺少{memberMapper.MemberName}的成员");
                     else continue;
@@ -405,9 +406,9 @@ public class RepositoryHelper
 
                 if (memberMapper.IsIgnore || memberMapper.IsNavigation || (keyType == 2 && memberMapper.IsKey))
                     continue;
-                if (onlyFieldNames != null && !onlyFieldNames.Contains(memberMapper.MemberName))
+                if (onlyFieldNames != null && !onlyFieldNames.Contains(lowerMemberName))
                     continue;
-                if (ignoreFieldNames != null && ignoreFieldNames.Contains(memberMapper.MemberName))
+                if (ignoreFieldNames != null && ignoreFieldNames.Contains(lowerMemberName))
                     continue;
                 if (!isUpdateRowVersion && memberMapper.IsRowVersion)
                     continue;
@@ -704,6 +705,7 @@ public class RepositoryHelper
             {
                 ParameterExpression valueTupleExpr = null;
                 MemberInfo targetMemberInfo = null;
+                var lowerMemberName = memberMapper.MemberName.ToLower();
                 if (isDictionary && isUseKey)
                 {
                     //var tuple = dict.ContainsLowerKey(targetMemberInfo.Name.ToLower());
@@ -711,9 +713,9 @@ public class RepositoryHelper
                     //  throw new KeyNotFoundException($"字典参数中{parametersType.FullName}缺少Key:{memberMapper.MemberName}的成员");
                     valueTupleExpr = Expression.Variable(typeof(ValueTuple<bool, object>), $"{memberMapper.MemberName.ToCamel()}Tuple");
                     blockParameters.Add(valueTupleExpr);
-                    var lowerMemberNameExpr = Expression.Constant(memberMapper.MemberName.ToLower());
+                    var lowerMemberNameExpr = Expression.Constant(lowerMemberName);
                     methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.ContainsLowerKey));
-                    var containsLowerKeyExpr = Expression.Call(typedWhereObjExpr, methodInfo, lowerMemberNameExpr);
+                    var containsLowerKeyExpr = Expression.Call(methodInfo, typedWhereObjExpr, lowerMemberNameExpr);
                     blockBodies.Add(Expression.Assign(valueTupleExpr, containsLowerKeyExpr));
                     var exception = new KeyNotFoundException($"字典参数中{whereObjType.FullName}缺少Key:{memberMapper.MemberName}的成员");
                     var isContainsKeyExpr = Expression.Field(valueTupleExpr, "Item1");
@@ -721,7 +723,7 @@ public class RepositoryHelper
                 }
                 else if (isEntityType)
                 {
-                    if (!targetMemberInfos.TryGetValue(memberMapper.MemberName.ToLower(), out targetMemberInfo))
+                    if (!targetMemberInfos.TryGetValue(lowerMemberName, out targetMemberInfo))
                     {
                         if (isUseKey)
                             throw new KeyNotFoundException($"参数类型{whereObjType.FullName}缺少{memberMapper.MemberName}的成员");
@@ -757,7 +759,7 @@ public class RepositoryHelper
                     {
                         methodInfo = typeof(EntityMap).GetMethod(nameof(EntityMap.GetMemberMap));
                         blockBodies.Add(Expression.Assign(memberMapperExpr, Expression.Call(entityMapperExpr, methodInfo, memberNameExpr)));
-                        var fieldValueExpr = Expression.Field(typedWhereObjExpr, "Item2");
+                        var fieldValueExpr = Expression.Field(valueTupleExpr, "Item2");
                         AddValueParameter(dbContext, dbParametersExpr, ormProviderExpr, myParameterNameExpr, fieldValueExpr, memberMapperExpr, blockBodies);
                     }
                     else
@@ -1223,7 +1225,7 @@ public class RepositoryHelper
             var headSql = $"UPDATE {ormProvider.GetTableName(entityMapper.TableName)} SET ";
             var isDictionary = typeof(IDictionary<string, object>).IsAssignableFrom(updateObjType);
             object commandInitializer = null;
-            if (isDictionary || isBulk)
+            if (isBulk)
             {
                 var fieldsSqlSetter = BuildFieldsSqlParametersPart(dbContext, entityType, updateObjType, 4, 1, 2, false, isBulk, isUpdateRowVersion, null, null, headSql) as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
                 var whereSqlSetter = BuildWhereSqlParametersPart(dbContext, entityType, updateObjType, 1, false, true, true, false, false, isBulk, " WHERE ") as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
@@ -1236,17 +1238,33 @@ public class RepositoryHelper
             }
             else
             {
-                var fieldsSqlSetter = BuildFieldsSqlParametersPart(dbContext, entityType, updateObjType, 4, 2, 2, true, false, isUpdateRowVersion, null, null, headSql) as Func<DbContext, object, string>;
-                var fieldsParameterSetter = BuildFieldsSqlParametersPart(dbContext, entityType, updateObjType, 4, 3, 0, false, false, isUpdateRowVersion, null, null, headSql) as Action<IDataParameterCollection, DbContext, object>;
-                var whereSqlSetter = BuildWhereSqlParametersPart(dbContext, entityType, updateObjType, 2, true, true, true, false, false, isBulk, " WHERE ") as Func<DbContext, object, string>;
-                var whereParameterSetter = BuildWhereSqlParametersPart(dbContext, entityType, updateObjType, 3, false, true, true, false, false, isBulk) as Action<IDataParameterCollection, DbContext, object>;
-                var sql = fieldsSqlSetter.Invoke(dbContext, null) + whereSqlSetter.Invoke(dbContext, null);
-                Func<IDataParameterCollection, DbContext, object, string> typedCommandInitializer = (dbParameters, dbContext, updateObj) =>
+                Func<IDataParameterCollection, DbContext, object, string> typedCommandInitializer = null;
+                if (isDictionary)
                 {
-                    fieldsParameterSetter.Invoke(dbParameters, dbContext, updateObj);
-                    whereParameterSetter.Invoke(dbParameters, dbContext, updateObj);
-                    return sql;
-                };
+                    var fieldsSqlSetter = BuildFieldsSqlParametersPart(dbContext, entityType, updateObjType, 4, 1, 2, false, isBulk, isUpdateRowVersion, null, null, headSql) as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
+                    var whereSqlSetter = BuildWhereSqlParametersPart(dbContext, entityType, updateObjType, 1, false, true, true, false, false, isBulk, " WHERE ") as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
+                    typedCommandInitializer = (dbParameters, dbContext, updateObj) =>
+                    {
+                        var builder = new StringBuilder();
+                        fieldsSqlSetter.Invoke(dbParameters, builder, dbContext, updateObj);
+                        whereSqlSetter.Invoke(dbParameters, builder, dbContext, updateObj);
+                        return builder.ToString();
+                    };
+                }
+                else
+                {
+                    var fieldsSqlSetter = BuildFieldsSqlParametersPart(dbContext, entityType, updateObjType, 4, 2, 2, true, false, isUpdateRowVersion, null, null, headSql) as Func<DbContext, object, string>;
+                    var fieldsParameterSetter = BuildFieldsSqlParametersPart(dbContext, entityType, updateObjType, 4, 3, 0, false, false, isUpdateRowVersion, null, null, headSql) as Action<IDataParameterCollection, DbContext, object>;
+                    var whereSqlSetter = BuildWhereSqlParametersPart(dbContext, entityType, updateObjType, 2, true, true, true, false, false, isBulk, " WHERE ") as Func<DbContext, object, string>;
+                    var whereParameterSetter = BuildWhereSqlParametersPart(dbContext, entityType, updateObjType, 3, false, true, true, false, false, isBulk) as Action<IDataParameterCollection, DbContext, object>;
+                    var sql = fieldsSqlSetter.Invoke(dbContext, null) + whereSqlSetter.Invoke(dbContext, null);
+                    typedCommandInitializer = (dbParameters, dbContext, updateObj) =>
+                    {
+                        fieldsParameterSetter.Invoke(dbParameters, dbContext, updateObj);
+                        whereParameterSetter.Invoke(dbParameters, dbContext, updateObj);
+                        return sql;
+                    };
+                }
                 commandInitializer = typedCommandInitializer;
             }
             return commandInitializer;
@@ -1404,13 +1422,14 @@ public class RepositoryHelper
                 foreach (var memberMapper in entityMapper.MemberMaps)
                 {
                     MemberInfo targetMemberInfo = null;
-                    if (!isDictionary && !targetMemberInfos.TryGetValue(memberMapper.MemberName.ToLower(), out targetMemberInfo))
+                    var lowerMemberName = memberMapper.MemberName.ToLower();
+                    if (!isDictionary && !targetMemberInfos.TryGetValue(lowerMemberName, out targetMemberInfo))
                         continue;
                     if (memberMapper.IsIgnore || memberMapper.IsNavigation || memberMapper.IsIgnoreUpdate || memberMapper.IsKey)
                         continue;
-                    if (onlyFieldNames != null && !onlyFieldNames.Contains(memberMapper.MemberName))
+                    if (onlyFieldNames != null && !onlyFieldNames.Contains(lowerMemberName))
                         continue;
-                    if (ignoreFieldNames != null && ignoreFieldNames.Contains(memberMapper.MemberName))
+                    if (ignoreFieldNames != null && ignoreFieldNames.Contains(lowerMemberName))
                         continue;
                     if (!isUpdateRowVersion && memberMapper.IsRowVersion)
                         continue;

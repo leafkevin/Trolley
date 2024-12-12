@@ -355,11 +355,16 @@ public class UnitTest3 : UnitTestBase
     {
         this.Initialize(2);
         var repository = this.dbFactory.Create();
-        var result = repository.Update<User>(new { Id = 1, Name = "leafkevin11" });
+        var result = repository.Update<User>(new { id = 1, name = "leafkevin11" });
         var result1 = repository.GetById<User>(1);
         Assert.True(result > 0);
         Assert.NotNull(result1);
         Assert.Equal("leafkevin11", result1.Name);
+        result = repository.Update<User>(new Dictionary<string, object> { { "id", 1 }, { "name", "leafkevin22" } });
+        result1 = repository.GetById<User>(1);
+        Assert.True(result > 0);
+        Assert.NotNull(result1);
+        Assert.Equal("leafkevin22", result1.Name);
     }
     [Fact]
     public void Update_Set_AnonymousObject_Where()
@@ -378,7 +383,7 @@ public class UnitTest3 : UnitTestBase
         Assert.Equal("UPDATE \"sys_user\" SET \"Name\"=@Name,\"Age\"=@Age,\"CompanyId\"=@CompanyId WHERE \"Id\"=1", sql);
         Assert.Equal(3, dbParameters.Count);
         Assert.Equal("leafkevin22", (string)dbParameters[0].Value);
-        Assert.Equal(25, (int)dbParameters[1].Value);        
+        Assert.Equal(25, (int)dbParameters[1].Value);
         Assert.True(dbParameters[2].Value == DBNull.Value);
 
         repository.Update<User>()
@@ -743,9 +748,9 @@ public class UnitTest3 : UnitTestBase
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
             .Set(true, (x, y) => new
             {
-                TotalAmount = 200.56,
-                OrderNo = x.OrderNo + "-111",
-                BuyerSource = y.SourceType
+                totalAmount = 200.56,
+                orderNo = x.OrderNo + "-111",
+                buyerSource = y.SourceType
             })
             .Set(x => x.Products, new List<int> { 1, 2, 3 })
             .Where((a, b) => a.BuyerId == 1)
@@ -761,9 +766,9 @@ public class UnitTest3 : UnitTestBase
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
             .Set(true, (x, y) => new
             {
-                TotalAmount = 200.56,
-                OrderNo = x.OrderNo + "-111",
-                BuyerSource = y.SourceType
+                totalAmount = 200.56,
+                orderNo = x.OrderNo + "-111",
+                buyerSource = y.SourceType
             })
             .Set(x => x.Products, new List<int> { 1, 2, 3 })
             .Where((a, b) => a.BuyerId == 1)
@@ -773,11 +778,11 @@ public class UnitTest3 : UnitTestBase
         sql = repository.Update<Order>()
             .SetFrom((a, b) => new
             {
-                TotalAmount = a.From<OrderDetail>('b')
+                totalAmount = a.From<OrderDetail>('b')
                     .Where(f => f.OrderId == b.Id)
                     .Select(t => Sql.Sum(t.Amount)),
-                OrderNo = b.OrderNo + "_111",
-                BuyerId = DBNull.Value
+                orderNo = b.OrderNo + "_111",
+                buyerId = DBNull.Value
             })
             .Where(a => a.BuyerId == 1)
             .ToSql(out _);
@@ -786,11 +791,11 @@ public class UnitTest3 : UnitTestBase
         result = repository.Update<Order>()
             .SetFrom((a, b) => new
             {
-                TotalAmount = a.From<OrderDetail>('b')
+                totalAmount = a.From<OrderDetail>('b')
                     .Where(f => f.OrderId == b.Id)
                     .Select(t => Sql.Sum(t.Amount)),
-                OrderNo = b.OrderNo + "_111",
-                BuyerId = DBNull.Value
+                orderNo = b.OrderNo + "_111",
+                buyerId = DBNull.Value
             })
             .Where(a => a.BuyerId == 1)
             .Execute();
@@ -1504,7 +1509,7 @@ public class UnitTest3 : UnitTestBase
             .ExecuteAsync();
 
         Assert.True(count == orders.Count);
-    }    
+    }
     private double CalcAmount(double price, double amount) => price * amount - 150;
     private int[] GetProducts() => new int[] { 1, 2, 3 };
 }
