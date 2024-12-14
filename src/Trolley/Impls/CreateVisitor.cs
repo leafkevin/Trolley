@@ -356,7 +356,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             this.FieldsBuilder.Append(',');
             this.ValuesBuilder.Append(',');
         }
-        this.FieldsBuilder.Append(memberMapper.FieldName);
+        this.FieldsBuilder.Append(this.OrmProvider.GetFieldName(memberMapper.FieldName));
         this.ValuesBuilder.Append(parameterName);
         this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
     }

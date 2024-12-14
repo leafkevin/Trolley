@@ -614,7 +614,7 @@ public class RepositoryHelper
                     .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field)
                     .ToDictionary(f => f.Name.ToLower(), f => f);
             }
-            else if (!isUseKey || entityMapper.KeyMembers.Count != 1)
+            else if (!(isUseKey && entityMapper.KeyMembers.Count == 1))
                 throw new NotSupportedException("不支持非单主键字段的业务场景");
         }
 
