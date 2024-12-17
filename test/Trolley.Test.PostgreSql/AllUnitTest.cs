@@ -2244,7 +2244,7 @@ public class AllUnitTest : UnitTestBase
                 UpdatedBy = 1,
                 UpdatedAt = DateTime.Now
             })
-            .OnConflict(f => f.DoNothing())
+            //.OnConflict(f => f.DoNothing())
             .ExecuteAsync();
         Assert.Equal(0, count);
     }
