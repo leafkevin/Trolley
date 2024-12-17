@@ -457,8 +457,6 @@ public static class Extensions
         while (readerIndex < readerFields.Count)
         {
             var readerField = readerFields[readerIndex];
-            var fieldName1 = reader.GetName(readerIndex);
-            var bodyd = readerField.Body;
             if (readerField.FieldType == SqlFieldType.Field)
             {
                 var fieldType = reader.GetFieldType(index);
