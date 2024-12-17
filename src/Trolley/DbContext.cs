@@ -577,7 +577,7 @@ public sealed class DbContext
         {
             var resultType = typeof(TResult);
             if (resultType.IsEntityType(out _))
-                result = reader.ToEntity<TResult>(this, readerFields, true);
+                result = reader.ToEntity<TResult>(this, readerFields);
             else result = reader.ToValue<TResult>(this);
         }
 
@@ -599,7 +599,7 @@ public sealed class DbContext
         {
             var resultType = typeof(TResult);
             if (resultType.IsEntityType(out _))
-                result = reader.ToEntity<TResult>(this, readerFields, true);
+                result = reader.ToEntity<TResult>(this, readerFields);
             else result = reader.ToValue<TResult>(this);
         }
 

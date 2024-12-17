@@ -1439,7 +1439,7 @@ public class UnitTest1 : UnitTestBase
             })
             .Returning(f => new { f.Id, f.TenantId })
             .ToSql(out var parameters1);
-        Assert.Equal("INSERT INTO `sys_user` (`Id`,`TenantId`,`Name`,`Gender`,`Age`,`CompanyId`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id,@TenantId,@Name,@Gender,@Age,@CompanyId,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) RETURNING Id,TenantId", sql1);
+        Assert.Equal("INSERT INTO `sys_user` (`Id`,`TenantId`,`Name`,`Gender`,`Age`,`CompanyId`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id,@TenantId,@Name,@Gender,@Age,@CompanyId,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) RETURNING `Id`,`TenantId`", sql1);
         await repository.BeginTransactionAsync();
         await repository.DeleteAsync<User>(1);
         var result1 = await repository.Create<User>()

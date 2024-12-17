@@ -529,9 +529,11 @@ public class MySqlCreateVisitor : CreateVisitor
     {
         //RETURNING f(id1), UPPER(animal1) 不需要列名 
         this.ReaderFields = new();
-        (var targetType, var lambdaExpr) = ((Type, LambdaExpression))deferredSegmentValue;
+        (var targetType, var fieldsSelector) = ((Type, Expression))deferredSegmentValue;
+        var lambdaExpr = fieldsSelector as LambdaExpression;
         var entityMapper = this.Tables[0].Mapper;
         var builder = new StringBuilder(" RETURNING ");
+        this.InitTableAlias(lambdaExpr);
         switch (lambdaExpr.Body.NodeType)
         {
             case ExpressionType.MemberAccess:
@@ -554,6 +556,7 @@ public class MySqlCreateVisitor : CreateVisitor
                     this.GetQuotedValue(sqlSegment, true);
                     sqlSegment.TargetMember = memberInfo;
                     sqlSegment.SegmentType = memberInfo.GetMemberType();
+                    if (i > 0) builder.Append(',');
                     builder.Append(sqlSegment.Body);
                     this.ReaderFields.Add(sqlSegment);
                 }
@@ -570,6 +573,7 @@ public class MySqlCreateVisitor : CreateVisitor
                     this.GetQuotedValue(sqlSegment, true);
                     sqlSegment.TargetMember = memberAssignment.Member;
                     sqlSegment.SegmentType = memberAssignment.Member.GetMemberType();
+                    if (i > 0) builder.Append(',');
                     builder.Append(sqlSegment.Body);
                     this.ReaderFields.Add(sqlSegment);
                 }

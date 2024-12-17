@@ -244,15 +244,15 @@ public static class Extensions
     /// <param name="readerFields"></param>
     /// <param name="isUseReaderOrder"></param>
     /// <returns></returns>
-    public static TEntity ToEntity<TEntity>(this ITheaDataReader reader, DbContext dbContext, List<SqlFieldSegment> readerFields, bool isUseReaderOrder = false)
+    public static TEntity ToEntity<TEntity>(this ITheaDataReader reader, DbContext dbContext, List<SqlFieldSegment> readerFields)
     {
         var dbReader = reader.BaseDataReader;
         var entityType = typeof(TEntity);
         var ormProviderType = dbContext.OrmProvider.OrmProviderType;
-        var cacheKey = GetTypeReaderKey(entityType, ormProviderType, dbReader, readerFields, isUseReaderOrder, out var deferredFuncs);
+        var cacheKey = GetTypeReaderKey(entityType, ormProviderType, dbReader, readerFields, out var deferredFuncs);
         if (!queryReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
         {
-            deserializer = CreateReaderDeserializer(dbContext, dbReader, entityType, readerFields, isUseReaderOrder);
+            deserializer = CreateReaderDeserializer(dbContext, dbReader, entityType, readerFields);
             queryReaderDeserializerCache.TryAdd(cacheKey, deserializer);
         }
         if (deferredFuncs != null && deferredFuncs.Count > 0)
@@ -440,7 +440,7 @@ public static class Extensions
         blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(entityType)));
         return Expression.Lambda(Expression.Block(blockParameters, blockBodies), readerExpr).Compile();
     }
-    private static Delegate CreateReaderDeserializer(DbContext dbContext, IDataReader reader, Type entityType, List<SqlFieldSegment> readerFields, bool isUseReaderOrder = false)
+    private static Delegate CreateReaderDeserializer(DbContext dbContext, IDataReader reader, Type entityType, List<SqlFieldSegment> readerFields)
     {
         var blockParameters = new List<ParameterExpression>();
         var blockBodies = new List<Expression>();
@@ -456,15 +456,9 @@ public static class Extensions
         var deferredBuilds = new Stack<EntityBuildInfo>();
         while (readerIndex < readerFields.Count)
         {
-            SqlFieldSegment readerField = null;
-            //PostgreSql，使用RETURNING *返回的字段顺序不固定，需要根据reader的顺序来绑定接收实体
-            //此时的字段都是基础类型
-            if (isUseReaderOrder)
-            {
-                var fieldName = reader.GetName(index);
-                readerField = readerFields.Find(f => f.Body == fieldName);
-            }
-            else readerField = readerFields[readerIndex];
+            var readerField = readerFields[readerIndex];
+            var fieldName1 = reader.GetName(readerIndex);
+            var bodyd = readerField.Body;
             if (readerField.FieldType == SqlFieldType.Field)
             {
                 var fieldType = reader.GetFieldType(index);
@@ -653,7 +647,7 @@ public static class Extensions
         blockBodies.Add(Expression.Assign(objLocalExpr, valueExpr));
         return objLocalExpr;
     }
-    private static int GetTypeReaderKey(Type entityType, OrmProviderType ormProviderType, IDataReader reader, List<SqlFieldSegment> readerFields, bool isUseReaderOrder, out List<object> deferredFuncs)
+    private static int GetTypeReaderKey(Type entityType, OrmProviderType ormProviderType, IDataReader reader, List<SqlFieldSegment> readerFields, out List<object> deferredFuncs)
     {
         deferredFuncs = null;
 #if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
@@ -678,7 +672,6 @@ public static class Extensions
                 hashCode.Add("TargetEntity");
             else hashCode.Add(readerField.TargetMember.Name);
         }
-        hashCode.Add(isUseReaderOrder);
         return hashCode.ToHashCode();
 #else
         int hashCode = 17;
@@ -704,7 +697,6 @@ public static class Extensions
                     hashCode = hashCode * 23 + "TargetEntity".GetHashCode();
                 else hashCode = hashCode * 23 + readerField.TargetMember.Name.GetHashCode();
             }
-            hashCode = hashCode * 23 + isUseReaderOrder.GetHashCode();
         }
         return hashCode;
 #endif

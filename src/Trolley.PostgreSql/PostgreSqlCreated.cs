@@ -292,7 +292,7 @@ public class PostgreSqlBulkCreated<TEntity, TResult> : Created<TEntity>, IPostgr
             {
                 while (reader.Read())
                 {
-                    result.Add(reader.ToEntity<TResult>(dbContext, readerFields, true));
+                    result.Add(reader.ToEntity<TResult>(dbContext, readerFields));
                 }
             };
         }
