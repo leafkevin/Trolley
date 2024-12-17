@@ -253,9 +253,9 @@ public class UnitTest1 : UnitTestBase
             Assert.True((string)dbParameter1.Value == Gender.Male.ToString());
         }
         Assert.True((bool)dbParameters[6].Value);
-        Assert.True((DateTime)dbParameters[7].Value == now);
+        Assert.Equal(now, (DateTime)dbParameters[7].Value);
         Assert.Equal(1, (int)dbParameters[8].Value);
-        Assert.True((DateTime)dbParameters[9].Value == now);
+        Assert.Equal(now, (DateTime)dbParameters[9].Value);
         Assert.Equal(1, (int)dbParameters[10].Value);
 
         repository.BeginTransaction();
@@ -423,7 +423,7 @@ public class UnitTest1 : UnitTestBase
             .WithBy(guidField.HasValue, new { GuidField = guidField })
             .ToSql(out _);
         repository.Commit();
-        Assert.Equal("INSERT INTO `sys_user` (`Id`,`TenantId`,`Name`,`Gender`,`Age`,`CompanyId`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`,SomeTimes,`GuidField`) VALUES (@Id,@TenantId,@Name,@Gender,@Age,@CompanyId,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy,@SomeTimes,@GuidField)", sql);
+        Assert.Equal("INSERT INTO `sys_user` (`Id`,`TenantId`,`Name`,`Gender`,`Age`,`CompanyId`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`,`SomeTimes`,`GuidField`) VALUES (@Id,@TenantId,@Name,@Gender,@Age,@CompanyId,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy,@SomeTimes,@GuidField)", sql);
 
         repository.BeginTransaction();
         count = repository.Delete<User>().Where(f => f.Id == 1).Execute();
@@ -923,7 +923,7 @@ public class UnitTest1 : UnitTestBase
         Assert.NotNull(orderDetail);
         Assert.Equal("3", orderDetail.OrderId);
         Assert.Equal(1, orderDetail.ProductId);
-        Assert.Equal(product.Price * 3, orderDetail.Amount);
+        Assert.Equal(product.Price * 3, orderDetail.Amount);        
     }
     [Fact]
     public async Task Insert_Select_From_SubQuery()
@@ -1052,6 +1052,7 @@ public class UnitTest1 : UnitTestBase
            .ToSql(out var parameters);
         Assert.Equal("INSERT INTO `sys_order` (`Id`,`TenantId`,`OrderNo`,`ProductCount`,`TotalAmount`,`BuyerId`,`BuyerSource`,`SellerId`,`Products`,`Disputes`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id,@TenantId,@OrderNo,@ProductCount,@TotalAmount,@BuyerId,@BuyerSource,@SellerId,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)", sql);
         Assert.Equal("@BuyerSource", parameters[6].ParameterName);
+        Assert.True(parameters[3].Value is DBNull);
         Assert.True(parameters[6].Value is DBNull);
         Assert.Equal("@Products", parameters[8].ParameterName);
         Assert.True((string)parameters[8].Value == new JsonTypeHandler().ToFieldValue(null, new List<int> { 1, 2 }).ToString());
@@ -1456,7 +1457,7 @@ public class UnitTest1 : UnitTestBase
                 UpdatedAt = DateTime.Now,
                 UpdatedBy = 1
             })
-            .Returning(f => new { f.Id, f.TenantId })
+            .Returning(f => new { f.TenantId, f.Id })
             .ExecuteAsync();
         await repository.CommitAsync();
         Assert.Equal(1, result1.Id);
@@ -1662,7 +1663,6 @@ public class UnitTest1 : UnitTestBase
         });
         var entity = await repository.GetByIdAsync<UpdateEntity1>(1);
         await repository.CommitAsync();
-
         Assert.Equal(entity.ByteArrayField, Encoding.ASCII.GetBytes("ByteArry"));
         Assert.Equal(0UL, entity.BitArrayField & 128);
         Assert.Equal(64UL, entity.BitArrayField & 64);

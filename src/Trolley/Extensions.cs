@@ -342,6 +342,21 @@ public static class Extensions
         }
         return (isContainsKey, value);
     }
+    public static (bool, string) ContainsLower(this List<string> keys, string lowerKey)
+    {
+        bool isContainsKey = false;
+        string value = null;
+        foreach (var key in keys)
+        {
+            if (key.ToLower() == lowerKey)
+            {
+                value = key;
+                isContainsKey = true;
+                break;
+            }
+        }
+        return (isContainsKey, value);
+    }
     internal static void CopyTo(this IDataParameterCollection dbParameters, IDataParameterCollection other)
     {
         if (dbParameters == null || dbParameters.Count == 0)

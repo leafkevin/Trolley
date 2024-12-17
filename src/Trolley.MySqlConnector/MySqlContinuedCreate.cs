@@ -47,25 +47,25 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCre
     #endregion
 
     #region Returnning
-    public IMySqlCreated<TEntity, TResult> Returning<TResult>(params string[] fieldNames)
+    public IMySqlCreated<TEntity, TResult> Returning<TResult>(string fieldNames)
     {
-        this.DialectVisitor.Returning(fieldNames);
+        this.DialectVisitor.Returning(typeof(TResult), fieldNames);
         return new MySqlCreated<TEntity, TResult>(this.DbContext, this.Visitor);
     }
     public IMySqlCreated<TEntity, TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector)
     {
-        this.DialectVisitor.Returning(fieldsSelector);
+        this.DialectVisitor.Returning(typeof(TResult), fieldsSelector);
         return new MySqlCreated<TEntity, TResult>(this.DbContext, this.Visitor);
     }
     #endregion
 
     #region OnDuplicateKeyUpdate
-    public IMySqlCreated<TEntity> OnDuplicateKeyUpdate<TUpdateFields>(TUpdateFields updateObj)
+    public IMySqlContinuedCreate<TEntity> OnDuplicateKeyUpdate<TUpdateFields>(TUpdateFields updateObj)
     {
         this.DialectVisitor.OnDuplicateKeyUpdate(updateObj);
         return this;
     }
-    public IMySqlCreated<TEntity> OnDuplicateKeyUpdate<TUpdateFields>(Expression<Func<IMySqlCreateDuplicateKeyUpdate<TEntity>, TUpdateFields>> fieldsAssignment)
+    public IMySqlContinuedCreate<TEntity> OnDuplicateKeyUpdate<TUpdateFields>(Expression<Func<IMySqlCreateDuplicateKeyUpdate<TEntity>, TUpdateFields>> fieldsAssignment)
     {
         this.DialectVisitor.OnDuplicateKeyUpdate(fieldsAssignment);
         return this;
@@ -313,25 +313,25 @@ public class MySqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySq
     #endregion
 
     #region Returnning
-    public IMySqlBulkCreated<TEntity, TResult> Returning<TResult>(params string[] fieldNames)
+    public IMySqlBulkCreated<TEntity, TResult> Returning<TResult>(string fieldNames)
     {
-        this.DialectVisitor.Returning(fieldNames);
+        this.DialectVisitor.Returning(typeof(TResult), fieldNames);
         return new MySqlBulkCreated<TEntity, TResult>(this.DbContext, this.Visitor);
     }
     public IMySqlBulkCreated<TEntity, TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector)
     {
-        this.DialectVisitor.Returning(fieldsSelector);
+        this.DialectVisitor.Returning(typeof(TResult), fieldsSelector);
         return new MySqlBulkCreated<TEntity, TResult>(this.DbContext, this.Visitor);
     }
     #endregion
 
     #region OnDuplicateKeyUpdate
-    public IMySqlCreated<TEntity> OnDuplicateKeyUpdate<TUpdateFields>(TUpdateFields updateObj)
+    public IMySqlBulkContinuedCreate<TEntity> OnDuplicateKeyUpdate<TUpdateFields>(TUpdateFields updateObj)
     {
         this.DialectVisitor.OnDuplicateKeyUpdate(updateObj);
         return this;
     }
-    public IMySqlCreated<TEntity> OnDuplicateKeyUpdate<TUpdateFields>(Expression<Func<IMySqlCreateDuplicateKeyUpdate<TEntity>, TUpdateFields>> fieldsAssignment)
+    public IMySqlBulkContinuedCreate<TEntity> OnDuplicateKeyUpdate<TUpdateFields>(Expression<Func<IMySqlCreateDuplicateKeyUpdate<TEntity>, TUpdateFields>> fieldsAssignment)
     {
         this.DialectVisitor.OnDuplicateKeyUpdate(fieldsAssignment);
         return this;

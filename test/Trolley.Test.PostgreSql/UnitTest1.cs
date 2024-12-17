@@ -1,13 +1,13 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Npgsql;
-using NpgsqlTypes;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
+using NpgsqlTypes;
 using Trolley.PostgreSql;
 using Xunit;
 using Xunit.Abstractions;
@@ -309,20 +309,20 @@ public class UnitTest1 : UnitTestBase
         var sql = repository.Create<User>()
            .WithBy(new
            {
-               Id = 1,
-               TenantId = "1",
-               Name = "leafkevin",
-               Age = 25,
-               CompanyId = 1,
-               Gender = Gender.Male,
-               SourceType = UserSourceType.Douyin,
-               IsEnabled = true,
-               CreatedAt = now,
-               CreatedBy = 1,
-               UpdatedAt = now,
-               UpdatedBy = 1
+               id = 1,
+               tenantId = "1",
+               name = "leafkevin",
+               age = 25,
+               companyId = 1,
+               gender = Gender.Male,
+               sourceType = UserSourceType.Douyin,
+               isEnabled = true,
+               createdAt = now,
+               createdBy = 1,
+               updatedAt = now,
+               updatedBy = 1
            })
-           .IgnoreFields("CompanyId", "SourceType")
+           .IgnoreFields("CompanyId", "sourceType")
            .ToSql(out var dbParameters);
         Assert.Equal("INSERT INTO \"sys_user\" (\"Id\",\"TenantId\",\"Name\",\"Gender\",\"Age\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\") VALUES (@Id,@TenantId,@Name,@Gender,@Age,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)", sql);
         Assert.Equal(10, dbParameters.Count);
@@ -332,20 +332,20 @@ public class UnitTest1 : UnitTestBase
         repository.Create<User>()
             .WithBy(new
             {
-                Id = 1,
-                TenantId = "1",
-                Name = "leafkevin",
-                Age = 25,
-                CompanyId = 1,
-                Gender = Gender.Male,
-                SourceType = UserSourceType.Douyin,
-                IsEnabled = true,
-                CreatedAt = now,
-                CreatedBy = 1,
-                UpdatedAt = now,
-                UpdatedBy = 1
+                id = 1,
+                tenantId = "1",
+                name = "leafkevin",
+                age = 25,
+                companyId = 1,
+                gender = Gender.Male,
+                sourceType = UserSourceType.Douyin,
+                isEnabled = true,
+                createdAt = now,
+                createdBy = 1,
+                updatedAt = now,
+                updatedBy = 1
             })
-            .IgnoreFields("CompanyId", "SourceType")
+            .IgnoreFields("CompanyId", "sourceType")
             .Execute();
         var user = repository.GetById<User>(1);
         repository.Commit();
@@ -424,7 +424,7 @@ public class UnitTest1 : UnitTestBase
             .WithBy(guidField.HasValue, new { GuidField = guidField })
             .ToSql(out _);
         repository.Commit();
-        Assert.Equal("INSERT INTO \"sys_user\" (\"Id\",\"TenantId\",\"Name\",\"Gender\",\"Age\",\"CompanyId\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\",SomeTimes,\"GuidField\") VALUES (@Id,@TenantId,@Name,@Gender,@Age,@CompanyId,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy,@SomeTimes,@GuidField)", sql);
+        Assert.Equal("INSERT INTO \"sys_user\" (\"Id\",\"TenantId\",\"Name\",\"Gender\",\"Age\",\"CompanyId\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\",\"SomeTimes\",\"GuidField\") VALUES (@Id,@TenantId,@Name,@Gender,@Age,@CompanyId,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy,@SomeTimes,@GuidField)", sql);
 
         repository.BeginTransaction();
         count = repository.Delete<User>().Where(f => f.Id == 1).Execute();
@@ -516,12 +516,12 @@ public class UnitTest1 : UnitTestBase
         id = repository.Create<Company>()
             .WithBy(new Dictionary<string, object>()
             {
-                    { "Name","谷歌"},
-                    { "IsEnabled", true},
-                    { "CreatedAt", DateTime.Now},
-                    { "CreatedBy", 1},
-                    { "UpdatedAt", DateTime.Now},
-                    { "UpdatedBy", 1}
+                    { "name","谷歌"},
+                    { "isEnabled", true},
+                    { "createdAt", DateTime.Now},
+                    { "createdBy", 1},
+                    { "updatedAt", DateTime.Now},
+                    { "updatedBy", 1}
             })
             .ExecuteIdentity();
         maxId = repository.From<Company>().Max(f => f.Id);
@@ -788,7 +788,7 @@ public class UnitTest1 : UnitTestBase
         }
     }
     [Fact]
-    public void Insert_Select_From_Table1()
+    public async void Insert_Select_From_Table1()
     {
         var repository = this.dbFactory.Create();
         var id = 2;
@@ -845,6 +845,28 @@ public class UnitTest1 : UnitTestBase
         Assert.True(product.ProductNo == "PN_" + id.ToString().PadLeft(3, '0'));
         Assert.True(product.Name == name);
         Assert.True(product.BrandId == brandId);
+
+        count = await repository.Create<Product>()
+            .From<Brand>()
+            .Where(f => f.Id == brandId)
+            .Select(f => new Product
+            {
+                Id = id,
+                ProductNo = "PN_" + id.ToString().PadLeft(3, '0'),
+                Name = name,
+                Price = 25.85,
+                BrandId = f.Id,
+                CategoryId = categoryId,
+                CompanyId = f.CompanyId,
+                IsEnabled = true,
+                CreatedBy = 1,
+                CreatedAt = DateTime.Now,
+                UpdatedBy = 1,
+                UpdatedAt = DateTime.Now
+            })
+            .OnConflict(f => f.DoNothing())
+            .ExecuteAsync();
+        Assert.Equal(0, count);
     }
     [Fact]
     public async Task Insert_Select_From_Table2()
@@ -1027,6 +1049,7 @@ public class UnitTest1 : UnitTestBase
            .ToSql(out var parameters);
         Assert.Equal("INSERT INTO \"sys_order\" (\"Id\",\"TenantId\",\"OrderNo\",\"ProductCount\",\"TotalAmount\",\"BuyerId\",\"BuyerSource\",\"SellerId\",\"Products\",\"Disputes\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\") VALUES (@Id,@TenantId,@OrderNo,@ProductCount,@TotalAmount,@BuyerId,@BuyerSource,@SellerId,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)", sql);
         Assert.Equal("@BuyerSource", parameters[6].ParameterName);
+        Assert.True(parameters[3].Value is DBNull);
         Assert.True(parameters[6].Value is DBNull);
         Assert.Equal("@Products", parameters[8].ParameterName);
         Assert.True((string)parameters[8].Value == new JsonTypeHandler().ToFieldValue(null, new List<int> { 1, 2 }).ToString());
@@ -1435,6 +1458,7 @@ public class UnitTest1 : UnitTestBase
         await repository.CommitAsync();
         Assert.Equal(1, count);
         Assert.Equal(order.TotalAmount + 500, updatedOrder.TotalAmount);
+        Assert.True(new JsonTypeHandler().ToFieldValue(null, updatedOrder.Products).ToString() == new JsonTypeHandler().ToFieldValue(null, new List<int> { 1, 2 }).ToString());
     }
     [Fact]
     public async Task Insert_Returning()
@@ -1655,6 +1679,7 @@ public class UnitTest1 : UnitTestBase
     {
         var repository = this.dbFactory.Create();
         var timeSpan = TimeSpan.FromMinutes(455);
+        await repository.BeginTransactionAsync();
         await repository.DeleteAsync<UpdateEntity2>(1);
         byte[] bytes = [68];
         await repository.CreateAsync<UpdateEntity2>(new UpdateEntity2
@@ -1680,6 +1705,7 @@ public class UnitTest1 : UnitTestBase
             BitArrayField = new BitArray(bytes)
         });
         var entity = await repository.GetByIdAsync<UpdateEntity2>(1);
+        await repository.CommitAsync();
         Assert.Equal(entity.ByteArrayField, Encoding.ASCII.GetBytes("ByteArry"));
         Assert.False(entity.BitArrayField.Get(0));
         Assert.False(entity.BitArrayField.Get(1));

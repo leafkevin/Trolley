@@ -1690,7 +1690,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     if (sqlSegment.IsConstant || sqlSegment.IsVariable || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
                         sqlSegment.IsNeedAlias = true;
                 }
-                //sqlSegment.FromMember = memberInfo;
                 sqlSegment.TargetMember = memberInfo;
                 //常量或变量场景，此值为null
                 sqlSegment.SegmentType = memberInfo.GetMemberType();

@@ -314,17 +314,18 @@ public class RepositoryHelper
             }
             loopBodies.Add(Expression.IfThen(isContinueExpr, Expression.Continue(continueLabel)));
 
-            //var parameterName = ormProvider.ParameterPrefix + itemKey + suffix;
+            //var parameterName = ormProvider.ParameterPrefix + memberMapper.MemberName + suffix;
             Expression myParameterNameExpr = Expression.Constant(ormProvider.ParameterPrefix);
             if (commandType > 1)
             {
+                var memberNameExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.MemberName));
                 if (hasSuffix)
                 {
-                    myParameterNameExpr = Expression.Call(concatMethodInfo2, myParameterNameExpr, itemKeyExpr, suffixExpr);
+                    myParameterNameExpr = Expression.Call(concatMethodInfo2, myParameterNameExpr, memberNameExpr, suffixExpr);
                     loopBodies.Add(Expression.Assign(parameterNameExpr, myParameterNameExpr));
                     myParameterNameExpr = parameterNameExpr;
                 }
-                else myParameterNameExpr = Expression.Call(concatMethodInfo, myParameterNameExpr, itemKeyExpr);
+                else myParameterNameExpr = Expression.Call(concatMethodInfo, myParameterNameExpr, memberNameExpr);
             }
             //生成SQL
             if (sqlType < 3)
@@ -614,7 +615,7 @@ public class RepositoryHelper
                     .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field)
                     .ToDictionary(f => f.Name.ToLower(), f => f);
             }
-            else if (!isUseKey || entityMapper.KeyMembers.Count != 1)
+            else if (!(isUseKey && entityMapper.KeyMembers.Count == 1))
                 throw new NotSupportedException("不支持非单主键字段的业务场景");
         }
 
@@ -661,15 +662,16 @@ public class RepositoryHelper
             isContinueExpr = Expression.OrElse(isContinueExpr, Expression.Property(memberMapperExpr, nameof(MemberMap.IsNavigation)));
             loopBodies.Add(Expression.IfThen(isContinueExpr, Expression.Continue(continueLabel)));
 
-            //var parameterName = ormProvider.ParameterPrefix + itemKey + suffix;
+            //var parameterName = ormProvider.ParameterPrefix + memberMapper.MemberName + suffix;
             Expression myParameterNameExpr = Expression.Constant(ormProvider.ParameterPrefix + (isWithKey ? "k" : ""));
+            var memberNameExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.MemberName));
             if (hasSuffix)
             {
-                myParameterNameExpr = Expression.Call(concatMethodInfo2, myParameterNameExpr, itemKeyExpr, suffixExpr);
+                myParameterNameExpr = Expression.Call(concatMethodInfo2, myParameterNameExpr, memberNameExpr, suffixExpr);
                 loopBodies.Add(Expression.Assign(parameterNameExpr, myParameterNameExpr));
                 myParameterNameExpr = parameterNameExpr;
             }
-            else myParameterNameExpr = Expression.Call(concatMethodInfo, myParameterNameExpr, itemKeyExpr);
+            else myParameterNameExpr = Expression.Call(concatMethodInfo, myParameterNameExpr, memberNameExpr);
 
             //生成SQL
             if (sqlType < 3)
@@ -1559,9 +1561,11 @@ public class RepositoryHelper
                     return (string origName, object parameter) =>
                     {
                         var dict = parameter as IDictionary<string, object>;
-                        if (!dict.TryGetValue(shardingTable.DependOnMembers[0], out var field1Value))
+                        (var isContainsKey, var field1Value) = dict.ContainsLowerKey(shardingTable.DependOnMembers[0].ToLower());
+                        if (!isContainsKey)
                             throw new MissingMemberException($"实体表{entityType.FullName}已设置分表并依赖成员{shardingTable.DependOnMembers[0]}映射的字段，但当前字典中并不包含key:{shardingTable.DependOnMembers[0]}的键值");
-                        if (!dict.TryGetValue(shardingTable.DependOnMembers[1], out var field2Value))
+                        (isContainsKey, var field2Value) = dict.ContainsLowerKey(shardingTable.DependOnMembers[1].ToLower());
+                        if (!isContainsKey)
                             throw new MissingMemberException($"实体表{entityType.FullName}已设置分表并依赖成员{shardingTable.DependOnMembers[1]}映射的字段，但当前字典中不包含key:{shardingTable.DependOnMembers[1]}的键值");
 
                         var tableNameRuleGetter = shardingTable.Rule as Func<string, object, object, string>;
@@ -1576,19 +1580,20 @@ public class RepositoryHelper
                     var origNameExpr = Expression.Parameter(typeof(string), "origName");
                     var parameterObjExpr = Expression.Parameter(typeof(object), "parameterObj");
                     var tableNameRuleGetter = shardingTable.Rule as Func<string, object, object, string>;
-
-                    var members = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                        .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
-                    if (!members.Exists(f => f.Name == shardingTable.DependOnMembers[0]))
-                        throw new MissingMemberException($"实体表{entityType.FullName}已设置分表并依赖成员{shardingTable.DependOnMembers[0]}映射的字段，但当前参数中并不包含{shardingTable.DependOnMembers[0]}成员");
-                    if (!members.Exists(f => f.Name == shardingTable.DependOnMembers[1]))
-                        throw new MissingMemberException($"实体表{entityType.FullName}已设置分表并依赖成员{shardingTable.DependOnMembers[1]}映射的字段，但当前参数中并不包含{shardingTable.DependOnMembers[1]}成员");
+                    //TODO:处理大小写
+                    var memberNames = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
+                        .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field)
+                        .Select(f => f.Name).ToList();
+                    (var isContains, var memberName1) = memberNames.ContainsLower(shardingTable.DependOnMembers[0].ToLower());
+                    if (!isContains) throw new MissingMemberException($"实体表{entityType.FullName}已设置分表并依赖成员{shardingTable.DependOnMembers[0]}映射的字段，但当前参数中并不包含{shardingTable.DependOnMembers[0]}成员");
+                    (isContains, var memberName2) = memberNames.ContainsLower(shardingTable.DependOnMembers[1].ToLower());
+                    if (!isContains) throw new MissingMemberException($"实体表{entityType.FullName}已设置分表并依赖成员{shardingTable.DependOnMembers[1]}映射的字段，但当前参数中并不包含{shardingTable.DependOnMembers[1]}成员");
 
                     var typedParameterObjExpr = Expression.Convert(parameterObjExpr, parameterType);
-                    Expression field1Expr = Expression.PropertyOrField(typedParameterObjExpr, shardingTable.DependOnMembers[0]);
+                    Expression field1Expr = Expression.PropertyOrField(typedParameterObjExpr, memberName1);
                     if (field1Expr.Type != typeof(object))
                         field1Expr = Expression.Convert(field1Expr, typeof(object));
-                    Expression field2Expr = Expression.PropertyOrField(typedParameterObjExpr, shardingTable.DependOnMembers[1]);
+                    Expression field2Expr = Expression.PropertyOrField(typedParameterObjExpr, memberName2);
                     if (field2Expr.Type != typeof(object))
                         field2Expr = Expression.Convert(field2Expr, typeof(object));
                     var getterExpr = Expression.Constant(tableNameRuleGetter, typeof(Func<string, object, object, string>));
@@ -1606,7 +1611,8 @@ public class RepositoryHelper
                     return (string origName, object parameter) =>
                     {
                         var dict = parameter as IDictionary<string, object>;
-                        if (!dict.TryGetValue(shardingTable.DependOnMembers[0], out var fieldValue))
+                        (var isContainsKey, var fieldValue) = dict.ContainsLowerKey(shardingTable.DependOnMembers[0].ToLower());
+                        if (!isContainsKey)
                             throw new MissingMemberException($"实体表{entityType.FullName}已设置分表并依赖成员{shardingTable.DependOnMembers[0]}映射的字段，但当前字典中并不包含key:{shardingTable.DependOnMembers[0]}的键值");
 
                         var tableNameRuleGetter = shardingTable.Rule as Func<string, object, string>;
@@ -1621,14 +1627,14 @@ public class RepositoryHelper
                     var origNameExpr = Expression.Parameter(typeof(string), "origName");
                     var parameterObjExpr = Expression.Parameter(typeof(object), "parameterObj");
                     var tableNameRuleGetter = shardingTable.Rule as Func<string, object, string>;
-
-                    var members = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                        .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
-                    if (!members.Exists(f => f.Name == shardingTable.DependOnMembers[0]))
-                        throw new MissingMemberException($"实体表{entityType.FullName}已设置分表并依赖成员{shardingTable.DependOnMembers[0]}映射的字段，但当前参数中并不包含{shardingTable.DependOnMembers[0]}成员");
+                    var memberNames = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
+                        .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field)
+                        .Select(f => f.Name).ToList();
+                    (var isContains, var memberName) = memberNames.ContainsLower(shardingTable.DependOnMembers[0].ToLower());
+                    if (!isContains) throw new MissingMemberException($"实体表{entityType.FullName}已设置分表并依赖成员{shardingTable.DependOnMembers[0]}映射的字段，但当前参数中并不包含{shardingTable.DependOnMembers[0]}成员");
 
                     var typedParameterObjExpr = Expression.Convert(parameterObjExpr, parameterType);
-                    Expression fieldExpr = Expression.PropertyOrField(typedParameterObjExpr, shardingTable.DependOnMembers[0]);
+                    Expression fieldExpr = Expression.PropertyOrField(typedParameterObjExpr, memberName);
                     if (fieldExpr.Type != typeof(object))
                         fieldExpr = Expression.Convert(fieldExpr, typeof(object));
                     var getterExpr = Expression.Constant(tableNameRuleGetter, typeof(Func<string, object, string>));

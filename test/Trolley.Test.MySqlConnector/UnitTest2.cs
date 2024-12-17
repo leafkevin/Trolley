@@ -85,6 +85,7 @@ public class UnitTest2 : UnitTestBase
         if (result1 != null && result2 != null)
         {
             Assert.True(result1.Id == result2.Id);
+            Assert.Equal(1, result1.Id);
         }
     }
     [Fact]

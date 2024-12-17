@@ -34,6 +34,7 @@ public class AllUnitTest : UnitTestBase
                 .Configure<ModelConfiguration>(OrmProviderType.PostgreSql)
                 .UseDatabaseSharding(() =>
                 {
+                    //可以硬编码分库，也可以使用redis，映射表 ...，其他方式等
                     var scopeFactory = f.GetRequiredService<IServiceScopeFactory>();
                     var serviceScope = scopeFactory.CreateScope();
                     var passport = serviceScope.ServiceProvider.GetService<IPassport>();
@@ -673,11 +674,31 @@ public class AllUnitTest : UnitTestBase
         Assert.Equal("SELECT COALESCE(a.\"Name\",'NoName') AS \"HasName\" FROM \"sys_user\" a WHERE a.\"Name\" LIKE CONCAT('%',@p0,'%')", sql);
         Assert.Equal(dbParameters[0].Value.ToString(), firstName);
 
+        repository.BeginTransaction();
+        var count = repository.Update<User>(new { Id = 1, Name = "千叶111" });
+        var result = repository.From<User>()
+            .Where(f => f.Name.Contains(lastName ?? firstName))
+            .Select(f => new { f.Id, HasName = f.Name ?? "NoName" })
+            .ToList();
+        repository.Commit();
+        Assert.NotNull(result);
+        Assert.True(result.Count > 0);
+        Assert.True(result.Exists(f => f.Id == 1));
+
         sql = repository.From<User>()
             .Where(f => (f.Name ?? f.Id.ToString()) == "leafkevin")
             .Select(f => f.Id)
             .ToSql(out dbParameters);
         Assert.Equal("SELECT a.\"Id\" FROM \"sys_user\" a WHERE COALESCE(a.\"Name\",CAST(a.\"Id\" AS VARCHAR))='leafkevin'", sql);
+        repository.BeginTransaction();
+        count = repository.Update<User>(new { Id = 1, Name = "leafkevin" });
+        var result1 = repository.From<User>()
+            .Where(f => (f.Name ?? f.Id.ToString()) == "leafkevin")
+            .Select(f => f.Id)
+            .ToList();
+        repository.Commit();
+        Assert.NotNull(result);
+        Assert.True(result.Exists(f => f.Id == 1));
     }
     [Fact]
     public void Conditional()
@@ -922,7 +943,7 @@ public class AllUnitTest : UnitTestBase
         var sql = repository.From<User>()
             .Where(f => f.Name.Contains("cindy"))
             .Select(f => $"{f.Name + "222"}_111_{f.Age + isMale.ToString()}_{isMale}_{count}")
-           .ToSql(out var dbParameters);
+            .ToSql(out var dbParameters);
         Assert.Equal("SELECT CONCAT(a.\"Name\",'222_111_',CAST(a.\"Age\" AS VARCHAR),@p0,'_',@p1,'_',@p2) FROM \"sys_user\" a WHERE a.\"Name\" LIKE '%cindy%'", sql);
         Assert.Equal((string)dbParameters[0].Value, isMale.ToString());
         Assert.Equal(typeof(string), dbParameters[0].Value.GetType());
@@ -1276,7 +1297,7 @@ public class AllUnitTest : UnitTestBase
                 Age = Convert.ToString(f.Age)
             })
             .ToSql(out _);
-        Assert.Equal("SELECT CONCAT('Age-',@p0) AS \"StringAge\",CONCAT('Id-',CAST(a.\"Id\" AS VARCHAR)) AS \"StringId1\",((CAST(a.\"Age\" AS DECIMAL)*2)-10) AS \"DoubleAge\",a.\"Gender\" AS \"Gender1\",a.\"Gender\" AS \"Gender2\",CAST(a.\"Age\" AS VARCHAR) AS \"Age\" FROM \"sys_user\" a WHERE a.\"Id\"=1", sql);
+        Assert.Equal("SELECT CONCAT('Age-',@p0) AS \"StringAge\",CONCAT('Id-',CAST(a.\"Id\" AS VARCHAR)) AS \"StringId1\",((CAST(a.\"Age\" AS FLOAT)*2)-10) AS \"DoubleAge\",a.\"Gender\" AS \"Gender1\",a.\"Gender\" AS \"Gender2\",CAST(a.\"Age\" AS VARCHAR) AS \"Age\" FROM \"sys_user\" a WHERE a.\"Id\"=1", sql);
 
         var result = repository.From<User>()
             .Where(f => f.Id == 1)
@@ -1564,17 +1585,17 @@ public class AllUnitTest : UnitTestBase
                 UpdatedBy = 1
             })
             .ToSql(out var dbParameters);
-        Assert.Equal("INSERT INTO \"sys_user\" (\"Id\",\"TenantId\",\"Name\",\"Age\",\"CompanyId\",\"Gender\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\") VALUES (@Id,@TenantId,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)", sql);
+        Assert.Equal("INSERT INTO \"sys_user\" (\"Id\",\"TenantId\",\"Name\",\"Gender\",\"Age\",\"CompanyId\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\") VALUES (@Id,@TenantId,@Name,@Gender,@Age,@CompanyId,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)", sql);
         Assert.Equal(1, (int)dbParameters[0].Value);
         Assert.Equal("1", (string)dbParameters[1].Value);
         Assert.Equal("leafkevin", (string)dbParameters[2].Value);
-        Assert.Equal(25, (int)dbParameters[3].Value);
-        Assert.Equal(1, (int)dbParameters[4].Value);
-        if (dbParameters[5] is NpgsqlParameter dbParameter)
+        if (dbParameters[3] is NpgsqlParameter dbParameter)
         {
             Assert.Equal(NpgsqlDbType.Varchar, dbParameter.NpgsqlDbType);
             Assert.True((string)dbParameter.Value == Gender.Male.ToString());
         }
+        Assert.Equal(25, (int)dbParameters[4].Value);
+        Assert.Equal(1, (int)dbParameters[5].Value);
         Assert.True((bool)dbParameters[6].Value);
         Assert.True((DateTime)dbParameters[7].Value == now);
         Assert.Equal(1, (int)dbParameters[8].Value);
@@ -1584,17 +1605,17 @@ public class AllUnitTest : UnitTestBase
         sql = repository.Create<User>()
             .WithBy(new Dictionary<string, object>
             {
-                { "Id", 1 },
-                { "TenantId", "1"},
-                { "Name", "leafkevin"},
-                { "Age", 25},
-                { "CompanyId", 1},
-                { "Gender", Gender.Male},
-                { "IsEnabled", true},
-                { "CreatedAt", now},
-                { "CreatedBy", 1},
-                { "UpdatedAt", now},
-                { "UpdatedBy", 1}
+                { "id", 1 },
+                { "tenantId", "1"},
+                { "name", "leafkevin"},
+                { "age", 25},
+                { "companyId", 1},
+                { "gender", Gender.Male},
+                { "isEnabled", true},
+                { "createdAt", now},
+                { "createdBy", 1},
+                { "updatedAt", now},
+                { "updatedBy", 1}
             })
           .ToSql(out dbParameters);
         Assert.Equal("INSERT INTO \"sys_user\" (\"Id\",\"TenantId\",\"Name\",\"Age\",\"CompanyId\",\"Gender\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\") VALUES (@Id,@TenantId,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)", sql);
@@ -1619,17 +1640,17 @@ public class AllUnitTest : UnitTestBase
         var result = repository.Create<User>()
             .WithBy(new
             {
-                Id = 1,
-                TenantId = "1",
-                Name = "leafkevin",
-                Age = 25,
-                CompanyId = 1,
-                Gender = Gender.Male,
-                IsEnabled = true,
-                CreatedAt = now,
-                CreatedBy = 1,
-                UpdatedAt = now,
-                UpdatedBy = 1
+                id = 1,
+                tenantId = "1",
+                name = "leafkevin",
+                age = 25,
+                companyId = 1,
+                gender = Gender.Male,
+                isEnabled = true,
+                createdAt = now,
+                createdBy = 1,
+                updatedAt = now,
+                updatedBy = 1
             })
             .Execute();
         repository.Commit();
@@ -1640,17 +1661,17 @@ public class AllUnitTest : UnitTestBase
         result = repository.Create<User>()
             .WithBy(new Dictionary<string, object>
             {
-                { "Id", 1 },
-                { "TenantId", "1"},
-                { "Name", "leafkevin"},
-                { "Age", 25},
-                { "CompanyId", 1},
-                { "Gender", Gender.Male},
-                { "IsEnabled", true},
-                { "CreatedAt", now},
-                { "CreatedBy", 1},
-                { "UpdatedAt", now},
-                { "UpdatedBy", 1}
+                { "id", 1 },
+                { "tenantId", "1"},
+                { "name", "leafkevin"},
+                { "age", 25},
+                { "companyId", 1},
+                { "gender", Gender.Male},
+                { "isEnabled", true},
+                { "createdAt", now},
+                { "createdBy", 1},
+                { "updatedAt", now},
+                { "updatedBy", 1}
             })
             .Execute();
         repository.Commit();
@@ -1679,7 +1700,7 @@ public class AllUnitTest : UnitTestBase
            })
            .IgnoreFields("CompanyId", "SourceType")
            .ToSql(out var dbParameters);
-        Assert.Equal("INSERT INTO \"sys_user\" (\"Id\",\"TenantId\",\"Name\",\"Age\",\"Gender\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\") VALUES (@Id,@TenantId,@Name,@Age,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)", sql);
+        Assert.Equal("INSERT INTO \"sys_user\" (\"Id\",\"TenantId\",\"Name\",\"Gender\",\"Age\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\") VALUES (@Id,@TenantId,@Name,@Gender,@Age,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)", sql);
         Assert.Equal(10, dbParameters.Count);
 
         repository.BeginTransaction();
@@ -1779,7 +1800,7 @@ public class AllUnitTest : UnitTestBase
             .WithBy(guidField.HasValue, new { GuidField = guidField })
             .ToSql(out _);
         repository.Commit();
-        Assert.Equal("INSERT INTO \"sys_user\" (\"Id\",\"TenantId\",\"Name\",\"Age\",\"CompanyId\",\"Gender\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\",\"SomeTimes\",\"GuidField\") VALUES (@Id,@TenantId,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy,@SomeTimes,@GuidField)", sql);
+        Assert.Equal("INSERT INTO \"sys_user\" (\"Id\",\"TenantId\",\"Name\",\"Gender\",\"Age\",\"CompanyId\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\",\"SomeTimes\",\"GuidField\") VALUES (@Id,@TenantId,@Name,@Gender,@Age,@CompanyId,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy,@SomeTimes,@GuidField)", sql);
 
         repository.BeginTransaction();
         count = repository.Delete<User>().Where(f => f.Id == 1).Execute();
@@ -1827,7 +1848,7 @@ public class AllUnitTest : UnitTestBase
             .WithBy(f => f.TenantId, "1")
             .WithBy(guidField.HasValue, new { GuidField = guidField })
             .ToSql(out _);
-        Assert.Equal("INSERT INTO \"sys_user\" (\"Id\",\"Name\",\"Age\",\"CompanyId\",\"Gender\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\",\"TenantId\",\"GuidField\") VALUES (@Id,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy,@TenantId,@GuidField)", sql);
+        Assert.Equal("INSERT INTO \"sys_user\" (\"Id\",\"Name\",\"Gender\",\"Age\",\"CompanyId\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\",\"TenantId\",\"GuidField\") VALUES (@Id,@Name,@Gender,@Age,@CompanyId,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy,@TenantId,@GuidField)", sql);
 
         repository.BeginTransaction();
         var count = repository.Delete<User>().Where(f => f.Id == 1).Execute();
@@ -1991,48 +2012,48 @@ public class AllUnitTest : UnitTestBase
     {
         var repository = this.dbFactory.Create();
         repository.BeginTransaction();
-        await repository.Delete<Product>().Where(new[] { new { Id = 1 }, new { Id = 2 }, new { Id = 3 } }).ExecuteAsync();
+        await repository.Delete<Product>().Where(new[] { new { id = 1 }, new { id = 2 }, new { id = 3 } }).ExecuteAsync();
         var count = repository.Create<Product>()
             .WithBulk(new[]
             {
                 new Dictionary<string,object>
                 {
-                    { "Id",1 },
-                    { "ProductNo","PN-001"},
-                    { "Name","波司登羽绒服"},
-                    { "BrandId",1},
-                    { "CategoryId",1},
-                    { "IsEnabled",true},
-                    { "CreatedAt",DateTime.Now},
-                    { "CreatedBy",1},
-                    { "UpdatedAt",DateTime.Now},
-                    { "UpdatedBy",1}
+                    { "id",1 },
+                    { "productNo","PN-001"},
+                    { "name","波司登羽绒服"},
+                    { "brandId",1},
+                    { "categoryId",1},
+                    { "isEnabled",true},
+                    { "createdAt",DateTime.Now},
+                    { "createdBy",1},
+                    { "updatedAt",DateTime.Now},
+                    { "updatedBy",1}
                 },
                 new Dictionary<string,object>
                 {
-                    { "Id",2},
-                    { "ProductNo","PN-002"},
-                    { "Name","雪中飞羽绒裤"},
-                    { "BrandId",2},
-                    { "CategoryId",2},
-                    { "IsEnabled",true},
-                    { "CreatedAt",DateTime.Now},
-                    { "CreatedBy",1},
-                    { "UpdatedAt",DateTime.Now},
-                    { "UpdatedBy",1}
+                    { "id",2},
+                    { "productNo","PN-002"},
+                    { "name","雪中飞羽绒裤"},
+                    { "brandId",2},
+                    { "categoryId",2},
+                    { "isEnabled",true},
+                    { "createdAt",DateTime.Now},
+                    { "createdBy",1},
+                    { "updatedAt",DateTime.Now},
+                    { "updatedBy",1}
                 },
                 new Dictionary<string,object>
                 {
-                    { "Id",3},
-                    { "ProductNo","PN-003"},
-                    { "Name","优衣库保暖内衣"},
-                    { "BrandId",3},
-                    { "CategoryId",3},
-                    { "IsEnabled",true},
-                    { "CreatedAt",DateTime.Now},
-                    { "CreatedBy",1},
-                    { "UpdatedAt",DateTime.Now},
-                    { "UpdatedBy",1}
+                    { "id",3},
+                    { "productNo","PN-003"},
+                    { "name","优衣库保暖内衣"},
+                    { "brandId",3},
+                    { "categoryId",3},
+                    { "isEnabled",true},
+                    { "createdAt",DateTime.Now},
+                    { "createdBy",1},
+                    { "updatedAt",DateTime.Now},
+                    { "updatedBy",1}
                 }
             })
             .Execute();
@@ -2147,7 +2168,7 @@ public class AllUnitTest : UnitTestBase
         }
     }
     [Fact]
-    public void Insert_Select_From_Table1()
+    public async Task Insert_Select_From_Table1()
     {
         var repository = this.dbFactory.Create();
         var id = 2;
@@ -2204,6 +2225,28 @@ public class AllUnitTest : UnitTestBase
         Assert.True(product.ProductNo == "PN_" + id.ToString().PadLeft(3, '0'));
         Assert.True(product.Name == name);
         Assert.True(product.BrandId == brandId);
+		
+		count = await repository.Create<Product>()
+            .From<Brand>()
+            .Where(f => f.Id == brandId)
+            .Select(f => new Product
+            {
+                Id = id,
+                ProductNo = "PN_" + id.ToString().PadLeft(3, '0'),
+                Name = name,
+                Price = 25.85,
+                BrandId = f.Id,
+                CategoryId = categoryId,
+                CompanyId = f.CompanyId,
+                IsEnabled = true,
+                CreatedBy = 1,
+                CreatedAt = DateTime.Now,
+                UpdatedBy = 1,
+                UpdatedAt = DateTime.Now
+            })
+            .OnConflict(f => f.DoNothing())
+            .ExecuteAsync();
+        Assert.Equal(0, count);
     }
     [Fact]
     public async Task Insert_Select_From_Table2()
@@ -2384,9 +2427,10 @@ public class AllUnitTest : UnitTestBase
                UpdatedBy = 1
            })
            .ToSql(out var parameters);
-        Assert.Equal("INSERT INTO \"sys_order\" (\"Id\",\"TenantId\",\"OrderNo\",\"TotalAmount\",\"BuyerId\",\"BuyerSource\",\"SellerId\",\"ProductCount\",\"Products\",\"Disputes\",\"IsEnabled\",\"CreatedBy\",\"CreatedAt\",\"UpdatedBy\",\"UpdatedAt\") VALUES (@Id,@TenantId,@OrderNo,@TotalAmount,@BuyerId,@BuyerSource,@SellerId,@ProductCount,@Products,@Disputes,@IsEnabled,@CreatedBy,@CreatedAt,@UpdatedBy,@UpdatedAt)", sql);
-        Assert.Equal("@BuyerSource", parameters[5].ParameterName);
-        Assert.True(parameters[5].Value is DBNull);
+        Assert.Equal("INSERT INTO \"sys_order\" (\"Id\",\"TenantId\",\"OrderNo\",\"ProductCount\",\"TotalAmount\",\"BuyerId\",\"BuyerSource\",\"SellerId\",\"Products\",\"Disputes\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\") VALUES (@Id,@TenantId,@OrderNo,@ProductCount,@TotalAmount,@BuyerId,@BuyerSource,@SellerId,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)", sql);
+        Assert.True(parameters[3].Value is DBNull);
+        Assert.Equal("@BuyerSource", parameters[6].ParameterName);
+        Assert.True(parameters[6].Value is DBNull);
         Assert.Equal("@Products", parameters[8].ParameterName);
         Assert.True((string)parameters[8].Value == new JsonTypeHandler().ToFieldValue(null, new List<int> { 1, 2 }).ToString());
         Assert.Equal("@Disputes", parameters[9].ParameterName);
@@ -2483,7 +2527,7 @@ public class AllUnitTest : UnitTestBase
             })
             .OnConflict(f => f.DoNothing())
             .ToSql(out var parameters1);
-        Assert.Equal("INSERT INTO \"sys_user\" (\"Id\",\"TenantId\",\"Name\",\"Age\",\"CompanyId\",\"Gender\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\") VALUES (@Id,@TenantId,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) ON CONFLICT DO NOTHING", sql1);
+        Assert.Equal("INSERT INTO \"sys_user\" (\"Id\",\"TenantId\",\"Name\",\"Gender\",\"Age\",\"CompanyId\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\") VALUES (@Id,@TenantId,@Name,@Gender,@Age,@CompanyId,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) ON CONFLICT DO NOTHING", sql1);
         var count = await repository.Create<User>()
             .WithBy(new
             {
@@ -2611,9 +2655,8 @@ public class AllUnitTest : UnitTestBase
                 })
                 .Set(buyerSource.HasValue, f => f.BuyerSource, buyerSource))
             .ToSql(out _);
-        Assert.Equal("INSERT INTO \"sys_order\" (\"Id\",\"TenantId\",\"OrderNo\",\"BuyerId\",\"SellerId\",\"TotalAmount\",\"Products\",\"Disputes\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\") VALUES (@Id,@TenantId,@OrderNo,@BuyerId,@SellerId,@TotalAmount,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) ON CONFLICT (\"Id\") DO UPDATE SET \"TotalAmount\"=EXCLUDED.\"TotalAmount\",\"Products\"=EXCLUDED.\"Products\",\"BuyerSource\"=@BuyerSource", sql1);
-
-        await repository.BeginTransactionAsync();
+        Assert.Equal("INSERT INTO \"sys_order\" (\"Id\",\"TenantId\",\"OrderNo\",\"TotalAmount\",\"BuyerId\",\"SellerId\",\"Products\",\"Disputes\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\") VALUES (@Id,@TenantId,@OrderNo,@TotalAmount,@BuyerId,@SellerId,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) ON CONFLICT (\"Id\") DO UPDATE SET \"TotalAmount\"=EXCLUDED.\"TotalAmount\",\"Products\"=EXCLUDED.\"Products\",\"BuyerSource\"=@BuyerSource", sql1);
+		await repository.BeginTransactionAsync();
         await repository.DeleteAsync<Order>("9");
         var count = await repository.Create<Order>()
              .WithBy(new
@@ -2686,7 +2729,7 @@ public class AllUnitTest : UnitTestBase
                 })
                 .Set(buyerSource.HasValue, f => f.BuyerSource, buyerSource))
             .ToSql(out _);
-        Assert.Equal("INSERT INTO \"sys_order\" a (\"Id\",\"TenantId\",\"OrderNo\",\"BuyerId\",\"SellerId\",\"TotalAmount\",\"Disputes\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\") VALUES (@Id,@TenantId,@OrderNo,@BuyerId,@SellerId,@TotalAmount,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) ON CONFLICT (\"Id\") DO UPDATE SET \"TotalAmount\"=a.\"TotalAmount\"+EXCLUDED.\"TotalAmount\",\"Products\"=EXCLUDED.\"Products\",\"BuyerSource\"=@BuyerSource", sql2);
+        Assert.Equal("INSERT INTO \"sys_order\" AS a (\"Id\",\"TenantId\",\"OrderNo\",\"TotalAmount\",\"BuyerId\",\"SellerId\",\"Disputes\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\") VALUES (@Id,@TenantId,@OrderNo,@TotalAmount,@BuyerId,@SellerId,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) ON CONFLICT (\"Id\") DO UPDATE SET \"TotalAmount\"=a.\"TotalAmount\"+EXCLUDED.\"TotalAmount\",\"Products\"=EXCLUDED.\"Products\",\"BuyerSource\"=@BuyerSource", sql2);
 
         await repository.BeginTransactionAsync();
         count = await repository.Create<Order>()
@@ -2756,7 +2799,7 @@ public class AllUnitTest : UnitTestBase
                 .Set(f => new { TotalAmount = f.TotalAmount + x.Excluded(f.TotalAmount) })
                 .Set(f => f.Products, f => x.Excluded(f.Products)))
             .ToSql(out _);
-        Assert.Equal("INSERT INTO \"sys_order\" a (\"Id\",\"TenantId\",\"OrderNo\",\"BuyerId\",\"SellerId\",\"BuyerSource\",\"TotalAmount\",\"Products\",\"Disputes\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\") VALUES (@Id,@TenantId,@OrderNo,@BuyerId,@SellerId,@BuyerSource,@TotalAmount,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) ON CONFLICT (\"Id\") DO UPDATE SET \"TotalAmount\"=a.\"TotalAmount\"+EXCLUDED.\"TotalAmount\",\"Products\"=EXCLUDED.\"Products\"", sql3);
+        Assert.Equal("INSERT INTO \"sys_order\" AS a (\"Id\",\"TenantId\",\"OrderNo\",\"TotalAmount\",\"BuyerId\",\"BuyerSource\",\"SellerId\",\"Products\",\"Disputes\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\") VALUES (@Id,@TenantId,@OrderNo,@TotalAmount,@BuyerId,@BuyerSource,@SellerId,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) ON CONFLICT (\"Id\") DO UPDATE SET \"TotalAmount\"=a.\"TotalAmount\"+EXCLUDED.\"TotalAmount\",\"Products\"=EXCLUDED.\"Products\"", sql3);
 
         await repository.BeginTransactionAsync();
         order = await repository.GetByIdAsync<Order>("9");
@@ -2815,7 +2858,7 @@ public class AllUnitTest : UnitTestBase
             })
             .Returning(f => new { f.Id, f.TenantId })
             .ToSql(out var parameters1);
-        Assert.Equal("INSERT INTO \"sys_user\" (\"Id\",\"TenantId\",\"Name\",\"Age\",\"CompanyId\",\"Gender\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\") VALUES (@Id,@TenantId,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) RETURNING \"Id\",\"TenantId\"", sql1);
+        Assert.Equal("INSERT INTO \"sys_user\" (\"Id\",\"TenantId\",\"Name\",\"Gender\",\"Age\",\"CompanyId\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\") VALUES (@Id,@TenantId,@Name,@Gender,@Age,@CompanyId,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) RETURNING \"Id\",\"TenantId\"", sql1);
         await repository.BeginTransactionAsync();
         await repository.DeleteAsync<User>(1);
         var result1 = await repository.Create<User>()
@@ -2856,7 +2899,7 @@ public class AllUnitTest : UnitTestBase
             })
             .Returning<User>("*")
             .ToSql(out var parameters2);
-        Assert.Equal("INSERT INTO \"sys_user\" (\"Id\",\"TenantId\",\"Name\",\"Age\",\"CompanyId\",\"Gender\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\") VALUES (@Id,@TenantId,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) RETURNING *", sql2);
+        Assert.Equal("INSERT INTO \"sys_user\" (\"Id\",\"TenantId\",\"Name\",\"Gender\",\"Age\",\"CompanyId\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\") VALUES (@Id,@TenantId,@Name,@Gender,@Age,@CompanyId,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) RETURNING *", sql2);
         await repository.BeginTransactionAsync();
         await repository.DeleteAsync<User>(2);
         var result2 = await repository.Create<User>()
@@ -3032,6 +3075,7 @@ public class AllUnitTest : UnitTestBase
         if (result1 != null && result2 != null)
         {
             Assert.True(result1.Id == result2.Id);
+            Assert.Equal(1, result1.Id);
         }
     }
     [Fact]
@@ -5940,10 +5984,10 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
             })
             .Where(f => f.Id == 1)
             .ToSql(out var dbParameters);
-        Assert.Equal("UPDATE \"sys_user\" SET \"Age\"=@Age,\"Name\"=@Name,\"CompanyId\"=@CompanyId WHERE \"Id\"=1", sql);
+        Assert.Equal("UPDATE \"sys_user\" SET \"Name\"=@Name,\"Age\"=@Age,\"CompanyId\"=@CompanyId WHERE \"Id\"=1", sql);
         Assert.Equal(3, dbParameters.Count);
-        Assert.Equal(25, (int)dbParameters[0].Value);
-        Assert.Equal("leafkevin22", (string)dbParameters[1].Value);
+        Assert.Equal("leafkevin22", (string)dbParameters[0].Value);
+        Assert.Equal(25, (int)dbParameters[1].Value);        
         Assert.True(dbParameters[2].Value == DBNull.Value);
 
         repository.Update<User>()
@@ -7631,6 +7675,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
         Assert.Equal(0, count);
 
         await repository.Create<User>()
+            .UseTableBy("104")
             .WithBy(new
             {
                 Id = 101,
@@ -8350,10 +8395,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
                 .Select((x, a, b) => new { Group = x.Grouping, ProductCount = x.CountDistinct(a.ProductId) }))
             .InnerJoin<User>((x, y) => x.Group.BuyerId == y.Id)
             .UseTable<OrderDetail>((orderOrigName, userOrigName, orderTableName) =>
-            {
-                var tableName = orderTableName.Replace(orderOrigName, userOrigName);
-                return tableName[..^7];
-            })
+                orderTableName.Replace(orderOrigName, userOrigName)[..^7])
             .Where((a, b) => a.ProductCount > 1)
             .Select((x, y) => new
             {
@@ -8507,7 +8549,8 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
         var result = repository.From<Order>()
             .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
             .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
-            .UseTable<Order>((orderOrigName, orderDetailOrigName, orderTableName) => orderTableName.Replace(orderOrigName, orderDetailOrigName))
+            .UseTable<Order>((orderOrigName, orderDetailOrigName, orderTableName)
+                => orderTableName.Replace(orderOrigName, orderDetailOrigName))
             .Where((a, b) => a.ProductCount > productCount)
             .Select((x, y) => new
             {
@@ -8719,7 +8762,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
             .IgnoreFields(f => new { f.OrderNo, f.BuyerId, f.SellerId })
             .ToSql(out var dbParameters);
 
-        Assert.Equal("UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount0,\"ProductCount\"=@ProductCount0,\"UpdatedAt\"=@UpdatedAt0 WHERE \"Id\"=@kId0;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount0,\"ProductCount\"=@ProductCount0,\"UpdatedAt\"=@UpdatedAt0 WHERE \"Id\"=@kId0;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount1,\"ProductCount\"=@ProductCount1,\"UpdatedAt\"=@UpdatedAt1 WHERE \"Id\"=@kId1;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount1,\"ProductCount\"=@ProductCount1,\"UpdatedAt\"=@UpdatedAt1 WHERE \"Id\"=@kId1;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount2,\"ProductCount\"=@ProductCount2,\"UpdatedAt\"=@UpdatedAt2 WHERE \"Id\"=@kId2;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount2,\"ProductCount\"=@ProductCount2,\"UpdatedAt\"=@UpdatedAt2 WHERE \"Id\"=@kId2;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount3,\"ProductCount\"=@ProductCount3,\"UpdatedAt\"=@UpdatedAt3 WHERE \"Id\"=@kId3;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount3,\"ProductCount\"=@ProductCount3,\"UpdatedAt\"=@UpdatedAt3 WHERE \"Id\"=@kId3;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount4,\"ProductCount\"=@ProductCount4,\"UpdatedAt\"=@UpdatedAt4 WHERE \"Id\"=@kId4;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount4,\"ProductCount\"=@ProductCount4,\"UpdatedAt\"=@UpdatedAt4 WHERE \"Id\"=@kId4;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount5,\"ProductCount\"=@ProductCount5,\"UpdatedAt\"=@UpdatedAt5 WHERE \"Id\"=@kId5;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount5,\"ProductCount\"=@ProductCount5,\"UpdatedAt\"=@UpdatedAt5 WHERE \"Id\"=@kId5;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount6,\"ProductCount\"=@ProductCount6,\"UpdatedAt\"=@UpdatedAt6 WHERE \"Id\"=@kId6;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount6,\"ProductCount\"=@ProductCount6,\"UpdatedAt\"=@UpdatedAt6 WHERE \"Id\"=@kId6;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount7,\"ProductCount\"=@ProductCount7,\"UpdatedAt\"=@UpdatedAt7 WHERE \"Id\"=@kId7;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount7,\"ProductCount\"=@ProductCount7,\"UpdatedAt\"=@UpdatedAt7 WHERE \"Id\"=@kId7;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount8,\"ProductCount\"=@ProductCount8,\"UpdatedAt\"=@UpdatedAt8 WHERE \"Id\"=@kId8;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount8,\"ProductCount\"=@ProductCount8,\"UpdatedAt\"=@UpdatedAt8 WHERE \"Id\"=@kId8;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount9,\"ProductCount\"=@ProductCount9,\"UpdatedAt\"=@UpdatedAt9 WHERE \"Id\"=@kId9;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount9,\"ProductCount\"=@ProductCount9,\"UpdatedAt\"=@UpdatedAt9 WHERE \"Id\"=@kId9;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount10,\"ProductCount\"=@ProductCount10,\"UpdatedAt\"=@UpdatedAt10 WHERE \"Id\"=@kId10;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount10,\"ProductCount\"=@ProductCount10,\"UpdatedAt\"=@UpdatedAt10 WHERE \"Id\"=@kId10;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount11,\"ProductCount\"=@ProductCount11,\"UpdatedAt\"=@UpdatedAt11 WHERE \"Id\"=@kId11;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount11,\"ProductCount\"=@ProductCount11,\"UpdatedAt\"=@UpdatedAt11 WHERE \"Id\"=@kId11;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount12,\"ProductCount\"=@ProductCount12,\"UpdatedAt\"=@UpdatedAt12 WHERE \"Id\"=@kId12;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount12,\"ProductCount\"=@ProductCount12,\"UpdatedAt\"=@UpdatedAt12 WHERE \"Id\"=@kId12;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount13,\"ProductCount\"=@ProductCount13,\"UpdatedAt\"=@UpdatedAt13 WHERE \"Id\"=@kId13;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount13,\"ProductCount\"=@ProductCount13,\"UpdatedAt\"=@UpdatedAt13 WHERE \"Id\"=@kId13;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount14,\"ProductCount\"=@ProductCount14,\"UpdatedAt\"=@UpdatedAt14 WHERE \"Id\"=@kId14;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount14,\"ProductCount\"=@ProductCount14,\"UpdatedAt\"=@UpdatedAt14 WHERE \"Id\"=@kId14;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount15,\"ProductCount\"=@ProductCount15,\"UpdatedAt\"=@UpdatedAt15 WHERE \"Id\"=@kId15;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount15,\"ProductCount\"=@ProductCount15,\"UpdatedAt\"=@UpdatedAt15 WHERE \"Id\"=@kId15;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount16,\"ProductCount\"=@ProductCount16,\"UpdatedAt\"=@UpdatedAt16 WHERE \"Id\"=@kId16;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount16,\"ProductCount\"=@ProductCount16,\"UpdatedAt\"=@UpdatedAt16 WHERE \"Id\"=@kId16;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount17,\"ProductCount\"=@ProductCount17,\"UpdatedAt\"=@UpdatedAt17 WHERE \"Id\"=@kId17;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount17,\"ProductCount\"=@ProductCount17,\"UpdatedAt\"=@UpdatedAt17 WHERE \"Id\"=@kId17;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount18,\"ProductCount\"=@ProductCount18,\"UpdatedAt\"=@UpdatedAt18 WHERE \"Id\"=@kId18;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount18,\"ProductCount\"=@ProductCount18,\"UpdatedAt\"=@UpdatedAt18 WHERE \"Id\"=@kId18;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount19,\"ProductCount\"=@ProductCount19,\"UpdatedAt\"=@UpdatedAt19 WHERE \"Id\"=@kId19;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount19,\"ProductCount\"=@ProductCount19,\"UpdatedAt\"=@UpdatedAt19 WHERE \"Id\"=@kId19;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount20,\"ProductCount\"=@ProductCount20,\"UpdatedAt\"=@UpdatedAt20 WHERE \"Id\"=@kId20;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount20,\"ProductCount\"=@ProductCount20,\"UpdatedAt\"=@UpdatedAt20 WHERE \"Id\"=@kId20;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount21,\"ProductCount\"=@ProductCount21,\"UpdatedAt\"=@UpdatedAt21 WHERE \"Id\"=@kId21;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount21,\"ProductCount\"=@ProductCount21,\"UpdatedAt\"=@UpdatedAt21 WHERE \"Id\"=@kId21;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount22,\"ProductCount\"=@ProductCount22,\"UpdatedAt\"=@UpdatedAt22 WHERE \"Id\"=@kId22;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount22,\"ProductCount\"=@ProductCount22,\"UpdatedAt\"=@UpdatedAt22 WHERE \"Id\"=@kId22;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount23,\"ProductCount\"=@ProductCount23,\"UpdatedAt\"=@UpdatedAt23 WHERE \"Id\"=@kId23;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount23,\"ProductCount\"=@ProductCount23,\"UpdatedAt\"=@UpdatedAt23 WHERE \"Id\"=@kId23;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount24,\"ProductCount\"=@ProductCount24,\"UpdatedAt\"=@UpdatedAt24 WHERE \"Id\"=@kId24;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount24,\"ProductCount\"=@ProductCount24,\"UpdatedAt\"=@UpdatedAt24 WHERE \"Id\"=@kId24;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount25,\"ProductCount\"=@ProductCount25,\"UpdatedAt\"=@UpdatedAt25 WHERE \"Id\"=@kId25;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount25,\"ProductCount\"=@ProductCount25,\"UpdatedAt\"=@UpdatedAt25 WHERE \"Id\"=@kId25;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount26,\"ProductCount\"=@ProductCount26,\"UpdatedAt\"=@UpdatedAt26 WHERE \"Id\"=@kId26;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount26,\"ProductCount\"=@ProductCount26,\"UpdatedAt\"=@UpdatedAt26 WHERE \"Id\"=@kId26;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount27,\"ProductCount\"=@ProductCount27,\"UpdatedAt\"=@UpdatedAt27 WHERE \"Id\"=@kId27;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount27,\"ProductCount\"=@ProductCount27,\"UpdatedAt\"=@UpdatedAt27 WHERE \"Id\"=@kId27;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount28,\"ProductCount\"=@ProductCount28,\"UpdatedAt\"=@UpdatedAt28 WHERE \"Id\"=@kId28;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount28,\"ProductCount\"=@ProductCount28,\"UpdatedAt\"=@UpdatedAt28 WHERE \"Id\"=@kId28;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount29,\"ProductCount\"=@ProductCount29,\"UpdatedAt\"=@UpdatedAt29 WHERE \"Id\"=@kId29;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount29,\"ProductCount\"=@ProductCount29,\"UpdatedAt\"=@UpdatedAt29 WHERE \"Id\"=@kId29;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount30,\"ProductCount\"=@ProductCount30,\"UpdatedAt\"=@UpdatedAt30 WHERE \"Id\"=@kId30;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount30,\"ProductCount\"=@ProductCount30,\"UpdatedAt\"=@UpdatedAt30 WHERE \"Id\"=@kId30;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount31,\"ProductCount\"=@ProductCount31,\"UpdatedAt\"=@UpdatedAt31 WHERE \"Id\"=@kId31;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount31,\"ProductCount\"=@ProductCount31,\"UpdatedAt\"=@UpdatedAt31 WHERE \"Id\"=@kId31;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount32,\"ProductCount\"=@ProductCount32,\"UpdatedAt\"=@UpdatedAt32 WHERE \"Id\"=@kId32;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount32,\"ProductCount\"=@ProductCount32,\"UpdatedAt\"=@UpdatedAt32 WHERE \"Id\"=@kId32;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount33,\"ProductCount\"=@ProductCount33,\"UpdatedAt\"=@UpdatedAt33 WHERE \"Id\"=@kId33;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount33,\"ProductCount\"=@ProductCount33,\"UpdatedAt\"=@UpdatedAt33 WHERE \"Id\"=@kId33;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount34,\"ProductCount\"=@ProductCount34,\"UpdatedAt\"=@UpdatedAt34 WHERE \"Id\"=@kId34;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount34,\"ProductCount\"=@ProductCount34,\"UpdatedAt\"=@UpdatedAt34 WHERE \"Id\"=@kId34;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount35,\"ProductCount\"=@ProductCount35,\"UpdatedAt\"=@UpdatedAt35 WHERE \"Id\"=@kId35;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount35,\"ProductCount\"=@ProductCount35,\"UpdatedAt\"=@UpdatedAt35 WHERE \"Id\"=@kId35;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount36,\"ProductCount\"=@ProductCount36,\"UpdatedAt\"=@UpdatedAt36 WHERE \"Id\"=@kId36;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount36,\"ProductCount\"=@ProductCount36,\"UpdatedAt\"=@UpdatedAt36 WHERE \"Id\"=@kId36;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount37,\"ProductCount\"=@ProductCount37,\"UpdatedAt\"=@UpdatedAt37 WHERE \"Id\"=@kId37;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount37,\"ProductCount\"=@ProductCount37,\"UpdatedAt\"=@UpdatedAt37 WHERE \"Id\"=@kId37;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount38,\"ProductCount\"=@ProductCount38,\"UpdatedAt\"=@UpdatedAt38 WHERE \"Id\"=@kId38;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount38,\"ProductCount\"=@ProductCount38,\"UpdatedAt\"=@UpdatedAt38 WHERE \"Id\"=@kId38;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount39,\"ProductCount\"=@ProductCount39,\"UpdatedAt\"=@UpdatedAt39 WHERE \"Id\"=@kId39;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"TotalAmount\"=@TotalAmount39,\"ProductCount\"=@ProductCount39,\"UpdatedAt\"=@UpdatedAt39 WHERE \"Id\"=@kId39", sql);
+        Assert.Equal("UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount0,\"TotalAmount\"=@TotalAmount0,\"UpdatedAt\"=@UpdatedAt0 WHERE \"Id\"=@kId0;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount0,\"TotalAmount\"=@TotalAmount0,\"UpdatedAt\"=@UpdatedAt0 WHERE \"Id\"=@kId0;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount1,\"TotalAmount\"=@TotalAmount1,\"UpdatedAt\"=@UpdatedAt1 WHERE \"Id\"=@kId1;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount1,\"TotalAmount\"=@TotalAmount1,\"UpdatedAt\"=@UpdatedAt1 WHERE \"Id\"=@kId1;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount2,\"TotalAmount\"=@TotalAmount2,\"UpdatedAt\"=@UpdatedAt2 WHERE \"Id\"=@kId2;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount2,\"TotalAmount\"=@TotalAmount2,\"UpdatedAt\"=@UpdatedAt2 WHERE \"Id\"=@kId2;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount3,\"TotalAmount\"=@TotalAmount3,\"UpdatedAt\"=@UpdatedAt3 WHERE \"Id\"=@kId3;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount3,\"TotalAmount\"=@TotalAmount3,\"UpdatedAt\"=@UpdatedAt3 WHERE \"Id\"=@kId3;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount4,\"TotalAmount\"=@TotalAmount4,\"UpdatedAt\"=@UpdatedAt4 WHERE \"Id\"=@kId4;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount4,\"TotalAmount\"=@TotalAmount4,\"UpdatedAt\"=@UpdatedAt4 WHERE \"Id\"=@kId4;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount5,\"TotalAmount\"=@TotalAmount5,\"UpdatedAt\"=@UpdatedAt5 WHERE \"Id\"=@kId5;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount5,\"TotalAmount\"=@TotalAmount5,\"UpdatedAt\"=@UpdatedAt5 WHERE \"Id\"=@kId5;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount6,\"TotalAmount\"=@TotalAmount6,\"UpdatedAt\"=@UpdatedAt6 WHERE \"Id\"=@kId6;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount6,\"TotalAmount\"=@TotalAmount6,\"UpdatedAt\"=@UpdatedAt6 WHERE \"Id\"=@kId6;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount7,\"TotalAmount\"=@TotalAmount7,\"UpdatedAt\"=@UpdatedAt7 WHERE \"Id\"=@kId7;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount7,\"TotalAmount\"=@TotalAmount7,\"UpdatedAt\"=@UpdatedAt7 WHERE \"Id\"=@kId7;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount8,\"TotalAmount\"=@TotalAmount8,\"UpdatedAt\"=@UpdatedAt8 WHERE \"Id\"=@kId8;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount8,\"TotalAmount\"=@TotalAmount8,\"UpdatedAt\"=@UpdatedAt8 WHERE \"Id\"=@kId8;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount9,\"TotalAmount\"=@TotalAmount9,\"UpdatedAt\"=@UpdatedAt9 WHERE \"Id\"=@kId9;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount9,\"TotalAmount\"=@TotalAmount9,\"UpdatedAt\"=@UpdatedAt9 WHERE \"Id\"=@kId9;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount10,\"TotalAmount\"=@TotalAmount10,\"UpdatedAt\"=@UpdatedAt10 WHERE \"Id\"=@kId10;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount10,\"TotalAmount\"=@TotalAmount10,\"UpdatedAt\"=@UpdatedAt10 WHERE \"Id\"=@kId10;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount11,\"TotalAmount\"=@TotalAmount11,\"UpdatedAt\"=@UpdatedAt11 WHERE \"Id\"=@kId11;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount11,\"TotalAmount\"=@TotalAmount11,\"UpdatedAt\"=@UpdatedAt11 WHERE \"Id\"=@kId11;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount12,\"TotalAmount\"=@TotalAmount12,\"UpdatedAt\"=@UpdatedAt12 WHERE \"Id\"=@kId12;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount12,\"TotalAmount\"=@TotalAmount12,\"UpdatedAt\"=@UpdatedAt12 WHERE \"Id\"=@kId12;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount13,\"TotalAmount\"=@TotalAmount13,\"UpdatedAt\"=@UpdatedAt13 WHERE \"Id\"=@kId13;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount13,\"TotalAmount\"=@TotalAmount13,\"UpdatedAt\"=@UpdatedAt13 WHERE \"Id\"=@kId13;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount14,\"TotalAmount\"=@TotalAmount14,\"UpdatedAt\"=@UpdatedAt14 WHERE \"Id\"=@kId14;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount14,\"TotalAmount\"=@TotalAmount14,\"UpdatedAt\"=@UpdatedAt14 WHERE \"Id\"=@kId14;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount15,\"TotalAmount\"=@TotalAmount15,\"UpdatedAt\"=@UpdatedAt15 WHERE \"Id\"=@kId15;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount15,\"TotalAmount\"=@TotalAmount15,\"UpdatedAt\"=@UpdatedAt15 WHERE \"Id\"=@kId15;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount16,\"TotalAmount\"=@TotalAmount16,\"UpdatedAt\"=@UpdatedAt16 WHERE \"Id\"=@kId16;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount16,\"TotalAmount\"=@TotalAmount16,\"UpdatedAt\"=@UpdatedAt16 WHERE \"Id\"=@kId16;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount17,\"TotalAmount\"=@TotalAmount17,\"UpdatedAt\"=@UpdatedAt17 WHERE \"Id\"=@kId17;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount17,\"TotalAmount\"=@TotalAmount17,\"UpdatedAt\"=@UpdatedAt17 WHERE \"Id\"=@kId17;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount18,\"TotalAmount\"=@TotalAmount18,\"UpdatedAt\"=@UpdatedAt18 WHERE \"Id\"=@kId18;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount18,\"TotalAmount\"=@TotalAmount18,\"UpdatedAt\"=@UpdatedAt18 WHERE \"Id\"=@kId18;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount19,\"TotalAmount\"=@TotalAmount19,\"UpdatedAt\"=@UpdatedAt19 WHERE \"Id\"=@kId19;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount19,\"TotalAmount\"=@TotalAmount19,\"UpdatedAt\"=@UpdatedAt19 WHERE \"Id\"=@kId19;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount20,\"TotalAmount\"=@TotalAmount20,\"UpdatedAt\"=@UpdatedAt20 WHERE \"Id\"=@kId20;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount20,\"TotalAmount\"=@TotalAmount20,\"UpdatedAt\"=@UpdatedAt20 WHERE \"Id\"=@kId20;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount21,\"TotalAmount\"=@TotalAmount21,\"UpdatedAt\"=@UpdatedAt21 WHERE \"Id\"=@kId21;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount21,\"TotalAmount\"=@TotalAmount21,\"UpdatedAt\"=@UpdatedAt21 WHERE \"Id\"=@kId21;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount22,\"TotalAmount\"=@TotalAmount22,\"UpdatedAt\"=@UpdatedAt22 WHERE \"Id\"=@kId22;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount22,\"TotalAmount\"=@TotalAmount22,\"UpdatedAt\"=@UpdatedAt22 WHERE \"Id\"=@kId22;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount23,\"TotalAmount\"=@TotalAmount23,\"UpdatedAt\"=@UpdatedAt23 WHERE \"Id\"=@kId23;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount23,\"TotalAmount\"=@TotalAmount23,\"UpdatedAt\"=@UpdatedAt23 WHERE \"Id\"=@kId23;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount24,\"TotalAmount\"=@TotalAmount24,\"UpdatedAt\"=@UpdatedAt24 WHERE \"Id\"=@kId24;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount24,\"TotalAmount\"=@TotalAmount24,\"UpdatedAt\"=@UpdatedAt24 WHERE \"Id\"=@kId24;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount25,\"TotalAmount\"=@TotalAmount25,\"UpdatedAt\"=@UpdatedAt25 WHERE \"Id\"=@kId25;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount25,\"TotalAmount\"=@TotalAmount25,\"UpdatedAt\"=@UpdatedAt25 WHERE \"Id\"=@kId25;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount26,\"TotalAmount\"=@TotalAmount26,\"UpdatedAt\"=@UpdatedAt26 WHERE \"Id\"=@kId26;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount26,\"TotalAmount\"=@TotalAmount26,\"UpdatedAt\"=@UpdatedAt26 WHERE \"Id\"=@kId26;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount27,\"TotalAmount\"=@TotalAmount27,\"UpdatedAt\"=@UpdatedAt27 WHERE \"Id\"=@kId27;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount27,\"TotalAmount\"=@TotalAmount27,\"UpdatedAt\"=@UpdatedAt27 WHERE \"Id\"=@kId27;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount28,\"TotalAmount\"=@TotalAmount28,\"UpdatedAt\"=@UpdatedAt28 WHERE \"Id\"=@kId28;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount28,\"TotalAmount\"=@TotalAmount28,\"UpdatedAt\"=@UpdatedAt28 WHERE \"Id\"=@kId28;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount29,\"TotalAmount\"=@TotalAmount29,\"UpdatedAt\"=@UpdatedAt29 WHERE \"Id\"=@kId29;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount29,\"TotalAmount\"=@TotalAmount29,\"UpdatedAt\"=@UpdatedAt29 WHERE \"Id\"=@kId29;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount30,\"TotalAmount\"=@TotalAmount30,\"UpdatedAt\"=@UpdatedAt30 WHERE \"Id\"=@kId30;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount30,\"TotalAmount\"=@TotalAmount30,\"UpdatedAt\"=@UpdatedAt30 WHERE \"Id\"=@kId30;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount31,\"TotalAmount\"=@TotalAmount31,\"UpdatedAt\"=@UpdatedAt31 WHERE \"Id\"=@kId31;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount31,\"TotalAmount\"=@TotalAmount31,\"UpdatedAt\"=@UpdatedAt31 WHERE \"Id\"=@kId31;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount32,\"TotalAmount\"=@TotalAmount32,\"UpdatedAt\"=@UpdatedAt32 WHERE \"Id\"=@kId32;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount32,\"TotalAmount\"=@TotalAmount32,\"UpdatedAt\"=@UpdatedAt32 WHERE \"Id\"=@kId32;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount33,\"TotalAmount\"=@TotalAmount33,\"UpdatedAt\"=@UpdatedAt33 WHERE \"Id\"=@kId33;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount33,\"TotalAmount\"=@TotalAmount33,\"UpdatedAt\"=@UpdatedAt33 WHERE \"Id\"=@kId33;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount34,\"TotalAmount\"=@TotalAmount34,\"UpdatedAt\"=@UpdatedAt34 WHERE \"Id\"=@kId34;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount34,\"TotalAmount\"=@TotalAmount34,\"UpdatedAt\"=@UpdatedAt34 WHERE \"Id\"=@kId34;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount35,\"TotalAmount\"=@TotalAmount35,\"UpdatedAt\"=@UpdatedAt35 WHERE \"Id\"=@kId35;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount35,\"TotalAmount\"=@TotalAmount35,\"UpdatedAt\"=@UpdatedAt35 WHERE \"Id\"=@kId35;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount36,\"TotalAmount\"=@TotalAmount36,\"UpdatedAt\"=@UpdatedAt36 WHERE \"Id\"=@kId36;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount36,\"TotalAmount\"=@TotalAmount36,\"UpdatedAt\"=@UpdatedAt36 WHERE \"Id\"=@kId36;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount37,\"TotalAmount\"=@TotalAmount37,\"UpdatedAt\"=@UpdatedAt37 WHERE \"Id\"=@kId37;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount37,\"TotalAmount\"=@TotalAmount37,\"UpdatedAt\"=@UpdatedAt37 WHERE \"Id\"=@kId37;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount38,\"TotalAmount\"=@TotalAmount38,\"UpdatedAt\"=@UpdatedAt38 WHERE \"Id\"=@kId38;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount38,\"TotalAmount\"=@TotalAmount38,\"UpdatedAt\"=@UpdatedAt38 WHERE \"Id\"=@kId38;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount39,\"TotalAmount\"=@TotalAmount39,\"UpdatedAt\"=@UpdatedAt39 WHERE \"Id\"=@kId39;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount39,\"TotalAmount\"=@TotalAmount39,\"UpdatedAt\"=@UpdatedAt39 WHERE \"Id\"=@kId39", sql);
 
         await repository.BeginTransactionAsync();
         var result = await repository.Update<Order>()
@@ -8920,6 +8963,54 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
         }
     }
     [Fact]
+    public void TableSchema()
+    {
+        var repository = this.dbFactory.Create();
+        var sql = repository
+            .From(f => f.From<OrderDetail>()
+                .UseTableSchema("myschema")
+                .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
+                .UseTableSchema("myschema")
+                .GroupBy((a, b) => new { OrderId = b.Id, b.BuyerId })
+                .Select((x, a, b) => new { Group = x.Grouping, ProductCount = x.CountDistinct(a.ProductId) }))
+            .InnerJoin<User>((x, y) => x.Group.BuyerId == y.Id)
+            .UseTableSchema("myschema")
+            .Where((a, b) => a.ProductCount > 1)
+            .Select((x, y) => new
+            {
+                x.Group,
+                Buyer = y,
+                x.ProductCount
+            })
+            .ToSql(out _);
+        Assert.Equal("SELECT a.\"OrderId\",a.\"BuyerId\",b.\"Id\",b.\"TenantId\",b.\"Name\",b.\"Gender\",b.\"Age\",b.\"CompanyId\",b.\"GuidField\",b.\"SomeTimes\",b.\"SourceType\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\",a.\"ProductCount\" FROM (SELECT b.\"Id\" AS \"OrderId\",b.\"BuyerId\",COUNT(DISTINCT a.\"ProductId\") AS \"ProductCount\" FROM \"myschema\".\"sys_order_detail\" a INNER JOIN \"myschema\".\"sys_order\" b ON a.\"OrderId\"=b.\"Id\" GROUP BY b.\"Id\",b.\"BuyerId\") a INNER JOIN \"myschema\".\"sys_user\" b ON a.\"BuyerId\"=b.\"Id\" WHERE a.\"ProductCount\">1", sql);
+
+        var result = repository
+            .From(f => f.From<OrderDetail>()
+                .UseTableSchema("myschema")
+                .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
+                .UseTableSchema("myschema")
+                .GroupBy((a, b) => new { OrderId = b.Id, b.BuyerId })
+                .Select((x, a, b) => new { Group = x.Grouping, ProductCount = x.CountDistinct(a.ProductId) }))
+            .InnerJoin<User>((x, y) => x.Group.BuyerId == y.Id)
+            .UseTableSchema("myschema")
+            .Where((a, b) => a.ProductCount > 1)
+            .Select((x, y) => new
+            {
+                x.Group,
+                Buyer = y,
+                x.ProductCount
+            })
+            .ToList();
+        if (result.Count > 0)
+        {
+            Assert.NotNull(result[0]);
+            Assert.NotNull(result[0].Group);
+            Assert.NotNull(result[0].Buyer);
+            Assert.True(result[0].ProductCount > 1);
+        }
+    }
+    [Fact]
     public async Task Query_ManySharding_SingleTable_Include_TableSchema()
     {
         await this.InitSharding();
@@ -8993,6 +9084,45 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
             }
         }
     }
+    [Fact]
+    public async Task Create_Without_Sharding()
+    {
+        var repository = this.dbFactory.Create();
+        await repository.Delete<User>()
+            .UseTableBy("104")
+            .Where(11)
+            .ExecuteAsync();
+        repository.Create<User>()
+            .WithBy(new
+            {
+                Id = 11,
+                TenantId = "104",
+                Name = "leafkevin",
+                Age = 25,
+                CompanyId = 1,
+                Gender = Gender.Male,
+                GuidField = Guid.NewGuid(),
+#if NET6_0_OR_GREATER
+                SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
+#else
+                SomeTimes = TimeSpan.FromSeconds(4769),
+#endif
+                SourceType = UserSourceType.Douyin,
+                IsEnabled = true,
+                CreatedAt = DateTime.Parse("2024-05-10 06:07:08"),
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Parse("2024-05-15 16:27:38"),
+                UpdatedBy = 1
+            })
+            .Execute();
+        var result = repository.From<User>()
+            .UseTableBy("104")
+            .Where(f => f.Id == 11)
+            .First();
+        Assert.NotNull(result);
+        Assert.Equal("104", result.TenantId);
+    }
+
 
 
 

@@ -337,12 +337,14 @@ public class AllUnitTest : UnitTestBase
         Assert.Equal(localDate, (DateOnly)dbParameters[0].Value);
         Assert.Equal(localDate, (DateOnly)dbParameters[1].Value);
 
+        var now = DateTime.Now;
         var result = await repository.From<User>()
             .Where(f => f.Id == 1)
             .Select(f => new
             {
                 f.UpdatedAt,
                 DateTime.Today,
+                Now = now,
                 Today1 = DateOnly.FromDateTime(DateTime.Now),
                 FromDayNumber = DateOnly.FromDayNumber(739081),
                 localDate,
@@ -668,11 +670,31 @@ public class AllUnitTest : UnitTestBase
         Assert.Equal("SELECT COALESCE(a.`Name`,'NoName') AS `HasName` FROM `sys_user` a WHERE a.`Name` LIKE CONCAT('%',@p0,'%')", sql);
         Assert.Equal(dbParameters[0].Value.ToString(), firstName);
 
+        repository.BeginTransaction();
+        var count = repository.Update<User>(new { Id = 1, Name = "千叶111" });
+        var result = repository.From<User>()
+            .Where(f => f.Name.Contains(lastName ?? firstName))
+            .Select(f => new { f.Id, HasName = f.Name ?? "NoName" })
+            .ToList();
+        repository.Commit();
+        Assert.NotNull(result);
+        Assert.True(result.Count > 0);
+        //Assert.True(result.Exists(f => f.Id == 1));
+
         sql = repository.From<User>()
             .Where(f => (f.Name ?? f.Id.ToString()) == "leafkevin")
             .Select(f => f.Id)
             .ToSql(out dbParameters);
         Assert.Equal("SELECT a.`Id` FROM `sys_user` a WHERE COALESCE(a.`Name`,CAST(a.`Id` AS CHAR))='leafkevin'", sql);
+        repository.BeginTransaction();
+        count = repository.Update<User>(new { Id = 1, Name = "leafkevin" });
+        var result1 = repository.From<User>()
+            .Where(f => (f.Name ?? f.Id.ToString()) == "leafkevin")
+            .Select(f => f.Id)
+            .ToList();
+        repository.Commit();
+        Assert.NotNull(result);
+        //Assert.True(result.Exists(f => f.Id == 1));
     }
     [Fact]
     public void Conditional()
@@ -916,7 +938,7 @@ public class AllUnitTest : UnitTestBase
         var sql = repository.From<User>()
             .Where(f => f.Name.Contains("cindy"))
             .Select(f => $"{f.Name + "222"}_111_{f.Age + isMale.ToString()}_{isMale}_{count}")
-               .ToSql(out var dbParameters);
+            .ToSql(out var dbParameters);
         Assert.Equal("SELECT CONCAT(a.`Name`,'222_111_',CAST(a.`Age` AS CHAR),@p0,'_',@p1,'_',@p2) FROM `sys_user` a WHERE a.`Name` LIKE '%cindy%'", sql);
         Assert.Equal((string)dbParameters[0].Value, isMale.ToString());
         Assert.Equal(typeof(string), dbParameters[0].Value.GetType());
@@ -1578,17 +1600,17 @@ public class AllUnitTest : UnitTestBase
         sql = repository.Create<User>()
             .WithBy(new Dictionary<string, object>
             {
-                { "Id", 1 },
-                { "TenantId", "1"},
-                { "Name", "leafkevin"},
-                { "Age", 25},
-                { "CompanyId", 1},
-                { "Gender", Gender.Male},
-                { "IsEnabled", true},
-                { "CreatedAt", now},
-                { "CreatedBy", 1},
-                { "UpdatedAt", now},
-                { "UpdatedBy", 1}
+                { "id", 1 },
+                { "tenantId", "1"},
+                { "name", "leafkevin"},
+                { "age", 25},
+                { "companyId", 1},
+                { "gender", Gender.Male},
+                { "isEnabled", true},
+                { "createdAt", now},
+                { "createdBy", 1},
+                { "updatedAt", now},
+                { "updatedBy", 1}
             })
           .ToSql(out dbParameters);
         Assert.Equal("INSERT INTO `sys_user` (`Id`,`TenantId`,`Name`,`Age`,`CompanyId`,`Gender`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id,@TenantId,@Name,@Age,@CompanyId,@Gender,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)", sql);
@@ -1603,9 +1625,9 @@ public class AllUnitTest : UnitTestBase
             Assert.True((string)dbParameter1.Value == Gender.Male.ToString());
         }
         Assert.True((bool)dbParameters[6].Value);
-        Assert.True((DateTime)dbParameters[7].Value == now);
+        Assert.Equal(now, (DateTime)dbParameters[7].Value);
         Assert.Equal(1, (int)dbParameters[8].Value);
-        Assert.True((DateTime)dbParameters[9].Value == now);
+        Assert.Equal(now, (DateTime)dbParameters[9].Value);
         Assert.Equal(1, (int)dbParameters[10].Value);
 
         repository.BeginTransaction();
@@ -1613,17 +1635,17 @@ public class AllUnitTest : UnitTestBase
         var result = repository.Create<User>()
             .WithBy(new
             {
-                Id = 1,
-                TenantId = "1",
-                Name = "leafkevin",
-                Age = 25,
-                CompanyId = 1,
-                Gender = Gender.Male,
-                IsEnabled = true,
-                CreatedAt = now,
-                CreatedBy = 1,
-                UpdatedAt = now,
-                UpdatedBy = 1
+                id = 1,
+                tenantId = "1",
+                name = "leafkevin",
+                age = 25,
+                companyId = 1,
+                gender = Gender.Male,
+                isEnabled = true,
+                createdAt = now,
+                createdBy = 1,
+                updatedAt = now,
+                updatedBy = 1
             })
             .Execute();
         repository.Commit();
@@ -1634,17 +1656,17 @@ public class AllUnitTest : UnitTestBase
         result = repository.Create<User>()
             .WithBy(new Dictionary<string, object>
             {
-                { "Id", 1 },
-                { "TenantId", "1"},
-                { "Name", "leafkevin"},
-                { "Age", 25},
-                { "CompanyId", 1},
-                { "Gender", Gender.Male},
-                { "IsEnabled", true},
-                { "CreatedAt", now},
-                { "CreatedBy", 1},
-                { "UpdatedAt", now},
-                { "UpdatedBy", 1}
+                { "id", 1 },
+                { "tenantId", "1"},
+                { "name", "leafkevin"},
+                { "age", 25},
+                { "companyId", 1},
+                { "gender", Gender.Male},
+                { "isEnabled", true},
+                { "createdAt", now},
+                { "createdBy", 1},
+                { "updatedAt", now},
+                { "updatedBy", 1}
             })
             .Execute();
         repository.Commit();
@@ -1773,7 +1795,7 @@ public class AllUnitTest : UnitTestBase
             .WithBy(guidField.HasValue, new { GuidField = guidField })
             .ToSql(out _);
         repository.Commit();
-        Assert.Equal("INSERT INTO `sys_user` (`Id`,`TenantId`,`Name`,`Gender`,`Age`,`CompanyId`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`,SomeTimes,`GuidField`) VALUES (@Id,@TenantId,@Name,@Gender,@Age,@CompanyId,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy,@SomeTimes,@GuidField)", sql);
+        Assert.Equal("INSERT INTO `sys_user` (`Id`,`TenantId`,`Name`,`Gender`,`Age`,`CompanyId`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`,`SomeTimes`,`GuidField`) VALUES (@Id,@TenantId,@Name,@Gender,@Age,@CompanyId,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy,@SomeTimes,@GuidField)", sql);
 
         repository.BeginTransaction();
         count = repository.Delete<User>().Where(f => f.Id == 1).Execute();
@@ -1821,7 +1843,7 @@ public class AllUnitTest : UnitTestBase
             .WithBy(f => f.TenantId, "1")
             .WithBy(guidField.HasValue, new { GuidField = guidField })
             .ToSql(out _);
-        Assert.Equal("INSERT INTO `sys_user` (`Id`,`Name`,`Gender`,`Age`,`CompanyId`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`,TenantId,`GuidField`) VALUES (@Id,@Name,@Gender,@Age,@CompanyId,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy,@TenantId,@GuidField)", sql);
+        Assert.Equal("INSERT INTO `sys_user` (`Id`,`Name`,`Gender`,`Age`,`CompanyId`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`,`TenantId`,`GuidField`) VALUES (@Id,@Name,@Gender,@Age,@CompanyId,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy,@TenantId,@GuidField)", sql);
 
         repository.BeginTransaction();
         var count = repository.Delete<User>().Where(f => f.Id == 1).Execute();
@@ -1985,48 +2007,48 @@ public class AllUnitTest : UnitTestBase
     {
         var repository = this.dbFactory.Create();
         repository.BeginTransaction();
-        await repository.Delete<Product>().Where(new[] { new { Id = 1 }, new { Id = 2 }, new { Id = 3 } }).ExecuteAsync();
+        await repository.Delete<Product>().Where(new[] { new { id = 1 }, new { id = 2 }, new { id = 3 } }).ExecuteAsync();
         var count = repository.Create<Product>()
             .WithBulk(new[]
             {
                 new Dictionary<string,object>
                 {
-                    { "Id",1 },
-                    { "ProductNo","PN-001"},
-                    { "Name","波司登羽绒服"},
-                    { "BrandId",1},
-                    { "CategoryId",1},
-                    { "IsEnabled",true},
-                    { "CreatedAt",DateTime.Now},
-                    { "CreatedBy",1},
-                    { "UpdatedAt",DateTime.Now},
-                    { "UpdatedBy",1}
+                    { "id",1 },
+                    { "productNo","PN-001"},
+                    { "name","波司登羽绒服"},
+                    { "brandId",1},
+                    { "categoryId",1},
+                    { "isEnabled",true},
+                    { "createdAt",DateTime.Now},
+                    { "createdBy",1},
+                    { "updatedAt",DateTime.Now},
+                    { "updatedBy",1}
                 },
                 new Dictionary<string,object>
                 {
-                    { "Id",2},
-                    { "ProductNo","PN-002"},
-                    { "Name","雪中飞羽绒裤"},
-                    { "BrandId",2},
-                    { "CategoryId",2},
-                    { "IsEnabled",true},
-                    { "CreatedAt",DateTime.Now},
-                    { "CreatedBy",1},
-                    { "UpdatedAt",DateTime.Now},
-                    { "UpdatedBy",1}
+                    { "id",2},
+                    { "productNo","PN-002"},
+                    { "name","雪中飞羽绒裤"},
+                    { "brandId",2},
+                    { "categoryId",2},
+                    { "isEnabled",true},
+                    { "createdAt",DateTime.Now},
+                    { "createdBy",1},
+                    { "updatedAt",DateTime.Now},
+                    { "updatedBy",1}
                 },
                 new Dictionary<string,object>
                 {
-                    { "Id",3},
-                    { "ProductNo","PN-003"},
-                    { "Name","优衣库保暖内衣"},
-                    { "BrandId",3},
-                    { "CategoryId",3},
-                    { "IsEnabled",true},
-                    { "CreatedAt",DateTime.Now},
-                    { "CreatedBy",1},
-                    { "UpdatedAt",DateTime.Now},
-                    { "UpdatedBy",1}
+                    { "id",3},
+                    { "productNo","PN-003"},
+                    { "name","优衣库保暖内衣"},
+                    { "brandId",3},
+                    { "categoryId",3},
+                    { "isEnabled",true},
+                    { "createdAt",DateTime.Now},
+                    { "createdBy",1},
+                    { "updatedAt",DateTime.Now},
+                    { "updatedBy",1}
                 }
             })
             .Execute();
@@ -2405,6 +2427,7 @@ public class AllUnitTest : UnitTestBase
            })
            .ToSql(out var parameters);
         Assert.Equal("INSERT INTO `sys_order` (`Id`,`TenantId`,`OrderNo`,`ProductCount`,`TotalAmount`,`BuyerId`,`BuyerSource`,`SellerId`,`Products`,`Disputes`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id,@TenantId,@OrderNo,@ProductCount,@TotalAmount,@BuyerId,@BuyerSource,@SellerId,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)", sql);
+        Assert.True(parameters[3].Value is DBNull);
         Assert.Equal("@BuyerSource", parameters[6].ParameterName);
         Assert.True(parameters[6].Value is DBNull);
         Assert.Equal("@Products", parameters[8].ParameterName);
@@ -2987,6 +3010,7 @@ public class AllUnitTest : UnitTestBase
 
 
 
+
     [Fact]
     public async Task QueryFirst()
     {
@@ -3007,6 +3031,7 @@ public class AllUnitTest : UnitTestBase
         if (result1 != null && result2 != null)
         {
             Assert.True(result1.Id == result2.Id);
+            Assert.Equal(1, result1.Id);
         }
     }
     [Fact]

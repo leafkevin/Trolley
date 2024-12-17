@@ -14,7 +14,7 @@ public interface IFromCommand
     IQueryVisitor Visitor { get; }
     #endregion
 
-    #region Select    
+    #region Select
     /// <summary>
     /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
     /// </summary>

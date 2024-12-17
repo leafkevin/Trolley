@@ -109,14 +109,14 @@ public interface IMySqlContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     /// <typeparam name="TUpdateFields">要更新的字段类型</typeparam>
     /// <param name="updateObj">更新实体对象</param>
     /// <returns>返回插入对象</returns>
-    IMySqlCreated<TEntity> OnDuplicateKeyUpdate<TUpdateFields>(TUpdateFields updateObj);
+    IMySqlContinuedCreate<TEntity> OnDuplicateKeyUpdate<TUpdateFields>(TUpdateFields updateObj);
     /// <summary>
     /// 相同主键或唯一索引存在时执行更新动作，INSERT INTO ... ON DUPLICATE KEY UPDATE
     /// </summary>
     /// <typeparam name="TUpdateFields">要更新的字段类型</typeparam>
     /// <param name="fieldsAssignment">要更新的字段赋值表达式</param>
     /// <returns>返回插入对象</returns>
-    IMySqlCreated<TEntity> OnDuplicateKeyUpdate<TUpdateFields>(Expression<Func<IMySqlCreateDuplicateKeyUpdate<TEntity>, TUpdateFields>> fieldsAssignment);
+    IMySqlContinuedCreate<TEntity> OnDuplicateKeyUpdate<TUpdateFields>(Expression<Func<IMySqlCreateDuplicateKeyUpdate<TEntity>, TUpdateFields>> fieldsAssignment);
     #endregion
 
     #region Returning
@@ -126,7 +126,7 @@ public interface IMySqlContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     /// <typeparam name="TResult">返回类型</typeparam>
     /// <param name="fieldNames">字段名称列表</param>
     /// <returns>返回插入的部分字段</returns>
-    IMySqlCreated<TEntity, TResult> Returning<TResult>(params string[] fieldNames);
+    IMySqlCreated<TEntity, TResult> Returning<TResult>(string fieldNames);
     /// <summary>
     /// 返回插入后想要返回字段的内容，仅mariadb数据库支持
     /// </summary>
@@ -240,30 +240,30 @@ public interface IMySqlBulkContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     /// <typeparam name="TUpdateFields">要更新的字段类型</typeparam>
     /// <param name="updateObj">更新实体对象</param>
     /// <returns>返回插入对象</returns>
-    IMySqlCreated<TEntity> OnDuplicateKeyUpdate<TUpdateFields>(TUpdateFields updateObj);
+    IMySqlBulkContinuedCreate<TEntity> OnDuplicateKeyUpdate<TUpdateFields>(TUpdateFields updateObj);
     /// <summary>
     /// 相同主键或唯一索引存在时执行更新动作，INSERT INTO ... ON DUPLICATE KEY UPDATE
     /// </summary>
     /// <typeparam name="TUpdateFields">要更新的字段类型</typeparam>
     /// <param name="fieldsAssignment">要更新的字段赋值表达式</param>
     /// <returns>返回插入对象</returns>
-    IMySqlCreated<TEntity> OnDuplicateKeyUpdate<TUpdateFields>(Expression<Func<IMySqlCreateDuplicateKeyUpdate<TEntity>, TUpdateFields>> fieldsAssignment);
+    IMySqlBulkContinuedCreate<TEntity> OnDuplicateKeyUpdate<TUpdateFields>(Expression<Func<IMySqlCreateDuplicateKeyUpdate<TEntity>, TUpdateFields>> fieldsAssignment);
     #endregion
 
     #region Returning
     /// <summary>
-    /// mariadb数据库支持
+    /// 返回插入后想要返回字段的内容，仅mariadb数据库支持
     /// </summary>
-    /// <typeparam name="TResult"></typeparam>
-    /// <param name="fieldNames"></param>
-    /// <returns></returns>
-    IMySqlBulkCreated<TEntity, TResult> Returning<TResult>(params string[] fieldNames);
+    /// <typeparam name="TResult">返回类型</typeparam>
+    /// <param name="fieldNames">字段名称列表</param>
+    /// <returns>返回插入的部分字段</returns>
+    IMySqlBulkCreated<TEntity, TResult> Returning<TResult>(string fieldNames);
     /// <summary>
-    /// mariadb数据库支持
+    /// 返回插入后想要返回字段的内容，仅mariadb数据库支持
     /// </summary>
-    /// <typeparam name="TResult"></typeparam>
-    /// <param name="fieldsSelector"></param>
-    /// <returns></returns>
+    /// <typeparam name="TResult">返回类型</typeparam>
+    /// <param name="fieldsSelector">字段筛选表达式</param>
+    /// <returns>返回插入的部分字段</returns>
     IMySqlBulkCreated<TEntity, TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector);
     #endregion
 }

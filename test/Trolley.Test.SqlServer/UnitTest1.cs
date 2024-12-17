@@ -1,12 +1,12 @@
-﻿using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.DependencyInjection;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.DependencyInjection;
 using Trolley.SqlServer;
 using Xunit;
 using Xunit.Abstractions;
@@ -308,20 +308,20 @@ public class UnitTest1 : UnitTestBase
         var sql = repository.Create<User>()
            .WithBy(new
            {
-               Id = 1,
-               TenantId = "1",
-               Name = "leafkevin",
-               Age = 25,
-               CompanyId = 1,
-               Gender = Gender.Male,
-               SourceType = UserSourceType.Douyin,
-               IsEnabled = true,
-               CreatedAt = now,
-               CreatedBy = 1,
-               UpdatedAt = now,
-               UpdatedBy = 1
+               id = 1,
+               tenantId = "1",
+               name = "leafkevin",
+               age = 25,
+               companyId = 1,
+               gender = Gender.Male,
+               sourceType = UserSourceType.Douyin,
+               isEnabled = true,
+               createdAt = now,
+               createdBy = 1,
+               updatedAt = now,
+               updatedBy = 1
            })
-           .IgnoreFields("CompanyId", "SourceType")
+           .IgnoreFields("CompanyId", "sourceType")
            .ToSql(out var dbParameters);
         Assert.Equal("INSERT INTO [sys_user] ([Id],[TenantId],[Name],[Gender],[Age],[IsEnabled],[CreatedAt],[CreatedBy],[UpdatedAt],[UpdatedBy]) VALUES (@Id,@TenantId,@Name,@Gender,@Age,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy)", sql);
         Assert.Equal(10, dbParameters.Count);
@@ -331,20 +331,20 @@ public class UnitTest1 : UnitTestBase
         repository.Create<User>()
             .WithBy(new
             {
-                Id = 1,
-                TenantId = "1",
-                Name = "leafkevin",
-                Age = 25,
-                CompanyId = 1,
-                Gender = Gender.Male,
-                SourceType = UserSourceType.Douyin,
-                IsEnabled = true,
-                CreatedAt = now,
-                CreatedBy = 1,
-                UpdatedAt = now,
-                UpdatedBy = 1
+                id = 1,
+                tenantId = "1",
+                name = "leafkevin",
+                age = 25,
+                companyId = 1,
+                gender = Gender.Male,
+                sourceType = UserSourceType.Douyin,
+                isEnabled = true,
+                createdAt = now,
+                createdBy = 1,
+                updatedAt = now,
+                updatedBy = 1
             })
-            .IgnoreFields("CompanyId", "SourceType")
+            .IgnoreFields("CompanyId", "sourceType")
             .Execute();
         var user = repository.GetById<User>(1);
         repository.Commit();
@@ -423,7 +423,7 @@ public class UnitTest1 : UnitTestBase
             .WithBy(guidField.HasValue, new { GuidField = guidField })
             .ToSql(out _);
         repository.Commit();
-        Assert.Equal("INSERT INTO [sys_user] ([Id],[TenantId],[Name],[Gender],[Age],[CompanyId],[IsEnabled],[CreatedAt],[CreatedBy],[UpdatedAt],[UpdatedBy],SomeTimes,[GuidField]) VALUES (@Id,@TenantId,@Name,@Gender,@Age,@CompanyId,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy,@SomeTimes,@GuidField)", sql);
+        Assert.Equal("INSERT INTO [sys_user] ([Id],[TenantId],[Name],[Gender],[Age],[CompanyId],[IsEnabled],[CreatedAt],[CreatedBy],[UpdatedAt],[UpdatedBy],[SomeTimes],[GuidField]) VALUES (@Id,@TenantId,@Name,@Gender,@Age,@CompanyId,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy,@SomeTimes,@GuidField)", sql);
 
         repository.BeginTransaction();
         count = repository.Delete<User>().Where(f => f.Id == 1).Execute();
@@ -515,12 +515,12 @@ public class UnitTest1 : UnitTestBase
         id = repository.Create<Company>()
             .WithBy(new Dictionary<string, object>()
             {
-                    { "Name","谷歌"},
-                    { "IsEnabled", true},
-                    { "CreatedAt", DateTime.Now},
-                    { "CreatedBy", 1},
-                    { "UpdatedAt", DateTime.Now},
-                    { "UpdatedBy", 1}
+                    { "name","谷歌"},
+                    { "isEnabled", true},
+                    { "createdAt", DateTime.Now},
+                    { "createdBy", 1},
+                    { "updatedAt", DateTime.Now},
+                    { "updatedBy", 1}
             })
             .ExecuteIdentity();
         maxId = repository.From<Company>().Max(f => f.Id);
@@ -1190,7 +1190,7 @@ public class UnitTest1 : UnitTestBase
                 UpdatedAt = DateTime.Now,
                 UpdatedBy = 1
             })
-            .Output(f => new { f.Id, f.TenantId })
+            .Output(f => new { f.TenantId, f.Id })
             .ExecuteAsync();
         await repository.CommitAsync();
         Assert.Equal(1, result1.Id);
@@ -1288,7 +1288,7 @@ public class UnitTest1 : UnitTestBase
             .WithBulk(products)
             .Output(f => new { f.Id, f.ProductNo })
             .ToSql(out var parameters1);
-        Assert.Equal("INSERT INTO [sys_product]([Id],[ProductNo],[Name],[BrandId],[CategoryId],[IsEnabled],[CreatedAt],[CreatedBy],[UpdatedAt],[UpdatedBy]) OUTPUT INSERTED.Id,INSERTED.ProductNo VALUES(@Id0,@ProductNo0,@Name0,@BrandId0,@CategoryId0,@IsEnabled0,@CreatedAt0,@CreatedBy0,@UpdatedAt0,@UpdatedBy0),(@Id1,@ProductNo1,@Name1,@BrandId1,@CategoryId1,@IsEnabled1,@CreatedAt1,@CreatedBy1,@UpdatedAt1,@UpdatedBy1),(@Id2,@ProductNo2,@Name2,@BrandId2,@CategoryId2,@IsEnabled2,@CreatedAt2,@CreatedBy2,@UpdatedAt2,@UpdatedBy2)", sql1);
+        Assert.Equal("INSERT INTO [sys_product] ([Id],[ProductNo],[Name],[BrandId],[CategoryId],[IsEnabled],[CreatedAt],[CreatedBy],[UpdatedAt],[UpdatedBy]) OUTPUT INSERTED.Id,INSERTED.ProductNo VALUES (@Id0,@ProductNo0,@Name0,@BrandId0,@CategoryId0,@IsEnabled0,@CreatedAt0,@CreatedBy0,@UpdatedAt0,@UpdatedBy0),(@Id1,@ProductNo1,@Name1,@BrandId1,@CategoryId1,@IsEnabled1,@CreatedAt1,@CreatedBy1,@UpdatedAt1,@UpdatedBy1),(@Id2,@ProductNo2,@Name2,@BrandId2,@CategoryId2,@IsEnabled2,@CreatedAt2,@CreatedBy2,@UpdatedAt2,@UpdatedBy2)", sql1);
 
         await repository.BeginTransactionAsync();
         await repository.Delete<Product>().Where(new int[] { 1, 2, 3 }).ExecuteAsync();
@@ -1308,7 +1308,7 @@ public class UnitTest1 : UnitTestBase
             .WithBulk(products)
             .Output<Product>("*")
             .ToSql(out var parameters2);
-        Assert.Equal("INSERT INTO [sys_product]([Id],[ProductNo],[Name],[BrandId],[CategoryId],[IsEnabled],[CreatedAt],[CreatedBy],[UpdatedAt],[UpdatedBy]) OUTPUT INSERTED.* VALUES(@Id0,@ProductNo0,@Name0,@BrandId0,@CategoryId0,@IsEnabled0,@CreatedAt0,@CreatedBy0,@UpdatedAt0,@UpdatedBy0),(@Id1,@ProductNo1,@Name1,@BrandId1,@CategoryId1,@IsEnabled1,@CreatedAt1,@CreatedBy1,@UpdatedAt1,@UpdatedBy1),(@Id2,@ProductNo2,@Name2,@BrandId2,@CategoryId2,@IsEnabled2,@CreatedAt2,@CreatedBy2,@UpdatedAt2,@UpdatedBy2)", sql2);
+        Assert.Equal("INSERT INTO [sys_product] ([Id],[ProductNo],[Name],[BrandId],[CategoryId],[IsEnabled],[CreatedAt],[CreatedBy],[UpdatedAt],[UpdatedBy]) OUTPUT INSERTED.* VALUES (@Id0,@ProductNo0,@Name0,@BrandId0,@CategoryId0,@IsEnabled0,@CreatedAt0,@CreatedBy0,@UpdatedAt0,@UpdatedBy0),(@Id1,@ProductNo1,@Name1,@BrandId1,@CategoryId1,@IsEnabled1,@CreatedAt1,@CreatedBy1,@UpdatedAt1,@UpdatedBy1),(@Id2,@ProductNo2,@Name2,@BrandId2,@CategoryId2,@IsEnabled2,@CreatedAt2,@CreatedBy2,@UpdatedAt2,@UpdatedBy2)", sql2);
 
         await repository.BeginTransactionAsync();
         await repository.Delete<Product>().Where(new int[] { 1, 2, 3 }).ExecuteAsync();
@@ -1370,6 +1370,7 @@ public class UnitTest1 : UnitTestBase
     {
         var repository = this.dbFactory.Create();
         var timeSpan = TimeSpan.FromMinutes(455);
+		await repository.BeginTransactionAsync();
         await repository.DeleteAsync<UpdateEntity3>(1);
         byte[] bytes = [68];
         await repository.CreateAsync<UpdateEntity3>(new UpdateEntity3
@@ -1395,6 +1396,7 @@ public class UnitTest1 : UnitTestBase
             BitArrayField = Encoding.ASCII.GetBytes("BitArray")
         });
         var entity = await repository.GetByIdAsync<UpdateEntity3>(1);
+		await repository.CommitAsync();
         Assert.Equal(entity.ByteArrayField, Encoding.ASCII.GetBytes("ByteArry"));
         Assert.Equal(entity.BitArrayField, Encoding.ASCII.GetBytes("BitArray"));
     }
