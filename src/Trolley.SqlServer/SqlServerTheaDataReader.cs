@@ -10,9 +10,12 @@ class SqlServerTheaDataReader : ITheaDataReader
 {
     private readonly SqlDataReader reader;
     public IDataReader BaseDataReader => this.reader;
+    public int FieldCount => this.reader.FieldCount;
 
     public SqlServerTheaDataReader(SqlDataReader reader) => this.reader = reader;
 
+    public string GetName(int index) => this.reader.GetName(index);
+    public object GetValue(int index) => this.reader.GetValue(index);
     public void Close() => this.reader.Close();
     public Task CloseAsync()
 #if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER

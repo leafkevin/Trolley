@@ -103,6 +103,7 @@ public class OrderInfo
     public string Id { get; set; }
     public string OrderNo { get; set; }
     public int BuyerId { get; set; }
+    public string TotalAmount { get; set; }
 }
 public class OrderDetail
 {

@@ -2482,7 +2482,8 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .Where(f => Sql.In(f.Id, new[] { "8" }))
             .SelectFlattenTo(f => new OrderInfo
             {
-                Description = this.DeferInvoke().Deferred()
+                Description = this.DeferInvoke().Deferred(),
+                TotalAmount = f.TotalAmount.ToString("C")
             })
             .ToList();
         Assert.Equal("8", result[0].Id);
@@ -2551,6 +2552,76 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         {
             Assert.True(result[0].LastBuyAt >= result[1].LastBuyAt);
         }
+    }
+    [Fact]
+    public async Task DeferredField()
+    {
+        var repository = this.dbFactory.Create();
+        repository.BeginTransaction();
+        repository.Delete<Order>("8");
+        repository.Create<Order>(new Order
+        {
+            Id = "8",
+            TenantId = "2",
+            OrderNo = "On-ZwYx",
+            BuyerId = 1,
+            SellerId = 2,
+            TotalAmount = 500,
+            Products = new List<int> { 1, 2 },
+            IsEnabled = true,
+            CreatedAt = DateTime.Now,
+            CreatedBy = 1,
+            UpdatedAt = DateTime.Now,
+            UpdatedBy = 1
+        });
+        repository.Commit();
+        var sql1 = repository.From<Order>()
+            .Where(f => Sql.In(f.Id, new[] { "8" }))
+            .SelectFlattenTo(f => new OrderInfo
+            {
+                Description = this.DeferInvoke().Deferred(),
+                TotalAmount = f.TotalAmount.ToString("C")
+            })
+            .ToSql(out _);
+        Assert.Equal("SELECT a.`TotalAmount` AS `TotalAmount`,a.`Id`,a.`OrderNo`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id` IN ('8')", sql1);
+
+        var result1 = await repository.From<Order>()
+          .Where(f => Sql.In(f.Id, new[] { "8" }))
+          .SelectFlattenTo(f => new OrderInfo
+          {
+              Description = this.DeferInvoke().Deferred(),
+              TotalAmount = f.TotalAmount.ToString("C")
+          })
+          .ToListAsync();
+        Assert.Equal("8", result1[0].Id);
+        Assert.Equal(1, result1[0].BuyerId);
+        Assert.Equal("On-ZwYx", result1[0].OrderNo);
+        Assert.NotNull(result1[0].Description);
+        Assert.True(result1[0].Description == this.DeferInvoke());
+
+        var sql2 = repository.From<Order>()
+            .Where(f => Sql.In(f.Id, new[] { "8" }))
+            .SelectFlattenTo(f => new OrderInfo
+            {
+                Description = this.DeferInvoke().Deferred(),
+                TotalAmount = this.DeferInvoke().Deferred()
+            })
+            .ToSql(out _);
+        Assert.Equal("SELECT a.`TotalAmount` AS `TotalAmount`,a.`Id`,a.`OrderNo`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id` IN ('8')", sql2);
+
+        var result2 = await repository.From<Order>()
+          .Where(f => Sql.In(f.Id, new[] { "8" }))
+          .SelectFlattenTo(f => new OrderInfo
+          {
+              Description = this.DeferInvoke().Deferred(),
+              TotalAmount = f.TotalAmount.ToString("C")
+          })
+          .ToListAsync();
+        Assert.Equal("8", result1[0].Id);
+        Assert.Equal(1, result1[0].BuyerId);
+        Assert.Equal("On-ZwYx", result1[0].OrderNo);
+        Assert.NotNull(result1[0].Description);
+        Assert.True(result1[0].Description == this.DeferInvoke());
     }
     private string DeferInvoke() => "DeferInvoke";
 }

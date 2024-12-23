@@ -1237,6 +1237,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             if (lambdaExpr.Body.NodeType == ExpressionType.MemberInit)
             {
                 var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = lambdaExpr.Body });
+                //特殊的已经确定的列
                 this.ReaderFields = sqlSegment.Value as List<SqlFieldSegment>;
             }
             else this.ReaderFields = new();

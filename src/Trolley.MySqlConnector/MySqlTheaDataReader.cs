@@ -10,9 +10,11 @@ class MySqlTheaDataReader : ITheaDataReader
 {
     private readonly MySqlDataReader reader;
     public IDataReader BaseDataReader => this.reader;
-
+    public int FieldCount => this.reader.FieldCount;
     public MySqlTheaDataReader(MySqlDataReader reader) => this.reader = reader;
 
+    public string GetName(int index) => this.reader.GetName(index);
+    public object GetValue(int index) => this.reader.GetValue(index);
     public void Close() => this.reader.Close();
     public Task CloseAsync()
     {

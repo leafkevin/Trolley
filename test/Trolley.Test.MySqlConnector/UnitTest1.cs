@@ -1504,6 +1504,49 @@ public class UnitTest1 : UnitTestBase
         await repository.CommitAsync();
         Assert.Equal(2, result2.Id);
         Assert.Equal("1", result2.TenantId);
+
+        var sql3= repository.Create<User>()
+            .WithBy(new
+            {
+                Id = 1,
+                TenantId = "1",
+                Name = "leafkevin",
+                Age = 25,
+                CompanyId = 1,
+                Gender = Gender.Male,
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            })
+            .Returning<User>("`Id`,`TenantId`,CONCAT(`Gender`,'-',CAST(`Age` AS CHAR),'-',UPPER(`Name`)) AS Name")
+            .ToSql(out _);
+        Assert.Equal("INSERT INTO `sys_user` (`Id`,`TenantId`,`Name`,`Gender`,`Age`,`CompanyId`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id,@TenantId,@Name,@Gender,@Age,@CompanyId,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) RETURNING `Id`,`TenantId`,CONCAT(`Gender`,'-',CAST(`Age` AS CHAR),'-',UPPER(`Name`)) AS Name", sql3);
+        await repository.BeginTransactionAsync();
+        await repository.DeleteAsync<User>(1);
+        var result3 = await repository.Create<User>()
+            .WithBy(new
+            {
+                Id = 1,
+                TenantId = "1",
+                Name = "leafkevin",
+                Age = 25,
+                CompanyId = 1,
+                Gender = Gender.Male,
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            })
+            .Returning<User>("`Id`,`TenantId`,CONCAT(`Gender`,'-',CAST(`Age` AS CHAR),'-',UPPER(`Name`)) AS Name")
+            .ExecuteAsync();
+        await repository.CommitAsync();
+        Assert.Equal(1, result3.Id);
+        Assert.Equal("1", result3.TenantId);
+        Assert.Equal($"{Gender.Male}-{25}-{"leafkevin".ToUpper()}", result3.Name);
+        Assert.Null(result3.SourceType);
     }
     [Fact]
     public async Task Insert_Returnings()

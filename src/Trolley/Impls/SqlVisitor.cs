@@ -702,22 +702,23 @@ public class SqlVisitor : ISqlVisitor
         {
             //延迟方法调用，两种场景：
             //1.主动延迟方法调用：如，把返回的枚举列转成描述，参数就是枚举列，返回值是对应的描述
-            //2.Select子句中Include导航成员访问，主表数据已经查询了，此处成员访问只是多一个引用赋值动作，做成了延迟委托调用
+            //2.Select子句中Include导航成员引用访问，主表数据已经查询了，此处成员访问只是多一个引用赋值动作，做成了延迟委托调用
             string fields = null;
             List<SqlFieldSegment> readerFields = null;
             LambdaExpression deferredFuncExpr = null;
+
             if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count > 0)
             {
                 readerFields = new List<SqlFieldSegment>();
                 var builder = new StringBuilder();
-                var visitor = new ReplaceParameterVisitor();
+                var visitor = new MemberVisitor();
                 var bodyExpr = visitor.Visit(methodCallExpr);
-                //f.Balance.ToString("C")
-                //args0.ToString("C")
-                //(args0)=>{args0.ToString("C")}
-                if (visitor.NewParameters.Count > 0)
-                    deferredFuncExpr = Expression.Lambda(bodyExpr, visitor.NewParameters);
-                foreach (var argsExpr in visitor.OrgMembers)
+                //$"{f.OrderNo} : {f.TotalAmount.ToString("C")}"
+                //f.TotalAmount.ToString("C")
+                //"TotalAmount: " + (f.Price * f.Quantity).ToString("C")
+                //this.DeferredInvoke(f.Price, f.Quantity)
+
+                foreach (var argsExpr in visitor.Members)
                 {
                     var argumentSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = argsExpr });
                     if (argumentSegment.HasField)
@@ -745,12 +746,10 @@ public class SqlVisitor : ISqlVisitor
             {
                 if (readerFields == null)
                     fields = "NULL";
-                var deferredDelegate = deferredFuncExpr.Compile();
                 sqlSegment.IsDeferredFields = true;
                 sqlSegment.FieldType = SqlFieldType.DeferredFields;
                 sqlSegment.Body = fields;
-                sqlSegment.DeferredDelegateType = deferredFuncExpr.Type;
-                sqlSegment.DeferredDelegate = deferredDelegate;
+                sqlSegment.DeferredExpression = deferredFuncExpr;
                 sqlSegment.Fields = readerFields;
                 sqlSegment.IsMethodCall = true;
                 return sqlSegment;
@@ -2054,16 +2053,14 @@ public class SqlVisitor : ISqlVisitor
         {
             readerFields = new List<SqlFieldSegment>();
             var builder = new StringBuilder();
-            var visitor = new ReplaceParameterVisitor();
+            var visitor = new MemberVisitor();
             var bodyExpr = visitor.Visit(methodCallExpr);
+            //$"{f.OrderNo} : {f.TotalAmount.ToString("C")}"
+            //f.TotalAmount.ToString("C")
+            //"TotalAmount: " + (f.Price * f.Quantity).ToString("C")
+            //this.DeferredInvoke(f.Price, f.Quantity)
 
-            //f.Balance.ToString("C")
-            //args0.ToString("C")
-            //(args0)=>{args0.ToString("C")}          
-            if (visitor.NewParameters.Count > 0)
-                deferredFuncExpr = Expression.Lambda(bodyExpr, visitor.NewParameters.ToArray());
-
-            foreach (var argsExpr in visitor.OrgMembers)
+            foreach (var argsExpr in visitor.Members)
             {
                 var argumentSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = argsExpr });
                 if (argumentSegment.HasField)
@@ -2089,12 +2086,10 @@ public class SqlVisitor : ISqlVisitor
 
         if (readerFields == null)
             fields = "NULL";
-        var deferredDelegate = deferredFuncExpr.Compile();
         sqlSegment.IsDeferredFields = true;
         sqlSegment.FieldType = SqlFieldType.DeferredFields;
         sqlSegment.Body = fields;
-        sqlSegment.DeferredDelegateType = deferredFuncExpr.Type;
-        sqlSegment.DeferredDelegate = deferredDelegate;
+        sqlSegment.DeferredExpression = methodCallExpr;
         sqlSegment.Fields = readerFields;
         sqlSegment.IsMethodCall = true;
         return sqlSegment;

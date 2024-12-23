@@ -130,7 +130,7 @@ public class SqlFieldSegment
     /// </summary>
     public bool HasNextInclude { get; set; }
     /// <summary>
-    /// 实体表或是子查询表的所有字段，FieldType为Entity时有值
+    /// 实体表或是子查询表的所有字段，FieldType为Entity、DeferredFields时有值
     /// </summary>
     public List<SqlFieldSegment> Fields { get; set; }
     /// <summary>
@@ -140,13 +140,9 @@ public class SqlFieldSegment
     /// <summary>
     /// 延迟调用的委托
     /// </summary>
-    public Delegate DeferredDelegate { get; set; }
+    public Expression DeferredExpression { get; set; }
     /// <summary>
-    /// 延迟方法调用委托的类型
-    /// </summary>
-    public Type DeferredDelegateType { get; set; }
-    /// <summary>
-    /// 最外层Select时，原参数访问的路径，如：.Select(x => new { Order = x, x.Seller.Company })中的x, x.Seller.Company
+    /// 最外层Select时，原参数访问的路径，有参数访问时才有值，如：.Select(x => new { Order = x, x.Seller.Company })中的x, x.Seller.Company
     /// 当有Include导航属性成员访问时，查找其主表在Select返回的实体中的属性值，构造延迟属性设置方法
     /// 此处获取Company表字段信息，在Order属性中已经存在了，直接取里面的值，不再查询数据库，只做延迟属性值设置
     /// </summary>
@@ -328,8 +324,7 @@ public class SqlFieldSegment
             Value = this.Value,
             Body = this.Body,
             IsDeferredFields = this.IsDeferredFields,
-            DeferredDelegateType = this.DeferredDelegateType,
-            DeferredDelegate = this.DeferredDelegate,
+            DeferredExpression = this.DeferredExpression,
             SegmentType = this.SegmentType,
             TargetMember = this.TargetMember,
             FromMember = this.FromMember,
@@ -342,5 +337,5 @@ public class SqlFieldSegment
         };
     }
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-    private string DebugDisplayText => $"Value: {this.Value} Expression: {this.Expression}";
+    private string DebugDisplayText => $"Body: {this.Body ?? this.Value.ToString()} Expression: {this.Expression}";
 }

@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -206,8 +207,11 @@ public static class Extensions
     {
         var targetType = typeof(TValue);
         var fieldType = reader.GetFieldType(0);
+        if (fieldType == targetType)
+            return (TValue)reader.GetValue(0);
+
         var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(targetType, fieldType, dbContext.Options);
-        return (TValue)valueGetter.Invoke(reader.BaseDataReader[0]);
+        return (TValue)valueGetter.Invoke(reader.GetValue(0));
     }
     /// <summary>
     /// 使用SQL+参数查询，返回的是单纯的实体
@@ -218,22 +222,45 @@ public static class Extensions
     /// <returns></returns>
     public static TEntity ToEntity<TEntity>(this ITheaDataReader reader, DbContext dbContext)
     {
-        var dbReader = reader.BaseDataReader;
+        if (reader.FieldCount == 1)
+            return reader.ToValue<TEntity>(dbContext);
+
         var entityType = typeof(TEntity);
+        if (entityType == typeof(object))
+        {
+            var row = new List<object>();
+            for (var i = 0; i < reader.FieldCount; i++)
+            {
+                var dbValue = reader.GetValue(i);
+                row.Add(dbValue is DBNull ? null : dbValue);
+            }
+            return (TEntity)(object)row;
+        }
+        else if (typeof(IDictionary<string, object>).IsAssignableFrom(entityType))
+        {
+            var row = new Dictionary<string, object>();
+            for (var i = 0; i < reader.FieldCount; i++)
+            {
+                var dbValue = reader.GetValue(i);
+                row[reader.GetName(i).Trim()] = dbValue is DBNull ? null : dbValue;
+            }
+            return (TEntity)(object)row;
+        }
+
         var ormProviderType = dbContext.OrmProvider.OrmProviderType;
-        var cacheKey = GetTypeReaderKey(entityType, ormProviderType, dbReader);
+        var cacheKey = GetTypeReaderKey(entityType, ormProviderType, reader);
         Delegate deserializer = null;
         if (entityType.FullName.StartsWith("System.ValueTuple`"))
         {
             if (!valueTupleReaderDeserializerCache.TryGetValue(cacheKey, out deserializer))
-                valueTupleReaderDeserializerCache.TryAdd(cacheKey, deserializer = CreateReaderValueTupleDeserializer(dbContext, dbReader, entityType));
+                valueTupleReaderDeserializerCache.TryAdd(cacheKey, deserializer = CreateReaderValueTupleDeserializer(dbContext, reader, entityType));
         }
         else
         {
             if (!typeReaderDeserializerCache.TryGetValue(cacheKey, out deserializer))
-                typeReaderDeserializerCache.TryAdd(cacheKey, deserializer = CreateReaderEntityDeserializer(dbContext, dbReader, entityType));
+                typeReaderDeserializerCache.TryAdd(cacheKey, deserializer = CreateReaderEntityDeserializer(dbContext, reader, entityType));
         }
-        return ((Func<IDataReader, TEntity>)deserializer).Invoke(dbReader);
+        return ((Func<ITheaDataReader, TEntity>)deserializer).Invoke(reader);
     }
     /// <summary>
     /// 使用非SQL查询，返回的是可能包含Include对象，包含层次的实体对象
@@ -246,21 +273,79 @@ public static class Extensions
     /// <returns></returns>
     public static TEntity ToEntity<TEntity>(this ITheaDataReader reader, DbContext dbContext, List<SqlFieldSegment> readerFields)
     {
-        var dbReader = reader.BaseDataReader;
         var entityType = typeof(TEntity);
+        if (reader.FieldCount == 1)
+        {
+            var fieldType = reader.GetFieldType(0);
+            var dbValue = reader.GetValue(0);
+            if (fieldType != entityType)
+            {
+                if (readerFields[0].TypeHandler != null)
+                    dbValue = readerFields[0].TypeHandler.Parse(dbContext.OrmProvider, readerFields[0].SegmentType, dbValue);
+                else
+                {
+                    var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(entityType, readerFields[0].SegmentType, dbContext.Options);
+                    dbValue = valueGetter.Invoke(dbValue);
+                }
+            }
+            return (TEntity)dbValue;
+        }
+
+        if (entityType == typeof(object))
+        {
+            var row = new List<object>();
+            for (var i = 0; i < reader.FieldCount; i++)
+            {
+                var dbValue = reader.GetValue(i);
+                var fieldType = reader.GetFieldType(i);
+                if (dbValue is DBNull) dbValue = null;
+                var readerField = readerFields[i];
+                if (fieldType != entityType)
+                {
+                    if (readerField.TypeHandler != null)
+                        dbValue = readerField.TypeHandler.Parse(dbContext.OrmProvider, readerField.SegmentType, dbValue);
+                    else
+                    {
+                        var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(entityType, readerField.SegmentType, dbContext.Options);
+                        dbValue = valueGetter.Invoke(dbValue);
+                    }
+                }
+                row.Add(dbValue);
+            }
+            return (TEntity)(object)row;
+        }
+        else if (typeof(IDictionary<string, object>).IsAssignableFrom(entityType))
+        {
+            var row = new Dictionary<string, object>();
+            for (var i = 0; i < reader.FieldCount; i++)
+            {
+                var dbValue = reader.GetValue(i);
+                var fieldType = reader.GetFieldType(i);
+                if (dbValue is DBNull) dbValue = null;
+                var readerField = readerFields[i];
+                if (fieldType != entityType)
+                {
+                    if (readerField.TypeHandler != null)
+                        dbValue = readerField.TypeHandler.Parse(dbContext.OrmProvider, readerField.SegmentType, dbValue);
+                    else
+                    {
+                        var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(entityType, readerField.SegmentType, dbContext.Options);
+                        dbValue = valueGetter.Invoke(dbValue);
+                    }
+                }
+                row.Add(readerField.TargetMember.Name, dbValue);
+            }
+            return (TEntity)(object)row;
+        }
+
         var ormProviderType = dbContext.OrmProvider.OrmProviderType;
-        var cacheKey = GetTypeReaderKey(entityType, ormProviderType, dbReader, readerFields, out var deferredFuncs);
+        var cacheKey = GetTypeReaderKey(entityType, ormProviderType, reader, readerFields);
         if (!queryReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
         {
-            deserializer = CreateReaderDeserializer(dbContext, dbReader, entityType, readerFields);
+            deserializer = CreateReaderDeserializer(dbContext, reader, entityType, readerFields);
             queryReaderDeserializerCache.TryAdd(cacheKey, deserializer);
         }
-        if (deferredFuncs != null && deferredFuncs.Count > 0)
-        {
-            deferredFuncs.Insert(0, dbReader);
-            return (TEntity)deserializer.DynamicInvoke(deferredFuncs.ToArray());
-        }
-        return ((Func<IDataReader, TEntity>)deserializer).Invoke(dbReader);
+        return ((Func<ITheaDataReader, TEntity>)deserializer).Invoke(reader);
     }
     /// <summary>
     /// 用在方法调用中，判断!=,NOT IN,NOT LIKE三种情况
@@ -373,7 +458,7 @@ public static class Extensions
         if (value.Length > 1) return value.Substring(0, 1).ToLower() + value.Substring(1);
         else return value.ToLower();
     }
-    private static Delegate CreateReaderEntityDeserializer(DbContext dbContext, IDataReader reader, Type entityType)
+    private static Delegate CreateReaderEntityDeserializer(DbContext dbContext, ITheaDataReader reader, Type entityType)
     {
         var readerExpr = Expression.Parameter(typeof(IDataReader), "reader");
         var ormProviderExpr = Expression.Constant(dbContext.OrmProvider);
@@ -408,7 +493,7 @@ public static class Extensions
         blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(entityType)));
         return Expression.Lambda(Expression.Block(blockParameters, blockBodies), readerExpr).Compile();
     }
-    private static Delegate CreateReaderValueTupleDeserializer(DbContext dbContext, IDataReader reader, Type entityType)
+    private static Delegate CreateReaderValueTupleDeserializer(DbContext dbContext, ITheaDataReader reader, Type entityType)
     {
         var readerExpr = Expression.Parameter(typeof(IDataReader), "reader");
         var ormProviderExpr = Expression.Constant(dbContext.OrmProvider);
@@ -440,7 +525,7 @@ public static class Extensions
         blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(entityType)));
         return Expression.Lambda(Expression.Block(blockParameters, blockBodies), readerExpr).Compile();
     }
-    private static Delegate CreateReaderDeserializer(DbContext dbContext, IDataReader reader, Type entityType, List<SqlFieldSegment> readerFields)
+    private static Delegate CreateReaderDeserializer(DbContext dbContext, ITheaDataReader reader, Type entityType, List<SqlFieldSegment> readerFields)
     {
         var blockParameters = new List<ParameterExpression>();
         var blockBodies = new List<Expression>();
@@ -448,20 +533,34 @@ public static class Extensions
         var parameterExprs = new List<ParameterExpression> { readerExpr };
         var ormProviderExpr = Expression.Constant(dbContext.OrmProvider);
 
+        //IDataReader的索引，readerFields的索引
         int index = 0, readerIndex = 0;
         var root = NewBuildInfo(entityType);
         var current = root;
         var parent = root;
         var readerBuilders = new Dictionary<SqlFieldSegment, EntityBuildInfo>();
+        var refValues = new Dictionary<SqlFieldSegment, Expression>();
         var deferredBuilds = new Stack<EntityBuildInfo>();
+
         while (readerIndex < readerFields.Count)
         {
             var readerField = readerFields[readerIndex];
+            //readerFields个数与IDataReader返回的Field个数不一致的场景，readerFields是根据Type类型来生成的，
+            //SQL语句也不是生成的，通常是原始SQL，才会走到此处
+            if (index >= reader.FieldCount)
+            {
+                var readerValueExpr = Expression.Default(readerField.TargetMember.GetMemberType());
+                if (!current.IsDefault) current.Arguments.Add(readerValueExpr);
+                readerIndex++;
+                continue;
+            }
             if (readerField.FieldType == SqlFieldType.Field)
             {
                 var fieldType = reader.GetFieldType(index);
                 var readerValueExpr = GetReaderValue(dbContext, ormProviderExpr, readerExpr, Expression.Constant(index),
                     readerField.SegmentType, fieldType, readerField.TypeHandler, blockParameters, blockBodies);
+                //TODO: 延迟字段的处理
+                refValues.Add(readerField, readerValueExpr);
                 if (root.IsDefault) root.Bindings.Add(Expression.Bind(readerField.TargetMember, readerValueExpr));
                 else root.Arguments.Add(readerValueExpr);
                 index++;
@@ -484,16 +583,18 @@ public static class Extensions
                         readerBuilders.Add(readerField, current);
                     }
 
-                    Expression executeExpr = null;
+                    var visitor = new ReplaceParameterVisitor();
+                    var bodyExpr = visitor.Visit(readerField.DeferredExpression);
 
-                    var deferredDelegateType = readerField.DeferredDelegateType;
-                    var deferredFuncExpr = Expression.Parameter(typeof(object), $"deferredFunc{parameterExprs.Count}");
-                    var typedDeferredFuncExpr = Expression.Convert(deferredFuncExpr, deferredDelegateType);
-                    parameterExprs.Add(deferredFuncExpr);
-                    //把延迟方法调用委托当作参数传进来，这样缓存才有效，相同key，不同的延迟方法
-                    if (endIndex > index)
+                    //$"{f.OrderNo} : {f.TotalAmount.ToString("C")}"
+                    //f.TotalAmount.ToString("C")
+                    //"TotalAmount: " + (f.Price * f.Quantity).ToString("C")
+                    //this.DeferredInvoke(f.Price, f.Quantity)
+                    Expression executeExpr = null;
+                    if (readerField.Fields != null && readerField.Fields.Count > 0)
                     {
                         var argsExprs = new List<Expression>();
+                        var deferredFuncExpr = Expression.Convert(Expression.Lambda(bodyExpr, visitor.NewParameters), readerField.DeferredExpression.Type);
                         while (index < endIndex)
                         {
                             var fieldType = reader.GetFieldType(index);
@@ -505,10 +606,14 @@ public static class Extensions
                             childIndex++;
                             index++;
                         }
-                        executeExpr = Expression.Invoke(typedDeferredFuncExpr, argsExprs);
+                        executeExpr = Expression.Invoke(deferredFuncExpr, argsExprs);
                     }
-                    else executeExpr = Expression.Invoke(typedDeferredFuncExpr);
-
+                    else
+                    {
+                        var typedDeferredFuncExpr = Expression.Convert(Expression.Lambda(bodyExpr), readerField.DeferredExpression.Type);
+                        executeExpr = Expression.Invoke(typedDeferredFuncExpr);
+                    }
+                    //把延迟方法调用委托当作参数传进来，这样缓存才有效，相同key，不同的延迟方法
                     if (current.IsDefault)
                         current.Bindings.Add(Expression.Bind(readerField.TargetMember, executeExpr));
                     else current.Arguments.Add(executeExpr);
@@ -518,7 +623,8 @@ public static class Extensions
                     //Include导航属性引用不能单独Select，前面一定有Parameter访问
                     //Include导航属性引用单独处理，先设置默认值，在整个实体初始化完后，再设置具体值，初始化Action在成员访问的时候，已经构建好了
                     var refReaderField = readerField.Value as SqlFieldSegment;
-                    var instanceExpr = readerBuilders[refReaderField].Instance;
+                    var instanceExpr = refValues[refReaderField];
+                    //此处生成的副本，从新new的一个对象
                     if (parent.IsDefault)
                         parent.Bindings.Add(Expression.Bind(readerField.TargetMember, instanceExpr));
                     else parent.Arguments.Add(instanceExpr);
@@ -564,8 +670,8 @@ public static class Extensions
                             if (current.IsDefault)
                                 instanceExpr = Expression.MemberInit(Expression.New(current.Constructor), current.Bindings);
                             else instanceExpr = Expression.New(current.Constructor, current.Arguments);
-                            current.Instance = instanceExpr;
-
+                            //TODO:待测试
+                            refValues.Add(readerField, instanceExpr);
                             //赋值给父对象的属性
                             if (current.Parent == null)
                                 break;
@@ -645,9 +751,8 @@ public static class Extensions
         blockBodies.Add(Expression.Assign(objLocalExpr, valueExpr));
         return objLocalExpr;
     }
-    private static int GetTypeReaderKey(Type entityType, OrmProviderType ormProviderType, IDataReader reader, List<SqlFieldSegment> readerFields, out List<object> deferredFuncs)
+    private static int GetTypeReaderKey(Type entityType, OrmProviderType ormProviderType, ITheaDataReader reader, List<SqlFieldSegment> readerFields)
     {
-        deferredFuncs = null;
 #if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
         var hashCode = new HashCode();
         hashCode.Add(ormProviderType);
@@ -660,14 +765,11 @@ public static class Extensions
         hashCode.Add(readerFields.Count);
         foreach (var readerField in readerFields)
         {
-            if (readerField.FieldType == SqlFieldType.DeferredFields)
-            {
-                deferredFuncs ??= new();
-                deferredFuncs.Add(readerField.DeferredDelegate);
-            }
             hashCode.Add(readerField.FieldType);
             if (readerField.FieldType == SqlFieldType.Entity && readerField.IsTargetType)
                 hashCode.Add("TargetEntity");
+            else if (readerField.FieldType == SqlFieldType.DeferredFields)
+                hashCode.Add($"{readerField.TargetMember.Name}:{readerField.DeferredExpression.ToString()}");
             else hashCode.Add(readerField.TargetMember.Name);
         }
         return hashCode.ToHashCode();
@@ -685,21 +787,18 @@ public static class Extensions
             hashCode = hashCode * 23 + readerFields.Count.GetHashCode();
             foreach (var readerField in readerFields)
             {
-                if (readerField.FieldType == SqlFieldType.DeferredFields)
-                {
-                    deferredFuncs ??= new();
-                    deferredFuncs.Add(readerField.DeferredDelegate);
-                }
                 hashCode = hashCode * 23 + readerField.FieldType.GetHashCode();
                 if (readerField.FieldType == SqlFieldType.Entity && readerField.IsTargetType)
                     hashCode = hashCode * 23 + "TargetEntity".GetHashCode();
+                else if (readerField.FieldType == SqlFieldType.DeferredFields)
+                    hashCode = hashCode * 23 + $"{readerField.TargetMember.Name}:{readerField.DeferredExpression.ToString()}".GetHashCode();
                 else hashCode = hashCode * 23 + readerField.TargetMember.Name.GetHashCode();
             }
         }
         return hashCode;
 #endif
     }
-    private static int GetTypeReaderKey(Type entityType, OrmProviderType ormProviderType, IDataReader reader)
+    private static int GetTypeReaderKey(Type entityType, OrmProviderType ormProviderType, ITheaDataReader reader)
     {
 #if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
         var hashCode = new HashCode();
@@ -736,18 +835,5 @@ public static class Extensions
         public List<Expression> Arguments { get; set; }
         public MemberInfo FromMember { get; set; }
         public EntityBuildInfo Parent { get; set; }
-        public Expression Instance { get; set; }
-        public EntityBuildInfo Clone(EntityBuildInfo parent, MemberInfo fromMember)
-        {
-            return new EntityBuildInfo
-            {
-                IsDefault = this.IsDefault,
-                Constructor = this.Constructor,
-                Bindings = this.Bindings,
-                Arguments = this.Arguments,
-                FromMember = fromMember,
-                Parent = parent
-            };
-        }
     }
 }

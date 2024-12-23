@@ -3,6 +3,17 @@ using System.Linq.Expressions;
 
 namespace Trolley;
 
+class MemberVisitor : ExpressionVisitor
+{
+    public List<MemberExpression> Members { get; private set; } = new();
+
+    protected override Expression VisitMember(MemberExpression node)
+    {
+        if (node.Expression.NodeType == ExpressionType.Parameter)
+            this.Members.Add(node);
+        return base.VisitMember(node);
+    }
+}
 class ReplaceParameterVisitor : ExpressionVisitor
 {
     public List<ParameterExpression> NewParameters { get; private set; } = new();
@@ -15,11 +26,8 @@ class ReplaceParameterVisitor : ExpressionVisitor
             var parameterExpr = node.Expression as ParameterExpression;
             var parameterName = $"{parameterExpr.Name}${node.Member.Name}";
 
-            if (this.NewParameters != null)
-            {
-                parameterExpr = NewParameters.Find(f => f.Name == parameterName);
-                if (parameterExpr != null) return parameterExpr;
-            }
+            parameterExpr = NewParameters.Find(f => f.Name == parameterName);
+            if (parameterExpr != null) return parameterExpr;
 
             this.OrgMembers.Add(node);
             parameterExpr = Expression.Parameter(node.Type, parameterName);

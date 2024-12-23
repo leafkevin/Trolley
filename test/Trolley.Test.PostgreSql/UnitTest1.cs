@@ -788,7 +788,7 @@ public class UnitTest1 : UnitTestBase
         }
     }
     [Fact]
-    public async void Insert_Select_From_Table1()
+    public async Task Insert_Select_From_Table1()
     {
         var repository = this.dbFactory.Create();
         var id = 2;

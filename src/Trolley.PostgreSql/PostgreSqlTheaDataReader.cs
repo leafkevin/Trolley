@@ -10,9 +10,12 @@ class PostgreSqlTheaDataReader : ITheaDataReader
 {
     private readonly NpgsqlDataReader reader;
     public IDataReader BaseDataReader => this.reader;
+    public int FieldCount => this.reader.FieldCount;
 
     public PostgreSqlTheaDataReader(NpgsqlDataReader reader) => this.reader = reader;
 
+    public string GetName(int index) => this.reader.GetName(index);
+    public object GetValue(int index) => this.reader.GetValue(index);
     public void Close() => this.reader.Close();
     public Task CloseAsync() => this.reader.CloseAsync();
     public void Dispose() => this.reader.Dispose();
