@@ -23,7 +23,8 @@ public enum SqlFieldType : byte
     /// <summary>
     /// 先从数据库中查询连续的一个或多个字段，再执行函数调用返回一个字段
     /// </summary>
-    DeferredFields
+    DeferredFields,
+    RawSql
 }
 [DebuggerDisplay("Value: {Value,nq}     Expression: {Expression,nq}")]
 public class SqlFieldSegment

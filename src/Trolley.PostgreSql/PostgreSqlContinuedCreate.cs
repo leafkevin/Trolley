@@ -47,7 +47,7 @@ public class PostgreSqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IPos
     #endregion
 
     #region Returnning
-    public IPostgreSqlCreated<TEntity, TResult> Returning<TResult>(params string[] fieldNames)
+    public IPostgreSqlCreated<TEntity, TResult> Returning<TResult>(string fieldNames)
     {
         this.DialectVisitor.Returning(fieldNames);
         return new PostgreSqlCreated<TEntity, TResult>(this.DbContext, this.Visitor);
@@ -307,7 +307,7 @@ public class PostgreSqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, 
     #endregion
 
     #region Returnning
-    public IPostgreSqlBulkCreated<TEntity, TResult> Returning<TResult>(params string[] fieldNames)
+    public IPostgreSqlBulkCreated<TEntity, TResult> Returning<TResult>(string fieldNames)
     {
         this.DialectVisitor.Returning(fieldNames);
         return new PostgreSqlBulkCreated<TEntity, TResult>(this.DbContext, this.Visitor);

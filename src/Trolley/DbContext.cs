@@ -576,9 +576,7 @@ public sealed class DbContext
         if (reader.Read())
         {
             var resultType = typeof(TResult);
-            if (resultType.IsEntityType(out _))
-                result = reader.ToEntity<TResult>(this, readerFields);
-            else result = reader.ToValue<TResult>(this);
+            result = reader.ToEntity<TResult>(this, readerFields);
         }
 
         reader.Dispose();
@@ -598,9 +596,7 @@ public sealed class DbContext
         if (await reader.ReadAsync(cancellationToken))
         {
             var resultType = typeof(TResult);
-            if (resultType.IsEntityType(out _))
-                result = reader.ToEntity<TResult>(this, readerFields);
-            else result = reader.ToValue<TResult>(this);
+            result = reader.ToEntity<TResult>(this, readerFields);
         }
 
         await reader.DisposeAsync();
@@ -609,110 +605,6 @@ public sealed class DbContext
         visitor.Dispose();
         return result;
     }
-    //public List<TResult> CreateResults<TResult>(ICreateVisitor visitor)
-    //{
-    //    var result = new List<TResult>();
-    //    (var isNeedClose, var connection, var command) = this.UseMasterCommand();
-    //    command.CommandText = visitor.BuildCommand(command, false, out var readerFields);
-
-    //    connection.Open();
-    //    using var reader = command.ExecuteReader(CommandSqlType.Insert, CommandBehavior.SequentialAccess);
-    //    var resultType = typeof(TResult);
-    //    if (resultType.IsEntityType(out _))
-    //    {
-    //        while (reader.Read())
-    //        {
-    //            result.Add(reader.ToEntity<TResult>(this, readerFields, true));
-    //        }
-    //    }
-    //    else
-    //    {
-    //        while (reader.Read())
-    //        {
-    //            result.Add(reader.ToValue<TResult>(this));
-    //        }
-    //    }
-
-    //    reader.Dispose();
-    //    command.Dispose();
-    //    if (isNeedClose) connection.Close();
-    //    return result;
-    //}
-    //public async Task<List<TResult>> CreateResultsAsync<TResult>(ICreateVisitor visitor, CancellationToken cancellationToken = default)
-    //{
-    //    var result = new List<TResult>();
-    //    (var isNeedClose, var connection, var command) = this.UseMasterCommand();
-    //    command.CommandText = visitor.BuildCommand(command, false, out var readerFields);
-
-    //    await connection.OpenAsync(cancellationToken);
-    //    using var reader = await command.ExecuteReaderAsync(CommandSqlType.Insert, CommandBehavior.SequentialAccess, cancellationToken);
-
-    //    var resultType = typeof(TResult);
-    //    if (resultType.IsEntityType(out _))
-    //    {
-    //        while (await reader.ReadAsync(cancellationToken))
-    //        {
-    //            result.Add(reader.ToEntity<TResult>(this, readerFields, true));
-    //        }
-    //    }
-    //    else
-    //    {
-    //        while (await reader.ReadAsync(cancellationToken))
-    //        {
-    //            result.Add(reader.ToValue<TResult>(this));
-    //        }
-    //    }
-
-    //    await reader.DisposeAsync();
-    //    await command.DisposeAsync();
-    //    if (isNeedClose) await connection.CloseAsync();
-    //    visitor.Dispose();
-    //    return result;
-    //}
-    //public void BuildCreateCommand(IDbCommand command, Type entityType, object insertObj, bool isReturnIdentity)
-    //{
-    //    var insertObjType = insertObj.GetType();
-    //    var entityMapper = this.MapProvider.GetEntityMap(entityType);
-    //    var tableName = entityMapper.TableName;
-    //    var fieldsSql = RepositoryHelper.BuildFieldsSqlPart(this.OrmProvider, entityMapper, insertObjType, 2, false, "(", ")");
-    //    Action<StringBuilder, string> firstSqlSetter = (builder, tableName) =>
-    //    {
-    //        builder.Append("INSERT INTO ");
-    //        builder.Append(this.OrmProvider.GetTableName(tableName));
-    //        builder.Append(fieldsSql);
-    //    };
-    //    var tailSql = ")";
-    //    if (isReturnIdentity)
-    //    {
-    //        var keyField = entityMapper.KeyMembers[0].FieldName;
-    //        keyField = this.OrmProvider.GetFieldName(keyField);
-    //        tailSql += this.OrmProvider.GetIdentitySql(keyField);
-    //    }
-    //    var sqlParameterSetter = RepositoryHelper.BuildFieldsSqlParametersPart(this, entityType, insertObjType, false, false, false, false, null, null, "(", tailSql);
-    //    var typedSqlParameterSetter = sqlParameterSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
-
-    //    Action<IDbCommand, DbContext, object> commandInitializer = null;
-    //    if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out _))
-    //    {
-    //        commandInitializer = (command, dbContext, insertObjs) =>
-    //        {
-    //            var myTableName = this.GetShardingTableName(entityType, insertObjType, insertObjs);
-    //            var builder = new StringBuilder();
-    //            firstSqlSetter.Invoke(builder, myTableName);
-    //            typedSqlParameterSetter.Invoke(command.Parameters, builder, dbContext, insertObjs);
-    //        };
-    //    }
-    //    else
-    //    {
-    //        commandInitializer = (command, dbContext, insertObjs) =>
-    //        {
-    //            var builder = new StringBuilder();
-    //            firstSqlSetter.Invoke(builder, tableName);
-    //            typedSqlParameterSetter.Invoke(command.Parameters, builder, dbContext, insertObjs);
-    //        };
-    //    }
-    //    command.CommandText = sqlBuilder.ToString();
-    //}
     #endregion
 
     #region Others   

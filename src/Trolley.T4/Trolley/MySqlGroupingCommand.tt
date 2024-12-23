@@ -1,0 +1,108 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="Microsoft.VisualStudio.TextTemplating"#>
+<#@ output extension=".cs" #>
+using System;
+using System.Linq.Expressions;
+
+namespace Trolley.MySqlConnector;
+
+public class MySqlGroupingCommand<T, TGrouping> : GroupingCommand<T, TGrouping>, IMySqlGroupingCommand<T, TGrouping>
+{
+    #region Constructor
+    public MySqlGroupingCommand(DbContext dbContext, IQueryVisitor visitor)
+        : base(dbContext, visitor) { }
+    #endregion
+
+    #region Having
+    public new IMySqlGroupingCommand<T, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate)
+        => this.Having(true, predicate);
+    public new IMySqlGroupingCommand<T, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate)
+    {
+        base.HavingInternal(condition, predicate);
+        return this;
+    }
+    #endregion
+
+    #region OrderBy/OrderByDescending
+    public new IMySqlGroupingCommand<T, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
+        => this.OrderBy(true, fieldsExpr);
+    public new IMySqlGroupingCommand<T, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
+    {
+        this.OrderByInternal(condition, fieldsExpr);
+        return this;
+    }
+    public new IMySqlGroupingCommand<T, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
+        => this.OrderByDescending(true, fieldsExpr);
+    public new IMySqlGroupingCommand<T, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
+    {
+        this.OrderByDescendingInternal(condition, fieldsExpr);
+        return this;
+    }
+    #endregion
+
+    #region Select
+    public new IMySqlFromContinuedCreate<TGrouping> Select()
+        => base.Select() as IMySqlFromContinuedCreate<TGrouping>;
+    public new IMySqlFromContinuedCreate<TTarget> Select<TTarget>(string fields = "*")
+        => base.Select<TTarget>(fields) as IMySqlFromContinuedCreate<TTarget>;
+    public new IMySqlFromContinuedCreate<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T, TTarget>> fieldsExpr)
+        => base.Select<TTarget>(fieldsExpr) as IMySqlFromContinuedCreate<TTarget>;
+    #endregion
+}
+<#
+    var count = 6;
+    var tables = "T1";
+    var currentTable = "T1";
+    for (int i = 2; i <= count; i++)
+    {
+        tables += $", T{i}";
+        currentTable = $"T{i}";
+#>
+public class MySqlGroupingCommand<<#=tables#>, TGrouping> : GroupingCommand<<#=tables#>, TGrouping>, IMySqlGroupingCommand<<#=tables#>, TGrouping>
+{
+    #region Constructor
+    public MySqlGroupingCommand(DbContext dbContext, IQueryVisitor visitor)
+        : base(dbContext, visitor) { }
+    #endregion
+
+    #region Having
+    public new IMySqlGroupingCommand<<#=tables#>, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, bool>> predicate)
+        => this.Having(true, predicate);
+    public new IMySqlGroupingCommand<<#=tables#>, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, bool>> predicate)
+    {
+        base.HavingInternal(condition, predicate);
+        return this;
+    }
+    #endregion
+
+    #region OrderBy/OrderByDescending
+    public new IMySqlGroupingCommand<<#=tables#>, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr)
+        => this.OrderBy(true, fieldsExpr);
+    public new IMySqlGroupingCommand<<#=tables#>, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr)
+    {
+        base.OrderByInternal(condition, fieldsExpr);
+        return this;
+    }
+    public new IMySqlGroupingCommand<<#=tables#>, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr)
+        => this.OrderByDescending(true, fieldsExpr);
+    public new IMySqlGroupingCommand<<#=tables#>, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr)
+    {
+        base.OrderByDescendingInternal(condition, fieldsExpr);
+        return this;
+    }
+    #endregion
+
+    #region Select
+    public new IMySqlFromContinuedCreate<TGrouping> Select()
+        => base.Select() as IMySqlFromContinuedCreate<TGrouping>;
+    public new IMySqlFromContinuedCreate<TTarget> Select<TTarget>(string fields = "*")
+        => base.Select<TTarget>(fields) as IMySqlFromContinuedCreate<TTarget>;
+    public new IMySqlFromContinuedCreate<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TTarget>> fieldsExpr)
+        => base.Select<TTarget>(fieldsExpr) as IMySqlFromContinuedCreate<TTarget>;
+    #endregion
+}
+<#  }#>

@@ -13,7 +13,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
     public StringBuilder UpdateBuilder { get; set; }
     public bool IsUpdate { get; set; }
     public bool IsUseTableAlias { get; set; }
-    public List<string> OutputFieldNames { get; set; }
+    public string OutputSql { get; set; }
 
     public PostgreSqlCreateVisitor(DbContext dbContext, char tableAsStart = 'a')
         : base(dbContext, tableAsStart) { }
@@ -45,6 +45,12 @@ public class PostgreSqlCreateVisitor : CreateVisitor
                         this.UpdateBuilder ??= new();
                         this.VisitSetExpression(deferredSegment.Value as LambdaExpression);
                         break;
+                    case "OutputFields":
+                        this.VisitOutputFields(deferredSegment.Value as string);
+                        break;
+                    case "OutputExpression":
+                        this.VisitOutputExpression(deferredSegment.Value as LambdaExpression);
+                        break;
                 }
             }
             sql = this.BuildSql(out readerFields);
@@ -53,7 +59,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
     }
     public override string BuildSql(out List<SqlFieldSegment> readerFields)
     {
-        readerFields = null;
+        readerFields = this.ReaderFields;
         var tableSegment = this.Tables[0];
         var entityType = tableSegment.EntityType;
         var entityMapper = tableSegment.Mapper;
@@ -73,16 +79,16 @@ public class PostgreSqlCreateVisitor : CreateVisitor
         //Set语句中，引用了原值，就需要使用别名
         if (this.IsUseTableAlias) tableName += $" AS {tableSegment.AliasName}";
 
-        if (this.UpdateBuilder != null && this.OutputFieldNames != null || this.UpdateBuilder != null && this.IsReturnIdentity
-            || this.OutputFieldNames != null && this.IsReturnIdentity)
-            throw new NotSupportedException("不支持同时OnConflict、Returning、Identity操作，只能选择一种操作");
+        if (this.UpdateBuilder != null && this.IsReturnIdentity
+            || this.OutputSql != null && this.IsReturnIdentity)
+            throw new NotSupportedException("不支持同时Returning、Identity操作，只能选择一种操作");
 
-        string tailSql = null;
+        string tailSql = string.Empty;
         if (this.UpdateBuilder != null)
             tailSql = this.UpdateBuilder.ToString();
 
-        if (this.OutputFieldNames != null)
-            tailSql = this.BuildOutputSql(out readerFields);
+        if (this.OutputSql != null)
+            tailSql += this.OutputSql;
 
         if (this.IsReturnIdentity)
         {
@@ -159,16 +165,15 @@ public class PostgreSqlCreateVisitor : CreateVisitor
 
         string tailSql = null;
         List<SqlFieldSegment> readerFields = null;
-        if (this.UpdateBuilder != null || this.OutputFieldNames != null)
-        {
-            if (this.UpdateBuilder != null && this.OutputFieldNames != null)
-                throw new NotSupportedException("不支持同时OnConflict和Returning操作，只能选择一种操作");
 
-            if (this.UpdateBuilder != null)
-                tailSql = this.UpdateBuilder.ToString();
-            if (this.OutputFieldNames != null)
-                tailSql = this.BuildOutputSql(out readerFields);
+        if (this.UpdateBuilder != null)
+            tailSql = this.UpdateBuilder.ToString();
+        if (this.OutputSql != null)
+        {
+            tailSql += this.OutputSql;
+            readerFields = this.ReaderFields;
         }
+
         var fieldsSql = $" ({this.FieldsBuilder}) VALUES ";
         this.FieldsBuilder.Clear();
         this.ValuesBuilder.Clear();
@@ -194,13 +199,22 @@ public class PostgreSqlCreateVisitor : CreateVisitor
         this.DbParameters = command.Parameters;
         return (isNeedSplit, tableName, insertObjs, bulkCount, firstSqlSetter, loopSqlSetter, tailSql, readerFields);
     }
-    public void Returning(params string[] fieldNames)
+    public void Returning(string fieldNames)
     {
-        this.OutputFieldNames ??= new();
-        this.OutputFieldNames.AddRange(fieldNames);
+        this.deferredSegments.Add(new CommandSegment
+        {
+            Type = "OutputFields",
+            Value = fieldNames
+        });
     }
     public virtual void Returning(Expression fieldsSelector)
-        => this.OutputFieldNames = this.VisitFields(fieldsSelector, false);
+    {
+        this.deferredSegments.Add(new CommandSegment
+        {
+            Type = "OutputExpression",
+            Value = fieldsSelector
+        });
+    }
     public void WithBulkCopy(IEnumerable insertObjs)
     {
         this.ActionMode = ActionMode.BulkCopy;
@@ -493,39 +507,19 @@ public class PostgreSqlCreateVisitor : CreateVisitor
         if (this.UpdateBuilder.Length > 0) this.UpdateBuilder.Append(',');
         this.UpdateBuilder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
     }
-    public virtual string BuildOutputSql(out List<SqlFieldSegment> readerFields)
+    public void VisitOutputFields(string fieldNames)
     {
-        readerFields = new List<SqlFieldSegment>();
-        var entityMapper = this.Tables[0].Mapper;
-        var builder = new StringBuilder(" RETURNING ");
-        for (int i = 0; i < this.OutputFieldNames.Count; i++)
+        this.ReaderFields = new();
+        this.OutputSql = $" RETURNING {fieldNames}";
+        var entityType = this.Tables[0].EntityType;
+        if (fieldNames == "*")
         {
-            var fieldName = this.OutputFieldNames[i];
-            if (i > 0) builder.Append(',');
-            if (fieldName == "*")
+            var entityMapper = this.Tables[0].Mapper;
+            foreach (var memberMapper in entityMapper.MemberMaps)
             {
-                builder.Append(fieldName);
-                foreach (var memberMapper in entityMapper.MemberMaps)
-                {
-                    if (memberMapper.IsIgnore || memberMapper.IsNavigation)
-                        continue;
-                    readerFields.Add(new SqlFieldSegment
-                    {
-                        FieldType = SqlFieldType.Field,
-                        FromMember = memberMapper.Member,
-                        TargetMember = memberMapper.Member,
-                        SegmentType = memberMapper.MemberType,
-                        NativeDbType = memberMapper.NativeDbType,
-                        TypeHandler = memberMapper.TypeHandler,
-                        Body = memberMapper.FieldName
-                    });
-                }
-            }
-            else
-            {
-                builder.Append(this.OrmProvider.GetFieldName(fieldName));
-                var memberMapper = entityMapper.GetMemberMapByFieldName(fieldName);
-                readerFields.Add(new SqlFieldSegment
+                if (memberMapper.IsIgnore || memberMapper.IsNavigation)
+                    continue;
+                this.ReaderFields.Add(new SqlFieldSegment
                 {
                     FieldType = SqlFieldType.Field,
                     FromMember = memberMapper.Member,
@@ -537,14 +531,80 @@ public class PostgreSqlCreateVisitor : CreateVisitor
                 });
             }
         }
-        var sql = builder.ToString();
+        else
+        {
+            this.ReaderFields.Add(new SqlFieldSegment
+            {
+                FieldType = SqlFieldType.RawSql,
+                Body = fieldNames
+            });
+        }
+    }
+    public void VisitOutputExpression(LambdaExpression fieldsSelector)
+    {
+        this.ReaderFields = new();
+        var entityMapper = this.Tables[0].Mapper;
+        var builder = new StringBuilder(" RETURNING ");
+        this.InitTableAlias(fieldsSelector);
+        switch (fieldsSelector.Body.NodeType)
+        {
+            case ExpressionType.MemberAccess:
+                {
+                    var memberExpr = fieldsSelector.Body as MemberExpression;
+                    var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = memberExpr });
+                    this.GetQuotedValue(sqlSegment, true);
+                    sqlSegment.TargetMember = memberExpr.Member;
+                    sqlSegment.SegmentType = memberExpr.Type;
+                    builder.Append(sqlSegment.Body);
+                    if (sqlSegment.IsNeedAlias || sqlSegment.IsConstant || sqlSegment.IsVariable || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall
+                        || sqlSegment.FromMember != null && sqlSegment.FromMember.Name != sqlSegment.TargetMember.Name)
+                        builder.Append($" AS {this.OrmProvider.GetFieldName(memberExpr.Member.Name)}");
+                    this.ReaderFields.Add(sqlSegment);
+                }
+                break;
+            case ExpressionType.New:
+                var newExpr = fieldsSelector.Body as NewExpression;
+                for (int i = 0; i < newExpr.Arguments.Count; i++)
+                {
+                    var memberInfo = newExpr.Members[i];
+                    var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = newExpr.Arguments[i] });
+                    this.GetQuotedValue(sqlSegment, true);
+                    sqlSegment.TargetMember = memberInfo;
+                    sqlSegment.SegmentType = memberInfo.GetMemberType();
+                    if (i > 0) builder.Append(',');
+                    builder.Append(sqlSegment.Body);
+                    if (sqlSegment.IsNeedAlias || sqlSegment.IsConstant || sqlSegment.IsVariable || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
+                        builder.Append($" AS {this.OrmProvider.GetFieldName(memberInfo.Name)}");
+                    this.ReaderFields.Add(sqlSegment);
+                }
+                break;
+            case ExpressionType.MemberInit:
+                var memberInitExpr = fieldsSelector.Body as MemberInitExpression;
+                for (int i = 0; i < memberInitExpr.Bindings.Count; i++)
+                {
+                    if (memberInitExpr.Bindings[i].BindingType != MemberBindingType.Assignment)
+                        throw new NotSupportedException("暂时不支持除MemberBindingType.Assignment类型外的成员绑定表达式");
+
+                    var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
+                    var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = memberAssignment.Expression });
+                    this.GetQuotedValue(sqlSegment, true);
+                    sqlSegment.TargetMember = memberAssignment.Member;
+                    sqlSegment.SegmentType = memberAssignment.Member.GetMemberType();
+                    if (i > 0) builder.Append(',');
+                    builder.Append(sqlSegment.Body);
+                    if (sqlSegment.IsNeedAlias || sqlSegment.IsConstant || sqlSegment.IsVariable || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
+                        builder.Append($" AS {this.OrmProvider.GetFieldName(memberAssignment.Member.Name)}");
+                    this.ReaderFields.Add(sqlSegment);
+                }
+                break;
+        }
+        this.OutputSql = builder.ToString();
         builder.Clear();
-        return sql;
     }
     public override void Dispose()
     {
         base.Dispose();
         this.UpdateBuilder = null;
-        this.OutputFieldNames = null;
+        this.OutputSql = null;
     }
 }

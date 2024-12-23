@@ -49,12 +49,12 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCre
     #region Returnning
     public IMySqlCreated<TEntity, TResult> Returning<TResult>(string fieldNames)
     {
-        this.DialectVisitor.Returning(typeof(TResult), fieldNames);
+        this.DialectVisitor.Returning(fieldNames);
         return new MySqlCreated<TEntity, TResult>(this.DbContext, this.Visitor);
     }
     public IMySqlCreated<TEntity, TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector)
     {
-        this.DialectVisitor.Returning(typeof(TResult), fieldsSelector);
+        this.DialectVisitor.Returning(fieldsSelector);
         return new MySqlCreated<TEntity, TResult>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -315,12 +315,12 @@ public class MySqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySq
     #region Returnning
     public IMySqlBulkCreated<TEntity, TResult> Returning<TResult>(string fieldNames)
     {
-        this.DialectVisitor.Returning(typeof(TResult), fieldNames);
+        this.DialectVisitor.Returning(fieldNames);
         return new MySqlBulkCreated<TEntity, TResult>(this.DbContext, this.Visitor);
     }
     public IMySqlBulkCreated<TEntity, TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector)
     {
-        this.DialectVisitor.Returning(typeof(TResult), fieldsSelector);
+        this.DialectVisitor.Returning(fieldsSelector);
         return new MySqlBulkCreated<TEntity, TResult>(this.DbContext, this.Visitor);
     }
     #endregion

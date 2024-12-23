@@ -48,10 +48,10 @@ public class MySqlCreateVisitor : CreateVisitor
                         this.VisitSetExpression(deferredSegment.Value as LambdaExpression);
                         break;
                     case "OutputFields":
-                        this.VisitOutputFields(deferredSegment.Value);
+                        this.VisitOutputFields(deferredSegment.Value as string);
                         break;
                     case "OutputExpression":
-                        this.VisitOutputExpression(deferredSegment.Value);
+                        this.VisitOutputExpression(deferredSegment.Value as LambdaExpression);
                         break;
                 }
             }
@@ -61,7 +61,7 @@ public class MySqlCreateVisitor : CreateVisitor
     }
     public override string BuildSql(out List<SqlFieldSegment> readerFields)
     {
-        readerFields = null;
+        readerFields = this.ReaderFields;
         var tableSegment = this.Tables[0];
         var entityType = tableSegment.EntityType;
         var entityMapper = tableSegment.Mapper;
@@ -82,7 +82,7 @@ public class MySqlCreateVisitor : CreateVisitor
         if (this.IsReturnIdentity && (this.UpdateBuilder != null || this.OutputSql != null))
             throw new NotSupportedException("返回Identity，不支持同时OnDuplicateKeyUpdate、Returning操作");
 
-        string tailSql = null;
+        string tailSql = string.Empty;
         if (this.UpdateBuilder != null)
             tailSql = this.UpdateBuilder.ToString();
 
@@ -164,7 +164,7 @@ public class MySqlCreateVisitor : CreateVisitor
         //生成批量Fields SQL
         fieldsSetter.Invoke(this.FieldsBuilder, this.DbContext, firstInsertObj);
 
-        string tailSql = null;
+        string tailSql = string.Empty;
         List<SqlFieldSegment> readerFields = null;
 
         if (this.UpdateBuilder != null)
@@ -200,20 +200,20 @@ public class MySqlCreateVisitor : CreateVisitor
         this.DbParameters = command.Parameters;
         return (isNeedSplit, tableName, insertObjs, bulkCount, firstSqlSetter, loopSqlSetter, tailSql, readerFields);
     }
-    public void Returning(Type targetType, string fieldNames)
+    public void Returning(string fieldNames)
     {
         this.deferredSegments.Add(new CommandSegment
         {
             Type = "OutputFields",
-            Value = (targetType, fieldNames)
+            Value = fieldNames
         });
     }
-    public virtual void Returning(Type targetType, Expression fieldsSelector)
+    public virtual void Returning(Expression fieldsSelector)
     {
         this.deferredSegments.Add(new CommandSegment
         {
             Type = "OutputExpression",
-            Value = (targetType, fieldsSelector)
+            Value = fieldsSelector
         });
     }
     public void WithBulkCopy(IEnumerable insertObjs, int? timeoutSeconds)
@@ -484,13 +484,12 @@ public class MySqlCreateVisitor : CreateVisitor
         if (this.UpdateBuilder.Length > 0) this.UpdateBuilder.Append(',');
         this.UpdateBuilder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}={parameterName}");
     }
-    public void VisitOutputFields(object deferredSegmentValue)
+    public void VisitOutputFields(string fieldNames)
     {
         this.ReaderFields = new();
-        (var targetType, var fieldNames) = ((Type, string))deferredSegmentValue;
         this.OutputSql = $" RETURNING {fieldNames}";
         var entityType = this.Tables[0].EntityType;
-        if (fieldNames == "*" || targetType == entityType)
+        if (fieldNames == "*")
         {
             var entityMapper = this.Tables[0].Mapper;
             foreach (var memberMapper in entityMapper.MemberMaps)
@@ -509,36 +508,26 @@ public class MySqlCreateVisitor : CreateVisitor
                 });
             }
         }
-        //TODO:
-        //else
-        //{
-        //    var memberMapper = entityMapper.GetMemberMapByFieldName(fieldName);
-        //    this.ReaderFields.Add(new SqlFieldSegment
-        //    {
-        //        FieldType = SqlFieldType.Field,
-        //        FromMember = memberMapper.Member,
-        //        TargetMember = memberMapper.Member,
-        //        SegmentType = memberMapper.MemberType,
-        //        NativeDbType = memberMapper.NativeDbType,
-        //        TypeHandler = memberMapper.TypeHandler,
-        //        Body = memberMapper.FieldName
-        //    });
-        //}
+        else
+        {
+            this.ReaderFields.Add(new SqlFieldSegment
+            {
+                FieldType = SqlFieldType.RawSql,
+                Body = fieldNames
+            });
+        }
     }
-    public void VisitOutputExpression(object deferredSegmentValue)
+    public void VisitOutputExpression(LambdaExpression fieldsSelector)
     {
-        //RETURNING f(id1), UPPER(animal1) 不需要列名 
         this.ReaderFields = new();
-        (var targetType, var fieldsSelector) = ((Type, Expression))deferredSegmentValue;
-        var lambdaExpr = fieldsSelector as LambdaExpression;
         var entityMapper = this.Tables[0].Mapper;
         var builder = new StringBuilder(" RETURNING ");
-        this.InitTableAlias(lambdaExpr);
-        switch (lambdaExpr.Body.NodeType)
+        this.InitTableAlias(fieldsSelector);
+        switch (fieldsSelector.Body.NodeType)
         {
             case ExpressionType.MemberAccess:
                 {
-                    var memberExpr = lambdaExpr.Body as MemberExpression;
+                    var memberExpr = fieldsSelector.Body as MemberExpression;
                     var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = memberExpr });
                     this.GetQuotedValue(sqlSegment, true);
                     sqlSegment.TargetMember = memberExpr.Member;
@@ -551,7 +540,7 @@ public class MySqlCreateVisitor : CreateVisitor
                 }
                 break;
             case ExpressionType.New:
-                var newExpr = lambdaExpr.Body as NewExpression;
+                var newExpr = fieldsSelector.Body as NewExpression;
                 for (int i = 0; i < newExpr.Arguments.Count; i++)
                 {
                     var memberInfo = newExpr.Members[i];
@@ -567,7 +556,7 @@ public class MySqlCreateVisitor : CreateVisitor
                 }
                 break;
             case ExpressionType.MemberInit:
-                var memberInitExpr = lambdaExpr.Body as MemberInitExpression;
+                var memberInitExpr = fieldsSelector.Body as MemberInitExpression;
                 for (int i = 0; i < memberInitExpr.Bindings.Count; i++)
                 {
                     if (memberInitExpr.Bindings[i].BindingType != MemberBindingType.Assignment)

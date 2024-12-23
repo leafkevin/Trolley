@@ -1633,6 +1633,53 @@ public class UnitTest1 : UnitTestBase
         }
     }
     [Fact]
+    public async Task Insert_Returning_RawSql()
+    {
+        var repository = this.dbFactory.Create();
+        var sql1 = repository.Create<User>()
+            .WithBy(new
+            {
+                Id = 1,
+                TenantId = "1",
+                Name = "leafkevin",
+                Age = 25,
+                CompanyId = 1,
+                Gender = Gender.Male,
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            })
+            .Returning<UserInfo>("\"Age\",\"Id\"")
+            .ToSql(out _);
+        Assert.Equal("INSERT INTO \"sys_user\" (\"Id\",\"TenantId\",\"Name\",\"Gender\",\"Age\",\"CompanyId\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\") VALUES (@Id,@TenantId,@Name,@Gender,@Age,@CompanyId,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) RETURNING \"Age\",\"Id\"", sql1);
+        await repository.BeginTransactionAsync();
+        await repository.DeleteAsync<User>(1);
+        var result1 = await repository.Create<User>()
+            .WithBy(new
+            {
+                Id = 1,
+                TenantId = "1",
+                Name = "leafkevin",
+                Age = 25,
+                CompanyId = 1,
+                Gender = Gender.Male,
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            })
+            .Returning<UserInfo>("\"Age\",\"Id\"")
+            .ExecuteAsync();
+        await repository.CommitAsync();
+        Assert.Equal(1, result1.Id);
+        Assert.Null(result1.Name);
+        Assert.Equal(25, result1.Age);
+        Assert.Equal(Gender.Unknown, result1.Gender);
+    }
+    [Fact]
     public async Task Insert_BulkCopy()
     {
         var repository = this.dbFactory.Create();

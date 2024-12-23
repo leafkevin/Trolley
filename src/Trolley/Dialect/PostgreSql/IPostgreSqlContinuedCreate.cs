@@ -119,7 +119,7 @@ public interface IPostgreSqlContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     /// <typeparam name="TResult"></typeparam>
     /// <param name="fieldNames"></param>
     /// <returns></returns>
-    IPostgreSqlCreated<TEntity, TResult> Returning<TResult>(params string[] fieldNames);
+    IPostgreSqlCreated<TEntity, TResult> Returning<TResult>(string fieldNames);
     /// <summary>
     /// mariadb数据库支持
     /// </summary>
@@ -242,7 +242,7 @@ public interface IPostgreSqlBulkContinuedCreate<TEntity> : IContinuedCreate<TEnt
     /// <typeparam name="TResult"></typeparam>
     /// <param name="fieldNames"></param>
     /// <returns></returns>
-    IPostgreSqlBulkCreated<TEntity, TResult> Returning<TResult>(params string[] fieldNames);
+    IPostgreSqlBulkCreated<TEntity, TResult> Returning<TResult>(string fieldNames);
     /// <summary>
     /// mariadb数据库支持
     /// </summary>
