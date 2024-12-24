@@ -1547,7 +1547,7 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
                 OrderCount = Sql.Count(a.Id),
                 TotalAmount = Sql.Sum(a.TotalAmount)
             })
-        .ToSql(out _);
+            .ToSql(out _);
         Assert.Equal("SELECT COUNT(a.`Id`) AS `OrderCount`,SUM(a.`TotalAmount`) AS `TotalAmount` FROM `sys_order` a", sql);
         result = repository.From<Order>()
             .Select(a => new
@@ -2482,8 +2482,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .Where(f => Sql.In(f.Id, new[] { "8" }))
             .SelectFlattenTo(f => new OrderInfo
             {
-                Description = this.DeferInvoke().Deferred(),
-                TotalAmount = f.TotalAmount.ToString("C")
+                Description = this.DeferInvoke().Deferred()
             })
             .ToList();
         Assert.Equal("8", result[0].Id);
@@ -2579,8 +2578,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .Where(f => Sql.In(f.Id, new[] { "8" }))
             .SelectFlattenTo(f => new OrderInfo
             {
-                Description = this.DeferInvoke().Deferred(),
-                TotalAmount = f.TotalAmount.ToString("C")
+                Description = f.TotalAmount.ToString("C") + f.OrderNo
             })
             .ToSql(out _);
         Assert.Equal("SELECT a.`TotalAmount` AS `TotalAmount`,a.`Id`,a.`OrderNo`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id` IN ('8')", sql1);
@@ -2589,22 +2587,20 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
           .Where(f => Sql.In(f.Id, new[] { "8" }))
           .SelectFlattenTo(f => new OrderInfo
           {
-              Description = this.DeferInvoke().Deferred(),
-              TotalAmount = f.TotalAmount.ToString("C")
+              Description = $"{f.OrderNo}: {f.TotalAmount.ToString("C")}"
           })
-          .ToListAsync();
-        Assert.Equal("8", result1[0].Id);
-        Assert.Equal(1, result1[0].BuyerId);
-        Assert.Equal("On-ZwYx", result1[0].OrderNo);
-        Assert.NotNull(result1[0].Description);
-        Assert.True(result1[0].Description == this.DeferInvoke());
+          .FirstAsync();
+        Assert.Equal("8", result1.Id);
+        Assert.Equal(1, result1.BuyerId);
+        Assert.Equal("On-ZwYx", result1.OrderNo);
+        Assert.NotNull(result1.Description);
+        Assert.True(result1.Description == $"{result1.OrderNo}: {result1.TotalAmount.ToString("C")}");
 
         var sql2 = repository.From<Order>()
             .Where(f => Sql.In(f.Id, new[] { "8" }))
             .SelectFlattenTo(f => new OrderInfo
             {
-                Description = this.DeferInvoke().Deferred(),
-                TotalAmount = this.DeferInvoke().Deferred()
+                Description = f.TotalAmount.ToString("C") + f.OrderNo
             })
             .ToSql(out _);
         Assert.Equal("SELECT a.`TotalAmount` AS `TotalAmount`,a.`Id`,a.`OrderNo`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id` IN ('8')", sql2);
@@ -2613,15 +2609,14 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
           .Where(f => Sql.In(f.Id, new[] { "8" }))
           .SelectFlattenTo(f => new OrderInfo
           {
-              Description = this.DeferInvoke().Deferred(),
-              TotalAmount = f.TotalAmount.ToString("C")
+              Description = f.TotalAmount.ToString("C") + f.OrderNo
           })
-          .ToListAsync();
-        Assert.Equal("8", result1[0].Id);
-        Assert.Equal(1, result1[0].BuyerId);
-        Assert.Equal("On-ZwYx", result1[0].OrderNo);
-        Assert.NotNull(result1[0].Description);
-        Assert.True(result1[0].Description == this.DeferInvoke());
+          .FirstAsync();
+        Assert.Equal("8", result2.Id);
+        Assert.Equal(1, result2.BuyerId);
+        Assert.Equal("On-ZwYx", result2.OrderNo);
+        Assert.NotNull(result2.Description);
+        Assert.True(result2.Description == result2.TotalAmount.ToString("C") + result2.OrderNo);
     }
     private string DeferInvoke() => "DeferInvoke";
 }

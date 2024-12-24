@@ -460,7 +460,7 @@ public static class Extensions
     }
     private static Delegate CreateReaderEntityDeserializer(DbContext dbContext, ITheaDataReader reader, Type entityType)
     {
-        var readerExpr = Expression.Parameter(typeof(IDataReader), "reader");
+        var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader");
         var ormProviderExpr = Expression.Constant(dbContext.OrmProvider);
         var entityMapper = dbContext.MapProvider.GetEntityMap(entityType);
         var index = 0;
@@ -495,7 +495,7 @@ public static class Extensions
     }
     private static Delegate CreateReaderValueTupleDeserializer(DbContext dbContext, ITheaDataReader reader, Type entityType)
     {
-        var readerExpr = Expression.Parameter(typeof(IDataReader), "reader");
+        var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader");
         var ormProviderExpr = Expression.Constant(dbContext.OrmProvider);
         var index = 0;
         var target = NewBuildInfo(entityType);

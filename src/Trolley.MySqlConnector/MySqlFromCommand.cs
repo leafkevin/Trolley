@@ -136,12 +136,12 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
     #endregion
 
     #region Select
-    public new IMySqlFromContinuedCreate<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>(fields) as IMySqlFromContinuedCreate<TTarget>;
-    public new IMySqlFromContinuedCreate<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr)
-        => base.Select(fieldsExpr) as IMySqlFromContinuedCreate<TTarget>;
-    public new IMySqlFromContinuedCreate<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr)
-        => base.SelectAggregate<TTarget>(fieldsExpr) as IMySqlFromContinuedCreate<TTarget>;
+    public new IMySqlFromCommand<TTarget> Select<TTarget>(string fields = "*")
+        => base.Select<TTarget>(fields) as IMySqlFromCommand<TTarget>;
+    public new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr)
+        => base.Select(fieldsExpr) as IMySqlFromCommand<TTarget>;
+    public new IMySqlFromCommand<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr)
+        => base.SelectAggregate(fieldsExpr) as IMySqlFromCommand<TTarget>;
     #endregion
 
     #region Distinct
@@ -164,6 +164,53 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
         return this;
     }
     #endregion
+
+    #region OnDuplicateKeyUpdate
+    public IMySqlFromContinuedCreate<T> OnDuplicateKeyUpdate<TUpdateFields>(TUpdateFields updateObj)
+    {
+        var sql = this.Visitor.BuildCommandSql(out _);
+        var visitor = this.NewCreateVisitor(sql);
+        visitor.OnDuplicateKeyUpdate(updateObj);
+        return new MySqlFromContinuedCreate<T>(this.DbContext, visitor);
+    }
+    public IMySqlFromContinuedCreate<T> OnDuplicateKeyUpdate<TUpdateFields>(Expression<Func<IMySqlCreateDuplicateKeyUpdate<T>, TUpdateFields>> fieldsAssignment)
+    {
+        var sql = this.Visitor.BuildCommandSql(out _);
+        var visitor = this.NewCreateVisitor(sql);
+        visitor.OnDuplicateKeyUpdate(fieldsAssignment);
+        return new MySqlFromContinuedCreate<T>(this.DbContext, visitor);
+    }
+    #endregion
+
+    #region Returnning
+    public IMySqlBulkCreated<T, TResult> Returning<TResult>(string fieldNames)
+    {
+        var sql = this.Visitor.BuildCommandSql(out _);
+        var visitor = this.NewCreateVisitor(sql);
+        visitor.Returning(fieldNames);
+        return new MySqlBulkCreated<T, TResult>(this.DbContext, visitor);
+    }
+    public IMySqlBulkCreated<T, TResult> Returning<TResult>(Expression<Func<T, TResult>> fieldsSelector)
+    {
+        var sql = this.Visitor.BuildCommandSql(out _);
+        var visitor = this.NewCreateVisitor(sql);
+        visitor.Returning(fieldsSelector);
+        return new MySqlBulkCreated<T, TResult>(this.DbContext, visitor);
+    }
+    #endregion
+
+    protected virtual MySqlCreateVisitor NewCreateVisitor(string fromSql)
+    {
+        var createVisiter = new MySqlCreateVisitor(this.DbContext, this.Visitor.TableAsStart);
+        createVisiter.Tables = this.Visitor.Tables;
+        createVisiter.IsMultiple = this.Visitor.IsMultiple;
+        createVisiter.CommandIndex = this.Visitor.CommandIndex;
+        createVisiter.RefQueries = this.Visitor.RefQueries;
+        createVisiter.ShardingTables = this.Visitor.ShardingTables;
+        createVisiter.DbParameters = this.Visitor.DbParameters;
+        createVisiter.FromSql = fromSql;
+        return createVisiter;
+    }
 }
 public class MySqlFromCommand<T1, T2> : FromCommand<T1, T2>, IMySqlFromCommand<T1, T2>
 {
@@ -290,10 +337,10 @@ public class MySqlFromCommand<T1, T2> : FromCommand<T1, T2>, IMySqlFromCommand<T
     #endregion
 
     #region Select
-    public new IMySqlFromContinuedCreate<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>(fields) as IMySqlFromContinuedCreate<TTarget>;
-    public new IMySqlFromContinuedCreate<TTarget> Select<TTarget>(Expression<Func<T1, T2, TTarget>> fieldsExpr)
-        => base.Select(fieldsExpr) as IMySqlFromContinuedCreate<TTarget>;
+    public new IMySqlFromCommand<TTarget> Select<TTarget>(string fields = "*")
+        => base.Select<TTarget>(fields) as IMySqlFromCommand<TTarget>;
+    public new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, TTarget>> fieldsExpr)
+        => base.Select(fieldsExpr) as IMySqlFromCommand<TTarget>;
     #endregion
 
     #region Skip/Take
@@ -434,10 +481,10 @@ public class MySqlFromCommand<T1, T2, T3> : FromCommand<T1, T2, T3>, IMySqlFromC
     #endregion
 
     #region Select
-    public new IMySqlFromContinuedCreate<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>(fields) as IMySqlFromContinuedCreate<TTarget>;
-    public new IMySqlFromContinuedCreate<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, TTarget>> fieldsExpr)
-        => base.Select(fieldsExpr) as IMySqlFromContinuedCreate<TTarget>;
+    public new IMySqlFromCommand<TTarget> Select<TTarget>(string fields = "*")
+        => base.Select<TTarget>(fields) as IMySqlFromCommand<TTarget>;
+    public new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, TTarget>> fieldsExpr)
+        => base.Select(fieldsExpr) as IMySqlFromCommand<TTarget>;
     #endregion
 
     #region Skip/Take
@@ -578,10 +625,10 @@ public class MySqlFromCommand<T1, T2, T3, T4> : FromCommand<T1, T2, T3, T4>, IMy
     #endregion
 
     #region Select
-    public new IMySqlFromContinuedCreate<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>(fields) as IMySqlFromContinuedCreate<TTarget>;
-    public new IMySqlFromContinuedCreate<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, TTarget>> fieldsExpr)
-        => base.Select(fieldsExpr) as IMySqlFromContinuedCreate<TTarget>;
+    public new IMySqlFromCommand<TTarget> Select<TTarget>(string fields = "*")
+        => base.Select<TTarget>(fields) as IMySqlFromCommand<TTarget>;
+    public new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, TTarget>> fieldsExpr)
+        => base.Select(fieldsExpr) as IMySqlFromCommand<TTarget>;
     #endregion
 
     #region Skip/Take
@@ -722,10 +769,10 @@ public class MySqlFromCommand<T1, T2, T3, T4, T5> : FromCommand<T1, T2, T3, T4, 
     #endregion
 
     #region Select
-    public new IMySqlFromContinuedCreate<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>(fields) as IMySqlFromContinuedCreate<TTarget>;
-    public new IMySqlFromContinuedCreate<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, TTarget>> fieldsExpr)
-        => base.Select(fieldsExpr) as IMySqlFromContinuedCreate<TTarget>;
+    public new IMySqlFromCommand<TTarget> Select<TTarget>(string fields = "*")
+        => base.Select<TTarget>(fields) as IMySqlFromCommand<TTarget>;
+    public new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, TTarget>> fieldsExpr)
+        => base.Select(fieldsExpr) as IMySqlFromCommand<TTarget>;
     #endregion
 
     #region Skip/Take
@@ -848,10 +895,10 @@ public class MySqlFromCommand<T1, T2, T3, T4, T5, T6> : FromCommand<T1, T2, T3, 
     #endregion
 
     #region Select
-    public new IMySqlFromContinuedCreate<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>(fields) as IMySqlFromContinuedCreate<TTarget>;
-    public new IMySqlFromContinuedCreate<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr)
-        => base.Select(fieldsExpr) as IMySqlFromContinuedCreate<TTarget>;
+    public new IMySqlFromCommand<TTarget> Select<TTarget>(string fields = "*")
+        => base.Select<TTarget>(fields) as IMySqlFromCommand<TTarget>;
+    public new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr)
+        => base.Select(fieldsExpr) as IMySqlFromCommand<TTarget>;
     #endregion
 
     #region Skip/Take

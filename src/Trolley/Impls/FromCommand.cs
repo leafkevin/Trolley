@@ -26,36 +26,6 @@ public class FromCommand : QueryInternal, IFromCommand
     }
     #endregion
 
-    #region Execute
-    public virtual int Execute()
-    {
-        if (this.Visitor.IsNeedFetchShardingTables)
-            this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        command.CommandText = this.Visitor.BuildCommandSql(out var dbParameters);
-        dbParameters.CopyTo(command.Parameters);
-        connection.Open();
-        var result = command.ExecuteNonQuery(CommandSqlType.Insert);
-        command.Dispose();
-        if (isNeedClose) connection.Close();
-        return result;
-    }
-    public virtual async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
-    {
-        if (this.Visitor.IsNeedFetchShardingTables)
-            await this.DbContext.FetchShardingTablesAsync(this.Visitor as SqlVisitor, cancellationToken);
-
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        command.CommandText = this.Visitor.BuildCommandSql(out var dbParameters);
-        dbParameters.CopyTo(command.Parameters);
-        await connection.OpenAsync(cancellationToken);
-        var result = await command.ExecuteNonQueryAsync(CommandSqlType.Insert, cancellationToken);
-        await command.DisposeAsync();
-        if (isNeedClose) await connection.CloseAsync();
-        return result;
-    }
-    #endregion
-
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
@@ -70,11 +40,14 @@ public class FromCommand : QueryInternal, IFromCommand
     public void Dispose() => this.Visitor.Dispose();
     #endregion
 }
-public class FromCommand<T> : FromCommand, IFromCommand<T>
+public class FromCommand<T> : QueryInternal, IFromCommand<T>
 {
     #region Constructor
     public FromCommand(DbContext dbContext, IQueryVisitor visitor)
-        : base(dbContext, visitor) { }
+    {
+        this.DbContext = dbContext;
+        this.Visitor = visitor;
+    }
     #endregion
 
     #region Sharding
@@ -233,6 +206,11 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
     #endregion
 
     #region Select
+    public virtual IFromCommand<TTarget> Select<TTarget>(string fields = "*")
+    {
+        this.SelectInternal(fields);
+        return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
+    }
     public virtual IFromCommand<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr)
     {
         base.SelectInternal(fieldsExpr);
@@ -264,6 +242,50 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
         this.Visitor.Take(limit);
         return this;
     }
+    #endregion
+
+    #region Execute
+    public virtual int Execute()
+    {
+        if (this.Visitor.IsNeedFetchShardingTables)
+            this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        command.CommandText = this.Visitor.BuildCommandSql(out var dbParameters);
+        dbParameters.CopyTo(command.Parameters);
+        connection.Open();
+        var result = command.ExecuteNonQuery(CommandSqlType.Insert);
+        command.Dispose();
+        if (isNeedClose) connection.Close();
+        return result;
+    }
+    public virtual async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
+    {
+        if (this.Visitor.IsNeedFetchShardingTables)
+            await this.DbContext.FetchShardingTablesAsync(this.Visitor as SqlVisitor, cancellationToken);
+
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        command.CommandText = this.Visitor.BuildCommandSql(out var dbParameters);
+        dbParameters.CopyTo(command.Parameters);
+        await connection.OpenAsync(cancellationToken);
+        var result = await command.ExecuteNonQueryAsync(CommandSqlType.Insert, cancellationToken);
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
+        return result;
+    }
+    #endregion
+
+    #region ToSql
+    public virtual string ToSql(out List<IDbDataParameter> dbParameters)
+    {
+        var sql = this.Visitor.BuildCommandSql(out var dbDataParameters);
+        dbParameters = dbDataParameters.Cast<IDbDataParameter>().ToList();
+        this.Dispose();
+        return sql;
+    }
+    #endregion
+
+    #region Dispose
+    public void Dispose() => this.Visitor.Dispose();
     #endregion
 }
 public class FromCommand<T1, T2> : FromCommand, IFromCommand<T1, T2>

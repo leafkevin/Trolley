@@ -160,7 +160,6 @@ public class MySqlQueryVisitor : QueryVisitor
         }
         sql = builder.ToString();
         builder.Clear();
-        builder = null;
         return sql;
     }
     public override string BuildTableShardingsSql()

@@ -12,7 +12,7 @@ public interface IMySqlFromCommand : IFromCommand
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fields">原始字段字符串，默认值*</param>
     /// <returns>返回插入对象</returns>
-    new IMySqlFromContinuedCreate<TTarget> Select<TTarget>(string fields = "*");
+    new IMySqlFromCommand<TTarget> Select<TTarget>(string fields = "*");
     #endregion
 }
 public interface IMySqlFromCommand<T> : IFromCommand<T>, IMySqlFromCommand
@@ -290,7 +290,7 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>, IMySqlFromCommand
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromContinuedCreate<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr);
+    new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr);
     /// <summary>
     /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
     /// <code>
@@ -306,11 +306,45 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>, IMySqlFromCommand
     /// <typeparam name="TTarget">返回实体的类型，通常是一个匿名类</typeparam>
     /// <param name="fieldsExpr">字段选择表达式，单个或多个聚合字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromContinuedCreate<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr);
+    new IMySqlFromCommand<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr);
     #endregion
 
     #region Take
     new IMySqlFromCommand<T> Take(int limit);
+    #endregion
+
+    #region OnDuplicateKeyUpdate
+    /// <summary>
+    /// 相同主键或唯一索引存在时执行更新动作，INSERT INTO ... ON DUPLICATE KEY UPDATE
+    /// </summary>
+    /// <typeparam name="TUpdateFields">要更新的字段类型</typeparam>
+    /// <param name="updateObj">更新实体对象</param>
+    /// <returns>返回插入对象</returns>
+    IMySqlFromContinuedCreate<T> OnDuplicateKeyUpdate<TUpdateFields>(TUpdateFields updateObj);
+    /// <summary>
+    /// 相同主键或唯一索引存在时执行更新动作，INSERT INTO ... ON DUPLICATE KEY UPDATE
+    /// </summary>
+    /// <typeparam name="TUpdateFields">要更新的字段类型</typeparam>
+    /// <param name="fieldsAssignment">要更新的字段赋值表达式</param>
+    /// <returns>返回插入对象</returns>
+    IMySqlFromContinuedCreate<T> OnDuplicateKeyUpdate<TUpdateFields>(Expression<Func<IMySqlCreateDuplicateKeyUpdate<T>, TUpdateFields>> fieldsAssignment);
+    #endregion
+
+    #region Returning
+    /// <summary>
+    /// 返回插入后想要返回字段的内容，仅mariadb数据库支持
+    /// </summary>
+    /// <typeparam name="TResult">返回类型</typeparam>
+    /// <param name="fieldNames">字段名称列表</param>
+    /// <returns>返回插入的部分字段</returns>
+    IMySqlBulkCreated<T, TResult> Returning<TResult>(string fieldNames);
+    /// <summary>
+    /// 返回插入后想要返回字段的内容，仅mariadb数据库支持
+    /// </summary>
+    /// <typeparam name="TResult">返回类型</typeparam>
+    /// <param name="fieldsSelector">字段筛选表达式</param>
+    /// <returns>返回插入的部分字段</returns>
+    IMySqlBulkCreated<T, TResult> Returning<TResult>(Expression<Func<T, TResult>> fieldsSelector);
     #endregion
 }
 public interface IMySqlFromCommand<T1, T2> : IFromCommand<T1, T2>, IMySqlFromCommand
@@ -606,7 +640,7 @@ public interface IMySqlFromCommand<T1, T2> : IFromCommand<T1, T2>, IMySqlFromCom
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromContinuedCreate<TTarget> Select<TTarget>(Expression<Func<T1, T2, TTarget>> fieldsExpr);
+    new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, TTarget>> fieldsExpr);
     #endregion
 }
 public interface IMySqlFromCommand<T1, T2, T3> : IFromCommand<T1, T2, T3>, IMySqlFromCommand
@@ -902,7 +936,7 @@ public interface IMySqlFromCommand<T1, T2, T3> : IFromCommand<T1, T2, T3>, IMySq
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromContinuedCreate<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, TTarget>> fieldsExpr);
+    new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, TTarget>> fieldsExpr);
     #endregion
 }
 public interface IMySqlFromCommand<T1, T2, T3, T4> : IFromCommand<T1, T2, T3, T4>, IMySqlFromCommand
@@ -1198,7 +1232,7 @@ public interface IMySqlFromCommand<T1, T2, T3, T4> : IFromCommand<T1, T2, T3, T4
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromContinuedCreate<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, TTarget>> fieldsExpr);
+    new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, TTarget>> fieldsExpr);
     #endregion
 }
 public interface IMySqlFromCommand<T1, T2, T3, T4, T5> : IFromCommand<T1, T2, T3, T4, T5>, IMySqlFromCommand
@@ -1494,7 +1528,7 @@ public interface IMySqlFromCommand<T1, T2, T3, T4, T5> : IFromCommand<T1, T2, T3
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromContinuedCreate<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, TTarget>> fieldsExpr);
+    new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, TTarget>> fieldsExpr);
     #endregion
 }
 public interface IMySqlFromCommand<T1, T2, T3, T4, T5, T6> : IFromCommand<T1, T2, T3, T4, T5, T6>, IMySqlFromCommand
@@ -1676,6 +1710,6 @@ public interface IMySqlFromCommand<T1, T2, T3, T4, T5, T6> : IFromCommand<T1, T2
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromContinuedCreate<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr);
+    new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr);
     #endregion
 }

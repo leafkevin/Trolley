@@ -2039,8 +2039,8 @@ public class SqlVisitor : ISqlVisitor
         {
             //支持TableSchema
             if (!string.IsNullOrEmpty(tableSegment.TableSchema))
-                tableName = tableSegment.TableSchema + "." + tableName;
-            tableName = this.OrmProvider.GetTableName(tableName);
+                tableName = this.OrmProvider.GetTableName(tableSegment.TableSchema) + "." + this.OrmProvider.GetTableName(tableName);
+            else tableName = this.OrmProvider.GetTableName(tableName);
         }
         return tableName;
     }
@@ -2327,11 +2327,6 @@ public class SqlVisitor : ISqlVisitor
         if (declaringType.IsGenericType && declaringType.FullName.StartsWith("Trolley.IQuery"))
             return true;
         return false;
-    }
-    class ConditionOperator
-    {
-        public string OperatorType { get; set; }
-        public int Deep { get; set; }
     }
     class ConditionExpression
     {

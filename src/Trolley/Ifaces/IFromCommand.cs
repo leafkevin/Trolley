@@ -24,20 +24,6 @@ public interface IFromCommand
     IFromCommand<TTarget> Select<TTarget>(string fields = "*");
     #endregion
 
-    #region Execute
-    /// <summary>
-    /// 执行插入操作，并返回插入行数
-    /// </summary>
-    /// <returns>返回插入行数</returns>
-    int Execute();
-    /// <summary>
-    /// 执行插入操作，并返回插入行数
-    /// </summary>
-    /// <param name="cancellationToken">取消token</param>
-    /// <returns>返回插入行数</returns>
-    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-    #endregion
-
     #region ToSql
     /// <summary>
     /// 返回当前查询的SQL和参数列表
@@ -343,6 +329,20 @@ public interface IFromCommand<T> : IFromCommand
 
     #region Take
     IFromCommand<T> Take(int limit);
+    #endregion
+
+    #region Execute
+    /// <summary>
+    /// 执行插入操作，并返回插入行数
+    /// </summary>
+    /// <returns>返回插入行数</returns>
+    int Execute();
+    /// <summary>
+    /// 执行插入操作，并返回插入行数
+    /// </summary>
+    /// <param name="cancellationToken">取消token</param>
+    /// <returns>返回插入行数</returns>
+    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
     #endregion
 }
 public interface IFromCommand<T1, T2> : IFromCommand

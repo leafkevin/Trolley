@@ -63,4 +63,21 @@ public class MySqlCreate<TEntity> : Create<TEntity>, IMySqlCreate<TEntity>
         return this.OrmProvider.NewCreated<TEntity>(this.DbContext, this.Visitor) as IMySqlCreated<TEntity>;
     }
     #endregion
+
+    #region From
+    public new IMySqlFromCommand<T> From<T>()
+        => base.From<T>() as IMySqlFromCommand<T>;
+    public new IMySqlFromCommand<T1, T2> From<T1, T2>()
+        => base.From<T1, T2>() as IMySqlFromCommand<T1, T2>;
+    public new IMySqlFromCommand<T1, T2, T3> From<T1, T2, T3>()
+       => base.From<T1, T2, T3>() as IMySqlFromCommand<T1, T2, T3>;
+    public new IMySqlFromCommand<T1, T2, T3, T4> From<T1, T2, T3, T4>()
+        => base.From<T1, T2, T3, T4>() as IMySqlFromCommand<T1, T2, T3, T4>;
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>()
+        => base.From<T1, T2, T3, T4, T5>() as IMySqlFromCommand<T1, T2, T3, T4, T5>;
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>()
+        => base.From<T1, T2, T3, T4, T5, T6>() as IMySqlFromCommand<T1, T2, T3, T4, T5, T6>;
+    public new IMySqlFromCommand<T> From<T>(IQuery<T> subQuery)
+        => base.From(subQuery) as IMySqlFromCommand<T>;
+    #endregion
 }

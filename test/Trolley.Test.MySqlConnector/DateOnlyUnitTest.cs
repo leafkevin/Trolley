@@ -1,9 +1,11 @@
 ﻿#if NET6_0_OR_GREATER
+using MySqlConnector;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Text;
 using Trolley.MySqlConnector;
 using Xunit;
 using Xunit.Abstractions;
@@ -43,6 +45,13 @@ public class DateOnlyUnitTest : UnitTestBase
                     };
                     df.OnCommandExecuting += evt =>
                     {
+                        var builder = new StringBuilder();
+                        foreach (var parameter in evt.DbParameters)
+                        {
+                            var dbParameter = parameter as MySqlParameter;
+                            builder.Append($"{dbParameter.ParameterName}={dbParameter.Value},DbType={dbParameter.MySqlDbType}; ");
+                        }
+                        var parameters = builder.ToString();
                         this.output.WriteLine($"{evt.SqlType} Begin, TransactionId:{evt.TransactionId} Sql: {evt.Sql}, Parameters: {evt.DbParameters.ToMySqlParametersString()}");
                     };
                     df.OnCommandExecuted += evt =>

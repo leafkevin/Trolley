@@ -515,12 +515,12 @@ public class UnitTest1 : UnitTestBase
         id = repository.Create<Company>()
             .WithBy(new Dictionary<string, object>()
             {
-                    { "Name","谷歌"},
-                    { "IsEnabled", true},
-                    { "CreatedAt", DateTime.Now},
-                    { "CreatedBy", 1},
-                    { "UpdatedAt", DateTime.Now},
-                    { "UpdatedBy", 1}
+                    { "name","谷歌"},
+                    { "isEnabled", true},
+                    { "createdAt", DateTime.Now},
+                    { "createdBy", 1},
+                    { "updatedAt", DateTime.Now},
+                    { "updatedBy", 1}
             })
             .ExecuteIdentity();
         maxId = repository.From<Company>().Max(f => f.Id);
@@ -989,6 +989,61 @@ public class UnitTest1 : UnitTestBase
             .ExecuteAsync();
         await repository.CommitAsync();
         Assert.Equal(orderIds.Count, result);
+    }
+    [Fact]
+    public async Task Insert_Select_From_SubQuery_Returning()
+    {
+        var repository = this.dbFactory.Create();
+        var sql = repository.Create<Order>()
+            .From<OrderDetail>()
+            .Where(f => f.Id.Length < 10)
+            .GroupBy(f => f.OrderId)
+            .Select((x, f) => new
+            {
+                Id = f.OrderId,
+                TenantId = "1",
+                OrderNo = $"ON-{f.OrderId}",
+                BuyerId = 1,
+                SellerId = 1,
+                BuyerSource = UserSourceType.Taobao.ToString(),
+                ProductCount = 2,
+                TotalAmount = x.Sum(f.Amount),
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            })
+            .Returning<OrderInfo>("BuyerId,TotalAmount")
+            .ToSql(out var parameters);
+        Assert.Equal("INSERT INTO `sys_order` (`Id`,`TenantId`,`OrderNo`,`BuyerId`,`SellerId`,`BuyerSource`,`ProductCount`,`TotalAmount`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) SELECT b.`OrderId`,'1',CONCAT('ON-',b.`OrderId`),1,1,'Taobao',2,SUM(b.`Amount`),1,NOW(),1,NOW(),1 FROM `sys_order_detail` b WHERE CHAR_LENGTH(b.`Id`)<10 GROUP BY b.`OrderId` RETURNING BuyerId,TotalAmount", sql);
+        await repository.BeginTransactionAsync();
+        repository.Delete<Order>(f => f.Id.Length < 10);
+        var result = await repository.Create<Order>()
+            .From<OrderDetail>()
+            .Where(f => f.Id.Length < 10)
+            .GroupBy(f => f.OrderId)
+            .Select((x, f) => new
+            {
+                Id = f.OrderId,
+                TenantId = "1",
+                OrderNo = $"ON-{f.OrderId}",
+                BuyerId = 1,
+                SellerId = 1,
+                BuyerSource = UserSourceType.Taobao.ToString(),
+                ProductCount = 2,
+                TotalAmount = x.Sum(f.Amount),
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            })
+            .Returning<OrderInfo>("BuyerId,TotalAmount")
+            .ExecuteAsync();
+        await repository.CommitAsync();
+        Assert.NotEmpty(result);
+        Assert.Null(result[0].OrderNo);
     }
     [Fact]
     public void Insert_Null_Field()
@@ -1505,7 +1560,7 @@ public class UnitTest1 : UnitTestBase
         Assert.Equal(2, result2.Id);
         Assert.Equal("1", result2.TenantId);
 
-        var sql3= repository.Create<User>()
+        var sql3 = repository.Create<User>()
             .WithBy(new
             {
                 Id = 1,
@@ -1599,7 +1654,7 @@ public class UnitTest1 : UnitTestBase
             .WithBulk(products)
             .Returning(f => new { f.Id, f.ProductNo })
             .ToSql(out var parameters1);
-        Assert.Equal("INSERT INTO `sys_product` (`Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id0,@ProductNo0,@Name0,@BrandId0,@CategoryId0,@IsEnabled0,@CreatedAt0,@CreatedBy0,@UpdatedAt0,@UpdatedBy0),(@Id1,@ProductNo1,@Name1,@BrandId1,@CategoryId1,@IsEnabled1,@CreatedAt1,@CreatedBy1,@UpdatedAt1,@UpdatedBy1),(@Id2,@ProductNo2,@Name2,@BrandId2,@CategoryId2,@IsEnabled2,@CreatedAt2,@CreatedBy2,@UpdatedAt2,@UpdatedBy2) RETURNING Id,ProductNo", sql1);
+        Assert.Equal("INSERT INTO `sys_product` (`Id`,`ProductNo`,`Name`,`BrandId`,`CategoryId`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id0,@ProductNo0,@Name0,@BrandId0,@CategoryId0,@IsEnabled0,@CreatedAt0,@CreatedBy0,@UpdatedAt0,@UpdatedBy0),(@Id1,@ProductNo1,@Name1,@BrandId1,@CategoryId1,@IsEnabled1,@CreatedAt1,@CreatedBy1,@UpdatedAt1,@UpdatedBy1),(@Id2,@ProductNo2,@Name2,@BrandId2,@CategoryId2,@IsEnabled2,@CreatedAt2,@CreatedBy2,@UpdatedAt2,@UpdatedBy2) RETURNING `Id`,`ProductNo`", sql1);
 
         await repository.BeginTransactionAsync();
         await repository.Delete<Product>().Where(new int[] { 1, 2, 3 }).ExecuteAsync();
@@ -1633,6 +1688,53 @@ public class UnitTest1 : UnitTestBase
             Assert.Equal(products[i].Id, result2[i].Id);
             Assert.Equal(products[i].ProductNo, result2[i].ProductNo);
         }
+    }
+    [Fact]
+    public async Task Insert_Returning_RawSql()
+    {
+        var repository = this.dbFactory.Create();
+        var sql1 = repository.Create<User>()
+            .WithBy(new
+            {
+                Id = 1,
+                TenantId = "1",
+                Name = "leafkevin",
+                Age = 25,
+                CompanyId = 1,
+                Gender = Gender.Male,
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            })
+            .Returning<UserInfo>("`Age`,`Id`")
+            .ToSql(out _);
+        Assert.Equal("INSERT INTO `sys_user` (`Id`,`TenantId`,`Name`,`Gender`,`Age`,`CompanyId`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) VALUES (@Id,@TenantId,@Name,@Gender,@Age,@CompanyId,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) RETURNING `Age`,`Id`", sql1);
+        await repository.BeginTransactionAsync();
+        await repository.DeleteAsync<User>(1);
+        var result1 = await repository.Create<User>()
+            .WithBy(new
+            {
+                Id = 1,
+                TenantId = "1",
+                Name = "leafkevin",
+                Age = 25,
+                CompanyId = 1,
+                Gender = Gender.Male,
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            })
+            .Returning<UserInfo>("`Age`,`Id`")
+            .ExecuteAsync();
+        await repository.CommitAsync();
+        Assert.Equal(1, result1.Id);
+        Assert.Null(result1.Name);
+        Assert.Equal(25, result1.Age);
+        Assert.Equal(Gender.Unknown, result1.Gender);
     }
     [Fact]
     public async Task Insert_BulkCopy()

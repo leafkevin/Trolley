@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Text;
 
 namespace Trolley.MySqlConnector;
@@ -15,6 +14,7 @@ public class MySqlCreateVisitor : CreateVisitor
     public StringBuilder UpdateBuilder { get; set; }
     public bool IsUseSetAlias { get; set; }
     public string SetRowAlias { get; set; } = "newRow";
+    public string FromSql { get; set; }
     public string OutputSql { get; set; }
 
     public MySqlCreateVisitor(DbContext dbContext, char tableAsStart = 'a')
@@ -65,22 +65,27 @@ public class MySqlCreateVisitor : CreateVisitor
         var tableSegment = this.Tables[0];
         var entityType = tableSegment.EntityType;
         var entityMapper = tableSegment.Mapper;
-        string tableName;
-        if (tableSegment.IsSharding)
-            tableName = tableSegment.Body;
-        else
-        {
-            if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out _))
-                tableName = this.GetShardingTableName();
-            else tableName = entityMapper.TableName;
-        }
-        var tableSchema = tableSegment.TableSchema;
-        if (!string.IsNullOrEmpty(tableSegment.TableSchema))
-            tableName = $"{this.OrmProvider.GetTableName(tableSegment.TableSchema)}.{this.OrmProvider.GetTableName(tableName)}";
-        tableName = this.OrmProvider.GetTableName(tableName);
 
-        if (this.IsReturnIdentity && (this.UpdateBuilder != null || this.OutputSql != null))
-            throw new NotSupportedException("返回Identity，不支持同时OnDuplicateKeyUpdate、Returning操作");
+        if (string.IsNullOrEmpty(this.FromSql))
+        {
+            string tableName;
+            if (tableSegment.IsSharding)
+                tableName = tableSegment.Body;
+            else
+            {
+                if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out _))
+                    tableName = this.GetShardingTableName();
+                else tableName = entityMapper.TableName;
+            }
+            var tableSchema = tableSegment.TableSchema;
+            if (!string.IsNullOrEmpty(tableSegment.TableSchema))
+                tableName = $"{this.OrmProvider.GetTableName(tableSegment.TableSchema)}.{this.OrmProvider.GetTableName(tableName)}";
+            tableName = this.OrmProvider.GetTableName(tableName);
+
+            if (this.IsReturnIdentity && (this.UpdateBuilder != null || this.OutputSql != null))
+                throw new NotSupportedException("返回Identity，不支持同时OnDuplicateKeyUpdate、Returning操作");
+            this.FromSql = $"{this.BuildHeadSql()} {tableName} ({this.FieldsBuilder}) VALUES ({this.ValuesBuilder})";
+        }
 
         string tailSql = string.Empty;
         if (this.UpdateBuilder != null)
@@ -98,7 +103,7 @@ public class MySqlCreateVisitor : CreateVisitor
                 throw new NotSupportedException($"实体{entityMapper.EntityType.FullName}表未配置自增长字段，无法返回Identity值");
             tailSql = this.OrmProvider.GetIdentitySql(null);
         }
-        return $"{this.BuildHeadSql()} {tableName} ({this.FieldsBuilder}) VALUES ({this.ValuesBuilder}){tailSql}";
+        return $"{this.FromSql}{tailSql}";
     }
     public override (bool, string, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
         Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command)
@@ -145,7 +150,13 @@ public class MySqlCreateVisitor : CreateVisitor
                         this.UpdateBuilder ??= new();
                         this.VisitSetExpression(deferredSegment.Value as LambdaExpression);
                         break;
-                    default: throw new NotSupportedException("批量插入后，只支持WithBy/IgnoreFields/OnlyFields/OnDuplicateKeyUpdate操作");
+                    case "OutputFields":
+                        this.VisitOutputFields(deferredSegment.Value as string);
+                        break;
+                    case "OutputExpression":
+                        this.VisitOutputExpression(deferredSegment.Value as LambdaExpression);
+                        break;
+                    default: throw new NotSupportedException("批量插入后，只支持WithBy/IgnoreFields/OnlyFields/OnDuplicateKeyUpdate/Returning操作");
                 }
                 fixedDbParameters = this.DbParameters.Cast<IDbDataParameter>().ToList();
             }

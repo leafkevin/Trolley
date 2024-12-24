@@ -14,6 +14,7 @@ public interface IQueryVisitor : IDisposable
     bool IsMultiple { get; set; }
     int CommandIndex { get; set; }
     string WhereSql { get; }
+    List<TableSegment> Tables { get; set; }
     Dictionary<string, TableSegment> TableAliases { get; }
     /// <summary>
     /// 在解析子查询中，会用到父查询中的所有表，父查询中所有表别名引用
