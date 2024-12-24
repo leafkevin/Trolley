@@ -991,7 +991,8 @@ public class UnitTest1 : UnitTestBase
     public async Task Insert_Select_From_SubQuery_Returning()
     {
         var repository = this.dbFactory.Create();
-        var ordersQuery = repository.From<OrderDetail>()
+        var sql = repository.Create<Order>()
+            .From<OrderDetail>()
             .Where(f => f.Id.Length < 10)
             .GroupBy(f => f.OrderId)
             .Select((x, f) => new
@@ -1010,24 +1011,14 @@ public class UnitTest1 : UnitTestBase
                 UpdatedAt = DateTime.Now,
                 UpdatedBy = 1
             })
-            .AsCteTable("orders");
-        var sql = repository.Create<Order>()
-            .From(ordersQuery)
             .Returning<OrderInfo>("BuyerId,TotalAmount")
             .ToSql(out var parameters);
-        Assert.Equal("INSERT INTO `sys_order` (`Id`,`TenantId`,`OrderNo`,`BuyerId`,`SellerId`,`BuyerSource`,`ProductCount`,`TotalAmount`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) WITH \r\n`orders`(`Id`,`TenantId`,`OrderNo`,`BuyerId`,`SellerId`,`BuyerSource`,`ProductCount`,`TotalAmount`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) AS \r\n(\r\nSELECT a.`OrderId`,'1',CONCAT('ON-',a.`OrderId`),1,1,'Taobao',2,SUM(a.`Amount`),1,NOW(),1,NOW(),1 FROM `sys_order_detail` a GROUP BY a.`OrderId`\r\n)\r\nSELECT b.`Id`,b.`TenantId`,b.`OrderNo`,b.`BuyerId`,b.`SellerId`,b.`BuyerSource`,b.`ProductCount`,b.`TotalAmount`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy` FROM `orders` b", sql);
-        var orderIds = ordersQuery.Select(f => f.Id).ToList();
+        Assert.Equal("INSERT INTO `sys_order` (`Id`,`TenantId`,`OrderNo`,`BuyerId`,`SellerId`,`BuyerSource`,`ProductCount`,`TotalAmount`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) SELECT b.`OrderId`,'1',CONCAT('ON-',b.`OrderId`),1,1,'Taobao',2,SUM(b.`Amount`),1,NOW(),1,NOW(),1 FROM `sys_order_detail` b WHERE CHAR_LENGTH(b.`Id`)<10 GROUP BY b.`OrderId` RETURNING BuyerId,TotalAmount", sql);
         await repository.BeginTransactionAsync();
-        repository.Delete<Order>(orderIds);
+        repository.Delete<Order>(f => f.Id.Length < 10);
         var result = await repository.Create<Order>()
-            .From(ordersQuery)
-            .Returning<OrderInfo>("BuyerId,TotalAmount")
-            .ExecuteAsync();
-        await repository.CommitAsync();
-        //Assert.Equal(ordersQuery.Count, result);
-
-        sql = repository.Create<Order>()
             .From<OrderDetail>()
+            .Where(f => f.Id.Length < 10)
             .GroupBy(f => f.OrderId)
             .Select((x, f) => new
             {
@@ -1045,16 +1036,11 @@ public class UnitTest1 : UnitTestBase
                 UpdatedAt = DateTime.Now,
                 UpdatedBy = 1
             })
-            .ToSql(out parameters);
-        Assert.Equal("INSERT INTO `sys_order` (`Id`,`TenantId`,`OrderNo`,`BuyerId`,`SellerId`,`BuyerSource`,`ProductCount`,`TotalAmount`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) SELECT b.`OrderId`,'1',CONCAT('ON-',b.`OrderId`),1,1,'Taobao',2,SUM(b.`Amount`),1,NOW(),1,NOW(),1 FROM `sys_order_detail` b GROUP BY b.`OrderId`", sql);
-        await repository.BeginTransactionAsync();
-        repository.Delete<Order>(orderIds);
-        result = await repository.Create<Order>()
-            .From(ordersQuery)
             .Returning<OrderInfo>("BuyerId,TotalAmount")
             .ExecuteAsync();
         await repository.CommitAsync();
-        //Assert.Equal(orderIds.Count, result);
+        Assert.NotEmpty(result);
+        Assert.Null(result[0].OrderNo);
     }
     [Fact]
     public void Insert_Null_Field()

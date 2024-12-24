@@ -2581,7 +2581,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
                 Description = f.TotalAmount.ToString("C") + f.OrderNo
             })
             .ToSql(out _);
-        Assert.Equal("SELECT a.`TotalAmount` AS `TotalAmount`,a.`Id`,a.`OrderNo`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id` IN ('8')", sql1);
+        Assert.Equal("SELECT a.`TotalAmount`,a.`OrderNo`,a.`Id`,a.`OrderNo`,a.`BuyerId`,a.`TotalAmount` FROM `sys_order` a WHERE a.`Id` IN ('8')", sql1);
 
         var result1 = await repository.From<Order>()
           .Where(f => Sql.In(f.Id, new[] { "8" }))
@@ -2603,7 +2603,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
                 Description = f.TotalAmount.ToString("C") + f.OrderNo
             })
             .ToSql(out _);
-        Assert.Equal("SELECT a.`TotalAmount` AS `TotalAmount`,a.`Id`,a.`OrderNo`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id` IN ('8')", sql2);
+        Assert.Equal("SELECT a.`TotalAmount`,a.`OrderNo`,a.`Id`,a.`OrderNo`,a.`BuyerId`,a.`TotalAmount` FROM `sys_order` a WHERE a.`Id` IN ('8')", sql2);
 
         var result2 = await repository.From<Order>()
           .Where(f => Sql.In(f.Id, new[] { "8" }))

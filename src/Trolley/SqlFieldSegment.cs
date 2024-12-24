@@ -26,7 +26,7 @@ public enum SqlFieldType : byte
     DeferredFields,
     RawSql
 }
-[DebuggerDisplay("Value: {Value,nq}     Expression: {Expression,nq}")]
+[DebuggerDisplay("FieldType: {FieldType,nq} Body: {Body,nq} Value: {Value,nq} Expression: {Expression,nq}")]
 public class SqlFieldSegment
 {
     public static readonly SqlFieldSegment True = new SqlFieldSegment { IsConstant = true, Value = true, Body = "True" };
@@ -338,5 +338,5 @@ public class SqlFieldSegment
         };
     }
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-    private string DebugDisplayText => $"Body: {this.Body ?? this.Value.ToString()} Expression: {this.Expression}";
+    private string DebugDisplayText => $"Body: {this.Body} Value: {this.Value.ToString()} Expression: {this.Expression}";
 }

@@ -31,6 +31,7 @@ public class UnitTest6 : UnitTestBase
                 .Configure<ModelConfiguration>(OrmProviderType.PostgreSql)
                 .UseDatabaseSharding(() =>
                 {
+                    //可以硬编码分库，也可以使用redis，映射表 ...，其他方式等
                     var scopeFactory = f.GetRequiredService<IServiceScopeFactory>();
                     var serviceScope = scopeFactory.CreateScope();
                     var passport = serviceScope.ServiceProvider.GetService<IPassport>();
@@ -454,7 +455,7 @@ public class UnitTest6 : UnitTestBase
             Gender = Gender.Female,
             GuidField = Guid.NewGuid(),
 #if NET6_0_OR_GREATER
-                SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
+            SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(5730)),
 #else
             SomeTimes = TimeSpan.FromSeconds(5730),
 #endif
@@ -952,6 +953,66 @@ public class UnitTest6 : UnitTestBase
         Assert.Equal(4000, count2);
     }
     [Fact]
+    public async Task Insert_Select_From_SubQuery_Returning()
+    {
+        var repository = this.dbFactory.Create();
+        var sql = repository.Create<Order>()
+            .UseTableBy("104", DateTime.Parse("2024-05-01"))
+            .From<OrderDetail>()
+            .UseTableBy("104", DateTime.Parse("2024-05-01"))
+            .Where(f => f.Id.Length < 1050)
+            .GroupBy(f => f.OrderId)
+            .Select((x, f) => new
+            {
+                Id = f.OrderId,
+                f.TenantId,
+                OrderNo = $"ON-{f.OrderId}",
+                BuyerId = 1,
+                SellerId = 1,
+                BuyerSource = UserSourceType.Taobao.ToString(),
+                ProductCount = 2,
+                TotalAmount = x.Sum(f.Amount),
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            })
+            .Returning<OrderInfo>("BuyerId,TotalAmount")
+            .ToSql(out var parameters);
+        Assert.Equal("INSERT INTO `sys_order_104_202405` (`Id`,`TenantId`,`OrderNo`,`BuyerId`,`SellerId`,`BuyerSource`,`ProductCount`,`TotalAmount`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) SELECT b.`OrderId`,b.`TenantId`,CONCAT('ON-',b.`OrderId`),1,1,'Taobao',2,SUM(b.`Amount`),1,NOW(),1,NOW(),1 FROM `sys_order_detail_104_202405` b WHERE CHAR_LENGTH(b.`Id`)<1050 GROUP BY b.`OrderId` RETURNING BuyerId,TotalAmount", sql);
+        await repository.BeginTransactionAsync();
+        await repository.Delete<Order>()
+            .UseTableBy("104", DateTime.Parse("2024-05-01"))
+            .Where(f => f.Id.Length < 10)
+            .ExecuteAsync();
+        var result = await repository.Create<Order>()
+            .UseTableBy("104", DateTime.Parse("2024-05-01"))
+            .From<OrderDetail>()
+            .UseTableBy("104", DateTime.Parse("2024-05-01"))
+            .Where(f => f.Id.Length < 1050)
+            .GroupBy(f => f.OrderId)
+            .Select((x, f) => new
+            {
+                Id = f.OrderId,
+                TenantId = "1",
+                OrderNo = $"ON-{f.OrderId}",
+                BuyerId = 1,
+                SellerId = 1,
+                BuyerSource = UserSourceType.Taobao.ToString(),
+                ProductCount = 2,
+                TotalAmount = x.Sum(f.Amount),
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            })
+            .Returning<OrderInfo>("BuyerId,TotalAmount")
+            .ExecuteAsync();
+        await repository.CommitAsync();
+    }
+    [Fact]
     public async Task Query_ManySharding_SingleTable()
     {
         await this.InitSharding();
@@ -1080,10 +1141,7 @@ public class UnitTest6 : UnitTestBase
                 .Select((x, a, b) => new { Group = x.Grouping, ProductCount = x.CountDistinct(a.ProductId) }))
             .InnerJoin<User>((x, y) => x.Group.BuyerId == y.Id)
             .UseTable<OrderDetail>((orderOrigName, userOrigName, orderTableName) =>
-            {
-                var tableName = orderTableName.Replace(orderOrigName, userOrigName);
-                return tableName[..^7];
-            })
+                orderTableName.Replace(orderOrigName, userOrigName)[..^7])
             .Where((a, b) => a.ProductCount > 1)
             .Select((x, y) => new
             {
@@ -1237,7 +1295,8 @@ public class UnitTest6 : UnitTestBase
         var result = repository.From<Order>()
             .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
             .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
-            .UseTable<Order>((orderOrigName, orderDetailOrigName, orderTableName) => orderTableName.Replace(orderOrigName, orderDetailOrigName))
+            .UseTable<Order>((orderOrigName, orderDetailOrigName, orderTableName)
+                => orderTableName.Replace(orderOrigName, orderDetailOrigName))
             .Where((a, b) => a.ProductCount > productCount)
             .Select((x, y) => new
             {

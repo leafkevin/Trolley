@@ -2730,7 +2730,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
                 Description = f.TotalAmount.ToString("C") + f.OrderNo
             })
          .ToSql(out _);
-        Assert.Equal("SELECT a.\"TotalAmount\",a.\"OrderNo\",a.\"Id\",a.\"OrderNo\",a.\"BuyerId\",a.\"TotalAmount\" FROM \"sys_order\" a WHERE a.\"Id\" IN ('8')", sql1);
+        Assert.Equal("SELECT a.\"TotalAmount\",a.\"OrderNo\",a.\"Id\",a.\"OrderNo\",a.\"BuyerId\",a.\"TotalAmount\" FROM \"sys_order\" a WHERE a.\"Id\" IN ('8')", sql2);
 
         var result2 = await repository.From<Order>()
           .Where(f => Sql.In(f.Id, new[] { "8" }))

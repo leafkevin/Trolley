@@ -539,7 +539,6 @@ public static class Extensions
         var current = root;
         var parent = root;
         var readerBuilders = new Dictionary<SqlFieldSegment, EntityBuildInfo>();
-        var refValues = new Dictionary<SqlFieldSegment, Expression>();
         var deferredBuilds = new Stack<EntityBuildInfo>();
 
         if (readerFields.Count == 1 && readerFields[0].FieldType == SqlFieldType.RawSql)
@@ -572,10 +571,10 @@ public static class Extensions
                 var readerField = readerFields[readerIndex];
                 //readerFields个数与IDataReader返回的Field个数不一致的场景，readerFields是根据Type类型来生成的，
                 //SQL语句也不是生成的，通常是原始SQL，才会走到此处
-                if (index >= reader.FieldCount)
+                if (index >= reader.FieldCount && readerField.FieldType != SqlFieldType.IncludeRef)
                 {
                     var readerValueExpr = Expression.Default(readerField.TargetMember.GetMemberType());
-                    if (!current.IsDefault) current.Arguments.Add(readerValueExpr);
+                    if (!root.IsDefault) root.Arguments.Add(readerValueExpr);
                     readerIndex++;
                     continue;
                 }
@@ -584,8 +583,6 @@ public static class Extensions
                     var fieldType = reader.GetFieldType(index);
                     var readerValueExpr = GetReaderValue(dbContext, ormProviderExpr, readerExpr, Expression.Constant(index),
                         readerField.SegmentType, fieldType, readerField.TypeHandler, blockParameters, blockBodies);
-                    //TODO: 延迟字段的处理
-                    refValues.Add(readerField, readerValueExpr);
                     if (root.IsDefault) root.Bindings.Add(Expression.Bind(readerField.TargetMember, readerValueExpr));
                     else root.Arguments.Add(readerValueExpr);
                     index++;
@@ -643,7 +640,7 @@ public static class Extensions
                         //Include导航属性引用不能单独Select，前面一定有Parameter访问
                         //Include导航属性引用单独处理，先设置默认值，在整个实体初始化完后，再设置具体值，初始化Action在成员访问的时候，已经构建好了
                         var refReaderField = readerField.Value as SqlFieldSegment;
-                        var instanceExpr = refValues[refReaderField];
+                        var instanceExpr = readerBuilders[refReaderField].InstanceExpr;
                         //此处生成的副本，从新new的一个对象
                         if (parent.IsDefault)
                             parent.Bindings.Add(Expression.Bind(readerField.TargetMember, instanceExpr));
@@ -690,8 +687,7 @@ public static class Extensions
                                 if (current.IsDefault)
                                     instanceExpr = Expression.MemberInit(Expression.New(current.Constructor), current.Bindings);
                                 else instanceExpr = Expression.New(current.Constructor, current.Arguments);
-                                //TODO:待测试
-                                refValues.Add(readerField, instanceExpr);
+                                current.InstanceExpr = instanceExpr;
                                 //赋值给父对象的属性
                                 if (current.Parent == null)
                                     break;
@@ -860,5 +856,6 @@ public static class Extensions
         public List<Expression> Arguments { get; set; }
         public MemberInfo FromMember { get; set; }
         public EntityBuildInfo Parent { get; set; }
+        public Expression InstanceExpr { get; set; }
     }
 }
