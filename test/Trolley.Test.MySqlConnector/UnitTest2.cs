@@ -2459,11 +2459,11 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         var result = repository.From<Order>()
             .Where(f => Sql.In(f.Id, new[] { "8" }))
             .SelectFlattenTo<OrderInfo>()
-            .ToList();
-        Assert.Equal("8", result[0].Id);
-        Assert.Equal(1, result[0].BuyerId);
-        Assert.Equal("On-ZwYx", result[0].OrderNo);
-        Assert.Null(result[0].Description);
+            .First();
+        Assert.Equal("8", result.Id);
+        Assert.Equal(1, result.BuyerId);
+        Assert.Equal("On-ZwYx", result.OrderNo);
+        Assert.Null(result.Description);
 
         result = repository.From<Order>()
             .Where(f => Sql.In(f.Id, new[] { "8" }))
@@ -2471,12 +2471,12 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             {
                 Description = "TotalAmount:" + f.TotalAmount
             })
-            .ToList();
-        Assert.Equal("8", result[0].Id);
-        Assert.Equal(1, result[0].BuyerId);
-        Assert.Equal("On-ZwYx", result[0].OrderNo);
-        Assert.NotNull(result[0].Description);
-        Assert.Equal("TotalAmount:500", result[0].Description);
+            .First();
+        Assert.Equal("8", result.Id);
+        Assert.Equal(1, result.BuyerId);
+        Assert.Equal("On-ZwYx", result.OrderNo);
+        Assert.NotNull(result.Description);
+        Assert.Equal("TotalAmount:500", result.Description);
 
         result = repository.From<Order>()
             .Where(f => Sql.In(f.Id, new[] { "8" }))
@@ -2484,25 +2484,82 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             {
                 Description = this.DeferInvoke().Deferred()
             })
-            .ToList();
-        Assert.Equal("8", result[0].Id);
-        Assert.Equal(1, result[0].BuyerId);
-        Assert.Equal("On-ZwYx", result[0].OrderNo);
-        Assert.NotNull(result[0].Description);
-        Assert.True(result[0].Description == this.DeferInvoke());
+            .First();
+        Assert.Equal("8", result.Id);
+        Assert.Equal(1, result.BuyerId);
+        Assert.Equal("On-ZwYx", result.OrderNo);
+        Assert.NotNull(result.Description);
+        Assert.True(result.Description == this.DeferInvoke());
 
-        var result1 = repository.From(f =>
-               f.From<Order, OrderDetail>('a')
-                .Where((a, b) => a.Id == b.OrderId)
-                .GroupBy((a, b) => new { a.BuyerId, OrderId = a.Id })
-                .Having((x, a, b) => Sql.CountDistinct(b.ProductId) > 0)
-                .Select((x, a, b) => new { x.Grouping.BuyerId, x.Grouping.OrderId, ProductTotal = Sql.CountDistinct(b.ProductId) }))
-           .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
-           .SelectFlattenTo((x, y) => new OrderBuyerInfo { BuyerName = y.Name })
+        result = repository.From<Order>()
+            .Where(f => Sql.In(f.Id, new[] { "8" }))
+            .SelectFlattenTo(f => new OrderInfo
+            {
+                Description = $"TotalAmount: {f.TotalAmount.ToString("C")}"
+            })
+            .First();
+        Assert.Equal("8", result.Id);
+        Assert.Equal(1, result.BuyerId);
+        Assert.Equal("On-ZwYx", result.OrderNo);
+        Assert.NotNull(result.Description);
+        Assert.Equal($"TotalAmount: {result.TotalAmount.ToString("C")}", result.Description);
+
+        var sql1 = repository.From<Order>()
+            .Where(f => Sql.In(f.Id, new[] { "8" }))
+            .SelectFlattenTo(f => new OrderInfo
+            {
+                Description = f.TotalAmount.ToString("C") + f.OrderNo
+            })
+            .ToSql(out _);
+        Assert.Equal("SELECT a.`TotalAmount`,a.`OrderNo`,a.`Id`,a.`OrderNo`,a.`BuyerId`,a.`TotalAmount` FROM `sys_order` a WHERE a.`Id` IN ('8')", sql1);
+
+        result = repository.From<Order>()
+           .Where(f => Sql.In(f.Id, new[] { "8" }))
+           .SelectFlattenTo(f => new OrderInfo
+           {
+               Description = $"{f.OrderNo}: {f.TotalAmount.ToString("C")}"
+           })
            .First();
-        if (result1 != null)
+        Assert.Equal("8", result.Id);
+        Assert.Equal(1, result.BuyerId);
+        Assert.Equal("On-ZwYx", result.OrderNo);
+        Assert.NotNull(result.Description);
+        Assert.True(result.Description == $"{result.OrderNo}: {result.TotalAmount.ToString("C")}");
+
+        var sql = repository.From<Order>()
+            .Where(f => Sql.In(f.Id, new[] { "8" }))
+            .SelectFlattenTo(f => new OrderInfo
+            {
+                Description = f.TotalAmount.ToString("C") + f.OrderNo
+            })
+            .ToSql(out _);
+        Assert.Equal("SELECT a.`TotalAmount`,a.`OrderNo`,a.`Id`,a.`OrderNo`,a.`BuyerId`,a.`TotalAmount` FROM `sys_order` a WHERE a.`Id` IN ('8')", sql);
+
+        result = repository.From<Order>()
+            .Where(f => Sql.In(f.Id, new[] { "8" }))
+            .SelectFlattenTo(f => new OrderInfo
+            {
+                Description = f.TotalAmount.ToString("C") + f.OrderNo
+            })
+            .First();
+        Assert.Equal("8", result.Id);
+        Assert.Equal(1, result.BuyerId);
+        Assert.Equal("On-ZwYx", result.OrderNo);
+        Assert.NotNull(result.Description);
+        Assert.True(result.Description == result.TotalAmount.ToString("C") + result.OrderNo);
+
+
+        var result1 = repository.From(f => f.From<Order, OrderDetail>('a')
+            .Where((a, b) => a.Id == b.OrderId)
+            .GroupBy((a, b) => new { a.BuyerId, OrderId = a.Id })
+            .Having((x, a, b) => Sql.CountDistinct(b.ProductId) > 0)
+            .Select((x, a, b) => new { x.Grouping.BuyerId, x.Grouping.OrderId, ProductTotal = Sql.CountDistinct(b.ProductId) }))
+        .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
+        .SelectFlattenTo((x, y) => new OrderBuyerInfo { BuyerName = y.Name })
+        .First();
+        if (result != null)
         {
-            Assert.NotNull(result1);
+            Assert.NotNull(result);
             Assert.False(string.IsNullOrEmpty(result1.OrderId));
             Assert.True(result1.BuyerId > 0);
             Assert.Null(result1.OrderNo);

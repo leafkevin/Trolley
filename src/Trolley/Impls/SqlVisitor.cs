@@ -705,14 +705,12 @@ public class SqlVisitor : ISqlVisitor
             //2.Select子句中Include导航成员引用访问，主表数据已经查询了，此处成员访问只是多一个引用赋值动作，做成了延迟委托调用
             string fields = null;
             List<SqlFieldSegment> readerFields = null;
-            LambdaExpression deferredFuncExpr = null;
-
             if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count > 0)
             {
                 readerFields = new List<SqlFieldSegment>();
                 var builder = new StringBuilder();
                 var visitor = new MemberVisitor();
-                var bodyExpr = visitor.Visit(methodCallExpr);
+                visitor.Visit(methodCallExpr);
                 //$"{f.OrderNo} : {f.TotalAmount.ToString("C")}"
                 //f.TotalAmount.ToString("C")
                 //"TotalAmount: " + (f.Price * f.Quantity).ToString("C")
@@ -740,8 +738,6 @@ public class SqlVisitor : ISqlVisitor
                 if (readerFields.Count > 0)
                     fields = builder.ToString();
             }
-            else deferredFuncExpr = Expression.Lambda(methodCallExpr);
-
             if (sqlSegment.IsDeferredFields || !string.IsNullOrEmpty(fields))
             {
                 if (readerFields == null)
@@ -749,7 +745,7 @@ public class SqlVisitor : ISqlVisitor
                 sqlSegment.IsDeferredFields = true;
                 sqlSegment.FieldType = SqlFieldType.DeferredFields;
                 sqlSegment.Body = fields;
-                sqlSegment.DeferredExpression = deferredFuncExpr;
+                sqlSegment.DeferredExpression = methodCallExpr;
                 sqlSegment.Fields = readerFields;
                 sqlSegment.IsMethodCall = true;
                 return sqlSegment;
@@ -1139,13 +1135,12 @@ public class SqlVisitor : ISqlVisitor
         if (binaryExpr.NodeType == ExpressionType.Add && (binaryExpr.Left.Type == typeof(string) || binaryExpr.Right.Type == typeof(string)))
         {
             //调用拼接方法Concat,每个数据库Provider都实现了这个方法
-            var methodInfo = typeof(string).GetMethod(nameof(string.Concat), [typeof(object[])]);
-            var parameters = Expression.NewArrayInit(typeof(object), binaryExpr);
-            var methodCallExpr = Expression.Call(methodInfo, parameters);
+            var methodInfo = typeof(string).GetMethod(nameof(string.Concat), [typeof(object), typeof(object)]);
+            var methodCallExpr = Expression.Call(methodInfo, binaryExpr.Left, binaryExpr.Right);
             sqlSegment.Expression = methodCallExpr;
             this.OrmProvider.TryGetMethodCallSqlFormatter(methodCallExpr, out var formater);
             //返回的SQL表达式中直接拼接好          
-            result = formater.Invoke(this, binaryExpr, null, null, binaryExpr);
+            result = formater.Invoke(this, methodCallExpr, null, null, binaryExpr.Left, binaryExpr.Right);
             return true;
         }
         result = null;
@@ -2048,13 +2043,12 @@ public class SqlVisitor : ISqlVisitor
     {
         string fields = null;
         List<SqlFieldSegment> readerFields = null;
-        LambdaExpression deferredFuncExpr = null;
         if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count > 0)
         {
             readerFields = new List<SqlFieldSegment>();
             var builder = new StringBuilder();
             var visitor = new MemberVisitor();
-            var bodyExpr = visitor.Visit(methodCallExpr);
+            visitor.Visit(methodCallExpr);
             //$"{f.OrderNo} : {f.TotalAmount.ToString("C")}"
             //f.TotalAmount.ToString("C")
             //"TotalAmount: " + (f.Price * f.Quantity).ToString("C")
@@ -2082,7 +2076,6 @@ public class SqlVisitor : ISqlVisitor
             if (readerFields.Count > 0)
                 fields = builder.ToString();
         }
-        else deferredFuncExpr = Expression.Lambda(methodCallExpr);
 
         if (readerFields == null)
             fields = "NULL";

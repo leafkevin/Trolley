@@ -93,9 +93,9 @@ partial class PostgreSqlProvider
                             if (isDeferredFields)
                             {
                                 if (!visitor.IsSelect)
-                                    throw new NotSupportedException($"不支持的方法调用：{methodCallExpr}");
-
-                                return visitor.BuildDeferredSqlSegment(methodCallExpr, resultSegment);
+                                    throw new NotSupportedException($"不支持的方法调用：{orgExpr}");
+                                //.NET解析 f.TotalAmount.ToString("C") 语句后，会更改methodCallExpr的内容，此处使用原始表达式
+                                return visitor.BuildDeferredSqlSegment(orgExpr as MethodCallExpression, resultSegment);
                             }
 
                             resultSegment = sqlSegments[0];
@@ -180,9 +180,9 @@ partial class PostgreSqlProvider
                             if (isDeferredFields)
                             {
                                 if (!visitor.IsSelect)
-                                    throw new NotSupportedException($"不支持的方法调用：{methodCallExpr}");
-
-                                return visitor.BuildDeferredSqlSegment(methodCallExpr, resultSegment);
+                                    throw new NotSupportedException($"不支持的方法调用：{orgExpr}");
+                                //.NET解析 f.TotalAmount.ToString("C") 语句后，会更改methodCallExpr的内容，此处使用原始表达式
+                                return visitor.BuildDeferredSqlSegment(orgExpr as MethodCallExpression, resultSegment);
                             }
 
                             resultSegment = sqlSegments[0];

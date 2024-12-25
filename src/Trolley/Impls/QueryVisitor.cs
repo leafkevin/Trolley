@@ -1840,9 +1840,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         continue;
                     body = this.GetQuotedValue(readerField);
                     builder.Append(body);
-                    //生成SQL的时候，才加上AS别名
-                    if (this.IsNeedAlias(readerField, isOnlyField))
-                        builder.Append($" AS {this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}");
+                    //延迟方法调用字段，不需要加别名
+                    //if (this.IsNeedAlias(readerField, isOnlyField))
+                    //    builder.Append($" AS {this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}");
                     break;
                 default:
                     body = this.GetQuotedValue(readerField);

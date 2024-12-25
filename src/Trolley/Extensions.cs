@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.Common;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -604,10 +603,7 @@ public static class Extensions
                             current = NewBuildInfo(readerField.SegmentType, readerField.TargetMember, parent);
                             readerBuilders.Add(readerField, current);
                         }
-
-                        var visitor = new ReplaceParameterVisitor();
-                        var bodyExpr = visitor.Visit(readerField.DeferredExpression);
-
+                        Expression bodyExpr = readerField.DeferredExpression;
                         //$"{f.OrderNo} : {f.TotalAmount.ToString("C")}"
                         //f.TotalAmount.ToString("C")
                         //"TotalAmount: " + (f.Price * f.Quantity).ToString("C")
@@ -615,6 +611,8 @@ public static class Extensions
                         Expression executeExpr = null;
                         if (readerField.Fields != null && readerField.Fields.Count > 0)
                         {
+                            var visitor = new ReplaceParameterVisitor();
+                            bodyExpr = visitor.Visit(readerField.DeferredExpression);
                             var argsExprs = new List<Expression>();
                             while (index < endIndex)
                             {

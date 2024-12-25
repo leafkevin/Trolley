@@ -13,14 +13,14 @@ public interface IPostgreSqlGroupingCommandBase<TGrouping> : IGroupingCommandBas
     /// 使用分组后对象直接返回
     /// </summary>
     /// <returns>返回分组后对象</returns>
-    new IPostgreSqlFromContinuedCreate<TGrouping> Select();
+    new IPostgreSqlFromCommand<TGrouping> Select();
     /// <summary>
     /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
     /// </summary>
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fields">原始字段字符串，默认值*</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlFromContinuedCreate<TTarget> Select<TTarget>(string fields = "*");
+    new IPostgreSqlFromCommand<TTarget> Select<TTarget>(string fields = "*");
 }
 /// <summary>
 /// 分组查询对象
@@ -83,7 +83,7 @@ public interface IPostgreSqlGroupingCommand<T, TGrouping> : IGroupingCommand<T, 
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    new IPostgreSqlFromContinuedCreate<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T, TTarget>> fieldsExpr);
+    new IPostgreSqlFromCommand<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T, TTarget>> fieldsExpr);
 }
 /// <summary>
 /// 分组查询对象
@@ -147,7 +147,7 @@ public interface IPostgreSqlGroupingCommand<T1, T2, TGrouping> : IGroupingComman
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    new IPostgreSqlFromContinuedCreate<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TTarget>> fieldsExpr);
+    new IPostgreSqlFromCommand<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TTarget>> fieldsExpr);
 }
 /// <summary>
 /// 分组查询对象
@@ -212,7 +212,7 @@ public interface IPostgreSqlGroupingCommand<T1, T2, T3, TGrouping> : IGroupingCo
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    new IPostgreSqlFromContinuedCreate<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TTarget>> fieldsExpr);
+    new IPostgreSqlFromCommand<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TTarget>> fieldsExpr);
 }
 /// <summary>
 /// 分组查询对象
@@ -278,7 +278,7 @@ public interface IPostgreSqlGroupingCommand<T1, T2, T3, T4, TGrouping> : IGroupi
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    new IPostgreSqlFromContinuedCreate<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TTarget>> fieldsExpr);
+    new IPostgreSqlFromCommand<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TTarget>> fieldsExpr);
 }
 /// <summary>
 /// 分组查询对象
@@ -345,7 +345,7 @@ public interface IPostgreSqlGroupingCommand<T1, T2, T3, T4, T5, TGrouping> : IGr
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    new IPostgreSqlFromContinuedCreate<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TTarget>> fieldsExpr);
+    new IPostgreSqlFromCommand<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TTarget>> fieldsExpr);
 }
 /// <summary>
 /// 分组查询对象
@@ -413,5 +413,5 @@ public interface IPostgreSqlGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> :
     /// <typeparam name="TTarget">返回实体的类型</typeparam>
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
-    new IPostgreSqlFromContinuedCreate<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr);
+    new IPostgreSqlFromCommand<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr);
 }
