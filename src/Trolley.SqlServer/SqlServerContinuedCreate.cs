@@ -47,7 +47,7 @@ public class SqlServerContinuedCreate<TEntity> : ContinuedCreate<TEntity>, ISqlS
     #endregion
 
     #region Output
-    public ISqlServerCreated<TEntity, TResult> Output<TResult>(params string[] fieldNames)
+    public ISqlServerCreated<TEntity, TResult> Output<TResult>(string fieldNames)
     {
         this.DialectVisitor.Output(fieldNames);
         return new SqlServerCreated<TEntity, TResult>(this.DbContext, this.Visitor);
@@ -300,7 +300,7 @@ public class SqlServerBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, I
     #endregion
 
     #region Output
-    public ISqlServerBulkCreated<TEntity, TResult> Output<TResult>(params string[] fieldNames)
+    public ISqlServerBulkCreated<TEntity, TResult> Output<TResult>(string fieldNames)
     {
         this.DialectVisitor.Output(fieldNames);
         return new SqlServerBulkCreated<TEntity, TResult>(this.DbContext, this.Visitor);

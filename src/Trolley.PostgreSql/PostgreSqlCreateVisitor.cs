@@ -13,8 +13,8 @@ public class PostgreSqlCreateVisitor : CreateVisitor
     public StringBuilder UpdateBuilder { get; set; }
     public bool IsUpdate { get; set; }
     public bool IsUseTableAlias { get; set; }
-    public string OutputSql { get; set; }
     public string FromSql { get; set; }
+    public string OutputSql { get; set; }
 
     public PostgreSqlCreateVisitor(DbContext dbContext, char tableAsStart = 'a')
         : base(dbContext, tableAsStart) { }

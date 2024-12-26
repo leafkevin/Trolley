@@ -91,7 +91,7 @@ public interface ISqlServerContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     /// <typeparam name="TResult">返回类型</typeparam>
     /// <param name="fieldNames">字段名称列表</param>
     /// <returns>返回插入的部分字段</returns>
-    ISqlServerCreated<TEntity, TResult> Output<TResult>(params string[] fieldNames);
+    ISqlServerCreated<TEntity, TResult> Output<TResult>(string fieldNames);
     /// <summary>
     /// 返回插入后想要返回字段的内容
     /// </summary>
@@ -189,7 +189,7 @@ public interface ISqlServerBulkContinuedCreate<TEntity> : IContinuedCreate<TEnti
     /// <typeparam name="TResult">返回类型</typeparam>
     /// <param name="fieldNames">字段名称列表</param>
     /// <returns>返回插入的部分字段</returns>
-    ISqlServerBulkCreated<TEntity, TResult> Output<TResult>(params string[] fieldNames);
+    ISqlServerBulkCreated<TEntity, TResult> Output<TResult>(string fieldNames);
     /// <summary>
     /// 返回插入后想要返回字段的内容
     /// </summary>

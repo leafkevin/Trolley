@@ -11,7 +11,8 @@ namespace Trolley.SqlServer;
 public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
 {
     public string LockName { get; set; }
-    public List<string> OutputFieldNames { get; set; }
+    public string FromSql { get; set; }
+    public string OutputSql { get; set; }
     public SqlServerCreateVisitor(DbContext dbContext, char tableAsStart = 'a')
         : base(dbContext, tableAsStart) { }
 
@@ -45,6 +46,12 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
                     case "WithByField":
                         this.VisitWithByField(deferredSegment.Value);
                         break;
+                    case "OutputFields":
+                        this.VisitOutputFields(deferredSegment.Value as string);
+                        break;
+                    case "OutputExpression":
+                        this.VisitOutputExpression(deferredSegment.Value as LambdaExpression);
+                        break;
                 }
             }
             sql = this.BuildSql(out readerFields);
@@ -53,39 +60,44 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
     }
     public override string BuildSql(out List<SqlFieldSegment> readerFields)
     {
-        readerFields = null;
+        readerFields = this.ReaderFields;
         var tableSegment = this.Tables[0];
         var entityType = tableSegment.EntityType;
         var entityMapper = tableSegment.Mapper;
-        string tableName;
-        if (tableSegment.IsSharding)
-            tableName = tableSegment.Body;
-        else
+        if (string.IsNullOrEmpty(this.FromSql))
         {
-            if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out _))
-                tableName = this.GetShardingTableName();
-            else tableName = entityMapper.TableName;
+            string tableName;
+            if (tableSegment.IsSharding)
+                tableName = tableSegment.Body;
+            else
+            {
+                if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out _))
+                    tableName = this.GetShardingTableName();
+                else tableName = entityMapper.TableName;
+            }
+            var tableSchema = tableSegment.TableSchema;
+            if (!string.IsNullOrEmpty(tableSegment.TableSchema))
+                tableName = $"{this.OrmProvider.GetTableName(tableSegment.TableSchema)}.{this.OrmProvider.GetTableName(tableName)}";
+            tableName = this.OrmProvider.GetTableName(tableName);
+
+            if (this.OutputSql != null && this.IsReturnIdentity)
+                throw new NotSupportedException("返回Identity，不支持同时Returning操作");
         }
-        var tableSchema = tableSegment.TableSchema;
-        if (!string.IsNullOrEmpty(tableSegment.TableSchema))
-            tableName = $"{this.OrmProvider.GetTableName(tableSegment.TableSchema)}.{this.OrmProvider.GetTableName(tableName)}";
-        tableName = this.OrmProvider.GetTableName(tableName);
-
-        if (this.OutputFieldNames != null && this.IsReturnIdentity)
-            throw new NotSupportedException("不支持同时Output、Identity操作，只能选择一种操作");
-
-        string outputSql = null;
-        if (this.OutputFieldNames != null)
-            outputSql = this.BuildOutputSql(out readerFields);
 
         string tailSql = null;
+        if (this.OutputSql != null)
+        {
+            tailSql += this.OutputSql;
+            readerFields = this.ReaderFields;
+        }
+
         if (this.IsReturnIdentity)
         {
             if (!entityMapper.IsAutoIncrementKey)
                 throw new NotSupportedException($"实体{entityMapper.EntityType.FullName}表未配置自增长字段，无法返回Identity值");
             tailSql = this.OrmProvider.GetIdentitySql(null);
         }
-        return $"INSERT INTO {tableName} ({this.FieldsBuilder}){outputSql} VALUES ({this.ValuesBuilder}){tailSql}";
+        return $"{this.FromSql}{tailSql}";
     }
     public override string BuildWithBulkSql(ITheaCommand command, out List<SqlFieldSegment> readerFields)
     {
@@ -159,7 +171,13 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
                     case "WithByField":
                         this.VisitWithByField(deferredSegment.Value);
                         break;
-                    default: throw new NotSupportedException("批量插入后，只支持WithBy/IgnoreFields/OnlyFields操作");
+                    case "OutputFields":
+                        this.VisitOutputFields(deferredSegment.Value as string);
+                        break;
+                    case "OutputExpression":
+                        this.VisitOutputExpression(deferredSegment.Value as LambdaExpression);
+                        break;
+                    default: throw new NotSupportedException("批量插入后，只支持WithBy/IgnoreFields/OnlyFields/Output操作");
                 }
                 fixedDbParameters = this.DbParameters.Cast<IDbDataParameter>().ToList();
             }
@@ -178,12 +196,9 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
         //生成批量Fields SQL
         fieldsSetter.Invoke(this.FieldsBuilder, this.DbContext, firstInsertObj);
 
-        List<SqlFieldSegment> readerFields = null;
-        string outputSql = null;
-        if (this.OutputFieldNames != null)
-            outputSql = this.BuildOutputSql(out readerFields);
+        var readerFields = this.ReaderFields;
 
-        var fieldsSql = $"({this.FieldsBuilder}){outputSql} VALUES ";
+        var fieldsSql = $"({this.FieldsBuilder}){this.OutputSql} VALUES ";
         this.FieldsBuilder.Clear();
         this.ValuesBuilder.Clear();
 
@@ -209,13 +224,22 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
         return (isNeedSplit, tableName, insertObjs, bulkCount, firstSqlSetter, loopSqlSetter, null, readerFields);
     }
     public void WithLock(string lockName) => this.LockName = lockName;
-    public void Output(params string[] fieldNames)
+    public void Output(string fieldNames)
     {
-        this.OutputFieldNames ??= new();
-        this.OutputFieldNames.AddRange(fieldNames);
+        this.deferredSegments.Add(new CommandSegment
+        {
+            Type = "OutputFields",
+            Value = fieldNames
+        });
     }
     public virtual void Output(Expression fieldsSelector)
-        => this.OutputFieldNames = this.VisitFields(fieldsSelector, false);
+    {
+        this.deferredSegments.Add(new CommandSegment
+        {
+            Type = "OutputExpression",
+            Value = fieldsSelector
+        });
+    }
     public void WithBulkCopy(IEnumerable insertObjs, int? timeoutSeconds)
     {
         this.ActionMode = ActionMode.BulkCopy;
@@ -226,41 +250,32 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
         });
     }
     public (IEnumerable, int?) BuildWithBulkCopy() => ((IEnumerable, int?))this.deferredSegments[0].Value;
-
-
-    public virtual string BuildOutputSql(out List<SqlFieldSegment> readerFields)
+    public void InitTableAlias(LambdaExpression lambdaExpr)
     {
-        readerFields = new List<SqlFieldSegment>();
-        var entityMapper = this.Tables[0].Mapper;
-        var builder = new StringBuilder(" OUTPUT ");
-        for (int i = 0; i < this.OutputFieldNames.Count; i++)
+        this.TableAliases.Clear();
+        lambdaExpr.Body.GetParameters(out var parameters);
+        if (parameters == null || parameters.Count == 0)
+            return;
+        foreach (var parameterExpr in parameters)
         {
-            var fieldName = this.OutputFieldNames[i];
-            if (i > 0) builder.Append(',');
-            builder.Append($"INSERTED.{fieldName}");
-
-            if (fieldName == "*")
+            if (this.TableAliases.ContainsKey(parameterExpr.Name))
+                continue;
+            this.TableAliases.Add(parameterExpr.Name, this.Tables[0]);
+        }
+    }
+    public void VisitOutputFields(string fieldNames)
+    {
+        this.ReaderFields = new();
+        this.OutputSql = $" RETURNING {fieldNames}";
+        var entityType = this.Tables[0].EntityType;
+        if (fieldNames == "*")
+        {
+            var entityMapper = this.Tables[0].Mapper;
+            foreach (var memberMapper in entityMapper.MemberMaps)
             {
-                foreach (var memberMapper in entityMapper.MemberMaps)
-                {
-                    if (memberMapper.IsIgnore || memberMapper.IsNavigation)
-                        continue;
-                    readerFields.Add(new SqlFieldSegment
-                    {
-                        FieldType = SqlFieldType.Field,
-                        FromMember = memberMapper.Member,
-                        TargetMember = memberMapper.Member,
-                        SegmentType = memberMapper.MemberType,
-                        NativeDbType = memberMapper.NativeDbType,
-                        TypeHandler = memberMapper.TypeHandler,
-                        Body = memberMapper.FieldName
-                    });
-                }
-            }
-            else
-            {
-                var memberMapper = entityMapper.GetMemberMapByFieldName(fieldName);
-                readerFields.Add(new SqlFieldSegment
+                if (memberMapper.IsIgnore || memberMapper.IsNavigation)
+                    continue;
+                this.ReaderFields.Add(new SqlFieldSegment
                 {
                     FieldType = SqlFieldType.Field,
                     FromMember = memberMapper.Member,
@@ -272,14 +287,80 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
                 });
             }
         }
-        var sql = builder.ToString();
+        else
+        {
+            this.ReaderFields.Add(new SqlFieldSegment
+            {
+                FieldType = SqlFieldType.RawSql,
+                Body = fieldNames
+            });
+        }
+    }
+    public void VisitOutputExpression(LambdaExpression fieldsSelector)
+    {
+        this.ReaderFields = new();
+        var entityMapper = this.Tables[0].Mapper;
+        var builder = new StringBuilder(" RETURNING ");
+        this.InitTableAlias(fieldsSelector);
+        switch (fieldsSelector.Body.NodeType)
+        {
+            case ExpressionType.MemberAccess:
+                {
+                    var memberExpr = fieldsSelector.Body as MemberExpression;
+                    var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = memberExpr });
+                    this.GetQuotedValue(sqlSegment, true);
+                    sqlSegment.TargetMember = memberExpr.Member;
+                    sqlSegment.SegmentType = memberExpr.Type;
+                    builder.Append(sqlSegment.Body);
+                    if (sqlSegment.IsNeedAlias || sqlSegment.IsConstant || sqlSegment.IsVariable || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall
+                        || sqlSegment.FromMember != null && sqlSegment.FromMember.Name != sqlSegment.TargetMember.Name)
+                        builder.Append($" AS {this.OrmProvider.GetFieldName(memberExpr.Member.Name)}");
+                    this.ReaderFields.Add(sqlSegment);
+                }
+                break;
+            case ExpressionType.New:
+                var newExpr = fieldsSelector.Body as NewExpression;
+                for (int i = 0; i < newExpr.Arguments.Count; i++)
+                {
+                    var memberInfo = newExpr.Members[i];
+                    var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = newExpr.Arguments[i] });
+                    this.GetQuotedValue(sqlSegment, true);
+                    sqlSegment.TargetMember = memberInfo;
+                    sqlSegment.SegmentType = memberInfo.GetMemberType();
+                    if (i > 0) builder.Append(',');
+                    builder.Append(sqlSegment.Body);
+                    if (sqlSegment.IsNeedAlias || sqlSegment.IsConstant || sqlSegment.IsVariable || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
+                        builder.Append($" AS {this.OrmProvider.GetFieldName(memberInfo.Name)}");
+                    this.ReaderFields.Add(sqlSegment);
+                }
+                break;
+            case ExpressionType.MemberInit:
+                var memberInitExpr = fieldsSelector.Body as MemberInitExpression;
+                for (int i = 0; i < memberInitExpr.Bindings.Count; i++)
+                {
+                    if (memberInitExpr.Bindings[i].BindingType != MemberBindingType.Assignment)
+                        throw new NotSupportedException("暂时不支持除MemberBindingType.Assignment类型外的成员绑定表达式");
+
+                    var memberAssignment = memberInitExpr.Bindings[i] as MemberAssignment;
+                    var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = memberAssignment.Expression });
+                    this.GetQuotedValue(sqlSegment, true);
+                    sqlSegment.TargetMember = memberAssignment.Member;
+                    sqlSegment.SegmentType = memberAssignment.Member.GetMemberType();
+                    if (i > 0) builder.Append(',');
+                    builder.Append(sqlSegment.Body);
+                    if (sqlSegment.IsNeedAlias || sqlSegment.IsConstant || sqlSegment.IsVariable || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
+                        builder.Append($" AS {this.OrmProvider.GetFieldName(memberAssignment.Member.Name)}");
+                    this.ReaderFields.Add(sqlSegment);
+                }
+                break;
+        }
+        this.OutputSql = builder.ToString();
         builder.Clear();
-        return sql;
     }
     public override void Dispose()
     {
         base.Dispose();
         this.LockName = null;
-        this.OutputFieldNames = null;
+        this.OutputSql = null;
     }
 }
