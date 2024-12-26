@@ -168,21 +168,24 @@ public class SqlServerFromCommand<T> : FromCommand<T>, ISqlServerFromCommand<T>
     #region Output
     public ISqlServerBulkCreated<T, TResult> Output<TResult>(string fieldNames)
     {
+        var visitor = this.NewCreateVisitor();
+        var dialectVisitor = this.Visitor as SqlServerQueryVisitor;
+        dialectVisitor.OutputSql = visitor.VisitOutputFields(fieldNames);
         var sql = this.Visitor.BuildCommandSql(out _);
-        var visitor = this.NewCreateVisitor(sql);
-        visitor.Output(fieldNames);
+        visitor.FromSql = this.Visitor.BuildCommandSql(out _);
         return new SqlServerBulkCreated<T, TResult>(this.DbContext, visitor);
     }
     public ISqlServerBulkCreated<T, TResult> Output<TResult>(Expression<Func<T, TResult>> fieldsSelector)
     {
-        var sql = this.Visitor.BuildCommandSql(out _);
-        var visitor = this.NewCreateVisitor(sql);
-        visitor.Output(fieldsSelector);
+        var visitor = this.NewCreateVisitor();
+        var dialectVisitor = this.Visitor as SqlServerQueryVisitor;
+        dialectVisitor.OutputSql = visitor.VisitOutputExpression(fieldsSelector);
+        visitor.FromSql = this.Visitor.BuildCommandSql(out _);
         return new SqlServerBulkCreated<T, TResult>(this.DbContext, visitor);
     }
     #endregion
 
-    protected virtual SqlServerCreateVisitor NewCreateVisitor(string fromSql)
+    protected virtual SqlServerCreateVisitor NewCreateVisitor()
     {
         var createVisiter = new SqlServerCreateVisitor(this.DbContext, this.Visitor.TableAsStart);
         createVisiter.Tables = this.Visitor.Tables;
@@ -191,7 +194,6 @@ public class SqlServerFromCommand<T> : FromCommand<T>, ISqlServerFromCommand<T>
         createVisiter.RefQueries = this.Visitor.RefQueries;
         createVisiter.ShardingTables = this.Visitor.ShardingTables;
         createVisiter.DbParameters = this.Visitor.DbParameters;
-        createVisiter.FromSql = fromSql;
         return createVisiter;
     }
 }

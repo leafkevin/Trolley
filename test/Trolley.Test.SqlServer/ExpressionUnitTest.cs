@@ -61,7 +61,7 @@ public class ExpressionUnitTest : UnitTestBase
             return builder.Build();
         });
         var serviceProvider = services.BuildServiceProvider();
-        dbFactory = serviceProvider.GetService<IOrmDbFactory>();
+        this.dbFactory = serviceProvider.GetService<IOrmDbFactory>();
     }
     [Fact]
     public void Coalesce()
@@ -74,7 +74,7 @@ public class ExpressionUnitTest : UnitTestBase
             .Select(f => new { HasName = f.Name ?? "NoName" })
             .ToSql(out var dbParameters);
         Assert.Equal("SELECT COALESCE(a.[Name],N'NoName') AS [HasName] FROM [sys_user] a WHERE a.[Name] LIKE '%'+@p0+'%'", sql);
-        Assert.True(dbParameters[0].Value.ToString() == firstName);
+        Assert.Equal(dbParameters[0].Value.ToString(), firstName);
 
         repository.BeginTransaction();
         var count = repository.Update<User>(new { Id = 1, Name = "千叶111" });

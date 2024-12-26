@@ -202,6 +202,11 @@ public sealed class OrmDbFactory : IOrmDbFactory
         };
         return database.OrmProvider.CreateRepository(dbContext);
     }
+    public IRepository CreateRepository(DbContext dbContext)
+    {
+        var ormProvider = dbContext.OrmProvider;
+        return ormProvider.CreateRepository(dbContext);
+    }
     public void With(Action<OrmDbFactoryOptions> optionsInitializer)
     {
         if (optionsInitializer == null)

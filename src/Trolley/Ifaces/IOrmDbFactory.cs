@@ -36,6 +36,12 @@ public interface IOrmDbFactory
     /// <param name="dbKey">指定的dbKey</param>
     /// <returns></returns>
     IRepository CreateRepository(string dbKey = null);
+    /// <summary>
+    /// 根据已有的dbContext对象，创建仓储对象，可以使用已有的事务
+    /// </summary>
+    /// <param name="dbContext"></param>
+    /// <returns></returns>
+    IRepository CreateRepository(DbContext dbContext);
     void With(Action<OrmDbFactoryOptions> optionsInitializer);
     void Build();
 }

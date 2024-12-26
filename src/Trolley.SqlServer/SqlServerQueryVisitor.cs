@@ -7,6 +7,7 @@ namespace Trolley.SqlServer;
 
 public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
 {
+    public string OutputSql { get; set; }
     public SqlServerQueryVisitor(DbContext dbContext, char tableAsStart = 'a', IDataParameterCollection dbParameters = null)
         : base(dbContext, tableAsStart, dbParameters) { }
 
@@ -161,7 +162,11 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
             builder.Append($"{this.OrmProvider.GetFieldName(memberMapper.FieldName)}");
             index++;
         }
-        builder.Append(") ");
+        builder.Append(')');
+        if (!string.IsNullOrEmpty(this.OutputSql))
+            builder.Append(this.OutputSql);
+        builder.Append(' ');
+
         //有CTE表
         if (this.IsUseCteTable && this.RefQueries != null && this.RefQueries.Count > 0)
         {
@@ -187,7 +192,6 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
             builder.Append(this.UnionSql);
             sql = builder.ToString();
             builder.Clear();
-            builder = null;
             return sql;
         }
         var headSql = builder.ToString();
@@ -283,7 +287,6 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
         }
         sql = builder.ToString();
         builder.Clear();
-        builder = null;
         return sql;
     }
     public override string BuildTableShardingsSql()

@@ -70,7 +70,7 @@ public class SqlServerCreate<TEntity> : Create<TEntity>, ISqlServerCreate<TEntit
     public new ISqlServerFromCommand<T1, T2> From<T1, T2>()
         => base.From<T1, T2>() as ISqlServerFromCommand<T1, T2>;
     public new ISqlServerFromCommand<T1, T2, T3> From<T1, T2, T3>()
-       => base.From<T1, T2, T3>() as ISqlServerFromCommand<T1, T2, T3>;
+        => base.From<T1, T2, T3>() as ISqlServerFromCommand<T1, T2, T3>;
     public new ISqlServerFromCommand<T1, T2, T3, T4> From<T1, T2, T3, T4>()
         => base.From<T1, T2, T3, T4>() as ISqlServerFromCommand<T1, T2, T3, T4>;
     public new ISqlServerFromCommand<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>()

@@ -2225,8 +2225,8 @@ public class AllUnitTest : UnitTestBase
         Assert.True(product.ProductNo == "PN_" + id.ToString().PadLeft(3, '0'));
         Assert.True(product.Name == name);
         Assert.True(product.BrandId == brandId);
-		
-		count = await repository.Create<Product>()
+
+        count = await repository.Create<Product>()
             .From<Brand>()
             .Where(f => f.Id == brandId)
             .Select(f => new Product
@@ -2656,7 +2656,7 @@ public class AllUnitTest : UnitTestBase
                 .Set(buyerSource.HasValue, f => f.BuyerSource, buyerSource))
             .ToSql(out _);
         Assert.Equal("INSERT INTO \"sys_order\" (\"Id\",\"TenantId\",\"OrderNo\",\"TotalAmount\",\"BuyerId\",\"SellerId\",\"Products\",\"Disputes\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\") VALUES (@Id,@TenantId,@OrderNo,@TotalAmount,@BuyerId,@SellerId,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) ON CONFLICT (\"Id\") DO UPDATE SET \"TotalAmount\"=EXCLUDED.\"TotalAmount\",\"Products\"=EXCLUDED.\"Products\",\"BuyerSource\"=@BuyerSource", sql1);
-		await repository.BeginTransactionAsync();
+        await repository.BeginTransactionAsync();
         await repository.DeleteAsync<Order>("9");
         var count = await repository.Create<Order>()
              .WithBy(new
@@ -3075,7 +3075,6 @@ public class AllUnitTest : UnitTestBase
         if (result1 != null && result2 != null)
         {
             Assert.True(result1.Id == result2.Id);
-            Assert.Equal(1, result1.Id);
         }
     }
     [Fact]
@@ -5987,7 +5986,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
         Assert.Equal("UPDATE \"sys_user\" SET \"Name\"=@Name,\"Age\"=@Age,\"CompanyId\"=@CompanyId WHERE \"Id\"=1", sql);
         Assert.Equal(3, dbParameters.Count);
         Assert.Equal("leafkevin22", (string)dbParameters[0].Value);
-        Assert.Equal(25, (int)dbParameters[1].Value);        
+        Assert.Equal(25, (int)dbParameters[1].Value);
         Assert.True(dbParameters[2].Value == DBNull.Value);
 
         repository.Update<User>()

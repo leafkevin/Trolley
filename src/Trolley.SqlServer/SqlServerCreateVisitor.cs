@@ -13,6 +13,8 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
     public string LockName { get; set; }
     public string FromSql { get; set; }
     public string OutputSql { get; set; }
+    public bool IsOutput { get; set; }
+
     public SqlServerCreateVisitor(DbContext dbContext, char tableAsStart = 'a')
         : base(dbContext, tableAsStart) { }
 
@@ -61,43 +63,38 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
     public override string BuildSql(out List<SqlFieldSegment> readerFields)
     {
         readerFields = this.ReaderFields;
+        if (!string.IsNullOrEmpty(this.FromSql))
+            return this.FromSql;
+
         var tableSegment = this.Tables[0];
         var entityType = tableSegment.EntityType;
         var entityMapper = tableSegment.Mapper;
-        if (string.IsNullOrEmpty(this.FromSql))
-        {
-            string tableName;
-            if (tableSegment.IsSharding)
-                tableName = tableSegment.Body;
-            else
-            {
-                if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out _))
-                    tableName = this.GetShardingTableName();
-                else tableName = entityMapper.TableName;
-            }
-            var tableSchema = tableSegment.TableSchema;
-            if (!string.IsNullOrEmpty(tableSegment.TableSchema))
-                tableName = $"{this.OrmProvider.GetTableName(tableSegment.TableSchema)}.{this.OrmProvider.GetTableName(tableName)}";
-            tableName = this.OrmProvider.GetTableName(tableName);
 
-            if (this.OutputSql != null && this.IsReturnIdentity)
-                throw new NotSupportedException("返回Identity，不支持同时Returning操作");
+        string tableName;
+        if (tableSegment.IsSharding)
+            tableName = tableSegment.Body;
+        else
+        {
+            if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out _))
+                tableName = this.GetShardingTableName();
+            else tableName = entityMapper.TableName;
         }
+        var tableSchema = tableSegment.TableSchema;
+        if (!string.IsNullOrEmpty(tableSegment.TableSchema))
+            tableName = $"{this.OrmProvider.GetTableName(tableSegment.TableSchema)}.{this.OrmProvider.GetTableName(tableName)}";
+        tableName = this.OrmProvider.GetTableName(tableName);
+
+        if (this.OutputSql != null && this.IsReturnIdentity)
+            throw new NotSupportedException("返回Identity，不支持同时Returning操作");
 
         string tailSql = null;
-        if (this.OutputSql != null)
-        {
-            tailSql += this.OutputSql;
-            readerFields = this.ReaderFields;
-        }
-
         if (this.IsReturnIdentity)
         {
             if (!entityMapper.IsAutoIncrementKey)
                 throw new NotSupportedException($"实体{entityMapper.EntityType.FullName}表未配置自增长字段，无法返回Identity值");
             tailSql = this.OrmProvider.GetIdentitySql(null);
         }
-        return $"{this.FromSql}{tailSql}";
+        return $"INSERT INTO {tableName} ({this.FieldsBuilder}){this.OutputSql} VALUES ({this.ValuesBuilder}){tailSql}";
     }
     public override string BuildWithBulkSql(ITheaCommand command, out List<SqlFieldSegment> readerFields)
     {
@@ -263,13 +260,14 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
             this.TableAliases.Add(parameterExpr.Name, this.Tables[0]);
         }
     }
-    public void VisitOutputFields(string fieldNames)
+    public string VisitOutputFields(string fieldNames)
     {
         this.ReaderFields = new();
-        this.OutputSql = $" RETURNING {fieldNames}";
+        this.OutputSql = $" OUTPUT {fieldNames}";
         var entityType = this.Tables[0].EntityType;
         if (fieldNames == "*")
         {
+            this.OutputSql = $" OUTPUT INSERTED.{fieldNames}";
             var entityMapper = this.Tables[0].Mapper;
             foreach (var memberMapper in entityMapper.MemberMaps)
             {
@@ -295,12 +293,14 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
                 Body = fieldNames
             });
         }
+        return this.OutputSql;
     }
-    public void VisitOutputExpression(LambdaExpression fieldsSelector)
+    public string VisitOutputExpression(LambdaExpression fieldsSelector)
     {
+        this.IsOutput = true;
         this.ReaderFields = new();
         var entityMapper = this.Tables[0].Mapper;
-        var builder = new StringBuilder(" RETURNING ");
+        var builder = new StringBuilder(" OUTPUT ");
         this.InitTableAlias(fieldsSelector);
         switch (fieldsSelector.Body.NodeType)
         {
@@ -355,7 +355,30 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
                 break;
         }
         this.OutputSql = builder.ToString();
+        this.IsOutput = false;
         builder.Clear();
+        return this.OutputSql;
+    }
+    public override SqlFieldSegment VisitMemberAccess(SqlFieldSegment sqlSegment)
+    {
+        if (this.IsOutput)
+        {
+            var memberExpr = sqlSegment.Expression as MemberExpression;
+            if (!this.Tables[0].Mapper.TryGetMemberMap(memberExpr.Member.Name, out var memberMapper))
+                throw new MissingMemberException($"类{this.Tables[0].EntityType.FullName}未找到成员{memberExpr.Member.Name}");
+
+            //在解析过程中，引用原值时使用别名，最后再设置IsNeedTableAlias
+            var fieldName = $"INSERTED.{this.OrmProvider.GetFieldName(memberMapper.FieldName)}";
+
+            sqlSegment.HasField = true;
+            sqlSegment.SegmentType = memberMapper.MemberType;
+            sqlSegment.FromMember = memberMapper.Member;
+            sqlSegment.NativeDbType = memberMapper.NativeDbType;
+            sqlSegment.TypeHandler = memberMapper.TypeHandler;
+            sqlSegment.Body = fieldName;
+            return sqlSegment;
+        }
+        return base.VisitMemberAccess(sqlSegment);
     }
     public override void Dispose()
     {

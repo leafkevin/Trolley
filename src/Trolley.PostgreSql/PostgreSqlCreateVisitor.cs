@@ -386,14 +386,14 @@ public class PostgreSqlCreateVisitor : CreateVisitor
             //在解析过程中，引用原值时使用别名，最后再设置IsNeedTableAlias
             this.IsUseTableAlias = true;
             var fieldName = $"{this.Tables[0].AliasName}.{this.OrmProvider.GetFieldName(memberMapper.FieldName)}";
-            return new SqlFieldSegment
-            {
-                HasField = true,
-                FromMember = memberMapper.Member,
-                NativeDbType = memberMapper.NativeDbType,
-                TypeHandler = memberMapper.TypeHandler,
-                Body = fieldName
-            };
+
+            sqlSegment.HasField = true;
+            sqlSegment.SegmentType = memberMapper.MemberType;
+            sqlSegment.FromMember = memberMapper.Member;
+            sqlSegment.NativeDbType = memberMapper.NativeDbType;
+            sqlSegment.TypeHandler = memberMapper.TypeHandler;
+            sqlSegment.Body = fieldName;
+            return sqlSegment;
         }
         return base.VisitMemberAccess(sqlSegment);
     }

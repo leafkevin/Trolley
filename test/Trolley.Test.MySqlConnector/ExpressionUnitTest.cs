@@ -77,11 +77,31 @@ public class ExpressionUnitTest : UnitTestBase
         Assert.Equal("SELECT COALESCE(a.`Name`,'NoName') AS `HasName` FROM `sys_user` a WHERE a.`Name` LIKE CONCAT('%',@p0,'%')", sql);
         Assert.Equal(dbParameters[0].Value.ToString(), firstName);
 
+        repository.BeginTransaction();
+        var count = repository.Update<User>(new { Id = 1, Name = "leafkevin111" });
+        var result = repository.From<User>()
+            .Where(f => f.Name.Contains(lastName ?? firstName))
+            .Select(f => new { f.Id, HasName = f.Name ?? "NoName" })
+            .ToList();
+        repository.Commit();
+        Assert.NotNull(result);
+        Assert.True(result.Count > 0);
+        Assert.True(result.Exists(f => f.Id == 1));
+
         sql = repository.From<User>()
             .Where(f => (f.Name ?? f.Id.ToString()) == "leafkevin")
             .Select(f => f.Id)
             .ToSql(out dbParameters);
         Assert.Equal("SELECT a.`Id` FROM `sys_user` a WHERE COALESCE(a.`Name`,CAST(a.`Id` AS CHAR))='leafkevin'", sql);
+        repository.BeginTransaction();
+        count = repository.Update<User>(new { Id = 1, Name = "leafkevin" });
+        var result1 = repository.From<User>()
+            .Where(f => (f.Name ?? f.Id.ToString()) == "leafkevin")
+            .Select(f => f.Id)
+            .ToList();
+        repository.Commit();
+        Assert.NotNull(result);
+        Assert.True(result.Exists(f => f.Id == 1));
     }
     [Fact]
     public void Conditional()
