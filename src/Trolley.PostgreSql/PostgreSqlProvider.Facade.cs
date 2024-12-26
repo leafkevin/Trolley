@@ -59,6 +59,33 @@ partial class PostgreSqlProvider
     public override IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> NewGroupQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>(DbContext dbContext, IQueryVisitor visitor) => new PostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>(dbContext, visitor);
     public override IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping> NewGroupQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping>(DbContext dbContext, IQueryVisitor visitor) => new PostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping>(dbContext, visitor);
 
+    public override IFromCommand<T> NewFromCommand<T>(DbContext dbContext, IQueryVisitor visitor)
+        => new PostgreSqlFromCommand<T>(dbContext, visitor);
+    public override IFromCommand<T1, T2> NewFromCommand<T1, T2>(DbContext dbContext, IQueryVisitor visitor)
+        => new PostgreSqlFromCommand<T1, T2>(dbContext, visitor);
+    public override IFromCommand<T1, T2, T3> NewFromCommand<T1, T2, T3>(DbContext dbContext, IQueryVisitor visitor)
+        => new PostgreSqlFromCommand<T1, T2, T3>(dbContext, visitor);
+    public override IFromCommand<T1, T2, T3, T4> NewFromCommand<T1, T2, T3, T4>(DbContext dbContext, IQueryVisitor visitor)
+        => new PostgreSqlFromCommand<T1, T2, T3, T4>(dbContext, visitor);
+    public override IFromCommand<T1, T2, T3, T4, T5> NewFromCommand<T1, T2, T3, T4, T5>(DbContext dbContext, IQueryVisitor visitor)
+        => new PostgreSqlFromCommand<T1, T2, T3, T4, T5>(dbContext, visitor);
+    public override IFromCommand<T1, T2, T3, T4, T5, T6> NewFromCommand<T1, T2, T3, T4, T5, T6>(DbContext dbContext, IQueryVisitor visitor)
+        => new PostgreSqlFromCommand<T1, T2, T3, T4, T5, T6>(dbContext, visitor);
+
+    public override IGroupingCommand<T, TGrouping> NewGroupCommand<T, TGrouping>(DbContext dbContext, IQueryVisitor visitor)
+        => new PostgreSqlGroupingCommand<T, TGrouping>(dbContext, visitor);
+    public override IGroupingCommand<T1, T2, TGrouping> NewGroupCommand<T1, T2, TGrouping>(DbContext dbContext, IQueryVisitor visitor)
+        => new PostgreSqlGroupingCommand<T1, T2, TGrouping>(dbContext, visitor);
+    public override IGroupingCommand<T1, T2, T3, TGrouping> NewGroupCommand<T1, T2, T3, TGrouping>(DbContext dbContext, IQueryVisitor visitor)
+        => new PostgreSqlGroupingCommand<T1, T2, T3, TGrouping>(dbContext, visitor);
+    public override IGroupingCommand<T1, T2, T3, T4, TGrouping> NewGroupCommand<T1, T2, T3, T4, TGrouping>(DbContext dbContext, IQueryVisitor visitor)
+        => new PostgreSqlGroupingCommand<T1, T2, T3, T4, TGrouping>(dbContext, visitor);
+    public override IGroupingCommand<T1, T2, T3, T4, T5, TGrouping> NewGroupCommand<T1, T2, T3, T4, T5, TGrouping>(DbContext dbContext, IQueryVisitor visitor)
+        => new PostgreSqlGroupingCommand<T1, T2, T3, T4, T5, TGrouping>(dbContext, visitor);
+    public override IGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> NewGroupCommand<T1, T2, T3, T4, T5, T6, TGrouping>(DbContext dbContext, IQueryVisitor visitor)
+        => new PostgreSqlGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping>(dbContext, visitor);
+
+
     public override ICreate<TEntity> NewCreate<TEntity>(DbContext dbContext) => new PostgreSqlCreate<TEntity>(dbContext);
     public override IContinuedCreate<TEntity> NewContinuedCreate<TEntity>(DbContext dbContext, ICreateVisitor visitor)
     {
@@ -73,7 +100,7 @@ partial class PostgreSqlProvider
     public override IUpdate<TEntity> NewUpdate<TEntity>(DbContext dbContext) => new PostgreSqlUpdate<TEntity>(dbContext);
     public override IContinuedUpdate<TEntity> NewContinuedUpdate<TEntity>(DbContext dbContext, IUpdateVisitor visitor)
         => new PostgreSqlContinuedUpdate<TEntity>(dbContext, visitor);
-    public override IBulkContinuedUpdate<TEntity> NewBulkContinuedUpdate<TEntity>(DbContext dbContext, IUpdateVisitor visitor) 
+    public override IBulkContinuedUpdate<TEntity> NewBulkContinuedUpdate<TEntity>(DbContext dbContext, IUpdateVisitor visitor)
         => new PostgreSqlBulkContinuedUpdate<TEntity>(dbContext, visitor);
     public override IUpdated<TEntity> NewUpdated<TEntity>(DbContext dbContext, IUpdateVisitor visitor)
         => new PostgreSqlUpdated<TEntity>(dbContext, visitor);

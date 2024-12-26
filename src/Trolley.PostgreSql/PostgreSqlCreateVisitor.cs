@@ -27,7 +27,18 @@ public class PostgreSqlCreateVisitor : CreateVisitor
             sql = this.BuildWithBulkSql(command, out readerFields);
         else
         {
-            this.DbParameters ??= command.Parameters;
+            //多命令执行时，第二次以后DbParameters有值，并且就是command.Parameters
+            //当Insert Select From操作时，DbParameters也有值，但不是command.Parameters，需要赋值到command.Parameters
+            if (this.DbParameters != null && this.DbParameters != command.Parameters)
+            {
+                foreach (var dbParameter in this.DbParameters)
+                {
+                    command.Parameters.Add(dbParameter);
+                }
+                this.DbParameters = command.Parameters;
+            }
+            else this.DbParameters ??= command.Parameters;
+
             foreach (var deferredSegment in this.deferredSegments)
             {
                 switch (deferredSegment.Type)
@@ -64,32 +75,39 @@ public class PostgreSqlCreateVisitor : CreateVisitor
         var tableSegment = this.Tables[0];
         var entityType = tableSegment.EntityType;
         var entityMapper = tableSegment.Mapper;
-        string tableName;
-        if (tableSegment.IsSharding)
-            tableName = tableSegment.Body;
-        else
-        {
-            if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out _))
-                tableName = this.GetShardingTableName();
-            else tableName = entityMapper.TableName;
-        }
-        var tableSchema = tableSegment.TableSchema;
-        if (!string.IsNullOrEmpty(tableSegment.TableSchema))
-            tableName = $"{this.OrmProvider.GetTableName(tableSegment.TableSchema)}.{this.OrmProvider.GetTableName(tableName)}";
-        tableName = this.OrmProvider.GetTableName(tableName);
-        //Set语句中，引用了原值，就需要使用别名
-        if (this.IsUseTableAlias) tableName += $" AS {tableSegment.AliasName}";
 
-        if (this.UpdateBuilder != null && this.IsReturnIdentity
-            || this.OutputSql != null && this.IsReturnIdentity)
-            throw new NotSupportedException("不支持同时Returning、Identity操作，只能选择一种操作");
+        if (string.IsNullOrEmpty(this.FromSql))
+        {
+            string tableName;
+            if (tableSegment.IsSharding)
+                tableName = tableSegment.Body;
+            else
+            {
+                if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out _))
+                    tableName = this.GetShardingTableName();
+                else tableName = entityMapper.TableName;
+            }
+            var tableSchema = tableSegment.TableSchema;
+            if (!string.IsNullOrEmpty(tableSegment.TableSchema))
+                tableName = $"{this.OrmProvider.GetTableName(tableSegment.TableSchema)}.{this.OrmProvider.GetTableName(tableName)}";
+            tableName = this.OrmProvider.GetTableName(tableName);
+            //Set语句中，引用了原值，就需要使用别名
+            if (this.IsUseTableAlias) tableName += $" AS {tableSegment.AliasName}";
+
+            if (this.IsReturnIdentity && (this.UpdateBuilder != null || this.OutputSql != null))
+                throw new NotSupportedException("返回Identity，不支持同时Returning操作");
+            this.FromSql = $"INSERT INTO {tableName} ({this.FieldsBuilder}) VALUES ({this.ValuesBuilder})";
+        }
 
         string tailSql = string.Empty;
         if (this.UpdateBuilder != null)
             tailSql = this.UpdateBuilder.ToString();
 
         if (this.OutputSql != null)
+        {
             tailSql += this.OutputSql;
+            readerFields = this.ReaderFields;
+        }
 
         if (this.IsReturnIdentity)
         {
@@ -98,7 +116,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
             var keyFieldName = this.OrmProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName);
             tailSql = this.OrmProvider.GetIdentitySql(keyFieldName);
         }
-        return $"INSERT INTO {tableName} ({this.FieldsBuilder}) VALUES ({this.ValuesBuilder}){tailSql}";
+        return $"{this.FromSql}{tailSql}";
     }
     public override (bool, string, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
         Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command)
@@ -145,7 +163,13 @@ public class PostgreSqlCreateVisitor : CreateVisitor
                         this.UpdateBuilder ??= new();
                         this.VisitSetExpression(deferredSegment.Value as LambdaExpression);
                         break;
-                    default: throw new NotSupportedException("批量插入后，只支持WithBy/IgnoreFields/OnlyFields/OnConflict操作");
+                    case "OutputFields":
+                        this.VisitOutputFields(deferredSegment.Value as string);
+                        break;
+                    case "OutputExpression":
+                        this.VisitOutputExpression(deferredSegment.Value as LambdaExpression);
+                        break;
+                    default: throw new NotSupportedException("批量插入后，只支持WithBy/IgnoreFields/OnlyFields/OnConflict/Returning操作");
                 }
                 fixedDbParameters = this.DbParameters.Cast<IDbDataParameter>().ToList();
             }
@@ -164,7 +188,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
         //生成批量Fields SQL
         fieldsSetter.Invoke(this.FieldsBuilder, this.DbContext, firstInsertObj);
 
-        string tailSql = null;
+        string tailSql = string.Empty;
         List<SqlFieldSegment> readerFields = null;
 
         if (this.UpdateBuilder != null)

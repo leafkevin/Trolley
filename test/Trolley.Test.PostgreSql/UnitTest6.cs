@@ -978,9 +978,9 @@ public class UnitTest6 : UnitTestBase
                 UpdatedAt = DateTime.Now,
                 UpdatedBy = 1
             })
-            .Returning<OrderInfo>("BuyerId,TotalAmount")
+            .Returning<OrderInfo>("\"BuyerId\",\"TotalAmount\"")
             .ToSql(out var parameters);
-        Assert.Equal("INSERT INTO `sys_order_104_202405` (`Id`,`TenantId`,`OrderNo`,`BuyerId`,`SellerId`,`BuyerSource`,`ProductCount`,`TotalAmount`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) SELECT b.`OrderId`,b.`TenantId`,CONCAT('ON-',b.`OrderId`),1,1,'Taobao',2,SUM(b.`Amount`),1,NOW(),1,NOW(),1 FROM `sys_order_detail_104_202405` b WHERE CHAR_LENGTH(b.`Id`)<1050 GROUP BY b.`OrderId` RETURNING BuyerId,TotalAmount", sql);
+        Assert.Equal("INSERT INTO \"sys_order_104_202405\" (\"Id\",\"TenantId\",\"OrderNo\",\"BuyerId\",\"SellerId\",\"BuyerSource\",\"ProductCount\",\"TotalAmount\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\") SELECT b.\"OrderId\",b.\"TenantId\",CONCAT('ON-',b.\"OrderId\"),1,1,'Taobao',2,SUM(b.\"Amount\"),TRUE,CURRENT_TIMESTAMP,1,CURRENT_TIMESTAMP,1 FROM \"sys_order_detail_104_202405\" b WHERE LENGTH(b.\"Id\")<1050 GROUP BY b.\"OrderId\" RETURNING \"BuyerId\",\"TotalAmount\"", sql);
         await repository.BeginTransactionAsync();
         await repository.Delete<Order>()
             .UseTableBy("104", DateTime.Parse("2024-05-01"))
@@ -1008,7 +1008,7 @@ public class UnitTest6 : UnitTestBase
                 UpdatedAt = DateTime.Now,
                 UpdatedBy = 1
             })
-            .Returning<OrderInfo>("BuyerId,TotalAmount")
+            .Returning<OrderInfo>("\"BuyerId\",\"TotalAmount\"")
             .ExecuteAsync();
         await repository.CommitAsync();
     }

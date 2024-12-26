@@ -23,7 +23,18 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
             sql = this.BuildWithBulkSql(command, out readerFields);
         else
         {
-            this.DbParameters ??= command.Parameters;
+            //多命令执行时，第二次以后DbParameters有值，并且就是command.Parameters
+            //当Insert Select From操作时，DbParameters也有值，但不是command.Parameters，需要赋值到command.Parameters
+            if (this.DbParameters != null && this.DbParameters != command.Parameters)
+            {
+                foreach (var dbParameter in this.DbParameters)
+                {
+                    command.Parameters.Add(dbParameter);
+                }
+                this.DbParameters = command.Parameters;
+            }
+            else this.DbParameters ??= command.Parameters;
+
             foreach (var deferredSegment in this.deferredSegments)
             {
                 switch (deferredSegment.Type)

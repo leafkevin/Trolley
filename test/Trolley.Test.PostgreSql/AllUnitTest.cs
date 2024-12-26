@@ -675,7 +675,7 @@ public class AllUnitTest : UnitTestBase
         Assert.Equal(dbParameters[0].Value.ToString(), firstName);
 
         repository.BeginTransaction();
-        var count = repository.Update<User>(new { Id = 1, Name = "千叶111" });
+        var count = repository.Update<User>(new { Id = 1, Name = "kevin111" });
         var result = repository.From<User>()
             .Where(f => f.Name.Contains(lastName ?? firstName))
             .Select(f => new { f.Id, HasName = f.Name ?? "NoName" })
@@ -2244,7 +2244,7 @@ public class AllUnitTest : UnitTestBase
                 UpdatedBy = 1,
                 UpdatedAt = DateTime.Now
             })
-            //.OnConflict(f => f.DoNothing())
+            .OnConflict(f => f.DoNothing())
             .ExecuteAsync();
         Assert.Equal(0, count);
     }

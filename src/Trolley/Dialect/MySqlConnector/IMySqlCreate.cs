@@ -141,5 +141,5 @@ public interface IMySqlCreate<TEntity> : ICreate<TEntity>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
     new IMySqlFromCommand<T> From<T>(IQuery<T> subQuery);
-    #endregion   
+    #endregion
 }

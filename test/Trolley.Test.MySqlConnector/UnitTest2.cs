@@ -2557,14 +2557,11 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
         .SelectFlattenTo((x, y) => new OrderBuyerInfo { BuyerName = y.Name })
         .First();
-        if (result != null)
-        {
-            Assert.NotNull(result);
-            Assert.False(string.IsNullOrEmpty(result1.OrderId));
-            Assert.True(result1.BuyerId > 0);
-            Assert.Null(result1.OrderNo);
-            Assert.NotNull(result1.BuyerName);
-        }
+        Assert.NotNull(result);
+        Assert.False(string.IsNullOrEmpty(result1.OrderId));
+        Assert.True(result1.BuyerId > 0);
+        Assert.Null(result1.OrderNo);
+        Assert.NotNull(result1.BuyerName);
     }
     [Fact]
     public void SelectAfterOrderBy()
