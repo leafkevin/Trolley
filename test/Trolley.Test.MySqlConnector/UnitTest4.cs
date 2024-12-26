@@ -393,4 +393,48 @@ public class UnitTest4 : UnitTestBase
         var user = await repository.GetByIdAsync<User>(1);
         Assert.NotNull(user);
     }
+    [Fact]
+    public async Task Multi_Transation()
+    {
+        var repository = this.dbFactory.Create();
+        bool? isMale = true;
+        var dbContext = repository.DbContext;
+        await repository.BeginTransactionAsync();
+        await repository.Update<User>()
+            .Set(new { Name = "leafkevin1" })
+            .Where(new { Id = 1 })
+            .ExecuteAsync();
+        await repository.UpdateAsync<User>(new { Name = "leafkevin1", Id = 1 });
+
+        var newResitory = this.dbFactory.Create(dbContext);
+        await newResitory.Delete<User>()
+            .Where(f => f.Name.Contains("kevin"))
+            .And(isMale.HasValue, f => f.Age > 25)
+            .ExecuteAsync();
+        await newResitory.CommitAsync();
+        if (!await repository.ExistsAsync<User>(1))
+            await repository.CreateAsync<User>(new User
+            {
+                Id = 1,
+                TenantId = "1",
+                Name = "leafkevin",
+                Age = 25,
+                CompanyId = 1,
+                Gender = Gender.Male,
+                GuidField = Guid.NewGuid(),
+#if NET6_0_OR_GREATER
+                SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
+#else
+                SomeTimes = TimeSpan.FromSeconds(4769),
+#endif
+                SourceType = UserSourceType.Douyin,
+                IsEnabled = true,
+                CreatedAt = DateTime.Parse("2023-03-10 06:07:08"),
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Parse("2023-03-15 16:27:38"),
+                UpdatedBy = 1
+            });
+        var user = await repository.GetByIdAsync<User>(1);
+        Assert.NotNull(user);
+    }
 }

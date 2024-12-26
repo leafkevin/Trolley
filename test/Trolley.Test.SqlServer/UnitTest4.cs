@@ -339,14 +339,14 @@ public class UnitTest4 : UnitTestBase
         Assert.True((string)parameters1[0].Value == gender.ToString());
 
         var sql3 = repository.Delete<Company>()
-             .Where(f => f.Nature == CompanyNature.Internet)
-             .ToSql(out _);
+            .Where(f => f.Nature == CompanyNature.Internet)
+            .ToSql(out _);
         Assert.Equal("DELETE FROM [sys_company] WHERE [Nature]=N'Internet'", sql3);
 
         var nature = CompanyNature.Internet;
         var sql4 = repository.Delete<Company>()
-             .Where(f => f.Nature == nature)
-             .ToSql(out var parameters2);
+            .Where(f => f.Nature == nature)
+            .ToSql(out var parameters2);
         Assert.Equal("DELETE FROM [sys_company] WHERE [Nature]=@p0", sql4);
         Assert.Equal("@p0", parameters2[0].ParameterName);
         Assert.True(parameters2[0].Value.GetType() == typeof(string));
@@ -368,6 +368,50 @@ public class UnitTest4 : UnitTestBase
             .And(isMale.HasValue, f => f.Age > 25)
             .ExecuteAsync();
         await repository.CommitAsync();
+        if (!await repository.ExistsAsync<User>(1))
+            await repository.CreateAsync<User>(new User
+            {
+                Id = 1,
+                TenantId = "1",
+                Name = "leafkevin",
+                Age = 25,
+                CompanyId = 1,
+                Gender = Gender.Male,
+                GuidField = Guid.NewGuid(),
+#if NET6_0_OR_GREATER
+                SomeTimes = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(4769)),
+#else
+                SomeTimes = TimeSpan.FromSeconds(4769),
+#endif
+                SourceType = UserSourceType.Douyin,
+                IsEnabled = true,
+                CreatedAt = DateTime.Parse("2023-03-10 06:07:08"),
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Parse("2023-03-15 16:27:38"),
+                UpdatedBy = 1
+            });
+        var user = await repository.GetByIdAsync<User>(1);
+        Assert.NotNull(user);
+    }
+    [Fact]
+    public async Task Multi_Transation()
+    {
+        var repository = this.dbFactory.Create();
+        bool? isMale = true;
+        var dbContext = repository.DbContext;
+        await repository.BeginTransactionAsync();
+        await repository.Update<User>()
+            .Set(new { Name = "leafkevin1" })
+            .Where(new { Id = 1 })
+            .ExecuteAsync();
+        await repository.UpdateAsync<User>(new { Name = "leafkevin1", Id = 1 });
+
+        var newResitory = this.dbFactory.Create(dbContext);
+        await newResitory.Delete<User>()
+            .Where(f => f.Name.Contains("kevin"))
+            .And(isMale.HasValue, f => f.Age > 25)
+            .ExecuteAsync();
+        await newResitory.CommitAsync();
         if (!await repository.ExistsAsync<User>(1))
             await repository.CreateAsync<User>(new User
             {

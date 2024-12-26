@@ -25,11 +25,7 @@ public class PredicateBuilder
 public class PredicateBuilder<T>
 {
     private Expression<Func<T, bool>> expression;
-    public PredicateBuilder<T> Where(Expression<Func<T, bool>> predicate)
-    {
-        this.expression = predicate;
-        return this;
-    }
+    public PredicateBuilder<T> Where(Expression<Func<T, bool>> predicate) => this.Merge(Expression.AndAlso, predicate);
     public PredicateBuilder<T> And(Expression<Func<T, bool>> predicate) => this.Merge(Expression.AndAlso, predicate);
     public PredicateBuilder<T> And(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
         => this.Merge(condition, Expression.AndAlso, ifPredicate, elsePredicate);
