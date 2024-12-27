@@ -3,11 +3,11 @@ using System.Linq.Expressions;
 
 namespace Trolley.PostgreSql;
 
-public interface IPostgreSqlNothing { }
+public interface IPostgreSqlOnConflictResult { }
 public interface IPostgreSqlCreateConflictDoUpdate<TEntity>
 {
     #region DoNothing
-    IPostgreSqlNothing DoNothing();
+    IPostgreSqlOnConflictResult DoNothing();
     #endregion
 
     #region UseKeys
@@ -51,7 +51,7 @@ public interface IPostgreSqlCreateConflictDoUpdate<TEntity>
     /// <returns>返回更新对象</returns>
     IPostgreSqlCreateConflictDoUpdate<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment);
     /// <summary>
-    /// VALUES单个字段更新，可多次使用，用法：.WithBy( ... ).OnConflictDoUpdate(x =>.Set(f => f.TotalAmount, f=> x.Values(f.TotalAmount)))
+    /// VALUES单个字段更新，可多次使用，用法：.WithBy( ... ).OnConflictDoUpdate(x =>.Set(f => f.TotalAmount, f=> x.Excluded(f.TotalAmount)))
     /// SQL: INSERT INTO ... VALUES ( ... ) ON CONFLICT DO UPDATE "TotalAmount"=VALUES("TotalAmount")
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -59,15 +59,12 @@ public interface IPostgreSqlCreateConflictDoUpdate<TEntity>
     /// <param name="fieldValueSelector">字段值表达式</param>
     /// <returns>返回更新对象</returns>
     IPostgreSqlCreateConflictDoUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<TEntity, TField>> fieldValueSelector);
-    /// <summary>
-    /// VALUES单个字段更新，用法：
-    /// </summary>
-    /// <typeparam name="TFields">多个字段实体类型</typeparam>
-    /// <param name="condition"></param>
-    /// <param name="fieldsAssignment"></param>
-    /// <returns></returns>
     IPostgreSqlCreateConflictDoUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
     IPostgreSqlCreateConflictDoUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
     IPostgreSqlCreateConflictDoUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<TEntity, TField>> fieldValueSelector);
+    #endregion
+
+    #region Where
+    IPostgreSqlOnConflictResult Where(Expression<Func<TEntity, bool>> predicate);
     #endregion
 }

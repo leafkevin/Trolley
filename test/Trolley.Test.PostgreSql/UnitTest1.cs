@@ -986,7 +986,7 @@ public class UnitTest1 : UnitTestBase
             .ExecuteAsync();
         await repository.CommitAsync();
         Assert.Equal(orderIds.Count, result);
-    }   
+    }
     [Fact]
     public async Task Insert_Select_From_SubQuery_Returning()
     {
@@ -1424,9 +1424,10 @@ public class UnitTest1 : UnitTestBase
                     TotalAmount = x.Excluded(t.TotalAmount),
                     Products = x.Excluded(t.Products)
                 })
-                .Set(buyerSource.HasValue, f => f.BuyerSource, buyerSource))
+                .Set(buyerSource.HasValue, f => f.BuyerSource, buyerSource)
+                .Where(f => x.Excluded(f.TotalAmount) > f.TotalAmount))
             .ToSql(out _);
-        Assert.Equal("INSERT INTO \"sys_order\" (\"Id\",\"TenantId\",\"OrderNo\",\"TotalAmount\",\"BuyerId\",\"SellerId\",\"Products\",\"Disputes\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\") VALUES (@Id,@TenantId,@OrderNo,@TotalAmount,@BuyerId,@SellerId,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) ON CONFLICT (\"Id\") DO UPDATE SET \"TotalAmount\"=EXCLUDED.\"TotalAmount\",\"Products\"=EXCLUDED.\"Products\",\"BuyerSource\"=@BuyerSource", sql1);
+        Assert.Equal("INSERT INTO \"sys_order\" AS a (\"Id\",\"TenantId\",\"OrderNo\",\"TotalAmount\",\"BuyerId\",\"SellerId\",\"Products\",\"Disputes\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\") VALUES (@Id,@TenantId,@OrderNo,@TotalAmount,@BuyerId,@SellerId,@Products,@Disputes,@IsEnabled,@CreatedAt,@CreatedBy,@UpdatedAt,@UpdatedBy) ON CONFLICT (\"Id\") DO UPDATE SET \"TotalAmount\"=EXCLUDED.\"TotalAmount\",\"Products\"=EXCLUDED.\"Products\",\"BuyerSource\"=@BuyerSource WHERE EXCLUDED.\"TotalAmount\">a.\"TotalAmount\"", sql1);
 
         await repository.BeginTransactionAsync();
         await repository.DeleteAsync<Order>("9");
@@ -1461,7 +1462,8 @@ public class UnitTest1 : UnitTestBase
                     TotalAmount = x.Excluded(t.TotalAmount),
                     Products = x.Excluded(t.Products)
                 })
-                .Set(buyerSource.HasValue, f => f.BuyerSource, buyerSource))
+                .Set(buyerSource.HasValue, f => f.BuyerSource, buyerSource)
+                .Where(f => x.Excluded(f.TotalAmount) > f.TotalAmount))
             .ExecuteAsync();
         var order = await repository.GetByIdAsync<Order>("9");
         await repository.CommitAsync();

@@ -362,11 +362,16 @@ public class PostgreSqlCreateVisitor : CreateVisitor
                         }
                     }
                     break;
+                case "Where":
+                    this.IsUpdate = true;
+                    var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = callExpr.Arguments[0] });
+                    this.UpdateBuilder.Append($" WHERE {sqlSegment.Body}");
+                    this.IsUpdate = false;
+                    break;
             }
         }
         this.UpdateBuilder.Insert(0, builder.ToString());
         builder.Clear();
-        this.IsUpdate = false;
     }
     public override SqlFieldSegment VisitMemberAccess(SqlFieldSegment sqlSegment)
     {

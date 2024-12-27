@@ -2486,6 +2486,7 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
                         {
                             HasField = true,
                             FromMember = memberMapper.Member,
+                            SegmentType = memberMapper.MemberType,
                             NativeDbType = memberMapper.NativeDbType,
                             TypeHandler = memberMapper.TypeHandler,
                             Body = fieldName
