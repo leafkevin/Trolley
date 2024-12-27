@@ -256,7 +256,7 @@ public class SqliteBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, ISql
     #endregion
 
     #region Returning
-    public ISqliteBulkCreated<TEntity, TResult> Returning<TResult>(params string[] fieldNames)
+    public ISqliteBulkCreated<TEntity, TResult> Returning<TResult>(string fieldNames)
     {
         this.DialectVisitor.Returning(fieldNames);
         return new SqliteBulkCreated<TEntity, TResult>(this.DbContext, this.Visitor);
@@ -267,8 +267,6 @@ public class SqliteBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, ISql
         return new SqliteBulkCreated<TEntity, TResult>(this.DbContext, this.Visitor);
     }
     #endregion
-
-
 
     #region Execute
     public override int Execute()

@@ -91,7 +91,7 @@ public interface ISqliteContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     /// <typeparam name="TResult">返回类型</typeparam>
     /// <param name="fieldNames">字段名称列表</param>
     /// <returns>返回插入的部分字段</returns>
-    ISqliteCreated<TEntity, TResult> Returning<TResult>(params string[] fieldNames);
+    ISqliteCreated<TEntity, TResult> Returning<TResult>(string fieldNames);
     /// <summary>
     /// 返回插入后想要返回字段的内容
     /// </summary>
@@ -189,7 +189,7 @@ public interface ISqliteBulkContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     /// <typeparam name="TResult">返回类型</typeparam>
     /// <param name="fieldNames">字段名称列表</param>
     /// <returns>返回插入的部分字段</returns>
-    ISqliteBulkCreated<TEntity, TResult> Returning<TResult>(params string[] fieldNames);
+    ISqliteBulkCreated<TEntity, TResult> Returning<TResult>(string fieldNames);
     /// <summary>
     /// 返回插入后想要返回字段的内容
     /// </summary>

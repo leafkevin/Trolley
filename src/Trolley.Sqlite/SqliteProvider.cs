@@ -48,7 +48,7 @@ public partial class SqliteProvider : BaseOrmProvider
         defaultMapTypes[DbType.Time] = typeof(TimeSpan);
 #endif
         defaultMapTypes[DbType.Guid] = typeof(Guid);
-        defaultMapTypes[DbType.Binary] = typeof(byte[]); 
+        defaultMapTypes[DbType.Binary] = typeof(byte[]);
         defaultMapTypes[DbType.VarNumeric] = typeof(decimal);
         defaultMapTypes[DbType.Xml] = typeof(string);
 
@@ -68,23 +68,23 @@ public partial class SqliteProvider : BaseOrmProvider
         defaultDbTypes[typeof(DateTime)] = DbType.DateTime;
         defaultDbTypes[typeof(TimeSpan)] = DbType.Time;
         defaultDbTypes[typeof(DateTimeOffset)] = DbType.DateTimeOffset;
-        
+
 #if NET6_0_OR_GREATER
         defaultDbTypes[typeof(DateOnly)] = DbType.Date;
         defaultDbTypes[typeof(TimeOnly)] = DbType.Time;
 #endif
         defaultDbTypes[typeof(byte[])] = DbType.Binary;
-        defaultDbTypes[typeof(Guid)] = DbType.String;
+        defaultDbTypes[typeof(Guid)] = DbType.Guid;
 
-        defaultDbTypes[typeof(bool?)] = DbType.Int32;
-        defaultDbTypes[typeof(byte?)] = DbType.Int32;
-        defaultDbTypes[typeof(sbyte?)] = DbType.Int32;
-        defaultDbTypes[typeof(short?)] = DbType.Int32;
-        defaultDbTypes[typeof(ushort?)] = DbType.Int32;
+        defaultDbTypes[typeof(bool?)] = DbType.Boolean;
+        defaultDbTypes[typeof(byte?)] = DbType.Byte;
+        defaultDbTypes[typeof(sbyte?)] = DbType.SByte;
+        defaultDbTypes[typeof(short?)] = DbType.Int16;
+        defaultDbTypes[typeof(ushort?)] = DbType.UInt16;
         defaultDbTypes[typeof(int?)] = DbType.Int32;
-        defaultDbTypes[typeof(uint?)] = DbType.Int64;
+        defaultDbTypes[typeof(uint?)] = DbType.UInt32;
         defaultDbTypes[typeof(long?)] = DbType.Int64;
-        defaultDbTypes[typeof(ulong?)] = DbType.Decimal;
+        defaultDbTypes[typeof(ulong?)] = DbType.UInt64;
         defaultDbTypes[typeof(float?)] = DbType.Single;
         defaultDbTypes[typeof(double?)] = DbType.Double;
         defaultDbTypes[typeof(decimal?)] = DbType.Decimal;
@@ -95,8 +95,7 @@ public partial class SqliteProvider : BaseOrmProvider
         defaultDbTypes[typeof(DateOnly?)] = DbType.Date;
         defaultDbTypes[typeof(TimeOnly?)] = DbType.Time;
 #endif
-        defaultDbTypes[typeof(Guid?)] = DbType.String;
-
+        defaultDbTypes[typeof(Guid?)] = DbType.Guid;
 
         castTos[typeof(string)] = "CHARACTER";
         castTos[typeof(byte)] = "TINYINT";
@@ -110,11 +109,11 @@ public partial class SqliteProvider : BaseOrmProvider
         castTos[typeof(float)] = "FLOAT";
         castTos[typeof(double)] = "DOUBLE";
         castTos[typeof(decimal)] = "DECIMAL(36,18)";
-        castTos[typeof(bool)] = "BOOLEAN";
-        castTos[typeof(DateTime)] = "DATETIME";
+        castTos[typeof(bool)] = "INTEGER";
+        castTos[typeof(DateTime)] = "CHARACTER";
 #if NET6_0_OR_GREATER
-        castTos[typeof(DateOnly)] = "DATE";
-        castTos[typeof(TimeOnly)] = "BIGINT";
+        castTos[typeof(DateOnly)] = "CHARACTER";
+        castTos[typeof(TimeOnly)] = "CHARACTER";
 #endif
         castTos[typeof(Guid)] = "CHARACTER";
 
@@ -131,10 +130,10 @@ public partial class SqliteProvider : BaseOrmProvider
         castTos[typeof(double?)] = "DOUBLE";
         castTos[typeof(decimal?)] = "DECIMAL(36,18)";
         castTos[typeof(bool?)] = "INTEGER";
-        castTos[typeof(DateTime?)] = "TEXT";
+        castTos[typeof(DateTime?)] = "CHARACTER";
 #if NET6_0_OR_GREATER
-        castTos[typeof(DateOnly?)] = "DATE";
-        castTos[typeof(TimeOnly?)] = "BIGINT";
+        castTos[typeof(DateOnly?)] = "CHARACTER";
+        castTos[typeof(TimeOnly?)] = "CHARACTER";
 #endif
         castTos[typeof(Guid?)] = "CHARACTER";
     }
@@ -167,14 +166,6 @@ public partial class SqliteProvider : BaseOrmProvider
         return "\"" + tableName + "\"";
     }
     public override string GetFieldName(string fieldName) => "\"" + fieldName + "\"";
-    public override string GetPagingTemplate(int? skip, int? limit, string orderBy = null)
-    {
-        var builder = new StringBuilder("SELECT /**fields**/ FROM /**tables**/ /**others**/");
-        if (!String.IsNullOrEmpty(orderBy)) builder.Append($" {orderBy}");
-        if (limit.HasValue) builder.Append($" LIMIT {limit}");
-        if (skip.HasValue && skip.Value > 0) builder.Append($" OFFSET {skip}");
-        return builder.ToString();
-    }
     public override object GetNativeDbType(Type fieldType)
     {
         if (!defaultDbTypes.TryGetValue(fieldType, out var dbType))
@@ -191,7 +182,29 @@ public partial class SqliteProvider : BaseOrmProvider
         => this.MapDefaultType(memberMappper.NativeDbType);
     public override string GetIdentitySql(string keyField) => ";SELECT LAST_INSERT_ROWID()";
     public override string CastTo(Type type, object value, string characterSetOrCollation = null)
-        => $"CAST({value} AS {castTos[type]})";
+    {
+        switch (type)
+        {
+            case Type factType when factType == typeof(bool):
+                return Convert.ToBoolean(value) ? "1" : "0";
+            case Type factType when factType == typeof(Guid):
+                return $"'{(Guid)value}'";
+            case Type factType when factType == typeof(DateTime):
+                return $"DATETIME({value})";
+            case Type factType when factType == typeof(DateTimeOffset):
+                return $"'{(DateTimeOffset)value:yyyy\\-MM\\-dd\\ HH\\:mm\\:ss\\.fffZ}'";
+#if NET6_0_OR_GREATER
+            case Type factType when factType == typeof(DateOnly):
+                return $"DATE({value})";
+#endif
+            case Type factType when factType == typeof(TimeSpan):
+                return $"TIME({value})";
+#if NET6_0_OR_GREATER
+            case Type factType when factType == typeof(TimeOnly): return $"TIME({value})";
+#endif        
+            default: return $"CAST({value} AS {castTos[type]})";
+        }
+    }
     public override string GetQuotedValue(Type expectType, object value)
     {
         if (value == null) return "NULL";
@@ -235,22 +248,24 @@ public partial class SqliteProvider : BaseOrmProvider
     {
         switch (columnInfo.DataType)
         {
+            case "bool":
             case "boolean": return DbType.Boolean;
 
             case "int2":
-            case "tinyint":
-            case "smallint":
+            case "tinyint": return DbType.Byte;
+            case "smallint": return DbType.Int16;
             case "mediumint":
+            case "int":
+            case "int4":
             case "integer": return DbType.Int32;
 
             case "int8":
             case "bigint": return DbType.Int64;
-
-            case "unsigned big int": return DbType.Decimal;
+            case "unsigned big int": return DbType.UInt64;
 
             case "float": return DbType.Single;
-            case "double precision":
-            case "double": return DbType.Double;
+            case "double":
+            case "double precision": return DbType.Double;
             case "real": return DbType.Decimal;
 
             case "date":
@@ -258,20 +273,52 @@ public partial class SqliteProvider : BaseOrmProvider
 
             case "blob": return DbType.Binary;
 
-            case "character(20)":
-            case "varchar(255)":
-            case "varying character(255)":
-            case "nchar(55)":
-            case "native character(70)":
-            case "nvarchar(100)":
-
+            case "character":
             case "varchar":
             case "varying character":
+            case "native character":
             case "nchar":
             case "nvarchar":
             case "text":
             case "clob": return DbType.String;
+        }
+        var index = columnInfo.DataType.IndexOf("(");
+        var dataType = columnInfo.DataType.Substring(0, index);
+        switch (dataType)
+        {
+            case "bool":
+            case "boolean": return DbType.Boolean;
 
+            case "int2":
+            case "tinyint": return DbType.Byte;
+            case "smallint": return DbType.Int16;
+            case "mediumint":
+            case "int":
+            case "int4":
+            case "integer": return DbType.Int32;
+
+            case "int8":
+            case "bigint": return DbType.Int64;
+            case "unsigned big int": return DbType.UInt64;
+
+            case "float": return DbType.Single;
+            case "double":
+            case "double precision": return DbType.Double;
+            case "real": return DbType.Decimal;
+
+            case "date":
+            case "datetime": return DbType.String;
+
+            case "blob": return DbType.Binary;
+
+            case "character":
+            case "varchar":
+            case "varying character":
+            case "native character":
+            case "nchar":
+            case "nvarchar":
+            case "text":
+            case "clob": return DbType.String;
             default: return DbType.Object;
         }
     }
