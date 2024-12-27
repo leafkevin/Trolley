@@ -30,6 +30,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     protected bool IsDistinct { get; set; }
     protected bool IsSelectMember { get; set; }
     public bool IsFromCommand { get; set; }
+    public bool IsNeedCommandTableAlias { get; set; }
     public bool IsCteTable { get; set; }
     protected bool IsUnion { get; set; }
     /// <summary>

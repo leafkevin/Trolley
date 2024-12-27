@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections;
 
 namespace Trolley.Sqlite;
 
@@ -61,25 +59,21 @@ public class SqliteCreate<TEntity> : Create<TEntity>, ISqliteCreate<TEntity>
     public new ISqliteBulkContinuedCreate<TEntity> WithBulk(IEnumerable insertObjs, int bulkCount)
         => base.WithBulk(insertObjs, bulkCount) as ISqliteBulkContinuedCreate<TEntity>;
     #endregion
-    //#region WithBulkCopy
-    //public ISqliteCreated<TEntity> WithBulkCopy(IEnumerable insertObjs, int? timeoutSeconds = null)
-    //{
-    //    if (insertObjs == null)
-    //        throw new ArgumentNullException(nameof(insertObjs));
 
-    //    if (insertObjs is IDictionary<string, object>)
-    //        throw new NotSupportedException("批量插入，单个对象类型只支持命名对象、匿名对象或是字典对象");
-
-    //    bool isEmpty = true;
-    //    foreach (var insertObj in insertObjs)
-    //    {
-    //        isEmpty = false;
-    //        break;
-    //    }
-    //    if (isEmpty) throw new Exception("批量更新，insertObjs参数至少要有一条数据");
-
-    //    this.DialectVisitor.WithBulkCopy(insertObjs, timeoutSeconds);
-    //    return this.OrmProvider.NewCreated<TEntity>(this.DbContext, this.Visitor) as ISqliteCreated<TEntity>;
-    //}
-    //#endregion
+    #region From
+    public new ISqliteFromCommand<T> From<T>()
+        => base.From<T>() as ISqliteFromCommand<T>;
+    public new ISqliteFromCommand<T1, T2> From<T1, T2>()
+        => base.From<T1, T2>() as ISqliteFromCommand<T1, T2>;
+    public new ISqliteFromCommand<T1, T2, T3> From<T1, T2, T3>()
+       => base.From<T1, T2, T3>() as ISqliteFromCommand<T1, T2, T3>;
+    public new ISqliteFromCommand<T1, T2, T3, T4> From<T1, T2, T3, T4>()
+        => base.From<T1, T2, T3, T4>() as ISqliteFromCommand<T1, T2, T3, T4>;
+    public new ISqliteFromCommand<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>()
+        => base.From<T1, T2, T3, T4, T5>() as ISqliteFromCommand<T1, T2, T3, T4, T5>;
+    public new ISqliteFromCommand<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>()
+        => base.From<T1, T2, T3, T4, T5, T6>() as ISqliteFromCommand<T1, T2, T3, T4, T5, T6>;
+    public new ISqliteFromCommand<T> From<T>(IQuery<T> subQuery)
+        => base.From(subQuery) as ISqliteFromCommand<T>;
+    #endregion
 }

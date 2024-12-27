@@ -21,10 +21,26 @@ public interface ISqliteCreate<TEntity> : ICreate<TEntity>
     #endregion
 
     #region OrIgnore/OrReplace/OrAbort/OrFail/OrRollback
+    /// <summary>
+    /// 在遇到冲突时，忽略冲突不引发错误
+    /// </summary>
+    /// <returns></returns>
     ISqliteCreate<TEntity> OrIgnore();
     ISqliteCreate<TEntity> OrReplace();
+    /// <summary>
+    /// 在遇到冲突时，回滚事务但不引发错误。
+    /// </summary>
+    /// <returns></returns>
     ISqliteCreate<TEntity> OrAbort();
+    /// <summary>
+    /// 在遇到冲突时，直接引发错误。
+    /// </summary>
+    /// <returns></returns>
     ISqliteCreate<TEntity> OrFail();
+    /// <summary>
+    /// 在遇到冲突时，回滚事务并引发错误。
+    /// </summary>
+    /// <returns></returns>
     ISqliteCreate<TEntity> OrRollback();
     #endregion
 

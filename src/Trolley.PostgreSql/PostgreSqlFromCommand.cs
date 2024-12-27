@@ -168,9 +168,10 @@ public class PostgreSqlFromCommand<T> : FromCommand<T>, IPostgreSqlFromCommand<T
     #region OnConflict
     public IPostgreSqlFromContinuedCreate<T> OnConflict<TUpdateFields>(Expression<Func<IPostgreSqlCreateConflictDoUpdate<T>, TUpdateFields>> fieldsAssignment)
     {
-        var sql = this.Visitor.BuildCommandSql(out _);
-        var visitor = this.NewCreateVisitor(sql);
-        visitor.OnConflict(fieldsAssignment);
+        var visitor = this.NewCreateVisitor();
+        visitor.VisitSetExpression(fieldsAssignment);
+        this.Visitor.IsNeedCommandTableAlias = visitor.IsUseTableAlias;
+        visitor.FromSql = this.Visitor.BuildCommandSql(out _);
         return new PostgreSqlFromContinuedCreate<T>(this.DbContext, visitor);
     }
     #endregion
@@ -179,20 +180,22 @@ public class PostgreSqlFromCommand<T> : FromCommand<T>, IPostgreSqlFromCommand<T
     public IPostgreSqlBulkCreated<T, TResult> Returning<TResult>(string fieldNames)
     {
         var sql = this.Visitor.BuildCommandSql(out _);
-        var visitor = this.NewCreateVisitor(sql);
+        var visitor = this.NewCreateVisitor();
+        visitor.FromSql = sql;
         visitor.Returning(fieldNames);
         return new PostgreSqlBulkCreated<T, TResult>(this.DbContext, visitor);
     }
     public IPostgreSqlBulkCreated<T, TResult> Returning<TResult>(Expression<Func<T, TResult>> fieldsSelector)
     {
         var sql = this.Visitor.BuildCommandSql(out _);
-        var visitor = this.NewCreateVisitor(sql);
+        var visitor = this.NewCreateVisitor();
+        visitor.FromSql = sql;
         visitor.Returning(fieldsSelector);
         return new PostgreSqlBulkCreated<T, TResult>(this.DbContext, visitor);
     }
     #endregion
 
-    protected virtual PostgreSqlCreateVisitor NewCreateVisitor(string fromSql)
+    protected virtual PostgreSqlCreateVisitor NewCreateVisitor()
     {
         var createVisiter = new PostgreSqlCreateVisitor(this.DbContext, this.Visitor.TableAsStart);
         createVisiter.Tables = this.Visitor.Tables;
@@ -201,7 +204,6 @@ public class PostgreSqlFromCommand<T> : FromCommand<T>, IPostgreSqlFromCommand<T
         createVisiter.RefQueries = this.Visitor.RefQueries;
         createVisiter.ShardingTables = this.Visitor.ShardingTables;
         createVisiter.DbParameters = this.Visitor.DbParameters;
-        createVisiter.FromSql = fromSql;
         return createVisiter;
     }
 }

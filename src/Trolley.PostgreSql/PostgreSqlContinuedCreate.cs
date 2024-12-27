@@ -46,6 +46,14 @@ public class PostgreSqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IPos
         => base.OnlyFields(fieldsSelector) as IPostgreSqlContinuedCreate<TEntity>;
     #endregion
 
+    #region OnConflict
+    public IPostgreSqlCreated<TEntity> OnConflict<TUpdateFields>(Expression<Func<IPostgreSqlCreateConflictDoUpdate<TEntity>, TUpdateFields>> fieldsAssignment)
+    {
+        this.DialectVisitor.OnConflict(fieldsAssignment);
+        return this;
+    }
+    #endregion
+
     #region Returnning
     public IPostgreSqlCreated<TEntity, TResult> Returning<TResult>(string fieldNames)
     {
@@ -57,15 +65,7 @@ public class PostgreSqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IPos
         this.DialectVisitor.Returning(fieldsSelector);
         return new PostgreSqlCreated<TEntity, TResult>(this.DbContext, this.Visitor);
     }
-    #endregion
-
-    #region OnConflict
-    public IPostgreSqlCreated<TEntity> OnConflict<TUpdateFields>(Expression<Func<IPostgreSqlCreateConflictDoUpdate<TEntity>, TUpdateFields>> fieldsAssignment)
-    {
-        this.DialectVisitor.OnConflict(fieldsAssignment);
-        return this;
-    }
-    #endregion
+    #endregion   
 
     #region Execute
     public override int Execute()

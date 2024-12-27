@@ -102,10 +102,7 @@ public class MySqlCreateVisitor : CreateVisitor
             tailSql = this.UpdateBuilder.ToString();
 
         if (this.OutputSql != null)
-        {
             tailSql += this.OutputSql;
-            readerFields = this.ReaderFields;
-        }
 
         if (this.IsReturnIdentity)
         {

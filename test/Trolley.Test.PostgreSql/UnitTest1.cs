@@ -986,7 +986,7 @@ public class UnitTest1 : UnitTestBase
             .ExecuteAsync();
         await repository.CommitAsync();
         Assert.Equal(orderIds.Count, result);
-    }
+    }   
     [Fact]
     public async Task Insert_Select_From_SubQuery_Returning()
     {
@@ -1041,6 +1041,102 @@ public class UnitTest1 : UnitTestBase
         await repository.CommitAsync();
         Assert.NotEmpty(result);
         Assert.Null(result[0].OrderNo);
+    }
+    [Fact]
+    public async Task Insert_Select_From_SubQuery_OnConflictUpdate_Returning()
+    {
+        var repository = this.dbFactory.Create();
+        var sql = repository.Create<Order>()
+            .From<OrderDetail>()
+            .Where(f => f.Id.Length < 10)
+            .GroupBy(f => f.OrderId)
+            .Select((x, f) => new
+            {
+                Id = f.OrderId,
+                TenantId = "1",
+                OrderNo = $"ON-{f.OrderId}",
+                BuyerId = 1,
+                SellerId = 1,
+                BuyerSource = UserSourceType.Taobao.ToString(),
+                ProductCount = 2,
+                TotalAmount = x.Sum(f.Amount),
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            })
+            .OnConflict(x => x.UseKeys()
+                .Set(f => new
+                {
+                    TotalAmount = f.TotalAmount + x.Excluded(f.TotalAmount),
+                    ProductCouint = f.ProductCount + x.Excluded(f.ProductCount)
+                }))
+            .Returning<OrderInfo>("\"BuyerId\",\"TotalAmount\"")
+            .ToSql(out var parameters);
+        Assert.Equal("INSERT INTO \"sys_order\" AS a (\"Id\",\"TenantId\",\"OrderNo\",\"BuyerId\",\"SellerId\",\"BuyerSource\",\"ProductCount\",\"TotalAmount\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\") SELECT b.\"OrderId\",'1',CONCAT('ON-',b.\"OrderId\"),1,1,'Taobao',2,SUM(b.\"Amount\"),TRUE,CURRENT_TIMESTAMP,1,CURRENT_TIMESTAMP,1 FROM \"sys_order_detail\" b WHERE LENGTH(b.\"Id\")<10 GROUP BY b.\"OrderId\" ON CONFLICT (\"Id\") DO UPDATE SET \"TotalAmount\"=a.\"TotalAmount\"+EXCLUDED.\"TotalAmount\" RETURNING \"BuyerId\",\"TotalAmount\"", sql);
+        await repository.BeginTransactionAsync();
+        repository.Delete<Order>(f => f.Id.Length < 10);
+        var result = await repository.Create<Order>()
+            .From<OrderDetail>()
+            .Where(f => f.Id.Length < 10)
+            .GroupBy(f => f.OrderId)
+            .Select((x, f) => new
+            {
+                Id = f.OrderId,
+                TenantId = "1",
+                OrderNo = $"ON-{f.OrderId}",
+                BuyerId = 1,
+                SellerId = 1,
+                BuyerSource = UserSourceType.Taobao.ToString(),
+                ProductCount = 2,
+                TotalAmount = x.Sum(f.Amount),
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            })
+            .OnConflict(x => x.UseKeys()
+                .Set(f => new
+                {
+                    TotalAmount = f.TotalAmount + x.Excluded(f.TotalAmount),
+                    ProductCouint = f.ProductCount + x.Excluded(f.ProductCount)
+                }))
+            .Returning<OrderInfo>("\"BuyerId\",\"TotalAmount\"")
+            .ExecuteAsync();
+        var newResult = await repository.Create<Order>()
+            .From<OrderDetail>()
+            .Where(f => f.Id.Length < 10)
+            .GroupBy(f => f.OrderId)
+            .Select((x, f) => new
+            {
+                Id = f.OrderId,
+                TenantId = "1",
+                OrderNo = $"ON-{f.OrderId}",
+                BuyerId = 1,
+                SellerId = 1,
+                BuyerSource = UserSourceType.Taobao.ToString(),
+                ProductCount = 2,
+                TotalAmount = x.Sum(f.Amount),
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            })
+            .OnConflict(x => x.UseKeys()
+                .Set(f => new
+                {
+                    TotalAmount = f.TotalAmount + x.Excluded(f.TotalAmount),
+                    ProductCouint = f.ProductCount + x.Excluded(f.ProductCount)
+                }))
+            .Returning<OrderInfo>("\"BuyerId\",\"TotalAmount\"")
+            .ExecuteAsync();
+        await repository.CommitAsync();
+        Assert.NotEmpty(result);
+        Assert.NotEmpty(newResult);
+        Assert.Equal(newResult[0].TotalAmount, result[0].TotalAmount * 2);
     }
     [Fact]
     public void Insert_Null_Field()

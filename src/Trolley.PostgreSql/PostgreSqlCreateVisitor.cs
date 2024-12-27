@@ -12,6 +12,9 @@ public class PostgreSqlCreateVisitor : CreateVisitor
 {
     public StringBuilder UpdateBuilder { get; set; }
     public bool IsUpdate { get; set; }
+    /// <summary>
+    /// 当有OnConflict更新操作时，引用原值时才会设置，使用IsNeedTableAlias会影响正常Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)场景的解析
+    /// </summary>
     public bool IsUseTableAlias { get; set; }
     public string FromSql { get; set; }
     public string OutputSql { get; set; }
@@ -49,12 +52,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
                     case "WithByField":
                         this.VisitWithByField(deferredSegment.Value);
                         break;
-                    case "SetObject":
-                        this.UpdateBuilder ??= new();
-                        this.VisitSetObject(deferredSegment.Value);
-                        break;
                     case "SetExpression":
-                        this.UpdateBuilder ??= new();
                         this.VisitSetExpression(deferredSegment.Value as LambdaExpression);
                         break;
                     case "OutputFields":
@@ -104,10 +102,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
             tailSql = this.UpdateBuilder.ToString();
 
         if (this.OutputSql != null)
-        {
             tailSql += this.OutputSql;
-            readerFields = this.ReaderFields;
-        }
 
         if (this.IsReturnIdentity)
         {
@@ -155,12 +150,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
                     case "WithByField":
                         this.VisitWithByField(deferredSegment.Value);
                         break;
-                    case "SetObject":
-                        this.UpdateBuilder ??= new();
-                        this.VisitSetObject(deferredSegment.Value);
-                        break;
                     case "SetExpression":
-                        this.UpdateBuilder ??= new();
                         this.VisitSetExpression(deferredSegment.Value as LambdaExpression);
                         break;
                     case "OutputFields":
@@ -290,6 +280,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
             }
         }
         this.InitTableAlias(lambdaExpr);
+        this.UpdateBuilder ??= new();
         var builder = new StringBuilder(" ON CONFLICT ");
         while (callStack.TryPop(out var callExpr))
         {
@@ -317,6 +308,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
                     if (callExpr.Arguments.Count == 1)
                     {
                         this.IsUpdate = true;
+                        //更新时的成员访问就是引用原值
                         //Set<TFields>(Expression<Func<TEntity, TFields>> fieldsAssignment)
                         if (callExpr.Arguments[0].Type.BaseType == typeof(LambdaExpression))
                         {
@@ -338,6 +330,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
                                 if (condition)
                                 {
                                     this.IsUpdate = true;
+                                    //更新时的成员访问就是引用原值
                                     this.VisitAndDeferred(new SqlFieldSegment { Expression = callExpr.Arguments[1] });
                                     this.IsUpdate = false;
                                 }
@@ -383,7 +376,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
             if (!this.Tables[0].Mapper.TryGetMemberMap(memberExpr.Member.Name, out var memberMapper))
                 throw new MissingMemberException($"类{this.Tables[0].EntityType.FullName}未找到成员{memberExpr.Member.Name}");
 
-            //在解析过程中，引用原值时使用别名，最后再设置IsNeedTableAlias
+            //更新时的成员访问就是引用原值
             this.IsUseTableAlias = true;
             var fieldName = $"{this.Tables[0].AliasName}.{this.OrmProvider.GetFieldName(memberMapper.FieldName)}";
 

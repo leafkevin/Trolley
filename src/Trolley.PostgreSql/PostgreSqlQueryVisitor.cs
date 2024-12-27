@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Text;
 
 namespace Trolley.PostgreSql;
@@ -157,7 +156,9 @@ public class PostgreSqlQueryVisitor : QueryVisitor
     {
         var builder = new StringBuilder("INSERT INTO");
         var entityMapper = this.Tables[0].Mapper;
-        builder.Append($" {this.GetTableName(this.Tables[0])} (");
+        builder.Append($" {this.GetTableName(this.Tables[0])}");
+        if (this.IsNeedCommandTableAlias) builder.Append($" AS {this.Tables[0].AliasName}");
+        builder.Append(" (");
         int index = 0;
         if (this.ReaderFields == null && this.IsFromQuery)
             this.ReaderFields = this.Tables[1].Fields;
@@ -301,7 +302,6 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         }
         sql = builder.ToString();
         builder.Clear();
-        builder = null;
         return sql;
     }
     public override string BuildTableShardingsSql()

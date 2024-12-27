@@ -51,7 +51,7 @@ public interface ISqliteCreateConflictDoUpdate<TEntity>
     /// <returns>返回更新对象</returns>
     ISqliteCreateConflictDoUpdate<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment);
     /// <summary>
-    /// VALUES单个字段更新，可多次使用，用法：.WithBy( ... ).OnConflictDoUpdate(x =>.Set(f => f.TotalAmount, f=> x.Values(f.TotalAmount)))
+    /// VALUES单个字段更新，可多次使用，用法：.WithBy( ... ).OnConflictDoUpdate(x =>.Set(f => f.TotalAmount, f=> x.Excluded(f.TotalAmount)))
     /// SQL: INSERT INTO ... VALUES ( ... ) ON CONFLICT DO UPDATE "TotalAmount"=VALUES("TotalAmount")
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
@@ -63,7 +63,6 @@ public interface ISqliteCreateConflictDoUpdate<TEntity>
     /// VALUES单个字段更新，用法：
     /// </summary>
     /// <typeparam name="TFields">多个字段实体类型</typeparam>
-    /// <param name="condition"></param>
     /// <param name="fieldsAssignment"></param>
     /// <returns></returns>
     ISqliteCreateConflictDoUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
