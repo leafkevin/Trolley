@@ -27,7 +27,6 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
     {
         int result = 0;
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        bool isNeedSplit = false;
         var entityType = typeof(TEntity);
         switch (this.Visitor.ActionMode)
         {
@@ -61,7 +60,7 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
             case ActionMode.Bulk:
                 {
                     var builder = new StringBuilder();
-                    (isNeedSplit, var tableName, var insertObjs, var bulkCount,
+                    (var isNeedSplit, var tableName, var insertObjs, var bulkCount,
                         var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
                     int Execute(string tableName, IEnumerable insertObjs)
                     {
@@ -126,7 +125,6 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
     {
         int result = 0;
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        bool isNeedSplit;
         var entityType = typeof(TEntity);
         switch (this.Visitor.ActionMode)
         {
@@ -160,7 +158,7 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
             case ActionMode.Bulk:
                 {
                     var builder = new StringBuilder();
-                    (isNeedSplit, var tableName, var insertObjs, var bulkCount,
+                    (var isNeedSplit, var tableName, var insertObjs, var bulkCount,
                         var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
                     async Task<int> Executor(string tableName, IEnumerable insertObjs)
                     {

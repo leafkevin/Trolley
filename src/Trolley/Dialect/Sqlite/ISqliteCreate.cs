@@ -26,6 +26,10 @@ public interface ISqliteCreate<TEntity> : ICreate<TEntity>
     /// </summary>
     /// <returns></returns>
     ISqliteCreate<TEntity> OrIgnore();
+    /// <summary>
+    /// 在遇到冲突时，覆盖之前的数据。
+    /// </summary>
+    /// <returns></returns>
     ISqliteCreate<TEntity> OrReplace();
     /// <summary>
     /// 在遇到冲突时，回滚事务但不引发错误。

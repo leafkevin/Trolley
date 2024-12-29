@@ -397,7 +397,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
     }
     public override SqlFieldSegment VisitNew(SqlFieldSegment sqlSegment)
     {
-        //只有OnDuplicateKeyUpdate.Set时，才会走到此场景，如：.Set(f => new { TotalAmount = f.TotalAmount + x.Values(f.TotalAmount) })
+        //只有OnConflictDoUpdate.Set时，才会走到此场景，如：.Set(f => new { TotalAmount = f.TotalAmount + x.Excluded(f.TotalAmount) })
         //INSERT INTO ... SELECT ... FROM ... 由FromCommand单独处理了，FromCommand走的是QueryVisitor的解析
         var newExpr = sqlSegment.Expression as NewExpression;
         if (newExpr.Type.Name.StartsWith("<>"))
@@ -628,6 +628,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
     {
         base.Dispose();
         this.UpdateBuilder = null;
+		this.FromSql = null;
         this.OutputSql = null;
     }
 }

@@ -174,6 +174,9 @@ public partial class SqliteProvider : BaseOrmProvider
     }
     public override Type MapDefaultType(object nativeDbType)
     {
+        if (nativeDbType == null)
+            throw new ArgumentNullException(nameof(nativeDbType));
+
         if (defaultMapTypes.TryGetValue(nativeDbType, out var result))
             return result;
         return typeof(object);
@@ -371,6 +374,7 @@ public partial class SqliteProvider : BaseOrmProvider
         }
         reader.Close();
         connection.Close();
+
         var fieldMapHandler = mapProvider.FieldMapHandler;
         foreach (var entityMapper in entityMappers)
         {
@@ -432,8 +436,7 @@ public partial class SqliteProvider : BaseOrmProvider
                 {
                     //允许自定义TypeHandlerType设置，默认设置
                     if ((memberMapper.UnderlyingType.IsClass && memberMapper.UnderlyingType != typeof(string)
-                        || memberMapper.UnderlyingType.IsEntityType(out _))
-                        && this.MapDefaultType(memberMapper.NativeDbType) == typeof(string))
+                        || memberMapper.UnderlyingType.IsEntityType(out _)) && this.MapDefaultType(memberMapper.NativeDbType) == typeof(string))
                         memberMapper.TypeHandlerType = typeof(JsonTypeHandler);
 
                     //object类型
@@ -470,6 +473,34 @@ public partial class SqliteProvider : BaseOrmProvider
         int cacheKey = 0;
         switch (methodInfo.Name)
         {
+            case "Excluded":
+                var genericArgumentTypes = methodInfo.DeclaringType.GetGenericArguments();
+                if (genericArgumentTypes.Length == 1 && methodInfo.DeclaringType == typeof(ISqliteCreateConflictDoUpdate<>).MakeGenericType(genericArgumentTypes[0]))
+                {
+                    cacheKey = RepositoryHelper.GetCacheKey(typeof(ISqliteCreateConflictDoUpdate<>), methodInfo.GetGenericMethodDefinition());
+                    //.OnConflict(x => x.UseKeys().Set(f => new { TotalAmount = f.TotalAmount + x.Excluded(f.TotalAmount) }) ... )
+                    formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
+                    {
+                        var myVisitor = visitor as SqliteCreateVisitor;
+                        if (args[0] is not MemberExpression memberExpr)
+                            throw new NotSupportedException($"不支持的表达式访问，类型{methodInfo.DeclaringType.FullName}.Excluded方法，只支持MemberAccess访问，如：.Set(f =&gt; new {{TotalAmount = x.Excluded(f.TotalAmount)}})");
+                        if (!myVisitor.Tables[0].Mapper.TryGetMemberMap(memberExpr.Member.Name, out var memberMapper))
+                            throw new MissingMemberException($"类{myVisitor.Tables[0].EntityType.FullName}未找到成员{memberExpr.Member.Name}");
+
+                        var fieldName = $"EXCLUDED.{this.GetFieldName(memberMapper.FieldName)}";
+                        return new SqlFieldSegment
+                        {
+                            HasField = true,
+                            FromMember = memberMapper.Member,
+                            SegmentType = memberMapper.MemberType,
+                            NativeDbType = memberMapper.NativeDbType,
+                            TypeHandler = memberMapper.TypeHandler,
+                            Body = fieldName
+                        };
+                    });
+                    return true;
+                }
+                break;
             case "IsNull":
                 cacheKey = RepositoryHelper.GetCacheKey(typeof(Sql), methodInfo.GetGenericMethodDefinition());
                 formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
@@ -485,121 +516,4 @@ public partial class SqliteProvider : BaseOrmProvider
         formatter = null;
         return false;
     }
-    //public int ExecuteBulkCopy(bool isUpdate, DbContext dbContext, SqlVisitor visitor, ITheaConnection connection, Type insertObjType, IEnumerable insertObjs, int? timeoutSeconds, string tableName = null)
-    //{
-    //    var entityMapper = visitor.Tables[0].Mapper;
-    //    var memberMappers = visitor.GetRefMemberMappers(insertObjType, entityMapper, isUpdate);
-    //    var dataTable = visitor.ToDataTable(insertObjType, insertObjs, memberMappers, tableName ?? entityMapper.TableName);
-    //    if (dataTable.Rows.Count == 0) return 0;
-
-    //    connection.Open();
-    //    var dbConnection = connection.BaseConnection as SQLiteConnection;
-    //    var transaction = dbContext.Transaction?.BaseTransaction as SQLiteTransaction;
-
-    //    var bulkCopy = new SQLiteBulkCopy(dbConnection, SqlBulkCopyOptions.Default, transaction);
-    //    if (timeoutSeconds.HasValue) bulkCopy.BulkCopyTimeout = timeoutSeconds.Value;
-    //    bulkCopy.DestinationTableName = dataTable.TableName;
-    //    for (int i = 0; i < dataTable.Columns.Count; i++)
-    //    {
-    //        bulkCopy.ColumnMappings.Add(new SqlBulkCopyColumnMapping(i, dataTable.Columns[i].ColumnName));
-    //    }
-
-    //    var createdAt = DateTime.Now;
-    //    dbContext.DbInterceptors.OnCommandExecuting?.Invoke(new CommandEventArgs
-    //    {
-    //        DbKey = dbContext.DbKey,
-    //        ConnectionString = connection.ConnectionString,
-    //        SqlType = CommandSqlType.BulkCopyInsert
-    //    });
-    //    int recordsAffected = 0;
-    //    bool isSuccess = true;
-    //    Exception exception = null;
-    //    try
-    //    {
-    //        bulkCopy.WriteToServer(dataTable);
-    //        recordsAffected = dataTable.Rows.Count;
-    //    }
-    //    catch (Exception ex)
-    //    {
-    //        exception = ex;
-    //        isSuccess = false;
-    //    }
-    //    finally
-    //    {
-    //        var elapsed = DateTime.Now.Subtract(createdAt).TotalMilliseconds;
-    //        dbContext.DbInterceptors.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs
-    //        {
-    //            DbKey = dbContext.DbKey,
-    //            ConnectionString = connection.ConnectionString,
-    //            SqlType = CommandSqlType.BulkCopyInsert,
-    //            IsSuccess = isSuccess,
-    //            Exception = exception,
-    //            Elapsed = (int)elapsed
-    //        });
-    //    }
-    //    if (!isSuccess)
-    //    {
-    //        if (transaction == null) connection.Close();
-    //        throw exception;
-    //    }
-    //    return recordsAffected;
-    //}
-    //public async Task<int> ExecuteBulkCopyAsync(bool isUpdate, DbContext dbContext, SqlVisitor visitor, ITheaConnection connection, Type insertObjType, IEnumerable insertObjs, int? timeoutSeconds, CancellationToken cancellationToken = default, string tableName = null)
-    //{
-    //    var entityMapper = visitor.Tables[0].Mapper;
-    //    var memberMappers = visitor.GetRefMemberMappers(insertObjType, entityMapper, isUpdate);
-    //    var dataTable = visitor.ToDataTable(insertObjType, insertObjs, memberMappers, tableName ?? entityMapper.TableName);
-    //    if (dataTable.Rows.Count == 0) return 0;
-
-    //    await connection.OpenAsync(cancellationToken);
-    //    var dbConnection = connection.BaseConnection as SqlConnection;
-    //    var transaction = dbContext.Transaction?.BaseTransaction as SqlTransaction;
-    //    var bulkCopy = new SqlBulkCopy(dbConnection, SqlBulkCopyOptions.Default, transaction);
-    //    if (timeoutSeconds.HasValue) bulkCopy.BulkCopyTimeout = timeoutSeconds.Value;
-    //    bulkCopy.DestinationTableName = dataTable.TableName;
-    //    for (int i = 0; i < dataTable.Columns.Count; i++)
-    //    {
-    //        bulkCopy.ColumnMappings.Add(new SqlBulkCopyColumnMapping(i, dataTable.Columns[i].ColumnName));
-    //    }
-
-    //    var createdAt = DateTime.Now;
-    //    dbContext.DbInterceptors.OnCommandExecuting?.Invoke(new CommandEventArgs
-    //    {
-    //        DbKey = dbContext.DbKey,
-    //        ConnectionString = connection.ConnectionString,
-    //        SqlType = CommandSqlType.BulkCopyInsert
-    //    });
-    //    int recordsAffected = 0;
-    //    bool isSuccess = true;
-    //    Exception exception = null;
-    //    try
-    //    {
-    //        await bulkCopy.WriteToServerAsync(dataTable);
-    //        recordsAffected = dataTable.Rows.Count;
-    //    }
-    //    catch (Exception ex)
-    //    {
-    //        exception = ex;
-    //        isSuccess = false;
-    //    }
-    //    finally
-    //    {
-    //        var elapsed = DateTime.Now.Subtract(createdAt).TotalMilliseconds;
-    //        dbContext.DbInterceptors.OnCommandExecuted?.Invoke(new CommandCompletedEventArgs
-    //        {
-    //            DbKey = dbContext.DbKey,
-    //            ConnectionString = connection.ConnectionString,
-    //            SqlType = CommandSqlType.BulkCopyInsert,
-    //            IsSuccess = isSuccess,
-    //            Exception = exception,
-    //            Elapsed = (int)elapsed
-    //        });
-    //    }
-    //    if (!isSuccess)
-    //    {
-    //        if (transaction == null) await connection.CloseAsync();
-    //        throw exception;
-    //    }
-    //    return recordsAffected;
-    //}
 }

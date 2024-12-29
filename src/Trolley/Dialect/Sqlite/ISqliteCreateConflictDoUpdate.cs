@@ -3,11 +3,11 @@ using System.Linq.Expressions;
 
 namespace Trolley.Sqlite;
 
-public interface ISqliteNothing { }
+public interface ISqliteOnConflictResult { }
 public interface ISqliteCreateConflictDoUpdate<TEntity>
 {
     #region DoNothing
-    ISqliteNothing DoNothing();
+    ISqliteOnConflictResult DoNothing();
     #endregion
 
     #region UseKeys
@@ -32,10 +32,8 @@ public interface ISqliteCreateConflictDoUpdate<TEntity>
     /// <summary>
     // VALUES多个字段更新，用法：
     /// <code>
-    /// 使用Excluded方法 .WithBy( ... ).OnDuplicateKeyUpdate(x =>x.Set(f => new { TotalAmount = x.Excluded(f.TotalAmount) })
-    /// SQL: INSERT INTO ... VALUES ( ... ) ON DUPLICATE KEY UPDATE "TotalAmount"=EXCLUDED.TotalAmount
-    /// 使用OrigTable方法 .WithBy( ... ).OnDuplicateKeyUpdate(x => x.Alias().Set(f => new { TotalAmount = f.TotalAmount + x.Excluded(f.TotalAmount) })
-    /// SQL: INSERT INTO ... VALUES ( ... ) AS newRow ON DUPLICATE KEY UPDATE "TotalAmount"="TotalAmount"+newRow.TotalAmount
+    /// 使用Excluded方法 .WithBy( ... ).OnDuplicateKeyUpdate(x =>x.Set(f => new { TotalAmount = f.TotalAmount + x.Excluded(f.TotalAmount) })
+    /// SQL: INSERT INTO ... VALUES ( ... ) ON DUPLICATE KEY UPDATE "TotalAmount" = a.TotalAmount" + EXCLUDED."TotalAmount"
     /// </code>
     /// </summary>
     /// <typeparam name="TFields">要更新的实体类型</typeparam>
@@ -52,21 +50,19 @@ public interface ISqliteCreateConflictDoUpdate<TEntity>
     ISqliteCreateConflictDoUpdate<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment);
     /// <summary>
     /// VALUES单个字段更新，可多次使用，用法：.WithBy( ... ).OnConflictDoUpdate(x =>.Set(f => f.TotalAmount, f=> x.Excluded(f.TotalAmount)))
-    /// SQL: INSERT INTO ... VALUES ( ... ) ON CONFLICT DO UPDATE "TotalAmount"=VALUES("TotalAmount")
+    /// SQL: INSERT INTO ... VALUES ( ... ) ON CONFLICT DO UPDATE "TotalAmount"=EXCLUDED."TotalAmount"
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldSelector">字段选择表表达式</param>
     /// <param name="fieldValueSelector">字段值表达式</param>
     /// <returns>返回更新对象</returns>
     ISqliteCreateConflictDoUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<TEntity, TField>> fieldValueSelector);
-    /// <summary>
-    /// VALUES单个字段更新，用法：
-    /// </summary>
-    /// <typeparam name="TFields">多个字段实体类型</typeparam>
-    /// <param name="fieldsAssignment"></param>
-    /// <returns></returns>
     ISqliteCreateConflictDoUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
     ISqliteCreateConflictDoUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue);
     ISqliteCreateConflictDoUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<TEntity, TField>> fieldValueSelector);
+    #endregion
+
+    #region Where
+    ISqliteOnConflictResult Where(Expression<Func<TEntity, bool>> predicate);
     #endregion
 }

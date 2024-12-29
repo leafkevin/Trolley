@@ -50,11 +50,9 @@ public class MySqlCreateVisitor : CreateVisitor
                         this.VisitWithByField(deferredSegment.Value);
                         break;
                     case "SetObject":
-                        this.UpdateBuilder ??= new();
                         this.VisitSetObject(deferredSegment.Value);
                         break;
                     case "SetExpression":
-                        this.UpdateBuilder ??= new();
                         this.VisitSetExpression(deferredSegment.Value as LambdaExpression);
                         break;
                     case "OutputFields":
@@ -274,6 +272,7 @@ public class MySqlCreateVisitor : CreateVisitor
 
         var entityType = this.Tables[0].EntityType;
         var updateObjType = updateObj.GetType();
+        this.UpdateBuilder ??= new();
         var setFieldsSetter = RepositoryHelper.BuildFieldsSqlParametersPart(this.DbContext, entityType, updateObjType, 3, 1, 0, false, this.IsMultiple, false, this.OnlyFieldNames, this.IgnoreFieldNames);
         if (this.IsMultiple)
         {
@@ -303,6 +302,7 @@ public class MySqlCreateVisitor : CreateVisitor
         }
         this.InitTableAlias(lambdaExpr);
         bool isNeedAlias = false;
+        this.UpdateBuilder ??= new();
         while (callStack.TryPop(out var callExpr))
         {
             var genericArguments = callExpr.Method.GetGenericArguments();

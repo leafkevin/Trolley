@@ -35,7 +35,7 @@ public class PostgreSqlCreate<TEntity> : Create<TEntity>, IPostgreSqlCreate<TEnt
     #endregion
 
     #region WithBulkCopy
-    public IPostgreSqlCreated<TEntity> WithBulkCopy(IEnumerable insertObjs )
+    public IPostgreSqlCreated<TEntity> WithBulkCopy(IEnumerable insertObjs)
     {
         if (insertObjs == null)
             throw new ArgumentNullException(nameof(insertObjs));

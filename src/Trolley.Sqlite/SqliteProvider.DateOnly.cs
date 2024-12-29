@@ -251,7 +251,7 @@ partial class SqliteProvider
 
                         var leftArgument = visitor.GetQuotedValue(leftSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return leftSegment.Merge(rightSegment, $"CASE WHEN {leftArgument}={rightArgument} THEN 0 WHEN {leftArgument}>{rightArgument} THEN 1 ELSE -1 END");
+                        return leftSegment.Merge(rightSegment, $"CASE WHEN DATE({leftArgument})=DATE({rightArgument}) THEN 0 WHEN DATE({leftArgument})>DATE({rightArgument}) THEN 1 ELSE -1 END");
                     });
                     result = true;
                     break;
@@ -320,7 +320,7 @@ partial class SqliteProvider
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"{targetArgument}={rightArgument}");
+                        return targetSegment.Merge(rightSegment, $"DATE({targetArgument})=\"DATE({rightArgument})");
                     });
                     result = true;
                     break;
@@ -332,7 +332,7 @@ partial class SqliteProvider
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"CASE WHEN {targetArgument}={rightArgument} THEN 0 WHEN {targetArgument}>{rightArgument} THEN 1 ELSE -1 END");
+                        return targetSegment.Merge(rightSegment, $"CASE WHEN DATE({targetArgument})=DATE({rightArgument}) THEN 0 WHEN DATE({targetArgument})>DATE({rightArgument}) THEN 1 ELSE -1 END");
                     });
                     result = true;
                     break;
@@ -345,7 +345,7 @@ partial class SqliteProvider
                             if (targetSegment.IsConstant || targetSegment.IsVariable)
                                 return targetSegment.ChangeValue(targetSegment.Value.ToString());
 
-                            return targetSegment.Change($"CONVERT({targetSegment.Body},'YYYY-MM-DD')", false, true);
+                            return targetSegment.Change($"CAST({targetSegment.Body},'YYYY-MM-DD')", false, true);
                         });
                         result = true;
                     }

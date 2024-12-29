@@ -10,9 +10,12 @@ class SqliteTheaDataReader : ITheaDataReader
 {
     private readonly SQLiteDataReader reader;
     public IDataReader BaseDataReader => this.reader;
+    public int FieldCount => this.reader.FieldCount;
 
     public SqliteTheaDataReader(SQLiteDataReader reader) => this.reader = reader;
 
+    public string GetName(int index) => this.reader.GetName(index);
+    public object GetValue(int index) => this.reader.GetValue(index);
     public Type GetFieldType(int ordinal) => this.reader.GetFieldType(ordinal);
     public bool NextResult() => this.reader.NextResult();
     public Task<bool> NextResultAsync(CancellationToken cancellationToken)
