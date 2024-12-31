@@ -345,7 +345,7 @@ partial class SqliteProvider
                             if (targetSegment.IsConstant || targetSegment.IsVariable)
                                 return targetSegment.ChangeValue(targetSegment.Value.ToString());
 
-                            return targetSegment.Change($"CAST({targetSegment.Body},'YYYY-MM-DD')", false, true);
+                            return targetSegment.Change($"STRFTIME('%Y-%m-%d',{visitor.GetQuotedValue(targetSegment)})", false, true);
                         });
                         result = true;
                     }
@@ -362,27 +362,27 @@ partial class SqliteProvider
                                 formatArgument = $"'{formatSegment.Value}'";
 
                                 if (formatArgument.Contains("yyyy"))
-                                    formatArgument = formatArgument.NextReplace("yyyy", "YYYY");
+                                    formatArgument = formatArgument.NextReplace("yyyy", "%Y");
                                 else if (formatArgument.Contains("yyy"))
-                                    formatArgument = formatArgument.NextReplace("yyy", "YYY");
+                                    formatArgument = formatArgument.NextReplace("yyy", "%Y");
                                 else if (formatArgument.Contains("yy"))
-                                    formatArgument = formatArgument.NextReplace("yy", "YY");
+                                    formatArgument = formatArgument.NextReplace("yy", "%Y");
 
                                 if (formatArgument.Contains("MMMM"))
-                                    formatArgument = formatArgument.NextReplace("MMMM", "Month");
+                                    formatArgument = formatArgument.NextReplace("MMMM", "%m");
                                 else if (formatArgument.Contains("MMM"))
-                                    formatArgument = formatArgument.NextReplace("MMM", "Mon");
+                                    formatArgument = formatArgument.NextReplace("MMM", "%m");
                                 else if (formatArgument.Contains("M") && !formatArgument.Contains("MM"))
-                                    formatArgument = formatArgument.NextReplace("M", "FMMM");
+                                    formatArgument = formatArgument.NextReplace("M", "%m");
 
                                 if (formatArgument.Contains("dddd"))
-                                    formatArgument = formatArgument.NextReplace("dddd", "Day");
+                                    formatArgument = formatArgument.NextReplace("dddd", "%d");
                                 else if (formatArgument.Contains("ddd"))
-                                    formatArgument = formatArgument.NextReplace("ddd", "DY");
+                                    formatArgument = formatArgument.NextReplace("ddd", "%d");
                                 else if (formatArgument.Contains("dd"))
-                                    formatArgument = formatArgument.NextReplace("dd", "DD");
+                                    formatArgument = formatArgument.NextReplace("dd", "%d");
                                 else if (formatArgument.Contains("d"))
-                                    formatArgument = formatArgument.NextReplace("d", "FMDD");
+                                    formatArgument = formatArgument.NextReplace("d", "%d");
                             }
                             else formatArgument = visitor.GetQuotedValue(formatSegment);
 
@@ -392,7 +392,7 @@ partial class SqliteProvider
 
                             var targetArgument = visitor.GetQuotedValue(targetSegment);
                             if (formatSegment.IsConstant || formatSegment.IsVariable)
-                                return targetSegment.Merge(formatSegment, $"FORMAT({targetArgument},{formatArgument})", false, true);
+                                return targetSegment.Merge(formatSegment, $"STRFTIME({formatArgument},{targetArgument})", false, true);
 
                             throw new NotSupportedException("DateOnly类型暂时不支持非常量的格式化字符串");
                         });

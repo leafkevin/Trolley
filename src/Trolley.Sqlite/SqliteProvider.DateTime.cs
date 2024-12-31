@@ -38,15 +38,15 @@ partial class SqliteProvider
                     result = true;
                     break;
                 case "Today":
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) => target.Change("CONVERT(DATE,GETDATE())", false, true));
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) => target.Change("DATE(CURRENT_TIMESTAMP,'localtime')", false, true));
                     result = true;
                     break;
                 case "Now":
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) => target.Change("GETDATE()", false, true));
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) => target.Change("DATETIME(CURRENT_TIMESTAMP,'localtime')", false, true));
                     result = true;
                     break;
                 case "UtcNow":
-                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) => target.Change("GETUTCDATE()", false, true));
+                    formatter = memberAccessSqlFormatterCache.GetOrAdd(cacheKey, (visitor, target) => target.Change("CURRENT_TIMESTAMP", false, true));
                     result = true;
                     break;
             }
@@ -67,7 +67,7 @@ partial class SqliteProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.ChangeValue(((DateTime)targetSegment.Value).Date);
 
-                        return targetSegment.Change($"CONVERT(DATE,{targetSegment.Body})", false, true);
+                        return targetSegment.Change($"DATE({targetSegment.Body})", false, true);
                     });
                     result = true;
                     break;
@@ -83,7 +83,7 @@ partial class SqliteProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.ChangeValue(((DateTime)targetSegment.Value).Day);
 
-                        return targetSegment.Change($"DATEPART(DAY,{targetSegment.Body})", false, true);
+                        return targetSegment.Change($"CAST(STRFTIME('%d',{targetSegment.Body}) AS INTEGER)", false, true);
                     });
                     result = true;
                     break;
@@ -99,7 +99,7 @@ partial class SqliteProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.ChangeValue(((DateTime)targetSegment.Value).DayOfWeek);
 
-                        return targetSegment.Change($"DATEPART(WEEKDAY,{targetSegment.Body})-1");
+                        return targetSegment.Change($"CAST(STRFTIME('%w',{targetSegment.Body}) AS INTEGER)", false, true);
                     });
                     result = true;
                     break;
@@ -115,7 +115,7 @@ partial class SqliteProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.ChangeValue(((DateTime)targetSegment.Value).DayOfYear);
 
-                        return targetSegment.Change($"DATEPART(DAYOFYEAR,{targetSegment.Body})", false, true);
+                        return targetSegment.Change($"CAST(STRFTIME('%j',{targetSegment.Body}) AS INTEGER)", false, true);
                     });
                     result = true;
                     break;
@@ -131,7 +131,7 @@ partial class SqliteProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.ChangeValue(((DateTime)targetSegment.Value).Hour);
 
-                        return targetSegment.Change($"DATEPART(HOUR,{targetSegment.Body})", false, true);
+                        return targetSegment.Change($"CAST(STRFTIME('%H',{targetSegment.Body}) AS INTEGER)", false, true);
                     });
                     result = true;
                     break;
@@ -163,7 +163,7 @@ partial class SqliteProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.ChangeValue(((DateTime)targetSegment.Value).Millisecond);
 
-                        return targetSegment.Change($"DATEPART(MILLISECOND,{targetSegment.Body})", false, true);
+                        return targetSegment.Change($"CAST(STRFTIME('%f',{targetSegment.Body})*1000.0%1000.0 AS INTEGER)", false, true);
                     });
                     result = true;
                     break;
@@ -179,7 +179,7 @@ partial class SqliteProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.ChangeValue(((DateTime)targetSegment.Value).Minute);
 
-                        return targetSegment.Change($"DATEPART(MINUTE,{targetSegment.Body})", false, true);
+                        return targetSegment.Change($"CAST(STRFTIME('%M',{targetSegment.Body}) AS INTEGER)", false, true);
                     });
                     result = true;
                     break;
@@ -195,7 +195,7 @@ partial class SqliteProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.ChangeValue(((DateTime)targetSegment.Value).Month);
 
-                        return targetSegment.Change($"DATEPART(MONTH,{targetSegment.Body})", false, true);
+                        return targetSegment.Change($"CAST(STRFTIME('%m',{targetSegment.Body}) AS INTEGER)", false, true);
                     });
                     result = true;
                     break;
@@ -211,7 +211,7 @@ partial class SqliteProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.ChangeValue(((DateTime)targetSegment.Value).Second);
 
-                        return targetSegment.Change($"DATEPART(SECOND,{targetSegment.Body})", false, true);
+                        return targetSegment.Change($"CAST(STRFTIME('%S',{targetSegment.Body}) AS INTEGER)", false, true);
                     });
                     result = true;
                     break;
@@ -227,7 +227,7 @@ partial class SqliteProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.ChangeValue(((DateTime)targetSegment.Value).Ticks);
 
-                        return targetSegment.Change($"DATEDIFF_BIG(MICROSECOND,'0001-01-01',{targetSegment.Body})*10");
+                        return targetSegment.Change($"CAST(((STRFTIME('%J',{targetSegment.Body})-1721425.5)*{TimeSpan.TicksPerDay}) AS INTEGER)");
                     });
                     result = true;
                     break;
@@ -243,7 +243,7 @@ partial class SqliteProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.ChangeValue(((DateTime)targetSegment.Value).TimeOfDay);
 
-                        return targetSegment.Change($"CONVERT(TIME,{targetSegment.Body})", false, true);
+                        return targetSegment.Change($"TIME({targetSegment.Body})", false, true);
                     });
                     result = true;
                     break;
@@ -259,7 +259,7 @@ partial class SqliteProvider
                         if (targetSegment.IsConstant || targetSegment.IsVariable)
                             return targetSegment.ChangeValue(((DateTime)targetSegment.Value).Year);
 
-                        return targetSegment.Change($"DATEPART(YEAR,{targetSegment.Body})", false, true);
+                        return targetSegment.Change($"CAST(STRFTIME('%Y',{targetSegment.Body}) AS INTEGER)", false, true);
                     });
                     result = true;
                     break;
@@ -289,7 +289,7 @@ partial class SqliteProvider
 
                         var leftArgument = visitor.GetQuotedValue(leftSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return leftSegment.Merge(rightSegment, $"DAY(EOMONTH(CAST({leftArgument} AS NVARCHAR(4))+'-'+CAST({rightArgument} AS NVARCHAR(2))+'-01'))", false, true);
+                        return leftSegment.Merge(rightSegment, $"DATETIME(EOMONTH(CAST({leftArgument} AS NVARCHAR(4))+'-'+CAST({rightArgument} AS NVARCHAR(2))+'-01'))", false, true);
                     });
                     result = true;
                     break;
@@ -326,7 +326,7 @@ partial class SqliteProvider
                                 && (styleSegment.IsConstant || styleSegment.IsVariable))
                                 return valueSegment.ChangeValue(DateTime.Parse(valueSegment.Value.ToString(), (IFormatProvider)providerSegment.Value, (DateTimeStyles)styleSegment.Value));
 
-                            return valueSegment.Change($"CAST({valueSegment.Body} AS DATETIME)", false, true);
+                            return valueSegment.Change($"DATETIME({valueSegment.Body})", false, true);
                         });
                     }
                     else if (parameterInfos.Length == 2)
@@ -340,7 +340,7 @@ partial class SqliteProvider
                                 && (providerSegment.IsConstant || providerSegment.IsVariable))
                                 return valueSegment.ChangeValue(DateTime.Parse(valueSegment.Value.ToString(), (IFormatProvider)providerSegment.Value));
 
-                            return valueSegment.Change($"CAST({valueSegment.Body} AS DATETIME)", false, true);
+                            return valueSegment.Change($"DATETIME({valueSegment.Body})", false, true);
                         });
                     }
                     else
@@ -351,7 +351,7 @@ partial class SqliteProvider
                             if (valueSegment.IsConstant || valueSegment.IsVariable)
                                 return valueSegment.ChangeValue(DateTime.Parse(valueSegment.Value.ToString()));
 
-                            return valueSegment.Change($"CAST({valueSegment.Body} AS DATETIME)", false, true);
+                            return valueSegment.Change($"DATETIME({valueSegment.Body})", false, true);
                         });
                     }
                     result = true;
@@ -375,33 +375,7 @@ partial class SqliteProvider
                             throw new NotSupportedException($"方法DateTime.{methodInfo.Name}格式化字符串，暂时不支持非常量、变量的解析");
 
                         var valueArgument = visitor.GetQuotedValue(valueSegment);
-                        var format = formatSegment.Value.ToString();
-                        string formatValue = null;
-                        switch (format)
-                        {
-                            case "mm/dd/yyyy": formatValue = $"CONVERT(DATETIME,{valueArgument},101)"; break;
-                            case "yyyy.mm.dd": formatValue = $"CONVERT(DATETIME,{valueArgument},102)"; break;
-                            case "dd/mm/yyyy": formatValue = $"CONVERT(DATETIME,{valueArgument},103)"; break;
-                            case "dd.mm.yyyy": formatValue = $"CONVERT(DATETIME,{valueArgument},104)"; break;
-                            case "dd-mm-yyyy": formatValue = $"CONVERT(DATETIME,{valueArgument},105)"; break;
-                            case "dd mon yyyy": formatValue = $"CONVERT(DATETIME,{valueArgument},106)"; break;
-                            case "mon dd, yyyy": formatValue = $"CONVERT(DATETIME,{valueArgument},107)"; break;
-                            case "hh:mi:ss": formatValue = $"CONVERT(DATETIME,{valueArgument},108)"; break;
-                            case "mon dd yyyy hh:mi:ss:mmmAM":
-                            case "mon dd yyyy hh:mi:ss:mmmPM": formatValue = $"CONVERT(DATETIME,{valueArgument},109)"; break;
-                            case "mm-dd-yyyy": formatValue = $"CONVERT(DATETIME,{valueArgument},110)"; break;
-                            case "yyyy/mm/dd": formatValue = $"CONVERT(DATETIME,{valueArgument},111)"; break;
-                            case "yyyymmdd": formatValue = $"CONVERT(DATETIME,{valueArgument},112)"; break;
-                            case "yyyy-mm-dd hh:mi:ss": formatValue = $"CONVERT(DATETIME,{valueArgument},120)"; break;
-                            case "yyyy-mm-dd hh:mi:ss.mmm": formatValue = $"CONVERT(DATETIME,{valueArgument},121)"; break;
-                            case "yyyy-mm-ddThh:mi:ss.mmm": formatValue = $"CONVERT(DATETIME,{valueArgument},126)"; break;
-                            case "dd mon yyyy hh:mi:ss:mmmAM":
-                            case "dd mon yyyy hh:mi:ss:mmmPM": formatValue = $"CONVERT(DATETIME,{valueArgument},130)"; break;
-                            case "dd/mm/yyyy hh:mi:ss:mmmAM":
-                            case "dd/mm/yyyy hh:mi:ss:mmmPM": formatValue = $"CONVERT(DATETIME,{valueArgument},131)"; break;
-                            default: formatValue = $"CAST({valueArgument} AS DATETIME)"; break;
-                        }
-                        return valueSegment.Merge(formatSegment, formatValue, false, true);
+                        return valueSegment.Merge(formatSegment, $"DATETIME({valueArgument})", false, true);
                     });
                     result = true;
                     if (methodInfo.IsStatic && parameterInfos.Length >= 1 && parameterInfos[0].ParameterType == typeof(ReadOnlySpan<char>))
@@ -415,7 +389,7 @@ partial class SqliteProvider
 
                         var leftArgument = visitor.GetQuotedValue(leftSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return leftSegment.Merge(rightSegment, $"CASE WHEN {leftArgument}={rightArgument} THEN 0 WHEN {leftArgument}>{rightArgument} THEN 1 ELSE -1 END");
+                        return leftSegment.Merge(rightSegment, $"CASE WHEN DATETIME({leftArgument})=DATETIME({rightArgument}) THEN 0 WHEN DATETIME({leftArgument})>DATETIME({rightArgument}) THEN 1 ELSE -1 END");
                     });
                     result = true;
                     break;
@@ -435,26 +409,25 @@ partial class SqliteProvider
                             return targetSegment.MergeValue(rightSegment, Convert.ToDateTime(targetSegment.Value).Add((TimeSpan)rightSegment.Value));
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
+                        var timeSpan = (TimeSpan)rightSegment.Value;
                         if (rightSegment.IsConstant || rightSegment.IsVariable)
                         {
                             var builder = new StringBuilder();
-                            var timeSpan = (TimeSpan)rightSegment.Value;
                             if (timeSpan.Days > 0)
                             {
-                                builder.Append($"DATEADD(DAY,{timeSpan.Days},{targetArgument})");
+                                builder.Append($"STRFTIME({targetArgument},{timeSpan.Days} days)");
                                 timeSpan = timeSpan.Subtract(TimeSpan.FromDays(timeSpan.Days));
                             }
                             if (timeSpan.Ticks > 0)
                             {
-                                if (builder.Length > 0) builder.Insert(0, $"DATEADD(MILLISECOND,{timeSpan.TotalMilliseconds},");
-                                else builder.Append($"DATEADD(MILLISECOND,{timeSpan.TotalMilliseconds},{targetArgument}");
-                                builder.Append(')');
+                                if (builder.Length > 0) builder.Insert(0, $"STRFTIME(");
+                                else builder.Append($"STRFTIME({targetArgument}");
+                                builder.Append($",{timeSpan.TotalSeconds} seconds)");
                             }
                             return targetSegment.Change(builder.ToString(), false, true);
                         }
                         //非常量、变量的，只能小于一天,数据库的Time类型映射成TimeSpan
-                        var rightArgument = $"DATEDIFF_BIG(MILLISECOND,'00:00:00',{rightSegment.Body})";
-                        return targetSegment.Merge(rightSegment, $"DATEADD(MILLISECOND,{rightArgument},{targetArgument})", false, true);
+                        return targetSegment.Change($"STRFTIME({targetArgument},{timeSpan.TotalSeconds} seconds)", false, true);
                     });
                     result = true;
                     break;
@@ -470,7 +443,7 @@ partial class SqliteProvider
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"DATEADD(DAY,{rightArgument},{targetArgument})", false, true);
+                        return targetSegment.Merge(rightSegment, $"STRFTIME({targetArgument},{targetArgument} days)", false, true);
                     });
                     result = true;
                     break;
@@ -486,7 +459,7 @@ partial class SqliteProvider
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"DATEADD(HOUR,{rightArgument},{targetArgument})", false, true);
+                        return targetSegment.Merge(rightSegment, $"STRFTIME({targetArgument},{rightArgument} hours)", false, true);
                     });
                     result = true;
                     break;
@@ -501,7 +474,7 @@ partial class SqliteProvider
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"DATEADD(MILLISECOND,{rightArgument},{targetArgument})", false, true);
+                        return targetSegment.Merge(rightSegment, $"STRFTIME({targetArgument},{rightArgument}/1000 seconds)", false, true);
                     });
                     result = true;
                     break;
@@ -516,7 +489,7 @@ partial class SqliteProvider
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"DATEADD(MINUTE,{rightArgument},{targetArgument})", false, true);
+                        return targetSegment.Merge(rightSegment, $"STRFTIME({targetArgument},{rightArgument} minutes)", false, true);
                     });
                     result = true;
                     break;
@@ -531,7 +504,7 @@ partial class SqliteProvider
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"DATEADD(MONTH,{rightArgument},{targetArgument})", false, true);
+                        return targetSegment.Merge(rightSegment, $"STRFTIME({targetArgument},{rightArgument} months)", false, true);
                     });
                     result = true;
                     break;
@@ -546,7 +519,7 @@ partial class SqliteProvider
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"DATEADD(SECOND,{rightArgument},{targetArgument})", false, true);
+                        return targetSegment.Merge(rightSegment, $"STRFTIME({targetArgument},{rightArgument} seconds)", false, true);
                     });
                     result = true;
                     break;
@@ -561,7 +534,7 @@ partial class SqliteProvider
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment, true);
-                        return targetSegment.Merge(rightSegment, $"DATEADD(MILLISECOND,{rightArgument}/{TimeSpan.TicksPerMillisecond},{targetArgument})", false, true);
+                        return targetSegment.Merge(rightSegment, $"STRFTIME({rightArgument}/{TimeSpan.TicksPerMillisecond},{targetArgument})", false, true);
                     });
                     result = true;
                     break;
@@ -576,7 +549,7 @@ partial class SqliteProvider
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"DATEADD(YEAR,{rightArgument},{targetArgument})", false, true);
+                        return targetSegment.Merge(rightSegment, $"STRFTIME({targetArgument},{rightArgument} years)", false, true);
                     });
                     result = true;
                     break;
@@ -664,6 +637,51 @@ partial class SqliteProvider
                             var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = target });
                             if (targetSegment.IsConstant || targetSegment.IsVariable)
                                 return targetSegment.ChangeValue(targetSegment.Value.ToString());
+
+                            formatArgument = $"'{formatSegment.Value}'";
+
+                            if (formatArgument.Contains("yyyy"))
+                                formatArgument = formatArgument.NextReplace("yyyy", "%Y");
+                            else if (formatArgument.Contains("yyy"))
+                                formatArgument = formatArgument.NextReplace("yyy", "%Y");
+                            else if (formatArgument.Contains("yy"))
+                                formatArgument = formatArgument.NextReplace("yy", "%Y");
+
+                            if (formatArgument.Contains("MMMM"))
+                                formatArgument = formatArgument.NextReplace("MMMM", "%m");
+                            else if (formatArgument.Contains("MMM"))
+                                formatArgument = formatArgument.NextReplace("MMM", "%m");
+                            else if (formatArgument.Contains("MM"))
+                                formatArgument = formatArgument.NextReplace("MM", "%m");
+                            else if (formatArgument.Contains("M"))
+                                formatArgument = formatArgument.NextReplace("M", "%m");
+
+                            if (formatArgument.Contains("dddd"))
+                                formatArgument = formatArgument.NextReplace("dddd", "%d");
+                            else if (formatArgument.Contains("ddd"))
+                                formatArgument = formatArgument.NextReplace("ddd", "%d");
+                            else if (formatArgument.Contains("dd"))
+                                formatArgument = formatArgument.NextReplace("dd", "%d");
+                            else if (formatArgument.Contains("d"))
+                                formatArgument = formatArgument.NextReplace("d", "%d");
+
+                            if (formatArgument.Contains("HH"))
+                                formatArgument = formatArgument.NextReplace("HH", "%H");
+                            else if (formatArgument.Contains("H"))
+                                formatArgument = formatArgument.NextReplace("H", "%H");
+                            else if (formatArgument.Contains("hh"))
+                                formatArgument = formatArgument.NextReplace("hh", "%H");
+                            else if (formatArgument.Contains("h"))
+                                formatArgument = formatArgument.NextReplace("h", "%H");
+
+                            if (formatArgument.Contains("mm"))
+                                formatArgument = formatArgument.NextReplace("mm", "%M");
+                            else formatArgument = formatArgument.NextReplace("m", "%M");
+
+                            if (formatArgument.Contains("ss"))
+                                formatArgument = formatArgument.NextReplace("ss", "%S");
+                            else if (formatArgument.Contains("s"))
+                                formatArgument = formatArgument.NextReplace("s", "%S");
 
                             return targetSegment.Change($"CONVERT(VARCHAR,{targetSegment.Body},121)", false, true);
                         });
