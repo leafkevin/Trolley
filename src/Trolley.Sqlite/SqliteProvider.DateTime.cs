@@ -415,19 +415,19 @@ partial class SqliteProvider
                             var builder = new StringBuilder();
                             if (timeSpan.Days > 0)
                             {
-                                builder.Append($"STRFTIME({targetArgument},{timeSpan.Days} days)");
+                                builder.Append($"DATETIME({targetArgument},'{timeSpan.Days} days')");
                                 timeSpan = timeSpan.Subtract(TimeSpan.FromDays(timeSpan.Days));
                             }
                             if (timeSpan.Ticks > 0)
                             {
-                                if (builder.Length > 0) builder.Insert(0, $"STRFTIME(");
-                                else builder.Append($"STRFTIME({targetArgument}");
-                                builder.Append($",{timeSpan.TotalSeconds} seconds)");
+                                if (builder.Length > 0) builder.Insert(0, $"DATETIME(");
+                                else builder.Append($"DATETIME({targetArgument}");
+                                builder.Append($",'{timeSpan.TotalSeconds} seconds')");
                             }
                             return targetSegment.Change(builder.ToString(), false, true);
                         }
                         //非常量、变量的，只能小于一天,数据库的Time类型映射成TimeSpan
-                        return targetSegment.Change($"STRFTIME({targetArgument},{timeSpan.TotalSeconds} seconds)", false, true);
+                        return targetSegment.Change($"DATETIME({targetArgument},{timeSpan.TotalSeconds} || ' seconds')", false, true);
                     });
                     result = true;
                     break;
@@ -443,7 +443,9 @@ partial class SqliteProvider
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"STRFTIME({targetArgument},{targetArgument} days)", false, true);
+                        if (rightSegment.IsConstant || rightSegment.IsVariable)
+                            return targetSegment.Merge(rightSegment, $"DATETIME({targetArgument},'{rightArgument} days')", false, true);
+                        return targetSegment.Merge(rightSegment, $"DATETIME({targetArgument},{targetArgument} || ' days')", false, true);
                     });
                     result = true;
                     break;
@@ -459,7 +461,9 @@ partial class SqliteProvider
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"STRFTIME({targetArgument},{rightArgument} hours)", false, true);
+                        if (rightSegment.IsConstant || rightSegment.IsVariable)
+                            return targetSegment.Merge(rightSegment, $"DATETIME({targetArgument},'{rightArgument} hours')", false, true);
+                        return targetSegment.Merge(rightSegment, $"DATETIME({targetArgument},{rightArgument} || ' hours')", false, true);
                     });
                     result = true;
                     break;
@@ -474,7 +478,7 @@ partial class SqliteProvider
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"STRFTIME({targetArgument},{rightArgument}/1000 seconds)", false, true);
+                        return targetSegment.Merge(rightSegment, $"DATETIME({targetArgument},({rightArgument}/1000) || ' hours')", false, true);
                     });
                     result = true;
                     break;
@@ -489,7 +493,9 @@ partial class SqliteProvider
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"STRFTIME({targetArgument},{rightArgument} minutes)", false, true);
+                        if (rightSegment.IsConstant || rightSegment.IsVariable)
+                            return targetSegment.Merge(rightSegment, $"DATETIME({targetArgument},'{rightArgument} minutes')", false, true);
+                        return targetSegment.Merge(rightSegment, $"DATETIME({targetArgument},{rightArgument} || ' minutes')", false, true);
                     });
                     result = true;
                     break;
@@ -504,7 +510,9 @@ partial class SqliteProvider
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"STRFTIME({targetArgument},{rightArgument} months)", false, true);
+                        if (rightSegment.IsConstant || rightSegment.IsVariable)
+                            return targetSegment.Merge(rightSegment, $"DATETIME({targetArgument},'{rightArgument} months')", false, true);
+                        return targetSegment.Merge(rightSegment, $"DATETIME({targetArgument},{rightArgument} || ' months')", false, true);
                     });
                     result = true;
                     break;
@@ -519,7 +527,9 @@ partial class SqliteProvider
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"STRFTIME({targetArgument},{rightArgument} seconds)", false, true);
+                        if (rightSegment.IsConstant || rightSegment.IsVariable)
+                            return targetSegment.Merge(rightSegment, $"DATETIME({targetArgument},'{rightArgument} seconds')", false, true);
+                        return targetSegment.Merge(rightSegment, $"DATETIME({targetArgument},{rightArgument} || ' seconds')", false, true);
                     });
                     result = true;
                     break;
@@ -534,7 +544,7 @@ partial class SqliteProvider
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment, true);
-                        return targetSegment.Merge(rightSegment, $"STRFTIME({rightArgument}/{TimeSpan.TicksPerMillisecond},{targetArgument})", false, true);
+                        return targetSegment.Merge(rightSegment, $"DATETIME({targetArgument},({rightArgument}/10000000) || ' seconds')", false, true);
                     });
                     result = true;
                     break;
@@ -549,7 +559,9 @@ partial class SqliteProvider
 
                         var targetArgument = visitor.GetQuotedValue(targetSegment);
                         var rightArgument = visitor.GetQuotedValue(rightSegment);
-                        return targetSegment.Merge(rightSegment, $"STRFTIME({targetArgument},{rightArgument} years)", false, true);
+                        if (rightSegment.IsConstant || rightSegment.IsVariable)
+                            return targetSegment.Merge(rightSegment, $"DATETIME({targetArgument},'{rightArgument} years')", false, true);
+                        return targetSegment.Merge(rightSegment, $"DATETIME({targetArgument},{rightArgument} || ' years')", false, true);
                     });
                     result = true;
                     break;
@@ -566,7 +578,7 @@ partial class SqliteProvider
 
                             var targetArgument = visitor.GetQuotedValue(targetSegment);
                             var rightArgument = visitor.GetQuotedValue(rightSegment);
-                            return targetSegment.Change($"CASE WHEN DATEDIFF(SECOND,{rightArgument},{targetArgument})>0 THEN CAST(DATEDIFF(DAY,{rightArgument},{targetArgument}) AS VARCHAR)+'.'+CAST(CONVERT(TIME,DATEADD(SECOND,DATEDIFF(SECOND,{rightArgument},{targetArgument})%86400,'00:00:00')) AS VARCHAR) ELSE CAST(DATEDIFF(DAY,{rightArgument},{targetArgument})+1 AS VARCHAR)+'.'+CAST(CONVERT(TIME,DATEADD(SECOND,86400-DATEDIFF(SECOND,{rightArgument},{targetArgument})%86400,'00:00:00')) AS VARCHAR) END");
+                            return targetSegment.Change($"TIME('00:00:00',(STRFTIME('%s',{targetArgument})-STRFTIME('%s',{rightArgument})) || ' seconds')");
                         });
                         result = true;
                     }
@@ -581,26 +593,8 @@ partial class SqliteProvider
                                 return targetSegment.MergeValue(rightSegment, Convert.ToDateTime(targetSegment.Value).Subtract((TimeSpan)rightSegment.Value));
 
                             var targetArgument = visitor.GetQuotedValue(targetSegment);
-                            if (rightSegment.IsConstant || rightSegment.IsVariable)
-                            {
-                                var builder = new StringBuilder();
-                                var timeSpan = (TimeSpan)rightSegment.Value;
-                                if (timeSpan.Days > 0)
-                                {
-                                    builder.Append($"DATEADD(DAY,-{timeSpan.Days},{targetArgument})");
-                                    timeSpan = timeSpan.Subtract(TimeSpan.FromDays(timeSpan.Days));
-                                }
-                                if (timeSpan.Ticks > 0)
-                                {
-                                    if (builder.Length > 0) builder.Insert(0, $"DATEADD(MILLISECOND,-{timeSpan.TotalMilliseconds},");
-                                    else builder.Append($"DATEADD(MILLISECOND,-{timeSpan.TotalMilliseconds},{targetArgument}");
-                                    builder.Append(')');
-                                }
-                                return targetSegment.Change(builder.ToString());
-                            }
-                            //非常量、变量的，只能小于一天
-                            var rightArgument = $"DATEDIFF_BIG(MILLISECOND,'00:00:00',{rightSegment.Body})";
-                            return targetSegment.Merge(rightSegment, $"DATEADD(MILLISECOND,-{rightArgument},{targetArgument})", false, true);
+                            var rightArgument = visitor.GetQuotedValue(rightSegment);
+                            return targetSegment.Change($"DATETIME({targetArgument},-STRFTIME('%s',{rightArgument}) || ' seconds')");
                         });
                         result = true;
                     }
