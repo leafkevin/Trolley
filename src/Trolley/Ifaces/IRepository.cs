@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -281,6 +282,23 @@ public interface IRepository
     /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
     Task<TEntity> QueryFirstAsync<TEntity>(string rawSql, object parameters = null, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default);
     /// <summary>
+    /// 执行原始SQL，并返回影响行数
+    /// </summary>
+    /// <param name="commandType">命令类型</param>
+    /// <param name="rawSql">要执行的SQL</param>
+    /// <param name="parameters">参数数组</param>
+    /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
+    TEntity QueryFirst<TEntity>(CommandType commandType, string rawSql, params DbParameter[] parameters);
+    /// <summary>
+    /// 执行原始SQL，并返回影响行数
+    /// </summary>
+    /// <param name="commandType">命令类型</param>
+    /// <param name="rawSql">要执行的SQL</param>
+    /// <param name="parameters">参数数组</param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
+    Task<TEntity> QueryFirstAsync<TEntity>(CommandType commandType, string rawSql, DbParameter[] parameters = null, CancellationToken cancellationToken = default);
+    /// <summary>
     /// 从表TEntity中，查询与whereObj对象各属性值都相等的第一条记录，记录不存在时返回TEntity类型的默认值，不支持分表，用法：
     /// <code>
     /// repository.QueryFirst&lt;User&gt;(new { Id = 1, IsEnabled = true })
@@ -325,6 +343,23 @@ public interface IRepository
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回查询结果，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表</returns>
     Task<List<TEntity>> QueryAsync<TEntity>(string rawSql, object parameters = null, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// 执行原始SQL，并返回影响行数
+    /// </summary>
+    /// <param name="commandType">命令类型</param>
+    /// <param name="rawSql">要执行的SQL</param>
+    /// <param name="parameters">参数数组</param>
+    /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
+    List<TEntity> Query<TEntity>(CommandType commandType, string rawSql, params DbParameter[] parameters);
+    /// <summary>
+    /// 执行原始SQL，并返回影响行数
+    /// </summary>
+    /// <param name="commandType">命令类型</param>
+    /// <param name="rawSql">要执行的SQL</param>
+    /// <param name="parameters">参数数组</param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
+    Task<List<TEntity>> QueryAsync<TEntity>(CommandType commandType, string rawSql, DbParameter[] parameters = null, CancellationToken cancellationToken = default);
     /// <summary>
     /// 从表TEntity中，查询与whereObj对象各属性值都相等的所有记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，不支持分表，用法：
     /// <code>
@@ -571,6 +606,23 @@ public interface IRepository
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回影响行数</returns>
     Task<int> ExecuteAsync(string rawSql, object parameters = null, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// 执行原始SQL，并返回影响行数
+    /// </summary>
+    /// <param name="commandType">命令类型</param>
+    /// <param name="rawSql">要执行的SQL</param>
+    /// <param name="parameters">参数数组</param>
+    /// <returns>返回影响行数</returns>
+    int Execute(CommandType commandType, string rawSql, params DbParameter[] parameters);
+    /// <summary>
+    /// 执行原始SQL，并返回影响行数
+    /// </summary>
+    /// <param name="commandType">命令类型</param>
+    /// <param name="rawSql">要执行的SQL</param>
+    /// <param name="parameters">参数数组</param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回影响行数</returns>
+    Task<int> ExecuteAsync(CommandType commandType, string rawSql, DbParameter[] parameters = null, CancellationToken cancellationToken = default);
     #endregion
 
     #region QueryMultiple
