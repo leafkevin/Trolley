@@ -2,8 +2,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -292,6 +292,71 @@ public class Repository : IRepository
         if (isNeedClose) await connection.CloseAsync();
         return result;
     }
+    public virtual TEntity QueryFirst<TEntity>(CommandType commandType, string rawSql, params DbParameter[] parameters)
+    {
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
+
+        var entityType = typeof(TEntity);
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
+        command.CommandText = rawSql;
+        command.CommandType = commandType;
+        if (parameters != null)
+            Array.ForEach(parameters, f => command.Parameters.Add(f));
+
+        connection.Open();
+        TEntity result = default;
+        if (entityType.IsEntityType(out _))
+        {
+            var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+            using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
+            if (reader.Read())
+                result = reader.ToEntity<TEntity>(this.DbContext);
+            reader.Dispose();
+        }
+        else
+        {
+            var objResult = command.ExecuteScalar(CommandSqlType.Select);
+            if (objResult != null) result = (TEntity)Convert.ChangeType(objResult, typeof(TEntity));
+        }
+
+        command.Dispose();
+        if (isNeedClose) connection.Close();
+        return result;
+    }
+    public virtual async Task<TEntity> QueryFirstAsync<TEntity>(CommandType commandType, string rawSql, DbParameter[] parameters = null, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
+
+        var entityType = typeof(TEntity);
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
+        command.CommandText = rawSql;
+        command.CommandType = commandType;
+        if (parameters != null)
+            Array.ForEach(parameters, f => command.Parameters.Add(f));
+
+        await connection.OpenAsync(cancellationToken);
+        TEntity result = default;
+        if (entityType.IsEntityType(out _))
+        {
+            var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+            using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
+            if (await reader.ReadAsync(cancellationToken))
+                result = reader.ToEntity<TEntity>(this.DbContext);
+            await reader.DisposeAsync();
+        }
+        else
+        {
+            var objResult = await command.ExecuteScalarAsync(CommandSqlType.Select, cancellationToken);
+            if (objResult != null) result = (TEntity)Convert.ChangeType(objResult, typeof(TEntity));
+        }
+
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
+        return result;
+    }
+
     public virtual TEntity QueryFirst<TEntity>(object whereObj)
     {
         return this.DbContext.Query<TEntity, TEntity>(whereObj, true, reader =>
@@ -373,6 +438,70 @@ public class Repository : IRepository
         }
         command.CommandText = rawSql;
         command.CommandType = commandType;
+
+        await connection.OpenAsync(cancellationToken);
+        var behavior = CommandBehavior.SequentialAccess;
+        using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
+        var result = new List<TEntity>();
+        var entityType = typeof(TEntity);
+        if (entityType.IsEntityType(out _))
+        {
+            while (await reader.ReadAsync(cancellationToken))
+                result.Add(reader.ToEntity<TEntity>(this.DbContext));
+        }
+        else
+        {
+            while (await reader.ReadAsync(cancellationToken))
+                result.Add(reader.ToValue<TEntity>(this.DbContext));
+        }
+
+        await reader.DisposeAsync();
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
+        return result;
+    }
+    public virtual List<TEntity> Query<TEntity>(CommandType commandType, string rawSql, params DbParameter[] parameters)
+    {
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
+
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
+        command.CommandText = rawSql;
+        command.CommandType = commandType;
+        if (parameters != null)
+            Array.ForEach(parameters, f => command.Parameters.Add(f));
+
+        connection.Open();
+        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+        using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
+        var result = new List<TEntity>();
+        var entityType = typeof(TEntity);
+        if (entityType.IsEntityType(out _))
+        {
+            while (reader.Read())
+                result.Add(reader.ToEntity<TEntity>(this.DbContext));
+        }
+        else
+        {
+            while (reader.Read())
+                result.Add(reader.ToValue<TEntity>(this.DbContext));
+        }
+
+        reader.Dispose();
+        command.Dispose();
+        if (isNeedClose) connection.Close();
+        return result;
+    }
+    public virtual async Task<List<TEntity>> QueryAsync<TEntity>(CommandType commandType, string rawSql, DbParameter[] parameters = null, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
+
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
+        command.CommandText = rawSql;
+        command.CommandType = commandType;
+        if (parameters != null)
+            Array.ForEach(parameters, f => command.Parameters.Add(f));
 
         await connection.OpenAsync(cancellationToken);
         var behavior = CommandBehavior.SequentialAccess;
@@ -788,6 +917,38 @@ public class Repository : IRepository
             var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.OrmProvider, rawSql, parameters);
             commandInitializer.Invoke(command.Parameters, this.OrmProvider, parameters);
         }
+        await connection.OpenAsync(cancellationToken);
+        var result = await command.ExecuteNonQueryAsync(CommandSqlType.RawExecute, cancellationToken);
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
+        return result;
+    }
+    public virtual int Execute(CommandType commandType, string rawSql, params DbParameter[] parameters)
+    {
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
+
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        command.CommandText = rawSql;
+        command.CommandType = commandType;
+        if (parameters != null)
+            Array.ForEach(parameters, f => command.Parameters.Add(f));
+        connection.Open();
+        var result = command.ExecuteNonQuery(CommandSqlType.RawExecute);
+        command.Dispose();
+        if (isNeedClose) connection.Close();
+        return result;
+    }
+    public virtual async Task<int> ExecuteAsync(CommandType commandType, string rawSql, DbParameter[] parameters = null, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
+
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        command.CommandText = rawSql;
+        command.CommandType = commandType;
+        if (parameters != null)
+            Array.ForEach(parameters, f => command.Parameters.Add(f));
         await connection.OpenAsync(cancellationToken);
         var result = await command.ExecuteNonQueryAsync(CommandSqlType.RawExecute, cancellationToken);
         await command.DisposeAsync();
