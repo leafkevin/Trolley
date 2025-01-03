@@ -43,7 +43,7 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                     var sqlVisitor = this.Visitor as SqlVisitor;
                     if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out var shardingTable))
                     {
-                        isNeedSplit = this.Visitor.Tables[0].Body == null;
+                        var isNeedSplit = this.Visitor.Tables[0].Body == null;
                         if (isNeedSplit)
                         {
                             var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
@@ -141,7 +141,7 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                     var sqlVisitor = this.Visitor as SqlVisitor;
                     if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out var shardingTable))
                     {
-                        isNeedSplit = this.Visitor.Tables[0].Body == null;
+                        var isNeedSplit = this.Visitor.Tables[0].Body == null;
                         if (isNeedSplit)
                         {
                             var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
