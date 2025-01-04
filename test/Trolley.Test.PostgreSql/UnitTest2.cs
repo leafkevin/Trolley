@@ -1,7 +1,11 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using MySqlConnector;
+using Npgsql;
+using NpgsqlTypes;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -85,6 +89,23 @@ public class UnitTest2 : UnitTestBase
         if (result1 != null && result2 != null)
         {
             Assert.True(result1.Id == result2.Id);
+        }
+    }
+    [Fact]
+    public async Task QueryFirst_Raw()
+    {
+        this.Initialize(2);
+        var repository = this.dbFactory.Create();
+        var parameters = new DbParameter[]
+        {
+            new NpgsqlParameter("pId", NpgsqlDbType.Integer) { Value = 1 },
+            new NpgsqlParameter("pOut", NpgsqlDbType.Varchar) { Size = 50, Direction = ParameterDirection.Output }
+        };
+        var result = await repository.QueryFirstAsync<User>(CommandType.StoredProcedure, "get_user", parameters);
+        if (result != null)
+        {
+            Assert.NotNull(result.Name);
+            Assert.Equal("OK", parameters[1].Value.ToString());
         }
     }
     [Fact]

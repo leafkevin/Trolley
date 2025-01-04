@@ -116,6 +116,18 @@ public static class Extensions
         }
         throw new NotSupportedException("成员member，不是属性也不是字段");
     }
+    public static bool CanWrite(this MemberInfo member)
+    {
+        switch (member.MemberType)
+        {
+            case MemberTypes.Property:
+                var propertyInfo = member as PropertyInfo;
+                return propertyInfo.CanWrite;
+            case MemberTypes.Field:
+                return true;
+        }
+        return false;
+    }
     public static bool IsParameter(this Expression expr, out string parameterName)
     {
         var visitor = new IsParameterVisitor();
@@ -478,9 +490,10 @@ public static class Extensions
             var readerValueExpr = GetReaderValue(dbContext, ormProviderExpr, readerExpr, Expression.Constant(index),
                   memberMapper.MemberType, fieldType, memberMapper.TypeHandler, blockParameters, blockBodies);
 
-            if (target.IsDefault)
+            if (!target.IsDefault)
+                target.Arguments.Add(readerValueExpr);
+            else if (memberMapper.Member.CanWrite())
                 target.Bindings.Add(Expression.Bind(memberMapper.Member, readerValueExpr));
-            else target.Arguments.Add(readerValueExpr);
             index++;
         }
         var resultLabelExpr = Expression.Label(entityType);
@@ -500,7 +513,6 @@ public static class Extensions
         var target = NewBuildInfo(entityType);
         var blockParameters = new List<ParameterExpression>();
         var blockBodies = new List<Expression>();
-
         while (index < reader.FieldCount)
         {
             //使用原始SQL才有可能SQL中的字段名与成员名不一致，或是没有加 AS成员名
@@ -509,16 +521,11 @@ public static class Extensions
             var memberType = memberInfo.GetMemberType();
             var readerValueExpr = GetReaderValue(dbContext, ormProviderExpr, readerExpr,
                 Expression.Constant(index), memberType, fieldType, null, blockParameters, blockBodies);
-
-            if (target.IsDefault)
-                target.Bindings.Add(Expression.Bind(memberInfo, readerValueExpr));
-            else target.Arguments.Add(readerValueExpr);
+            target.Arguments.Add(readerValueExpr);
             index++;
         }
         var resultLabelExpr = Expression.Label(entityType);
-        Expression returnExpr;
-        if (target.IsDefault) returnExpr = Expression.MemberInit(Expression.New(target.Constructor), target.Bindings);
-        else returnExpr = Expression.New(target.Constructor, target.Arguments);
+        var returnExpr = Expression.New(target.Constructor, target.Arguments);
 
         blockBodies.Add(Expression.Return(resultLabelExpr, returnExpr));
         blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(entityType)));
@@ -543,8 +550,7 @@ public static class Extensions
         if (readerFields.Count == 1 && readerFields[0].FieldType == SqlFieldType.RawSql)
         {
             var memberNames = entityType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field)
-                .Select(f => f.Name).ToList();
+                .Where(f => f.CanWrite()).Select(f => f.Name).ToList();
 
             if (!root.IsDefault)
                 throw new NotSupportedException($"不支持使用原始SQL创建没有默认构造函数的实体，实体类型:{entityType.FullName}");
@@ -553,13 +559,18 @@ public static class Extensions
             {
                 var fieldName = reader.GetName(index);
                 (var isContains, var memberName) = memberNames.ContainsLower(fieldName.ToLower());
+                var memberInfo = entityType.GetMember(memberName)[0];
+                if (!memberInfo.CanWrite()) continue;
                 Expression readerValueExpr = null;
                 if (!isContains) continue;
                 var fieldType = reader.GetFieldType(index);
-                var memberInfo = entityType.GetMember(memberName)[0];
+
                 var indexExpr = Expression.Constant(index);
                 readerValueExpr = GetReaderValue(dbContext, ormProviderExpr, readerExpr, indexExpr, memberInfo.GetMemberType(), fieldType, null, blockParameters, blockBodies);
-                root.Bindings.Add(Expression.Bind(memberInfo, readerValueExpr));
+                if (!root.IsDefault)
+                    root.Arguments.Add(readerValueExpr);
+                else if (memberInfo.CanWrite())
+                    root.Bindings.Add(Expression.Bind(memberInfo, readerValueExpr));
                 index++;
             }
         }
@@ -582,8 +593,8 @@ public static class Extensions
                     var fieldType = reader.GetFieldType(index);
                     var readerValueExpr = GetReaderValue(dbContext, ormProviderExpr, readerExpr, Expression.Constant(index),
                         readerField.SegmentType, fieldType, readerField.TypeHandler, blockParameters, blockBodies);
-                    if (root.IsDefault) root.Bindings.Add(Expression.Bind(readerField.TargetMember, readerValueExpr));
-                    else root.Arguments.Add(readerValueExpr);
+                    if (!root.IsDefault) root.Arguments.Add(readerValueExpr);
+                    else if (readerField.TargetMember.CanWrite()) root.Bindings.Add(Expression.Bind(readerField.TargetMember, readerValueExpr));
                     index++;
                 }
                 else
@@ -629,9 +640,8 @@ public static class Extensions
                         }
                         else executeExpr = Expression.Invoke(Expression.Lambda(bodyExpr));
                         //把延迟方法调用委托当作参数传进来，这样缓存才有效，相同key，不同的延迟方法
-                        if (current.IsDefault)
-                            current.Bindings.Add(Expression.Bind(readerField.TargetMember, executeExpr));
-                        else current.Arguments.Add(executeExpr);
+                        if (!current.IsDefault) current.Arguments.Add(executeExpr);
+                        else if (readerField.TargetMember.CanWrite()) current.Bindings.Add(Expression.Bind(readerField.TargetMember, executeExpr));
                     }
                     else if (readerField.FieldType == SqlFieldType.IncludeRef)
                     {
@@ -640,9 +650,8 @@ public static class Extensions
                         var refReaderField = readerField.Value as SqlFieldSegment;
                         var instanceExpr = readerBuilders[refReaderField].InstanceExpr;
                         //此处生成的副本，从新new的一个对象
-                        if (parent.IsDefault)
-                            parent.Bindings.Add(Expression.Bind(readerField.TargetMember, instanceExpr));
-                        else parent.Arguments.Add(instanceExpr);
+                        if (!parent.IsDefault) parent.Arguments.Add(instanceExpr);
+                        else if (readerField.TargetMember.CanWrite()) parent.Bindings.Add(Expression.Bind(readerField.TargetMember, instanceExpr));
                         readerIndex++;
                         continue;
                     }
@@ -663,9 +672,8 @@ public static class Extensions
                             readerValueExpr = GetReaderValue(dbContext, ormProviderExpr, readerExpr, Expression.Constant(index),
                                 childReaderField.SegmentType, fieldType, childReaderField.TypeHandler, blockParameters, blockBodies);
 
-                            if (current.IsDefault) current.Bindings.Add(Expression.Bind(childReaderField.TargetMember, readerValueExpr));
-                            else current.Arguments.Add(readerValueExpr);
-
+                            if (!current.IsDefault) current.Arguments.Add(readerValueExpr);
+                            else if (childReaderField.TargetMember.CanWrite()) current.Bindings.Add(Expression.Bind(childReaderField.TargetMember, readerValueExpr));
                             childIndex++;
                             index++;
                         }
@@ -689,9 +697,8 @@ public static class Extensions
                                 //赋值给父对象的属性
                                 if (current.Parent == null)
                                     break;
-                                if (current.Parent.IsDefault)
-                                    current.Parent.Bindings.Add(Expression.Bind(current.FromMember, instanceExpr));
-                                else current.Parent.Arguments.Add(instanceExpr);
+                                if (!current.Parent.IsDefault) current.Parent.Arguments.Add(instanceExpr);
+                                else if (current.FromMember.CanWrite()) current.Parent.Bindings.Add(Expression.Bind(current.FromMember, instanceExpr));
                             }
                             while (deferredBuilds.TryPop(out current));
                         }

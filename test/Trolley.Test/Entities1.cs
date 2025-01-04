@@ -131,7 +131,7 @@ public class Product
     public double Price { get; set; }
     public int BrandId { get; set; }
     public int CategoryId { get; set; }
-    public int CompanyId { get; set; }
+    public int CompanyId { get; }
     public bool IsEnabled { get; set; }
     public int CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; }

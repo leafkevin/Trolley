@@ -1,6 +1,9 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using MySqlConnector;
 using System;
 using System.Collections.Generic;
+using System.Data;
+using System.Data.Common;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -86,6 +89,23 @@ public class UnitTest2 : UnitTestBase
         {
             Assert.True(result1.Id == result2.Id);
             Assert.Equal(1, result1.Id);
+        }
+    }
+    [Fact]
+    public async Task QueryFirst_Raw()
+    {
+        this.Initialize(1);
+        var repository = this.dbFactory.Create();
+        var parameters = new DbParameter[]
+        {
+            new MySqlParameter("pId", MySqlDbType.Int32) { Value = 1 },
+            new MySqlParameter("pOut", MySqlDbType.VarChar) { Size = 50, Direction = ParameterDirection.Output }
+        };
+        var result = await repository.QueryFirstAsync<User>(CommandType.StoredProcedure, "GET_USER", parameters);
+        if (result != null)
+        {
+            Assert.NotNull(result.Name);
+            Assert.Equal("OK", parameters[1].Value.ToString());
         }
     }
     [Fact]
@@ -2641,7 +2661,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
           .Where(f => Sql.In(f.Id, new[] { "8" }))
           .SelectFlattenTo(f => new OrderInfo
           {
-                Description = f.TotalAmount.ToString("C") + f.OrderNo
+              Description = f.TotalAmount.ToString("C") + f.OrderNo
           })
           .FirstAsync();
         Assert.Equal("8", result1.Id);

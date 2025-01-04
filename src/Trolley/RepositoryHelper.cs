@@ -146,7 +146,7 @@ public class RepositoryHelper
     {
         var builder = new StringBuilder();
         var memberInfos = parametersType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-           .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
+           .Where(f => f.CanWrite()).ToList();
 
         var index = 0;
         foreach (var memberInfo in memberInfos)
@@ -374,7 +374,7 @@ public class RepositoryHelper
             if (!isDictionary)
             {
                 targetMemberInfos = parametersType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                    .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field)
+                    .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field)
                     .ToDictionary(f => f.Name.ToLower(), f => f);
             }
             var index = 0;
@@ -612,8 +612,7 @@ public class RepositoryHelper
             if (isEntityType)
             {
                 targetMemberInfos = whereObjType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                    .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field)
-                    .ToDictionary(f => f.Name.ToLower(), f => f);
+                    .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field).ToDictionary(f => f.Name.ToLower(), f => f);
             }
             else if (!(isUseKey && entityMapper.KeyMembers.Count == 1))
                 throw new NotSupportedException("不支持非单主键字段的业务场景");
@@ -930,7 +929,7 @@ public class RepositoryHelper
             commandInitializer = queryRawSqlCommandInitializerCache.GetOrAdd(cacheKey, f =>
             {
                 var memberInfos = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                    .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
+                    .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field).ToList();
                 var dbParametersExpr = Expression.Parameter(typeof(IDataParameterCollection), "dbParameters");
                 var ormProviderExpr = Expression.Parameter(typeof(IOrmProvider), "ormProvider");
                 var parameterExpr = Expression.Parameter(typeof(object), "parameter");
@@ -1417,7 +1416,7 @@ public class RepositoryHelper
             {
                 var entityMapper = mapProvider.GetEntityMap(entityType);
                 var targetMemberInfos = updateObjType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                    .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field)
+                    .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field)
                     .ToDictionary(f => f.Name.ToLower(), f => f);
 
                 var index = 0;
@@ -1582,7 +1581,7 @@ public class RepositoryHelper
                     var tableNameRuleGetter = shardingTable.Rule as Func<string, object, object, string>;
                     //TODO:处理大小写
                     var memberNames = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                        .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field)
+                        .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field)
                         .Select(f => f.Name).ToList();
                     (var isContains, var memberName1) = memberNames.ContainsLower(shardingTable.DependOnMembers[0].ToLower());
                     if (!isContains) throw new MissingMemberException($"实体表{entityType.FullName}已设置分表并依赖成员{shardingTable.DependOnMembers[0]}映射的字段，但当前参数中并不包含{shardingTable.DependOnMembers[0]}成员");
@@ -1628,7 +1627,7 @@ public class RepositoryHelper
                     var parameterObjExpr = Expression.Parameter(typeof(object), "parameterObj");
                     var tableNameRuleGetter = shardingTable.Rule as Func<string, object, string>;
                     var memberNames = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                        .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field)
+                        .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field)
                         .Select(f => f.Name).ToList();
                     (var isContains, var memberName) = memberNames.ContainsLower(shardingTable.DependOnMembers[0].ToLower());
                     if (!isContains) throw new MissingMemberException($"实体表{entityType.FullName}已设置分表并依赖成员{shardingTable.DependOnMembers[0]}映射的字段，但当前参数中并不包含{shardingTable.DependOnMembers[0]}成员");

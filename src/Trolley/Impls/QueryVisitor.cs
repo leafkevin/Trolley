@@ -1250,7 +1250,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 isExistsFields = true;
             }
             var targetMembers = targetType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
+                .Where(f => f.CanWrite()).ToList();
 
             foreach (var memberInfo in targetMembers)
             {
@@ -1263,7 +1263,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         {
             this.ReaderFields = new();
             var targetMembers = targetType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
+                .Where(f => f.CanWrite()).ToList();
 
             foreach (var memberInfo in targetMembers)
             {

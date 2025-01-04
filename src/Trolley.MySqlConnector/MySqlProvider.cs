@@ -359,7 +359,7 @@ public partial class MySqlProvider : BaseOrmProvider
                 continue;
 
             var memberInfos = entityMapper.EntityType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
+                .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field).ToList();
 
             var mappedMappers = new List<MemberMap>();
             foreach (var columnInfo in tableInfo.Columns)

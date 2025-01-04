@@ -1969,7 +1969,7 @@ public class SqlVisitor : ISqlVisitor
     public List<(MemberMap, Func<object, object>)> GetRefMemberMappers(Type parameterType, EntityMap refEntityMapper, bool isUpdate = false)
     {
         var memberInfos = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-            .Where(f => f.MemberType == MemberTypes.Property | f.MemberType == MemberTypes.Field).ToList();
+            .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field).ToList();
         var memberMappers = new List<(MemberMap, Func<object, object>)>();
         foreach (var refMemberMapper in refEntityMapper.MemberMaps)
         {

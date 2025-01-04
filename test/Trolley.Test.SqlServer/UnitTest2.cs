@@ -1,12 +1,16 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using MySqlConnector;
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
+using System.Data;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Trolley.SqlServer;
 using Xunit;
 using Xunit.Abstractions;
+using Microsoft.Data.SqlClient;
 
 namespace Trolley.Test.SqlServer;
 
@@ -85,6 +89,23 @@ public class UnitTest2 : UnitTestBase
         {
             Assert.True(result1.Id == result2.Id);
             Assert.Equal(1, result1.Id);
+        }
+    }
+    [Fact]
+    public async Task QueryFirst_Raw()
+    {
+        this.Initialize(3);
+        var repository = this.dbFactory.Create();
+        var parameters = new DbParameter[]
+        {
+            new SqlParameter("pId", SqlDbType.Int) { Value = 1 },
+            new SqlParameter("pOut", SqlDbType.VarChar) { Size = 50, Direction = ParameterDirection.Output }
+        };
+        var result = await repository.QueryFirstAsync<User>(CommandType.StoredProcedure, "GET_USER", parameters);
+        if (result != null)
+        {
+            Assert.NotNull(result.Name);
+            Assert.Equal("OK", parameters[1].Value.ToString());
         }
     }
     [Fact]

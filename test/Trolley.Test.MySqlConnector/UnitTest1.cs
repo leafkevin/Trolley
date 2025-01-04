@@ -799,7 +799,7 @@ public class UnitTest1 : UnitTestBase
             .IgnoreInto()
             .From<Brand>()
             .Where(f => f.Id == brandId)
-            .Select(f => new Product
+            .Select(f => new 
             {
                 Id = id,
                 ProductNo = "PN_" + id.ToString().PadLeft(3, '0'),
@@ -807,7 +807,7 @@ public class UnitTest1 : UnitTestBase
                 Price = 25.85,
                 BrandId = f.Id,
                 CategoryId = categoryId,
-                CompanyId = f.CompanyId,
+                f.CompanyId,
                 IsEnabled = true,
                 CreatedBy = 1,
                 CreatedAt = DateTime.Now,
@@ -823,7 +823,7 @@ public class UnitTest1 : UnitTestBase
             .IgnoreInto()
             .From<Brand>()
             .Where(f => f.Id == brandId)
-            .Select(f => new Product
+            .Select(f => new
             {
                 Id = id,
                 ProductNo = "PN_" + id.ToString().PadLeft(3, '0'),
@@ -831,7 +831,7 @@ public class UnitTest1 : UnitTestBase
                 Price = 25.85,
                 BrandId = f.Id,
                 CategoryId = categoryId,
-                CompanyId = f.CompanyId,
+                f.CompanyId,
                 IsEnabled = true,
                 CreatedBy = 1,
                 CreatedAt = DateTime.Now,
@@ -859,7 +859,7 @@ public class UnitTest1 : UnitTestBase
                 Price = 25.85,
                 BrandId = f.Id,
                 CategoryId = categoryId,
-                CompanyId = f.CompanyId,
+                //CompanyId = f.CompanyId,
                 IsEnabled = true,
                 CreatedBy = 1,
                 CreatedAt = DateTime.Now,

@@ -27,7 +27,6 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
     {
         int result = 0;
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        bool isNeedSplit = false;
         var entityType = typeof(TEntity);
         switch (this.Visitor.ActionMode)
         {
@@ -44,7 +43,7 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                     var sqlVisitor = this.Visitor as SqlVisitor;
                     if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out var shardingTable))
                     {
-                        isNeedSplit = this.Visitor.Tables[0].Body == null;
+                        var isNeedSplit = this.Visitor.Tables[0].Body == null;
                         if (isNeedSplit)
                         {
                             var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
@@ -61,7 +60,7 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
             case ActionMode.Bulk:
                 {
                     var builder = new StringBuilder();
-                    (isNeedSplit, var tableName, var insertObjs, var bulkCount,
+                    (var isNeedSplit, var tableName, var insertObjs, var bulkCount,
                         var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
                     int Execute(string tableName, IEnumerable insertObjs)
                     {
@@ -126,7 +125,6 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
     {
         int result = 0;
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        bool isNeedSplit;
         var entityType = typeof(TEntity);
         switch (this.Visitor.ActionMode)
         {
@@ -143,7 +141,7 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
                     var sqlVisitor = this.Visitor as SqlVisitor;
                     if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out var shardingTable))
                     {
-                        isNeedSplit = this.Visitor.Tables[0].Body == null;
+                        var isNeedSplit = this.Visitor.Tables[0].Body == null;
                         if (isNeedSplit)
                         {
                             var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
@@ -160,7 +158,7 @@ public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
             case ActionMode.Bulk:
                 {
                     var builder = new StringBuilder();
-                    (isNeedSplit, var tableName, var insertObjs, var bulkCount,
+                    (var isNeedSplit, var tableName, var insertObjs, var bulkCount,
                         var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
                     async Task<int> Executor(string tableName, IEnumerable insertObjs)
                     {
