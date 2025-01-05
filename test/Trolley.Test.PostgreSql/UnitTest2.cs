@@ -1,14 +1,13 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using MySqlConnector;
-using Npgsql;
-using NpgsqlTypes;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
+using NpgsqlTypes;
 using Trolley.PostgreSql;
 using Xunit;
 using Xunit.Abstractions;
@@ -89,23 +88,6 @@ public class UnitTest2 : UnitTestBase
         if (result1 != null && result2 != null)
         {
             Assert.True(result1.Id == result2.Id);
-        }
-    }
-    [Fact]
-    public async Task QueryFirst_Raw()
-    {
-        this.Initialize(2);
-        var repository = this.dbFactory.Create();
-        var parameters = new DbParameter[]
-        {
-            new NpgsqlParameter("pId", NpgsqlDbType.Integer) { Value = 1 },
-            new NpgsqlParameter("pOut", NpgsqlDbType.Varchar) { Size = 50, Direction = ParameterDirection.Output }
-        };
-        var result = await repository.QueryFirstAsync<User>(CommandType.StoredProcedure, "get_user", parameters);
-        if (result != null)
-        {
-            Assert.NotNull(result.Name);
-            Assert.Equal("OK", parameters[1].Value.ToString());
         }
     }
     [Fact]
@@ -2819,6 +2801,30 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
         Assert.Equal("On-ZwYx", result2.OrderNo);
         Assert.NotNull(result2.Description);
         Assert.True(result2.Description == $"{result2.OrderNo}: {result2.TotalAmount.ToString("C")}");
+    }
+    [Fact]
+    public async Task RawParameters()
+    {
+        this.Initialize(2);
+        var repository = this.dbFactory.Create();
+        var parameters = new DbParameter[]
+        {
+            new NpgsqlParameter("pid", NpgsqlDbType.Integer) { Value = 1 },
+            new NpgsqlParameter("pout", NpgsqlDbType.Varchar) { Size = 50, Direction = ParameterDirection.Output }
+        };
+        var result = await repository.QueryFirstAsync<User>(CommandType.StoredProcedure, "GET_USER", parameters);
+        if (result != null)
+        {
+            Assert.NotNull(result.Name);
+            Assert.Equal("OK", parameters[1].Value.ToString());
+        }
+        await repository.BeginTransactionAsync();
+        await repository.ExecuteAsync(CommandType.StoredProcedure, "UPDATE_USER", parameters);
+        result = await repository.GetByIdAsync<User>(1);
+        await repository.CommitAsync();
+        Assert.Equal("UpdatedName", result.Name);
+        Assert.Equal(18, result.Age);
+        Assert.Equal("OK", parameters[1].Value.ToString());
     }
     private string DeferInvoke() => "DeferInvoke";
 }

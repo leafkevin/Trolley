@@ -90,24 +90,7 @@ public class UnitTest2 : UnitTestBase
             Assert.True(result1.Id == result2.Id);
             Assert.Equal(1, result1.Id);
         }
-    }
-    [Fact]
-    public async Task QueryFirst_Raw()
-    {
-        this.Initialize(3);
-        var repository = this.dbFactory.Create();
-        var parameters = new DbParameter[]
-        {
-            new SqlParameter("pId", SqlDbType.Int) { Value = 1 },
-            new SqlParameter("pOut", SqlDbType.VarChar) { Size = 50, Direction = ParameterDirection.Output }
-        };
-        var result = await repository.QueryFirstAsync<User>(CommandType.StoredProcedure, "GET_USER", parameters);
-        if (result != null)
-        {
-            Assert.NotNull(result.Name);
-            Assert.Equal("OK", parameters[1].Value.ToString());
-        }
-    }
+    }  
     [Fact]
     public async Task Get()
     {
@@ -2694,6 +2677,30 @@ SELECT a.[Id],a.[Name],a.[ParentId],b.[Url] FROM [myCteTable1] a INNER JOIN [myC
         Assert.Equal("On-ZwYx", result2.OrderNo);
         Assert.NotNull(result2.Description);
         Assert.True(result2.Description == $"{result2.OrderNo}: {result2.TotalAmount.ToString("C")}");
+    }
+    [Fact]
+    public async Task RawParameters()
+    {
+        this.Initialize(3);
+        var repository = this.dbFactory.Create();
+        var parameters = new DbParameter[]
+        {
+            new SqlParameter("pId", SqlDbType.Int) { Value = 1 },
+            new SqlParameter("pOut", SqlDbType.VarChar) { Size = 50, Direction = ParameterDirection.Output }
+        };
+        var result = await repository.QueryFirstAsync<User>(CommandType.StoredProcedure, "GET_USER", parameters);
+        if (result != null)
+        {
+            Assert.NotNull(result.Name);
+            Assert.Equal("OK", parameters[1].Value.ToString());
+        }
+        await repository.BeginTransactionAsync();
+        await repository.ExecuteAsync(CommandType.StoredProcedure, "UPDATE_USER", parameters);
+        result = await repository.GetByIdAsync<User>(1);
+        await repository.CommitAsync();
+        Assert.Equal("UpdatedName", result.Name);
+        Assert.Equal(18, result.Age);
+        Assert.Equal("OK", parameters[1].Value.ToString());
     }
     private string DeferInvoke() => "DeferInvoke";
 }

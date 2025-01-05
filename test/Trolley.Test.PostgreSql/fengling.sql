@@ -626,9 +626,18 @@ CREATE TABLE "myschema"."sys_update_entity" (
   "BitArrayField" bit(8) NULL DEFAULT NULL,
   CONSTRAINT "pk_sys_update_entity" PRIMARY KEY("Id")
 );
-CREATE OR REPLACE PROCEDURE GET_USER(IN pId INTEGER, OUT pOut VARCHAR(50))
-LANGUAGE plpgsql AS $$
+CREATE OR REPLACE PROCEDURE GET_USER(IN pId int4, OUT pOut varchar(50)) AS $BODY$
 BEGIN
 	pOut := 'OK';
 	SELECT * FROM sys_user WHERE "Id" = pId;
-END;$$
+END;
+$BODY$
+LANGUAGE plpgsql
+
+CREATE OR REPLACE PROCEDURE UPDATE_USER(IN pId int4, OUT pOut varchar(50)) AS $BODY$
+BEGIN
+	pOut := 'OK';
+	UPDATE sys_user SET "Name"='UpdatedName',"Age"=18 WHERE "Id" = pId;
+END;
+$BODY$
+LANGUAGE plpgsql

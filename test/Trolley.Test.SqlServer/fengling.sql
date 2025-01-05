@@ -542,9 +542,17 @@ CREATE TABLE [myschema].[sys_update_entity](
  	CONSTRAINT [pk_sys_update_entity] PRIMARY KEY CLUSTERED([Id] ASC)
 );
 GO
+
 CREATE PROCEDURE GET_USER @pId INT, @pOut VARCHAR(50) OUTPUT AS
 BEGIN
 SET @pOut='OK';
 SELECT * FROM sys_user WHERE Id=@pId;
-END 
+END
+GO
+
+CREATE PROCEDURE UPDATE_USER @pId INT, @pOut VARCHAR(50) OUTPUT AS
+BEGIN
+SET @pOut='OK';
+UPDATE sys_user SET [Name]='UpdatedName',[Age]=18 WHERE Id=@pId;
+END
 GO
