@@ -222,7 +222,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
             Value = fieldNames
         });
     }
-    public virtual void Returning(Expression fieldsSelector)
+    public void Returning(Expression fieldsSelector)
     {
         this.deferredSegments.Add(new CommandSegment
         {
@@ -628,7 +628,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
     {
         base.Dispose();
         this.UpdateBuilder = null;
-		this.FromSql = null;
+        this.FromSql = null;
         this.OutputSql = null;
     }
 }

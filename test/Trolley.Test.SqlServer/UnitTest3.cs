@@ -1192,6 +1192,114 @@ public class UnitTest3 : UnitTestBase
         }
     }
     [Fact]
+    public void Update_Set_Returning()
+    {
+        var repository = this.dbFactory.Create();
+        var parameter = repository.GetById<Order>("1");
+        parameter.TotalAmount += 50;
+        var sql1 = repository.Update<Order>()
+            .Set(f => new
+            {
+                parameter.TotalAmount,
+                Products = new List<int> { 1, 2, 3 },
+                Disputes = new Dispute
+                {
+                    Id = 1,
+                    Content = "43dss",
+                    Users = "1,2",
+                    Result = "OK",
+                    CreatedAt = DateTime.Now
+                }
+            })
+            .Where(x => x.Id == "1")
+            .Output(f => new { Id = f.Inserted(t => t.Id), TotalAmount = f.Inserted(t => t.TotalAmount) })
+            .ToSql(out _);
+        Assert.Equal("UPDATE [sys_order] SET [TotalAmount]=@p0,[Products]=@p1,[Disputes]=@p2 OUTPUT INSERTED.[Id],INSERTED.[TotalAmount] WHERE [Id]=N'1'", sql1);
+
+        repository.BeginTransaction();
+        var result1 = repository.Update<Order>()
+            .Set(f => new
+            {
+                parameter.TotalAmount,
+                Products = new List<int> { 1, 2, 3 },
+                Disputes = new Dispute
+                {
+                    Id = 1,
+                    Content = "43dss",
+                    Users = "1,2",
+                    Result = "OK",
+                    CreatedAt = DateTime.Now
+                }
+            })
+            .Where(x => x.Id == "1")
+            .Output(f => new { Id = f.Inserted(t => t.Id), TotalAmount = f.Inserted(t => t.TotalAmount) })
+            .Execute();
+
+        var order = repository.GetById<Order>("1");
+        repository.Commit();
+        Assert.NotEmpty(order.Products);
+        Assert.Equal(3, order.Products.Count);
+        Assert.Equal(1, order.Products[0]);
+        Assert.Equal(2, order.Products[1]);
+        Assert.Equal(3, order.Products[2]);
+        Assert.True(order.TotalAmount == parameter.TotalAmount);
+        Assert.True(result1.Id == parameter.Id);
+        Assert.True(result1.TotalAmount == parameter.TotalAmount);
+
+        var sql2 = repository.Update<Order>()
+            .Set(f => new
+            {
+                parameter.TotalAmount,
+                Products = new List<int> { 1, 2, 3 },
+                Disputes = new Dispute
+                {
+                    Id = 1,
+                    Content = "43dss",
+                    Users = "1,2",
+                    Result = "OK",
+                    CreatedAt = DateTime.Now
+                }
+            })
+            .Where(x => x.Id == "1")
+            .Output<Product>("DELETED.*")
+            .ToSql(out _);
+        Assert.Equal("UPDATE [sys_order] SET [TotalAmount]=@p0,[Products]=@p1,[Disputes]=@p2 OUTPUT DELETED.* WHERE [Id]=N'1'", sql2);
+
+        repository.BeginTransaction();
+        parameter = repository.GetById<Order>("1");
+        parameter.TotalAmount += 50;
+        var result2 = repository.Update<Order>()
+            .Set(new
+            {
+                parameter.TotalAmount,
+                Products = new List<int> { 1, 2, 3 },
+                Disputes = new Dispute
+                {
+                    Id = 1,
+                    Content = "43dss",
+                    Users = "1,2",
+                    Result = "OK",
+                    CreatedAt = DateTime.Now
+                }
+            })
+            .Where(x => x.Id == "1")
+            .Output<Order>("DELETED.*")
+            .Execute();
+        order = repository.GetById<Order>("1");
+        repository.Commit();
+        Assert.NotEmpty(order.Products);
+        Assert.Equal(3, order.Products.Count);
+        Assert.Equal(1, order.Products[0]);
+        Assert.Equal(2, order.Products[1]);
+        Assert.Equal(3, order.Products[2]);
+        Assert.True(order.TotalAmount == parameter.TotalAmount);
+        Assert.True(result2.Id == parameter.Id);
+        Assert.True(result2.TotalAmount == parameter.TotalAmount - 50);
+        var jsonTypeHandler = new JsonTypeHandler();
+        Assert.True(jsonTypeHandler.ToFieldValue(null, result2.Products).ToString() == "[1,2,3]");
+    }
+
+    [Fact]
     public void Update_SetJson()
     {
         var repository = this.dbFactory.Create();

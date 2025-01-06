@@ -207,6 +207,58 @@ public class Repository : IRepository
         if (isNeedClose) await connection.CloseAsync();
         return result;
     }
+    public virtual TValue QueryScalar<TValue>(CommandType commandType, string rawSql, params DbParameter[] parameters)
+    {
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
+        if (parameters != null)
+        {
+            var whereObjType = parameters.GetType();
+            if (!whereObjType.IsEntityType(out _))
+                throw new NotSupportedException("不支持的参数类型，QueryFirst方法的parameters参数，支持实体类型参数，命名、匿名对象或是字典对象");
+        }
+
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
+        command.CommandText = rawSql;
+        command.CommandType = commandType;
+        if (parameters != null)
+            Array.ForEach(parameters, f => command.Parameters.Add(f));
+
+        connection.Open();
+        TValue result = default;
+        var objResult = command.ExecuteScalar(CommandSqlType.Select);
+        if (objResult != null) result = (TValue)Convert.ChangeType(objResult, typeof(TValue));
+
+        command.Dispose();
+        if (isNeedClose) connection.Close();
+        return result;
+    }
+    public virtual async Task<TValue> QueryScalarAsync<TValue>(CommandType commandType, string rawSql, DbParameter[] parameters = null, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
+        if (parameters != null)
+        {
+            var whereObjType = parameters.GetType();
+            if (!whereObjType.IsEntityType(out _))
+                throw new NotSupportedException("不支持的参数类型，QueryFirstAsync方法的parameters参数，支持实体类型参数，命名、匿名对象或是字典对象");
+        }
+
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
+        command.CommandText = rawSql;
+        command.CommandType = commandType;
+        if (parameters != null)
+            Array.ForEach(parameters, f => command.Parameters.Add(f));
+
+        await connection.OpenAsync(cancellationToken);
+        TValue result = default;
+        var objResult = await command.ExecuteScalarAsync(CommandSqlType.Select, cancellationToken);
+        if (objResult != null) result = (TValue)Convert.ChangeType(objResult, typeof(TValue));
+
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
+        return result;
+    }
     #endregion
 
     #region QueryFirst

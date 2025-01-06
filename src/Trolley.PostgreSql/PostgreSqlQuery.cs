@@ -161,10 +161,10 @@ public class PostgreSqlQuery<T> : Query<T>, IPostgreSqlQuery<T>
     }
     public override async Task<T> FirstAsync(CancellationToken cancellationToken = default)
     {
-        return await this.DbContext.QueryFromAsync<T, T>(this.Visitor, true, (entityType, reader, readerFields) =>
+        return await this.DbContext.QueryFromAsync<T, T>(this.Visitor, true, async (entityType, reader, readerFields) =>
         {
             T result = default;
-            if (reader.Read())
+            if (await reader.ReadAsync(cancellationToken))
             {
                 if (entityType.IsEntityType(out _))
                     result = reader.ToEntity<T>(this.DbContext, readerFields);
@@ -197,19 +197,19 @@ public class PostgreSqlQuery<T> : Query<T>, IPostgreSqlQuery<T>
     }
     public override async Task<List<T>> ToListAsync(CancellationToken cancellationToken = default)
     {
-        return await this.DbContext.QueryFromAsync<T, List<T>>(this.Visitor, false, (entityType, reader, readerFields) =>
+        return await this.DbContext.QueryFromAsync<T, List<T>>(this.Visitor, false, async (entityType, reader, readerFields) =>
         {
             var result = new List<T>();
             if (entityType.IsEntityType(out _))
             {
-                while (reader.Read())
+                while (await reader.ReadAsync(cancellationToken))
                 {
                     result.Add(reader.ToEntity<T>(this.DbContext, readerFields));
                 }
             }
             else
             {
-                while (reader.Read())
+                while (await reader.ReadAsync(cancellationToken))
                 {
                     result.Add(reader.ToValue<T>(this.DbContext));
                 }

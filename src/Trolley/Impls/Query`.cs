@@ -250,9 +250,9 @@ public class Query<T1, T2> : QueryBase, IQuery<T1, T2>
     #endregion
 
     #region Exists
-    public virtual bool Exists(Expression<Func<T1, T2, bool>> predicate) => this.QueryFirstValue<int>("COUNT(1)") > 0;
+    public virtual bool Exists(Expression<Func<T1, T2, bool>> predicate) => this.QueryScalar<int>("COUNT(1)") > 0;
     public virtual async Task<bool> ExistsAsync(Expression<Func<T1, T2, bool>> predicate, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken) > 0;
+        => await this.QueryScalarAsync<int>("COUNT(*)", null, cancellationToken) > 0;
     #endregion
 }
 public class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
@@ -498,9 +498,9 @@ public class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
     #endregion
 
     #region Exists
-    public virtual bool Exists(Expression<Func<T1, T2, T3, bool>> predicate) => this.QueryFirstValue<int>("COUNT(1)") > 0;
+    public virtual bool Exists(Expression<Func<T1, T2, T3, bool>> predicate) => this.QueryScalar<int>("COUNT(1)") > 0;
     public virtual async Task<bool> ExistsAsync(Expression<Func<T1, T2, T3, bool>> predicate, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken) > 0;
+        => await this.QueryScalarAsync<int>("COUNT(*)", null, cancellationToken) > 0;
     #endregion
 }
 public class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
@@ -746,9 +746,9 @@ public class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
     #endregion
 
     #region Exists
-    public virtual bool Exists(Expression<Func<T1, T2, T3, T4, bool>> predicate) => this.QueryFirstValue<int>("COUNT(1)") > 0;
+    public virtual bool Exists(Expression<Func<T1, T2, T3, T4, bool>> predicate) => this.QueryScalar<int>("COUNT(1)") > 0;
     public virtual async Task<bool> ExistsAsync(Expression<Func<T1, T2, T3, T4, bool>> predicate, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken) > 0;
+        => await this.QueryScalarAsync<int>("COUNT(*)", null, cancellationToken) > 0;
     #endregion
 }
 public class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
@@ -994,9 +994,9 @@ public class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
     #endregion
 
     #region Exists
-    public virtual bool Exists(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate) => this.QueryFirstValue<int>("COUNT(1)") > 0;
+    public virtual bool Exists(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate) => this.QueryScalar<int>("COUNT(1)") > 0;
     public virtual async Task<bool> ExistsAsync(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken) > 0;
+        => await this.QueryScalarAsync<int>("COUNT(*)", null, cancellationToken) > 0;
     #endregion
 }
 public class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6>
@@ -1242,9 +1242,9 @@ public class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T
     #endregion
 
     #region Exists
-    public virtual bool Exists(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate) => this.QueryFirstValue<int>("COUNT(1)") > 0;
+    public virtual bool Exists(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate) => this.QueryScalar<int>("COUNT(1)") > 0;
     public virtual async Task<bool> ExistsAsync(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken) > 0;
+        => await this.QueryScalarAsync<int>("COUNT(*)", null, cancellationToken) > 0;
     #endregion
 }
 public class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7>
@@ -1490,9 +1490,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T
     #endregion
 
     #region Exists
-    public virtual bool Exists(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> predicate) => this.QueryFirstValue<int>("COUNT(1)") > 0;
+    public virtual bool Exists(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> predicate) => this.QueryScalar<int>("COUNT(1)") > 0;
     public virtual async Task<bool> ExistsAsync(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> predicate, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken) > 0;
+        => await this.QueryScalarAsync<int>("COUNT(*)", null, cancellationToken) > 0;
     #endregion
 }
 public class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8>
@@ -1738,9 +1738,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T
     #endregion
 
     #region Exists
-    public virtual bool Exists(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate) => this.QueryFirstValue<int>("COUNT(1)") > 0;
+    public virtual bool Exists(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate) => this.QueryScalar<int>("COUNT(1)") > 0;
     public virtual async Task<bool> ExistsAsync(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken) > 0;
+        => await this.QueryScalarAsync<int>("COUNT(*)", null, cancellationToken) > 0;
     #endregion
 }
 public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>
@@ -1986,9 +1986,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T
     #endregion
 
     #region Exists
-    public virtual bool Exists(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate) => this.QueryFirstValue<int>("COUNT(1)") > 0;
+    public virtual bool Exists(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate) => this.QueryScalar<int>("COUNT(1)") > 0;
     public virtual async Task<bool> ExistsAsync(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken) > 0;
+        => await this.QueryScalarAsync<int>("COUNT(*)", null, cancellationToken) > 0;
     #endregion
 }
 public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
@@ -2234,9 +2234,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<
     #endregion
 
     #region Exists
-    public virtual bool Exists(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate) => this.QueryFirstValue<int>("COUNT(1)") > 0;
+    public virtual bool Exists(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate) => this.QueryScalar<int>("COUNT(1)") > 0;
     public virtual async Task<bool> ExistsAsync(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken) > 0;
+        => await this.QueryScalarAsync<int>("COUNT(*)", null, cancellationToken) > 0;
     #endregion
 }
 public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
@@ -2482,9 +2482,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQ
     #endregion
 
     #region Exists
-    public virtual bool Exists(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate) => this.QueryFirstValue<int>("COUNT(1)") > 0;
+    public virtual bool Exists(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate) => this.QueryScalar<int>("COUNT(1)") > 0;
     public virtual async Task<bool> ExistsAsync(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken) > 0;
+        => await this.QueryScalarAsync<int>("COUNT(*)", null, cancellationToken) > 0;
     #endregion
 }
 public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>
@@ -2730,9 +2730,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBas
     #endregion
 
     #region Exists
-    public virtual bool Exists(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate) => this.QueryFirstValue<int>("COUNT(1)") > 0;
+    public virtual bool Exists(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate) => this.QueryScalar<int>("COUNT(1)") > 0;
     public virtual async Task<bool> ExistsAsync(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken) > 0;
+        => await this.QueryScalarAsync<int>("COUNT(*)", null, cancellationToken) > 0;
     #endregion
 }
 public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>
@@ -2978,9 +2978,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Que
     #endregion
 
     #region Exists
-    public virtual bool Exists(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate) => this.QueryFirstValue<int>("COUNT(1)") > 0;
+    public virtual bool Exists(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate) => this.QueryScalar<int>("COUNT(1)") > 0;
     public virtual async Task<bool> ExistsAsync(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken) > 0;
+        => await this.QueryScalarAsync<int>("COUNT(*)", null, cancellationToken) > 0;
     #endregion
 }
 public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>
@@ -3226,9 +3226,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> 
     #endregion
 
     #region Exists
-    public virtual bool Exists(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate) => this.QueryFirstValue<int>("COUNT(1)") > 0;
+    public virtual bool Exists(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate) => this.QueryScalar<int>("COUNT(1)") > 0;
     public virtual async Task<bool> ExistsAsync(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken) > 0;
+        => await this.QueryScalarAsync<int>("COUNT(*)", null, cancellationToken) > 0;
     #endregion
 }
 public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>
@@ -3474,9 +3474,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
     #endregion
 
     #region Exists
-    public virtual bool Exists(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> predicate) => this.QueryFirstValue<int>("COUNT(1)") > 0;
+    public virtual bool Exists(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> predicate) => this.QueryScalar<int>("COUNT(1)") > 0;
     public virtual async Task<bool> ExistsAsync(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> predicate, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken) > 0;
+        => await this.QueryScalarAsync<int>("COUNT(*)", null, cancellationToken) > 0;
     #endregion
 }
 public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> : QueryBase, IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>
@@ -3664,8 +3664,8 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
     #endregion
 
     #region Exists
-    public virtual bool Exists(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> predicate) => this.QueryFirstValue<int>("COUNT(1)") > 0;
+    public virtual bool Exists(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> predicate) => this.QueryScalar<int>("COUNT(1)") > 0;
     public virtual async Task<bool> ExistsAsync(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> predicate, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken) > 0;
+        => await this.QueryScalarAsync<int>("COUNT(*)", null, cancellationToken) > 0;
     #endregion
 }

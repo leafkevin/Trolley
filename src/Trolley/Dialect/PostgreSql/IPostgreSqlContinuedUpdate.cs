@@ -237,6 +237,23 @@ public interface IPostgreSqlContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
     /// <returns>返回更新对象</returns>
     new IPostgreSqlContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate = null, Expression<Func<TEntity, bool>> elsePredicate = null);
     #endregion
+
+    #region Returning
+    /// <summary>
+    /// 返回结果
+    /// </summary>
+    /// <typeparam name="TResult">返回类型</typeparam>
+    /// <param name="fieldNames">返回字段列表, 如果有函数调用、表达式或是常量值需要带有AS子句</param>
+    /// <returns>返回插入对象</returns>
+    IPostgreSqlUpdated<TEntity, TResult> Returning<TResult>(string fieldNames);
+    /// <summary>
+    /// 返回结果
+    /// </summary>
+    /// <typeparam name="TResult">返回类型</typeparam>
+    /// <param name="fieldsSelector">返回字段名称列表</param>
+    /// <returns>返回插入的部分字段</returns>
+    IPostgreSqlUpdated<TEntity, TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector);
+    #endregion
 }
 /// <summary>
 /// 更新数据
@@ -396,5 +413,5 @@ public interface IPostgreSqlBulkContinuedUpdate<TEntity> : IBulkContinuedUpdate<
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回更新对象</returns>
     new IPostgreSqlBulkContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate = null, Expression<Func<TEntity, bool>> elsePredicate = null);
-    #endregion
+    #endregion 
 }

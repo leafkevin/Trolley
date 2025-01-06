@@ -79,6 +79,19 @@ public class SqlServerContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqlS
         => base.And(condition, ifPredicate, elsePredicate) as ISqlServerContinuedUpdate<TEntity>;
     #endregion
 
+    #region Output
+    public ISqlServerUpdated<TEntity, TResult> Output<TResult>(string fieldNames)
+    {
+        this.DialectVisitor.Output(fieldNames);
+        return new SqlServerUpdated<TEntity, TResult>(this.DbContext, this.Visitor);
+    }
+    public ISqlServerUpdated<TEntity, TResult> Output<TResult>(Expression<Func<ISqlServerOutput<TEntity>, TResult>> fieldsSelector)
+    {
+        this.DialectVisitor.Output(fieldsSelector);
+        return new SqlServerUpdated<TEntity, TResult>(this.DbContext, this.Visitor);
+    }
+    #endregion
+
     #region Execute
     public override int Execute()
     {
@@ -230,7 +243,7 @@ public class SqlServerContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqlS
 
                     if (this.Visitor.IsNeedFetchShardingTables)
                         this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
-                    command.CommandText = this.Visitor.BuildCommand(this.DbContext, command);
+                    command.CommandText = this.Visitor.BuildCommand(this.DbContext, command, out _);
                     connection.Open();
                     result = command.ExecuteNonQuery(CommandSqlType.Update);
                 }
@@ -392,7 +405,7 @@ public class SqlServerContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqlS
 
                     if (this.Visitor.IsNeedFetchShardingTables)
                         this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
-                    command.CommandText = this.Visitor.BuildCommand(this.DbContext, command);
+                    command.CommandText = this.Visitor.BuildCommand(this.DbContext, command, out _);
                     await connection.OpenAsync(cancellationToken);
                     result = await command.ExecuteNonQueryAsync(CommandSqlType.Update, cancellationToken);
                 }
@@ -489,7 +502,7 @@ public class SqlServerContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqlS
                 builder.Append(';');
             }
             (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-            sql = this.Visitor.BuildCommand(this.DbContext, command);
+            sql = this.Visitor.BuildCommand(this.DbContext, command, out _);
             if (this.Visitor.IsNeedFetchShardingTables)
             {
                 builder.Append(sql);
@@ -714,7 +727,7 @@ public class SqlServerBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity
 
                     if (this.Visitor.IsNeedFetchShardingTables)
                         this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
-                    command.CommandText = this.Visitor.BuildCommand(this.DbContext, command);
+                    command.CommandText = this.Visitor.BuildCommand(this.DbContext, command, out _);
                     connection.Open();
                     result = command.ExecuteNonQuery(CommandSqlType.Update);
                 }
@@ -876,7 +889,7 @@ public class SqlServerBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity
 
                     if (this.Visitor.IsNeedFetchShardingTables)
                         this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
-                    command.CommandText = this.Visitor.BuildCommand(this.DbContext, command);
+                    command.CommandText = this.Visitor.BuildCommand(this.DbContext, command, out _);
                     await connection.OpenAsync(cancellationToken);
                     result = await command.ExecuteNonQueryAsync(CommandSqlType.Update, cancellationToken);
                 }
@@ -973,7 +986,7 @@ public class SqlServerBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity
                 builder.Append(';');
             }
             (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-            sql = this.Visitor.BuildCommand(this.DbContext, command);
+            sql = this.Visitor.BuildCommand(this.DbContext, command, out _);
             if (this.Visitor.IsNeedFetchShardingTables)
             {
                 builder.Append(sql);

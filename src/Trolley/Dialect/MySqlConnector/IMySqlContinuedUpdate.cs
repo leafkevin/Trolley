@@ -236,7 +236,7 @@ public interface IMySqlContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回更新对象</returns>
     new IMySqlContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate = null, Expression<Func<TEntity, bool>> elsePredicate = null);
-    #endregion
+    #endregion   
 }
 /// <summary>
 /// 更新数据
