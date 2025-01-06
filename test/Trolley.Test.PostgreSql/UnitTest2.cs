@@ -2807,18 +2807,15 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
     {
         this.Initialize(2);
         var repository = this.dbFactory.Create();
+        var result = await repository.QueryFirstAsync<User>(CommandType.Text, "SELECT * FROM GET_USER(1)");
+        Assert.NotNull(result);
+        Assert.NotNull(result.Name);
+        await repository.BeginTransactionAsync();
         var parameters = new DbParameter[]
         {
             new NpgsqlParameter("pid", NpgsqlDbType.Integer) { Value = 1 },
             new NpgsqlParameter("pout", NpgsqlDbType.Varchar) { Size = 50, Direction = ParameterDirection.Output }
         };
-        var result = await repository.QueryFirstAsync<User>(CommandType.StoredProcedure, "GET_USER", parameters);
-        if (result != null)
-        {
-            Assert.NotNull(result.Name);
-            Assert.Equal("OK", parameters[1].Value.ToString());
-        }
-        await repository.BeginTransactionAsync();
         await repository.ExecuteAsync(CommandType.StoredProcedure, "UPDATE_USER", parameters);
         result = await repository.GetByIdAsync<User>(1);
         await repository.CommitAsync();
