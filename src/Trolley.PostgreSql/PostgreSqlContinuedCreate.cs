@@ -65,7 +65,7 @@ public class PostgreSqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IPos
         this.DialectVisitor.Returning(fieldsSelector);
         return new PostgreSqlCreated<TEntity, TResult>(this.DbContext, this.Visitor);
     }
-    #endregion   
+    #endregion
 
     #region Execute
     public override int Execute()

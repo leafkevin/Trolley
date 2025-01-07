@@ -238,22 +238,22 @@ public interface ISqlServerContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
     new ISqlServerContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate = null, Expression<Func<TEntity, bool>> elsePredicate = null);
     #endregion
 
-    //#region Output
-    ///// <summary>
-    ///// 设置更新前后想要返回字段的内容，更新前的内容：DELETED.Id，更新后的内容：INSERTED.Id
-    ///// </summary>
-    ///// <typeparam name="TResult">返回类型</typeparam>
-    ///// <param name="fieldNames">字段名称列表</param>
-    ///// <returns>返回插入的部分字段</returns>
-    //ISqlServerUpdated<TEntity, TResult> Output<TResult>(string fieldNames);
-    ///// <summary>
-    ///// 设置更新前后想要返回字段的内容，更新前的内容：.Output(f =&gt; f.Deleted(t =&gt; t.Id))，更新后的内容：.Output(f =&gt; f.Inserted(t =&gt; t.Id))
-    ///// </summary>
-    ///// <typeparam name="TResult">返回类型</typeparam>
-    ///// <param name="fieldsSelector">字段筛选表达式</param>
-    ///// <returns>返回插入的部分字段</returns>
-    //ISqlServerUpdated<TEntity, TResult> Output<TResult>(Expression<Func<ISqlServerOutput<TEntity>, TResult>> fieldsSelector);
-    //#endregion
+    #region Output
+    /// <summary>
+    /// 设置更新前后想要返回字段的内容，更新前的内容：DELETED.Id，更新后的内容：INSERTED.Id
+    /// </summary>
+    /// <typeparam name="TResult">返回类型</typeparam>
+    /// <param name="fieldNames">字段名称列表</param>
+    /// <returns>返回插入的部分字段</returns>
+    ISqlServerUpdated<TEntity, TResult> Output<TResult>(string fieldNames);
+    /// <summary>
+    /// 设置更新前后想要返回字段的内容，更新前的内容：.Output(f =&gt; f.Deleted(t =&gt; t.Id))，更新后的内容：.Output(f =&gt; f.Inserted(t =&gt; t.Id))
+    /// </summary>
+    /// <typeparam name="TResult">返回类型</typeparam>
+    /// <param name="fieldsSelector">字段筛选表达式</param>
+    /// <returns>返回插入的部分字段</returns>
+    ISqlServerUpdated<TEntity, TResult> Output<TResult>(Expression<Func<ISqlServerOutput<TEntity>, TResult>> fieldsSelector);
+    #endregion
 }
 /// <summary>
 /// 更新数据
@@ -415,20 +415,20 @@ public interface ISqlServerBulkContinuedUpdate<TEntity> : IBulkContinuedUpdate<T
     new ISqlServerBulkContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate = null, Expression<Func<TEntity, bool>> elsePredicate = null);
     #endregion
 
-    //#region Output
-    ///// <summary>
-    ///// 返回插入后想要返回字段的内容
-    ///// </summary>
-    ///// <typeparam name="TResult">返回类型</typeparam>
-    ///// <param name="fieldNames">字段名称列表</param>
-    ///// <returns>返回插入的部分字段</returns>
-    //ISqlServerUpdated<TEntity, TResult> Output<TResult>(string fieldNames);
-    ///// <summary>
-    ///// 返回插入后想要返回字段的内容
-    ///// </summary>
-    ///// <typeparam name="TResult">返回类型</typeparam>
-    ///// <param name="fieldsSelector">字段筛选表达式</param>
-    ///// <returns>返回插入的部分字段</returns>
-    //ISqlServerUpdated<TEntity, TResult> Output<TResult>(Expression<Func<ISqlServerOutput<TEntity>, TResult>> fieldsSelector);
-    //#endregion
+    #region Output
+    /// <summary>
+    /// 设置更新前后想要返回字段的内容，更新前的内容：DELETED.Id，更新后的内容：INSERTED.Id
+    /// </summary>
+    /// <typeparam name="TResult">返回类型</typeparam>
+    /// <param name="fieldNames">字段名称列表</param>
+    /// <returns>返回插入的部分字段</returns>
+    ISqlServerBulkUpdated<TEntity, TResult> Output<TResult>(string fieldNames);
+    /// <summary>
+    /// 设置更新前后想要返回字段的内容，更新前的内容：.Output(f =&gt; f.Deleted(t =&gt; t.Id))，更新后的内容：.Output(f =&gt; f.Inserted(t =&gt; t.Id))
+    /// </summary>
+    /// <typeparam name="TResult">返回类型</typeparam>
+    /// <param name="fieldsSelector">字段筛选表达式</param>
+    /// <returns>返回插入的部分字段</returns>
+    ISqlServerBulkUpdated<TEntity, TResult> Output<TResult>(Expression<Func<ISqlServerOutput<TEntity>, TResult>> fieldsSelector);
+    #endregion
 }

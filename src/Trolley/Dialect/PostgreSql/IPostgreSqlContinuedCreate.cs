@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq.Expressions;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Trolley.PostgreSql;
 
@@ -104,7 +101,7 @@ public interface IPostgreSqlContinuedCreate<TEntity> : IContinuedCreate<TEntity>
 
     #region OnConflict
     /// <summary>
-    /// 相同主键或唯一索引存在时执行更新动作，INSERT INTO ... ON DUPLICATE KEY UPDATE
+    /// 相同主键或唯一索引存在时执行更新动作，INSERT INTO ... ON CONFLICT(...) DO UPDATE
     /// </summary>
     /// <typeparam name="TUpdateFields">要更新的字段类型</typeparam>
     /// <param name="fieldsAssignment">要更新的字段赋值表达式</param>
@@ -114,18 +111,18 @@ public interface IPostgreSqlContinuedCreate<TEntity> : IContinuedCreate<TEntity>
 
     #region Returning
     /// <summary>
-    /// mariadb数据库支持
+    /// 返回结果
     /// </summary>
-    /// <typeparam name="TResult"></typeparam>
-    /// <param name="fieldNames"></param>
-    /// <returns></returns>
+    /// <typeparam name="TResult">返回类型</typeparam>
+    /// <param name="fieldNames">返回字段列表, 如果有函数调用、表达式或是常量值需要带有AS子句</param>
+    /// <returns>返回插入对象</returns>
     IPostgreSqlCreated<TEntity, TResult> Returning<TResult>(string fieldNames);
     /// <summary>
-    /// mariadb数据库支持
+    /// 返回结果
     /// </summary>
-    /// <typeparam name="TResult"></typeparam>
-    /// <param name="fieldsSelector"></param>
-    /// <returns></returns>
+    /// <typeparam name="TResult">返回类型</typeparam>
+    /// <param name="fieldsSelector">返回字段名称列表</param>
+    /// <returns>返回插入的部分字段</returns>
     IPostgreSqlCreated<TEntity, TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector);
     #endregion
 }
@@ -225,9 +222,9 @@ public interface IPostgreSqlBulkContinuedCreate<TEntity> : IContinuedCreate<TEnt
     new IPostgreSqlBulkContinuedCreate<TEntity> OnlyFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector);
     #endregion
 
-    #region OnDuplicateKeyUpdate
+    #region OnConflict
     /// <summary>
-    /// 相同主键或唯一索引存在时执行更新动作，INSERT INTO ... ON DUPLICATE KEY UPDATE
+    /// 相同主键或唯一索引存在时执行更新动作，INSERT INTO ... ON CONFLICT(...) DO UPDATE
     /// </summary>
     /// <typeparam name="TUpdateFields">要更新的字段类型</typeparam>
     /// <param name="fieldsAssignment">要更新的字段赋值表达式</param>
@@ -251,36 +248,4 @@ public interface IPostgreSqlBulkContinuedCreate<TEntity> : IContinuedCreate<TEnt
     /// <returns></returns>
     IPostgreSqlBulkCreated<TEntity, TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector);
     #endregion
-}
-public interface IPostgreSqlCreated<TEntity, TResult> : IPostgreSqlCreated<TEntity>
-{
-    #region Execute
-    /// <summary>
-    /// 执行插入操作，并返回插入行数
-    /// </summary>
-    /// <returns>返回插入行数</returns>
-    new TResult Execute();
-    /// <summary>
-    /// 执行插入操作，并返回插入行数
-    /// </summary>
-    /// <param name="cancellationToken">取消token</param>
-    /// <returns>返回插入行数</returns>
-    new Task<TResult> ExecuteAsync(CancellationToken cancellationToken = default);
-    #endregion
-}
-public interface IPostgreSqlBulkCreated<TEntity, TResult> : IPostgreSqlCreated<TEntity>
-{
-    #region Execute
-    /// <summary>
-    /// 执行插入操作，并返回插入行数
-    /// </summary>
-    /// <returns>返回插入行数</returns>
-    new List<TResult> Execute();
-    /// <summary>
-    /// 执行插入操作，并返回插入行数
-    /// </summary>
-    /// <param name="cancellationToken">取消token</param>
-    /// <returns>返回插入行数</returns>
-    new Task<List<TResult>> ExecuteAsync(CancellationToken cancellationToken = default);
-    #endregion   
 }

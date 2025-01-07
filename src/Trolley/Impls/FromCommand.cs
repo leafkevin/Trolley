@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -29,7 +30,16 @@ public class FromCommand : QueryInternal, IFromCommand
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
+        if (this.Visitor.IsNeedFetchShardingTables)
+            this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
         var sql = this.Visitor.BuildCommandSql(out var dbDataParameters);
+        if (this.Visitor.IsNeedFetchShardingTables)
+        {
+            var builder = new StringBuilder(this.Visitor.BuildTableShardingsSql());
+            builder.Append(';');
+            builder.Append(sql);
+            sql = builder.ToString();
+        }
         dbParameters = dbDataParameters.Cast<IDbDataParameter>().ToList();
         this.Dispose();
         return sql;
@@ -277,7 +287,16 @@ public class FromCommand<T> : QueryInternal, IFromCommand<T>
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
+        if (this.Visitor.IsNeedFetchShardingTables)
+            this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
         var sql = this.Visitor.BuildCommandSql(out var dbDataParameters);
+        if (this.Visitor.IsNeedFetchShardingTables)
+        {
+            var builder = new StringBuilder(this.Visitor.BuildTableShardingsSql());
+            builder.Append(';');
+            builder.Append(sql);
+            sql = builder.ToString();
+        }
         dbParameters = dbDataParameters.Cast<IDbDataParameter>().ToList();
         this.Dispose();
         return sql;

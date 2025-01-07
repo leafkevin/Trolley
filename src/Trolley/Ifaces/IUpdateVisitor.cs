@@ -24,7 +24,7 @@ public interface IUpdateVisitor : IDisposable
 
     void Initialize(Type entityType, bool isMultiple = false, bool isFirst = true);
     MultipleCommand CreateMultipleCommand();
-    string BuildCommand(DbContext dbContext, ITheaCommand command);
+    string BuildCommand(DbContext dbContext, ITheaCommand command, out List<SqlFieldSegment> readerFields);
     void BuildMultiCommand(DbContext dbContext, ITheaCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex);
 
     void UseTable(bool isIncludeMany, params string[] tableNames);

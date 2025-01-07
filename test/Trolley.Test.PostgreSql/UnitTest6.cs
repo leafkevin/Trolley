@@ -1047,7 +1047,7 @@ public class UnitTest6 : UnitTestBase
                 orderName.Replace(origOrderName, origOrderDetailName))
             .Where(f => f.ProductCount > productCount)
             .ToSql(out _);
-        Assert.Equal("SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\" FROM \"sys_order_104_202405\" a WHERE a.\"ProductCount\">@p0", sql);
+        Assert.Equal("SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND b.nspname='public' AND (a.relname LIKE 'sys_order%' OR a.relname LIKE 'sys_order_detail%');SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\" FROM \"sys_order_104_202405\" a WHERE a.\"ProductCount\">@p0", sql);
 
         var result = repository.From<Order>()
             .UseTable(f => f.Contains("_104_") && int.Parse(f[^6..]) > 202001)
@@ -1077,7 +1077,7 @@ public class UnitTest6 : UnitTestBase
                 orderName.Replace(origOrderName, origOrderDetailName))
             .Where(f => f.ProductCount > productCount)
             .ToSql(out _);
-        Assert.Equal("SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\" FROM \"sys_order_104_202405\" a WHERE a.\"ProductCount\">@p0 UNION ALL SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\" FROM \"sys_order_105_202405\" a WHERE a.\"ProductCount\">@p0", sql);
+        Assert.Equal("SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND b.nspname='public' AND (a.relname LIKE 'sys_order_detail%');SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\" FROM \"sys_order_104_202405\" a WHERE a.\"ProductCount\">@p0 UNION ALL SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\" FROM \"sys_order_105_202405\" a WHERE a.\"ProductCount\">@p0", sql);
 
         result = repository.From<Order>()
             .UseTable("sys_order_104_202405", "sys_order_105_202405")
@@ -1151,7 +1151,7 @@ public class UnitTest6 : UnitTestBase
                 x.ProductCount
             })
             .ToSql(out _);
-        Assert.Equal("SELECT a.\"OrderId\",a.\"BuyerId\",b.\"TenantId\",b.\"Id\",b.\"TenantId\",b.\"Name\",b.\"Gender\",b.\"Age\",b.\"CompanyId\",b.\"GuidField\",b.\"SomeTimes\",b.\"SourceType\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\",a.\"ProductCount\" FROM (SELECT b.\"Id\" AS \"OrderId\",b.\"BuyerId\",COUNT(DISTINCT a.\"ProductId\") AS \"ProductCount\" FROM \"sys_order_detail_104_202405\" a INNER JOIN \"sys_order_104_202405\" b ON a.\"OrderId\"=b.\"Id\" GROUP BY b.\"Id\",b.\"BuyerId\") a INNER JOIN \"sys_user_104\" b ON a.\"BuyerId\"=b.\"Id\" WHERE a.\"ProductCount\">1 UNION ALL SELECT a.\"OrderId\",a.\"BuyerId\",b.\"TenantId\",b.\"Id\",b.\"TenantId\",b.\"Name\",b.\"Gender\",b.\"Age\",b.\"CompanyId\",b.\"GuidField\",b.\"SomeTimes\",b.\"SourceType\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\",a.\"ProductCount\" FROM (SELECT b.\"Id\" AS \"OrderId\",b.\"BuyerId\",COUNT(DISTINCT a.\"ProductId\") AS \"ProductCount\" FROM \"sys_order_detail_105_202405\" a INNER JOIN \"sys_order_105_202405\" b ON a.\"OrderId\"=b.\"Id\" GROUP BY b.\"Id\",b.\"BuyerId\") a INNER JOIN \"sys_user_105\" b ON a.\"BuyerId\"=b.\"Id\" WHERE a.\"ProductCount\">1", sql);
+        Assert.Equal("SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND b.nspname='public' AND (a.relname LIKE 'sys_order%' OR a.relname LIKE 'sys_user%');SELECT a.\"OrderId\",a.\"BuyerId\",b.\"TenantId\",b.\"Id\",b.\"TenantId\",b.\"Name\",b.\"Gender\",b.\"Age\",b.\"CompanyId\",b.\"GuidField\",b.\"SomeTimes\",b.\"SourceType\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\",a.\"ProductCount\" FROM (SELECT b.\"Id\" AS \"OrderId\",b.\"BuyerId\",COUNT(DISTINCT a.\"ProductId\") AS \"ProductCount\" FROM \"sys_order_detail_104_202405\" a INNER JOIN \"sys_order_104_202405\" b ON a.\"OrderId\"=b.\"Id\" GROUP BY b.\"Id\",b.\"BuyerId\") a INNER JOIN \"sys_user_104\" b ON a.\"BuyerId\"=b.\"Id\" WHERE a.\"ProductCount\">1 UNION ALL SELECT a.\"OrderId\",a.\"BuyerId\",b.\"TenantId\",b.\"Id\",b.\"TenantId\",b.\"Name\",b.\"Gender\",b.\"Age\",b.\"CompanyId\",b.\"GuidField\",b.\"SomeTimes\",b.\"SourceType\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\",a.\"ProductCount\" FROM (SELECT b.\"Id\" AS \"OrderId\",b.\"BuyerId\",COUNT(DISTINCT a.\"ProductId\") AS \"ProductCount\" FROM \"sys_order_detail_105_202405\" a INNER JOIN \"sys_order_105_202405\" b ON a.\"OrderId\"=b.\"Id\" GROUP BY b.\"Id\",b.\"BuyerId\") a INNER JOIN \"sys_user_105\" b ON a.\"BuyerId\"=b.\"Id\" WHERE a.\"ProductCount\">1", sql);
 
         var result = await repository
             .From(f => f.From<OrderDetail>()
@@ -1206,7 +1206,7 @@ public class UnitTest6 : UnitTestBase
                 Buyer = y
             })
             .ToSql(out _);
-        Assert.Equal("SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\",b.\"Id\",b.\"TenantId\",b.\"Name\",b.\"Gender\",b.\"Age\",b.\"CompanyId\",b.\"GuidField\",b.\"SomeTimes\",b.\"SourceType\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\" FROM \"sys_order_104_202405\" a INNER JOIN \"sys_user_104\" b ON a.\"BuyerId\"=b.\"Id\" WHERE a.\"ProductCount\">@p0 UNION ALL SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\",b.\"Id\",b.\"TenantId\",b.\"Name\",b.\"Gender\",b.\"Age\",b.\"CompanyId\",b.\"GuidField\",b.\"SomeTimes\",b.\"SourceType\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\" FROM \"sys_order_105_202405\" a INNER JOIN \"sys_user_105\" b ON a.\"BuyerId\"=b.\"Id\" WHERE a.\"ProductCount\">@p0", sql);
+        Assert.Equal("SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND b.nspname='public' AND (a.relname LIKE 'sys_user%');SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\",b.\"Id\",b.\"TenantId\",b.\"Name\",b.\"Gender\",b.\"Age\",b.\"CompanyId\",b.\"GuidField\",b.\"SomeTimes\",b.\"SourceType\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\" FROM \"sys_order_104_202405\" a INNER JOIN \"sys_user_104\" b ON a.\"BuyerId\"=b.\"Id\" WHERE a.\"ProductCount\">@p0 UNION ALL SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\",b.\"Id\",b.\"TenantId\",b.\"Name\",b.\"Gender\",b.\"Age\",b.\"CompanyId\",b.\"GuidField\",b.\"SomeTimes\",b.\"SourceType\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\" FROM \"sys_order_105_202405\" a INNER JOIN \"sys_user_105\" b ON a.\"BuyerId\"=b.\"Id\" WHERE a.\"ProductCount\">@p0", sql);
 
         var result = repository.From<Order>()
             .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
@@ -1250,7 +1250,7 @@ public class UnitTest6 : UnitTestBase
                 Buyer = y
             })
             .ToSql(out _);
-        Assert.Equal("SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\",b.\"Id\",b.\"TenantId\",b.\"Name\",b.\"Gender\",b.\"Age\",b.\"CompanyId\",b.\"GuidField\",b.\"SomeTimes\",b.\"SourceType\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\" FROM \"sys_order_104_202405\" a INNER JOIN \"sys_user_104\" b ON a.\"BuyerId\"=b.\"Id\" WHERE a.\"ProductCount\">@p0 UNION ALL SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\",b.\"Id\",b.\"TenantId\",b.\"Name\",b.\"Gender\",b.\"Age\",b.\"CompanyId\",b.\"GuidField\",b.\"SomeTimes\",b.\"SourceType\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\" FROM \"sys_order_105_202405\" a INNER JOIN \"sys_user_105\" b ON a.\"BuyerId\"=b.\"Id\" WHERE a.\"ProductCount\">@p0", sql);
+        Assert.Equal("SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND b.nspname='public' AND (a.relname LIKE 'sys_order%' OR a.relname LIKE 'sys_user%');SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\",b.\"Id\",b.\"TenantId\",b.\"Name\",b.\"Gender\",b.\"Age\",b.\"CompanyId\",b.\"GuidField\",b.\"SomeTimes\",b.\"SourceType\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\" FROM \"sys_order_104_202405\" a INNER JOIN \"sys_user_104\" b ON a.\"BuyerId\"=b.\"Id\" WHERE a.\"ProductCount\">@p0 UNION ALL SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\",b.\"Id\",b.\"TenantId\",b.\"Name\",b.\"Gender\",b.\"Age\",b.\"CompanyId\",b.\"GuidField\",b.\"SomeTimes\",b.\"SourceType\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\" FROM \"sys_order_105_202405\" a INNER JOIN \"sys_user_105\" b ON a.\"BuyerId\"=b.\"Id\" WHERE a.\"ProductCount\">@p0", sql);
 
         var result = repository.From<Order>()
             .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
@@ -1290,7 +1290,7 @@ public class UnitTest6 : UnitTestBase
                 Detail = y
             })
             .ToSql(out _);
-        Assert.Equal("SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\",b.\"Id\",b.\"TenantId\",b.\"OrderId\",b.\"ProductId\",b.\"Price\",b.\"Quantity\",b.\"Amount\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\" FROM \"sys_order_104_202405\" a INNER JOIN \"sys_order_detail_104_202405\" b ON a.\"Id\"=b.\"OrderId\" WHERE a.\"ProductCount\">@p0 UNION ALL SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\",b.\"Id\",b.\"TenantId\",b.\"OrderId\",b.\"ProductId\",b.\"Price\",b.\"Quantity\",b.\"Amount\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\" FROM \"sys_order_105_202405\" a INNER JOIN \"sys_order_detail_105_202405\" b ON a.\"Id\"=b.\"OrderId\" WHERE a.\"ProductCount\">@p0", sql);
+        Assert.Equal("SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND b.nspname='public' AND (a.relname LIKE 'sys_order%' OR a.relname LIKE 'sys_order_detail%');SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\",b.\"Id\",b.\"TenantId\",b.\"OrderId\",b.\"ProductId\",b.\"Price\",b.\"Quantity\",b.\"Amount\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\" FROM \"sys_order_104_202405\" a INNER JOIN \"sys_order_detail_104_202405\" b ON a.\"Id\"=b.\"OrderId\" WHERE a.\"ProductCount\">@p0 UNION ALL SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\",b.\"Id\",b.\"TenantId\",b.\"OrderId\",b.\"ProductId\",b.\"Price\",b.\"Quantity\",b.\"Amount\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\" FROM \"sys_order_105_202405\" a INNER JOIN \"sys_order_detail_105_202405\" b ON a.\"Id\"=b.\"OrderId\" WHERE a.\"ProductCount\">@p0", sql);
 
         var result = repository.From<Order>()
             .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
@@ -1537,6 +1537,233 @@ public class UnitTest6 : UnitTestBase
         }
     }
     [Fact]
+    public async Task Update_Set_Returning()
+    {
+        await this.InitSharding();
+        var repository = this.dbFactory.Create();
+        var parameter = await repository.From<Order>()
+            .UseTable("sys_order_104_202405")
+            .Where(f => f.Id == "ON_1001")
+            .FirstAsync();
+        parameter.TotalAmount += 50;
+        var sql1 = repository.Update<Order>()
+            .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
+            .Set(f => new
+            {
+                parameter.TotalAmount,
+                Products = new List<int> { 1, 2, 3 },
+                Disputes = new Dispute
+                {
+                    Id = 1,
+                    Content = "43dss",
+                    Users = "1,2",
+                    Result = "OK",
+                    CreatedAt = DateTime.Now
+                }
+            })
+            .Where(x => x.Id == "ON_1001")
+            .Returning(f => new { f.Id, f.TotalAmount })
+            .ToSql(out _);
+        Assert.Equal("SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND b.nspname='public' AND (a.relname LIKE 'sys_order%');UPDATE \"sys_order_104_202405\" SET \"TotalAmount\"=@p0,\"Products\"=@p1,\"Disputes\"=@p2 WHERE \"Id\"='ON_1001' RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"TotalAmount\"=@p0,\"Products\"=@p1,\"Disputes\"=@p2 WHERE \"Id\"='ON_1001' RETURNING \"Id\",\"TotalAmount\"", sql1);
+
+        await repository.BeginTransactionAsync();
+        var result1 = await repository.Update<Order>()
+            .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
+            .Set(f => new
+            {
+                parameter.TotalAmount,
+                Products = new List<int> { 1, 2, 3 },
+                Disputes = new Dispute
+                {
+                    Id = 1,
+                    Content = "43dss",
+                    Users = "1,2",
+                    Result = "OK",
+                    CreatedAt = DateTime.Now
+                }
+            })
+            .Where(x => x.Id == "ON_1001")
+            .Returning(f => new { f.Id, f.TotalAmount })
+            .ExecuteAsync();
+
+        var order = await repository.From<Order>()
+            .UseTable("sys_order_104_202405")
+            .Where(f => f.Id == "ON_1001")
+            .FirstAsync();
+        await repository.CommitAsync();
+        Assert.NotEmpty(order.Products);
+        Assert.Equal(3, order.Products.Count);
+        Assert.Equal(1, order.Products[0]);
+        Assert.Equal(2, order.Products[1]);
+        Assert.Equal(3, order.Products[2]);
+        Assert.True(order.TotalAmount == parameter.TotalAmount);
+        Assert.True(result1.Id == parameter.Id);
+        Assert.True(result1.TotalAmount == parameter.TotalAmount);
+
+        var sql2 = repository.Update<Order>()
+            .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
+            .Set(f => new
+            {
+                parameter.TotalAmount,
+                Products = new List<int> { 1, 2, 3 },
+                Disputes = new Dispute
+                {
+                    Id = 1,
+                    Content = "43dss",
+                    Users = "1,2",
+                    Result = "OK",
+                    CreatedAt = DateTime.Now
+                }
+            })
+            .Where(x => x.Id == "ON_1001")
+            .Returning<Order>("*")
+            .ToSql(out _);
+        Assert.Equal("SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND b.nspname='public' AND (a.relname LIKE 'sys_order%');UPDATE \"sys_order_104_202405\" SET \"TotalAmount\"=@p0,\"Products\"=@p1,\"Disputes\"=@p2 WHERE \"Id\"='ON_1001' RETURNING *;UPDATE \"sys_order_105_202405\" SET \"TotalAmount\"=@p0,\"Products\"=@p1,\"Disputes\"=@p2 WHERE \"Id\"='ON_1001' RETURNING *", sql2);
+
+        await repository.BeginTransactionAsync();
+        parameter = await repository.From<Order>()
+            .UseTable("sys_order_104_202405")
+            .Where(f => f.Id == "ON_1001")
+            .FirstAsync();
+        parameter.TotalAmount += 50;
+        var result2 = await repository.Update<Order>()
+            .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
+            .Set(new
+            {
+                parameter.TotalAmount,
+                Products = new List<int> { 1, 2, 3 },
+                Disputes = new Dispute
+                {
+                    Id = 1,
+                    Content = "43dss",
+                    Users = "1,2",
+                    Result = "OK",
+                    CreatedAt = DateTime.Now
+                }
+            })
+            .Where(x => x.Id == "ON_1001")
+            .Returning<Order>("*")
+            .ExecuteAsync();
+        order = await repository.From<Order>()
+            .UseTable("sys_order_104_202405")
+            .Where(f => f.Id == "ON_1001")
+            .FirstAsync();
+        repository.Commit();
+        Assert.NotEmpty(order.Products);
+        Assert.Equal(3, order.Products.Count);
+        Assert.Equal(1, order.Products[0]);
+        Assert.Equal(2, order.Products[1]);
+        Assert.Equal(3, order.Products[2]);
+        Assert.True(order.TotalAmount == parameter.TotalAmount);
+        Assert.True(result2.Id == parameter.Id);
+        Assert.True(result2.TotalAmount == parameter.TotalAmount);
+        var jsonTypeHandler = new JsonTypeHandler();
+        Assert.True(jsonTypeHandler.ToFieldValue(null, result2.Products).ToString() == "[1,2,3]");
+    }
+    [Fact]
+    public async Task Update_SetBulk_Returning()
+    {
+        await this.InitSharding();
+        var createdAt = DateTime.Parse("2024-05-24");
+        var repository = this.dbFactory.Create();
+        var orders = repository.From<Order>()
+            .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
+            .Select(f => new
+            {
+                f.Id,
+                f.OrderNo,
+                f.BuyerId,
+                f.SellerId,
+                TotalAmount = f.TotalAmount + 50,
+                ProductCount = 3,
+                UpdatedAt = DateTime.Now
+            })
+            .OrderByDescending(f => f.Id)
+            .Take(20)
+            .ToList();
+        var orderIds = orders.Select(f => f.Id).ToList();
+
+        var sql = repository.Update<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .SetBulk(orders, 10)
+            .Set(f => f.BuyerSource, UserSourceType.Wechat)
+            .IgnoreFields(f => new { f.OrderNo, f.BuyerId, f.SellerId })
+            .Returning(f => new { f.Id, f.TotalAmount })
+            .ToSql(out _);
+        Assert.Equal("UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount0,\"TotalAmount\"=@TotalAmount0,\"UpdatedAt\"=@UpdatedAt0 WHERE \"Id\"=@kId0 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount0,\"TotalAmount\"=@TotalAmount0,\"UpdatedAt\"=@UpdatedAt0 WHERE \"Id\"=@kId0 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount1,\"TotalAmount\"=@TotalAmount1,\"UpdatedAt\"=@UpdatedAt1 WHERE \"Id\"=@kId1 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount1,\"TotalAmount\"=@TotalAmount1,\"UpdatedAt\"=@UpdatedAt1 WHERE \"Id\"=@kId1 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount2,\"TotalAmount\"=@TotalAmount2,\"UpdatedAt\"=@UpdatedAt2 WHERE \"Id\"=@kId2 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount2,\"TotalAmount\"=@TotalAmount2,\"UpdatedAt\"=@UpdatedAt2 WHERE \"Id\"=@kId2 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount3,\"TotalAmount\"=@TotalAmount3,\"UpdatedAt\"=@UpdatedAt3 WHERE \"Id\"=@kId3 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount3,\"TotalAmount\"=@TotalAmount3,\"UpdatedAt\"=@UpdatedAt3 WHERE \"Id\"=@kId3 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount4,\"TotalAmount\"=@TotalAmount4,\"UpdatedAt\"=@UpdatedAt4 WHERE \"Id\"=@kId4 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount4,\"TotalAmount\"=@TotalAmount4,\"UpdatedAt\"=@UpdatedAt4 WHERE \"Id\"=@kId4 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount5,\"TotalAmount\"=@TotalAmount5,\"UpdatedAt\"=@UpdatedAt5 WHERE \"Id\"=@kId5 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount5,\"TotalAmount\"=@TotalAmount5,\"UpdatedAt\"=@UpdatedAt5 WHERE \"Id\"=@kId5 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount6,\"TotalAmount\"=@TotalAmount6,\"UpdatedAt\"=@UpdatedAt6 WHERE \"Id\"=@kId6 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount6,\"TotalAmount\"=@TotalAmount6,\"UpdatedAt\"=@UpdatedAt6 WHERE \"Id\"=@kId6 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount7,\"TotalAmount\"=@TotalAmount7,\"UpdatedAt\"=@UpdatedAt7 WHERE \"Id\"=@kId7 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount7,\"TotalAmount\"=@TotalAmount7,\"UpdatedAt\"=@UpdatedAt7 WHERE \"Id\"=@kId7 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount8,\"TotalAmount\"=@TotalAmount8,\"UpdatedAt\"=@UpdatedAt8 WHERE \"Id\"=@kId8 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount8,\"TotalAmount\"=@TotalAmount8,\"UpdatedAt\"=@UpdatedAt8 WHERE \"Id\"=@kId8 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount9,\"TotalAmount\"=@TotalAmount9,\"UpdatedAt\"=@UpdatedAt9 WHERE \"Id\"=@kId9 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount9,\"TotalAmount\"=@TotalAmount9,\"UpdatedAt\"=@UpdatedAt9 WHERE \"Id\"=@kId9 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount10,\"TotalAmount\"=@TotalAmount10,\"UpdatedAt\"=@UpdatedAt10 WHERE \"Id\"=@kId10 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount10,\"TotalAmount\"=@TotalAmount10,\"UpdatedAt\"=@UpdatedAt10 WHERE \"Id\"=@kId10 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount11,\"TotalAmount\"=@TotalAmount11,\"UpdatedAt\"=@UpdatedAt11 WHERE \"Id\"=@kId11 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount11,\"TotalAmount\"=@TotalAmount11,\"UpdatedAt\"=@UpdatedAt11 WHERE \"Id\"=@kId11 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount12,\"TotalAmount\"=@TotalAmount12,\"UpdatedAt\"=@UpdatedAt12 WHERE \"Id\"=@kId12 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount12,\"TotalAmount\"=@TotalAmount12,\"UpdatedAt\"=@UpdatedAt12 WHERE \"Id\"=@kId12 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount13,\"TotalAmount\"=@TotalAmount13,\"UpdatedAt\"=@UpdatedAt13 WHERE \"Id\"=@kId13 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount13,\"TotalAmount\"=@TotalAmount13,\"UpdatedAt\"=@UpdatedAt13 WHERE \"Id\"=@kId13 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount14,\"TotalAmount\"=@TotalAmount14,\"UpdatedAt\"=@UpdatedAt14 WHERE \"Id\"=@kId14 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount14,\"TotalAmount\"=@TotalAmount14,\"UpdatedAt\"=@UpdatedAt14 WHERE \"Id\"=@kId14 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount15,\"TotalAmount\"=@TotalAmount15,\"UpdatedAt\"=@UpdatedAt15 WHERE \"Id\"=@kId15 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount15,\"TotalAmount\"=@TotalAmount15,\"UpdatedAt\"=@UpdatedAt15 WHERE \"Id\"=@kId15 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount16,\"TotalAmount\"=@TotalAmount16,\"UpdatedAt\"=@UpdatedAt16 WHERE \"Id\"=@kId16 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount16,\"TotalAmount\"=@TotalAmount16,\"UpdatedAt\"=@UpdatedAt16 WHERE \"Id\"=@kId16 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount17,\"TotalAmount\"=@TotalAmount17,\"UpdatedAt\"=@UpdatedAt17 WHERE \"Id\"=@kId17 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount17,\"TotalAmount\"=@TotalAmount17,\"UpdatedAt\"=@UpdatedAt17 WHERE \"Id\"=@kId17 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount18,\"TotalAmount\"=@TotalAmount18,\"UpdatedAt\"=@UpdatedAt18 WHERE \"Id\"=@kId18 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount18,\"TotalAmount\"=@TotalAmount18,\"UpdatedAt\"=@UpdatedAt18 WHERE \"Id\"=@kId18 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount19,\"TotalAmount\"=@TotalAmount19,\"UpdatedAt\"=@UpdatedAt19 WHERE \"Id\"=@kId19 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount19,\"TotalAmount\"=@TotalAmount19,\"UpdatedAt\"=@UpdatedAt19 WHERE \"Id\"=@kId19 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount20,\"TotalAmount\"=@TotalAmount20,\"UpdatedAt\"=@UpdatedAt20 WHERE \"Id\"=@kId20 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount20,\"TotalAmount\"=@TotalAmount20,\"UpdatedAt\"=@UpdatedAt20 WHERE \"Id\"=@kId20 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount21,\"TotalAmount\"=@TotalAmount21,\"UpdatedAt\"=@UpdatedAt21 WHERE \"Id\"=@kId21 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount21,\"TotalAmount\"=@TotalAmount21,\"UpdatedAt\"=@UpdatedAt21 WHERE \"Id\"=@kId21 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount22,\"TotalAmount\"=@TotalAmount22,\"UpdatedAt\"=@UpdatedAt22 WHERE \"Id\"=@kId22 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount22,\"TotalAmount\"=@TotalAmount22,\"UpdatedAt\"=@UpdatedAt22 WHERE \"Id\"=@kId22 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount23,\"TotalAmount\"=@TotalAmount23,\"UpdatedAt\"=@UpdatedAt23 WHERE \"Id\"=@kId23 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount23,\"TotalAmount\"=@TotalAmount23,\"UpdatedAt\"=@UpdatedAt23 WHERE \"Id\"=@kId23 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount24,\"TotalAmount\"=@TotalAmount24,\"UpdatedAt\"=@UpdatedAt24 WHERE \"Id\"=@kId24 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount24,\"TotalAmount\"=@TotalAmount24,\"UpdatedAt\"=@UpdatedAt24 WHERE \"Id\"=@kId24 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount25,\"TotalAmount\"=@TotalAmount25,\"UpdatedAt\"=@UpdatedAt25 WHERE \"Id\"=@kId25 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount25,\"TotalAmount\"=@TotalAmount25,\"UpdatedAt\"=@UpdatedAt25 WHERE \"Id\"=@kId25 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount26,\"TotalAmount\"=@TotalAmount26,\"UpdatedAt\"=@UpdatedAt26 WHERE \"Id\"=@kId26 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount26,\"TotalAmount\"=@TotalAmount26,\"UpdatedAt\"=@UpdatedAt26 WHERE \"Id\"=@kId26 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount27,\"TotalAmount\"=@TotalAmount27,\"UpdatedAt\"=@UpdatedAt27 WHERE \"Id\"=@kId27 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount27,\"TotalAmount\"=@TotalAmount27,\"UpdatedAt\"=@UpdatedAt27 WHERE \"Id\"=@kId27 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount28,\"TotalAmount\"=@TotalAmount28,\"UpdatedAt\"=@UpdatedAt28 WHERE \"Id\"=@kId28 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount28,\"TotalAmount\"=@TotalAmount28,\"UpdatedAt\"=@UpdatedAt28 WHERE \"Id\"=@kId28 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount29,\"TotalAmount\"=@TotalAmount29,\"UpdatedAt\"=@UpdatedAt29 WHERE \"Id\"=@kId29 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount29,\"TotalAmount\"=@TotalAmount29,\"UpdatedAt\"=@UpdatedAt29 WHERE \"Id\"=@kId29 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount30,\"TotalAmount\"=@TotalAmount30,\"UpdatedAt\"=@UpdatedAt30 WHERE \"Id\"=@kId30 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount30,\"TotalAmount\"=@TotalAmount30,\"UpdatedAt\"=@UpdatedAt30 WHERE \"Id\"=@kId30 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount31,\"TotalAmount\"=@TotalAmount31,\"UpdatedAt\"=@UpdatedAt31 WHERE \"Id\"=@kId31 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount31,\"TotalAmount\"=@TotalAmount31,\"UpdatedAt\"=@UpdatedAt31 WHERE \"Id\"=@kId31 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount32,\"TotalAmount\"=@TotalAmount32,\"UpdatedAt\"=@UpdatedAt32 WHERE \"Id\"=@kId32 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount32,\"TotalAmount\"=@TotalAmount32,\"UpdatedAt\"=@UpdatedAt32 WHERE \"Id\"=@kId32 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount33,\"TotalAmount\"=@TotalAmount33,\"UpdatedAt\"=@UpdatedAt33 WHERE \"Id\"=@kId33 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount33,\"TotalAmount\"=@TotalAmount33,\"UpdatedAt\"=@UpdatedAt33 WHERE \"Id\"=@kId33 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount34,\"TotalAmount\"=@TotalAmount34,\"UpdatedAt\"=@UpdatedAt34 WHERE \"Id\"=@kId34 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount34,\"TotalAmount\"=@TotalAmount34,\"UpdatedAt\"=@UpdatedAt34 WHERE \"Id\"=@kId34 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount35,\"TotalAmount\"=@TotalAmount35,\"UpdatedAt\"=@UpdatedAt35 WHERE \"Id\"=@kId35 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount35,\"TotalAmount\"=@TotalAmount35,\"UpdatedAt\"=@UpdatedAt35 WHERE \"Id\"=@kId35 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount36,\"TotalAmount\"=@TotalAmount36,\"UpdatedAt\"=@UpdatedAt36 WHERE \"Id\"=@kId36 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount36,\"TotalAmount\"=@TotalAmount36,\"UpdatedAt\"=@UpdatedAt36 WHERE \"Id\"=@kId36 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount37,\"TotalAmount\"=@TotalAmount37,\"UpdatedAt\"=@UpdatedAt37 WHERE \"Id\"=@kId37 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount37,\"TotalAmount\"=@TotalAmount37,\"UpdatedAt\"=@UpdatedAt37 WHERE \"Id\"=@kId37 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount38,\"TotalAmount\"=@TotalAmount38,\"UpdatedAt\"=@UpdatedAt38 WHERE \"Id\"=@kId38 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount38,\"TotalAmount\"=@TotalAmount38,\"UpdatedAt\"=@UpdatedAt38 WHERE \"Id\"=@kId38 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount39,\"TotalAmount\"=@TotalAmount39,\"UpdatedAt\"=@UpdatedAt39 WHERE \"Id\"=@kId39 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount39,\"TotalAmount\"=@TotalAmount39,\"UpdatedAt\"=@UpdatedAt39 WHERE \"Id\"=@kId39 RETURNING \"Id\",\"TotalAmount\"", sql);
+
+        await repository.BeginTransactionAsync();
+        var result = await repository.Update<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .SetBulk(orders, 10)
+            .Set(f => f.BuyerSource, UserSourceType.Wechat)
+            .IgnoreFields(f => new { f.OrderNo, f.BuyerId, f.SellerId })
+            .Returning(f => new { f.Id, f.TotalAmount })
+            .ExecuteAsync();
+        var updatedOrders = await repository.From<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .Where(f => orderIds.Contains(f.Id))
+            .ToListAsync();
+        await repository.CommitAsync();
+        orders.Sort((x, y) => x.Id.CompareTo(y.Id));
+        updatedOrders.Sort((x, y) => x.Id.CompareTo(y.Id));
+        result.Sort((x, y) => x.Id.CompareTo(y.Id));
+        Assert.NotNull(result);
+        for (int i = 0; i < orders.Count; i++)
+        {
+            Assert.True(orders[i].TotalAmount == updatedOrders[i].TotalAmount);
+            Assert.True(orders[i].ProductCount == updatedOrders[i].ProductCount);
+
+            Assert.True(orders[i].OrderNo == updatedOrders[i].OrderNo);
+            Assert.True(orders[i].BuyerId == updatedOrders[i].BuyerId);
+            Assert.True(orders[i].SellerId == updatedOrders[i].SellerId);
+            Assert.True(updatedOrders[i].TenantId == "104" || updatedOrders[i].TenantId == "105");
+
+            Assert.True(updatedOrders[i].Id == result[i].Id);
+            Assert.True(updatedOrders[i].TotalAmount == result[i].TotalAmount);
+        }
+
+        sql = repository.Update<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .SetBulk(orders, 10)
+            .Set(f => f.BuyerSource, UserSourceType.Wechat)
+            .IgnoreFields(f => new { f.OrderNo, f.BuyerId, f.SellerId })
+            .Returning<Order>("*")
+            .ToSql(out _);
+        Assert.Equal("UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount0,\"TotalAmount\"=@TotalAmount0,\"UpdatedAt\"=@UpdatedAt0 WHERE \"Id\"=@kId0 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount0,\"TotalAmount\"=@TotalAmount0,\"UpdatedAt\"=@UpdatedAt0 WHERE \"Id\"=@kId0 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount1,\"TotalAmount\"=@TotalAmount1,\"UpdatedAt\"=@UpdatedAt1 WHERE \"Id\"=@kId1 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount1,\"TotalAmount\"=@TotalAmount1,\"UpdatedAt\"=@UpdatedAt1 WHERE \"Id\"=@kId1 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount2,\"TotalAmount\"=@TotalAmount2,\"UpdatedAt\"=@UpdatedAt2 WHERE \"Id\"=@kId2 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount2,\"TotalAmount\"=@TotalAmount2,\"UpdatedAt\"=@UpdatedAt2 WHERE \"Id\"=@kId2 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount3,\"TotalAmount\"=@TotalAmount3,\"UpdatedAt\"=@UpdatedAt3 WHERE \"Id\"=@kId3 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount3,\"TotalAmount\"=@TotalAmount3,\"UpdatedAt\"=@UpdatedAt3 WHERE \"Id\"=@kId3 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount4,\"TotalAmount\"=@TotalAmount4,\"UpdatedAt\"=@UpdatedAt4 WHERE \"Id\"=@kId4 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount4,\"TotalAmount\"=@TotalAmount4,\"UpdatedAt\"=@UpdatedAt4 WHERE \"Id\"=@kId4 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount5,\"TotalAmount\"=@TotalAmount5,\"UpdatedAt\"=@UpdatedAt5 WHERE \"Id\"=@kId5 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount5,\"TotalAmount\"=@TotalAmount5,\"UpdatedAt\"=@UpdatedAt5 WHERE \"Id\"=@kId5 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount6,\"TotalAmount\"=@TotalAmount6,\"UpdatedAt\"=@UpdatedAt6 WHERE \"Id\"=@kId6 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount6,\"TotalAmount\"=@TotalAmount6,\"UpdatedAt\"=@UpdatedAt6 WHERE \"Id\"=@kId6 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount7,\"TotalAmount\"=@TotalAmount7,\"UpdatedAt\"=@UpdatedAt7 WHERE \"Id\"=@kId7 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount7,\"TotalAmount\"=@TotalAmount7,\"UpdatedAt\"=@UpdatedAt7 WHERE \"Id\"=@kId7 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount8,\"TotalAmount\"=@TotalAmount8,\"UpdatedAt\"=@UpdatedAt8 WHERE \"Id\"=@kId8 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount8,\"TotalAmount\"=@TotalAmount8,\"UpdatedAt\"=@UpdatedAt8 WHERE \"Id\"=@kId8 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount9,\"TotalAmount\"=@TotalAmount9,\"UpdatedAt\"=@UpdatedAt9 WHERE \"Id\"=@kId9 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount9,\"TotalAmount\"=@TotalAmount9,\"UpdatedAt\"=@UpdatedAt9 WHERE \"Id\"=@kId9 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount10,\"TotalAmount\"=@TotalAmount10,\"UpdatedAt\"=@UpdatedAt10 WHERE \"Id\"=@kId10 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount10,\"TotalAmount\"=@TotalAmount10,\"UpdatedAt\"=@UpdatedAt10 WHERE \"Id\"=@kId10 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount11,\"TotalAmount\"=@TotalAmount11,\"UpdatedAt\"=@UpdatedAt11 WHERE \"Id\"=@kId11 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount11,\"TotalAmount\"=@TotalAmount11,\"UpdatedAt\"=@UpdatedAt11 WHERE \"Id\"=@kId11 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount12,\"TotalAmount\"=@TotalAmount12,\"UpdatedAt\"=@UpdatedAt12 WHERE \"Id\"=@kId12 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount12,\"TotalAmount\"=@TotalAmount12,\"UpdatedAt\"=@UpdatedAt12 WHERE \"Id\"=@kId12 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount13,\"TotalAmount\"=@TotalAmount13,\"UpdatedAt\"=@UpdatedAt13 WHERE \"Id\"=@kId13 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount13,\"TotalAmount\"=@TotalAmount13,\"UpdatedAt\"=@UpdatedAt13 WHERE \"Id\"=@kId13 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount14,\"TotalAmount\"=@TotalAmount14,\"UpdatedAt\"=@UpdatedAt14 WHERE \"Id\"=@kId14 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount14,\"TotalAmount\"=@TotalAmount14,\"UpdatedAt\"=@UpdatedAt14 WHERE \"Id\"=@kId14 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount15,\"TotalAmount\"=@TotalAmount15,\"UpdatedAt\"=@UpdatedAt15 WHERE \"Id\"=@kId15 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount15,\"TotalAmount\"=@TotalAmount15,\"UpdatedAt\"=@UpdatedAt15 WHERE \"Id\"=@kId15 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount16,\"TotalAmount\"=@TotalAmount16,\"UpdatedAt\"=@UpdatedAt16 WHERE \"Id\"=@kId16 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount16,\"TotalAmount\"=@TotalAmount16,\"UpdatedAt\"=@UpdatedAt16 WHERE \"Id\"=@kId16 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount17,\"TotalAmount\"=@TotalAmount17,\"UpdatedAt\"=@UpdatedAt17 WHERE \"Id\"=@kId17 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount17,\"TotalAmount\"=@TotalAmount17,\"UpdatedAt\"=@UpdatedAt17 WHERE \"Id\"=@kId17 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount18,\"TotalAmount\"=@TotalAmount18,\"UpdatedAt\"=@UpdatedAt18 WHERE \"Id\"=@kId18 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount18,\"TotalAmount\"=@TotalAmount18,\"UpdatedAt\"=@UpdatedAt18 WHERE \"Id\"=@kId18 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount19,\"TotalAmount\"=@TotalAmount19,\"UpdatedAt\"=@UpdatedAt19 WHERE \"Id\"=@kId19 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount19,\"TotalAmount\"=@TotalAmount19,\"UpdatedAt\"=@UpdatedAt19 WHERE \"Id\"=@kId19 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount20,\"TotalAmount\"=@TotalAmount20,\"UpdatedAt\"=@UpdatedAt20 WHERE \"Id\"=@kId20 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount20,\"TotalAmount\"=@TotalAmount20,\"UpdatedAt\"=@UpdatedAt20 WHERE \"Id\"=@kId20 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount21,\"TotalAmount\"=@TotalAmount21,\"UpdatedAt\"=@UpdatedAt21 WHERE \"Id\"=@kId21 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount21,\"TotalAmount\"=@TotalAmount21,\"UpdatedAt\"=@UpdatedAt21 WHERE \"Id\"=@kId21 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount22,\"TotalAmount\"=@TotalAmount22,\"UpdatedAt\"=@UpdatedAt22 WHERE \"Id\"=@kId22 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount22,\"TotalAmount\"=@TotalAmount22,\"UpdatedAt\"=@UpdatedAt22 WHERE \"Id\"=@kId22 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount23,\"TotalAmount\"=@TotalAmount23,\"UpdatedAt\"=@UpdatedAt23 WHERE \"Id\"=@kId23 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount23,\"TotalAmount\"=@TotalAmount23,\"UpdatedAt\"=@UpdatedAt23 WHERE \"Id\"=@kId23 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount24,\"TotalAmount\"=@TotalAmount24,\"UpdatedAt\"=@UpdatedAt24 WHERE \"Id\"=@kId24 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount24,\"TotalAmount\"=@TotalAmount24,\"UpdatedAt\"=@UpdatedAt24 WHERE \"Id\"=@kId24 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount25,\"TotalAmount\"=@TotalAmount25,\"UpdatedAt\"=@UpdatedAt25 WHERE \"Id\"=@kId25 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount25,\"TotalAmount\"=@TotalAmount25,\"UpdatedAt\"=@UpdatedAt25 WHERE \"Id\"=@kId25 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount26,\"TotalAmount\"=@TotalAmount26,\"UpdatedAt\"=@UpdatedAt26 WHERE \"Id\"=@kId26 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount26,\"TotalAmount\"=@TotalAmount26,\"UpdatedAt\"=@UpdatedAt26 WHERE \"Id\"=@kId26 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount27,\"TotalAmount\"=@TotalAmount27,\"UpdatedAt\"=@UpdatedAt27 WHERE \"Id\"=@kId27 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount27,\"TotalAmount\"=@TotalAmount27,\"UpdatedAt\"=@UpdatedAt27 WHERE \"Id\"=@kId27 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount28,\"TotalAmount\"=@TotalAmount28,\"UpdatedAt\"=@UpdatedAt28 WHERE \"Id\"=@kId28 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount28,\"TotalAmount\"=@TotalAmount28,\"UpdatedAt\"=@UpdatedAt28 WHERE \"Id\"=@kId28 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount29,\"TotalAmount\"=@TotalAmount29,\"UpdatedAt\"=@UpdatedAt29 WHERE \"Id\"=@kId29 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount29,\"TotalAmount\"=@TotalAmount29,\"UpdatedAt\"=@UpdatedAt29 WHERE \"Id\"=@kId29 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount30,\"TotalAmount\"=@TotalAmount30,\"UpdatedAt\"=@UpdatedAt30 WHERE \"Id\"=@kId30 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount30,\"TotalAmount\"=@TotalAmount30,\"UpdatedAt\"=@UpdatedAt30 WHERE \"Id\"=@kId30 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount31,\"TotalAmount\"=@TotalAmount31,\"UpdatedAt\"=@UpdatedAt31 WHERE \"Id\"=@kId31 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount31,\"TotalAmount\"=@TotalAmount31,\"UpdatedAt\"=@UpdatedAt31 WHERE \"Id\"=@kId31 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount32,\"TotalAmount\"=@TotalAmount32,\"UpdatedAt\"=@UpdatedAt32 WHERE \"Id\"=@kId32 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount32,\"TotalAmount\"=@TotalAmount32,\"UpdatedAt\"=@UpdatedAt32 WHERE \"Id\"=@kId32 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount33,\"TotalAmount\"=@TotalAmount33,\"UpdatedAt\"=@UpdatedAt33 WHERE \"Id\"=@kId33 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount33,\"TotalAmount\"=@TotalAmount33,\"UpdatedAt\"=@UpdatedAt33 WHERE \"Id\"=@kId33 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount34,\"TotalAmount\"=@TotalAmount34,\"UpdatedAt\"=@UpdatedAt34 WHERE \"Id\"=@kId34 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount34,\"TotalAmount\"=@TotalAmount34,\"UpdatedAt\"=@UpdatedAt34 WHERE \"Id\"=@kId34 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount35,\"TotalAmount\"=@TotalAmount35,\"UpdatedAt\"=@UpdatedAt35 WHERE \"Id\"=@kId35 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount35,\"TotalAmount\"=@TotalAmount35,\"UpdatedAt\"=@UpdatedAt35 WHERE \"Id\"=@kId35 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount36,\"TotalAmount\"=@TotalAmount36,\"UpdatedAt\"=@UpdatedAt36 WHERE \"Id\"=@kId36 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount36,\"TotalAmount\"=@TotalAmount36,\"UpdatedAt\"=@UpdatedAt36 WHERE \"Id\"=@kId36 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount37,\"TotalAmount\"=@TotalAmount37,\"UpdatedAt\"=@UpdatedAt37 WHERE \"Id\"=@kId37 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount37,\"TotalAmount\"=@TotalAmount37,\"UpdatedAt\"=@UpdatedAt37 WHERE \"Id\"=@kId37 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount38,\"TotalAmount\"=@TotalAmount38,\"UpdatedAt\"=@UpdatedAt38 WHERE \"Id\"=@kId38 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount38,\"TotalAmount\"=@TotalAmount38,\"UpdatedAt\"=@UpdatedAt38 WHERE \"Id\"=@kId38 RETURNING *;UPDATE \"sys_order_104_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount39,\"TotalAmount\"=@TotalAmount39,\"UpdatedAt\"=@UpdatedAt39 WHERE \"Id\"=@kId39 RETURNING *;UPDATE \"sys_order_105_202405\" SET \"BuyerSource\"=@BuyerSource,\"ProductCount\"=@ProductCount39,\"TotalAmount\"=@TotalAmount39,\"UpdatedAt\"=@UpdatedAt39 WHERE \"Id\"=@kId39 RETURNING *", sql);
+
+        await repository.BeginTransactionAsync();
+        var result1 = await repository.Update<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .SetBulk(orders, 10)
+            .Set(f => f.BuyerSource, UserSourceType.Wechat)
+            .IgnoreFields(f => new { f.OrderNo, f.BuyerId, f.SellerId })
+            .Returning<Order>("*")
+            .ExecuteAsync();
+        updatedOrders = await repository.From<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .Where(f => orderIds.Contains(f.Id))
+            .ToListAsync();
+        await repository.CommitAsync();
+        orders.Sort((x, y) => x.Id.CompareTo(y.Id));
+        updatedOrders.Sort((x, y) => x.Id.CompareTo(y.Id));
+        result1.Sort((x, y) => x.Id.CompareTo(y.Id));
+        Assert.NotNull(result1);
+        for (int i = 0; i < orders.Count; i++)
+        {
+            Assert.True(orders[i].TotalAmount == updatedOrders[i].TotalAmount);
+            Assert.True(orders[i].ProductCount == updatedOrders[i].ProductCount);
+
+            Assert.True(orders[i].OrderNo == updatedOrders[i].OrderNo);
+            Assert.True(orders[i].BuyerId == updatedOrders[i].BuyerId);
+            Assert.True(orders[i].SellerId == updatedOrders[i].SellerId);
+            Assert.True(updatedOrders[i].TenantId == "104" || updatedOrders[i].TenantId == "105");
+
+            Assert.True(updatedOrders[i].Id == result1[i].Id);
+            Assert.True(updatedOrders[i].TotalAmount == result1[i].TotalAmount);
+        }
+    }
+    [Fact]
     public async Task Update_BulkCopy_ManySharding()
     {
         await this.InitSharding();
@@ -1601,7 +1828,7 @@ public class UnitTest6 : UnitTestBase
             })
             .OrderByDescending(f => f.Id)
             .ToSql(out _);
-        Assert.Equal("SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"TotalAmount\" FROM \"sys_order_104_202405\" a ORDER BY a.\"Id\" DESC", sql);
+        Assert.Equal("SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND b.nspname='public' AND (a.relname LIKE 'sys_order%');SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"TotalAmount\" FROM \"sys_order_104_202405\" a ORDER BY a.\"Id\" DESC", sql);
         var orders = repository.From<Order>()
             .UseTableByRange("104", beginTime, endTime)
             .Select(f => new
@@ -1631,7 +1858,7 @@ public class UnitTest6 : UnitTestBase
            })
            .OrderByDescending(f => f.Id)
            .ToSql(out _);
-        Assert.Equal("SELECT a.\"Id\",a.\"TenantId\",b.\"Name\" AS \"BuyerName\",a.\"TotalAmount\" FROM \"sys_order_104_202405\" a INNER JOIN \"sys_user_104\" b ON a.\"BuyerId\"=b.\"Id\" ORDER BY a.\"Id\" DESC", sql);
+        Assert.Equal("SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND b.nspname='public' AND (a.relname LIKE 'sys_order%' OR a.relname LIKE 'sys_user%');SELECT a.\"Id\",a.\"TenantId\",b.\"Name\" AS \"BuyerName\",a.\"TotalAmount\" FROM \"sys_order_104_202405\" a INNER JOIN \"sys_user_104\" b ON a.\"BuyerId\"=b.\"Id\" ORDER BY a.\"Id\" DESC", sql);
         var orderInfos = repository.From<Order>()
             .UseTableByRange("104", beginTime, endTime)
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
@@ -1677,7 +1904,7 @@ public class UnitTest6 : UnitTestBase
                 => orderTableName.Replace(orderOrigName, orderDetailOrigName))
             .Select((x, y) => new { y.Disputes, x.BuyerId, x.OrderId, x.OrderNo, x.ProductTotal, Order = y })
             .ToSql(out var dbParameters);
-        Assert.Equal("SELECT b.\"Disputes\",a.\"BuyerId\",a.\"OrderId\",a.\"OrderNo\",a.\"ProductTotal\",b.\"Id\",b.\"TenantId\",b.\"OrderNo\",b.\"ProductCount\",b.\"TotalAmount\",b.\"BuyerId\",b.\"BuyerSource\",b.\"SellerId\",b.\"Products\",b.\"Disputes\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\" FROM (SELECT a.\"BuyerId\",a.\"Id\" AS \"OrderId\",a.\"OrderNo\",COUNT(DISTINCT c.\"ProductId\") AS \"ProductTotal\" FROM \"sys_order_104_202405\" a INNER JOIN \"sys_user_104\" b ON a.\"BuyerId\"=b.\"Id\" LEFT JOIN \"sys_order_detail_104_202405\" c ON a.\"Id\"=c.\"OrderId\" GROUP BY a.\"BuyerId\",a.\"Id\",a.\"OrderNo\" HAVING COUNT(DISTINCT c.\"ProductId\")>@p0) a INNER JOIN \"sys_order\" b ON a.\"OrderId\"=b.\"Id\" UNION ALL SELECT b.\"Disputes\",a.\"BuyerId\",a.\"OrderId\",a.\"OrderNo\",a.\"ProductTotal\",b.\"Id\",b.\"TenantId\",b.\"OrderNo\",b.\"ProductCount\",b.\"TotalAmount\",b.\"BuyerId\",b.\"BuyerSource\",b.\"SellerId\",b.\"Products\",b.\"Disputes\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\" FROM (SELECT a.\"BuyerId\",a.\"Id\" AS \"OrderId\",a.\"OrderNo\",COUNT(DISTINCT c.\"ProductId\") AS \"ProductTotal\" FROM \"sys_order_105_202405\" a INNER JOIN \"sys_user_105\" b ON a.\"BuyerId\"=b.\"Id\" LEFT JOIN \"sys_order_detail_105_202405\" c ON a.\"Id\"=c.\"OrderId\" GROUP BY a.\"BuyerId\",a.\"Id\",a.\"OrderNo\" HAVING COUNT(DISTINCT c.\"ProductId\")>@p0) a INNER JOIN \"sys_order\" b ON a.\"OrderId\"=b.\"Id\"", sql);
+        Assert.Equal("SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND b.nspname='public' AND (a.relname LIKE 'sys_order%' OR a.relname LIKE 'sys_user%' OR a.relname LIKE 'sys_order_detail%' OR a.relname LIKE 'sys_order_detail%');SELECT b.\"Disputes\",a.\"BuyerId\",a.\"OrderId\",a.\"OrderNo\",a.\"ProductTotal\",b.\"Id\",b.\"TenantId\",b.\"OrderNo\",b.\"ProductCount\",b.\"TotalAmount\",b.\"BuyerId\",b.\"BuyerSource\",b.\"SellerId\",b.\"Products\",b.\"Disputes\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\" FROM (SELECT a.\"BuyerId\",a.\"Id\" AS \"OrderId\",a.\"OrderNo\",COUNT(DISTINCT c.\"ProductId\") AS \"ProductTotal\" FROM \"sys_order_104_202405\" a INNER JOIN \"sys_user_104\" b ON a.\"BuyerId\"=b.\"Id\" LEFT JOIN \"sys_order_detail_104_202405\" c ON a.\"Id\"=c.\"OrderId\" GROUP BY a.\"BuyerId\",a.\"Id\",a.\"OrderNo\" HAVING COUNT(DISTINCT c.\"ProductId\")>@p0) a INNER JOIN \"sys_order\" b ON a.\"OrderId\"=b.\"Id\" UNION ALL SELECT b.\"Disputes\",a.\"BuyerId\",a.\"OrderId\",a.\"OrderNo\",a.\"ProductTotal\",b.\"Id\",b.\"TenantId\",b.\"OrderNo\",b.\"ProductCount\",b.\"TotalAmount\",b.\"BuyerId\",b.\"BuyerSource\",b.\"SellerId\",b.\"Products\",b.\"Disputes\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\" FROM (SELECT a.\"BuyerId\",a.\"Id\" AS \"OrderId\",a.\"OrderNo\",COUNT(DISTINCT c.\"ProductId\") AS \"ProductTotal\" FROM \"sys_order_105_202405\" a INNER JOIN \"sys_user_105\" b ON a.\"BuyerId\"=b.\"Id\" LEFT JOIN \"sys_order_detail_105_202405\" c ON a.\"Id\"=c.\"OrderId\" GROUP BY a.\"BuyerId\",a.\"Id\",a.\"OrderNo\" HAVING COUNT(DISTINCT c.\"ProductId\")>@p0) a INNER JOIN \"sys_order\" b ON a.\"OrderId\"=b.\"Id\"", sql);
         Assert.Single(dbParameters);
         Assert.Equal((int)dbParameters[0].Value, count);
 
@@ -1723,7 +1950,7 @@ public class UnitTest6 : UnitTestBase
                 orderName.Replace(origOrderName, origOrderDetailName))
             .Where(f => f.ProductCount > productCount)
             .ToSql(out _);
-        Assert.Equal("SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\" FROM \"myschema\".\"sys_order_104_202405\" a WHERE a.\"ProductCount\">@p0", sql);
+        Assert.Equal("SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND b.nspname='myschema' AND (a.relname LIKE 'sys_order%' OR a.relname LIKE 'sys_order_detail%');SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\" FROM \"myschema\".\"sys_order_104_202405\" a WHERE a.\"ProductCount\">@p0", sql);
 
         var result = repository.From<Order>()
             .UseTable(f => f.Contains("_104_") && int.Parse(f[^6..]) > 202001)
@@ -1757,7 +1984,7 @@ public class UnitTest6 : UnitTestBase
                 orderName.Replace(origOrderName, origOrderDetailName))
             .Where(f => f.ProductCount > productCount)
             .ToSql(out _);
-        Assert.Equal("SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\" FROM \"myschema\".\"sys_order_104_202405\" a WHERE a.\"ProductCount\">@p0 UNION ALL SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\" FROM \"myschema\".\"sys_order_105_202405\" a WHERE a.\"ProductCount\">@p0", sql);
+        Assert.Equal("SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND b.nspname='myschema' AND (a.relname LIKE 'sys_order_detail%');SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\" FROM \"myschema\".\"sys_order_104_202405\" a WHERE a.\"ProductCount\">@p0 UNION ALL SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\" FROM \"myschema\".\"sys_order_105_202405\" a WHERE a.\"ProductCount\">@p0", sql);
 
         result = repository.From<Order>()
             .UseTable("sys_order_104_202405", "sys_order_105_202405")

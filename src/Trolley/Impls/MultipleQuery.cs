@@ -245,18 +245,13 @@ public class MultipleQuery : IMultipleQuery, IDisposable
         this.AddReader(typeof(int), sql, readerGetter, true);
         return this;
     }
-    public IMultipleQuery Exists<TEntity>(Expression<Func<TEntity, bool>> wherePredicate = null)
+    public IMultipleQuery Exists<TEntity>(Expression<Func<TEntity, bool>> wherePredicate)
     {
         if (wherePredicate == null)
             throw new ArgumentNullException(nameof(wherePredicate));
 
         var sql = this.From<TEntity>().Where(wherePredicate)
             .Select(f => Sql.Count()).ToSql(out _);
-
-        if (wherePredicate != null)
-            sql = this.From<TEntity>().Where(wherePredicate).Select(f => Sql.Count()).ToSql(out _);
-        else sql = this.From<TEntity>().Select(f => Sql.Count()).ToSql(out _);
-
         Func<ITheaDataReader, object> readerGetter = reader => reader.ToValue<int>(this.DbContext) > 0;
         this.AddReader(typeof(int), sql, readerGetter, true);
         return this;

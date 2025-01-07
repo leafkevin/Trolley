@@ -46,9 +46,10 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         }
         if (!isFirst) this.Clear();
     }
-    public virtual string BuildCommand(DbContext dbContext, ITheaCommand command)
+    public virtual string BuildCommand(DbContext dbContext, ITheaCommand command, out List<SqlFieldSegment> readerFields)
     {
         string sql = null;
+        readerFields = null;
         var builder = new StringBuilder();
         switch (this.ActionMode)
         {
@@ -234,9 +235,9 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         if (sqlBuilder.Length > 0) sqlBuilder.Append(';');
         if (this.deferredSegments.Count > 0 && this.deferredSegments[0].Type == "SetBulk")
             this.ActionMode = ActionMode.Bulk;
-        sqlBuilder.Append(this.BuildCommand(dbContext, command));
+        sqlBuilder.Append(this.BuildCommand(dbContext, command, out _));
     }
-    public (IEnumerable, int, string, Action<IDataParameterCollection>, Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>,
+    public virtual (IEnumerable, int, string, Action<IDataParameterCollection>, Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>,
         Action<StringBuilder, DbContext, string, object, string>) BuildWithBulk(ITheaCommand command)
     {
         Type updateObjType = null;

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -142,11 +143,20 @@ public class Deleted<TEntity> : IDeleted<TEntity>
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
+        if (this.Visitor.IsNeedFetchShardingTables)
+            this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         var sql = this.Visitor.BuildCommand(command);
+        if (this.Visitor.IsNeedFetchShardingTables)
+        {
+            var builder = new StringBuilder(this.Visitor.BuildTableShardingsSql());
+            builder.Append(';');
+            builder.Append(sql);
+            sql = builder.ToString();
+        }
         dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
-        if (isNeedClose) connection.Close();
+        this.Visitor.Dispose();
         return sql;
     }
     #endregion   

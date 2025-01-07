@@ -460,6 +460,90 @@ sys.index_columns ic,sys.indexes i where ic.object_id=i.object_id and ic.index_i
         int cacheKey = 0;
         switch (methodInfo.Name)
         {
+            case "Inserted":
+                {
+                    var genericArgumentTypes = methodInfo.DeclaringType.GetGenericArguments();
+                    if (genericArgumentTypes.Length == 1 && methodInfo.DeclaringType == typeof(ISqlServerOutput<>).MakeGenericType(genericArgumentTypes[0]))
+                    {
+                        cacheKey = RepositoryHelper.GetCacheKey(typeof(ISqlServerOutput<>), methodInfo.GetGenericMethodDefinition());
+                        //.Output(f => new { TotalAmount = f.TotalAmount + x.Inserted(f.TotalAmount) }) ... )
+                        formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
+                        {
+                            var myVisitor = visitor as SqlServerUpdateVisitor;
+                            var lambdaExpr = args[0] as LambdaExpression;
+
+                            if (lambdaExpr.Body is MemberExpression memberExpr)
+                            {
+                                if (!myVisitor.Tables[0].Mapper.TryGetMemberMap(memberExpr.Member.Name, out var memberMapper))
+                                    throw new MissingMemberException($"类{myVisitor.Tables[0].EntityType.FullName}未找到成员{memberExpr.Member.Name}");
+                                var fieldName = $"INSERTED.{this.GetFieldName(memberMapper.FieldName)}";
+                                return new SqlFieldSegment
+                                {
+                                    HasField = true,
+                                    FromMember = memberMapper.Member,
+                                    SegmentType = memberMapper.MemberType,
+                                    NativeDbType = memberMapper.NativeDbType,
+                                    TypeHandler = memberMapper.TypeHandler,
+                                    Body = fieldName
+                                };
+                            }
+                            myVisitor.OutputTableAlias = "INSERTED";
+                            switch (lambdaExpr.Body.NodeType)
+                            {
+                                case ExpressionType.New:
+                                    return myVisitor.VisitNew(new SqlFieldSegment { Expression = lambdaExpr });
+                                case ExpressionType.MemberInit:
+                                    return myVisitor.VisitMemberInit(new SqlFieldSegment { Expression = lambdaExpr });
+                                default:
+                                    throw new NotSupportedException($"不支持的表达式,{lambdaExpr}");
+                            }
+                        });
+                        return true;
+                    }
+                }
+                break;
+            case "Deleted":
+                {
+                    var genericArgumentTypes = methodInfo.DeclaringType.GetGenericArguments();
+                    if (genericArgumentTypes.Length == 1 && methodInfo.DeclaringType == typeof(ISqlServerOutput<>).MakeGenericType(genericArgumentTypes[0]))
+                    {
+                        cacheKey = RepositoryHelper.GetCacheKey(typeof(ISqlServerOutput<>), methodInfo.GetGenericMethodDefinition());
+                        //.Output(f => new { TotalAmount = f.TotalAmount + x.Deleted(f.TotalAmount) }) ... )
+                        formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
+                        {
+                            var myVisitor = visitor as SqlServerUpdateVisitor;
+                            var lambdaExpr = args[0] as LambdaExpression;
+
+                            if (lambdaExpr.Body is MemberExpression memberExpr)
+                            {
+                                if (!myVisitor.Tables[0].Mapper.TryGetMemberMap(memberExpr.Member.Name, out var memberMapper))
+                                    throw new MissingMemberException($"类{myVisitor.Tables[0].EntityType.FullName}未找到成员{memberExpr.Member.Name}");
+                                var fieldName = $"DELETED.{this.GetFieldName(memberMapper.FieldName)}";
+                                return new SqlFieldSegment
+                                {
+                                    HasField = true,
+                                    FromMember = memberMapper.Member,
+                                    SegmentType = memberMapper.MemberType,
+                                    NativeDbType = memberMapper.NativeDbType,
+                                    TypeHandler = memberMapper.TypeHandler,
+                                    Body = fieldName
+                                };
+                            }
+                            myVisitor.OutputTableAlias = "DELETED";
+                            switch (lambdaExpr.Body.NodeType)
+                            {
+                                case ExpressionType.New:
+                                    return myVisitor.VisitNew(new SqlFieldSegment { Expression = lambdaExpr });
+                                case ExpressionType.MemberInit:
+                                    return myVisitor.VisitMemberInit(new SqlFieldSegment { Expression = lambdaExpr });
+                                default:
+                                    throw new NotSupportedException($"不支持的表达式,{lambdaExpr}");
+                            }
+                        });
+                        return true;
+                    }
+                }
+                break;
             case "IsNull":
                 cacheKey = RepositoryHelper.GetCacheKey(typeof(Sql), methodInfo.GetGenericMethodDefinition());
                 formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>

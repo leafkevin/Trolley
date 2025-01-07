@@ -79,6 +79,19 @@ public class PostgreSqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IPos
         => base.And(condition, ifPredicate, elsePredicate) as IPostgreSqlContinuedUpdate<TEntity>;
     #endregion
 
+    #region Returnning
+    public IPostgreSqlUpdated<TEntity, TResult> Returning<TResult>(string fieldNames)
+    {
+        this.DialectVisitor.Returning(fieldNames);
+        return new PostgreSqlUpdated<TEntity, TResult>(this.DbContext, this.Visitor);
+    }
+    public IPostgreSqlUpdated<TEntity, TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector)
+    {
+        this.DialectVisitor.Returning(fieldsSelector);
+        return new PostgreSqlUpdated<TEntity, TResult>(this.DbContext, this.Visitor);
+    }
+    #endregion
+
     #region Execute
     public override int Execute()
     {
@@ -231,7 +244,7 @@ public class PostgreSqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IPos
 
                     if (this.Visitor.IsNeedFetchShardingTables)
                         this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
-                    command.CommandText = this.Visitor.BuildCommand(this.DbContext, command);
+                    command.CommandText = this.Visitor.BuildCommand(this.DbContext, command, out _);
                     connection.Open();
                     result = command.ExecuteNonQuery(CommandSqlType.Update);
                 }
@@ -394,7 +407,7 @@ public class PostgreSqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IPos
 
                     if (this.Visitor.IsNeedFetchShardingTables)
                         this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
-                    command.CommandText = this.Visitor.BuildCommand(this.DbContext, command);
+                    command.CommandText = this.Visitor.BuildCommand(this.DbContext, command, out _);
                     await connection.OpenAsync(cancellationToken);
                     result = await command.ExecuteNonQueryAsync(CommandSqlType.Update, cancellationToken);
                 }
@@ -491,7 +504,7 @@ public class PostgreSqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IPos
                 builder.Append(';');
             }
             (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-            sql = this.Visitor.BuildCommand(this.DbContext, command);
+            sql = this.Visitor.BuildCommand(this.DbContext, command, out _);
             if (this.Visitor.IsNeedFetchShardingTables)
             {
                 builder.Append(sql);
@@ -565,6 +578,19 @@ public class PostgreSqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntit
         => base.And(condition, ifPredicate, elsePredicate) as IPostgreSqlBulkContinuedUpdate<TEntity>;
     #endregion
 
+    #region Returnning
+    public IPostgreSqlBulkUpdated<TEntity, TResult> Returning<TResult>(string fieldNames)
+    {
+        this.DialectVisitor.Returning(fieldNames);
+        return new PostgreSqlBulkUpdated<TEntity, TResult>(this.DbContext, this.Visitor);
+    }
+    public IPostgreSqlBulkUpdated<TEntity, TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector)
+    {
+        this.DialectVisitor.Returning(fieldsSelector);
+        return new PostgreSqlBulkUpdated<TEntity, TResult>(this.DbContext, this.Visitor);
+    }
+    #endregion
+
     #region Execute
     public override int Execute()
     {
@@ -717,7 +743,7 @@ public class PostgreSqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntit
 
                     if (this.Visitor.IsNeedFetchShardingTables)
                         this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
-                    command.CommandText = this.Visitor.BuildCommand(this.DbContext, command);
+                    command.CommandText = this.Visitor.BuildCommand(this.DbContext, command, out _);
                     connection.Open();
                     result = command.ExecuteNonQuery(CommandSqlType.Update);
                 }
@@ -880,7 +906,7 @@ public class PostgreSqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntit
 
                     if (this.Visitor.IsNeedFetchShardingTables)
                         this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
-                    command.CommandText = this.Visitor.BuildCommand(this.DbContext, command);
+                    command.CommandText = this.Visitor.BuildCommand(this.DbContext, command, out _);
                     await connection.OpenAsync(cancellationToken);
                     result = await command.ExecuteNonQueryAsync(CommandSqlType.Update, cancellationToken);
                 }
@@ -977,7 +1003,7 @@ public class PostgreSqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntit
                 builder.Append(';');
             }
             (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-            sql = this.Visitor.BuildCommand(this.DbContext, command);
+            sql = this.Visitor.BuildCommand(this.DbContext, command, out _);
             if (this.Visitor.IsNeedFetchShardingTables)
             {
                 builder.Append(sql);

@@ -288,7 +288,7 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
         var sql = this.Visitor.BuildCommand(command, false, out _);
         dbParameters = command.Parameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
-        if (isNeedClose) connection.Close();
+        this.Visitor.Dispose();
         return sql;
     }
     #endregion

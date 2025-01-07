@@ -4,6 +4,6 @@ namespace Trolley.SqlServer;
 
 public interface ISqlServerOutput<TEntity>
 {
-    TFields Inserted<TFields>(Func<TEntity, TFields> fieldsSelector);
+    TField Inserted<TField>(Func<TEntity, TField> fieldsSelector);
     TFields Deleted<TFields>(Func<TEntity, TFields> fieldsSelector);
 }

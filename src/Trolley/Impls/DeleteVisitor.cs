@@ -9,8 +9,8 @@ namespace Trolley;
 
 public class DeleteVisitor : SqlVisitor, IDeleteVisitor
 {
-    private bool isWhereKeys = false;
-    private List<CommandSegment> deferredSegments = new();
+    public bool IsWhereKeys { get; set; }
+    protected List<CommandSegment> deferredSegments = new();
 
     public bool HasWhere { get; protected set; }
     public DeleteVisitor(DbContext dbContext, char tableAsStart = 'a')
@@ -38,7 +38,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
     {
         string sql = null;
         this.DbParameters ??= command.Parameters;
-        if (this.isWhereKeys)
+        if (this.IsWhereKeys)
         {
             var entityType = this.Tables[0].EntityType;
             var whereKeys = this.deferredSegments[0].Value;
@@ -176,7 +176,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
     }
     public virtual IDeleteVisitor WhereWith(object wherKeys)
     {
-        this.isWhereKeys = true;
+        this.IsWhereKeys = true;
         this.HasWhere = true;
         this.deferredSegments.Add(new CommandSegment
         {

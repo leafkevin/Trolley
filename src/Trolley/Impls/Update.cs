@@ -249,7 +249,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
             default:
                 if (!this.Visitor.HasWhere)
                     throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
-                command.CommandText = this.Visitor.BuildCommand(this.DbContext, command);
+                command.CommandText = this.Visitor.BuildCommand(this.DbContext, command, out _);
                 connection.Open();
                 result = command.ExecuteNonQuery(CommandSqlType.Update);
                 break;
@@ -325,7 +325,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
             default:
                 if (!this.Visitor.HasWhere)
                     throw new InvalidOperationException("缺少where条件，请使用Where/And方法完成where条件");
-                command.CommandText = this.Visitor.BuildCommand(this.DbContext, command);
+                command.CommandText = this.Visitor.BuildCommand(this.DbContext, command, out _);
                 await connection.OpenAsync(cancellationToken);
                 result = await command.ExecuteNonQueryAsync(CommandSqlType.Update, cancellationToken);
                 break;
@@ -344,13 +344,20 @@ public class Updated<TEntity> : IUpdated<TEntity>
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
         if (this.Visitor.IsNeedFetchShardingTables)
             this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
-        var sql = this.Visitor.BuildCommand(this.DbContext, command);
+        (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
+        var sql = this.Visitor.BuildCommand(this.DbContext, command, out _);
+        if (this.Visitor.IsNeedFetchShardingTables)
+        {
+            var builder = new StringBuilder(this.Visitor.BuildTableShardingsSql());
+            builder.Append(';');
+            builder.Append(sql);
+            sql = builder.ToString();
+        }
         dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
         command.Dispose();
-        if (isNeedClose) connection.Close();
+        this.Visitor.Dispose();
         return sql;
     }
     #endregion   
