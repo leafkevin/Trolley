@@ -19,4 +19,13 @@ public interface ISqlServerRepository : IRepository
     /// <returns>返回更新对象</returns>
     new ISqlServerUpdate<TEntity> Update<TEntity>();
     #endregion
+
+    #region Delete
+    /// <summary>
+    /// 创建TEntity类型删除对象
+    /// </summary>
+    /// <typeparam name="TEntity">更新实体类型</typeparam>
+    /// <returns>返回删除对象</returns>
+    new ISqlServerDelete<TEntity> Delete<TEntity>();
+    #endregion
 }

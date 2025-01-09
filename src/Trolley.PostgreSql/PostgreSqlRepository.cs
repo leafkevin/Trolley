@@ -5,7 +5,9 @@ namespace Trolley.PostgreSql;
 public class PostgreSqlRepository : Repository, IPostgreSqlRepository
 {
     #region Constructor
-    public PostgreSqlRepository(DbContext dbContext) : base(dbContext) { }
+    public PostgreSqlRepository(DbContext dbContext) :
+        base(dbContext)
+    { }
     #endregion
 
     #region From
@@ -46,5 +48,10 @@ public class PostgreSqlRepository : Repository, IPostgreSqlRepository
     #region Update
     public new IPostgreSqlUpdate<TEntity> Update<TEntity>()
         => this.OrmProvider.NewUpdate<TEntity>(this.DbContext) as IPostgreSqlUpdate<TEntity>;
+    #endregion
+
+    #region Delete
+    public new IPostgreSqlDelete<TEntity> Delete<TEntity>()
+        => this.OrmProvider.NewDelete<TEntity>(this.DbContext) as IPostgreSqlDelete<TEntity>;
     #endregion
 }

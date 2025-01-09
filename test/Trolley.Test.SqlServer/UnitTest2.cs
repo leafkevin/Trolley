@@ -901,6 +901,23 @@ SELECT a.[MenuId],a.[ParentId],a.[Url] FROM [menuPageList] a WHERE a.[ParentId]<
         Assert.NotNull(result[1].UserName);
     }
     [Fact]
+    public async Task FromQuery_OrderBy()
+    {
+        this.Initialize(3);
+        var repository = this.dbFactory.Create();
+        var sql = repository.From<User>()
+            .OrderByDescending(f => f.Id)
+            .ToSql(out _);
+        Assert.Equal("SELECT a.[Id],a.[TenantId],a.[Name],a.[Gender],a.[Age],a.[CompanyId],a.[GuidField],a.[SomeTimes],a.[SourceType],a.[IsEnabled],a.[CreatedAt],a.[CreatedBy],a.[UpdatedAt],a.[UpdatedBy] FROM [sys_user] a ORDER BY a.[Id] DESC", sql);
+
+        var maxId = await repository.From<User>().MaxAsync(f => f.Id);
+        var result = await repository.From<User>()
+            .OrderByDescending(f => f.Id)
+            .FirstAsync();
+        Assert.NotNull(result);
+        Assert.Equal(maxId, result.Id);
+    }
+    [Fact]
     public void FromQuery_Groupby_OrderBy()
     {
         var repository = this.dbFactory.Create();

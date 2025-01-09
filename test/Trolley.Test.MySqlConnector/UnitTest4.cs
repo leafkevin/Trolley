@@ -321,6 +321,78 @@ public class UnitTest4 : UnitTestBase
         Assert.Equal("DELETE FROM `sys_user` WHERE `Name` LIKE '%kevin%' AND `Age`>25", sql);
     }
     [Fact]
+    public async Task Delete_Where_Returning()
+    {
+        this.Initialize(1);
+        var repository = this.dbFactory.Create();
+        var sql = repository.Delete<User>()
+            .Where(1)
+            .Returning(f => new { f.Id, f.TenantId, Info = $"{f.Gender}-{f.Age}-{f.Name.ToUpper()}" })
+            .ToSql(out _);
+        Assert.Equal("DELETE FROM `sys_user` WHERE `Id`=@Id RETURNING `Id`,`TenantId`,CONCAT(`Gender`,'-',CAST(`Age` AS CHAR),'-',UPPER(`Name`)) AS `Info`", sql);
+
+        var user = await repository.GetByIdAsync<User>(1);
+        var result1 = await repository.Delete<User>()
+            .Where(1)
+            .Returning(f => new { f.Id, f.TenantId, Info = $"{f.Gender}-{f.Age}-{f.Name.ToUpper()}" })
+            .ExecuteAsync();
+        result1.Sort((x, y) => x.Id.CompareTo(y.Id));
+        Assert.Equal(user.Id, result1[0].Id);
+        Assert.Equal(user.TenantId, result1[0].TenantId);
+        Assert.Equal($"{user.Gender}-{user.Age}-{user.Name.ToUpper()}", result1[0].Info);
+
+        var sql2 = repository.Delete<User>()
+            .Where(1)
+            .Returning<User>("*")
+            .ToSql(out _);
+        Assert.Equal("DELETE FROM `sys_user` WHERE `Id`=@Id RETURNING *", sql2);
+
+        await repository.DeleteAsync<User>(1);
+        await repository.Create<User>()
+            .WithBy(new
+            {
+                Id = 1,
+                TenantId = "1",
+                Name = "leafkevin",
+                Age = 25,
+                CompanyId = 1,
+                Gender = Gender.Male,
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            })
+            .ExecuteAsync();
+
+        user = await repository.GetByIdAsync<User>(1);
+        var users = await repository.Delete<User>()
+            .Where(1)
+            .Returning<User>("*")
+            .ExecuteAsync();
+        Assert.Equal(user.Id, users[0].Id);
+        Assert.Equal(user.TenantId, users[0].TenantId);
+
+        this.Initialize(1);
+        var userIds = new int[] { 1, 2, 3 };
+        sql = repository.Delete<User>()
+          .Where(userIds)
+          .Returning(f => new { f.Id, f.TenantId, Info = $"{f.Gender}-{f.Age}-{f.Name.ToUpper()}" })
+          .ToSql(out _);
+        Assert.Equal("DELETE FROM `sys_user` WHERE `Id` IN (@Id0,@Id1,@Id2) RETURNING `Id`,`TenantId`,CONCAT(`Gender`,'-',CAST(`Age` AS CHAR),'-',UPPER(`Name`)) AS `Info`", sql);
+
+        users = await repository.GetByIdsAsync<User>(userIds);
+        result1 = await repository.Delete<User>()
+            .Where(userIds)
+            .Returning(f => new { f.Id, f.TenantId, Info = $"{f.Gender}-{f.Age}-{f.Name.ToUpper()}" })
+            .ExecuteAsync();
+        users.Sort((x, y) => x.Id.CompareTo(y.Id));
+        result1.Sort((x, y) => x.Id.CompareTo(y.Id));
+        Assert.Equal(users[0].Id, result1[0].Id);
+        Assert.Equal(users[0].TenantId, result1[0].TenantId);
+        Assert.Equal($"{users[0].Gender}-{users[0].Age}-{users[0].Name.ToUpper()}", result1[0].Info);
+    }
+    [Fact]
     public void Delete_Enum_Fields()
     {
         var repository = this.dbFactory.Create();

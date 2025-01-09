@@ -286,32 +286,37 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
             fixedParametersSetter = dbParameters => fixedDbParameters.ForEach(f => dbParameters.Add(f));
         Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string> firstSqlSetter = null;
         Action<StringBuilder, DbContext, string, object, string> sqlSetter = null;
-        if (!string.IsNullOrEmpty(this.OutputSql))
+        bool isOutputSql = !string.IsNullOrEmpty(this.OutputSql);
+        (var bulkSqlSetter, var shardingSqlSetter) = RepositoryHelper.BuildUpdateBulkSetWithSqlParametersPart(this.DbContext, entityType, updateObjType, this.IsMultiple, false, this.OnlyFieldNames, this.IgnoreFieldNames, isOutputSql);
+
+        if (isOutputSql)
         {
-            (var bulkSqlSetter, var shardingSqlSetter) = this.BuildBulkSetWithOutputSqlParametersPart(entityType, updateObjType);
+            var typedBulkSqlSetter = bulkSqlSetter as Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>;
+            var typedShardingSqlSetter = shardingSqlSetter as Action<StringBuilder, DbContext, string, object, string>;
             firstSqlSetter = (dbParameters, builder, dbContext, tableName, updateObj, suffix) =>
             {
                 builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)} SET {fixedSql}");
-                bulkSqlSetter.Invoke(dbParameters, builder, dbContext, this.OutputSql, updateObj, suffix);
+                typedBulkSqlSetter.Invoke(dbParameters, builder, dbContext, this.OutputSql, updateObj, suffix);
             };
             sqlSetter = (builder, dbContext, tableName, updateObj, suffix) =>
             {
                 builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)} SET {fixedSql}");
-                shardingSqlSetter.Invoke(builder, dbContext, this.OutputSql, updateObj, suffix);
+                typedShardingSqlSetter.Invoke(builder, dbContext, this.OutputSql, updateObj, suffix);
             };
         }
         else
         {
-            (var bulkSqlSetter, var shardingSqlSetter) = RepositoryHelper.BuildUpdateBulkSetWithSqlParametersPart(this.DbContext, entityType, updateObjType, this.IsMultiple, false, this.OnlyFieldNames, this.IgnoreFieldNames);
+            var typedBulkSqlSetter = bulkSqlSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
+            var typedShardingSqlSetter = shardingSqlSetter as Action<StringBuilder, DbContext, object, string>;
             firstSqlSetter = (dbParameters, builder, dbContext, tableName, updateObj, suffix) =>
             {
                 builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)} SET {fixedSql}");
-                bulkSqlSetter.Invoke(dbParameters, builder, dbContext, updateObj, suffix);
+                typedBulkSqlSetter.Invoke(dbParameters, builder, dbContext, updateObj, suffix);
             };
             sqlSetter = (builder, dbContext, tableName, updateObj, suffix) =>
             {
                 builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)} SET {fixedSql}");
-                shardingSqlSetter.Invoke(builder, dbContext, updateObj, suffix);
+                typedShardingSqlSetter.Invoke(builder, dbContext, updateObj, suffix);
             };
         }
         var tableName = tableSegment.Mapper.TableName;
@@ -648,30 +653,5 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
         this.OutputSql = builder.ToString();
         this.IsOutput = false;
         builder.Clear();
-    }
-    public (Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>, Action<StringBuilder, DbContext, string, object, string>)
-        BuildBulkSetWithOutputSqlParametersPart(Type entityType, Type updateObjType, bool isUpdateRowVersion = false)
-    {
-        var cacheKey = RepositoryHelper.GetCacheKey(this.OrmProvider.OrmProviderType, this.MapProvider, entityType, updateObjType, this.OnlyFieldNames, this.IgnoreFieldNames);
-        return bulkWithCommandInitializerCache.GetOrAdd(cacheKey, f =>
-        {
-            var fieldsSetter = RepositoryHelper.BuildFieldsSqlParametersPart(this.DbContext, entityType, updateObjType, 4, 1, 2, false, true, isUpdateRowVersion, this.OnlyFieldNames, this.IgnoreFieldNames) as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
-            var whereSetter = RepositoryHelper.BuildWhereSqlParametersPart(this.DbContext, entityType, updateObjType, 1, false, true, true, false, this.IsMultiple, true, " WHERE ") as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
-            Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string> firstSqlSetter = (dbParameters, builder, dbContext, outputSql, updateObj, suffix) =>
-            {
-                fieldsSetter.Invoke(dbParameters, builder, dbContext, updateObj, suffix);
-                builder.Append(outputSql);
-                whereSetter.Invoke(dbParameters, builder, dbContext, updateObj, suffix);
-            };
-            var fieldsSqlSetter = RepositoryHelper.BuildFieldsSqlParametersPart(this.DbContext, entityType, updateObjType, 4, 2, 2, false, true, isUpdateRowVersion, this.OnlyFieldNames, this.IgnoreFieldNames) as Action<StringBuilder, DbContext, object, string>;
-            var whereSqlSetter = RepositoryHelper.BuildWhereSqlParametersPart(this.DbContext, entityType, updateObjType, 2, false, true, true, false, this.IsMultiple, true, " WHERE ") as Action<StringBuilder, DbContext, object, string>;
-            Action<StringBuilder, DbContext, string, object, string> shardingSqlSetter = (builder, dbContext, outputSql, updateObj, suffix) =>
-            {
-                fieldsSqlSetter.Invoke(builder, dbContext, updateObj, suffix);
-                builder.Append(outputSql);
-                whereSqlSetter.Invoke(builder, dbContext, updateObj, suffix);
-            };
-            return (firstSqlSetter, shardingSqlSetter);
-        });
     }
 }

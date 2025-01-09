@@ -21,7 +21,7 @@ public interface IDeleteVisitor : IDisposable
 
     void Initialize(Type entityType, bool isMultiple = false, bool isFirst = true);
     MultipleCommand CreateMultipleCommand();
-    string BuildCommand(ITheaCommand command);
+    string BuildCommand(ITheaCommand command, out List<SqlFieldSegment> readerFields);
     void BuildMultiCommand(ITheaCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex);
 
     void UseTable(bool isIncludeMany, params string[] tableNames);

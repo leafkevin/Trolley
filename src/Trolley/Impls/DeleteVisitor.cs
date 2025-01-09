@@ -34,10 +34,11 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         }
         if (!isFirst) this.Clear();
     }
-    public virtual string BuildCommand(ITheaCommand command)
+    public virtual string BuildCommand(ITheaCommand command, out List<SqlFieldSegment> readerFields)
     {
         string sql = null;
         this.DbParameters ??= command.Parameters;
+        readerFields = null;
         if (this.IsWhereKeys)
         {
             var entityType = this.Tables[0].EntityType;
@@ -91,7 +92,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
                 }
             }
             if (!string.IsNullOrEmpty(this.Tables[0].TableSchema))
-                headSqlSetter = (builder, tableName) => headSqlSetter.Invoke(builder, this.Tables[0].TableSchema + "." + tableName);
+                headSqlSetter = (builder, tableName, fixedSql) => headSqlSetter.Invoke(builder, this.Tables[0].TableSchema + "." + tableName, fixedSql);
             if (this.ShardingTables != null && this.ShardingTables.Count > 0)
             {
                 var tableNames = this.ShardingTables[0].TableNames;
@@ -99,14 +100,14 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
                 for (int i = 0; i < tableNames.Count; i++)
                 {
                     if (i > 0) builder.Append(';');
-                    headSqlSetter.Invoke(builder, tableNames[i]);
+                    headSqlSetter.Invoke(builder, tableNames[i], null);
                     builder.Append(whereSqlBuilder);
                 }
             }
             else
             {
                 sqlExecuter.Invoke();
-                headSqlSetter.Invoke(builder, this.Tables[0].Body ?? origName);
+                headSqlSetter.Invoke(builder, this.Tables[0].Body ?? origName, null);
                 builder.Append(whereSqlBuilder);
             }
             sql = builder.ToString();
@@ -172,7 +173,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         this.RefQueries = multiCommand.RefQueries;
         this.IsNeedTableAlias = multiCommand.IsNeedTableAlias;
         if (sqlBuilder.Length > 0) sqlBuilder.Append(';');
-        sqlBuilder.Append(this.BuildCommand(command));
+        sqlBuilder.Append(this.BuildCommand(command, out _));
     }
     public virtual IDeleteVisitor WhereWith(object wherKeys)
     {
@@ -337,7 +338,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         base.Dispose();
         this.deferredSegments = null;
     }
-    protected virtual void VisitWhere(Expression whereExpr)
+    public virtual void VisitWhere(Expression whereExpr)
     {
         this.IsWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
@@ -346,7 +347,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         this.LastWhereOperationType = operationType;
         this.IsWhere = false;
     }
-    protected virtual void VisitAnd(Expression whereExpr)
+    public virtual void VisitAnd(Expression whereExpr)
     {
         this.IsWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
@@ -361,7 +362,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         else this.WhereSql = conditionSql;
         this.IsWhere = false;
     }
-    private void AddMemberElement(SqlFieldSegment sqlSegment, MemberMap memberMapper, StringBuilder builder)
+    public void AddMemberElement(SqlFieldSegment sqlSegment, MemberMap memberMapper, StringBuilder builder)
     {
         sqlSegment = this.VisitAndDeferred(sqlSegment);
         if (builder.Length > 0)
@@ -370,5 +371,5 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         if (sqlSegment == SqlFieldSegment.Null)
             builder.Append("NULL");
         else builder.Append(this.GetQuotedValue(sqlSegment));
-    }
+    }    
 }

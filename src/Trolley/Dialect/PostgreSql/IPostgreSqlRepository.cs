@@ -178,4 +178,13 @@ public interface IPostgreSqlRepository : IRepository
     /// <returns>返回更新对象</returns>
     new IPostgreSqlUpdate<TEntity> Update<TEntity>();
     #endregion
+
+    #region Delete
+    /// <summary>
+    /// 创建TEntity类型删除对象
+    /// </summary>
+    /// <typeparam name="TEntity">更新实体类型</typeparam>
+    /// <returns>返回删除对象</returns>
+    new IPostgreSqlDelete<TEntity> Delete<TEntity>();
+    #endregion
 }

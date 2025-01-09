@@ -43,6 +43,7 @@ partial class SqlServerProvider
         => new SqlServerCreated<TEntity>(dbContext, visitor);
     public override ICreateVisitor NewCreateVisitor(DbContext dbContext, char tableAsStart = 'a')
         => new SqlServerCreateVisitor(dbContext, tableAsStart);
+
     public override IUpdate<TEntity> NewUpdate<TEntity>(DbContext dbContext) => new SqlServerUpdate<TEntity>(dbContext);
     public override IContinuedUpdate<TEntity> NewContinuedUpdate<TEntity>(DbContext dbContext, IUpdateVisitor visitor)
         => new SqlServerContinuedUpdate<TEntity>(dbContext, visitor);
@@ -52,6 +53,11 @@ partial class SqlServerProvider
         => new SqlServerUpdated<TEntity>(dbContext, visitor);
     public override IUpdateVisitor NewUpdateVisitor(DbContext dbContext, char tableAsStart = 'a')
         => new SqlServerUpdateVisitor(dbContext, tableAsStart);
+
+    public override IDelete<TEntity> NewDelete<TEntity>(DbContext dbContext)
+        => new SqlServerDelete<TEntity>(dbContext);
+    public override IContinuedDelete<TEntity> NewContinuedDelete<TEntity>(DbContext dbContext, IDeleteVisitor visitor)
+        => new SqlServerContinuedDelete<TEntity>(dbContext, visitor);
     public override IDeleteVisitor NewDeleteVisitor(DbContext dbContext, char tableAsStart = 'a')
         => new SqlServerDeleteVisitor(dbContext, tableAsStart);
 }

@@ -3,14 +3,23 @@
 public class MySqlRepository : Repository, IMySqlRepository
 {
     #region Constructor
-    public MySqlRepository(DbContext dbContext) : base(dbContext) { }
+    public MySqlRepository(DbContext dbContext) :
+        base(dbContext)
+    { }
     #endregion
 
     #region Create
-    public new IMySqlCreate<TEntity> Create<TEntity>() => this.OrmProvider.NewCreate<TEntity>(this.DbContext) as IMySqlCreate<TEntity>;
+    public new IMySqlCreate<TEntity> Create<TEntity>()
+        => this.OrmProvider.NewCreate<TEntity>(this.DbContext) as IMySqlCreate<TEntity>;
     #endregion
 
     #region Update
-    public new IMySqlUpdate<TEntity> Update<TEntity>() => this.OrmProvider.NewUpdate<TEntity>(this.DbContext) as IMySqlUpdate<TEntity>;
+    public new IMySqlUpdate<TEntity> Update<TEntity>()
+        => this.OrmProvider.NewUpdate<TEntity>(this.DbContext) as IMySqlUpdate<TEntity>;
+    #endregion
+
+    #region Delete
+    public new IMySqlDelete<TEntity> Delete<TEntity>()
+        => this.OrmProvider.NewDelete<TEntity>(this.DbContext) as IMySqlDelete<TEntity>;
     #endregion
 }

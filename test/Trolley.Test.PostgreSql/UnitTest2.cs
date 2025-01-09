@@ -91,7 +91,7 @@ public class UnitTest2 : UnitTestBase
         }
     }
     [Fact]
-    public async Task Get()
+    public async Task GetById()
     {
         this.Initialize(2);
         var repository = this.dbFactory.Create();
@@ -99,6 +99,17 @@ public class UnitTest2 : UnitTestBase
         Assert.Equal("leafkevin", result.Name);
         var user = await repository.GetByIdAsync<User>(new { Id = 1 });
         Assert.True(user.Name == result.Name);
+    }
+    [Fact]
+    public async Task GetByIds()
+    {
+        this.Initialize(2);
+        var repository = this.dbFactory.Create();
+        var userIds = new int[] { 1, 2, 3 };
+        var users = repository.GetByIds<User>(userIds);
+        Assert.Equal("leafkevin", users[0].Name);
+        var userInfos = await repository.GetByIdsAsync<User>(new[] { new { Id = 1 }, new { Id = 2 }, new { Id = 3 } });
+        Assert.True(users[0].Name == userInfos[0].Name);
     }
     [Fact]
     public async Task Query()
@@ -884,6 +895,23 @@ SELECT a.""MenuId"",a.""ParentId"",a.""Url"" FROM ""menuPageList"" a WHERE a.""P
         Assert.True(result.Count >= 2);
         Assert.NotNull(result[0].UserName);
         Assert.NotNull(result[1].UserName);
+    }
+    [Fact]
+    public async Task FromQuery_OrderBy()
+    {
+        this.Initialize(2);
+        var repository = this.dbFactory.Create();
+        var sql = repository.From<User>()
+            .OrderByDescending(f => f.Id)
+            .ToSql(out _);
+        Assert.Equal("SELECT a.\"Id\",a.\"TenantId\",a.\"Name\",a.\"Gender\",a.\"Age\",a.\"CompanyId\",a.\"GuidField\",a.\"SomeTimes\",a.\"SourceType\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\" FROM \"sys_user\" a ORDER BY a.\"Id\" DESC", sql);
+
+        var maxId = await repository.From<User>().MaxAsync(f => f.Id);
+        var result = await repository.From<User>()
+            .OrderByDescending(f => f.Id)
+            .FirstAsync();
+        Assert.NotNull(result);
+        Assert.Equal(maxId, result.Id);
     }
     [Fact]
     public void FromQuery_Groupby_OrderBy()

@@ -97,6 +97,7 @@ partial class PostgreSqlProvider
         => new PostgreSqlCreated<TEntity>(dbContext, visitor);
     public override ICreateVisitor NewCreateVisitor(DbContext dbContext, char tableAsStart = 'a')
         => new PostgreSqlCreateVisitor(dbContext, tableAsStart);
+
     public override IUpdate<TEntity> NewUpdate<TEntity>(DbContext dbContext) => new PostgreSqlUpdate<TEntity>(dbContext);
     public override IContinuedUpdate<TEntity> NewContinuedUpdate<TEntity>(DbContext dbContext, IUpdateVisitor visitor)
         => new PostgreSqlContinuedUpdate<TEntity>(dbContext, visitor);
@@ -106,6 +107,11 @@ partial class PostgreSqlProvider
         => new PostgreSqlUpdated<TEntity>(dbContext, visitor);
     public override IUpdateVisitor NewUpdateVisitor(DbContext dbContext, char tableAsStart = 'a')
         => new PostgreSqlUpdateVisitor(dbContext, tableAsStart);
+
+    public override IDelete<TEntity> NewDelete<TEntity>(DbContext dbContext)
+        => new PostgreSqlDelete<TEntity>(dbContext);
+    public override IContinuedDelete<TEntity> NewContinuedDelete<TEntity>(DbContext dbContext, IDeleteVisitor visitor)
+        => new PostgreSqlContinuedDelete<TEntity>(dbContext, visitor);
     public override IDeleteVisitor NewDeleteVisitor(DbContext dbContext, char tableAsStart = 'a')
         => new PostgreSqlDeleteVisitor(dbContext, tableAsStart);
 }

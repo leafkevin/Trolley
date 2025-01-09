@@ -50,7 +50,12 @@ partial class MySqlProvider
     public override IBulkContinuedUpdate<TEntity> NewBulkContinuedUpdate<TEntity>(DbContext dbContext, IUpdateVisitor visitor)
         => new MySqlBulkContinuedUpdate<TEntity>(dbContext, visitor);
     public override IUpdated<TEntity> NewUpdated<TEntity>(DbContext dbContext, IUpdateVisitor visitor)
-            => new MySqlUpdated<TEntity>(dbContext, visitor);
+        => new MySqlUpdated<TEntity>(dbContext, visitor);
+    public override IDelete<TEntity> NewDelete<TEntity>(DbContext dbContext)
+        => new MySqlDelete<TEntity>(dbContext);
+    public override IContinuedDelete<TEntity> NewContinuedDelete<TEntity>(DbContext dbContext, IDeleteVisitor visitor)
+        => new MySqlContinuedDelete<TEntity>(dbContext, visitor);
+
     public override IUpdateVisitor NewUpdateVisitor(DbContext dbContext, char tableAsStart = 'a')
         => new MySqlUpdateVisitor(dbContext, tableAsStart);
     public override IDeleteVisitor NewDeleteVisitor(DbContext dbContext, char tableAsStart = 'a')

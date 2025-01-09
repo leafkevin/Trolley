@@ -63,13 +63,13 @@ public class Delete<TEntity> : IDelete<TEntity>
     #endregion
 
     #region Where
-    public virtual IDeleted<TEntity> Where(object keys)
+    public virtual IContinuedDelete<TEntity> Where(object keys)
     {
         if (keys == null)
             throw new ArgumentNullException(nameof(keys));
 
         this.Visitor.WhereWith(keys);
-        return this.OrmProvider.NewDeleted<TEntity>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewContinuedDelete<TEntity>(this.DbContext, this.Visitor);
     }
     public virtual IContinuedDelete<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
         => this.Where(true, predicate);
@@ -110,7 +110,7 @@ public class Deleted<TEntity> : IDeleted<TEntity>
             this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
 
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        command.CommandText = this.Visitor.BuildCommand(command);
+        command.CommandText = this.Visitor.BuildCommand(command, out _);
         connection.Open();
         var result = command.ExecuteNonQuery(CommandSqlType.Delete);
 
@@ -126,7 +126,7 @@ public class Deleted<TEntity> : IDeleted<TEntity>
             await this.DbContext.FetchShardingTablesAsync(this.Visitor as SqlVisitor, cancellationToken);
 
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        command.CommandText = this.Visitor.BuildCommand(command);
+        command.CommandText = this.Visitor.BuildCommand(command, out _);
         await connection.OpenAsync(cancellationToken);
         var result = await command.ExecuteNonQueryAsync(CommandSqlType.Delete, cancellationToken);
 
@@ -146,7 +146,7 @@ public class Deleted<TEntity> : IDeleted<TEntity>
         if (this.Visitor.IsNeedFetchShardingTables)
             this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        var sql = this.Visitor.BuildCommand(command);
+        var sql = this.Visitor.BuildCommand(command, out _);
         if (this.Visitor.IsNeedFetchShardingTables)
         {
             var builder = new StringBuilder(this.Visitor.BuildTableShardingsSql());
@@ -182,5 +182,5 @@ public class ContinuedDelete<TEntity> : Deleted<TEntity>, IContinuedDelete<TEnti
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
-    #endregion 
+    #endregion
 }

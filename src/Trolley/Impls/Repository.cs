@@ -861,7 +861,7 @@ public class Repository : IRepository
             var typedWhereSqlParametersSetter = whereSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
             typedWhereSqlParametersSetter.Invoke(command.Parameters, whereSqlBuilder, this.DbContext, whereKeys);
         }
-        headSqlSetter.Invoke(builder, tableName);
+        headSqlSetter.Invoke(builder, tableName, null);
         builder.Append(whereSqlBuilder);
         command.CommandText = builder.ToString();
         builder.Clear();
