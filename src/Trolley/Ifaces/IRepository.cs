@@ -259,6 +259,25 @@ public interface IRepository
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回单个值</returns>
     Task<TValue> QueryScalarAsync<TValue>(string rawSql, object parameters = null, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// 指定原始SQL语句，查询单个值
+    /// </summary>
+    /// <typeparam name="TValue">返回值类型</typeparam>
+    /// <param name="commandType">rawSql原始语句的类型</param>
+    /// <param name="rawSql">原始SQL语句</param>
+    /// <param name="parameters">参数数组</param>
+    /// <returns>返回单个值</returns>
+    TValue QueryScalar<TValue>(CommandType commandType, string rawSql, params DbParameter[] parameters);
+    /// <summary>
+    /// 指定原始SQL语句，查询单个值
+    /// </summary>
+    /// <typeparam name="TValue">返回值类型</typeparam>
+    /// <param name="commandType">rawSql原始语句的类型</param>
+    /// <param name="rawSql">原始SQL语句</param>
+    /// <param name="parameters">参数数组</param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回单个值</returns>
+    Task<TValue> QueryScalarAsync<TValue>(CommandType commandType, string rawSql, DbParameter[] parameters = null, CancellationToken cancellationToken = default);
     #endregion
 
     #region QueryFirst
