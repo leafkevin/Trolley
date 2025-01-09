@@ -411,27 +411,24 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
                 //Where(f => f.Amount > 5)
                 //Select(f => new { f.OrderId, f.Disputes ...})
                 var tableSegment = this.TableAliases[parameterName];
-                sqlSegment.HasField = true;
-                sqlSegment.TableSegment = tableSegment;
-                string fieldName = null;
-
                 var memberMapper = tableSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
                 if (memberMapper.IsIgnore)
                     throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberMapper.MemberName}是忽略成员无法访问");
                 if (memberMapper.MemberType.IsEntityType(out _) && !memberMapper.IsNavigation && memberMapper.TypeHandler == null)
                     throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberExpr.Member.Name}不是值类型，未配置为导航属性也没有配置TypeHandler");
+
+                var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
+                sqlSegment.HasField = true;
+                sqlSegment.TableSegment = tableSegment;
                 sqlSegment.FromMember = memberMapper.Member;
                 sqlSegment.SegmentType = memberMapper.MemberType;
                 if (memberMapper.UnderlyingType.IsEnum)
                     sqlSegment.ExpectType = memberMapper.UnderlyingType;
                 sqlSegment.NativeDbType = memberMapper.NativeDbType;
                 sqlSegment.TypeHandler = memberMapper.TypeHandler;
-                //查询时，IsNeedAlias始终为true，新增、更新、删除时，引用联表操作时，才会为true
-                fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
                 if (this.IsOutput) fieldName = this.OutputTableAlias + "." + fieldName;
                 else if (this.IsNeedTableAlias) fieldName = tableSegment.AliasName + "." + fieldName;
                 sqlSegment.Body = fieldName;
-                //.NET枚举类型总是解析成对应的UnderlyingType数值类型，如：a.Gender ?? Gender.Male == Gender.Male
                 return sqlSegment;
             }
         }
@@ -454,6 +451,7 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
         //Select(f=>new {OrderId=this.Order.Id, ...}
         this.Evaluate(sqlSegment);
 
+        //这里不做参数化，后面统一走参数化处理
         sqlSegment.IsConstant = false;
         sqlSegment.IsVariable = true;
         sqlSegment.SegmentType = memberExpr.Type;

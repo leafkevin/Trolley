@@ -189,43 +189,38 @@ public class SqlServerDeleteVisitor : DeleteVisitor
                 {
                     sqlSegment.Push(new DeferredExpr { OperationType = OperationType.Equal, Value = SqlFieldSegment.Null });
                     sqlSegment.Push(new DeferredExpr { OperationType = OperationType.Not });
-                    return sqlSegment.Next(memberExpr.Expression);
+                    return this.Visit(sqlSegment.Next(memberExpr.Expression));
                 }
                 else if (memberExpr.Member.Name == nameof(Nullable<bool>.Value))
-                    return sqlSegment.Next(memberExpr.Expression);
+                    return this.Visit(sqlSegment.Next(memberExpr.Expression));
                 else throw new ArgumentException($"不支持的MemberAccess操作，表达式'{memberExpr}'返回值不是boolean类型");
             }
 
             //各种类型实例成员访问，如：DateTime,TimeSpan,String.Length,List.Count
             if (this.OrmProvider.TryGetMemberAccessSqlFormatter(memberExpr, out formatter))
             {
-                //Where(f=>... && f.OrderNo.Length==10 && ...)
+                //Where(f=>... && f.CreatedAt.Month<5 && ...)
                 //Where(f=>... && f.Order.OrderNo.Length==10 && ...)
                 var targetSegment = sqlSegment.Next(memberExpr.Expression);
-                return formatter.Invoke(this, targetSegment);
+                sqlSegment = formatter.Invoke(this, targetSegment);
+                sqlSegment.SegmentType = memberExpr.Type;
+                return sqlSegment;
             }
 
             if (memberExpr.IsParameter(out _))
             {
-                //Where(f=>... && f.Amount>5 && ...)
-                //Include(f=>f.Buyer); 或是 IncludeMany(f=>f.Orders)
-                //Select(f=>new {f.OrderId, ...})
-                //Where(f=>f.Order.Id>10)
-                //Include(f=>f.Order.Buyer)
-                //Select(f=>new {f.Order.OrderId, ...})
-                //GroupBy(f=>new {f.Order.OrderId, ...})
-                //GroupBy(f=>f.Order.OrderId)
-                //OrderBy(f=>new {f.Order.OrderId, ...})
-                //OrderBy(f=>f.Order.OrderId)                
-                var memberMapper = this.Tables[0].Mapper.GetMemberMap(memberExpr.Member.Name);
+                //Where(f => f.Amount > 5)
+                //Select(f => new { f.OrderId, f.Disputes ...})
+                var tableSegment = this.Tables[0];
+                var memberMapper = tableSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
                 if (memberMapper.IsIgnore)
-                    throw new Exception($"类{this.Tables[0].EntityType.FullName}的成员{memberMapper.MemberName}是忽略成员无法访问");
+                    throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberMapper.MemberName}是忽略成员无法访问");
                 if (memberMapper.MemberType.IsEntityType(out _) && !memberMapper.IsNavigation && memberMapper.TypeHandler == null)
-                    throw new Exception($"类{this.Tables[0].EntityType.FullName}的成员{memberExpr.Member.Name}不是值类型，未配置为导航属性也没有配置TypeHandler");
+                    throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberExpr.Member.Name}不是值类型，未配置为导航属性也没有配置TypeHandler");
 
                 var fieldName = this.OrmProvider.GetFieldName(memberMapper.FieldName);
                 sqlSegment.HasField = true;
-                sqlSegment.TableSegment = this.Tables[0];
+                sqlSegment.TableSegment = tableSegment;
                 sqlSegment.FromMember = memberMapper.Member;
                 sqlSegment.SegmentType = memberMapper.MemberType;
                 if (memberMapper.UnderlyingType.IsEnum)
@@ -233,7 +228,7 @@ public class SqlServerDeleteVisitor : DeleteVisitor
                 sqlSegment.NativeDbType = memberMapper.NativeDbType;
                 sqlSegment.TypeHandler = memberMapper.TypeHandler;
                 if (this.IsOutput) fieldName = "DELETED." + fieldName;
-                else if (this.IsNeedTableAlias) fieldName = this.Tables[0].AliasName + "." + fieldName;
+                else if (this.IsNeedTableAlias) fieldName = tableSegment.AliasName + "." + fieldName;
                 sqlSegment.Body = fieldName;
                 return sqlSegment;
             }
@@ -244,9 +239,13 @@ public class SqlServerDeleteVisitor : DeleteVisitor
 
         //各种静态成员访问，如：DateTime.Now,int.MaxValue,string.Empty
         if (this.OrmProvider.TryGetMemberAccessSqlFormatter(memberExpr, out formatter))
-            return formatter.Invoke(this, sqlSegment);
+        {
+            sqlSegment = formatter.Invoke(this, sqlSegment);
+            sqlSegment.SegmentType = memberExpr.Type;
+            return sqlSegment;
+        }
 
-        //访问局部变量或是成员变量，当作常量处理,直接计算，如果是字符串变成参数@p
+        //访问局部变量或是成员变量，当作常量处理，直接计算，后面统一做参数化处理
         //var orderIds=new List<int>{1,2,3}; Where(f=>orderIds.Contains(f.OrderId)); orderIds
         //private Order order; Where(f=>f.OrderId==this.Order.Id); this.Order.Id
         //var orderId=10; Select(f=>new {OrderId=orderId,...}
@@ -256,6 +255,7 @@ public class SqlServerDeleteVisitor : DeleteVisitor
         //这里不做参数化，后面统一走参数化处理
         sqlSegment.IsConstant = false;
         sqlSegment.IsVariable = true;
+        sqlSegment.SegmentType = memberExpr.Type;
         return sqlSegment;
     }
     public override SqlFieldSegment VisitNew(SqlFieldSegment sqlSegment)
