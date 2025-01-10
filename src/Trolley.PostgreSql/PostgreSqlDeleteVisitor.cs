@@ -121,7 +121,7 @@ public class PostgreSqlDeleteVisitor : DeleteVisitor
                 }
             }
             if (!string.IsNullOrEmpty(this.Tables[0].TableSchema))
-                headSqlSetter = (builder, tableName, fixedSql) => headSqlSetter.Invoke(builder, this.Tables[0].TableSchema + "." + tableName, fixedSql);
+                headSqlSetter = (builder, tableName) => headSqlSetter.Invoke(builder, this.Tables[0].TableSchema + "." + tableName);
             if (this.ShardingTables != null && this.ShardingTables.Count > 0)
             {
                 var tableNames = this.ShardingTables[0].TableNames;
@@ -129,14 +129,14 @@ public class PostgreSqlDeleteVisitor : DeleteVisitor
                 for (int i = 0; i < tableNames.Count; i++)
                 {
                     if (i > 0) builder.Append(';');
-                    headSqlSetter.Invoke(builder, tableNames[i], null);
+                    headSqlSetter.Invoke(builder, tableNames[i]);
                     builder.Append(whereSqlBuilder);
                 }
             }
             else
             {
                 sqlExecuter.Invoke();
-                headSqlSetter.Invoke(builder, this.Tables[0].Body ?? origName, null);
+                headSqlSetter.Invoke(builder, this.Tables[0].Body ?? origName);
                 builder.Append(whereSqlBuilder);
             }
             sql = builder.ToString();

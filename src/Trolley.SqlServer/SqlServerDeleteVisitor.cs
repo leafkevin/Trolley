@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
@@ -9,6 +10,10 @@ namespace Trolley.SqlServer;
 
 public class SqlServerDeleteVisitor : DeleteVisitor
 {
+    private static readonly ConcurrentDictionary<int, (bool, string, Action<StringBuilder, string, string>, object)> deleteCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<int, (bool, string, Action<StringBuilder, string, string>, object)> deleteMultiCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<int, (bool, string, Action<StringBuilder, string, string>, object)> deleteBulkCommandInitializerCache = new();
+
     public bool IsOutput { get; set; }
     public string OutputSql { get; set; }
 
@@ -57,7 +62,7 @@ public class SqlServerDeleteVisitor : DeleteVisitor
                 }
             }
             else whereObjType = whereKeys.GetType();
-            (var isMultiKeys, var origName, var headSqlSetter, var whereSqlSetter) = RepositoryHelper.BuildDeleteCommandInitializer(this.DbContext, entityType, whereObjType, this.IsMultiple, isBulk, isOutputSql);
+            (var isMultiKeys, var origName, var headSqlSetter, var whereSqlSetter) = BuildDeleteCommandInitializer(this.DbContext, entityType, whereObjType, this.IsMultiple, isBulk, isOutputSql);
             int index = 0;
             var builder = new StringBuilder();
             var whereSqlBuilder = new StringBuilder();
@@ -462,5 +467,34 @@ public class SqlServerDeleteVisitor : DeleteVisitor
             this.TableAliases.Add(parameterExpr.Name, this.Tables[index]);
             index++;
         }
+    }
+    public static (bool, string, Action<StringBuilder, string, string>, object) BuildDeleteCommandInitializer(DbContext dbContext, Type entityType, Type whereObjType, bool isMultiple, bool isBulk, bool hasFixedSql = false)
+    {
+        var ormProvider = dbContext.OrmProvider;
+        var mapProvider = dbContext.MapProvider;
+        var cacheKey = RepositoryHelper.GetCacheKey(ormProvider.OrmProviderType, mapProvider, entityType, whereObjType, isMultiple, isBulk, hasFixedSql);
+        var commandInitializerCache = isBulk ? deleteBulkCommandInitializerCache : isMultiple ? deleteMultiCommandInitializerCache : deleteCommandInitializerCache;
+        return commandInitializerCache.GetOrAdd(cacheKey, f =>
+        {
+            var entityMapper = mapProvider.GetEntityMap(entityType);
+            var isMultiKeys = entityMapper.KeyMembers.Count > 1;
+            Action<StringBuilder, string, string> headSqlSetter = null;
+            bool isInExpr = isBulk && !isMultiKeys;
+            if (hasFixedSql)
+            {
+                if (isInExpr)
+                    headSqlSetter = (builder, tableName, fixedSql) => builder.Append($"DELETE FROM {ormProvider.GetTableName(tableName)}{fixedSql} WHERE {ormProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName)} IN (");
+                else headSqlSetter = (builder, tableName, fixedSql) => builder.Append($"DELETE FROM {ormProvider.GetTableName(tableName)}{fixedSql} WHERE ");
+            }
+            else
+            {
+                if (isInExpr)
+                    headSqlSetter = (builder, tableName, fixedSql) => builder.Append($"DELETE FROM {ormProvider.GetTableName(tableName)} WHERE {ormProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName)} IN (");
+                else headSqlSetter = (builder, tableName, fixedSql) => builder.Append($"DELETE FROM {ormProvider.GetTableName(tableName)} WHERE ");
+            }
+            var whereSqlParametersSetter = RepositoryHelper.BuildWhereSqlParametersPart(dbContext, entityType, whereObjType, 1, false, true, false, isInExpr, isMultiple, isBulk);
+            var tableName = entityMapper.TableName;
+            return (isMultiKeys, tableName, headSqlSetter, whereSqlParametersSetter);
+        });
     }
 }

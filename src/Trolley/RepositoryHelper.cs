@@ -36,16 +36,16 @@ public class RepositoryHelper
     private static readonly ConcurrentDictionary<int, object> createValuesSqlParametersCache = new();
     private static readonly ConcurrentDictionary<int, object> createBulkValuesSqlParametersCache = new();
 
-    private static readonly ConcurrentDictionary<int, (bool, string, Action<StringBuilder, string, string>, object)> deleteCommandInitializerCache = new();
-    private static readonly ConcurrentDictionary<int, (bool, string, Action<StringBuilder, string, string>, object)> deleteMultiCommandInitializerCache = new();
-    private static readonly ConcurrentDictionary<int, (bool, string, Action<StringBuilder, string, string>, object)> deleteBulkCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<int, (bool, string, Action<StringBuilder, string>, object)> deleteCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<int, (bool, string, Action<StringBuilder, string>, object)> deleteMultiCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<int, (bool, string, Action<StringBuilder, string>, object)> deleteBulkCommandInitializerCache = new();
 
     private static readonly ConcurrentDictionary<int, object> updateCommandInitializerCache = new();
     private static readonly ConcurrentDictionary<int, object> updateMultiCommandInitializerCache = new();
 
     private static readonly ConcurrentDictionary<int, object> updateWithCommandInitializerCache = new();
     private static readonly ConcurrentDictionary<int, object> updateMultiWithCommandInitializerCache = new();
-    private static readonly ConcurrentDictionary<int, (object, object)> updateBulkWithCommandInitializerCache = new();
+    private static readonly ConcurrentDictionary<int, (Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, Action<StringBuilder, DbContext, object, string>)> updateBulkWithCommandInitializerCache = new();
 
     private static readonly ConcurrentDictionary<int, Func<string, object, string>> shardingTableNameGetters = new();
     private static readonly ConcurrentDictionary<Type, Func<object>> typedListGetters = new();
@@ -1466,33 +1466,8 @@ public class RepositoryHelper
             return result;
         });
     }
-    //public static (Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, Action<StringBuilder, DbContext, object, string>)
-    //    BuildUpdateBulkSetWithSqlParametersPart(DbContext dbContext, Type entityType, Type updateObjType, bool isMultiple, bool isUpdateRowVersion, List<string> onlyFieldNames, List<string> ignoreFieldNames)
-    //{
-    //    var ormProvider = dbContext.OrmProvider;
-    //    var mapProvider = dbContext.MapProvider;
-    //    var cacheKey = GetCacheKey(ormProvider.OrmProviderType, dbContext.MapProvider, entityType, updateObjType, onlyFieldNames, ignoreFieldNames);
-    //    return updateBulkWithCommandInitializerCache.GetOrAdd(cacheKey, f =>
-    //    {
-    //        var fieldsSetter = BuildFieldsSqlParametersPart(dbContext, entityType, updateObjType, 4, 1, 2, false, true, isUpdateRowVersion, onlyFieldNames, ignoreFieldNames) as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
-    //        var whereSetter = BuildWhereSqlParametersPart(dbContext, entityType, updateObjType, 1, false, true, true, false, isMultiple, true, " WHERE ") as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
-    //        Action<IDataParameterCollection, StringBuilder, DbContext, object, string> firstSqlSetter = (dbParameters, builder, dbContext, updateObj, suffix) =>
-    //        {
-    //            fieldsSetter.Invoke(dbParameters, builder, dbContext, updateObj, suffix);
-    //            whereSetter.Invoke(dbParameters, builder, dbContext, updateObj, suffix);
-    //        };
-    //        var fieldsSqlSetter = BuildFieldsSqlParametersPart(dbContext, entityType, updateObjType, 4, 2, 2, false, true, isUpdateRowVersion, onlyFieldNames, ignoreFieldNames) as Action<StringBuilder, DbContext, object, string>;
-    //        var whereSqlSetter = BuildWhereSqlParametersPart(dbContext, entityType, updateObjType, 2, false, true, true, false, isMultiple, true, " WHERE ") as Action<StringBuilder, DbContext, object, string>;
-    //        Action<StringBuilder, DbContext, object, string> shardingSqlSetter = (builder, dbContext, updateObj, suffix) =>
-    //        {
-    //            fieldsSqlSetter.Invoke(builder, dbContext, updateObj, suffix);
-    //            whereSqlSetter.Invoke(builder, dbContext, updateObj, suffix);
-    //        };
-    //        return (firstSqlSetter, shardingSqlSetter);
-    //    });
-    //}
-
-    public static (object, object) BuildUpdateBulkSetWithSqlParametersPart(DbContext dbContext, Type entityType, Type updateObjType, bool isMultiple, bool isUpdateRowVersion, List<string> onlyFieldNames, List<string> ignoreFieldNames, bool hasFixedSql = false)
+    public static (Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, Action<StringBuilder, DbContext, object, string>)
+        BuildUpdateBulkSetWithSqlParametersPart(DbContext dbContext, Type entityType, Type updateObjType, bool isMultiple, bool isUpdateRowVersion, List<string> onlyFieldNames, List<string> ignoreFieldNames)
     {
         var ormProvider = dbContext.OrmProvider;
         var mapProvider = dbContext.MapProvider;
@@ -1501,70 +1476,37 @@ public class RepositoryHelper
         {
             var fieldsSetter = BuildFieldsSqlParametersPart(dbContext, entityType, updateObjType, 4, 1, 2, false, true, isUpdateRowVersion, onlyFieldNames, ignoreFieldNames) as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
             var whereSetter = BuildWhereSqlParametersPart(dbContext, entityType, updateObjType, 1, false, true, true, false, isMultiple, true, " WHERE ") as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
+            Action<IDataParameterCollection, StringBuilder, DbContext, object, string> firstSqlSetter = (dbParameters, builder, dbContext, updateObj, suffix) =>
+            {
+                fieldsSetter.Invoke(dbParameters, builder, dbContext, updateObj, suffix);
+                whereSetter.Invoke(dbParameters, builder, dbContext, updateObj, suffix);
+            };
             var fieldsSqlSetter = BuildFieldsSqlParametersPart(dbContext, entityType, updateObjType, 4, 2, 2, false, true, isUpdateRowVersion, onlyFieldNames, ignoreFieldNames) as Action<StringBuilder, DbContext, object, string>;
             var whereSqlSetter = BuildWhereSqlParametersPart(dbContext, entityType, updateObjType, 2, false, true, true, false, isMultiple, true, " WHERE ") as Action<StringBuilder, DbContext, object, string>;
-            object firstSqlSetter = null;
-            object shardingSqlSetter = null;
-            if (hasFixedSql)
+            Action<StringBuilder, DbContext, object, string> shardingSqlSetter = (builder, dbContext, updateObj, suffix) =>
             {
-                Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string> typedFirstSqlSetter = (dbParameters, builder, dbContext, outputSql, updateObj, suffix) =>
-                {
-                    fieldsSetter.Invoke(dbParameters, builder, dbContext, updateObj, suffix);
-                    builder.Append(outputSql);
-                    whereSetter.Invoke(dbParameters, builder, dbContext, updateObj, suffix);
-                };
-                Action<StringBuilder, DbContext, string, object, string> typedShardingSqlSetter = (builder, dbContext, outputSql, updateObj, suffix) =>
-                {
-                    fieldsSqlSetter.Invoke(builder, dbContext, updateObj, suffix);
-                    builder.Append(outputSql);
-                    whereSqlSetter.Invoke(builder, dbContext, updateObj, suffix);
-                };
-                firstSqlSetter = typedFirstSqlSetter;
-                shardingSqlSetter = typedShardingSqlSetter;
-            }
-            else
-            {
-                Action<IDataParameterCollection, StringBuilder, DbContext, object, string> typedFirstSqlSetter = (dbParameters, builder, dbContext, updateObj, suffix) =>
-                {
-                    fieldsSetter.Invoke(dbParameters, builder, dbContext, updateObj, suffix);
-                    whereSetter.Invoke(dbParameters, builder, dbContext, updateObj, suffix);
-                };
-                Action<StringBuilder, DbContext, object, string> typedShardingSqlSetter = (builder, dbContext, updateObj, suffix) =>
-                {
-                    fieldsSqlSetter.Invoke(builder, dbContext, updateObj, suffix);
-                    whereSqlSetter.Invoke(builder, dbContext, updateObj, suffix);
-                };
-                firstSqlSetter = typedFirstSqlSetter;
-                shardingSqlSetter = typedShardingSqlSetter;
-            }
+                fieldsSqlSetter.Invoke(builder, dbContext, updateObj, suffix);
+                whereSqlSetter.Invoke(builder, dbContext, updateObj, suffix);
+            };
             return (firstSqlSetter, shardingSqlSetter);
         });
     }
 
-    public static (bool, string, Action<StringBuilder, string, string>, object) BuildDeleteCommandInitializer(DbContext dbContext, Type entityType, Type whereObjType, bool isMultiple, bool isBulk, bool hasFixedSql = false)
+    public static (bool, string, Action<StringBuilder, string>, object) BuildDeleteCommandInitializer(DbContext dbContext, Type entityType, Type whereObjType, bool isMultiple, bool isBulk)
     {
         var ormProvider = dbContext.OrmProvider;
         var mapProvider = dbContext.MapProvider;
-        var cacheKey = GetCacheKey(ormProvider.OrmProviderType, mapProvider, entityType, whereObjType, isMultiple, isBulk, hasFixedSql);
+        var cacheKey = GetCacheKey(ormProvider.OrmProviderType, mapProvider, entityType, whereObjType, isMultiple, isBulk);
         var commandInitializerCache = isBulk ? deleteBulkCommandInitializerCache : isMultiple ? deleteMultiCommandInitializerCache : deleteCommandInitializerCache;
         return commandInitializerCache.GetOrAdd(cacheKey, f =>
         {
             var entityMapper = mapProvider.GetEntityMap(entityType);
             var isMultiKeys = entityMapper.KeyMembers.Count > 1;
-            Action<StringBuilder, string, string> headSqlSetter = null;
+            Action<StringBuilder, string> headSqlSetter = null;
             bool isInExpr = isBulk && !isMultiKeys;
-            if (hasFixedSql)
-            {
-                if (isInExpr)
-                    headSqlSetter = (builder, tableName, fixedSql) => builder.Append($"DELETE FROM {ormProvider.GetTableName(tableName)}{fixedSql} WHERE {ormProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName)} IN (");
-                else headSqlSetter = (builder, tableName, fixedSql) => builder.Append($"DELETE FROM {ormProvider.GetTableName(tableName)}{fixedSql} WHERE ");
-            }
-            else
-            {
-                if (isInExpr)
-                    headSqlSetter = (builder, tableName, fixedSql) => builder.Append($"DELETE FROM {ormProvider.GetTableName(tableName)} WHERE {ormProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName)} IN (");
-                else headSqlSetter = (builder, tableName, fixedSql) => builder.Append($"DELETE FROM {ormProvider.GetTableName(tableName)} WHERE ");
-            }
+            if (isInExpr)
+                headSqlSetter = (builder, tableName) => builder.Append($"DELETE FROM {ormProvider.GetTableName(tableName)} WHERE {ormProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName)} IN (");
+            else headSqlSetter = (builder, tableName) => builder.Append($"DELETE FROM {ormProvider.GetTableName(tableName)} WHERE ");
             var whereSqlParametersSetter = BuildWhereSqlParametersPart(dbContext, entityType, whereObjType, 1, false, true, false, isInExpr, isMultiple, isBulk);
             var tableName = entityMapper.TableName;
             return (isMultiKeys, tableName, headSqlSetter, whereSqlParametersSetter);

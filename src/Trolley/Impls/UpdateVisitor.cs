@@ -297,8 +297,6 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
 
         var entityType = tableSegment.EntityType;
         (var bulkSqlSetter, var shardingSqlSetter) = RepositoryHelper.BuildUpdateBulkSetWithSqlParametersPart(this.DbContext, entityType, updateObjType, this.IsMultiple, false, this.OnlyFieldNames, this.IgnoreFieldNames);
-        var typedBulkSqlSetter = bulkSqlSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
-        var typedShardingSqlSetter = shardingSqlSetter as Action<StringBuilder, DbContext, object, string>;
 
         //处理有tableSchema的场景
         Action<IDataParameterCollection> fixedParametersSetter = null;
@@ -309,12 +307,12 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         firstSqlSetter = (dbParameters, builder, dbContext, tableName, updateObj, suffix) =>
         {
             builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)} SET {fixedSql}");
-            typedBulkSqlSetter.Invoke(dbParameters, builder, dbContext, updateObj, suffix);
+            bulkSqlSetter.Invoke(dbParameters, builder, dbContext, updateObj, suffix);
         };
         sqlSetter = (builder, dbContext, tableName, updateObj, suffix) =>
         {
             builder.Append($"{headSql}{this.OrmProvider.GetTableName(tableName)} SET {fixedSql}");
-            typedShardingSqlSetter.Invoke(builder, dbContext, updateObj, suffix);
+            shardingSqlSetter.Invoke(builder, dbContext, updateObj, suffix);
         };
         var tableName = tableSegment.Mapper.TableName;
         return (updateObjs, bulkCount, tableName, fixedParametersSetter, firstSqlSetter, sqlSetter);
