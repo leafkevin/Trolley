@@ -160,21 +160,28 @@ public class SqlVisitor : ISqlVisitor
             tableName = shardingRule.Invoke(origTableName, field1Value);
         }
         //单个分表，直接设置body表名，当作不分表处理
-        if (tableSegment.TableNames == null)
+        if (tableSegment.TableNames == null && !string.IsNullOrEmpty(tableSegment.Body))
         {
-            if (string.IsNullOrEmpty(tableSegment.Body))
-                tableSegment.Body = tableName;
-            else
-            {
-                tableSegment.TableNames = new List<string> { tableSegment.Body, tableName };
-                tableSegment.Body = null;
-                tableSegment.ShardingType = ShardingTableType.MultiTable;
-                this.ShardingTables ??= new();
-                if (!this.ShardingTables.Contains(tableSegment))
-                    this.ShardingTables.Add(tableSegment);
-            }
+            tableSegment.TableNames = new();
+            this.ShardingTables ??= new();
+            tableSegment.ShardingType = ShardingTableType.MultiTable;
+            if (!this.ShardingTables.Contains(tableSegment))
+                this.ShardingTables.Add(tableSegment);
         }
-        else tableSegment.TableNames.Add(tableName);
+        if (tableSegment.TableNames != null)
+        {
+            if (!string.IsNullOrEmpty(tableSegment.Body))
+            {
+                tableSegment.TableNames.Add(tableSegment.Body);
+                tableSegment.Body = null;
+            }
+            tableSegment.TableNames.Add(tableName);
+        }
+        else
+        {
+            tableSegment.ShardingType = ShardingTableType.SingleTable;
+            tableSegment.Body = tableName;
+        }
     }
     public void UseTableByRange(bool isIncludeMany, object beginFieldValue, object endFieldValue)
     {
@@ -187,23 +194,28 @@ public class SqlVisitor : ISqlVisitor
             throw new NotSupportedException($"实体表{tableSegment.EntityType.FullName}的分表规则依赖2个字段，不能使用此方法");
 
         tableSegment.IsSharding = true;
+        tableSegment.ShardingType = ShardingTableType.TableRange;
         var origTableName = tableSegment.Mapper.TableName;
         var shardingRule = shardingTable.RangleRule as Func<string, object, object, List<string>>;
         var tableNames = shardingRule.Invoke(origTableName, beginFieldValue, endFieldValue);
-        if (tableNames.Count > 1)
+
+        tableSegment.ShardingType = ShardingTableType.TableRange;
+        this.ShardingTables ??= new();
+        if (!this.ShardingTables.Contains(tableSegment))
+            this.ShardingTables.Add(tableSegment);
+
+        if (tableSegment.TableNames == null && (tableNames.Count > 1
+            || !string.IsNullOrEmpty(tableSegment.Body)))
+            tableSegment.TableNames = new();
+        if (tableSegment.TableNames != null)
         {
-            tableSegment.ShardingType = ShardingTableType.TableRange;
-            tableSegment.TableNames = new List<string>(tableNames);
-            this.ShardingTables ??= new();
-            if (this.ShardingTables.Exists(f => f.ShardingType < ShardingTableType.SubordinateMap))
-                throw new NotSupportedException("一个查询语句中仅支持一个主表多个分表，其他表多个分表只能调用方法UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)构造与主表表名称映射实现多个分表");
-            if (!this.ShardingTables.Contains(tableSegment))
+            if (!string.IsNullOrEmpty(tableSegment.Body))
             {
-                tableSegment.ShardingId = Guid.NewGuid().ToString("N");
-                this.ShardingTables.Add(tableSegment);
+                tableSegment.TableNames.Add(tableSegment.Body);
+                tableSegment.Body = null;
             }
+            tableSegment.TableNames.AddRange(tableNames);
         }
-        //一个分表的，当作不分表处理
         else tableSegment.Body = tableNames[0];
         this.IsNeedFetchShardingTables = true;
     }
@@ -221,20 +233,24 @@ public class SqlVisitor : ISqlVisitor
         var origTableName = tableSegment.Mapper.TableName;
         var shardingRule = shardingTable.RangleRule as Func<string, object, object, object, List<string>>;
         var tableNames = shardingRule.Invoke(origTableName, fieldValue1, fieldValue2, fieldValue3);
-        if (tableNames.Count > 1)
+
+        tableSegment.ShardingType = ShardingTableType.TableRange;
+        this.ShardingTables ??= new();
+        if (!this.ShardingTables.Contains(tableSegment))
+            this.ShardingTables.Add(tableSegment);
+
+        if (tableSegment.TableNames == null && (tableNames.Count > 1
+            || !string.IsNullOrEmpty(tableSegment.Body)))
+            tableSegment.TableNames = new();
+        if (tableSegment.TableNames != null)
         {
-            tableSegment.ShardingType = ShardingTableType.TableRange;
-            tableSegment.TableNames = new List<string>(tableNames);
-            this.ShardingTables ??= new();
-            if (this.ShardingTables.Exists(f => f.ShardingType < ShardingTableType.SubordinateMap))
-                throw new NotSupportedException("一个查询语句中仅支持一个主表多个分表，其他表多个分表只能调用方法UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)构造与主表表名称映射实现多个分表");
-            if (!this.ShardingTables.Contains(tableSegment))
+            if (!string.IsNullOrEmpty(tableSegment.Body))
             {
-                tableSegment.ShardingId = Guid.NewGuid().ToString("N");
-                this.ShardingTables.Add(tableSegment);
+                tableSegment.TableNames.Add(tableSegment.Body);
+                tableSegment.Body = null;
             }
+            tableSegment.TableNames.AddRange(tableNames);
         }
-        //一个分表的，当作不分表处理
         else tableSegment.Body = tableNames[0];
         this.IsNeedFetchShardingTables = true;
     }
@@ -293,13 +309,22 @@ public class SqlVisitor : ISqlVisitor
                 return result;
             });
             //只有一个分表时，会移除ShardingTables里面元素，生成SQL时候，直接取tableSegment.Body
-            if (tableNames.Count > 1)
-                tableSegment.TableNames = tableNames;
+            if (!string.IsNullOrEmpty(tableSegment.Body))
+            {
+                if (!tableNames.Contains(tableSegment.Body))
+                    throw new Exception($"分表{tableSegment.Body}不存在");
+                this.ShardingTables.Remove(tableSegment);
+            }
             else
             {
-                tableSegment.Body = tableNames[0];
-                tableSegment.TableNames = null;
-                this.ShardingTables.Remove(tableSegment);
+                if (tableNames.Count > 1)
+                    tableSegment.TableNames = tableNames;
+                else
+                {
+                    tableSegment.Body = tableNames[0];
+                    tableSegment.TableNames = null;
+                    this.ShardingTables.Remove(tableSegment);
+                }
             }
         }
     }
