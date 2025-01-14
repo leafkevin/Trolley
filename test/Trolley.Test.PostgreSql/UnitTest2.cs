@@ -99,6 +99,8 @@ public class UnitTest2 : UnitTestBase
         Assert.Equal("leafkevin", result.Name);
         var user = await repository.GetByIdAsync<User>(new { Id = 1 });
         Assert.True(user.Name == result.Name);
+        user = await repository.GetByIdAsync<User>(new[] { 1, 2, 3 });
+        Assert.True(user.Name == result.Name);
     }
     [Fact]
     public async Task GetByIds()

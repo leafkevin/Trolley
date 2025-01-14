@@ -880,18 +880,35 @@ public class Repository : IRepository
         var whereObjType = whereObj.GetType();
 
         (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
-        var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.DbContext, entityType, whereObjType, whereObj, false, isBulk);
-        var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
-        command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this.DbContext, whereObj);
+        if (isBulk)
+        {
+            (var isInExpr, var headSql, var commandInitializer) = ((bool, string, object))RepositoryHelper.BuildExistsSqlParameters(this.DbContext, entityType, whereObjType, whereObj, false, isBulk);
+            var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
+            var parameters = whereObj as IEnumerable;
+            int index = 0;
+            var builder = new StringBuilder(headSql);
+            var jointMark = isInExpr ? "," : " OR ";
+            foreach (var parameter in parameters)
+            {
+                if (index > 0) builder.Append(jointMark);
+                typedCommandInitializer.Invoke(command.Parameters, builder, this.DbContext, parameter, index.ToString());
+                index++;
+            }
+            if (isInExpr) builder.Append(')');
+            command.CommandText = builder.ToString();
+        }
+        else
+        {
+            var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.DbContext, entityType, whereObjType, whereObj, false, isBulk);
+            var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
+            command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this.DbContext, whereObj);
+        }
 
-        connection.Open();
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
         int result = 0;
-        if (reader.Read())
-            result = reader.ToValue<int>(this.DbContext);
+        connection.Open();
+        var objResult = command.ExecuteScalar(CommandSqlType.Select);
+        if (objResult != null) result = (int)Convert.ChangeType(objResult, typeof(int));
 
-        reader.Dispose();
         command.Dispose();
         if (isNeedClose) connection.Close();
         return result > 0;
@@ -908,8 +925,8 @@ public class Repository : IRepository
         (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
         if (isBulk)
         {
-            (var isInExpr, var headSql, var whereSqlSetter) = ((bool, string,object))RepositoryHelper.BuildExistsSqlParameters(this.DbContext, entityType, whereObjType, whereObj, false, isBulk);
-            //var typedWhereSqlSetter= whereSqlSetter as 
+            (var isInExpr, var headSql, var commandInitializer) = ((bool, string, object))RepositoryHelper.BuildExistsSqlParameters(this.DbContext, entityType, whereObjType, whereObj, false, isBulk);
+            var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
             var parameters = whereObj as IEnumerable;
             int index = 0;
             var builder = new StringBuilder(headSql);
@@ -917,7 +934,8 @@ public class Repository : IRepository
             foreach (var parameter in parameters)
             {
                 if (index > 0) builder.Append(jointMark);
-                typedCommandInitializer.Invoke(command.Parameters, builder, this, whereObj, index.ToString());
+                typedCommandInitializer.Invoke(command.Parameters, builder, this.DbContext, parameter, index.ToString());
+                index++;
             }
             if (isInExpr) builder.Append(')');
             command.CommandText = builder.ToString();
@@ -928,14 +946,11 @@ public class Repository : IRepository
             var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
             command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this.DbContext, whereObj);
         }
-        await connection.OpenAsync(cancellationToken);
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-        var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
         int result = 0;
-        if (await reader.ReadAsync(cancellationToken))
-            result = reader.ToValue<int>(this.DbContext);
+        await connection.OpenAsync(cancellationToken);
+        var objResult = await command.ExecuteScalarAsync(CommandSqlType.Select, cancellationToken);
+        if (objResult != null) result = (int)Convert.ChangeType(objResult, typeof(int));
 
-        await reader.DisposeAsync();
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         return result > 0;

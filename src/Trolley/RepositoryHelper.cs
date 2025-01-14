@@ -845,10 +845,10 @@ public class RepositoryHelper
         }
         else fieldsSql = BuildSelectFieldsSqlPart(ormProvider, entityMapper, entityType);
 
+        var isInExpr = false;
         var headSql = $"SELECT {fieldsSql} FROM {tableName} WHERE ";
         if (isBulk)
         {
-            var isInExpr = false;
             if (isUseKey) isInExpr = entityMapper.KeyMembers.Count == 1;
             else
             {
@@ -857,10 +857,9 @@ public class RepositoryHelper
                 isInExpr = memberInfos.Count == 1;
             }
             if (isInExpr) headSql += $"{ormProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName)} IN (";
-            var loopHeadSql = isInExpr ? null : headSql;
-            return (isInExpr, headSql, BuildWhereSqlParametersPart(dbContext, entityType, whereObjType, 1, false, isUseKey, false, isInExpr, isMultiple, isBulk, loopHeadSql));
+            return (isInExpr, headSql, BuildWhereSqlParametersPart(dbContext, entityType, whereObjType, 1, false, isUseKey, false, isInExpr, isMultiple, isBulk));
         }
-        return BuildWhereSqlParametersPart(dbContext, entityType, whereObjType, 1, true, isUseKey, false, false, isMultiple, isBulk, headSql);
+        return BuildWhereSqlParametersPart(dbContext, entityType, whereObjType, 1, true, isUseKey, false, isInExpr, isMultiple, isBulk, headSql);
     }
     public static object BuildQueryWhereObjSqlParameters(DbContext dbContext, Type entityType, Type whereObjType, object whereObjs, bool isMultiple, bool isBulk)
     {

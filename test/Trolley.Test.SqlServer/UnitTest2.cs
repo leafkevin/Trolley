@@ -90,9 +90,9 @@ public class UnitTest2 : UnitTestBase
             Assert.True(result1.Id == result2.Id);
             Assert.Equal(1, result1.Id);
         }
-    }  
+    }
     [Fact]
-    public async Task Get()
+    public async Task GetById()
     {
         this.Initialize(3);
         var repository = this.dbFactory.Create();
@@ -100,6 +100,19 @@ public class UnitTest2 : UnitTestBase
         Assert.Equal("leafkevin", result.Name);
         var user = await repository.GetByIdAsync<User>(new { Id = 1 });
         Assert.True(user.Name == result.Name);
+        user = await repository.GetByIdAsync<User>(new[] { 1, 2, 3 });
+        Assert.True(user.Name == result.Name);
+    }
+    [Fact]
+    public async Task GetByIds()
+    {
+        this.Initialize(3);
+        var repository = this.dbFactory.Create();
+        var userIds = new int[] { 1, 2, 3 };
+        var users = repository.GetByIds<User>(userIds);
+        Assert.Equal("leafkevin", users[0].Name);
+        var userInfos = await repository.GetByIdsAsync<User>(new[] { new { Id = 1 }, new { Id = 2 }, new { Id = 3 } });
+        Assert.True(users[0].Name == userInfos[0].Name);
     }
     [Fact]
     public async Task Query()
@@ -1184,7 +1197,7 @@ SELECT a.[MenuId],a.[ParentId],a.[Url] FROM [menuPageList] a WHERE a.[ParentId]<
         Assert.True(result.Count > 0);
     }
     [Fact]
-    public void Where_Exists()
+    public async Task Where_Exists()
     {
         var repository = this.dbFactory.Create();
         var sql = repository.From<User>()
@@ -1294,6 +1307,11 @@ SELECT a.[MenuId],a.[ParentId],a.[Url] FROM [menuPageList] a WHERE a.[ParentId]<
             .ToList();
         Assert.NotNull(result1);
         Assert.True(result1.Count > 0);
+
+        var userKeys = await repository.From<User>()
+            .Select(f => new { f.Gender, f.Age }).Take(5).ToListAsync();
+        var result3 = await repository.ExistsAsync<User>(userKeys);
+        Assert.True(result3);
     }
     [Fact]
     public async Task FromQuery_Exists()

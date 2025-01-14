@@ -117,7 +117,8 @@ public sealed class DbContext
             foreach (var parameter in parameters)
             {
                 if (index > 0) builder.Append(jointMark);
-                typedCommandInitializer.Invoke(command.Parameters, builder, this, whereObj, index.ToString());
+                typedCommandInitializer.Invoke(command.Parameters, builder, this, parameter, index.ToString());
+                index++;
             }
             if (isInExpr) builder.Append(')');
             command.CommandText = builder.ToString();
@@ -161,7 +162,8 @@ public sealed class DbContext
             foreach (var parameter in parameters)
             {
                 if (index > 0) builder.Append(jointMark);
-                typedCommandInitializer.Invoke(command.Parameters, builder, this, whereObj, index.ToString());
+                typedCommandInitializer.Invoke(command.Parameters, builder, this, parameter, index.ToString());
+                index++;
             }
             if (isInExpr) builder.Append(')');
             command.CommandText = builder.ToString();
