@@ -177,6 +177,10 @@ public class WhereUnitTest : UnitTestBase
         var localNature = CompanyNature.Internet;
         var result3 = await repository.QueryAsync<Company>(f => (f.Nature ?? CompanyNature.Internet) == localNature);
         Assert.True(result2.Count >= 2);
+        var count = await repository.From<Order>()
+            .Where(f => f.IsEnabled)
+            .SumAsync(f => f.ProductCount ?? 0);
+        Assert.True(count > 0);
     }
     [Fact]
     public void WhereAndOr()

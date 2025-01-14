@@ -906,10 +906,28 @@ public class Repository : IRepository
         var whereObjType = whereObj.GetType();
 
         (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
-        var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.DbContext, entityType, whereObjType, whereObj, false, isBulk);
-        var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
-        command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this.DbContext, whereObj);
-
+        if (isBulk)
+        {
+            (var isInExpr, var headSql, var whereSqlSetter) = ((bool, string,object))RepositoryHelper.BuildExistsSqlParameters(this.DbContext, entityType, whereObjType, whereObj, false, isBulk);
+            //var typedWhereSqlSetter= whereSqlSetter as 
+            var parameters = whereObj as IEnumerable;
+            int index = 0;
+            var builder = new StringBuilder(headSql);
+            var jointMark = isInExpr ? "," : " OR ";
+            foreach (var parameter in parameters)
+            {
+                if (index > 0) builder.Append(jointMark);
+                typedCommandInitializer.Invoke(command.Parameters, builder, this, whereObj, index.ToString());
+            }
+            if (isInExpr) builder.Append(')');
+            command.CommandText = builder.ToString();
+        }
+        else
+        {
+            var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.DbContext, entityType, whereObjType, whereObj, false, isBulk);
+            var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
+            command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this.DbContext, whereObj);
+        }
         await connection.OpenAsync(cancellationToken);
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
         var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);

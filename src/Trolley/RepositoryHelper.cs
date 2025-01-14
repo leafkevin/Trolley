@@ -848,12 +848,17 @@ public class RepositoryHelper
         var headSql = $"SELECT {fieldsSql} FROM {tableName} WHERE ";
         if (isBulk)
         {
-            if (isUseKey && entityMapper.KeyMembers.Count == 1)
+            var isInExpr = false;
+            if (isUseKey) isInExpr = entityMapper.KeyMembers.Count == 1;
+            else
             {
-                headSql += $"{ormProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName)} IN (";
-                return (true, headSql, BuildWhereSqlParametersPart(dbContext, entityType, whereObjType, 1, false, isUseKey, false, true, isMultiple, isBulk));
+                var memberInfos = whereObjType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
+                    .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field).ToList();
+                isInExpr = memberInfos.Count == 1;
             }
-            else return (false, headSql, BuildWhereSqlParametersPart(dbContext, entityType, whereObjType, 1, false, isUseKey, false, false, isMultiple, isBulk, headSql));
+            if (isInExpr) headSql += $"{ormProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName)} IN (";
+            var loopHeadSql = isInExpr ? null : headSql;
+            return (isInExpr, headSql, BuildWhereSqlParametersPart(dbContext, entityType, whereObjType, 1, false, isUseKey, false, isInExpr, isMultiple, isBulk, loopHeadSql));
         }
         return BuildWhereSqlParametersPart(dbContext, entityType, whereObjType, 1, true, isUseKey, false, false, isMultiple, isBulk, headSql);
     }
@@ -1524,7 +1529,7 @@ public class RepositoryHelper
         }
         foreach (var parameter in parameters)
         {
-            var tableName = RepositoryHelper.GetShardingTableName(mapProvider, shardingProvider, entityType, parameterType, parameter);
+            var tableName = GetShardingTableName(mapProvider, shardingProvider, entityType, parameterType, parameter);
             if (!result.TryGetValue(tableName, out var myParameters))
                 result.Add(tableName, myParameters = new List<object>());
             myParameters.Add(parameter);
