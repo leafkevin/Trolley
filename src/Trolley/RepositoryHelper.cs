@@ -849,14 +849,22 @@ public class RepositoryHelper
         var headSql = $"SELECT {fieldsSql} FROM {tableName} WHERE ";
         if (isBulk)
         {
-            if (isUseKey) isInExpr = entityMapper.KeyMembers.Count == 1;
+            string fieldName = null;
+            if (isUseKey)
+            {
+                isInExpr = entityMapper.KeyMembers.Count == 1;
+                fieldName = entityMapper.KeyMembers[0].FieldName;
+            }
             else
             {
                 var memberInfos = whereObjType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
                     .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field).ToList();
                 isInExpr = memberInfos.Count == 1;
+                if (!entityMapper.TryGetMemberMap(memberInfos[0].Name, out var memberMapper))
+                    throw new Exception($"实体表{entityMapper.TableName}不存在成员名{memberInfos[0].Name}的映射字段");
+                fieldName = memberMapper.FieldName;
             }
-            if (isInExpr) headSql += $"{ormProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName)} IN (";
+            if (isInExpr) headSql += $"{ormProvider.GetFieldName(fieldName)} IN (";
             return (isInExpr, headSql, BuildWhereSqlParametersPart(dbContext, entityType, whereObjType, 1, false, isUseKey, false, isInExpr, isMultiple, isBulk));
         }
         return BuildWhereSqlParametersPart(dbContext, entityType, whereObjType, 1, true, isUseKey, false, isInExpr, isMultiple, isBulk, headSql);

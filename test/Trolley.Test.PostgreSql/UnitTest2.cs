@@ -74,21 +74,19 @@ public class UnitTest2 : UnitTestBase
         this.Initialize(2);
         var repository = this.dbFactory.Create();
         var result = repository.QueryFirst<User>(f => f.Id == 1);
-        if (result != null)
-        {
-            Assert.NotNull(result.Name);
-        }
+        Assert.NotNull(result);
+        Assert.NotNull(result.Name);
         result = repository.QueryFirst<User>("SELECT * FROM sys_user where \"Id\"=1");
-        if (result != null)
-        {
-            Assert.NotNull(result.Name);
-        }
+        Assert.NotNull(result);
+        Assert.NotNull(result.Name);
         var result1 = await repository.QueryFirstAsync<User>(f => f.Name == "leafkevin");
         var result2 = await repository.QueryFirstAsync<User>(new { Name = "leafkevin" });
-        if (result1 != null && result2 != null)
-        {
-            Assert.True(result1.Id == result2.Id);
-        }
+        Assert.NotNull(result1);
+        Assert.NotNull(result2);
+        Assert.True(result1.Id == result2.Id);
+        var result3 = await repository.QueryFirstAsync<User>(new[] { new { Name = "leafkevin" }, new { Name = "cindy" } });
+        Assert.NotNull(result3);
+        Assert.Equal("leafkevin", result3.Name);
     }
     [Fact]
     public async Task GetById()
