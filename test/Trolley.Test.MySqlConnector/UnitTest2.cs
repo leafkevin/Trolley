@@ -1,12 +1,12 @@
-﻿using System;
+﻿using Microsoft.Extensions.DependencyInjection;
+using MySqlConnector;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
-using MySqlConnector;
 using Trolley.MySqlConnector;
 using Xunit;
 using Xunit.Abstractions;
@@ -903,16 +903,17 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
         this.Initialize(1);
         var repository = this.dbFactory.Create();
         var sql = repository.From<User>()
-            .OrderByDescending(f => f.Id)
+            .OrderBy(f => new { f.Gender, f.Age })
+            .OrderByDescending(f => new { f.TenantId, f.CreatedAt })
             .ToSql(out _);
-        Assert.Equal("SELECT a.`Id`,a.`TenantId`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`SourceType`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_user` a ORDER BY a.`Id` DESC", sql);
+        Assert.Equal("SELECT a.`Id`,a.`TenantId`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`SourceType`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_user` a ORDER BY a.`Gender`,a.`Age`,a.`TenantId` DESC,a.`CreatedAt` DESC", sql);
 
-        var maxId = await repository.From<User>().MaxAsync(f => f.Id);
         var result = await repository.From<User>()
-            .OrderByDescending(f => f.Id)
-            .FirstAsync();
+            .OrderBy(f => new { f.Gender, f.Age })
+            .OrderByDescending(f => new { f.TenantId, f.CreatedAt })
+            .ToListAsync();
         Assert.NotNull(result);
-        Assert.Equal(maxId, result.Id);
+        Assert.True(result.Count > 0);
     }
     [Fact]
     public void FromQuery_Groupby_OrderBy()
@@ -2589,9 +2590,9 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .GroupBy((a, b) => new { a.BuyerId, OrderId = a.Id })
             .Having((x, a, b) => Sql.CountDistinct(b.ProductId) > 0)
             .Select((x, a, b) => new { x.Grouping.BuyerId, x.Grouping.OrderId, ProductTotal = Sql.CountDistinct(b.ProductId) }))
-        .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
-        .SelectFlattenTo((x, y) => new OrderBuyerInfo { BuyerName = y.Name })
-        .First();
+            .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
+            .SelectFlattenTo((x, y) => new OrderBuyerInfo { BuyerName = y.Name })
+            .First();
         Assert.NotNull(result);
         Assert.False(string.IsNullOrEmpty(result1.OrderId));
         Assert.True(result1.BuyerId > 0);
@@ -2620,20 +2621,20 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         Assert.Equal("SELECT a.`BuyerId`,a.`Id` AS `OrderId`,b.`Name` AS `BuyerName`,b.`Age` AS `BuyerAge`,COUNT(DISTINCT c.`ProductId`) AS `ProductCount`,IFNULL(MAX(b.`CreatedAt`),a.`CreatedAt`) AS `LastBuyAt` FROM `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` LEFT JOIN `sys_order_detail` c ON a.`Id`=c.`OrderId` GROUP BY a.`BuyerId`,a.`Id`,b.`Name`,b.`Age` ORDER BY IFNULL(MAX(b.`CreatedAt`),a.`CreatedAt`) DESC", sql);
 
         var result = repository.From<Order>()
-           .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
-           .LeftJoin<OrderDetail>((a, b, c) => a.Id == c.OrderId)
-           .GroupBy((a, b, c) => new { a.BuyerId, OrderId = a.Id, BuyerName = b.Name, BuyerAge = b.Age })
-           .Select((x, a, b, c) => new
-           {
-               x.Grouping.BuyerId,
-               x.Grouping.OrderId,
-               x.Grouping.BuyerName,
-               x.Grouping.BuyerAge,
-               ProductCount = x.CountDistinct(c.ProductId),
-               LastBuyAt = x.Max(b.CreatedAt).IsNull(a.CreatedAt)
-           })
-           .OrderByDescending(f => f.LastBuyAt)
-           .ToList();
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .LeftJoin<OrderDetail>((a, b, c) => a.Id == c.OrderId)
+            .GroupBy((a, b, c) => new { a.BuyerId, OrderId = a.Id, BuyerName = b.Name, BuyerAge = b.Age })
+            .Select((x, a, b, c) => new
+            {
+                x.Grouping.BuyerId,
+                x.Grouping.OrderId,
+                x.Grouping.BuyerName,
+                x.Grouping.BuyerAge,
+                ProductCount = x.CountDistinct(c.ProductId),
+                LastBuyAt = x.Max(b.CreatedAt).IsNull(a.CreatedAt)
+            })
+            .OrderByDescending(f => f.LastBuyAt)
+            .ToList();
         Assert.NotNull(result);
         Assert.True(result.Count > 0);
         if (result.Count > 1)
@@ -2673,12 +2674,12 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         Assert.Equal("SELECT a.`TotalAmount`,a.`OrderNo`,a.`Id`,a.`OrderNo`,a.`BuyerId`,a.`TotalAmount` FROM `sys_order` a WHERE a.`Id` IN ('8')", sql1);
 
         var result1 = await repository.From<Order>()
-          .Where(f => Sql.In(f.Id, new[] { "8" }))
-          .SelectFlattenTo(f => new OrderInfo
-          {
-              Description = f.TotalAmount.ToString("C") + f.OrderNo
-          })
-          .FirstAsync();
+            .Where(f => Sql.In(f.Id, new[] { "8" }))
+            .SelectFlattenTo(f => new OrderInfo
+            {
+                Description = f.TotalAmount.ToString("C") + f.OrderNo
+            })
+            .FirstAsync();
         Assert.Equal("8", result1.Id);
         Assert.Equal(1, result1.BuyerId);
         Assert.Equal("On-ZwYx", result1.OrderNo);
@@ -2695,12 +2696,12 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         Assert.Equal("SELECT a.`OrderNo`,a.`TotalAmount`,a.`Id`,a.`OrderNo`,a.`BuyerId`,a.`TotalAmount` FROM `sys_order` a WHERE a.`Id` IN ('8')", sql2);
 
         var result2 = await repository.From<Order>()
-          .Where(f => Sql.In(f.Id, new[] { "8" }))
-          .SelectFlattenTo(f => new OrderInfo
-          {
-              Description = $"{f.OrderNo}: {f.TotalAmount.ToString("C")}"
-          })
-          .FirstAsync();
+            .Where(f => Sql.In(f.Id, new[] { "8" }))
+            .SelectFlattenTo(f => new OrderInfo
+            {
+                Description = $"{f.OrderNo}: {f.TotalAmount.ToString("C")}"
+            })
+            .FirstAsync();
         Assert.Equal("8", result2.Id);
         Assert.Equal(1, result2.BuyerId);
         Assert.Equal("On-ZwYx", result2.OrderNo);
@@ -2730,6 +2731,73 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         Assert.Equal("UpdatedName", result.Name);
         Assert.Equal(18, result.Age);
         Assert.Equal("OK", parameters[1].Value.ToString());
+    }
+    [Fact]
+    public async Task FromQuery_PartitionBy()
+    {
+        var repository = this.dbFactory.Create();
+        var sql = repository.From<Order>()
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .Select((a, b) => new
+            {
+                Rank = Sql.PartitionBy(a.SellerId).OrderBy(new { a.BuyerId, a.OrderNo })
+                    .OrderByDescending(a.CreatedAt).Over().Rank(),
+                a.Id,
+                a.OrderNo,
+                a.SellerId,
+                a.BuyerId,
+                BuyerName = b.Name,
+                a.TotalAmount
+            })
+            .ToSql(out _);
+        Assert.Equal("SELECT RANK() OVER(PARTITION BY a.`SellerId` ORDER BY a.`BuyerId`,a.`OrderNo`,a.`CreatedAt` DESC) AS `Rank`,a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId`,b.`Name` AS `BuyerName`,a.`TotalAmount` FROM `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id`", sql);
+        var result = await repository.From<Order>()
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .Select((a, b) => new
+            {
+                Rank = Sql.PartitionBy(a.SellerId).OrderBy(new { a.BuyerId, a.OrderNo })
+                    .OrderByDescending(a.CreatedAt).Over().Rank(),
+                a.Id,
+                a.OrderNo,
+                a.SellerId,
+                a.BuyerId,
+                BuyerName = b.Name,
+                a.TotalAmount
+            })
+            .ToListAsync();
+        Assert.NotNull(result);
+        Assert.True(result.Count > 0);
+        sql = repository.From<Order>()
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .Select((a, b) => new
+            {
+                Count = Sql.PartitionBy(a.SellerId).OrderBy(new { a.BuyerId, a.OrderNo })
+                    .OrderByDescending(a.CreatedAt).Over().Count(a.TenantId),
+                a.Id,
+                a.OrderNo,
+                a.SellerId,
+                a.BuyerId,
+                BuyerName = b.Name,
+                a.TotalAmount
+            })
+            .ToSql(out _);
+        Assert.Equal("SELECT COUNT(a.`TenantId`) OVER(PARTITION BY a.`SellerId` ORDER BY a.`BuyerId`,a.`OrderNo`,a.`CreatedAt` DESC) AS `Count`,a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId`,b.`Name` AS `BuyerName`,a.`TotalAmount` FROM `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id`", sql);
+        var result1 = await repository.From<Order>()
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .Select((a, b) => new
+            {
+                Count = Sql.PartitionBy(a.SellerId).OrderBy(new { a.BuyerId, a.OrderNo })
+                    .OrderByDescending(a.CreatedAt).Over().Count(a.TenantId),
+                a.Id,
+                a.OrderNo,
+                a.SellerId,
+                a.BuyerId,
+                BuyerName = b.Name,
+                a.TotalAmount
+            })
+            .ToListAsync();
+        Assert.NotNull(result1);
+        Assert.True(result1.Count > 0);
     }
     private string DeferInvoke() => "DeferInvoke";
 }

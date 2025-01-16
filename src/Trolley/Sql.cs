@@ -85,14 +85,6 @@ public static class Sql
     //{
     //    throw new NotImplementedException();
     //}
-    //public static int RowNumber()
-    //{
-    //    throw new NotImplementedException();
-    //}
-    //public static int RowNumberOver(Func<RowNumberOver, RowNumberOver> overExpr)
-    //{
-    //    throw new NotImplementedException();
-    //}
     public static bool In<TElement>(TElement value, params TElement[] list)
     {
         throw new NotImplementedException();
@@ -189,14 +181,7 @@ public static class Sql
     {
         throw new NotImplementedException();
     }
-}
-public class RowNumberOver
-{
-    public RowNumberOver PartitionBy<Fields>(Func<Fields> fields)
-    {
-        throw new NotImplementedException();
-    }
-    public RowNumberOver OrderBy<Fields>(Func<Fields> fields)
+    public static IPartitionBy PartitionBy<TFields>(TFields fields)
     {
         throw new NotImplementedException();
     }

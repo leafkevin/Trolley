@@ -453,8 +453,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                         {
                             var memberInfo = newExpr.Members[index];
                             var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = argumentExpr });
-                            if (builder.Length > 0)
-                                builder.Append(',');
+                            if (index > 0) builder.Append(',');
                             builder.Append(sqlSegment.Body ?? sqlSegment.Value.ToString());
                             if (orderType == "DESC")
                                 builder.Append(" DESC");

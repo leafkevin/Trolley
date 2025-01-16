@@ -916,16 +916,17 @@ SELECT a.[MenuId],a.[ParentId],a.[Url] FROM [menuPageList] a WHERE a.[ParentId]<
         this.Initialize(3);
         var repository = this.dbFactory.Create();
         var sql = repository.From<User>()
-            .OrderByDescending(f => f.Id)
+            .OrderBy(f => new { f.Gender, f.Age })
+            .OrderByDescending(f => new { f.TenantId, f.CreatedAt })
             .ToSql(out _);
-        Assert.Equal("SELECT a.[Id],a.[TenantId],a.[Name],a.[Gender],a.[Age],a.[CompanyId],a.[GuidField],a.[SomeTimes],a.[SourceType],a.[IsEnabled],a.[CreatedAt],a.[CreatedBy],a.[UpdatedAt],a.[UpdatedBy] FROM [sys_user] a ORDER BY a.[Id] DESC", sql);
+        Assert.Equal("SELECT a.[Id],a.[TenantId],a.[Name],a.[Gender],a.[Age],a.[CompanyId],a.[GuidField],a.[SomeTimes],a.[SourceType],a.[IsEnabled],a.[CreatedAt],a.[CreatedBy],a.[UpdatedAt],a.[UpdatedBy] FROM [sys_user] a ORDER BY a.[Gender],a.[Age],a.[TenantId] DESC,a.[CreatedAt] DESC", sql);
 
-        var maxId = await repository.From<User>().MaxAsync(f => f.Id);
         var result = await repository.From<User>()
-            .OrderByDescending(f => f.Id)
-            .FirstAsync();
+            .OrderBy(f => new { f.Gender, f.Age })
+            .OrderByDescending(f => new { f.TenantId, f.CreatedAt })
+            .ToListAsync();
         Assert.NotNull(result);
-        Assert.Equal(maxId, result.Id);
+        Assert.True(result.Count > 0);
     }
     [Fact]
     public void FromQuery_Groupby_OrderBy()
@@ -2733,6 +2734,73 @@ SELECT a.[Id],a.[Name],a.[ParentId],b.[Url] FROM [myCteTable1] a INNER JOIN [myC
         Assert.Equal("UpdatedName", result.Name);
         Assert.Equal(18, result.Age);
         Assert.Equal("OK", parameters[1].Value.ToString());
+    }
+    [Fact]
+    public async Task FromQuery_PartitionBy()
+    {
+        var repository = this.dbFactory.Create();
+        var sql = repository.From<Order>()
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .Select((a, b) => new
+            {
+                Rank = Sql.PartitionBy(a.SellerId).OrderBy(new { a.BuyerId, a.OrderNo })
+                    .OrderByDescending(a.CreatedAt).Over().Rank(),
+                a.Id,
+                a.OrderNo,
+                a.SellerId,
+                a.BuyerId,
+                BuyerName = b.Name,
+                a.TotalAmount
+            })
+            .ToSql(out _);
+        Assert.Equal("SELECT RANK() OVER(PARTITION BY a.[SellerId] ORDER BY a.[BuyerId],a.[OrderNo],a.[CreatedAt] DESC) AS [Rank],a.[Id],a.[OrderNo],a.[SellerId],a.[BuyerId],b.[Name] AS [BuyerName],a.[TotalAmount] FROM [sys_order] a INNER JOIN [sys_user] b ON a.[BuyerId]=b.[Id]", sql);
+        var result = await repository.From<Order>()
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .Select((a, b) => new
+            {
+                Rank = Sql.PartitionBy(a.SellerId).OrderBy(new { a.BuyerId, a.OrderNo })
+                    .OrderByDescending(a.CreatedAt).Over().Rank(),
+                a.Id,
+                a.OrderNo,
+                a.SellerId,
+                a.BuyerId,
+                BuyerName = b.Name,
+                a.TotalAmount
+            })
+            .ToListAsync();
+        Assert.NotNull(result);
+        Assert.True(result.Count > 0);
+        sql = repository.From<Order>()
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .Select((a, b) => new
+            {
+                Count = Sql.PartitionBy(a.SellerId).OrderBy(new { a.BuyerId, a.OrderNo })
+                    .OrderByDescending(a.CreatedAt).Over().Count(a.TenantId),
+                a.Id,
+                a.OrderNo,
+                a.SellerId,
+                a.BuyerId,
+                BuyerName = b.Name,
+                a.TotalAmount
+            })
+            .ToSql(out _);
+        Assert.Equal("SELECT COUNT(a.[TenantId]) OVER(PARTITION BY a.[SellerId] ORDER BY a.[BuyerId],a.[OrderNo],a.[CreatedAt] DESC) AS [Count],a.[Id],a.[OrderNo],a.[SellerId],a.[BuyerId],b.[Name] AS [BuyerName],a.[TotalAmount] FROM [sys_order] a INNER JOIN [sys_user] b ON a.[BuyerId]=b.[Id]", sql);
+        var result1 = await repository.From<Order>()
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .Select((a, b) => new
+            {
+                Count = Sql.PartitionBy(a.SellerId).OrderBy(new { a.BuyerId, a.OrderNo })
+                    .OrderByDescending(a.CreatedAt).Over().Count(a.TenantId),
+                a.Id,
+                a.OrderNo,
+                a.SellerId,
+                a.BuyerId,
+                BuyerName = b.Name,
+                a.TotalAmount
+            })
+            .ToListAsync();
+        Assert.NotNull(result1);
+        Assert.True(result1.Count > 0);
     }
     private string DeferInvoke() => "DeferInvoke";
 }

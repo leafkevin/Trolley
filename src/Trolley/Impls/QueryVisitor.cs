@@ -1114,7 +1114,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         }
                         var memberInfo = newExpr.Members[index];
                         var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = argumentExpr });
-                        if (builder.Length > 0)
+                        if (index > 0)
                             builder.Append(',');
 
                         builder.Append(sqlSegment.Body ?? sqlSegment.Value.ToString());
@@ -1842,8 +1842,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     body = this.GetQuotedValue(readerField);
                     builder.Append(body);
                     //延迟方法调用字段，不需要加别名
-                    //if (this.IsNeedAlias(readerField, isOnlyField))
-                    //    builder.Append($" AS {this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}");
                     break;
                 default:
                     body = this.GetQuotedValue(readerField);

@@ -711,9 +711,18 @@ public class SqlVisitor : ISqlVisitor
     public virtual SqlFieldSegment VisitMethodCall(SqlFieldSegment sqlSegment)
     {
         var methodCallExpr = sqlSegment.Expression as MethodCallExpression;
-        if (this.IsSqlMethodCall(methodCallExpr))
+        var declaringType = methodCallExpr.Method.DeclaringType;
+        if (declaringType == typeof(Sql) || declaringType == typeof(IRepository)
+           || typeof(IAggregateSelect).IsAssignableFrom(declaringType)
+           || declaringType.IsGenericType && declaringType.FullName.StartsWith("Trolley.IQuery"))
         {
             sqlSegment = this.VisitSqlMethodCall(sqlSegment);
+            sqlSegment.SegmentType = methodCallExpr.Type;
+            return sqlSegment;
+        }
+        if (declaringType == typeof(IPartitionBy) || declaringType == typeof(IPartitionByOver))
+        {
+            sqlSegment = this.VisitPartitionByOverMethodCall(sqlSegment);
             sqlSegment.SegmentType = methodCallExpr.Type;
             return sqlSegment;
         }
@@ -950,6 +959,11 @@ public class SqlVisitor : ISqlVisitor
         LambdaExpression lambdaExpr = null;
         switch (methodCallExpr.Method.Name)
         {
+            case "Raw":
+                //TODO:
+                sqlSegment.Body = this.Evaluate<string>(methodCallExpr.Arguments[0]);
+                sqlSegment.SegmentType = methodCallExpr.Method.ReturnType;
+                break;
             case "Deferred":
                 sqlSegment.IsDeferredFields = true;
                 sqlSegment = this.VisitMethodCall(sqlSegment.Next(methodCallExpr.Arguments[0]));
@@ -1153,6 +1167,132 @@ public class SqlVisitor : ISqlVisitor
                 break;
         }
         return sqlSegment;
+    }
+    public virtual SqlFieldSegment VisitPartitionByOverMethodCall(SqlFieldSegment sqlSegment)
+    {
+        var currentExpr = sqlSegment.Expression;
+        var callStack = new Stack<MethodCallExpression>();
+        while (currentExpr is MethodCallExpression callExpr)
+        {
+            if (callExpr.Type == typeof(Sql))
+                break;
+            callStack.Push(callExpr);
+            currentExpr = callExpr.Object;
+        }
+        var builder = new StringBuilder();
+        var orderBuilder = new StringBuilder();
+        SqlFieldSegment tempSqlSegment = null;
+        string sql = null;
+        while (callStack.TryPop(out var methodCallExpr))
+        {
+            switch (methodCallExpr.Method.Name)
+            {
+                case "PartitionBy":
+                    sql = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0])).Body;
+                    break;
+                case "OrderBy":
+                    tempSqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                    if (orderBuilder.Length > 0) orderBuilder.Append(',');
+                    if (this.ReaderFields != null && this.ReaderFields.Count > 0)
+                    {
+                        for (int i = 0; i < this.ReaderFields.Count; i++)
+                        {
+                            var readerField = this.ReaderFields[i];
+                            if (i > 0) orderBuilder.Append(',');
+                            var fieldName = readerField.Body;
+                            //CTE表字段是常量/变量/字段名称，都有可能和声明的字段不一致，所以需要获取CTE表的声明字段
+                            //body里面的值，是原始的值或是字段名
+                            if (readerField.TableSegment != null && readerField.TableSegment.TableType == TableType.CteSelfRef)
+                                fieldName = $"{readerField.TableSegment.AliasName}.{this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}";
+                            orderBuilder.Append(fieldName);
+                        }
+                        this.ReaderFields.Clear();
+                    }
+                    else orderBuilder.Append(tempSqlSegment.Body);
+                    break;
+                case "OrderByDescending":
+                    tempSqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                    if (orderBuilder.Length > 0) orderBuilder.Append(',');
+                    if (this.ReaderFields != null && this.ReaderFields.Count > 0)
+                    {
+                        for (int i = 0; i < this.ReaderFields.Count; i++)
+                        {
+                            var readerField = this.ReaderFields[i];
+                            if (i > 0) orderBuilder.Append(',');
+                            var fieldName = readerField.Body;
+                            //CTE表字段是常量/变量/字段名称，都有可能和声明的字段不一致，所以需要获取CTE表的声明字段
+                            //body里面的值，是原始的值或是字段名
+                            if (readerField.TableSegment != null && readerField.TableSegment.TableType == TableType.CteSelfRef)
+                                fieldName = $"{readerField.TableSegment.AliasName}.{this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}";
+                            orderBuilder.Append($"{fieldName} DESC");
+                        }
+                        this.ReaderFields.Clear();
+                    }
+                    else orderBuilder.Append($"{tempSqlSegment.Body} DESC");
+                    break;
+                case "Over":
+                    sql = $" OVER(PARTITION BY {sql} ORDER BY {orderBuilder})";
+                    orderBuilder.Clear();
+                    break;
+                case "Rank":
+                case "LongRank":
+                case "DenseRank":
+                case "LongDenseRank":
+                case "RowNumber":
+                case "LongRowNumber":
+                    var methodName = methodCallExpr.Method.Name.Replace("Long", "").ToUpper();
+                    builder.Append($"{methodName}()");
+                    break;
+                case "Count":
+                case "LongCount":
+                    if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
+                    {
+                        tempSqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                        builder.Append($"COUNT({sqlSegment.Body})");
+                    }
+                    else builder.Append("COUNT(*)");
+                    break;
+                case "CountDistinct":
+                case "LongCountDistinct":
+                    if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
+                    {
+                        tempSqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                        builder.Append($"COUNT(DISTINCT {sqlSegment.Body})");
+                    }
+                    break;
+                case "Sum":
+                    if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
+                    {
+                        sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                        builder.Append($"SUM({sqlSegment.Body})");
+                    }
+                    break;
+                case "Avg":
+                    if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
+                    {
+                        sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                        builder.Append($"AVG({sqlSegment.Body})");
+                    }
+                    break;
+                case "Max":
+                    if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
+                    {
+                        sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                        builder.Append($"MAX({sqlSegment.Body})");
+                    }
+                    break;
+                case "Min":
+                    if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
+                    {
+                        sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                        builder.Append($"MIN({sqlSegment.Body})");
+                    }
+                    break;
+            }
+        }
+        sql = builder.Append(sql).ToString();
+        builder.Clear();
+        return sqlSegment.Change(sql, false, true);
     }
     public virtual bool IsStringConcatOperator(SqlFieldSegment sqlSegment, out SqlFieldSegment result)
     {
@@ -2334,17 +2474,6 @@ public class SqlVisitor : ISqlVisitor
             sqlSegment.DeferredExprs.Push(new DeferredExpr { OperationType = OperationType.Equal, Value = SqlFieldSegment.True });
         }
         return sqlSegment;
-    }
-    private bool IsSqlMethodCall(MethodCallExpression methodCallExpr)
-    {
-        if (methodCallExpr.Method.DeclaringType == typeof(Sql) || methodCallExpr.Method.DeclaringType == typeof(IRepository)
-            || typeof(IAggregateSelect).IsAssignableFrom(methodCallExpr.Method.DeclaringType))
-            return true;
-        var methodInfo = methodCallExpr.Method;
-        var declaringType = methodCallExpr.Method.DeclaringType;
-        if (declaringType.IsGenericType && declaringType.FullName.StartsWith("Trolley.IQuery"))
-            return true;
-        return false;
     }
     class ConditionExpression
     {
