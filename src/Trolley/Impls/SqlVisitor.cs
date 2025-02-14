@@ -728,7 +728,7 @@ public class SqlVisitor : ISqlVisitor
         }
         if (methodCallExpr.Method.Name == "ToValue" && declaringType == typeof(IGroupConcat))
         {
-            sqlSegment = this.VisitOverMethodCall(sqlSegment);
+            sqlSegment = this.VisitGroupConcatMethodCall(sqlSegment);
             sqlSegment.SegmentType = methodCallExpr.Type;
             return sqlSegment;
         }
