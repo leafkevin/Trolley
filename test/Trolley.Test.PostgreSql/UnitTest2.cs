@@ -2866,7 +2866,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
         var sql = repository.From<Order>()
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
             .Select((a, b) => new
-            {
+            { 
                 Rank = Sql.PartitionBy(a.SellerId).OrderBy(new { a.BuyerId, a.OrderNo })
                     .OrderByDescending(a.CreatedAt).Over().Rank(),
                 a.Id,

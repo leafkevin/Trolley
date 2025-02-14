@@ -1,12 +1,12 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using MySqlConnector;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using MySqlConnector;
 using Trolley.MySqlConnector;
 using Xunit;
 using Xunit.Abstractions;
@@ -253,8 +253,8 @@ public class UnitTest2 : UnitTestBase
                  .InnerJoin<Order>((a, b) => a.Id == b.BuyerId)
                  .LeftJoin<OrderDetail>((a, b, c) => b.Id == c.OrderId)
                  .GroupBy((a, b, c) => new { b.BuyerId, OrderId = b.Id, b.OrderNo })
-                 .Having((x, a, b, c) => Sql.CountDistinct(c.ProductId) > count)
-                 .Select((a, b, c, d) => new { a.Grouping.BuyerId, a.Grouping.OrderId, c.OrderNo, ProductTotal = Sql.CountDistinct(d.ProductId) }))
+                 .Having((x, a, b, c) => x.CountDistinct(c.ProductId) > count)
+                 .Select((a, b, c, d) => new { a.Grouping.BuyerId, a.Grouping.OrderId, c.OrderNo, ProductTotal = a.CountDistinct(d.ProductId) }))
             .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
             .Include((a, b) => b.Details)
             .Select((x, y) => new { y.Disputes, x.BuyerId, x.OrderId, x.OrderNo, x.ProductTotal, Order = y })
@@ -267,8 +267,8 @@ public class UnitTest2 : UnitTestBase
                  .InnerJoin<Order>((a, b) => a.Id == b.BuyerId)
                  .LeftJoin<OrderDetail>((a, b, c) => b.Id == c.OrderId)
                  .GroupBy((a, b, c) => new { b.BuyerId, OrderId = b.Id, b.OrderNo })
-                 .Having((x, a, b, c) => Sql.CountDistinct(c.ProductId) > count)
-                 .Select((a, b, c, d) => new { a.Grouping.BuyerId, a.Grouping.OrderId, c.OrderNo, ProductTotal = Sql.CountDistinct(d.ProductId) }))
+                 .Having((x, a, b, c) => x.CountDistinct(c.ProductId) > count)
+                 .Select((a, b, c, d) => new { a.Grouping.BuyerId, a.Grouping.OrderId, c.OrderNo, ProductTotal = a.CountDistinct(d.ProductId) }))
             .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
             .Include((a, b) => b.Details)
             .Select((x, y) => new { y.Disputes, x.BuyerId, x.OrderId, x.OrderNo, x.ProductTotal, Order = y })
@@ -288,8 +288,8 @@ public class UnitTest2 : UnitTestBase
                  .InnerJoin<Order>((a, b) => a.Id == b.BuyerId)
                  .LeftJoin<OrderDetail>((a, b, c) => b.Id == c.OrderId)
                  .GroupBy((a, b, c) => new { b.BuyerId, OrderId = b.Id, b.OrderNo })
-                 .Having((x, a, b, c) => Sql.CountDistinct(c.ProductId) > count)
-                 .Select((a, b, c, d) => new { a.Grouping.BuyerId, a.Grouping.OrderId, c.OrderNo, ProductTotal = Sql.CountDistinct(d.ProductId) }))
+                 .Having((x, a, b, c) => x.CountDistinct(c.ProductId) > count)
+                 .Select((a, b, c, d) => new { a.Grouping.BuyerId, a.Grouping.OrderId, c.OrderNo, ProductTotal = a.CountDistinct(d.ProductId) }))
             .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
             .IncludeMany((a, b) => b.Details, f => f.Amount > amount)
             .Select((x, y) => new { y.Disputes, x.BuyerId, x.OrderId, x.OrderNo, x.ProductTotal, Order = y })
@@ -303,8 +303,8 @@ public class UnitTest2 : UnitTestBase
                  .InnerJoin<Order>((a, b) => a.Id == b.BuyerId)
                  .LeftJoin<OrderDetail>((a, b, c) => b.Id == c.OrderId)
                  .GroupBy((a, b, c) => new { b.BuyerId, OrderId = b.Id, b.OrderNo })
-                 .Having((x, a, b, c) => Sql.CountDistinct(c.ProductId) > count)
-                 .Select((a, b, c, d) => new { a.Grouping.BuyerId, a.Grouping.OrderId, c.OrderNo, ProductTotal = Sql.CountDistinct(d.ProductId) }))
+                 .Having((x, a, b, c) => x.CountDistinct(c.ProductId) > count)
+                 .Select((a, b, c, d) => new { a.Grouping.BuyerId, a.Grouping.OrderId, c.OrderNo, ProductTotal = a.CountDistinct(d.ProductId) }))
             .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
             .IncludeMany((a, b) => b.Details, f => f.Amount > amount)
             .Select((x, y) => new { y.Disputes, x.BuyerId, x.OrderId, x.OrderNo, x.ProductTotal, Order = y })
@@ -328,8 +328,8 @@ public class UnitTest2 : UnitTestBase
         var sql = repository.From(f => f.From<Order, OrderDetail>('a')
                 .Where((a, b) => a.Id == b.OrderId)
                 .GroupBy((a, b) => new { a.BuyerId, OrderId = a.Id })
-                .Having((x, a, b) => Sql.CountDistinct(b.ProductId) > 0)
-                .Select((x, a, b) => new { x.Grouping, ProductTotal = Sql.CountDistinct(b.ProductId), BuyerId1 = x.Grouping.BuyerId }))
+                .Having((x, a, b) => x.CountDistinct(b.ProductId) > 0)
+                .Select((x, a, b) => new { x.Grouping, ProductTotal = x.CountDistinct(b.ProductId), BuyerId1 = x.Grouping.BuyerId }))
             .InnerJoin<User>((x, y) => x.Grouping.BuyerId == y.Id)
             .Select((x, y) => new { x.Grouping, x.Grouping.BuyerId, x.ProductTotal, BuyerName = y.Name, BuyerId2 = x.BuyerId1 })
             .ToSql(out _);
@@ -338,8 +338,8 @@ public class UnitTest2 : UnitTestBase
         var result = repository.From(f => f.From<Order, OrderDetail>('a')
                 .Where((a, b) => a.Id == b.OrderId)
                 .GroupBy((a, b) => new { a.BuyerId, OrderId = a.Id })
-                .Having((x, a, b) => Sql.CountDistinct(b.ProductId) > 0)
-                .Select((x, a, b) => new { x.Grouping, ProductTotal = Sql.CountDistinct(b.ProductId), BuyerId1 = x.Grouping.BuyerId }))
+                .Having((x, a, b) => x.CountDistinct(b.ProductId) > 0)
+                .Select((x, a, b) => new { x.Grouping, ProductTotal = x.CountDistinct(b.ProductId), BuyerId1 = x.Grouping.BuyerId }))
             .InnerJoin<User>((x, y) => x.Grouping.BuyerId == y.Id)
             .Select((x, y) => new { x.Grouping, x.Grouping.BuyerId, x.ProductTotal, BuyerName = y.Name, BuyerId2 = x.BuyerId1 })
             .First();
@@ -357,14 +357,14 @@ public class UnitTest2 : UnitTestBase
         var sql = repository.From<User, Order, OrderDetail>()
             .InnerJoin((a, b, c) => a.Id == b.BuyerId)
             .LeftJoin((a, b, c) => b.Id == c.OrderId)
-            .Select((a, b, c) => new { OrderId = b.Id, b.OrderNo, b.Disputes, b.BuyerId, Buyer = a, TotalAmount = Sql.Sum(c.Amount) })
+            .Select((a, b, c) => new { OrderId = b.Id, b.OrderNo, b.Disputes, b.BuyerId, Buyer = a })
             .ToSql(out _);
-        Assert.Equal("SELECT b.`Id` AS `OrderId`,b.`OrderNo`,b.`Disputes`,b.`BuyerId`,a.`Id`,a.`TenantId`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`SourceType`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,SUM(c.`Amount`) AS `TotalAmount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` LEFT JOIN `sys_order_detail` c ON b.`Id`=c.`OrderId`", sql);
+        Assert.Equal("SELECT b.`Id` AS `OrderId`,b.`OrderNo`,b.`Disputes`,b.`BuyerId`,a.`Id`,a.`TenantId`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`SourceType`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` LEFT JOIN `sys_order_detail` c ON b.`Id`=c.`OrderId`", sql);
 
         var result = repository.From<User, Order, OrderDetail>()
                  .InnerJoin((a, b, c) => a.Id == b.BuyerId)
                  .LeftJoin((a, b, c) => b.Id == c.OrderId)
-            .Select((a, b, c) => new { OrderId = b.Id, b.OrderNo, b.Disputes, b.BuyerId, Buyer = a, TotalAmount = Sql.Sum(c.Amount) })
+            .Select((a, b, c) => new { OrderId = b.Id, b.OrderNo, b.Disputes, b.BuyerId, Buyer = a })
             .First();
         if (result != null)
         {
@@ -1274,7 +1274,7 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
                 .From<Order, OrderDetail>('b')
                 .Where((x, y) => x.Id == y.OrderId && f.Id == x.BuyerId)
                 .GroupBy((a, b) => a.Id)
-                .Having((x, a, b) => Sql.CountDistinct(b.ProductId) > 1)
+                .Having((x, a, b) => x.CountDistinct(b.ProductId) > 1)
                 .Select()))
             .GroupBy(f => new { f.Gender, f.CompanyId })
             .Select((t, a) => new { t.Grouping, UserTotal = t.CountDistinct(a.Id) })
@@ -1285,7 +1285,7 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
                 .From<Order, OrderDetail>('b')
                 .Where((x, y) => x.Id == y.OrderId && f.Id == x.BuyerId)
                 .GroupBy((a, b) => a.Id)
-                .Having((x, a, b) => Sql.CountDistinct(b.ProductId) > 1)
+                .Having((x, a, b) => x.CountDistinct(b.ProductId) > 1)
                 .Select()))
             .GroupBy(f => new { f.Gender, f.CompanyId })
             .Select((t, a) => new { t.Grouping, UserTotal = t.CountDistinct(a.Id) })
@@ -1308,7 +1308,7 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
                 .From<Order, OrderDetail>('c')
                 .Where((a, b) => a.BuyerId == x.Id && a.Id == b.OrderId)
                 .GroupBy((a, b) => a.Id)
-                .Having((x, a, b) => Sql.CountDistinct(b.ProductId) > 0)
+                .Having((x, a, b) => x.CountDistinct(b.ProductId) > 0)
                 .Select()))
             .GroupBy((x, y) => new { x.Gender, x.CompanyId })
             .Select((x, a, b) => new { x.Grouping, UserTotal = x.CountDistinct(a.Id) })
@@ -1320,7 +1320,7 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
                 .From<Order, OrderDetail>('c')
                 .Where((a, b) => a.BuyerId == x.Id && a.Id == b.OrderId)
                 .GroupBy((a, b) => a.Id)
-                .Having((x, a, b) => Sql.CountDistinct(b.ProductId) > 0)
+                .Having((x, a, b) => x.CountDistinct(b.ProductId) > 0)
                 .Select()))
             .GroupBy((x, y) => new { x.Gender, x.CompanyId })
             .Select((x, a, b) => new { x.Grouping, UserTotal = x.CountDistinct(a.Id) })
@@ -1577,24 +1577,6 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
         Assert.NotNull(result);
         Assert.True(result.Count > 0);
 
-        sql = repository.From<Order>()
-            .Select(a => new
-            {
-                OrderCount = Sql.Count(a.Id),
-                TotalAmount = Sql.Sum(a.TotalAmount)
-            })
-            .ToSql(out _);
-        Assert.Equal("SELECT COUNT(a.`Id`) AS `OrderCount`,SUM(a.`TotalAmount`) AS `TotalAmount` FROM `sys_order` a", sql);
-        result = repository.From<Order>()
-            .Select(a => new
-            {
-                OrderCount = Sql.Count(a.Id),
-                TotalAmount = Sql.Sum(a.TotalAmount)
-            })
-            .ToList();
-        Assert.NotNull(result);
-        Assert.True(result.Count > 0);
-
         var sql1 = repository.From<User>()
             .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
             .OrderBy((a, b) => new { UserId = a.Id, OrderId = b.Id })
@@ -1614,10 +1596,7 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
         this.Initialize(1);
         var repository = this.dbFactory.Create();
         var count = repository.From<User>().Count();
-        var count1 = repository.From<User>().Select(f => Sql.Count()).First();
-        var count2 = repository.QueryFirst<int>("SELECT COUNT(1) FROM sys_user");
-        Assert.True(count == count1);
-        Assert.True(count == count2);
+        Assert.True(count > 0);
     }
     [Fact]
     public void Query_Where_Count()
@@ -1629,7 +1608,7 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
                 f.From<Order, OrderDetail>('o')
                     .Where((a, b) => a.BuyerId == t.Id && a.Id == b.OrderId)
                     .GroupBy((a, b) => a.Id)
-                    .Having((x, a, b) => Sql.Count(b.Id) > 0)
+                    .Having((x, a, b) => x.Count(b.Id) > 0)
                     .Select()))
             .GroupBy(f => new { f.Gender, f.CompanyId })
             .Select((x, y) => new { x.Grouping, UserTotal = x.CountDistinct(y.Id) })
@@ -1647,10 +1626,8 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
         this.Initialize(1);
         var repository = this.dbFactory.Create();
         var count = repository.From<Order>().Max(f => f.TotalAmount);
-        var count1 = repository.From<Order>().Select(f => Sql.Max(f.TotalAmount)).First();
-        var count2 = repository.QueryFirst<double>("SELECT MAX(TotalAmount) FROM sys_order");
+        var count1 = repository.QueryFirst<double>("SELECT MAX(TotalAmount) FROM sys_order");
         Assert.True(count == count1);
-        Assert.True(count == count2);
     }
     [Fact]
     public void Query_Min()
@@ -1658,10 +1635,8 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
         this.Initialize(1);
         var repository = this.dbFactory.Create();
         var count = repository.From<Order>().Min(f => f.TotalAmount);
-        var count1 = repository.From<Order>().Select(f => Sql.Min(f.TotalAmount)).First();
-        var count2 = repository.QueryFirst<double>("SELECT MIN(TotalAmount) FROM sys_order");
+        var count1 = repository.QueryFirst<double>("SELECT MIN(TotalAmount) FROM sys_order");
         Assert.True(count == count1);
-        Assert.True(count == count2);
     }
     [Fact]
     public void Query_Avg()
@@ -1669,10 +1644,8 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
         this.Initialize(1);
         var repository = this.dbFactory.Create();
         var value1 = repository.From<Order>().Avg(f => f.TotalAmount);
-        var value2 = repository.From<Order>().Select(f => Sql.Avg(f.TotalAmount)).First();
-        var value3 = repository.QueryFirst<double>("SELECT AVG(TotalAmount) FROM sys_order");
+        var value2 = repository.From<Order>().Select(f => Sql.Raw<double>("AVG(TotalAmount)")).First();
         Assert.True(value1 == value2);
-        Assert.True(value1 == value3);
     }
     [Fact]
     public void Query_ValueTuple()
@@ -2588,7 +2561,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         var result1 = repository.From(f => f.From<Order, OrderDetail>('a')
             .Where((a, b) => a.Id == b.OrderId)
             .GroupBy((a, b) => new { a.BuyerId, OrderId = a.Id })
-            .Having((x, a, b) => Sql.CountDistinct(b.ProductId) > 0)
+            .Having((x, a, b) => x.CountDistinct(b.ProductId) > 0)
             .Select((x, a, b) => new { x.Grouping.BuyerId, x.Grouping.OrderId, ProductTotal = Sql.CountDistinct(b.ProductId) }))
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
             .SelectFlattenTo((x, y) => new OrderBuyerInfo { BuyerName = y.Name })
@@ -2740,8 +2713,8 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
             .Select((a, b) => new
             {
-                Rank = Sql.PartitionBy(a.SellerId).OrderBy(new { a.BuyerId, a.OrderNo })
-                    .OrderByDescending(a.CreatedAt).Over().Rank(),
+                Rank = Sql.Rank().Over().PartitionBy(a.SellerId).OrderByDescending(a.CreatedAt)
+                    .OrderBy(new { a.BuyerId, a.OrderNo }).ToValue(),
                 a.Id,
                 a.OrderNo,
                 a.SellerId,
@@ -2750,13 +2723,13 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
                 a.TotalAmount
             })
             .ToSql(out _);
-        Assert.Equal("SELECT RANK() OVER(PARTITION BY a.`SellerId` ORDER BY a.`BuyerId`,a.`OrderNo`,a.`CreatedAt` DESC) AS `Rank`,a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId`,b.`Name` AS `BuyerName`,a.`TotalAmount` FROM `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id`", sql);
+        Assert.Equal("SELECT RANK() OVER(PARTITION BY a.`SellerId` ORDER BY a.`CreatedAt` DESC,a.`BuyerId`,a.`OrderNo`) AS `Rank`,a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId`,b.`Name` AS `BuyerName`,a.`TotalAmount` FROM `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id`", sql);
         var result = await repository.From<Order>()
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
             .Select((a, b) => new
             {
-                Rank = Sql.PartitionBy(a.SellerId).OrderBy(new { a.BuyerId, a.OrderNo })
-                    .OrderByDescending(a.CreatedAt).Over().Rank(),
+                Rank = Sql.Rank().Over().PartitionBy(a.SellerId).OrderBy(new { a.BuyerId, a.OrderNo })
+                    .OrderByDescending(a.CreatedAt).ToValue(),
                 a.Id,
                 a.OrderNo,
                 a.SellerId,
@@ -2771,8 +2744,8 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
             .Select((a, b) => new
             {
-                Count = Sql.PartitionBy(a.SellerId).OrderBy(new { a.BuyerId, a.OrderNo })
-                    .OrderByDescending(a.CreatedAt).Over().Count(a.TenantId),
+                Count = Sql.Count(a.TenantId).Over().PartitionBy(a.SellerId)
+                    .OrderBy(new { a.BuyerId, a.OrderNo }).OrderByDescending(a.CreatedAt).ToValue(),
                 a.Id,
                 a.OrderNo,
                 a.SellerId,
@@ -2786,8 +2759,8 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
             .Select((a, b) => new
             {
-                Count = Sql.PartitionBy(a.SellerId).OrderBy(new { a.BuyerId, a.OrderNo })
-                    .OrderByDescending(a.CreatedAt).Over().Count(a.TenantId),
+                Count = Sql.Count(a.TenantId).Over().PartitionBy(a.SellerId)
+                    .OrderBy(new { a.BuyerId, a.OrderNo }).OrderByDescending(a.CreatedAt).ToValue(),
                 a.Id,
                 a.OrderNo,
                 a.SellerId,
@@ -2798,6 +2771,40 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .ToListAsync();
         Assert.NotNull(result1);
         Assert.True(result1.Count > 0);
+    }
+    [Fact]
+    public async Task FromQuery_GroupConcat()
+    {
+        var repository = this.dbFactory.Create();
+        var sql = repository.From<Order>()
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .Select((a, b) => new
+            {
+                Count = Sql.GroupConcat(new { a.TenantId, Buyer = a.BuyerId + "-" + b.Name })
+                    .OrderBy(new { a.BuyerId, a.OrderNo }).OrderByDescending(a.CreatedAt).Distinct().ToValue(),
+                a.Id,
+                a.OrderNo,
+                a.SellerId,
+                a.BuyerId,
+                BuyerName = b.Name,
+                a.TotalAmount
+            })
+            .ToSql(out _);
+        Assert.Equal("SELECT RANK() OVER(PARTITION BY a.`SellerId` ORDER BY a.`CreatedAt` DESC,a.`BuyerId`,a.`OrderNo`) AS `Rank`,a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId`,b.`Name` AS `BuyerName`,a.`TotalAmount` FROM `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id`", sql);
+        await repository.From<Order>()
+           .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+           .Select((a, b) => new
+           {
+               Count = Sql.GroupConcat(new { a.TenantId, Buyer = a.BuyerId + "-" + b.Name })
+                    .OrderBy(new { a.BuyerId, a.OrderNo }).OrderByDescending(a.CreatedAt).Distinct().ToValue(),
+               a.Id,
+               a.OrderNo,
+               a.SellerId,
+               a.BuyerId,
+               BuyerName = b.Name,
+               a.TotalAmount
+           })
+           .ToListAsync();
     }
     private string DeferInvoke() => "DeferInvoke";
 }

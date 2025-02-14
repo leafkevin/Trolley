@@ -4,7 +4,7 @@ using System.Linq.Expressions;
 
 namespace Trolley;
 
-public static class Sql
+public static partial class Sql
 {
     /// <summary>
     /// 使用原始SQL生成名一个字段，如：INSERT INTO XXX (...) VALUES(...) RETURNING myMethod(a.name,a.amount)+upper(a.order_no) as order_info
@@ -50,14 +50,6 @@ public static class Sql
         return field;
     }
     /// <summary>
-    /// 更改当前字段对应的数据库类型，常用于枚举类型常量，无法获取当前字段对应的数据库类型
-    /// </summary>
-    /// <typeparam name="TField"></typeparam>
-    /// <typeparam name="TDbType"></typeparam>
-    /// <param name="field"></param>
-    /// <returns></returns>
-    public static TField ToDbType<TField, TDbType>(this TField field) => field;
-    /// <summary>
     /// 更改参数名称，在子查询或是CTE子句中使用参数会有与主查询SQL中参数名相同，可以使用此方法更改参数名，避免参数名重复
     /// </summary>
     /// <typeparam name="T">变量类型</typeparam>
@@ -65,46 +57,12 @@ public static class Sql
     /// <param name="parameterName">参数名称</param>
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
-    public static T ToParameter<T>(this T value, string parameterName)
-    {
-        throw new NotImplementedException();
-    }
-    /// <summary>
-    /// 数据分组后，把字段field的多行数据，用separator字符分割拼接在一起，行转列操作
-    /// </summary>
-    /// <typeparam name="TField">字段类型</typeparam>
-    /// <param name="field">字段名称</param>
-    /// <param name="separator">连接符</param>
-    /// <returns>返回连接后的字符串表达式</returns>
-    /// <exception cref="NotImplementedException"></exception>
-    //public static string GroupConcat<TField>(this TField field, string separator)
-    //{
-    //    throw new NotImplementedException();
-    //}
-    //public static List<TTable> GroupInto<TTable, TField>(this TTable table, Expression<Func<TTable, TField>> fieldSelector)
-    //{
-    //    throw new NotImplementedException();
-    //}
-    public static bool In<TElement>(TElement value, params TElement[] list)
-    {
-        throw new NotImplementedException();
-    }
-    public static bool In<TElement>(TElement value, IEnumerable<TElement> list)
-    {
-        throw new NotImplementedException();
-    }
-    public static bool In<TElement>(TElement value, IQuery<TElement> subQuery)
-    {
-        throw new NotImplementedException();
-    }
-    public static bool In<TElement>(TElement value, Func<IFromQuery, IQuery<TElement>> subQuery)
-    {
-        throw new NotImplementedException();
-    }
-    public static bool Exists<TTarget>(Func<IFromQuery, IQuery<TTarget>> subQuery)
-    {
-        throw new NotImplementedException();
-    }
+    public static T ToParameter<T>(this T value, string parameterName) => throw new NotImplementedException();
+    public static bool In<TElement>(TElement value, params TElement[] list) => throw new NotImplementedException();
+    public static bool In<TElement>(TElement value, IEnumerable<TElement> list) => throw new NotImplementedException();
+    public static bool In<TElement>(TElement value, IQuery<TElement> subQuery) => throw new NotImplementedException();
+    public static bool In<TElement>(TElement value, Func<IFromQuery, IQuery<TElement>> subQuery) => throw new NotImplementedException();
+    public static bool Exists<TTarget>(Func<IFromQuery, IQuery<TTarget>> subQuery) => throw new NotImplementedException();
     /// <summary>
     /// 使用CTE表构建Exists查询条件
     /// </summary>
@@ -113,76 +71,70 @@ public static class Sql
     /// <param name="predicate"></param>
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
-    public static bool Exists<T>(ICteQuery<T> subQuery, Expression<Func<T, bool>> predicate)
-    {
-        throw new NotImplementedException();
-    }
-    public static bool Exists<T>(Expression<Func<T, bool>> predicate)
-    {
-        throw new NotImplementedException();
-    }
-    public static bool Exists<T1, T2>(Expression<Func<T1, T2, bool>> predicate)
-    {
-        throw new NotImplementedException();
-    }
-    public static bool Exists<T1, T2, T3>(Expression<Func<T1, T2, T3, bool>> predicate)
-    {
-        throw new NotImplementedException();
-    }
-    public static bool Exists<T1, T2, T3, T4>(Expression<Func<T1, T2, T3, T4, bool>> predicate)
-    {
-        throw new NotImplementedException();
-    }
-    public static bool Exists<T1, T2, T3, T4, T5>(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
-    {
-        throw new NotImplementedException();
-    }
-    public static bool Exists<T1, T2, T3, T4, T5, T6>(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate)
-    {
-        throw new NotImplementedException();
-    }
-    public static int Count()
-    {
-        throw new NotImplementedException();
-    }
-    public static long LongCount()
-    {
-        throw new NotImplementedException();
-    }
-    public static int Count<TField>(TField field)
-    {
-        throw new NotImplementedException();
-    }
-    public static int CountDistinct<TField>(TField field)
-    {
-        throw new NotImplementedException();
-    }
-    public static long LongCount<TField>(TField field)
-    {
-        throw new NotImplementedException();
-    }
-    public static long LongCountDistinct<TField>(TField field)
-    {
-        throw new NotImplementedException();
-    }
-    public static TField Sum<TField>(TField field)
-    {
-        throw new NotImplementedException();
-    }
-    public static TField Avg<TField>(TField field)
-    {
-        throw new NotImplementedException();
-    }
-    public static TField Max<TField>(TField field)
-    {
-        throw new NotImplementedException();
-    }
-    public static TField Min<TField>(TField field)
-    {
-        throw new NotImplementedException();
-    }
-    public static IPartitionBy PartitionBy<TFields>(TFields fields)
-    {
-        throw new NotImplementedException();
-    }
+    public static bool Exists<T>(ICteQuery<T> subQuery, Expression<Func<T, bool>> predicate) => throw new NotImplementedException();
+    public static bool Exists<T>(Expression<Func<T, bool>> predicate) => throw new NotImplementedException();
+    public static bool Exists<T1, T2>(Expression<Func<T1, T2, bool>> predicate) => throw new NotImplementedException();
+    public static bool Exists<T1, T2, T3>(Expression<Func<T1, T2, T3, bool>> predicate) => throw new NotImplementedException();
+    public static bool Exists<T1, T2, T3, T4>(Expression<Func<T1, T2, T3, T4, bool>> predicate) => throw new NotImplementedException();
+    public static bool Exists<T1, T2, T3, T4, T5>(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate) => throw new NotImplementedException();
+    public static bool Exists<T1, T2, T3, T4, T5, T6>(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate) => throw new NotImplementedException();
+
+    public static IWindowFunction<int> Rank() => throw new NotImplementedException();
+    public static IWindowFunction<long> LongRank() => throw new NotImplementedException();
+    public static IWindowFunction<int> DenseRank() => throw new NotImplementedException();
+    public static IWindowFunction<long> LongDenseRank() => throw new NotImplementedException();
+    public static IWindowFunction<int> RowNumber() => throw new NotImplementedException();
+    public static IWindowFunction<int> LongRowNumber() => throw new NotImplementedException();
+    public static IWindowFunction<int> Count() => throw new NotImplementedException();
+    public static IWindowFunction<long> LongCount() => throw new NotImplementedException();
+    public static IWindowFunction<int> Count<TField>(TField field) => throw new NotImplementedException();
+    public static IWindowFunction<long> CountDistinct<TField>(TField field) => throw new NotImplementedException();
+    public static IWindowFunction<long> LongCount<TField>(TField field) => throw new NotImplementedException();
+    public static IWindowFunction<long> LongCountDistinct<TField>(TField field) => throw new NotImplementedException();
+    public static IWindowFunction<TField> Sum<TField>(TField field) => throw new NotImplementedException();
+    public static IWindowFunction<TField> Avg<TField>(TField field) => throw new NotImplementedException();
+    public static IWindowFunction<TField> Max<TField>(TField field) => throw new NotImplementedException();
+    public static IWindowFunction<TField> Min<TField>(TField field) => throw new NotImplementedException();
+
+    /// <summary>
+    /// 数据分组后，把字段field的多行数据，用,字符分割拼接在一起，行转列操作
+    /// </summary>
+    /// <typeparam name="TFields"></typeparam>
+    /// <param name="fields"></param>
+    /// <returns></returns>
+    /// <exception cref="NotImplementedException"></exception>
+    public static IGroupConcat GroupConcat<TFields>(TFields fields) => throw new NotImplementedException();
+    /// <summary>
+    /// 数据分组后，把字段field的多行数据，用separator字符分割拼接在一起，行转列操作
+    /// </summary>
+    /// <typeparam name="TFields"></typeparam>
+    /// <param name="fields"></param>
+    /// <param name="separator"></param>
+    /// <returns></returns>
+    /// <exception cref="NotImplementedException"></exception>
+    public static IGroupConcat GroupConcat<TFields>(TFields fields, string separator) => throw new NotImplementedException();
+}
+public interface IPartitionByOver<TValue>
+{
+    IPartitionByOver<TValue> OrderBy<TFields>(TFields fields);
+    IPartitionByOver<TValue> OrderByDescending<TFields>(TFields fields);
+    TValue ToValue();
+}
+public interface IWindowFunction<TValue>
+{
+    ISqlOver<TValue> Over();
+}
+public interface ISqlOver<TValue>
+{
+    ISqlOver<TValue> OrderBy<TFields>(TFields fields);
+    ISqlOver<TValue> OrderByDescending<TFields>(TFields fields);
+    IPartitionByOver<TValue> PartitionBy<TFields>(TFields fields);
+    TValue ToValue();
+}
+public interface IGroupConcat
+{
+    IGroupConcat OrderBy<TFields>(TFields fields);
+    IGroupConcat OrderByDescending<TFields>(TFields fields);
+    IGroupConcat Distinct();
+    string ToValue();
 }

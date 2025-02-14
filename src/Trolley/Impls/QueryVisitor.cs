@@ -1617,6 +1617,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 this.AddSelectElement(newExpr.Arguments[i], newExpr.Members[i], readerFields);
             }
             this.IsSelectMember = false;
+            sqlSegment.FieldType = SqlFieldType.Entity;
             return sqlSegment.ChangeValue(readerFields);
         }
         return this.Evaluate(sqlSegment);

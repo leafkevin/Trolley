@@ -720,9 +720,15 @@ public class SqlVisitor : ISqlVisitor
             sqlSegment.SegmentType = methodCallExpr.Type;
             return sqlSegment;
         }
-        if (declaringType == typeof(IPartitionBy) || declaringType == typeof(IPartitionByOver))
+        if (methodCallExpr.Method.Name == "ToValue" && declaringType.FullName.StartsWith("Trolley.ISqlOver") || declaringType.FullName.StartsWith("Trolley.IPartitionByOver"))
         {
-            sqlSegment = this.VisitPartitionByOverMethodCall(sqlSegment);
+            sqlSegment = this.VisitOverMethodCall(sqlSegment);
+            sqlSegment.SegmentType = methodCallExpr.Type;
+            return sqlSegment;
+        }
+        if (methodCallExpr.Method.Name == "ToValue" && declaringType == typeof(IGroupConcat))
+        {
+            sqlSegment = this.VisitOverMethodCall(sqlSegment);
             sqlSegment.SegmentType = methodCallExpr.Type;
             return sqlSegment;
         }
@@ -1168,9 +1174,10 @@ public class SqlVisitor : ISqlVisitor
         }
         return sqlSegment;
     }
-    public virtual SqlFieldSegment VisitPartitionByOverMethodCall(SqlFieldSegment sqlSegment)
+    public virtual SqlFieldSegment VisitOverMethodCall(SqlFieldSegment sqlSegment)
     {
-        var currentExpr = sqlSegment.Expression;
+        var methodCallExpr = sqlSegment.Expression as MethodCallExpression;
+        var currentExpr = methodCallExpr.Object;
         var callStack = new Stack<MethodCallExpression>();
         while (currentExpr is MethodCallExpression callExpr)
         {
@@ -1179,60 +1186,74 @@ public class SqlVisitor : ISqlVisitor
             callStack.Push(callExpr);
             currentExpr = callExpr.Object;
         }
+        bool hasPartitionBy = false;
+        bool hasOrder = false;
+        bool hasOver = false;
         var builder = new StringBuilder();
-        var orderBuilder = new StringBuilder();
-        SqlFieldSegment tempSqlSegment = null;
-        string sql = null;
-        while (callStack.TryPop(out var methodCallExpr))
+        while (callStack.TryPop(out methodCallExpr))
         {
             switch (methodCallExpr.Method.Name)
             {
                 case "PartitionBy":
-                    sql = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0])).Body;
+                    sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                    builder.Append($"PARTITION BY {sqlSegment.Body}");
+                    hasPartitionBy = true;
                     break;
                 case "OrderBy":
-                    tempSqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
-                    if (orderBuilder.Length > 0) orderBuilder.Append(',');
+                    sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                    if (hasOrder) builder.Append(',');
+                    else
+                    {
+                        if (hasPartitionBy) builder.Append(' ');
+                        builder.Append("ORDER BY ");
+                    }
                     if (this.ReaderFields != null && this.ReaderFields.Count > 0)
                     {
                         for (int i = 0; i < this.ReaderFields.Count; i++)
                         {
                             var readerField = this.ReaderFields[i];
-                            if (i > 0) orderBuilder.Append(',');
+                            if (i > 0) builder.Append(',');
                             var fieldName = readerField.Body;
                             //CTE表字段是常量/变量/字段名称，都有可能和声明的字段不一致，所以需要获取CTE表的声明字段
                             //body里面的值，是原始的值或是字段名
                             if (readerField.TableSegment != null && readerField.TableSegment.TableType == TableType.CteSelfRef)
                                 fieldName = $"{readerField.TableSegment.AliasName}.{this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}";
-                            orderBuilder.Append(fieldName);
+                            builder.Append(fieldName);
                         }
                         this.ReaderFields.Clear();
                     }
-                    else orderBuilder.Append(tempSqlSegment.Body);
+                    else builder.Append(sqlSegment.Body);
+                    hasOrder = true;
                     break;
                 case "OrderByDescending":
-                    tempSqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
-                    if (orderBuilder.Length > 0) orderBuilder.Append(',');
+                    sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                    if (hasOrder) builder.Append(',');
+                    else
+                    {
+                        if (hasPartitionBy) builder.Append(' ');
+                        builder.Append("ORDER BY ");
+                    }
                     if (this.ReaderFields != null && this.ReaderFields.Count > 0)
                     {
                         for (int i = 0; i < this.ReaderFields.Count; i++)
                         {
                             var readerField = this.ReaderFields[i];
-                            if (i > 0) orderBuilder.Append(',');
+                            if (i > 0) builder.Append(',');
                             var fieldName = readerField.Body;
                             //CTE表字段是常量/变量/字段名称，都有可能和声明的字段不一致，所以需要获取CTE表的声明字段
                             //body里面的值，是原始的值或是字段名
                             if (readerField.TableSegment != null && readerField.TableSegment.TableType == TableType.CteSelfRef)
                                 fieldName = $"{readerField.TableSegment.AliasName}.{this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}";
-                            orderBuilder.Append($"{fieldName} DESC");
+                            builder.Append($"{fieldName} DESC");
                         }
                         this.ReaderFields.Clear();
                     }
-                    else orderBuilder.Append($"{tempSqlSegment.Body} DESC");
+                    else builder.Append($"{sqlSegment.Body} DESC");
+                    hasOrder = true;
                     break;
                 case "Over":
-                    sql = $" OVER(PARTITION BY {sql} ORDER BY {orderBuilder})";
-                    orderBuilder.Clear();
+                    builder.Append($" OVER(");
+                    hasOver = true;
                     break;
                 case "Rank":
                 case "LongRank":
@@ -1247,7 +1268,7 @@ public class SqlVisitor : ISqlVisitor
                 case "LongCount":
                     if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
                     {
-                        tempSqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                        sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                         builder.Append($"COUNT({sqlSegment.Body})");
                     }
                     else builder.Append("COUNT(*)");
@@ -1256,7 +1277,7 @@ public class SqlVisitor : ISqlVisitor
                 case "LongCountDistinct":
                     if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
                     {
-                        tempSqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                        sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                         builder.Append($"COUNT(DISTINCT {sqlSegment.Body})");
                     }
                     break;
@@ -1290,6 +1311,93 @@ public class SqlVisitor : ISqlVisitor
                     break;
             }
         }
+        if (hasOver) builder.Append(')');
+        var sql = builder.ToString();
+        builder.Clear();
+        sqlSegment.FieldType = SqlFieldType.Field;
+        return sqlSegment.Change(sql, false, true);
+    }
+    public virtual SqlFieldSegment VisitGroupConcatMethodCall(SqlFieldSegment sqlSegment)
+    {
+        var methodCallExpr = sqlSegment.Expression as MethodCallExpression;
+        var currentExpr = methodCallExpr.Object;
+        var callStack = new Stack<MethodCallExpression>();
+        while (currentExpr is MethodCallExpression callExpr)
+        {
+            if (callExpr.Type == typeof(Sql))
+                break;
+            callStack.Push(callExpr);
+            currentExpr = callExpr.Object;
+        }
+        var builder = new StringBuilder();
+        bool hasOrder = false, hasDistinct = false;
+        string sql = null, separator = null;
+        MethodCallSqlFormatter sqlFormatter = null;
+        while (callStack.TryPop(out methodCallExpr))
+        {
+            switch (methodCallExpr.Method.Name)
+            {
+                case "GroupConcat":
+                    sql = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0])).Body;
+                    if (!this.OrmProvider.TryGetMethodCallSqlFormatter(methodCallExpr, out sqlFormatter))
+                        throw new NotImplementedException($"当前Provider:{this.OrmProvider.GetType().FullName}未实现方法IsNull");
+                    if (methodCallExpr.Arguments.Count > 1)
+                        separator = this.Evaluate<string>(methodCallExpr.Arguments[1]);
+                    break;
+                case "OrderBy":
+                    sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                    if (hasOrder) builder.Append(',');
+                    else builder.Append("ORDER BY ");
+                    if (this.ReaderFields != null && this.ReaderFields.Count > 0)
+                    {
+                        for (int i = 0; i < this.ReaderFields.Count; i++)
+                        {
+                            var readerField = this.ReaderFields[i];
+                            if (i > 0) builder.Append(',');
+                            var fieldName = readerField.Body;
+                            //CTE表字段是常量/变量/字段名称，都有可能和声明的字段不一致，所以需要获取CTE表的声明字段
+                            //body里面的值，是原始的值或是字段名
+                            if (readerField.TableSegment != null && readerField.TableSegment.TableType == TableType.CteSelfRef)
+                                fieldName = $"{readerField.TableSegment.AliasName}.{this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}";
+                            builder.Append(fieldName);
+                        }
+                        this.ReaderFields.Clear();
+                    }
+                    else builder.Append(sqlSegment.Body);
+                    hasOrder = true;
+                    break;
+                case "OrderByDescending":
+                    sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                    if (hasOrder) builder.Append(',');
+                    else builder.Append("ORDER BY ");
+                    if (this.ReaderFields != null && this.ReaderFields.Count > 0)
+                    {
+                        for (int i = 0; i < this.ReaderFields.Count; i++)
+                        {
+                            var readerField = this.ReaderFields[i];
+                            if (i > 0) builder.Append(',');
+                            var fieldName = readerField.Body;
+                            //CTE表字段是常量/变量/字段名称，都有可能和声明的字段不一致，所以需要获取CTE表的声明字段
+                            //body里面的值，是原始的值或是字段名
+                            if (readerField.TableSegment != null && readerField.TableSegment.TableType == TableType.CteSelfRef)
+                                fieldName = $"{readerField.TableSegment.AliasName}.{this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}";
+                            builder.Append($"{fieldName} DESC");
+                        }
+                        this.ReaderFields.Clear();
+                    }
+                    else builder.Append($"{sqlSegment.Body} DESC");
+                    hasOrder = true;
+                    break;
+                case "Distinct":
+                    hasDistinct = true;
+                    break;
+            }
+        }
+        //TODO:不同的数据库有不同的解析
+        if (!string.IsNullOrEmpty(separator))
+            builder.Append($" SEPARATOR '{this.OrmProvider.GetQuotedValue(typeof(string), separator)}'");
+        if (hasDistinct) builder.Insert(0, $"DISTINCT ");
+        sqlSegment = sqlFormatter.Invoke(this, sqlSegment.OriginalExpression, null, null, methodCallExpr.Arguments.ToArray());
         sql = builder.Append(sql).ToString();
         builder.Clear();
         return sqlSegment.Change(sql, false, true);
