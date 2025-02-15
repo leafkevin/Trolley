@@ -1604,15 +1604,15 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
         this.Initialize(1);
         var repository = this.dbFactory.Create();
         var result = repository.From<User>()
-            .Where(t => Sql.Exists(f =>
-                f.From<Order, OrderDetail>('o')
-                    .Where((a, b) => a.BuyerId == t.Id && a.Id == b.OrderId)
-                    .GroupBy((a, b) => a.Id)
-                    .Having((x, a, b) => x.Count(b.Id) > 0)
-                    .Select()))
-            .GroupBy(f => new { f.Gender, f.CompanyId })
-            .Select((x, y) => new { x.Grouping, UserTotal = x.CountDistinct(y.Id) })
-            .ToList();
+           .Where(t => Sql.Exists(f =>
+               f.From<Order, OrderDetail>('o')
+                   .Where((a, b) => a.BuyerId == t.Id && a.Id == b.OrderId)
+                   .GroupBy((a, b) => a.Id)
+                   .Having((x, a, b) => x.Count(b.Id) > 0)
+                   .Select()))
+           .GroupBy(f => new { f.Gender, f.CompanyId })
+           .Select((x, y) => new { x.Grouping, UserTotal = x.CountDistinct(y.Id) })
+           .ToList();
         if (result.Count > 0)
         {
             Assert.NotNull(result[0]);
@@ -2557,12 +2557,11 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         Assert.NotNull(result.Description);
         Assert.True(result.Description == result.TotalAmount.ToString("C") + result.OrderNo);
 
-
         var result1 = repository.From(f => f.From<Order, OrderDetail>('a')
             .Where((a, b) => a.Id == b.OrderId)
             .GroupBy((a, b) => new { a.BuyerId, OrderId = a.Id })
             .Having((x, a, b) => x.CountDistinct(b.ProductId) > 0)
-            .Select((x, a, b) => new { x.Grouping.BuyerId, x.Grouping.OrderId, ProductTotal = Sql.CountDistinct(b.ProductId) }))
+            .Select((x, a, b) => new { x.Grouping.BuyerId, x.Grouping.OrderId, ProductTotal = x.CountDistinct(b.ProductId) }))
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
             .SelectFlattenTo((x, y) => new OrderBuyerInfo { BuyerName = y.Name })
             .First();
@@ -2790,7 +2789,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
                 a.TotalAmount
             })
             .ToSql(out _);
-        Assert.Equal("SELECT RANK() OVER(PARTITION BY a.`SellerId` ORDER BY a.`CreatedAt` DESC,a.`BuyerId`,a.`OrderNo`) AS `Rank`,a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId`,b.`Name` AS `BuyerName`,a.`TotalAmount` FROM `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id`", sql);
+        Assert.Equal("SELECT GROUP_CONCAT(DISTINCT a.`TenantId`,CONCAT(CAST(a.`BuyerId` AS CHAR),'-',b.`Name`) ORDER BY a.`BuyerId`,a.`OrderNo`,a.`CreatedAt` DESC) AS `Count`,a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId`,b.`Name` AS `BuyerName`,a.`TotalAmount` FROM `sys_order` a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id`", sql);
         await repository.From<Order>()
            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
            .Select((a, b) => new

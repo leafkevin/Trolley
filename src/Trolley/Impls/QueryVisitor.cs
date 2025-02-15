@@ -1795,8 +1795,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             {
                 if (typeof(IAggregateSelect).IsAssignableFrom(parameterExpr.Type))
                     continue;
-                if (typeof(IAggregateSelect).IsAssignableFrom(parameterExpr.Type))
-                    continue;
                 if (typeof(IFromQuery).IsAssignableFrom(parameterExpr.Type))
                     continue;
                 if (!parameterNames.Contains(parameterExpr.Name))
@@ -1816,6 +1814,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             foreach (var parameterName in parameterNames)
             {
                 if (this.TableAliases.ContainsKey(parameterName))
+                    continue;
+                if (!this.RefTableAliases.ContainsKey(parameterName))
                     continue;
                 this.TableAliases.Add(parameterName, this.RefTableAliases[parameterName]);
             }
@@ -1857,6 +1857,29 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     break;
             }
             index++;
+        }
+    }
+    public virtual void AddVisitedFieldsSqlWithoutAlias(StringBuilder builder, SqlFieldSegment readerField, string suffix = null)
+    {
+        switch (readerField.FieldType)
+        {
+            case SqlFieldType.Entity:
+                var readerFields = readerField.Value as List<SqlFieldSegment> ?? readerField.Fields;
+                for (int i = 0; i < readerFields.Count; i++)
+                {
+                    if (i > 0) builder.Append(',');
+                    this.AddVisitedFieldsSqlWithoutAlias(builder, readerFields[i], suffix);
+                }
+                break;
+            default:
+                var body = this.GetQuotedValue(readerField);
+                //CTE表字段是常量/变量/字段名称，都有可能和声明的字段不一致，所以需要获取CTE表的声明字段
+                //body里面的值，是原始的值或是字段名
+                if (readerField.TableSegment != null && readerField.TableSegment.TableType == TableType.CteSelfRef)
+                    body = $"{readerField.TableSegment.AliasName}.{this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}";
+                builder.Append(body);
+                if (suffix != null) builder.Append(suffix);
+                break;
         }
     }
     public virtual bool IsNeedAlias(SqlFieldSegment readerField, bool isOnlyField)
