@@ -106,7 +106,7 @@ public interface IPostgreSqlContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     /// <typeparam name="TUpdateFields">要更新的字段类型</typeparam>
     /// <param name="fieldsAssignment">要更新的字段赋值表达式</param>
     /// <returns>返回插入对象</returns>
-    IPostgreSqlCreated<TEntity> OnConflict<TUpdateFields>(Expression<Func<IPostgreSqlCreateConflictDoUpdate<TEntity>, TUpdateFields>> fieldsAssignment);
+    IPostgreSqlContinuedCreate<TEntity> OnConflict<TUpdateFields>(Expression<Func<IPostgreSqlCreateConflictDoUpdate<TEntity>, TUpdateFields>> fieldsAssignment);
     #endregion
 
     #region Returning
@@ -229,7 +229,7 @@ public interface IPostgreSqlBulkContinuedCreate<TEntity> : IContinuedCreate<TEnt
     /// <typeparam name="TUpdateFields">要更新的字段类型</typeparam>
     /// <param name="fieldsAssignment">要更新的字段赋值表达式</param>
     /// <returns>返回插入对象</returns>
-    IPostgreSqlCreated<TEntity> OnConflict<TUpdateFields>(Expression<Func<IPostgreSqlCreateConflictDoUpdate<TEntity>, TUpdateFields>> fieldsAssignment);
+    IPostgreSqlBulkContinuedCreate<TEntity> OnConflict<TUpdateFields>(Expression<Func<IPostgreSqlCreateConflictDoUpdate<TEntity>, TUpdateFields>> fieldsAssignment);
     #endregion
 
     #region Returning

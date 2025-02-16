@@ -50,6 +50,7 @@ public class PostgreSqlDeleted<TEntity, TResult> : Deleted<TEntity>, IPostgreSql
         reader.Dispose();
         command.Dispose();
         if (isNeedClose) connection.Close();
+		this.Visitor.Dispose();
         return result;
     }
     public new async Task<List<TResult>> ExecuteAsync(CancellationToken cancellationToken = default)
@@ -79,6 +80,7 @@ public class PostgreSqlDeleted<TEntity, TResult> : Deleted<TEntity>, IPostgreSql
         await reader.DisposeAsync();
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
+		this.Visitor.Dispose();
         return result;
     }
     #endregion

@@ -39,6 +39,7 @@ public class MySqlCreateVisitor : CreateVisitor
                 this.DbParameters = command.Parameters;
             }
             else this.DbParameters ??= command.Parameters;
+
             foreach (var deferredSegment in this.deferredSegments)
             {
                 switch (deferredSegment.Type)
@@ -148,11 +149,9 @@ public class MySqlCreateVisitor : CreateVisitor
                         this.VisitWithByField(deferredSegment.Value);
                         break;
                     case "SetObject":
-                        this.UpdateBuilder ??= new();
                         this.VisitSetObject(deferredSegment.Value);
                         break;
-                    case "SetExpression":
-                        this.UpdateBuilder ??= new();
+                    case "SetExpression":                        
                         this.VisitSetExpression(deferredSegment.Value as LambdaExpression);
                         break;
                     case "OutputFields":

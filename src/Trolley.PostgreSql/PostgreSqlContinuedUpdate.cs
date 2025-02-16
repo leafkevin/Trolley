@@ -253,6 +253,7 @@ public class PostgreSqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IPos
 
         command.Dispose();
         if (isNeedClose) connection.Close();
+        this.Visitor.Dispose();
         return result;
     }
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
@@ -416,6 +417,7 @@ public class PostgreSqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IPos
 
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
+        this.Visitor.Dispose();
         return result;
     }
     #endregion
@@ -514,6 +516,7 @@ public class PostgreSqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IPos
             command.Dispose();
             if (isNeedClose) connection.Close();
         }
+        this.Visitor.Dispose();
         builder.Clear();
         return sql;
     }
@@ -752,6 +755,7 @@ public class PostgreSqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntit
 
         command.Dispose();
         if (isNeedClose) connection.Close();
+        this.Visitor.Dispose();
         return result;
     }
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
@@ -915,6 +919,7 @@ public class PostgreSqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntit
 
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
+        this.Visitor.Dispose();
         return result;
     }
     #endregion
@@ -1013,6 +1018,7 @@ public class PostgreSqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntit
             command.Dispose();
             if (isNeedClose) connection.Close();
         }
+        this.Visitor.Dispose();
         builder.Clear();
         return sql;
     }

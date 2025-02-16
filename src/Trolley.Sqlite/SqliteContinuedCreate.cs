@@ -134,6 +134,7 @@ public class SqliteContinuedCreate<TEntity> : ContinuedCreate<TEntity>, ISqliteC
         }
         command.Dispose();
         if (isNeedClose) connection.Close();
+        this.Visitor.Dispose();
         return result;
     }
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)

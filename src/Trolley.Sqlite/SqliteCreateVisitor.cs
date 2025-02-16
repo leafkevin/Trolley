@@ -52,9 +52,6 @@ public class SqliteCreateVisitor : CreateVisitor
                     case "WithByField":
                         this.VisitWithByField(deferredSegment.Value);
                         break;
-                    case "SetObject":
-                        this.VisitSetObject(deferredSegment.Value);
-                        break;
                     case "SetExpression":
                         this.VisitSetExpression(deferredSegment.Value as LambdaExpression);
                         break;
@@ -97,7 +94,7 @@ public class SqliteCreateVisitor : CreateVisitor
 
             if (this.IsReturnIdentity && (this.UpdateBuilder != null || this.OutputSql != null))
                 throw new NotSupportedException("返回Identity，不支持同时Returning操作");
-            this.FromSql = $"INSERT INTO {tableName} ({this.FieldsBuilder}) VALUES ({this.ValuesBuilder})";
+            this.FromSql = $"INSERT{this.OrExpr} INTO {tableName} ({this.FieldsBuilder}) VALUES ({this.ValuesBuilder})";
         }
 
         string tailSql = string.Empty;
@@ -111,7 +108,8 @@ public class SqliteCreateVisitor : CreateVisitor
         {
             if (!entityMapper.IsAutoIncrementKey)
                 throw new NotSupportedException($"实体{entityMapper.EntityType.FullName}表未配置自增长字段，无法返回Identity值");
-            tailSql = this.OrmProvider.GetIdentitySql(null);
+            var keyFieldName = this.OrmProvider.GetFieldName(entityMapper.KeyMembers[0].FieldName);
+            tailSql = this.OrmProvider.GetIdentitySql(keyFieldName);
         }
         return $"{this.FromSql}{tailSql}";
     }
@@ -230,15 +228,6 @@ public class SqliteCreateVisitor : CreateVisitor
         {
             Type = "OutputExpression",
             Value = fieldsSelector
-        });
-    }
-    public void WithBulkCopy(IEnumerable insertObjs)
-    {
-        this.ActionMode = ActionMode.BulkCopy;
-        this.deferredSegments.Add(new CommandSegment
-        {
-            Type = "WithBulkCopy",
-            Value = insertObjs
         });
     }
     public void OrExpression(string orExpr) => this.OrExpr = orExpr;
@@ -451,7 +440,8 @@ public class SqliteCreateVisitor : CreateVisitor
             IsMultiple = this.IsMultiple,
             CommandIndex = this.CommandIndex,
             RefQueries = this.RefQueries,
-            ShardingTables = this.ShardingTables
+            ShardingTables = this.ShardingTables,
+            OrExpr = this.OrExpr
         };
         return queryVisiter;
     }

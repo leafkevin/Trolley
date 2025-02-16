@@ -47,7 +47,7 @@ public class PostgreSqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IPos
     #endregion
 
     #region OnConflict
-    public IPostgreSqlCreated<TEntity> OnConflict<TUpdateFields>(Expression<Func<IPostgreSqlCreateConflictDoUpdate<TEntity>, TUpdateFields>> fieldsAssignment)
+    public IPostgreSqlContinuedCreate<TEntity> OnConflict<TUpdateFields>(Expression<Func<IPostgreSqlCreateConflictDoUpdate<TEntity>, TUpdateFields>> fieldsAssignment)
     {
         this.DialectVisitor.OnConflict(fieldsAssignment);
         return this;
@@ -263,6 +263,7 @@ public class PostgreSqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IPos
 
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
+        this.Visitor.Dispose();
         return result;
     }
     #endregion
@@ -306,6 +307,14 @@ public class PostgreSqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, 
         => base.OnlyFields(fieldsSelector) as IPostgreSqlBulkContinuedCreate<TEntity>;
     #endregion
 
+    #region OnConflict
+    public IPostgreSqlBulkContinuedCreate<TEntity> OnConflict<TUpdateFields>(Expression<Func<IPostgreSqlCreateConflictDoUpdate<TEntity>, TUpdateFields>> fieldsAssignment)
+    {
+        this.DialectVisitor.OnConflict(fieldsAssignment);
+        return this;
+    }
+    #endregion
+
     #region Returnning
     public IPostgreSqlBulkCreated<TEntity, TResult> Returning<TResult>(string fieldNames)
     {
@@ -317,15 +326,7 @@ public class PostgreSqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, 
         this.DialectVisitor.Returning(fieldsSelector);
         return new PostgreSqlBulkCreated<TEntity, TResult>(this.DbContext, this.Visitor);
     }
-    #endregion
-
-    #region OnConflict
-    public IPostgreSqlCreated<TEntity> OnConflict<TUpdateFields>(Expression<Func<IPostgreSqlCreateConflictDoUpdate<TEntity>, TUpdateFields>> fieldsAssignment)
-    {
-        this.DialectVisitor.OnConflict(fieldsAssignment);
-        return this;
-    }
-    #endregion
+    #endregion  
 
     #region Execute
     public override int Execute()

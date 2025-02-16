@@ -4,20 +4,20 @@ using System.Data;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Trolley.MySqlConnector;
+namespace Trolley.Sqlite;
 
-public class MySqlDeleted<TEntity, TResult> : Deleted<TEntity>, IMySqlDeleted<TEntity, TResult>
+public class SqliteDeleted<TEntity, TResult> : Deleted<TEntity>, ISqliteDeleted<TEntity, TResult>
 {
     #region Properties
-    public MySqlDeleteVisitor DialectVisitor { get; protected set; }
+    public SqliteDeleteVisitor DialectVisitor { get; protected set; }
     public IOrmProvider OrmProvider => this.Visitor.OrmProvider;
     #endregion
 
     #region Constructor
-    public MySqlDeleted(DbContext dbContext, IDeleteVisitor visitor)
+    public SqliteDeleted(DbContext dbContext, IDeleteVisitor visitor)
         : base(dbContext, visitor)
     {
-        this.DialectVisitor = this.Visitor as MySqlDeleteVisitor;
+        this.DialectVisitor = this.Visitor as SqliteDeleteVisitor;
     }
     #endregion
 

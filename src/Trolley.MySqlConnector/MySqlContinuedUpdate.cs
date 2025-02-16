@@ -240,6 +240,7 @@ public class MySqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IMySqlUpd
 
         command.Dispose();
         if (isNeedClose) connection.Close();
+        this.Visitor.Dispose();
         return result;
     }
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
@@ -403,6 +404,7 @@ public class MySqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IMySqlUpd
 
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
+        this.Visitor.Dispose();
         return result;
     }
     #endregion
@@ -724,6 +726,7 @@ public class MySqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity>, I
 
         command.Dispose();
         if (isNeedClose) connection.Close();
+        this.Visitor.Dispose();
         return result;
     }
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
@@ -887,6 +890,7 @@ public class MySqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity>, I
 
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
+        this.Visitor.Dispose();
         return result;
     }
     #endregion
@@ -985,6 +989,7 @@ public class MySqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity>, I
             command.Dispose();
             if (isNeedClose) connection.Close();
         }
+        this.Visitor.Dispose();
         builder.Clear();
         return sql;
     }

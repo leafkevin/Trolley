@@ -7,6 +7,7 @@ namespace Trolley.Sqlite;
 
 public class SqliteQueryVisitor : QueryVisitor, IQueryVisitor
 {
+    public string OrExpr { get; set; }
     public SqliteQueryVisitor(DbContext dbContext, char tableAsStart = 'a', IDataParameterCollection dbParameters = null)
         : base(dbContext, tableAsStart, dbParameters) { }
 
@@ -146,7 +147,7 @@ public class SqliteQueryVisitor : QueryVisitor, IQueryVisitor
     {
         var builder = new StringBuilder();
         var entityMapper = this.Tables[0].Mapper;
-        builder.Append($"INSERT INTO {this.GetTableName(this.Tables[0])} (");
+        builder.Append($"INSERT{this.OrExpr} INTO {this.GetTableName(this.Tables[0])} (");
         int index = 0;
         if (this.ReaderFields == null && this.IsFromQuery)
             this.ReaderFields = this.Tables[1].Fields;
