@@ -32,14 +32,14 @@ public interface IPostgreSqlGroupingCommand<T, TGrouping> : IGroupingCommand<T, 
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
-    /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500, Sql.Sum(a.Amount) > 500，两者等效</param>
+    /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingCommand<T, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，执行Having操作，否则不执行Having操作
     /// </summary>
     /// <param name="condition">判断条件</param>
-    /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500, Sql.Sum(a.Amount) > 500，两者等效</param>
+    /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingCommand<T, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate);
     /// <summary>
@@ -96,14 +96,14 @@ public interface IPostgreSqlGroupingCommand<T1, T2, TGrouping> : IGroupingComman
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
-    /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500, Sql.Sum(a.Amount) > 500，两者等效</param>
+    /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingCommand<T1, T2, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，执行Having操作，否则不执行Having操作
     /// </summary>
     /// <param name="condition">判断条件</param>
-    /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500, Sql.Sum(a.Amount) > 500，两者等效</param>
+    /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingCommand<T1, T2, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, bool>> predicate);
     /// <summary>
@@ -161,14 +161,14 @@ public interface IPostgreSqlGroupingCommand<T1, T2, T3, TGrouping> : IGroupingCo
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
-    /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500, Sql.Sum(a.Amount) > 500，两者等效</param>
+    /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingCommand<T1, T2, T3, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，执行Having操作，否则不执行Having操作
     /// </summary>
     /// <param name="condition">判断条件</param>
-    /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500, Sql.Sum(a.Amount) > 500，两者等效</param>
+    /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingCommand<T1, T2, T3, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, bool>> predicate);
     /// <summary>
@@ -227,14 +227,14 @@ public interface IPostgreSqlGroupingCommand<T1, T2, T3, T4, TGrouping> : IGroupi
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
-    /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500, Sql.Sum(a.Amount) > 500，两者等效</param>
+    /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingCommand<T1, T2, T3, T4, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，执行Having操作，否则不执行Having操作
     /// </summary>
     /// <param name="condition">判断条件</param>
-    /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500, Sql.Sum(a.Amount) > 500，两者等效</param>
+    /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingCommand<T1, T2, T3, T4, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, bool>> predicate);
     /// <summary>
@@ -294,14 +294,14 @@ public interface IPostgreSqlGroupingCommand<T1, T2, T3, T4, T5, TGrouping> : IGr
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
-    /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500, Sql.Sum(a.Amount) > 500，两者等效</param>
+    /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingCommand<T1, T2, T3, T4, T5, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，执行Having操作，否则不执行Having操作
     /// </summary>
     /// <param name="condition">判断条件</param>
-    /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500, Sql.Sum(a.Amount) > 500，两者等效</param>
+    /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingCommand<T1, T2, T3, T4, T5, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, bool>> predicate);
     /// <summary>
@@ -362,14 +362,14 @@ public interface IPostgreSqlGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> :
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
-    /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500, Sql.Sum(a.Amount) > 500，两者等效</param>
+    /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, bool>> predicate);
     /// <summary>
     /// 判断condition布尔值，如果为true，执行Having操作，否则不执行Having操作
     /// </summary>
     /// <param name="condition">判断条件</param>
-    /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500, Sql.Sum(a.Amount) > 500，两者等效</param>
+    /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     new IPostgreSqlGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, bool>> predicate);
     /// <summary>

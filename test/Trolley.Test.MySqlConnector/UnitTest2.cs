@@ -1576,27 +1576,19 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
             .ToList();
         Assert.NotNull(result);
         Assert.True(result.Count > 0);
-
-        var sql1 = repository.From<User>()
-            .InnerJoin<Order>((x, y) => x.Id == y.BuyerId)
-            .OrderBy((a, b) => new { UserId = a.Id, OrderId = b.Id })
-            .Select((a, b) => new
-            {
-                UserId = a.Id,
-                OrderId = b.Id,
-                OrderCount = Sql.Count(b.Id),
-                TotalAmount = Sql.Sum(b.TotalAmount)
-            })
-            .ToSql(out _);
-        Assert.Equal("SELECT a.`Id` AS `UserId`,b.`Id` AS `OrderId`,COUNT(b.`Id`) AS `OrderCount`,SUM(b.`TotalAmount`) AS `TotalAmount` FROM `sys_user` a INNER JOIN `sys_order` b ON a.`Id`=b.`BuyerId` ORDER BY a.`Id`,b.`Id`", sql1);
     }
     [Fact]
     public void Query_Count()
     {
         this.Initialize(1);
         var repository = this.dbFactory.Create();
-        var count = repository.From<User>().Count();
-        Assert.True(count > 0);
+        var value1 = repository.From<User>().Count();
+        var value2 = repository.From<User>().SelectAggregate((x, f) => x.Count()).First();
+        var value3 = repository.QueryFirst<int>("SELECT COUNT(1) FROM sys_user");
+        var value4 = repository.From<User>().Select(f => Sql.Raw<int>("COUNT(1)")).First();
+        Assert.True(value1 == value2);
+        Assert.True(value1 == value3);
+        Assert.True(value1 == value4);
     }
     [Fact]
     public void Query_Where_Count()
@@ -1625,18 +1617,26 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
     {
         this.Initialize(1);
         var repository = this.dbFactory.Create();
-        var count = repository.From<Order>().Max(f => f.TotalAmount);
-        var count1 = repository.QueryFirst<double>("SELECT MAX(TotalAmount) FROM sys_order");
-        Assert.True(count == count1);
+        var value1 = repository.From<Order>().Max(f => f.TotalAmount);
+        var value2 = repository.From<Order>().SelectAggregate((x, f) => x.Max(f.TotalAmount)).First();
+        var value3 = repository.QueryFirst<double>("SELECT MAX(TotalAmount) FROM sys_order");
+        var value4 = repository.From<Order>().Select(f => Sql.Raw<double>("MAX(TotalAmount)")).First();
+        Assert.True(value1 == value2);
+        Assert.True(value1 == value3);
+        Assert.True(value1 == value4);
     }
     [Fact]
     public void Query_Min()
     {
         this.Initialize(1);
         var repository = this.dbFactory.Create();
-        var count = repository.From<Order>().Min(f => f.TotalAmount);
-        var count1 = repository.QueryFirst<double>("SELECT MIN(TotalAmount) FROM sys_order");
-        Assert.True(count == count1);
+        var value1 = repository.From<Order>().Min(f => f.TotalAmount);
+        var value2 = repository.From<Order>().SelectAggregate((x, f) => x.Min(f.TotalAmount)).First();
+        var value3 = repository.QueryFirst<double>("SELECT MIN(TotalAmount) FROM sys_order");
+        var value4 = repository.From<Order>().Select(f => Sql.Raw<double>("MIN(TotalAmount)")).First();
+        Assert.True(value1 == value2);
+        Assert.True(value1 == value3);
+        Assert.True(value1 == value4);
     }
     [Fact]
     public void Query_Avg()
@@ -1644,8 +1644,13 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
         this.Initialize(1);
         var repository = this.dbFactory.Create();
         var value1 = repository.From<Order>().Avg(f => f.TotalAmount);
-        var value2 = repository.From<Order>().Select(f => Sql.Raw<double>("AVG(TotalAmount)")).First();
+        var value2 = repository.From<Order>().SelectAggregate((x, f) => x.Avg(f.TotalAmount)).First();
+
+        var value4 = repository.QueryFirst<double>("SELECT AVG(TotalAmount) FROM sys_order");
+        var value3 = repository.From<Order>().Select(f => Sql.Raw<double>("AVG(TotalAmount)")).First();
         Assert.True(value1 == value2);
+        Assert.True(value1 == value3);
+        Assert.True(value1 == value4);
     }
     [Fact]
     public void Query_ValueTuple()

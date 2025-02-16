@@ -1864,7 +1864,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         switch (readerField.FieldType)
         {
             case SqlFieldType.Entity:
-                var readerFields = readerField.Value as List<SqlFieldSegment> ?? readerField.Fields;
+                var readerFields = readerField.Value as List<SqlFieldSegment>;
                 for (int i = 0; i < readerFields.Count; i++)
                 {
                     if (i > 0) builder.Append(',');

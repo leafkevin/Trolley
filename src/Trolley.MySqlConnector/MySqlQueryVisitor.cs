@@ -252,4 +252,6 @@ public class MySqlQueryVisitor : QueryVisitor
         builder.Clear();
         return sqlSegment.Change(fieldsSql, false, true);
     }
+    public override SqlFieldSegment VisitStringAggMethodCall(SqlFieldSegment sqlSegment)
+        => throw new NotSupportedException("不支持的方法调用，请考虑使用Sql.GroupConcat方法");
 }

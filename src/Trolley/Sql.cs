@@ -79,6 +79,7 @@ public static partial class Sql
     public static bool Exists<T1, T2, T3, T4, T5>(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate) => throw new NotImplementedException();
     public static bool Exists<T1, T2, T3, T4, T5, T6>(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate) => throw new NotImplementedException();
 
+
     public static IWindowFunction<int> Rank() => throw new NotImplementedException();
     public static IWindowFunction<long> LongRank() => throw new NotImplementedException();
     public static IWindowFunction<int> DenseRank() => throw new NotImplementedException();
@@ -97,7 +98,7 @@ public static partial class Sql
     public static IWindowFunction<TField> Min<TField>(TField field) => throw new NotImplementedException();
 
     /// <summary>
-    /// 数据分组后，把字段field的多行数据，用,字符分割拼接在一起，行转列操作
+    /// 数据分组后，把字段field的多行数据，用,字符分割拼接在一起，行转列操作，仅支持MySql,Mariadb数据库
     /// </summary>
     /// <typeparam name="TFields"></typeparam>
     /// <param name="fields"></param>
@@ -105,7 +106,7 @@ public static partial class Sql
     /// <exception cref="NotImplementedException"></exception>
     public static IGroupConcat GroupConcat<TFields>(TFields fields) => throw new NotImplementedException();
     /// <summary>
-    /// 数据分组后，把字段field的多行数据，用separator字符分割拼接在一起，行转列操作
+    /// 数据分组后，把字段field的多行数据，用separator字符分割拼接在一起，行转列操作，仅支持MySql,Mariadb数据库
     /// </summary>
     /// <typeparam name="TFields"></typeparam>
     /// <param name="fields"></param>
@@ -113,6 +114,16 @@ public static partial class Sql
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
     public static IGroupConcat GroupConcat<TFields>(TFields fields, string separator) => throw new NotImplementedException();
+    /// <summary>
+    /// 数据分组后，字符串连接，仅支持Postgresql,SqlServer数据库，Postgresql: STRING_AGG (expression, separator [order_by_clause] ) ,Sql Server: STRING_AGG(expression, separator )[WITHIN GROUP(ORDER BY <order_by_expression_list> [ASC|DESC])]
+    /// </summary>
+    /// <typeparam name="TFields"></typeparam>
+    /// <param name="fields"></param>
+    /// <param name="separator"></param>
+    /// <returns></returns>
+    /// <exception cref="NotImplementedException"></exception>
+    public static IStringAgg StringAgg<TFields>(TFields fields, string separator) => throw new NotImplementedException();
+
 }
 public interface IPartitionByOver<TValue>
 {
@@ -136,5 +147,11 @@ public interface IGroupConcat
     IGroupConcat OrderBy<TFields>(TFields fields);
     IGroupConcat OrderByDescending<TFields>(TFields fields);
     IGroupConcat Distinct();
+    string ToValue();
+}
+public interface IStringAgg
+{
+    IStringAgg OrderBy<TFields>(TFields fields);
+    IStringAgg OrderByDescending<TFields>(TFields fields);
     string ToValue();
 }

@@ -675,7 +675,7 @@ public class UnitTest3 : UnitTestBase
             {
                 TotalAmount = a.From<OrderDetail>('b')
                     .Where(f => f.OrderId == b.Id)
-                    .Select(t => Sql.Sum(t.Amount)),
+                    .SelectAggregate((x, t) => x.Sum(t.Amount)),
                 OrderNo = b.OrderNo + "_111",
                 BuyerId = DBNull.Value
             })
@@ -688,7 +688,7 @@ public class UnitTest3 : UnitTestBase
             {
                 TotalAmount = a.From<OrderDetail>('b')
                     .Where(f => f.OrderId == b.Id)
-                    .Select(t => Sql.Sum(t.Amount)),
+                    .SelectAggregate((x, t) => x.Sum(t.Amount)),
                 OrderNo = b.OrderNo + "_111",
                 BuyerId = DBNull.Value
             })
@@ -706,7 +706,7 @@ public class UnitTest3 : UnitTestBase
             {
                 TotalAmount = a.From<OrderDetail>('b')
                     .Where(f => f.OrderId == b.Id)
-                    .Select(t => Sql.Sum(t.Amount)),
+                    .SelectAggregate((x, t) => x.Sum(t.Amount)),
                 OrderNo = b.OrderNo + "_111",
                 BuyerId = DBNull.Value
             })
@@ -719,7 +719,7 @@ public class UnitTest3 : UnitTestBase
             {
                 TotalAmount = a.From<OrderDetail>('b')
                     .Where(f => f.OrderId == b.Id)
-                    .Select(t => Sql.Sum(t.Amount)),
+                    .SelectAggregate((x, t) => x.Sum(t.Amount)),
                 OrderNo = b.OrderNo + "_111",
                 BuyerId = DBNull.Value
             })
@@ -777,7 +777,7 @@ public class UnitTest3 : UnitTestBase
             {
                 totalAmount = a.From<OrderDetail>('b')
                     .Where(f => f.OrderId == b.Id)
-                    .Select(t => Sql.Sum(t.Amount)),
+                    .SelectAggregate((x, t) => x.Sum(t.Amount)),
                 orderNo = b.OrderNo + "_111",
                 buyerId = DBNull.Value
             })
@@ -790,7 +790,7 @@ public class UnitTest3 : UnitTestBase
             {
                 totalAmount = a.From<OrderDetail>('b')
                     .Where(f => f.OrderId == b.Id)
-                    .Select(t => Sql.Sum(t.Amount)),
+                    .SelectAggregate((x, t) => x.Sum(t.Amount)),
                 orderNo = b.OrderNo + "_111",
                 buyerId = DBNull.Value
             })
@@ -811,7 +811,7 @@ public class UnitTest3 : UnitTestBase
             .SetFrom(f => f.TotalAmount, (x, y) => x
                 .From<OrderDetail>('b')
                 .Where(t => t.OrderId == y.Id)
-                .Select(f => Sql.Sum(f.Amount)))
+                .SelectAggregate((x, t) => x.Sum(t.Amount)))
             .Set(x => x.OrderNo, "ON_111")
             .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.Id == "1")
@@ -824,7 +824,7 @@ public class UnitTest3 : UnitTestBase
             .SetFrom(f => f.TotalAmount, (x, y) => x
                 .From<OrderDetail>('b')
                 .Where(t => t.OrderId == y.Id)
-                .Select(f => Sql.Sum(f.Amount)))
+                .SelectAggregate((x, t) => x.Sum(t.Amount)))
             .Set(x => x.OrderNo, "ON_111")
             .Set(f => new { BuyerId = DBNull.Value })
             .Where(a => a.Id == "1")
@@ -839,7 +839,7 @@ public class UnitTest3 : UnitTestBase
             {
                 TotalAmount = a.From<OrderDetail>('b')
                     .Where(f => f.OrderId == b.Id)
-                    .Select(t => Sql.Sum(t.Amount))
+                    .SelectAggregate((x, f) => x.Sum(f.Amount))
             })
             .Set(x => x.OrderNo, "ON_111")
             .Set(f => new { BuyerId = DBNull.Value })
@@ -852,7 +852,7 @@ public class UnitTest3 : UnitTestBase
             {
                 TotalAmount = a.From<OrderDetail>('b')
                     .Where(f => f.OrderId == b.Id)
-                    .Select(t => Sql.Sum(t.Amount))
+                    .SelectAggregate((x, f) => x.Sum(f.Amount))
             })
             .Set(x => x.OrderNo, "ON_111")
             .Set(f => new { BuyerId = DBNull.Value })
@@ -910,7 +910,7 @@ public class UnitTest3 : UnitTestBase
             {
                 TotalAmount = x.From<OrderDetail>('b')
                     .Where(f => f.OrderId == y.Id)
-                    .Select(t => Sql.Sum(t.Amount))
+                    .SelectAggregate((x, t) => x.Sum(t.Amount))
             })
             .Set(x => x.OrderNo, "ON_111")
             .Set(f => new { BuyerId = DBNull.Value })
@@ -1042,7 +1042,7 @@ public class UnitTest3 : UnitTestBase
             {
                 TotalAmount = x.From<OrderDetail>('c')
                     .Where(f => f.OrderId == y.Id)
-                    .Select(t => Sql.Sum(t.Amount))
+                    .SelectAggregate((x, t) => x.Sum(t.Amount))
             })
             .Set((a, b) => new { OrderNo = a.OrderNo + " - " + b.Id.ToString() })
             .Set((x, y) => new { BuyerId = DBNull.Value })
@@ -1062,7 +1062,7 @@ public class UnitTest3 : UnitTestBase
             {
                 TotalAmount = x.From<OrderDetail>('c')
                     .Where(f => f.OrderId == y.Id)
-                    .Select(t => Sql.Sum(t.Amount))
+                    .SelectAggregate((x, t) => x.Sum(t.Amount))
             })
             .Set((a, b) => new { OrderNo = a.OrderNo + " - " + b.Id.ToString() })
             .Set((x, y) => new { BuyerId = DBNull.Value })
@@ -1080,7 +1080,7 @@ public class UnitTest3 : UnitTestBase
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
             .SetFrom(f => f.TotalAmount, (x, y) => x.From<OrderDetail>('c')
                 .Where(f => f.OrderId == y.Id)
-                .Select(t => Sql.Sum(t.Amount)))
+                .SelectAggregate((x, t) => x.Sum(t.Amount)))
             .Set((a, b) => new { OrderNo = a.OrderNo + " - " + b.Id.ToString() })
             .Set((x, y) => new { BuyerId = DBNull.Value })
             .Where((x, y) => x.Id == "2")
@@ -1097,7 +1097,7 @@ public class UnitTest3 : UnitTestBase
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
             .SetFrom(f => f.TotalAmount, (x, y) => x.From<OrderDetail>('c')
                 .Where(f => f.OrderId == y.Id)
-                .Select(t => Sql.Sum(t.Amount)))
+                .SelectAggregate((x, t) => x.Sum(t.Amount)))
             .Set((a, b) => new { OrderNo = a.OrderNo + " - " + b.Id.ToString() })
             .Set((x, y) => new { BuyerId = DBNull.Value })
             .Where((x, y) => x.Id == "2")

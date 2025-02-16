@@ -31,6 +31,7 @@ public class UnitTest6 : UnitTestBase
                 .Configure<ModelConfiguration>(OrmProviderType.SqlServer)
                 .UseDatabaseSharding(() =>
                 {
+                    //可以硬编码分库，也可以使用redis，映射表 ...，其他方式等
                     var scopeFactory = f.GetRequiredService<IServiceScopeFactory>();
                     var serviceScope = scopeFactory.CreateScope();
                     var passport = serviceScope.ServiceProvider.GetService<IPassport>();
@@ -953,6 +954,66 @@ public class UnitTest6 : UnitTestBase
         Assert.Equal(4000, count2);
     }
     [Fact]
+    public async Task Insert_Select_From_SubQuery_Output()
+    {
+        var repository = this.dbFactory.Create();
+        var sql = repository.Create<Order>()
+            .UseTableBy("104", DateTime.Parse("2024-05-01"))
+            .From<OrderDetail>()
+            .UseTableBy("104", DateTime.Parse("2024-05-01"))
+            .Where(f => f.Id.Length < 1050)
+            .GroupBy(f => f.OrderId)
+            .Select((x, f) => new
+            {
+                Id = f.OrderId,
+                f.TenantId,
+                OrderNo = $"ON-{f.OrderId}",
+                BuyerId = 1,
+                SellerId = 1,
+                BuyerSource = UserSourceType.Taobao.ToString(),
+                ProductCount = 2,
+                TotalAmount = x.Sum(f.Amount),
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            })
+            .Output<OrderInfo>("[BuyerId],[TotalAmount]")
+            .ToSql(out var parameters);
+        Assert.Equal("INSERT INTO \"sys_order_104_202405\" (\"Id\",\"TenantId\",\"OrderNo\",\"BuyerId\",\"SellerId\",\"BuyerSource\",\"ProductCount\",\"TotalAmount\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\") SELECT b.\"OrderId\",b.\"TenantId\",CONCAT('ON-',b.\"OrderId\"),1,1,'Taobao',2,SUM(b.\"Amount\"),TRUE,CURRENT_TIMESTAMP,1,CURRENT_TIMESTAMP,1 FROM \"sys_order_detail_104_202405\" b WHERE LENGTH(b.\"Id\")<1050 GROUP BY b.\"OrderId\" RETURNING \"BuyerId\",\"TotalAmount\"", sql);
+        await repository.BeginTransactionAsync();
+        await repository.Delete<Order>()
+            .UseTableBy("104", DateTime.Parse("2024-05-01"))
+            .Where(f => f.Id.Length < 10)
+            .ExecuteAsync();
+        var result = await repository.Create<Order>()
+            .UseTableBy("104", DateTime.Parse("2024-05-01"))
+            .From<OrderDetail>()
+            .UseTableBy("104", DateTime.Parse("2024-05-01"))
+            .Where(f => f.Id.Length < 1050)
+            .GroupBy(f => f.OrderId)
+            .Select((x, f) => new
+            {
+                Id = f.OrderId,
+                TenantId = "1",
+                OrderNo = $"ON-{f.OrderId}",
+                BuyerId = 1,
+                SellerId = 1,
+                BuyerSource = UserSourceType.Taobao.ToString(),
+                ProductCount = 2,
+                TotalAmount = x.Sum(f.Amount),
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            })
+            .Output<OrderInfo>("[BuyerId],[TotalAmount]")
+            .ExecuteAsync();
+        await repository.CommitAsync();
+    }
+    [Fact]
     public async Task Query_ManySharding_SingleTable()
     {
         await this.InitSharding();
@@ -1838,8 +1899,8 @@ public class UnitTest6 : UnitTestBase
                 .UseTable<Order>((orderOrigName, orderDetailOrigName, orderTableName)
                     => orderTableName.Replace(orderOrigName, orderDetailOrigName))
                 .GroupBy((a, b, c) => new { a.BuyerId, OrderId = a.Id, a.OrderNo })
-                .Having((x, a, b, c) => Sql.CountDistinct(c.ProductId) > count)
-                .Select((a, b, c, d) => new { a.Grouping.BuyerId, a.Grouping.OrderId, a.Grouping.OrderNo, ProductTotal = Sql.CountDistinct(d.ProductId) }))
+                .Having((x, a, b, c) => x.CountDistinct(c.ProductId) > count)
+                .Select((a, b, c, d) => new { a.Grouping.BuyerId, a.Grouping.OrderId, a.Grouping.OrderNo, ProductTotal = a.CountDistinct(d.ProductId) }))
             .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
             .IncludeMany((a, b) => b.Details, f => f.Amount > amount)
             .UseTable<Order>((orderOrigName, orderDetailOrigName, orderTableName)
@@ -1860,8 +1921,8 @@ public class UnitTest6 : UnitTestBase
                 .UseTable<Order>((orderOrigName, orderDetailOrigName, orderTableName)
                     => orderTableName.Replace(orderOrigName, orderDetailOrigName))
                 .GroupBy((a, b, c) => new { a.BuyerId, OrderId = a.Id, a.OrderNo })
-                .Having((x, a, b, c) => Sql.CountDistinct(c.ProductId) > count)
-                .Select((a, b, c, d) => new { a.Grouping.BuyerId, a.Grouping.OrderId, a.Grouping.OrderNo, ProductTotal = Sql.CountDistinct(d.ProductId) }))
+                .Having((x, a, b, c) => x.CountDistinct(c.ProductId) > count)
+                .Select((a, b, c, d) => new { a.Grouping.BuyerId, a.Grouping.OrderId, a.Grouping.OrderNo, ProductTotal = a.CountDistinct(d.ProductId) }))
             .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
             .IncludeMany((a, b) => b.Details, f => f.Amount > amount)
             .UseTable<Order>((orderOrigName, orderDetailOrigName, orderTableName)

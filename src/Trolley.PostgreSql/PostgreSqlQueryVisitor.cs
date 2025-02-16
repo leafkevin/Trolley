@@ -834,10 +834,63 @@ public class PostgreSqlQueryVisitor : QueryVisitor
             {
                 if (this.TableAliases.ContainsKey(parameterName))
                     continue;
+                if (!this.RefTableAliases.ContainsKey(parameterName))
+                    continue;
                 this.TableAliases.Add(parameterName, this.RefTableAliases[parameterName]);
             }
         }
         return tableSegment;
+    }
+    public override SqlFieldSegment VisitGroupConcatMethodCall(SqlFieldSegment sqlSegment)
+        => throw new NotSupportedException("不支持的方法调用，请考虑使用Sql.StringAgg方法");
+    public override SqlFieldSegment VisitStringAggMethodCall(SqlFieldSegment sqlSegment)
+    {
+        var methodCallExpr = sqlSegment.Expression as MethodCallExpression;
+        var currentExpr = methodCallExpr.Object;
+        var callStack = new Stack<MethodCallExpression>();
+        while (currentExpr is MethodCallExpression callExpr)
+        {
+            if (callExpr.Type == typeof(Sql))
+                break;
+            callStack.Push(callExpr);
+            currentExpr = callExpr.Object;
+        }
+        var builder = new StringBuilder("STRING_AGG(");
+        bool hasOrder = false;
+        SqlFieldSegment fieldsSegment = null;
+        while (callStack.TryPop(out methodCallExpr))
+        {
+            switch (methodCallExpr.Method.Name)
+            {
+                case "StringAgg":
+                    var fieldsExpr = methodCallExpr.Arguments[0];
+                    if (fieldsExpr.NodeType == ExpressionType.New || fieldsExpr.NodeType == ExpressionType.MemberInit)
+                        throw new NotSupportedException("不支持的字段类型，Sql.StringAgg方法，只支持单个字段，不支持多个字段");
+                    fieldsSegment = this.Visit(new SqlFieldSegment { Expression = fieldsExpr });
+                    this.AddVisitedFieldsSqlWithoutAlias(builder, fieldsSegment);
+                    var separator = this.Evaluate<string>(methodCallExpr.Arguments[1]);
+                    builder.Append($",{this.OrmProvider.GetQuotedValue(typeof(string), separator)}");
+                    break;
+                case "OrderBy":
+                    fieldsSegment = this.Visit(new SqlFieldSegment { Expression = methodCallExpr.Arguments[0] });
+                    if (hasOrder) builder.Append(',');
+                    else builder.Append(" ORDER BY ");
+                    this.AddVisitedFieldsSqlWithoutAlias(builder, fieldsSegment);
+                    hasOrder = true;
+                    break;
+                case "OrderByDescending":
+                    fieldsSegment = this.Visit(new SqlFieldSegment { Expression = methodCallExpr.Arguments[0] });
+                    if (hasOrder) builder.Append(',');
+                    else builder.Append(" ORDER BY ");
+                    this.AddVisitedFieldsSqlWithoutAlias(builder, fieldsSegment, " DESC");
+                    hasOrder = true;
+                    break;
+            }
+        }
+        builder.Append(')');
+        var sql = builder.ToString();
+        builder.Clear();
+        return sqlSegment.Change(sql, false, true);
     }
     private bool IsDistinctOnMember(MemberExpression memberExpr)
     {

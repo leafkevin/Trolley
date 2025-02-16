@@ -202,7 +202,7 @@ public class MultipleQuery : IMultipleQuery, IDisposable
             throw new ArgumentNullException(nameof(wherePredicate));
 
         var sql = this.From<TEntity>().Where(wherePredicate)
-            .Select(f => Sql.Count()).ToSql(out _);
+            .SelectAggregate((x, f) => x.Count()).ToSql(out _);
         Func<ITheaDataReader, object> readerGetter = reader => reader.To<int>() > 0;
         this.AddReader(typeof(int), sql, readerGetter);
         return this;

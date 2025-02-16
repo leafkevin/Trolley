@@ -101,7 +101,7 @@ public interface ISqliteContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
     ///     orderInfo.Disputes, //直接赋值，使用同名变量，实体对象由TypeHandler处理
     ///     TotalAmount = x.From&lt;OrderDetail&gt;('c')
     ///         .Where(f =&gt; f.OrderId == y.Id)
-    ///         .Select(t =&gt; Sql.Sum(t.Amount)) //子查询
+    ///         .SelectAggregate((x, t) =&gt; x.Sum(t.Amount)) //子查询
     ///     OrderNo = "ON-001",
     ///     BuyerSource = DBNull.Value,
     /// })
@@ -121,7 +121,7 @@ public interface ISqliteContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
     ///     orderInfo.Disputes, //直接赋值，使用同名变量，实体对象由TypeHandler处理
     ///     TotalAmount = x.From&lt;OrderDetail&gt;('c')
     ///         .Where(f =&gt; f.OrderId == y.Id)
-    ///         .Select(t =&gt; Sql.Sum(t.Amount)) //子查询
+    ///         .SelectAggregate((x, t) =&gt; x.Sum(t.Amount)) //子查询
     ///     OrderNo = "ON-001",
     ///     BuyerSource = DBNull.Value,
     /// })
@@ -139,7 +139,7 @@ public interface ISqliteContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
     /// .SetFrom(f =&gt; f.TotalAmount, (x, y) =&gt; x
     ///     .From&lt;OrderDetail&gt;('c')
     ///     .Where(f =&gt; f.OrderId == y.Id)
-    ///     .Select(t =&gt; Sql.Sum(t.Amount))) ...
+    ///     .SelectAggregate((x, t) =&gt; x.Sum(t.Amount))) ...
     /// SQL: SET a."TotalAmount"=(SELECT SUM(c."Amount") FROM "sys_order_detail" c WHERE c."OrderId"=a."Id") ...
     /// </code>
     /// </summary>
@@ -154,7 +154,7 @@ public interface ISqliteContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
     /// .SetFrom(true, f =&gt; f.TotalAmount, (x, y) =&gt; x
     ///     .From&lt;OrderDetail&gt;('c')
     ///     .Where(f =&gt; f.OrderId == y.Id)
-    ///     .Select(t =&gt; Sql.Sum(t.Amount))) ...
+    ///     .SelectAggregate((x, t) =&gt; x.Sum(t.Amount))) ...
     /// SQL: SET a."TotalAmount"=(SELECT SUM(c."Amount") FROM "sys_order_detail" c WHERE c."OrderId"=a."Id") ...
     /// </code>
     /// </summary>
