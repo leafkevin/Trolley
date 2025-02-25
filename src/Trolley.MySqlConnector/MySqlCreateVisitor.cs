@@ -599,6 +599,8 @@ public class MySqlCreateVisitor : CreateVisitor
     {
         base.Dispose();
         this.UpdateBuilder = null;
+		this.SetRowAlias = null;
+        this.FromSql = null;
         this.OutputSql = null;
     }
 }

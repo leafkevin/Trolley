@@ -171,9 +171,9 @@ public class SqliteCreateVisitor : CreateVisitor
         var valuesSetter = RepositoryHelper.BuildCreateValuesSqlPart(this.DbContext, entityType, insertObjType, true, false, this.OnlyFieldNames, this.IgnoreFieldNames);
         var typedValuesSetter = valuesSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
 
-        string headSql = "INSERT INTO ";
+        string headSql = $"INSERT{this.OrExpr} INTO ";
         if (!string.IsNullOrEmpty(tableSegment.TableSchema))
-            headSql = $"INSERT INTO {this.OrmProvider.GetTableName(tableSegment.TableSchema)}.";
+            headSql = $"INSERT{this.OrExpr} INTO {this.OrmProvider.GetTableName(tableSegment.TableSchema)}.";
 
         //生成批量Fields SQL
         fieldsSetter.Invoke(this.FieldsBuilder, this.DbContext, firstInsertObj);
@@ -231,7 +231,7 @@ public class SqliteCreateVisitor : CreateVisitor
         });
     }
     public void OrExpression(string orExpr) => this.OrExpr = orExpr;
-    public IEnumerable BuildWithBulkCopy() => (IEnumerable)this.deferredSegments[0].Value;
+   
     public void OnConflict(Expression updateExpr)
     {
         this.deferredSegments.Add(new CommandSegment

@@ -81,7 +81,7 @@ public class FieldShardingBuilder<TEntity, TField>
         var entityType = typeof(TEntity);
         if (!this.shardingProvider.TryGetTableSharding(entityType, out var shardingTable))
             this.shardingProvider.AddTableSharding(entityType, shardingTable = new TableShardingInfo { EntityType = entityType });
-        shardingTable.Rule = (string origName, object beginFieldValue, object endFieldValue)
+        shardingTable.RangleRule = (string origName, object beginFieldValue, object endFieldValue)
             => tableNamesGetter(origName, (TField)beginFieldValue, (TField)endFieldValue);
         return this;
     }

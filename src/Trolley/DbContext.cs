@@ -388,6 +388,7 @@ public sealed class DbContext
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.IsUseMaster);
         Expression<Func<TResult, TResult>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
+        visitor.IsNeedPaging = true;
         var sql = visitor.BuildSql(out var readerFields);
         sql = this.BuildSql(visitor, sql, " UNION ALL ");
         command.CommandText = sql;
@@ -440,6 +441,7 @@ public sealed class DbContext
 
         Expression<Func<TResult, TResult>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
+        visitor.IsNeedPaging = true;
         var sql = visitor.BuildSql(out var readerFields);
         sql = this.BuildSql(visitor, sql, " UNION ALL ");
         command.CommandText = sql;

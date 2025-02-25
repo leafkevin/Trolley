@@ -42,6 +42,7 @@ public interface IQueryVisitor : IDisposable
     bool IsFromQuery { get; set; }
     bool IsFromCommand { get; set; }
     bool IsUseMaster { get; }
+    bool IsNeedPaging { get; set; }
 
     string BuildSql(out List<SqlFieldSegment> readerFields);
     string BuildCommandSql(out IDataParameterCollection dbParameters);

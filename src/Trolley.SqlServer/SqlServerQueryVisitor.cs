@@ -129,7 +129,7 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
             pageSql = pageSql.Replace("/**tables**/", tableSql);
             pageSql = pageSql.Replace(" /**others**/", others);
 
-            if (this.skip.HasValue && this.limit.HasValue)
+            if (this.IsNeedPaging && this.skip.HasValue && this.limit.HasValue)
                 builder.Append($"SELECT COUNT(*) FROM {tableSql}{whereSql};");
             builder.Append($"{pageSql}");
         }
@@ -373,7 +373,7 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
                     fieldsSegment = this.Visit(new SqlFieldSegment { Expression = fieldsExpr });
                     this.AddVisitedFieldsSqlWithoutAlias(builder, fieldsSegment);
                     var separator = this.Evaluate<string>(methodCallExpr.Arguments[1]);
-                    builder.Append($",{this.OrmProvider.GetQuotedValue(typeof(string), separator)})"); 
+                    builder.Append($",{this.OrmProvider.GetQuotedValue(typeof(string), separator)})");
                     break;
                 case "OrderBy":
                     fieldsSegment = this.Visit(new SqlFieldSegment { Expression = methodCallExpr.Arguments[0] });

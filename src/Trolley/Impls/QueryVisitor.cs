@@ -45,6 +45,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public ICteQuery SelfRefQueryObj { get; set; }
     public int PageNumber { get; set; }
     public int PageSize { get; set; }
+    public bool IsNeedPaging { get; set; } = false;
 
     public QueryVisitor(DbContext dbContext, char tableAsStart = 'a', IDataParameterCollection dbParameters = null)
     {
@@ -168,7 +169,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             pageSql = pageSql.Replace("/**tables**/", tableSql);
             pageSql = pageSql.Replace(" /**others**/", others);
 
-            if (this.skip.HasValue && this.limit.HasValue)
+            if (this.IsNeedPaging && this.skip.HasValue && this.limit.HasValue)
                 builder.Append($"SELECT COUNT(*) FROM {tableSql}{whereSql};");
             builder.Append($"{pageSql}");
         }

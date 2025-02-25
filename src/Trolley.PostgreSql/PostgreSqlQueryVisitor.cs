@@ -133,7 +133,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
             pageSql = pageSql.Replace("/**tables**/", tableSql);
             pageSql = pageSql.Replace(" /**others**/", others);
 
-            if (this.skip.HasValue && this.limit.HasValue)
+            if (this.IsNeedPaging && this.skip.HasValue && this.limit.HasValue)
                 builder.Append($"SELECT COUNT(*) FROM {tableSql}{whereSql};");
             builder.Append($"{pageSql}");
         }
