@@ -299,32 +299,31 @@ public class SqlVisitor : ISqlVisitor
             if (this.ShardingProvider == null || !this.ShardingProvider.TryGetTableSharding(entityType, out var shardingTable))
                 throw new Exception($"实体{entityType.FullName}表有配置分表信息");
 
-            tableNames = shardingTables.FindAll(f =>
-            {
-                var result = Regex.IsMatch(f, shardingTable.ValidateRegex);
-                if (tableSegment.ShardingType == ShardingTableType.MasterFilter)
-                    result = result && tableSegment.ShardingFilter.Invoke(f);
-                else if (tableSegment.ShardingType == ShardingTableType.TableRange && tableSegment.TableNames != null)
-                    result = result && tableSegment.TableNames.Contains(f);
-                return result;
-            });
-            //只有一个分表时，会移除ShardingTables里面元素，生成SQL时候，直接取tableSegment.Body
             if (!string.IsNullOrEmpty(tableSegment.Body))
             {
-                if (!tableNames.Contains(tableSegment.Body))
+                tableNames = shardingTables.FindAll(f => f == tableSegment.Body);
+                if (tableNames == null || tableNames.Count == 0)
                     throw new Exception($"分表{tableSegment.Body}不存在");
-                this.ShardingTables.Remove(tableSegment);
             }
+            else if (tableSegment.ShardingType == ShardingTableType.MasterFilter)
+            {
+                tableNames = shardingTables.FindAll(f =>
+                {
+                    var result = Regex.IsMatch(f, shardingTable.ValidateRegex);
+                    return result && tableSegment.ShardingFilter.Invoke(f);
+                });
+            }
+            if (tableSegment.TableNames != null)
+                tableNames = tableNames.FindAll(f => tableSegment.TableNames.Contains(f));
+
+            //只有一个分表时，会移除ShardingTables里面元素，生成SQL时候，直接取tableSegment.Body
+            if (tableNames.Count > 1)
+                tableSegment.TableNames = tableNames;
             else
             {
-                if (tableNames.Count > 1)
-                    tableSegment.TableNames = tableNames;
-                else
-                {
-                    tableSegment.Body = tableNames[0];
-                    tableSegment.TableNames = null;
-                    this.ShardingTables.Remove(tableSegment);
-                }
+                tableSegment.Body = tableNames[0];
+                tableSegment.TableNames = null;
+                this.ShardingTables.Remove(tableSegment);
             }
         }
     }
