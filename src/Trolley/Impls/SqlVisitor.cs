@@ -301,7 +301,11 @@ public class SqlVisitor : ISqlVisitor
 
             if (!string.IsNullOrEmpty(tableSegment.Body))
             {
-                tableNames = shardingTables.FindAll(f => f == tableSegment.Body);
+                tableNames = shardingTables.FindAll(f =>
+                {
+                    var result = Regex.IsMatch(f, shardingTable.ValidateRegex);
+                    return result && f == tableSegment.Body;
+                });
                 if (tableNames == null || tableNames.Count == 0)
                     throw new Exception($"分表{tableSegment.Body}不存在");
             }
@@ -314,7 +318,15 @@ public class SqlVisitor : ISqlVisitor
                 });
             }
             if (tableSegment.TableNames != null)
-                tableNames = tableNames.FindAll(f => tableSegment.TableNames.Contains(f));
+            {
+                tableNames = tableNames.FindAll(f =>
+                {
+                    var result = Regex.IsMatch(f, shardingTable.ValidateRegex);
+                    return result && tableSegment.TableNames.Contains(f);
+                });
+                if (tableNames == null || tableNames.Count == 0)
+                    throw new Exception($"没有搜索到满足条件的{tableSegment.Mapper.TableName}分表");
+            }
 
             //只有一个分表时，会移除ShardingTables里面元素，生成SQL时候，直接取tableSegment.Body
             if (tableNames.Count > 1)
