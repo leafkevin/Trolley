@@ -1708,6 +1708,40 @@ public class UnitTest6 : UnitTestBase
         }
     }
     [Fact]
+    public async Task ManySharding_Paging()
+    {
+        //await this.InitSharding();
+        var repository = this.dbFactory.Create();
+        var tenantId = "104";
+        var beginTime = DateTime.Parse("2024-04-05");
+        var endTime = DateTime.Parse("2024-06-05");
+        var result = await repository.From<Order>()
+            .UseTableByRange(tenantId, beginTime, endTime)
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .UseTable<Order>((orderOrigName, userOrigName, orderTableName)
+                => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+            .Select((a, b) => new { a.Id, a.BuyerId, a.TotalAmount, a.CreatedAt })
+            .Page(1, 10)
+            .ToPageListAsync();
+        if (result != null)
+        {
+            Assert.Equal(10, result.Count);
+        }
+        result = await repository.From<Order>()
+            .UseTableByRange(tenantId, beginTime, endTime)
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .UseTable<Order>((orderOrigName, userOrigName, orderTableName)
+                => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+            .Select((a, b) => new { a.Id, a.BuyerId, a.TotalAmount, a.CreatedAt })
+            .Page(3, 10)
+            .OrderBy(f => f.BuyerId).OrderByDescending(f => f.CreatedAt)
+            .ToPageListAsync();
+        if (result != null)
+        {
+            Assert.Equal(10, result.Count);
+        }
+    }
+    [Fact]
     public void TableSchema()
     {
         var repository = this.dbFactory.Create();

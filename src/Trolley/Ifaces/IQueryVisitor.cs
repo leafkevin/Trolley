@@ -43,9 +43,11 @@ public interface IQueryVisitor : IDisposable
     bool IsFromCommand { get; set; }
     bool IsUseMaster { get; }
     bool IsNeedPaging { get; set; }
+    bool IsShardingTables { get; set; }
 
     string BuildSql(out List<SqlFieldSegment> readerFields);
     string BuildCommandSql(out IDataParameterCollection dbParameters);
+    string BuildShardingPagingSql(string rawSql);
     string BuildCteTableSql(string tableName, out List<SqlFieldSegment> readerFields, out bool isRecursive);
 
     string BuildTableShardingsSql();

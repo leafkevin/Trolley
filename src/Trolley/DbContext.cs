@@ -275,8 +275,7 @@ public sealed class DbContext
         if (visitor.IsNeedFetchShardingTables)
             this.FetchShardingTables(visitor as SqlVisitor);
 
-        var sql = visitor.BuildSql(out var readerFields);
-        sql = this.BuildSql(visitor, sql, " UNION ALL ");
+        var sql = this.BuildSql(visitor, " UNION ALL ", out var readerFields);
         command.CommandText = sql;
         visitor.DbParameters.CopyTo(command.Parameters);
 
@@ -296,8 +295,7 @@ public sealed class DbContext
         if (visitor.IsNeedFetchShardingTables)
             await this.FetchShardingTablesAsync(visitor as SqlVisitor, cancellationToken);
 
-        var sql = visitor.BuildSql(out var readerFields);
-        sql = this.BuildSql(visitor, sql, " UNION ALL ");
+        var sql = this.BuildSql(visitor, " UNION ALL ", out var readerFields);
         command.CommandText = sql;
         visitor.DbParameters.CopyTo(command.Parameters);
 
@@ -320,8 +318,7 @@ public sealed class DbContext
 
         Expression<Func<TEntity, TEntity>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
-        var sql = visitor.BuildSql(out var readerFields);
-        sql = this.BuildSql(visitor, sql, " UNION ALL ");
+        var sql = this.BuildSql(visitor, " UNION ALL ", out var readerFields);
         command.CommandText = sql;
         visitor.DbParameters.CopyTo(command.Parameters);
 
@@ -354,8 +351,7 @@ public sealed class DbContext
 
         Expression<Func<TEntity, TEntity>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
-        var sql = visitor.BuildSql(out var readerFields);
-        sql = this.BuildSql(visitor, sql, " UNION ALL ");
+        var sql = this.BuildSql(visitor, " UNION ALL ", out var readerFields);
         command.CommandText = sql;
         visitor.DbParameters.CopyTo(command.Parameters);
 
@@ -389,8 +385,7 @@ public sealed class DbContext
         Expression<Func<TResult, TResult>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
         visitor.IsNeedPaging = true;
-        var sql = visitor.BuildSql(out var readerFields);
-        sql = this.BuildSql(visitor, sql, " UNION ALL ");
+        var sql = this.BuildSql(visitor, " UNION ALL ", out var readerFields);
         command.CommandText = sql;
         visitor.DbParameters.CopyTo(command.Parameters);
 
@@ -442,8 +437,7 @@ public sealed class DbContext
         Expression<Func<TResult, TResult>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
         visitor.IsNeedPaging = true;
-        var sql = visitor.BuildSql(out var readerFields);
-        sql = this.BuildSql(visitor, sql, " UNION ALL ");
+        var sql = this.BuildSql(visitor, " UNION ALL ", out var readerFields);
         command.CommandText = sql;
         visitor.DbParameters.CopyTo(command.Parameters);
 
@@ -664,11 +658,22 @@ public sealed class DbContext
     #endregion
 
     #region Sharding
-    public string BuildSql(IQueryVisitor visitor, string formatSql, string jointMark)
+    public string BuildSql(IQueryVisitor visitor, string jointMark, out List<SqlFieldSegment> readerFields)
     {
-        var sql = formatSql;
-        if (visitor.ShardingTables != null && visitor.ShardingTables.Count > 0)
-            sql = this.BuildShardingTablesSqlByFormat(visitor as SqlVisitor, formatSql, jointMark);
+        string sql = null;
+        readerFields = null;
+        if (visitor.IsNeedFetchShardingTables)
+            this.FetchShardingTables(visitor as SqlVisitor);
+
+        visitor.IsShardingTables = visitor.ShardingTables != null && visitor.ShardingTables.Count > 0;
+        sql = visitor.BuildSql(out readerFields);
+        if (visitor.IsShardingTables)
+        {
+            //有分页，先生成不分页SQL，再Union起来，再分页            
+            sql = this.BuildShardingTablesSqlByFormat(visitor as SqlVisitor, sql, jointMark);
+            if (visitor.IsNeedPaging)
+                sql = visitor.BuildShardingPagingSql(sql);
+        }
         return sql;
     }
     public void FetchShardingTables(SqlVisitor visitor)

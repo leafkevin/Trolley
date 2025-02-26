@@ -20,6 +20,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     private bool isDisposed;
 
     protected List<CommandSegment> deferredSegments = new();
+    private List<OrderByField> orderByFields;
     protected int? skip;
     protected int? limit;
 
@@ -32,13 +33,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public bool IsFromCommand { get; set; }
     public bool IsNeedCommandTableAlias { get; set; }
     public bool IsCteTable { get; set; }
-    protected bool IsUnion { get; set; }
+    public bool IsUnion { get; set; }
     /// <summary>
     /// 第二个Union子句
     /// </summary>
     public bool IsSecondUnion { get; set; } = false;
-
-    protected TableSegment LastIncludeSegment { get; set; }
+    public TableSegment LastIncludeSegment { get; set; }
 
     public bool IsRecursive { get; set; }
     public bool IsUseCteTable { get; set; } = true;
@@ -46,6 +46,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public int PageNumber { get; set; }
     public int PageSize { get; set; }
     public bool IsNeedPaging { get; set; } = false;
+    public bool IsShardingTables { get; set; }
 
     public QueryVisitor(DbContext dbContext, char tableAsStart = 'a', IDataParameterCollection dbParameters = null)
     {
@@ -161,7 +162,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (!string.IsNullOrEmpty(headSql))
             builder.Append(headSql);
 
-        if (this.skip.HasValue || this.limit.HasValue)
+        if (!this.IsShardingTables && (this.skip.HasValue || this.limit.HasValue))
         {
             //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ /**others**/
             var pageSql = this.OrmProvider.GetPagingTemplate(this.skip, this.limit, orderBy);
@@ -178,7 +179,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不正确
         if (isManySharding)
             isManySharding = this.ShardingTables != null && this.ShardingTables[0].TableNames != null && this.ShardingTables[0].TableNames.Count > 1;
-        bool isNeedWrap = (this.IsUnion || this.IsSecondUnion || isManySharding) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue);
+        bool isNeedWrap = (this.IsUnion || this.IsSecondUnion) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue);
         if (isNeedWrap)
         {
             builder.Insert(0, "SELECT * FROM (");
@@ -334,6 +335,41 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         sql = builder.ToString();
         builder.Clear();
         builder = null;
+        return sql;
+    }
+    public virtual string BuildShardingPagingSql(string rawSql)
+    {
+        //select * from (...) order by ... limit 10 offset 10
+        var tableSql = $"({rawSql})";
+
+        int index = 0;
+        string orderBy = null;
+        var builder = new StringBuilder();
+        if (this.orderByFields != null)
+        {
+            foreach (var orderByField in this.orderByFields)
+            {
+                var readerField = orderByField.Field.TargetMember ?? orderByField.Field.FromMember;
+                var fieldName = this.OrmProvider.GetFieldName(readerField.Name);
+                if (index > 0) builder.Append(',');
+                builder.Append(fieldName);
+                if (!string.IsNullOrEmpty(orderByField.OrderSuffix))
+                    builder.Append(orderByField.OrderSuffix);
+                index++;
+            }
+            orderBy = " ORDER BY " + builder.ToString();
+            builder.Clear();
+        }
+        var pageSql = this.OrmProvider.GetPagingTemplate(this.skip, this.limit, orderBy);
+        pageSql = pageSql.Replace("/**fields**/", "*");
+        pageSql = pageSql.Replace("/**tables**/", $"{tableSql} b");
+        pageSql = pageSql.Replace(" /**others**/", "");
+
+        if (this.IsNeedPaging && this.skip.HasValue && this.limit.HasValue)
+            builder.Append($"SELECT COUNT(*) FROM {tableSql} a;");
+        builder.Append($"{pageSql}");
+        var sql = builder.ToString();
+        builder.Clear();
         return sql;
     }
     public virtual string BuildCteTableSql(string tableName, out List<SqlFieldSegment> readerFields, out bool isRecursive)
@@ -1078,6 +1114,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (!string.IsNullOrEmpty(this.OrderBySql))
             builder.Append(this.OrderBySql + ",");
 
+        this.orderByFields ??= new();
         //能够访问Grouping属性的场景，通常是在最外层的Select子句或是OrderBy子句
         //访问Grouping字段，并且Grouping对象是一个字段
         if (this.IsGroupingMember(lambdaExpr.Body as MemberExpression))
@@ -1086,8 +1123,13 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             {
                 if (i > 0) builder.Append(',');
                 builder.Append(this.GroupFields[i].Body);
+                var orderField = new OrderByField { Field = this.GroupFields[i] };
+                this.orderByFields.Add(orderField);
                 if (orderType == "DESC")
+                {
                     builder.Append(" DESC");
+                    orderField.OrderSuffix = " DESC";
+                }
             }
         }
         else
@@ -1107,8 +1149,13 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                             {
                                 if (i > 0) builder.Append(',');
                                 builder.Append(this.GroupFields[i].Body);
+                                var orderField = new OrderByField { Field = this.GroupFields[i] };
+                                this.orderByFields.Add(orderField);
                                 if (orderType == "DESC")
+                                {
                                     builder.Append(" DESC");
+                                    orderField.OrderSuffix = " DESC";
+                                }
                             }
                             index++;
                             continue;
@@ -1119,8 +1166,13 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                             builder.Append(',');
 
                         builder.Append(sqlSegment.Body ?? sqlSegment.Value.ToString());
+                        var myOrderField = new OrderByField { Field = sqlSegment };
+                        this.orderByFields.Add(myOrderField);
                         if (orderType == "DESC")
+                        {
                             builder.Append(" DESC");
+                            myOrderField.OrderSuffix = " DESC";
+                        }
                         index++;
                     }
                     break;
@@ -1133,8 +1185,13 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                             {
                                 if (i > 0) builder.Append(',');
                                 builder.Append(this.GroupFields[i].Body);
+                                var orderField = new OrderByField { Field = this.GroupFields[i] };
+                                this.orderByFields.Add(orderField);
                                 if (orderType == "DESC")
+                                {
                                     builder.Append(" DESC");
+                                    orderField.OrderSuffix = " DESC";
+                                }
                             }
                             break;
                         }
@@ -1142,14 +1199,24 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         {
                             var readerField = this.GroupFields.Find(f => f.TargetMember.Name == memberExpr.Member.Name);
                             builder.Append(readerField.Body);
+                            var orderField = new OrderByField { Field = readerField };
+                            this.orderByFields.Add(orderField);
                             if (orderType == "DESC")
+                            {
                                 builder.Append(" DESC");
+                                orderField.OrderSuffix = " DESC";
+                            }
                             break;
                         }
                         var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = memberExpr });
                         builder.Append(sqlSegment.Body ?? sqlSegment.Value.ToString());
+                        var myOrderField = new OrderByField { Field = sqlSegment };
+                        this.orderByFields.Add(myOrderField);
                         if (orderType == "DESC")
+                        {
                             builder.Append(" DESC");
+                            myOrderField.OrderSuffix = " DESC";
+                        }
                     }
                     break;
             }
@@ -2027,4 +2094,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         return hashCode;
 #endif
     }
+}
+class OrderByField
+{
+    public SqlFieldSegment Field { get; set; }
+    public string OrderSuffix { get; set; }
 }
