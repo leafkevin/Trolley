@@ -272,9 +272,6 @@ public sealed class DbContext
     public TResult QueryScalar<TEntity, TResult>(IQueryVisitor visitor)
     {
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.IsUseMaster);
-        if (visitor.IsNeedFetchShardingTables)
-            this.FetchShardingTables(visitor as SqlVisitor);
-
         var sql = this.BuildSql(visitor, " UNION ALL ", out var readerFields);
         command.CommandText = sql;
         visitor.DbParameters.CopyTo(command.Parameters);
@@ -292,9 +289,6 @@ public sealed class DbContext
     public async Task<TResult> QueryScalarAsync<TEntity, TResult>(IQueryVisitor visitor, CancellationToken cancellationToken = default)
     {
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.IsUseMaster);
-        if (visitor.IsNeedFetchShardingTables)
-            await this.FetchShardingTablesAsync(visitor as SqlVisitor, cancellationToken);
-
         var sql = this.BuildSql(visitor, " UNION ALL ", out var readerFields);
         command.CommandText = sql;
         visitor.DbParameters.CopyTo(command.Parameters);
@@ -313,9 +307,6 @@ public sealed class DbContext
     {
         var entityType = typeof(TEntity);
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.IsUseMaster);
-        if (visitor.IsNeedFetchShardingTables)
-            this.FetchShardingTables(visitor as SqlVisitor);
-
         Expression<Func<TEntity, TEntity>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
         var sql = this.BuildSql(visitor, " UNION ALL ", out var readerFields);
@@ -346,8 +337,6 @@ public sealed class DbContext
     {
         var entityType = typeof(TEntity);
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.IsUseMaster);
-        if (visitor.IsNeedFetchShardingTables)
-            await this.FetchShardingTablesAsync(visitor as SqlVisitor, cancellationToken);
 
         Expression<Func<TEntity, TEntity>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
@@ -662,10 +651,9 @@ public sealed class DbContext
     {
         string sql = null;
         readerFields = null;
-        if (visitor.IsNeedFetchShardingTables)
-            this.FetchShardingTables(visitor as SqlVisitor);
-
         visitor.IsShardingTables = visitor.ShardingTables != null && visitor.ShardingTables.Count > 0;
+        if (visitor.IsNeedFetchShardingTables)
+            this.FetchShardingTables(visitor as SqlVisitor);        
         sql = visitor.BuildSql(out readerFields);
         if (visitor.IsShardingTables)
         {
