@@ -20,7 +20,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     private bool isDisposed;
 
     protected List<CommandSegment> deferredSegments = new();
-    private List<OrderByField> orderByFields;
     protected int? skip;
     protected int? limit;
 
@@ -39,6 +38,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     /// </summary>
     public bool IsSecondUnion { get; set; } = false;
     public TableSegment LastIncludeSegment { get; set; }
+    public List<OrderByField> OrderByFields { get; set; }
 
     public bool IsRecursive { get; set; }
     public bool IsUseCteTable { get; set; } = true;
@@ -125,7 +125,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         //各种单值查询，如：SELECT COUNT(*)/MAX(*)..等，都有SELECT操作     
         //如：From(f=>...).InnerJoin/UnionAll(f=>...)
-
         //生成sql时，include表的字段，一定要紧跟着主表字段后面，方便赋值主表实体的属性中，所以在插入时候就排好序
         //方案：在buildSql时确定，ReaderFields要重新排好序，include字段放到对应主表字段后面，表别名顺序不变
         if (this.ReaderFields == null)
@@ -345,9 +344,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         int index = 0;
         string orderBy = null;
         var builder = new StringBuilder();
-        if (this.orderByFields != null)
+        if (this.OrderByFields != null)
         {
-            foreach (var orderByField in this.orderByFields)
+            foreach (var orderByField in this.OrderByFields)
             {
                 var readerField = orderByField.Field.TargetMember ?? orderByField.Field.FromMember;
                 var fieldName = this.OrmProvider.GetFieldName(readerField.Name);
@@ -1114,7 +1113,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (!string.IsNullOrEmpty(this.OrderBySql))
             builder.Append(this.OrderBySql + ",");
 
-        this.orderByFields ??= new();
+        this.OrderByFields ??= new();
         //能够访问Grouping属性的场景，通常是在最外层的Select子句或是OrderBy子句
         //访问Grouping字段，并且Grouping对象是一个字段
         if (this.IsGroupingMember(lambdaExpr.Body as MemberExpression))
@@ -1124,7 +1123,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 if (i > 0) builder.Append(',');
                 builder.Append(this.GroupFields[i].Body);
                 var orderField = new OrderByField { Field = this.GroupFields[i] };
-                this.orderByFields.Add(orderField);
+                this.OrderByFields.Add(orderField);
                 if (orderType == "DESC")
                 {
                     builder.Append(" DESC");
@@ -1150,72 +1149,70 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                                 if (i > 0) builder.Append(',');
                                 builder.Append(this.GroupFields[i].Body);
                                 var orderField = new OrderByField { Field = this.GroupFields[i] };
-                                this.orderByFields.Add(orderField);
+                                this.OrderByFields.Add(orderField);
                                 if (orderType == "DESC")
                                 {
                                     builder.Append(" DESC");
                                     orderField.OrderSuffix = " DESC";
                                 }
                             }
-                            index++;
-                            continue;
                         }
-                        var memberInfo = newExpr.Members[index];
-                        var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = argumentExpr });
-                        if (index > 0)
-                            builder.Append(',');
-
-                        builder.Append(sqlSegment.Body ?? sqlSegment.Value.ToString());
-                        var myOrderField = new OrderByField { Field = sqlSegment };
-                        this.orderByFields.Add(myOrderField);
-                        if (orderType == "DESC")
+                        else
                         {
-                            builder.Append(" DESC");
-                            myOrderField.OrderSuffix = " DESC";
-                        }
-                        index++;
-                    }
-                    break;
-                case ExpressionType.MemberAccess:
-                    {
-                        var memberExpr = lambdaExpr.Body as MemberExpression;
-                        if (this.IsGroupingMember(memberExpr))
-                        {
-                            for (int i = 0; i < this.GroupFields.Count; i++)
-                            {
-                                if (i > 0) builder.Append(',');
-                                builder.Append(this.GroupFields[i].Body);
-                                var orderField = new OrderByField { Field = this.GroupFields[i] };
-                                this.orderByFields.Add(orderField);
-                                if (orderType == "DESC")
-                                {
-                                    builder.Append(" DESC");
-                                    orderField.OrderSuffix = " DESC";
-                                }
-                            }
-                            break;
-                        }
-                        if (this.IsGroupingMember(memberExpr.Expression as MemberExpression))
-                        {
-                            var readerField = this.GroupFields.Find(f => f.TargetMember.Name == memberExpr.Member.Name);
-                            builder.Append(readerField.Body);
-                            var orderField = new OrderByField { Field = readerField };
-                            this.orderByFields.Add(orderField);
+                            var memberInfo = newExpr.Members[index];
+                            var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = argumentExpr });
+                            if (index > 0) builder.Append(',');
+                            builder.Append(sqlSegment.Body ?? sqlSegment.Value.ToString());
+                            var orderField = new OrderByField { Field = sqlSegment };
+                            this.OrderByFields.Add(orderField);
                             if (orderType == "DESC")
                             {
                                 builder.Append(" DESC");
                                 orderField.OrderSuffix = " DESC";
                             }
-                            break;
                         }
-                        var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = memberExpr });
-                        builder.Append(sqlSegment.Body ?? sqlSegment.Value.ToString());
-                        var myOrderField = new OrderByField { Field = sqlSegment };
-                        this.orderByFields.Add(myOrderField);
+                        index++;
+                    }
+                    break;
+                case ExpressionType.MemberAccess:
+                    var memberExpr = lambdaExpr.Body as MemberExpression;
+                    if (this.IsGroupingMember(memberExpr))
+                    {
+                        for (int i = 0; i < this.GroupFields.Count; i++)
+                        {
+                            if (i > 0) builder.Append(',');
+                            builder.Append(this.GroupFields[i].Body);
+                            var orderField = new OrderByField { Field = this.GroupFields[i] };
+                            this.OrderByFields.Add(orderField);
+                            if (orderType == "DESC")
+                            {
+                                builder.Append(" DESC");
+                                orderField.OrderSuffix = " DESC";
+                            }
+                        }
+                    }
+                    else if (this.IsGroupingMember(memberExpr.Expression as MemberExpression))
+                    {
+                        var readerField = this.GroupFields.Find(f => f.TargetMember.Name == memberExpr.Member.Name);
+                        builder.Append(readerField.Body);
+                        var orderField = new OrderByField { Field = readerField };
+                        this.OrderByFields.Add(orderField);
                         if (orderType == "DESC")
                         {
                             builder.Append(" DESC");
-                            myOrderField.OrderSuffix = " DESC";
+                            orderField.OrderSuffix = " DESC";
+                        }
+                    }
+                    else
+                    {
+                        var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = memberExpr });
+                        builder.Append(sqlSegment.Body ?? sqlSegment.Value.ToString());
+                        var orderField = new OrderByField { Field = sqlSegment };
+                        this.OrderByFields.Add(orderField);
+                        if (orderType == "DESC")
+                        {
+                            builder.Append(" DESC");
+                            orderField.OrderSuffix = " DESC";
                         }
                     }
                     break;
@@ -2009,6 +2006,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         this.deferredSegments = null;
         this.LastIncludeSegment = null;
+        this.OrderByFields = null;
         this.SelfRefQueryObj = null;
 
         base.Dispose();
@@ -2095,7 +2093,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 #endif
     }
 }
-class OrderByField
+public class OrderByField
 {
     public SqlFieldSegment Field { get; set; }
     public string OrderSuffix { get; set; }

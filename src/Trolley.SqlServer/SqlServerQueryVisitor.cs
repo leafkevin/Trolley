@@ -37,7 +37,6 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
             builder.Append(this.UnionSql);
             sql = builder.ToString();
             builder.Clear();
-            builder = null;
             return sql;
         }
         var headSql = builder.ToString();
@@ -87,7 +86,7 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
         //SqlServer数据库，Union子句在SELECT * FROM包装后，每个列都需要有一个明确的列名，没有则需要增加as别名
         if (isManySharding)
             isManySharding = this.ShardingTables != null && this.ShardingTables[0].TableNames != null && this.ShardingTables[0].TableNames.Count > 1;
-        bool isNeedWrap = (this.IsUnion || this.IsSecondUnion || isManySharding) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue);
+        bool isNeedWrap = (this.IsUnion || this.IsSecondUnion) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue);
         this.AddSelectFieldsSql(builder, this.ReaderFields, isNeedWrap);
 
         string selectSql = null;
@@ -102,7 +101,6 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
             whereSql = $" WHERE {this.WhereSql}";
             builder.Append(whereSql);
         }
-
         if (!string.IsNullOrEmpty(this.GroupBySql))
             builder.Append($" GROUP BY {this.GroupBySql}");
         if (!string.IsNullOrEmpty(this.HavingSql))
@@ -121,7 +119,7 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
         if (!string.IsNullOrEmpty(headSql))
             builder.Append(headSql);
 
-        if (this.skip.HasValue || this.limit.HasValue)
+        if (!this.IsShardingTables && (this.skip.HasValue || this.limit.HasValue))
         {
             //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ /**others**/
             var pageSql = this.OrmProvider.GetPagingTemplate(this.skip, this.limit, orderBy);
@@ -141,7 +139,6 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
         }
         sql = builder.ToString();
         builder.Clear();
-        builder = null;
         return sql;
     }
     public override string BuildCommandSql(out IDataParameterCollection dbParameters)

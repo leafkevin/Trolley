@@ -14,6 +14,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
     public bool IsDistinctOn { get; set; }
     public List<SqlFieldSegment> DistinctOnFields { get; set; }
     public string DistinctOnSql { get; set; }
+
     public override string BuildSql(out List<SqlFieldSegment> readerFields)
     {
         var builder = new StringBuilder();
@@ -125,7 +126,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         if (!string.IsNullOrEmpty(headSql))
             builder.Append(headSql);
 
-        if (this.skip.HasValue || this.limit.HasValue)
+        if (!this.IsShardingTables && (this.skip.HasValue || this.limit.HasValue))
         {
             //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ /**others**/
             var pageSql = this.OrmProvider.GetPagingTemplate(this.skip, this.limit, orderBy);
@@ -396,6 +397,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         if (!string.IsNullOrEmpty(this.OrderBySql))
             builder.Append(this.OrderBySql + ",");
 
+        this.OrderByFields ??= new();
         //能够访问Grouping属性的场景，通常是在最外层的Select子句或是OrderBy子句
         //访问Grouping字段，并且Grouping对象是一个字段
         if (this.IsGroupingMember(lambdaExpr.Body as MemberExpression))
@@ -404,8 +406,13 @@ public class PostgreSqlQueryVisitor : QueryVisitor
             {
                 if (i > 0) builder.Append(',');
                 builder.Append(this.GroupFields[i].Body);
+                var orderField = new OrderByField { Field = this.GroupFields[i] };
+                this.OrderByFields.Add(orderField);
                 if (orderType == "DESC")
+                {
                     builder.Append(" DESC");
+                    orderField.OrderSuffix = " DESC";
+                }
             }
         }
         else if (this.IsDistinctOnMember(lambdaExpr.Body as MemberExpression))
@@ -414,8 +421,13 @@ public class PostgreSqlQueryVisitor : QueryVisitor
             {
                 if (i > 0) builder.Append(',');
                 builder.Append(this.DistinctOnFields[i].Body);
+                var orderField = new OrderByField { Field = this.DistinctOnFields[i] };
+                this.OrderByFields.Add(orderField);
                 if (orderType == "DESC")
+                {
                     builder.Append(" DESC");
+                    orderField.OrderSuffix = " DESC";
+                }
             }
         }
         else
@@ -435,8 +447,13 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                             {
                                 if (i > 0) builder.Append(',');
                                 builder.Append(this.GroupFields[i].Body);
+                                var orderField = new OrderByField { Field = this.GroupFields[i] };
+                                this.OrderByFields.Add(orderField);
                                 if (orderType == "DESC")
+                                {
                                     builder.Append(" DESC");
+                                    orderField.OrderSuffix = " DESC";
+                                }
                             }
                         }
                         else if (this.IsDistinctOnMember(argumentExpr as MemberExpression))
@@ -445,8 +462,13 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                             {
                                 if (i > 0) builder.Append(',');
                                 builder.Append(this.DistinctOnFields[i].Body);
+                                var orderField = new OrderByField { Field = this.DistinctOnFields[i] };
+                                this.OrderByFields.Add(orderField);
                                 if (orderType == "DESC")
+                                {
                                     builder.Append(" DESC");
+                                    orderField.OrderSuffix = " DESC";
+                                }
                             }
                         }
                         else
@@ -455,38 +477,83 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                             var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = argumentExpr });
                             if (index > 0) builder.Append(',');
                             builder.Append(sqlSegment.Body ?? sqlSegment.Value.ToString());
+                            var orderField = new OrderByField { Field = sqlSegment };
+                            this.OrderByFields.Add(orderField);
                             if (orderType == "DESC")
+                            {
                                 builder.Append(" DESC");
+                                orderField.OrderSuffix = " DESC";
+                            }
                         }
                         index++;
                     }
                     break;
                 case ExpressionType.MemberAccess:
+                    var memberExpr = lambdaExpr.Body as MemberExpression;
+                    if (this.IsGroupingMember(memberExpr))
                     {
-                        var memberExpr = lambdaExpr.Body as MemberExpression;
-                        if (this.IsGroupingMember(memberExpr))
+                        for (int i = 0; i < this.GroupFields.Count; i++)
                         {
-                            for (int i = 0; i < this.GroupFields.Count; i++)
+                            if (i > 0) builder.Append(',');
+                            builder.Append(this.GroupFields[i].Body);
+                            var orderField = new OrderByField { Field = this.GroupFields[i] };
+                            this.OrderByFields.Add(orderField);
+                            if (orderType == "DESC")
                             {
-                                if (i > 0) builder.Append(',');
-                                builder.Append(this.GroupFields[i].Body);
-                                if (orderType == "DESC")
-                                    builder.Append(" DESC");
+                                builder.Append(" DESC");
+                                orderField.OrderSuffix = " DESC";
                             }
                         }
-                        else if (this.IsDistinctOnMember(memberExpr.Expression as MemberExpression))
+                    }
+                    else if (this.IsGroupingMember(memberExpr.Expression as MemberExpression))
+                    {
+                        var readerField = this.GroupFields.Find(f => f.TargetMember.Name == memberExpr.Member.Name);
+                        builder.Append(readerField.Body);
+                        var orderField = new OrderByField { Field = readerField };
+                        this.OrderByFields.Add(orderField);
+                        if (orderType == "DESC")
                         {
-                            var readerField = this.DistinctOnFields.Find(f => f.TargetMember.Name == memberExpr.Member.Name);
-                            builder.Append(readerField.Body);
-                            if (orderType == "DESC")
-                                builder.Append(" DESC");
+                            builder.Append(" DESC");
+                            orderField.OrderSuffix = " DESC";
                         }
-                        else
+                    }
+                    else if (this.IsDistinctOnMember(memberExpr))
+                    {
+                        for (int i = 0; i < this.DistinctOnFields.Count; i++)
                         {
-                            var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = memberExpr });
-                            builder.Append(sqlSegment.Body ?? sqlSegment.Value.ToString());
+                            if (i > 0) builder.Append(',');
+                            builder.Append(this.DistinctOnFields[i].Body);
+                            var orderField = new OrderByField { Field = this.DistinctOnFields[i] };
+                            this.OrderByFields.Add(orderField);
                             if (orderType == "DESC")
+                            {
                                 builder.Append(" DESC");
+                                orderField.OrderSuffix = " DESC";
+                            }
+                        }
+                    }
+                    else if (this.IsDistinctOnMember(memberExpr.Expression as MemberExpression))
+                    {
+                        var readerField = this.DistinctOnFields.Find(f => f.TargetMember.Name == memberExpr.Member.Name);
+                        builder.Append(readerField.Body);
+                        var orderField = new OrderByField { Field = readerField };
+                        this.OrderByFields.Add(orderField);
+                        if (orderType == "DESC")
+                        {
+                            builder.Append(" DESC");
+                            orderField.OrderSuffix = " DESC";
+                        }
+                    }
+                    else
+                    {
+                        var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = memberExpr });
+                        builder.Append(sqlSegment.Body ?? sqlSegment.Value.ToString());
+                        var orderField = new OrderByField { Field = sqlSegment };
+                        this.OrderByFields.Add(orderField);
+                        if (orderType == "DESC")
+                        {
+                            builder.Append(" DESC");
+                            orderField.OrderSuffix = " DESC";
                         }
                     }
                     break;
@@ -725,7 +792,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                         //访问子查询表的成员，子查询表没有Mapper，也不会有实体类型成员
                         //Json的实体类型字段                       
                         //子查询，Select了Grouping分组对象或是匿名对象，目前子查询中，只支持一层，匿名对象后续会做支持
-                        //取AS后的字段名，与原字段名不一定一样,AS后的字段名与memberExpr.Member.Name一致
+                        //取AS后的字段名，与原字段名不一定一样，AS后的字段名与memberExpr.Member.Name一致
                         SqlFieldSegment readerField = null;
                         if (memberExpr.Expression.NodeType != ExpressionType.Parameter)
                         {
@@ -743,9 +810,10 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                         sqlSegment.FieldType = readerField.FieldType;
                         sqlSegment.FromMember = readerField.FromMember;
                         sqlSegment.TargetMember = readerField.TargetMember;
+                        sqlSegment.SegmentType = readerField.SegmentType;
                         if (readerField.SegmentType.IsEnumType(out var underlyingType))
                             sqlSegment.ExpectType = underlyingType;
-                        sqlSegment.SegmentType = readerField.SegmentType;
+
                         sqlSegment.NativeDbType = readerField.NativeDbType;
                         sqlSegment.TypeHandler = readerField.TypeHandler;
                         if (fromSegment.TableType == TableType.TempReaderFields)
@@ -756,6 +824,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                             if (this.IsNeedTableAlias) fieldName = fromSegment.AliasName + "." + fieldName;
                         }
                         sqlSegment.Body = fieldName;
+                        sqlSegment.Fields = readerField.Fields;
                     }
                 }
                 return sqlSegment;
