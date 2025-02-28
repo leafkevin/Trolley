@@ -265,7 +265,6 @@ public class SqlVisitor : ISqlVisitor
     public virtual string BuildTableShardingsSql() => null;
     public void SetShardingTables(List<string> shardingTables)
     {
-        List<string> tableNames = null;
         if (this.ShardingTables.Count > 1)
         {
             var needQueryTables = this.ShardingTables.FindAll(f => f.ShardingType > ShardingTableType.MultiTable);
@@ -299,6 +298,7 @@ public class SqlVisitor : ISqlVisitor
             if (this.ShardingProvider == null || !this.ShardingProvider.TryGetTableSharding(entityType, out var shardingTable))
                 throw new Exception($"实体{entityType.FullName}表有配置分表信息");
 
+            var tableNames = shardingTables;
             if (!string.IsNullOrEmpty(tableSegment.Body))
             {
                 tableNames = shardingTables.FindAll(f =>
@@ -317,12 +317,12 @@ public class SqlVisitor : ISqlVisitor
                     return result && tableSegment.ShardingFilter.Invoke(f);
                 });
             }
-            if (tableSegment.TableNames != null)
+            if (tableNames != null)
             {
                 tableNames = tableNames.FindAll(f =>
                 {
                     var result = Regex.IsMatch(f, shardingTable.ValidateRegex);
-                    return result && tableSegment.TableNames.Contains(f);
+                    return result && tableNames.Contains(f);
                 });
                 if (tableNames == null || tableNames.Count == 0)
                     throw new Exception($"没有搜索到满足条件的{tableSegment.Mapper.TableName}分表");

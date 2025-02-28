@@ -6,6 +6,7 @@ using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Text;
 
 namespace Trolley;
 
@@ -399,7 +400,14 @@ public static class Extensions
         var readerValue = reader.GetValue(index);
         if (readerValue == null || readerValue is DBNull)
             return default;
-        return (T)Convert.ChangeType(readerValue, typeof(T));
+        if (readerValue is IConvertible convertible)
+            return (T)Convert.ChangeType(readerValue, typeof(T));
+        var fieldType = readerValue.GetType();
+        var targetType = typeof(T);
+        //分布式数据库，默认值栏位是byte[]类型，需要转换为string类型值
+        if (readerValue is byte[] bytes && targetType == typeof(string))
+            return (T)(object)UTF8Encoding.UTF8.GetString(bytes);
+        throw new NotSupportedException($"不支持的类型转换，{fieldType.FullName}->{targetType.FullName}");
     }
 #if !NETCOREAPP2_0_OR_GREATER || !NETSTANDARD2_1_OR_GREATER
     public static bool TryPop<TElement>(this Stack<TElement> stack, out TElement element)
