@@ -1098,6 +1098,18 @@ public class UnitTest6 : UnitTestBase
                 }
             }
         }
+        var beginTime = DateTime.Parse("2024-04-01");
+        var endTime = DateTime.Parse("2024-06-05");
+        result = repository.From<Order>()
+            .UseTableByRange("104", beginTime, endTime)
+            .Where(f => f.ProductCount > productCount)
+            .ToList();
+        Assert.True(result.Count > 0);
+        result = repository.From<Order>()
+            .UseTable(f => f.Contains("_104_") && int.Parse(f[^6..]) > 202001)
+            .Where(f => f.ProductCount > productCount)
+            .ToList();
+        Assert.True(result.Count > 0);
     }
     [Fact]
     public async Task Query_SingleSharding_Value()

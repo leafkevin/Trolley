@@ -309,21 +309,18 @@ public class SqlVisitor : ISqlVisitor
                 if (tableNames == null || tableNames.Count == 0)
                     throw new Exception($"分表{tableSegment.Body}不存在");
             }
-            else if (tableSegment.ShardingType == ShardingTableType.MasterFilter)
+            else
             {
-                tableNames = shardingTables.FindAll(f =>
+                switch (tableSegment.ShardingType)
                 {
-                    var result = Regex.IsMatch(f, shardingTable.ValidateRegex);
-                    return result && tableSegment.ShardingFilter.Invoke(f);
-                });
-            }
-            if (tableNames != null)
-            {
-                tableNames = tableNames.FindAll(f =>
-                {
-                    var result = Regex.IsMatch(f, shardingTable.ValidateRegex);
-                    return result && tableNames.Contains(f);
-                });
+                    case ShardingTableType.TableRange:
+                        var oldTableNames = tableSegment.TableNames;
+                        tableNames = shardingTables.FindAll(f => oldTableNames.Contains(f) && Regex.IsMatch(f, shardingTable.ValidateRegex));
+                        break;
+                    case ShardingTableType.MasterFilter:
+                        tableNames = shardingTables.FindAll(f => Regex.IsMatch(f, shardingTable.ValidateRegex) && tableSegment.ShardingFilter.Invoke(f));
+                        break;
+                }
                 if (tableNames == null || tableNames.Count == 0)
                     throw new Exception($"没有搜索到满足条件的{tableSegment.Mapper.TableName}分表");
             }

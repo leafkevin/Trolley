@@ -653,7 +653,7 @@ public sealed class DbContext
         readerFields = null;
         visitor.IsShardingTables = visitor.ShardingTables != null && visitor.ShardingTables.Count > 0;
         if (visitor.IsNeedFetchShardingTables)
-            this.FetchShardingTables(visitor as SqlVisitor);        
+            this.FetchShardingTables(visitor as SqlVisitor);
         sql = visitor.BuildSql(out readerFields);
         if (visitor.IsShardingTables)
         {
@@ -718,12 +718,13 @@ public sealed class DbContext
             Dictionary<TableSegment, List<string>> tableShardings = new();
             for (int i = 0; i < loopCount; i++)
             {
-                if (builder.Length > 0) builder.Append(jointMark);
                 var masterTableName = masterTableSegment.TableNames[i];
                 var sql = formatSql.Replace($"__SHARDING_{masterTableSegment.ShardingId}_{origMasterName}", masterTableName);
-
                 if (this.GetdShardingMapTableName(visitor, origMasterName, masterTableName, sql, tableShardings, out sql))
+                {
+                    if (builder.Length > 0) builder.Append(jointMark);
                     builder.Append(sql);
+                }
             }
             if (tableShardings.Count > 0)
             {
@@ -768,7 +769,6 @@ public sealed class DbContext
             //如果主表分表名不存在，直接忽略本次关联
             var tableName = tableSegment.ShardingMapGetter.Invoke(origMasterName, origName, masterTableName);
             //主表存在分表，但从表不存在分表，直接忽略本次关联
-            //TOTO:此处需要记录日志
             if (!tableSegment.TableNames.Exists(f => f == tableName))
                 return false;
             sql = sql.Replace($"__SHARDING_{tableSegment.ShardingId}_{origName}", tableName);

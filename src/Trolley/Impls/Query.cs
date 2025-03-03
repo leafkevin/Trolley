@@ -677,8 +677,6 @@ public class Query<T> : QueryBase, IQuery<T>
     #region ToSql
     public override string ToSql(out List<IDbDataParameter> dbParameters)
     {
-        if (this.Visitor.IsNeedFetchShardingTables)
-            this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
         Expression<Func<T, T>> defaultExpr = f => f;
         this.Visitor.SelectDefault(defaultExpr);
         var sql = this.DbContext.BuildSql(this.Visitor, " UNION ALL ", out var readerFields);
