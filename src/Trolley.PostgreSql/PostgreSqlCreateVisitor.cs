@@ -620,6 +620,24 @@ public class PostgreSqlCreateVisitor : CreateVisitor
                     this.ReaderFields.Add(sqlSegment);
                 }
                 break;
+            case ExpressionType.Parameter:
+                foreach (var memberMapper in entityMapper.MemberMaps)
+                {
+                    if (memberMapper.IsIgnore || memberMapper.IsNavigation)
+                        continue;
+                    this.ReaderFields.Add(new SqlFieldSegment
+                    {
+                        FieldType = SqlFieldType.Field,
+                        FromMember = memberMapper.Member,
+                        TargetMember = memberMapper.Member,
+                        SegmentType = memberMapper.MemberType,
+                        NativeDbType = memberMapper.NativeDbType,
+                        TypeHandler = memberMapper.TypeHandler,
+                        Body = memberMapper.FieldName
+                    });
+                }
+                builder.Append('*');
+                break;
         }
         this.OutputSql = builder.ToString();
         builder.Clear();

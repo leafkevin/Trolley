@@ -799,7 +799,7 @@ public class UnitTest1 : UnitTestBase
             .IgnoreInto()
             .From<Brand>()
             .Where(f => f.Id == brandId)
-            .Select(f => new 
+            .Select(f => new
             {
                 Id = id,
                 ProductNo = "PN_" + id.ToString().PadLeft(3, '0'),
@@ -1699,6 +1699,30 @@ public class UnitTest1 : UnitTestBase
         Assert.Equal("1", result3.TenantId);
         Assert.Equal($"{Gender.Male}-{25}-{"leafkevin".ToUpper()}", result3.Name);
         Assert.Null(result3.SourceType);
+        await repository.BeginTransactionAsync();
+        await repository.DeleteAsync<User>(1);
+        var result4 = await repository.Create<User>()
+            .WithBy(new
+            {
+                Id = 1,
+                TenantId = "1",
+                Name = "leafkevin",
+                Age = 25,
+                CompanyId = 1,
+                Gender = Gender.Male,
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            })
+            .Returning(f => f)
+            .ExecuteAsync();
+        await repository.CommitAsync();
+        Assert.Equal(1, result4.Id);
+        Assert.Equal("1", result4.TenantId);
+        Assert.Equal("leafkevin", result4.Name);
+        Assert.Null(result4.SourceType);
     }
     [Fact]
     public async Task Insert_Returnings()
