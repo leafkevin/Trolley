@@ -383,18 +383,11 @@ class SqlServerTheaCommand : ITheaCommand
         }
         return result;
     }
-    public void Dispose()
-    {
-        this.command.Dispose();
-        this.command.CommandText = null;
-        this.command.Parameters.Clear();     
-    }
+    public void Dispose() => this.command.Dispose();
     public ValueTask DisposeAsync()
     {
 #if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-        this.command.DisposeAsync();
-        this.command.CommandText = null;
-        this.command.Parameters.Clear();
+        this.command.DisposeAsync(); 
 #else
         this.command.Dispose();
 #endif
