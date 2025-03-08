@@ -384,19 +384,19 @@ class PostgreSqlTheaCommand : ITheaCommand
     }
     public void Dispose()
     {
+        this.command.Dispose();
         this.command.CommandText = null;
         this.command.Parameters.Clear();
-        this.command.Dispose();
     }
     public ValueTask DisposeAsync()
     {
+#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+        this.command.DisposeAsync();
         this.command.CommandText = null;
         this.command.Parameters.Clear();
-#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-        return this.command.DisposeAsync();
 #else
         this.Dispose();
+#endif  
         return default;
-#endif
     }
 }

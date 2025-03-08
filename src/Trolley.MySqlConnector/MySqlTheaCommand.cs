@@ -385,14 +385,14 @@ class MySqlTheaCommand : ITheaCommand
     }
     public void Dispose()
     {
-        this.command.CommandText = null;
-        this.command.Parameters.Clear();
         this.command.Dispose();
+        this.command.CommandText = null;
+        this.command.Parameters.Clear();      
     }
     public async ValueTask DisposeAsync()
     {
-        this.command.CommandText = null;
-        this.command.Parameters.Clear();
         await this.command.DisposeAsync();
+        this.command.CommandText = null;
+        this.command.Parameters.Clear();     
     }
 }
