@@ -297,6 +297,118 @@ public class UnitTest3 : UnitTestBase
         }
     }
     [Fact]
+    public async Task Update_SetBulk_Output()
+    {
+        var repository = this.dbFactory.Create();
+        var orders = await repository.From<Order>()
+             .OrderBy(f => f.Id)
+             .Take(20)
+             .ToListAsync();
+        var parameters = orders.Select(f => new
+        {
+            f.Id,
+            TotalAmount = f.TotalAmount + 50,
+            Products = new List<int> { 1, 2, 3 },
+            Disputes = new Dispute
+            {
+                Id = 1,
+                Content = "43dss",
+                Users = "1,2",
+                Result = "OK",
+                CreatedAt = DateTime.Now
+            },
+            UpdatedAt = f.UpdatedAt.AddDays(1)
+        })
+        .ToList();
+        var sql1 = repository.Update<Order>()
+            .SetBulk(parameters, 10)
+            .Output(t => t.Inserted(f => new { f.Id, f.TotalAmount }))
+            .ToSql(out _);
+        Assert.Equal("UPDATE [sys_order] SET [TotalAmount]=@TotalAmount0,[Products]=@Products0,[Disputes]=@Disputes0,[UpdatedAt]=@UpdatedAt0 OUTPUT INSERTED.[Id],INSERTED.[TotalAmount] WHERE [Id]=@kId0;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount1,[Products]=@Products1,[Disputes]=@Disputes1,[UpdatedAt]=@UpdatedAt1 OUTPUT INSERTED.[Id],INSERTED.[TotalAmount] WHERE [Id]=@kId1;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount2,[Products]=@Products2,[Disputes]=@Disputes2,[UpdatedAt]=@UpdatedAt2 OUTPUT INSERTED.[Id],INSERTED.[TotalAmount] WHERE [Id]=@kId2;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount3,[Products]=@Products3,[Disputes]=@Disputes3,[UpdatedAt]=@UpdatedAt3 OUTPUT INSERTED.[Id],INSERTED.[TotalAmount] WHERE [Id]=@kId3;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount4,[Products]=@Products4,[Disputes]=@Disputes4,[UpdatedAt]=@UpdatedAt4 OUTPUT INSERTED.[Id],INSERTED.[TotalAmount] WHERE [Id]=@kId4;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount5,[Products]=@Products5,[Disputes]=@Disputes5,[UpdatedAt]=@UpdatedAt5 OUTPUT INSERTED.[Id],INSERTED.[TotalAmount] WHERE [Id]=@kId5;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount6,[Products]=@Products6,[Disputes]=@Disputes6,[UpdatedAt]=@UpdatedAt6 OUTPUT INSERTED.[Id],INSERTED.[TotalAmount] WHERE [Id]=@kId6;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount7,[Products]=@Products7,[Disputes]=@Disputes7,[UpdatedAt]=@UpdatedAt7 OUTPUT INSERTED.[Id],INSERTED.[TotalAmount] WHERE [Id]=@kId7;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount8,[Products]=@Products8,[Disputes]=@Disputes8,[UpdatedAt]=@UpdatedAt8 OUTPUT INSERTED.[Id],INSERTED.[TotalAmount] WHERE [Id]=@kId8;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount9,[Products]=@Products9,[Disputes]=@Disputes9,[UpdatedAt]=@UpdatedAt9 OUTPUT INSERTED.[Id],INSERTED.[TotalAmount] WHERE [Id]=@kId9;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount10,[Products]=@Products10,[Disputes]=@Disputes10,[UpdatedAt]=@UpdatedAt10 OUTPUT INSERTED.[Id],INSERTED.[TotalAmount] WHERE [Id]=@kId10;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount11,[Products]=@Products11,[Disputes]=@Disputes11,[UpdatedAt]=@UpdatedAt11 OUTPUT INSERTED.[Id],INSERTED.[TotalAmount] WHERE [Id]=@kId11;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount12,[Products]=@Products12,[Disputes]=@Disputes12,[UpdatedAt]=@UpdatedAt12 OUTPUT INSERTED.[Id],INSERTED.[TotalAmount] WHERE [Id]=@kId12;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount13,[Products]=@Products13,[Disputes]=@Disputes13,[UpdatedAt]=@UpdatedAt13 OUTPUT INSERTED.[Id],INSERTED.[TotalAmount] WHERE [Id]=@kId13;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount14,[Products]=@Products14,[Disputes]=@Disputes14,[UpdatedAt]=@UpdatedAt14 OUTPUT INSERTED.[Id],INSERTED.[TotalAmount] WHERE [Id]=@kId14;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount15,[Products]=@Products15,[Disputes]=@Disputes15,[UpdatedAt]=@UpdatedAt15 OUTPUT INSERTED.[Id],INSERTED.[TotalAmount] WHERE [Id]=@kId15;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount16,[Products]=@Products16,[Disputes]=@Disputes16,[UpdatedAt]=@UpdatedAt16 OUTPUT INSERTED.[Id],INSERTED.[TotalAmount] WHERE [Id]=@kId16;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount17,[Products]=@Products17,[Disputes]=@Disputes17,[UpdatedAt]=@UpdatedAt17 OUTPUT INSERTED.[Id],INSERTED.[TotalAmount] WHERE [Id]=@kId17;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount18,[Products]=@Products18,[Disputes]=@Disputes18,[UpdatedAt]=@UpdatedAt18 OUTPUT INSERTED.[Id],INSERTED.[TotalAmount] WHERE [Id]=@kId18;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount19,[Products]=@Products19,[Disputes]=@Disputes19,[UpdatedAt]=@UpdatedAt19 OUTPUT INSERTED.[Id],INSERTED.[TotalAmount] WHERE [Id]=@kId19", sql1);
+
+        var ids = parameters.Select(f => f.Id).ToList();
+        repository.BeginTransaction();
+        var result1 = await repository.Update<Order>()
+            .SetBulk(parameters, 10)
+            .Output(t => new { Id = t.Inserted(f => f.Id), TotalAmount = t.Inserted(f => f.TotalAmount) })
+            .ExecuteAsync();
+
+        var updatedOrders = repository.GetByIds<Order>(ids);
+        repository.Commit();
+        foreach (var updatedOrder in updatedOrders)
+        {
+            var parameter = parameters.FirstOrDefault(f => f.Id == updatedOrder.Id);
+            Assert.NotEmpty(updatedOrder.Products);
+            Assert.Equal(3, updatedOrder.Products.Count);
+            Assert.Equal(1, updatedOrder.Products[0]);
+            Assert.Equal(2, updatedOrder.Products[1]);
+            Assert.Equal(3, updatedOrder.Products[2]);
+            Assert.True(updatedOrder.TotalAmount == parameter.TotalAmount);
+        }
+
+        var sql2 = repository.Update<Order>()
+            .SetBulk(parameters, 10)
+            .Output<Order>("*")
+            .ToSql(out _);
+        Assert.Equal("UPDATE [sys_order] SET [TotalAmount]=@TotalAmount0,[Products]=@Products0,[Disputes]=@Disputes0,[UpdatedAt]=@UpdatedAt0 OUTPUT INSERTED.* WHERE [Id]=@kId0;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount1,[Products]=@Products1,[Disputes]=@Disputes1,[UpdatedAt]=@UpdatedAt1 OUTPUT INSERTED.* WHERE [Id]=@kId1;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount2,[Products]=@Products2,[Disputes]=@Disputes2,[UpdatedAt]=@UpdatedAt2 OUTPUT INSERTED.* WHERE [Id]=@kId2;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount3,[Products]=@Products3,[Disputes]=@Disputes3,[UpdatedAt]=@UpdatedAt3 OUTPUT INSERTED.* WHERE [Id]=@kId3;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount4,[Products]=@Products4,[Disputes]=@Disputes4,[UpdatedAt]=@UpdatedAt4 OUTPUT INSERTED.* WHERE [Id]=@kId4;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount5,[Products]=@Products5,[Disputes]=@Disputes5,[UpdatedAt]=@UpdatedAt5 OUTPUT INSERTED.* WHERE [Id]=@kId5;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount6,[Products]=@Products6,[Disputes]=@Disputes6,[UpdatedAt]=@UpdatedAt6 OUTPUT INSERTED.* WHERE [Id]=@kId6;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount7,[Products]=@Products7,[Disputes]=@Disputes7,[UpdatedAt]=@UpdatedAt7 OUTPUT INSERTED.* WHERE [Id]=@kId7;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount8,[Products]=@Products8,[Disputes]=@Disputes8,[UpdatedAt]=@UpdatedAt8 OUTPUT INSERTED.* WHERE [Id]=@kId8;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount9,[Products]=@Products9,[Disputes]=@Disputes9,[UpdatedAt]=@UpdatedAt9 OUTPUT INSERTED.* WHERE [Id]=@kId9;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount10,[Products]=@Products10,[Disputes]=@Disputes10,[UpdatedAt]=@UpdatedAt10 OUTPUT INSERTED.* WHERE [Id]=@kId10;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount11,[Products]=@Products11,[Disputes]=@Disputes11,[UpdatedAt]=@UpdatedAt11 OUTPUT INSERTED.* WHERE [Id]=@kId11;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount12,[Products]=@Products12,[Disputes]=@Disputes12,[UpdatedAt]=@UpdatedAt12 OUTPUT INSERTED.* WHERE [Id]=@kId12;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount13,[Products]=@Products13,[Disputes]=@Disputes13,[UpdatedAt]=@UpdatedAt13 OUTPUT INSERTED.* WHERE [Id]=@kId13;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount14,[Products]=@Products14,[Disputes]=@Disputes14,[UpdatedAt]=@UpdatedAt14 OUTPUT INSERTED.* WHERE [Id]=@kId14;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount15,[Products]=@Products15,[Disputes]=@Disputes15,[UpdatedAt]=@UpdatedAt15 OUTPUT INSERTED.* WHERE [Id]=@kId15;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount16,[Products]=@Products16,[Disputes]=@Disputes16,[UpdatedAt]=@UpdatedAt16 OUTPUT INSERTED.* WHERE [Id]=@kId16;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount17,[Products]=@Products17,[Disputes]=@Disputes17,[UpdatedAt]=@UpdatedAt17 OUTPUT INSERTED.* WHERE [Id]=@kId17;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount18,[Products]=@Products18,[Disputes]=@Disputes18,[UpdatedAt]=@UpdatedAt18 OUTPUT INSERTED.* WHERE [Id]=@kId18;UPDATE [sys_order] SET [TotalAmount]=@TotalAmount19,[Products]=@Products19,[Disputes]=@Disputes19,[UpdatedAt]=@UpdatedAt19 OUTPUT INSERTED.* WHERE [Id]=@kId19", sql2);
+
+        repository.BeginTransaction();
+        orders = repository.GetByIds<Order>(ids);
+        parameters = orders.Select(f => new
+        {
+            f.Id,
+            TotalAmount = f.TotalAmount + 50,
+            Products = new List<int> { 2, 3 },
+            Disputes = new Dispute
+            {
+                Id = 2,
+                Content = "43dss",
+                Users = "1,2",
+                Result = "OK",
+                CreatedAt = DateTime.Now
+            },
+            UpdatedAt = f.UpdatedAt.AddDays(1)
+        })
+        .ToList();
+        var result2 = repository.Update<Order>()
+            .SetBulk(parameters, 10)
+            .Output<Order>("*")
+            .Execute();
+        updatedOrders = repository.GetByIds<Order>(ids);
+        repository.Commit();
+        foreach (var updatedOrder in updatedOrders)
+        {
+            var parameter = parameters.FirstOrDefault(f => f.Id == updatedOrder.Id);
+            Assert.NotEmpty(updatedOrder.Products);
+            Assert.Equal(2, updatedOrder.Products.Count);
+            Assert.Equal(2, updatedOrder.Products[0]);
+            Assert.Equal(3, updatedOrder.Products[1]);
+            Assert.True(updatedOrder.TotalAmount == parameter.TotalAmount);
+        }
+
+        var sql3 = repository.Update<Order>()
+           .SetBulk(parameters, 10)
+           .Set(f => f.BuyerId, 2)
+           .Output(t => t.Inserted(f => new { f.Id, f.BuyerId, f.TotalAmount }))
+           .ToSql(out _);
+        Assert.Equal("UPDATE [sys_order] SET [BuyerId]=@BuyerId,[TotalAmount]=@TotalAmount0,[Products]=@Products0,[Disputes]=@Disputes0,[UpdatedAt]=@UpdatedAt0 OUTPUT INSERTED.[Id],INSERTED.[BuyerId],INSERTED.[TotalAmount] WHERE [Id]=@kId0;UPDATE [sys_order] SET [BuyerId]=@BuyerId,[TotalAmount]=@TotalAmount1,[Products]=@Products1,[Disputes]=@Disputes1,[UpdatedAt]=@UpdatedAt1 OUTPUT INSERTED.[Id],INSERTED.[BuyerId],INSERTED.[TotalAmount] WHERE [Id]=@kId1;UPDATE [sys_order] SET [BuyerId]=@BuyerId,[TotalAmount]=@TotalAmount2,[Products]=@Products2,[Disputes]=@Disputes2,[UpdatedAt]=@UpdatedAt2 OUTPUT INSERTED.[Id],INSERTED.[BuyerId],INSERTED.[TotalAmount] WHERE [Id]=@kId2;UPDATE [sys_order] SET [BuyerId]=@BuyerId,[TotalAmount]=@TotalAmount3,[Products]=@Products3,[Disputes]=@Disputes3,[UpdatedAt]=@UpdatedAt3 OUTPUT INSERTED.[Id],INSERTED.[BuyerId],INSERTED.[TotalAmount] WHERE [Id]=@kId3;UPDATE [sys_order] SET [BuyerId]=@BuyerId,[TotalAmount]=@TotalAmount4,[Products]=@Products4,[Disputes]=@Disputes4,[UpdatedAt]=@UpdatedAt4 OUTPUT INSERTED.[Id],INSERTED.[BuyerId],INSERTED.[TotalAmount] WHERE [Id]=@kId4;UPDATE [sys_order] SET [BuyerId]=@BuyerId,[TotalAmount]=@TotalAmount5,[Products]=@Products5,[Disputes]=@Disputes5,[UpdatedAt]=@UpdatedAt5 OUTPUT INSERTED.[Id],INSERTED.[BuyerId],INSERTED.[TotalAmount] WHERE [Id]=@kId5;UPDATE [sys_order] SET [BuyerId]=@BuyerId,[TotalAmount]=@TotalAmount6,[Products]=@Products6,[Disputes]=@Disputes6,[UpdatedAt]=@UpdatedAt6 OUTPUT INSERTED.[Id],INSERTED.[BuyerId],INSERTED.[TotalAmount] WHERE [Id]=@kId6;UPDATE [sys_order] SET [BuyerId]=@BuyerId,[TotalAmount]=@TotalAmount7,[Products]=@Products7,[Disputes]=@Disputes7,[UpdatedAt]=@UpdatedAt7 OUTPUT INSERTED.[Id],INSERTED.[BuyerId],INSERTED.[TotalAmount] WHERE [Id]=@kId7;UPDATE [sys_order] SET [BuyerId]=@BuyerId,[TotalAmount]=@TotalAmount8,[Products]=@Products8,[Disputes]=@Disputes8,[UpdatedAt]=@UpdatedAt8 OUTPUT INSERTED.[Id],INSERTED.[BuyerId],INSERTED.[TotalAmount] WHERE [Id]=@kId8;UPDATE [sys_order] SET [BuyerId]=@BuyerId,[TotalAmount]=@TotalAmount9,[Products]=@Products9,[Disputes]=@Disputes9,[UpdatedAt]=@UpdatedAt9 OUTPUT INSERTED.[Id],INSERTED.[BuyerId],INSERTED.[TotalAmount] WHERE [Id]=@kId9;UPDATE [sys_order] SET [BuyerId]=@BuyerId,[TotalAmount]=@TotalAmount10,[Products]=@Products10,[Disputes]=@Disputes10,[UpdatedAt]=@UpdatedAt10 OUTPUT INSERTED.[Id],INSERTED.[BuyerId],INSERTED.[TotalAmount] WHERE [Id]=@kId10;UPDATE [sys_order] SET [BuyerId]=@BuyerId,[TotalAmount]=@TotalAmount11,[Products]=@Products11,[Disputes]=@Disputes11,[UpdatedAt]=@UpdatedAt11 OUTPUT INSERTED.[Id],INSERTED.[BuyerId],INSERTED.[TotalAmount] WHERE [Id]=@kId11;UPDATE [sys_order] SET [BuyerId]=@BuyerId,[TotalAmount]=@TotalAmount12,[Products]=@Products12,[Disputes]=@Disputes12,[UpdatedAt]=@UpdatedAt12 OUTPUT INSERTED.[Id],INSERTED.[BuyerId],INSERTED.[TotalAmount] WHERE [Id]=@kId12;UPDATE [sys_order] SET [BuyerId]=@BuyerId,[TotalAmount]=@TotalAmount13,[Products]=@Products13,[Disputes]=@Disputes13,[UpdatedAt]=@UpdatedAt13 OUTPUT INSERTED.[Id],INSERTED.[BuyerId],INSERTED.[TotalAmount] WHERE [Id]=@kId13;UPDATE [sys_order] SET [BuyerId]=@BuyerId,[TotalAmount]=@TotalAmount14,[Products]=@Products14,[Disputes]=@Disputes14,[UpdatedAt]=@UpdatedAt14 OUTPUT INSERTED.[Id],INSERTED.[BuyerId],INSERTED.[TotalAmount] WHERE [Id]=@kId14;UPDATE [sys_order] SET [BuyerId]=@BuyerId,[TotalAmount]=@TotalAmount15,[Products]=@Products15,[Disputes]=@Disputes15,[UpdatedAt]=@UpdatedAt15 OUTPUT INSERTED.[Id],INSERTED.[BuyerId],INSERTED.[TotalAmount] WHERE [Id]=@kId15;UPDATE [sys_order] SET [BuyerId]=@BuyerId,[TotalAmount]=@TotalAmount16,[Products]=@Products16,[Disputes]=@Disputes16,[UpdatedAt]=@UpdatedAt16 OUTPUT INSERTED.[Id],INSERTED.[BuyerId],INSERTED.[TotalAmount] WHERE [Id]=@kId16;UPDATE [sys_order] SET [BuyerId]=@BuyerId,[TotalAmount]=@TotalAmount17,[Products]=@Products17,[Disputes]=@Disputes17,[UpdatedAt]=@UpdatedAt17 OUTPUT INSERTED.[Id],INSERTED.[BuyerId],INSERTED.[TotalAmount] WHERE [Id]=@kId17;UPDATE [sys_order] SET [BuyerId]=@BuyerId,[TotalAmount]=@TotalAmount18,[Products]=@Products18,[Disputes]=@Disputes18,[UpdatedAt]=@UpdatedAt18 OUTPUT INSERTED.[Id],INSERTED.[BuyerId],INSERTED.[TotalAmount] WHERE [Id]=@kId18;UPDATE [sys_order] SET [BuyerId]=@BuyerId,[TotalAmount]=@TotalAmount19,[Products]=@Products19,[Disputes]=@Disputes19,[UpdatedAt]=@UpdatedAt19 OUTPUT INSERTED.[Id],INSERTED.[BuyerId],INSERTED.[TotalAmount] WHERE [Id]=@kId19", sql3);
+
+        repository.BeginTransaction();
+        var result3 = await repository.Update<Order>()
+            .SetBulk(parameters, 10)
+            .Set(f => f.BuyerId, 2)
+            .Output(t => t.Inserted(f => new { f.Id, f.BuyerId, f.TotalAmount }))
+            .ExecuteAsync();
+
+        updatedOrders = repository.GetByIds<Order>(ids);
+        repository.Commit();
+        foreach (var updatedOrder in updatedOrders)
+        {
+            var parameter = parameters.FirstOrDefault(f => f.Id == updatedOrder.Id);
+            Assert.Equal(2, updatedOrder.BuyerId);
+        }
+    }
+    [Fact]
     public void Update_Fields_Where()
     {
         this.Initialize(3);
@@ -1192,7 +1304,7 @@ public class UnitTest3 : UnitTestBase
         }
     }
     [Fact]
-    public void Update_Set_Returning()
+    public void Update_Set_Output()
     {
         var repository = this.dbFactory.Create();
         var parameter = repository.GetById<Order>("1");
