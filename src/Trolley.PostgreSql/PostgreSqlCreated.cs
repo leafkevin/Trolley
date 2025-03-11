@@ -41,12 +41,12 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                     }
                     var dialectOrmProvider = this.OrmProvider as PostgreSqlProvider;
                     var sqlVisitor = this.Visitor as SqlVisitor;
-                    if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out var shardingTable))
+                    if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
                     {
                         var isNeedSplit = this.Visitor.Tables[0].Body == null;
                         if (isNeedSplit)
                         {
-                            var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
+                            var tabledInsertObjs = this.Visitor.SplitShardingParameters(tableShardingInfo, insertObjs);
                             foreach (var tabledInsertObj in tabledInsertObjs)
                             {
                                 result += dialectOrmProvider.ExecuteBulkCopy(false, this.DbContext, sqlVisitor, connection, insertObjType, tabledInsertObj.Value, tabledInsertObj.Key);
@@ -60,7 +60,7 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
             case ActionMode.Bulk:
                 {
                     var builder = new StringBuilder();
-                    (var isNeedSplit, var tableName, var insertObjs, var bulkCount,
+                    (var tableName, var tabledInsertObjs, var insertObjs, var bulkCount,
                         var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
                     int Execute(string tableName, IEnumerable insertObjs)
                     {
@@ -69,6 +69,8 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                         {
                             if (index > 0) builder.Append(',');
                             loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
+                            index++;
+
                             if (index >= bulkCount)
                             {
                                 command.CommandText = builder.ToString();
@@ -77,9 +79,7 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                                 command.Parameters.Clear();
                                 firstSqlSetter.Invoke(command.Parameters, builder, tableName);
                                 index = 0;
-                                continue;
                             }
-                            index++;
                         }
                         if (index > 0)
                         {
@@ -91,9 +91,8 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                         return count;
                     };
                     connection.Open();
-                    if (isNeedSplit)
+                    if (tabledInsertObjs != null)
                     {
-                        var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
                         foreach (var tabledInsertObj in tabledInsertObjs)
                         {
                             firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
@@ -139,12 +138,12 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                     }
                     var dialectOrmProvider = this.OrmProvider as PostgreSqlProvider;
                     var sqlVisitor = this.Visitor as SqlVisitor;
-                    if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out var shardingTable))
+                    if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
                     {
                         var isNeedSplit = this.Visitor.Tables[0].Body == null;
                         if (isNeedSplit)
                         {
-                            var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
+                            var tabledInsertObjs = this.Visitor.SplitShardingParameters(tableShardingInfo, insertObjs);
                             foreach (var tabledInsertObj in tabledInsertObjs)
                             {
                                 result += await dialectOrmProvider.ExecuteBulkCopyAsync(false, this.DbContext, sqlVisitor, connection, insertObjType, tabledInsertObj.Value, cancellationToken, tabledInsertObj.Key);
@@ -158,7 +157,7 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
             case ActionMode.Bulk:
                 {
                     var builder = new StringBuilder();
-                    (var isNeedSplit, var tableName, var insertObjs, var bulkCount,
+                    (var tableName, var tabledInsertObjs, var insertObjs, var bulkCount,
                         var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
                     async Task<int> Executor(string tableName, IEnumerable insertObjs)
                     {
@@ -167,6 +166,8 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                         {
                             if (index > 0) builder.Append(',');
                             loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
+                            index++;
+
                             if (index >= bulkCount)
                             {
                                 command.CommandText = builder.ToString();
@@ -175,9 +176,7 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                                 command.Parameters.Clear();
                                 firstSqlSetter.Invoke(command.Parameters, builder, tableName);
                                 index = 0;
-                                continue;
                             }
-                            index++;
                         }
                         if (index > 0)
                         {
@@ -189,9 +188,8 @@ public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<T
                         return count;
                     };
                     await connection.OpenAsync(cancellationToken);
-                    if (isNeedSplit)
+                    if (tabledInsertObjs != null)
                     {
-                        var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
                         foreach (var tabledInsertObj in tabledInsertObjs)
                         {
                             firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
@@ -291,13 +289,14 @@ public class PostgreSqlBulkCreated<TEntity, TResult> : Created<TEntity>, IPostgr
         }
         else
         {
-            (var isNeedSplit, var tableName, var insertObjs, var bulkCount, var firstSqlSetter,
+            (var tableName, var tabledInsertObjs, var insertObjs, var bulkCount, var firstSqlSetter,
                 var loopSqlSetter, var tailSql, var readerFields) = this.Visitor.BuildWithBulk(command);
 
             var entityType = typeof(TEntity);
             var resultType = typeof(TResult);
             var builder = new StringBuilder();
             Action<DbContext, List<TResult>, ITheaDataReader> initializer = null;
+
             if (resultType.IsEntityType(out _))
             {
                 initializer = (dbContext, result, reader) =>
@@ -326,6 +325,8 @@ public class PostgreSqlBulkCreated<TEntity, TResult> : Created<TEntity>, IPostgr
                 {
                     if (index > 0) builder.Append(',');
                     loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
+                    index++;
+
                     if (index >= bulkCount)
                     {
                         builder.Append(tailSql);
@@ -337,9 +338,7 @@ public class PostgreSqlBulkCreated<TEntity, TResult> : Created<TEntity>, IPostgr
                         command.Parameters.Clear();
                         firstSqlSetter.Invoke(command.Parameters, builder, tableName);
                         index = 0;
-                        continue;
                     }
-                    index++;
                 }
                 if (index > 0)
                 {
@@ -353,9 +352,8 @@ public class PostgreSqlBulkCreated<TEntity, TResult> : Created<TEntity>, IPostgr
                 }
             };
             connection.Open();
-            if (isNeedSplit)
+            if (tabledInsertObjs != null)
             {
-                var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
                 foreach (var tabledInsertObj in tabledInsertObjs)
                 {
                     firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
@@ -395,13 +393,14 @@ public class PostgreSqlBulkCreated<TEntity, TResult> : Created<TEntity>, IPostgr
         }
         else
         {
-            (var isNeedSplit, var tableName, var insertObjs, var bulkCount, var firstSqlSetter,
+            (var tableName, var tabledInsertObjs, var insertObjs, var bulkCount, var firstSqlSetter,
                 var loopSqlSetter, var tailSql, var readerFields) = this.Visitor.BuildWithBulk(command);
 
             var entityType = typeof(TEntity);
             var resultType = typeof(TResult);
             var builder = new StringBuilder();
             Func<DbContext, List<TResult>, ITheaDataReader, CancellationToken, Task> initializer = null;
+
             if (resultType.IsEntityType(out _))
             {
                 initializer = async (dbContext, result, reader, cancellationToken) =>
@@ -430,6 +429,8 @@ public class PostgreSqlBulkCreated<TEntity, TResult> : Created<TEntity>, IPostgr
                 {
                     if (index > 0) builder.Append(',');
                     loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
+                    index++;
+
                     if (index >= bulkCount)
                     {
                         builder.Append(tailSql);
@@ -441,9 +442,7 @@ public class PostgreSqlBulkCreated<TEntity, TResult> : Created<TEntity>, IPostgr
                         command.Parameters.Clear();
                         firstSqlSetter.Invoke(command.Parameters, builder, tableName);
                         index = 0;
-                        continue;
                     }
-                    index++;
                 }
                 if (index > 0)
                 {
@@ -457,9 +456,8 @@ public class PostgreSqlBulkCreated<TEntity, TResult> : Created<TEntity>, IPostgr
                 }
             };
             await connection.OpenAsync(cancellationToken);
-            if (isNeedSplit)
+            if (tabledInsertObjs != null)
             {
-                var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
                 foreach (var tabledInsertObj in tabledInsertObjs)
                 {
                     firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);

@@ -300,6 +300,118 @@ public class UnitTest3 : UnitTestBase
         }
     }
     [Fact]
+    public async Task Update_SetBulk_Returning()
+    {
+        var repository = this.dbFactory.Create();
+        var orders = await repository.From<Order>()
+             .OrderBy(f => f.Id)
+             .Take(20)
+             .ToListAsync();
+        var parameters = orders.Select(f => new
+        {
+            f.Id,
+            TotalAmount = f.TotalAmount + 50,
+            Products = new List<int> { 1, 2, 3 },
+            Disputes = new Dispute
+            {
+                Id = 1,
+                Content = "43dss",
+                Users = "1,2",
+                Result = "OK",
+                CreatedAt = DateTime.Now
+            },
+            UpdatedAt = f.UpdatedAt.AddDays(1)
+        })
+        .ToList();
+        var sql1 = repository.Update<Order>()
+            .SetBulk(parameters, 10)
+            .Returning(f => new { f.Id, f.TotalAmount })
+            .ToSql(out _);
+        Assert.Equal("UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount0,\"Products\"=@Products0,\"Disputes\"=@Disputes0,\"UpdatedAt\"=@UpdatedAt0 WHERE \"Id\"=@kId0 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount1,\"Products\"=@Products1,\"Disputes\"=@Disputes1,\"UpdatedAt\"=@UpdatedAt1 WHERE \"Id\"=@kId1 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount2,\"Products\"=@Products2,\"Disputes\"=@Disputes2,\"UpdatedAt\"=@UpdatedAt2 WHERE \"Id\"=@kId2 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount3,\"Products\"=@Products3,\"Disputes\"=@Disputes3,\"UpdatedAt\"=@UpdatedAt3 WHERE \"Id\"=@kId3 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount4,\"Products\"=@Products4,\"Disputes\"=@Disputes4,\"UpdatedAt\"=@UpdatedAt4 WHERE \"Id\"=@kId4 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount5,\"Products\"=@Products5,\"Disputes\"=@Disputes5,\"UpdatedAt\"=@UpdatedAt5 WHERE \"Id\"=@kId5 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount6,\"Products\"=@Products6,\"Disputes\"=@Disputes6,\"UpdatedAt\"=@UpdatedAt6 WHERE \"Id\"=@kId6 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount7,\"Products\"=@Products7,\"Disputes\"=@Disputes7,\"UpdatedAt\"=@UpdatedAt7 WHERE \"Id\"=@kId7 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount8,\"Products\"=@Products8,\"Disputes\"=@Disputes8,\"UpdatedAt\"=@UpdatedAt8 WHERE \"Id\"=@kId8 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount9,\"Products\"=@Products9,\"Disputes\"=@Disputes9,\"UpdatedAt\"=@UpdatedAt9 WHERE \"Id\"=@kId9 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount10,\"Products\"=@Products10,\"Disputes\"=@Disputes10,\"UpdatedAt\"=@UpdatedAt10 WHERE \"Id\"=@kId10 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount11,\"Products\"=@Products11,\"Disputes\"=@Disputes11,\"UpdatedAt\"=@UpdatedAt11 WHERE \"Id\"=@kId11 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount12,\"Products\"=@Products12,\"Disputes\"=@Disputes12,\"UpdatedAt\"=@UpdatedAt12 WHERE \"Id\"=@kId12 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount13,\"Products\"=@Products13,\"Disputes\"=@Disputes13,\"UpdatedAt\"=@UpdatedAt13 WHERE \"Id\"=@kId13 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount14,\"Products\"=@Products14,\"Disputes\"=@Disputes14,\"UpdatedAt\"=@UpdatedAt14 WHERE \"Id\"=@kId14 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount15,\"Products\"=@Products15,\"Disputes\"=@Disputes15,\"UpdatedAt\"=@UpdatedAt15 WHERE \"Id\"=@kId15 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount16,\"Products\"=@Products16,\"Disputes\"=@Disputes16,\"UpdatedAt\"=@UpdatedAt16 WHERE \"Id\"=@kId16 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount17,\"Products\"=@Products17,\"Disputes\"=@Disputes17,\"UpdatedAt\"=@UpdatedAt17 WHERE \"Id\"=@kId17 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount18,\"Products\"=@Products18,\"Disputes\"=@Disputes18,\"UpdatedAt\"=@UpdatedAt18 WHERE \"Id\"=@kId18 RETURNING \"Id\",\"TotalAmount\";UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount19,\"Products\"=@Products19,\"Disputes\"=@Disputes19,\"UpdatedAt\"=@UpdatedAt19 WHERE \"Id\"=@kId19 RETURNING \"Id\",\"TotalAmount\"", sql1);
+
+        var ids = parameters.Select(f => f.Id).ToList();
+        repository.BeginTransaction();
+        var result1 = await repository.Update<Order>()
+            .SetBulk(parameters, 10)
+            .Returning(f => new { f.Id, f.TotalAmount })
+            .ExecuteAsync();
+
+        var updatedOrders = repository.GetByIds<Order>(ids);
+        repository.Commit();
+        foreach (var updatedOrder in updatedOrders)
+        {
+            var parameter = parameters.FirstOrDefault(f => f.Id == updatedOrder.Id);
+            Assert.NotEmpty(updatedOrder.Products);
+            Assert.Equal(3, updatedOrder.Products.Count);
+            Assert.Equal(1, updatedOrder.Products[0]);
+            Assert.Equal(2, updatedOrder.Products[1]);
+            Assert.Equal(3, updatedOrder.Products[2]);
+            Assert.True(updatedOrder.TotalAmount == parameter.TotalAmount);
+        }
+
+        var sql2 = repository.Update<Order>()
+            .SetBulk(parameters, 10)
+            .Returning<Order>("*")
+            .ToSql(out _);
+        Assert.Equal("UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount0,\"Products\"=@Products0,\"Disputes\"=@Disputes0,\"UpdatedAt\"=@UpdatedAt0 WHERE \"Id\"=@kId0 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount1,\"Products\"=@Products1,\"Disputes\"=@Disputes1,\"UpdatedAt\"=@UpdatedAt1 WHERE \"Id\"=@kId1 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount2,\"Products\"=@Products2,\"Disputes\"=@Disputes2,\"UpdatedAt\"=@UpdatedAt2 WHERE \"Id\"=@kId2 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount3,\"Products\"=@Products3,\"Disputes\"=@Disputes3,\"UpdatedAt\"=@UpdatedAt3 WHERE \"Id\"=@kId3 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount4,\"Products\"=@Products4,\"Disputes\"=@Disputes4,\"UpdatedAt\"=@UpdatedAt4 WHERE \"Id\"=@kId4 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount5,\"Products\"=@Products5,\"Disputes\"=@Disputes5,\"UpdatedAt\"=@UpdatedAt5 WHERE \"Id\"=@kId5 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount6,\"Products\"=@Products6,\"Disputes\"=@Disputes6,\"UpdatedAt\"=@UpdatedAt6 WHERE \"Id\"=@kId6 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount7,\"Products\"=@Products7,\"Disputes\"=@Disputes7,\"UpdatedAt\"=@UpdatedAt7 WHERE \"Id\"=@kId7 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount8,\"Products\"=@Products8,\"Disputes\"=@Disputes8,\"UpdatedAt\"=@UpdatedAt8 WHERE \"Id\"=@kId8 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount9,\"Products\"=@Products9,\"Disputes\"=@Disputes9,\"UpdatedAt\"=@UpdatedAt9 WHERE \"Id\"=@kId9 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount10,\"Products\"=@Products10,\"Disputes\"=@Disputes10,\"UpdatedAt\"=@UpdatedAt10 WHERE \"Id\"=@kId10 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount11,\"Products\"=@Products11,\"Disputes\"=@Disputes11,\"UpdatedAt\"=@UpdatedAt11 WHERE \"Id\"=@kId11 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount12,\"Products\"=@Products12,\"Disputes\"=@Disputes12,\"UpdatedAt\"=@UpdatedAt12 WHERE \"Id\"=@kId12 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount13,\"Products\"=@Products13,\"Disputes\"=@Disputes13,\"UpdatedAt\"=@UpdatedAt13 WHERE \"Id\"=@kId13 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount14,\"Products\"=@Products14,\"Disputes\"=@Disputes14,\"UpdatedAt\"=@UpdatedAt14 WHERE \"Id\"=@kId14 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount15,\"Products\"=@Products15,\"Disputes\"=@Disputes15,\"UpdatedAt\"=@UpdatedAt15 WHERE \"Id\"=@kId15 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount16,\"Products\"=@Products16,\"Disputes\"=@Disputes16,\"UpdatedAt\"=@UpdatedAt16 WHERE \"Id\"=@kId16 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount17,\"Products\"=@Products17,\"Disputes\"=@Disputes17,\"UpdatedAt\"=@UpdatedAt17 WHERE \"Id\"=@kId17 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount18,\"Products\"=@Products18,\"Disputes\"=@Disputes18,\"UpdatedAt\"=@UpdatedAt18 WHERE \"Id\"=@kId18 RETURNING *;UPDATE \"sys_order\" SET \"TotalAmount\"=@TotalAmount19,\"Products\"=@Products19,\"Disputes\"=@Disputes19,\"UpdatedAt\"=@UpdatedAt19 WHERE \"Id\"=@kId19 RETURNING *", sql2);
+
+        repository.BeginTransaction();
+        orders = repository.GetByIds<Order>(ids);
+        parameters = orders.Select(f => new
+        {
+            f.Id,
+            TotalAmount = f.TotalAmount + 50,
+            Products = new List<int> { 2, 3 },
+            Disputes = new Dispute
+            {
+                Id = 2,
+                Content = "43dss",
+                Users = "1,2",
+                Result = "OK",
+                CreatedAt = DateTime.Now
+            },
+            UpdatedAt = f.UpdatedAt.AddDays(1)
+        })
+        .ToList();
+        var result2 = repository.Update<Order>()
+            .SetBulk(parameters, 10)
+            .Returning<Order>("*")
+            .Execute();
+        updatedOrders = repository.GetByIds<Order>(ids);
+        repository.Commit();
+        foreach (var updatedOrder in updatedOrders)
+        {
+            var parameter = parameters.FirstOrDefault(f => f.Id == updatedOrder.Id);
+            Assert.NotEmpty(updatedOrder.Products);
+            Assert.Equal(2, updatedOrder.Products.Count);
+            Assert.Equal(2, updatedOrder.Products[0]);
+            Assert.Equal(3, updatedOrder.Products[1]);
+            Assert.True(updatedOrder.TotalAmount == parameter.TotalAmount);
+        }
+
+        var sql3 = repository.Update<Order>()
+           .SetBulk(parameters, 10)
+           .Set(f => f.BuyerId, 2)
+           .Returning(f => new { f.Id, f.BuyerId, f.TotalAmount })
+           .ToSql(out _);
+        Assert.Equal("UPDATE \"sys_order\" SET \"BuyerId\"=@BuyerId,\"TotalAmount\"=@TotalAmount0,\"Products\"=@Products0,\"Disputes\"=@Disputes0,\"UpdatedAt\"=@UpdatedAt0 WHERE \"Id\"=@kId0 RETURNING \"Id\",\"BuyerId\",\"TotalAmount\";UPDATE \"sys_order\" SET \"BuyerId\"=@BuyerId,\"TotalAmount\"=@TotalAmount1,\"Products\"=@Products1,\"Disputes\"=@Disputes1,\"UpdatedAt\"=@UpdatedAt1 WHERE \"Id\"=@kId1 RETURNING \"Id\",\"BuyerId\",\"TotalAmount\";UPDATE \"sys_order\" SET \"BuyerId\"=@BuyerId,\"TotalAmount\"=@TotalAmount2,\"Products\"=@Products2,\"Disputes\"=@Disputes2,\"UpdatedAt\"=@UpdatedAt2 WHERE \"Id\"=@kId2 RETURNING \"Id\",\"BuyerId\",\"TotalAmount\";UPDATE \"sys_order\" SET \"BuyerId\"=@BuyerId,\"TotalAmount\"=@TotalAmount3,\"Products\"=@Products3,\"Disputes\"=@Disputes3,\"UpdatedAt\"=@UpdatedAt3 WHERE \"Id\"=@kId3 RETURNING \"Id\",\"BuyerId\",\"TotalAmount\";UPDATE \"sys_order\" SET \"BuyerId\"=@BuyerId,\"TotalAmount\"=@TotalAmount4,\"Products\"=@Products4,\"Disputes\"=@Disputes4,\"UpdatedAt\"=@UpdatedAt4 WHERE \"Id\"=@kId4 RETURNING \"Id\",\"BuyerId\",\"TotalAmount\";UPDATE \"sys_order\" SET \"BuyerId\"=@BuyerId,\"TotalAmount\"=@TotalAmount5,\"Products\"=@Products5,\"Disputes\"=@Disputes5,\"UpdatedAt\"=@UpdatedAt5 WHERE \"Id\"=@kId5 RETURNING \"Id\",\"BuyerId\",\"TotalAmount\";UPDATE \"sys_order\" SET \"BuyerId\"=@BuyerId,\"TotalAmount\"=@TotalAmount6,\"Products\"=@Products6,\"Disputes\"=@Disputes6,\"UpdatedAt\"=@UpdatedAt6 WHERE \"Id\"=@kId6 RETURNING \"Id\",\"BuyerId\",\"TotalAmount\";UPDATE \"sys_order\" SET \"BuyerId\"=@BuyerId,\"TotalAmount\"=@TotalAmount7,\"Products\"=@Products7,\"Disputes\"=@Disputes7,\"UpdatedAt\"=@UpdatedAt7 WHERE \"Id\"=@kId7 RETURNING \"Id\",\"BuyerId\",\"TotalAmount\";UPDATE \"sys_order\" SET \"BuyerId\"=@BuyerId,\"TotalAmount\"=@TotalAmount8,\"Products\"=@Products8,\"Disputes\"=@Disputes8,\"UpdatedAt\"=@UpdatedAt8 WHERE \"Id\"=@kId8 RETURNING \"Id\",\"BuyerId\",\"TotalAmount\";UPDATE \"sys_order\" SET \"BuyerId\"=@BuyerId,\"TotalAmount\"=@TotalAmount9,\"Products\"=@Products9,\"Disputes\"=@Disputes9,\"UpdatedAt\"=@UpdatedAt9 WHERE \"Id\"=@kId9 RETURNING \"Id\",\"BuyerId\",\"TotalAmount\";UPDATE \"sys_order\" SET \"BuyerId\"=@BuyerId,\"TotalAmount\"=@TotalAmount10,\"Products\"=@Products10,\"Disputes\"=@Disputes10,\"UpdatedAt\"=@UpdatedAt10 WHERE \"Id\"=@kId10 RETURNING \"Id\",\"BuyerId\",\"TotalAmount\";UPDATE \"sys_order\" SET \"BuyerId\"=@BuyerId,\"TotalAmount\"=@TotalAmount11,\"Products\"=@Products11,\"Disputes\"=@Disputes11,\"UpdatedAt\"=@UpdatedAt11 WHERE \"Id\"=@kId11 RETURNING \"Id\",\"BuyerId\",\"TotalAmount\";UPDATE \"sys_order\" SET \"BuyerId\"=@BuyerId,\"TotalAmount\"=@TotalAmount12,\"Products\"=@Products12,\"Disputes\"=@Disputes12,\"UpdatedAt\"=@UpdatedAt12 WHERE \"Id\"=@kId12 RETURNING \"Id\",\"BuyerId\",\"TotalAmount\";UPDATE \"sys_order\" SET \"BuyerId\"=@BuyerId,\"TotalAmount\"=@TotalAmount13,\"Products\"=@Products13,\"Disputes\"=@Disputes13,\"UpdatedAt\"=@UpdatedAt13 WHERE \"Id\"=@kId13 RETURNING \"Id\",\"BuyerId\",\"TotalAmount\";UPDATE \"sys_order\" SET \"BuyerId\"=@BuyerId,\"TotalAmount\"=@TotalAmount14,\"Products\"=@Products14,\"Disputes\"=@Disputes14,\"UpdatedAt\"=@UpdatedAt14 WHERE \"Id\"=@kId14 RETURNING \"Id\",\"BuyerId\",\"TotalAmount\";UPDATE \"sys_order\" SET \"BuyerId\"=@BuyerId,\"TotalAmount\"=@TotalAmount15,\"Products\"=@Products15,\"Disputes\"=@Disputes15,\"UpdatedAt\"=@UpdatedAt15 WHERE \"Id\"=@kId15 RETURNING \"Id\",\"BuyerId\",\"TotalAmount\";UPDATE \"sys_order\" SET \"BuyerId\"=@BuyerId,\"TotalAmount\"=@TotalAmount16,\"Products\"=@Products16,\"Disputes\"=@Disputes16,\"UpdatedAt\"=@UpdatedAt16 WHERE \"Id\"=@kId16 RETURNING \"Id\",\"BuyerId\",\"TotalAmount\";UPDATE \"sys_order\" SET \"BuyerId\"=@BuyerId,\"TotalAmount\"=@TotalAmount17,\"Products\"=@Products17,\"Disputes\"=@Disputes17,\"UpdatedAt\"=@UpdatedAt17 WHERE \"Id\"=@kId17 RETURNING \"Id\",\"BuyerId\",\"TotalAmount\";UPDATE \"sys_order\" SET \"BuyerId\"=@BuyerId,\"TotalAmount\"=@TotalAmount18,\"Products\"=@Products18,\"Disputes\"=@Disputes18,\"UpdatedAt\"=@UpdatedAt18 WHERE \"Id\"=@kId18 RETURNING \"Id\",\"BuyerId\",\"TotalAmount\";UPDATE \"sys_order\" SET \"BuyerId\"=@BuyerId,\"TotalAmount\"=@TotalAmount19,\"Products\"=@Products19,\"Disputes\"=@Disputes19,\"UpdatedAt\"=@UpdatedAt19 WHERE \"Id\"=@kId19 RETURNING \"Id\",\"BuyerId\",\"TotalAmount\"", sql3);
+
+        repository.BeginTransaction();
+        var result3 = await repository.Update<Order>()
+            .SetBulk(parameters, 10)
+            .Set(f => f.BuyerId, 2)
+            .Returning(f => new { f.Id, f.BuyerId, f.TotalAmount })
+            .ExecuteAsync();
+
+        updatedOrders = repository.GetByIds<Order>(ids);
+        repository.Commit();
+        foreach (var updatedOrder in updatedOrders)
+        {
+            var parameter = parameters.FirstOrDefault(f => f.Id == updatedOrder.Id);
+            Assert.Equal(2, updatedOrder.BuyerId);
+        }
+    }
+    [Fact]
     public void Update_Fields_Where()
     {
         this.Initialize(2);
@@ -1264,7 +1376,7 @@ public class UnitTest3 : UnitTestBase
                 }
             })
             .Where(x => x.Id == "1")
-            .Returning<Product>("*")
+            .Returning<Order>("*")
             .ToSql(out _);
         Assert.Equal("UPDATE \"sys_order\" SET \"TotalAmount\"=@p0,\"Products\"=@p1,\"Disputes\"=@p2 WHERE \"Id\"='1' RETURNING *", sql2);
 

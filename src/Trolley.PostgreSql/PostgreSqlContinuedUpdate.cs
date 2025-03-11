@@ -183,7 +183,7 @@ public class PostgreSqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IPos
             case ActionMode.Bulk:
                 {
                     var builder = new StringBuilder();
-                    (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter) = this.Visitor.BuildWithBulk(command);
+                    (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter, _) = this.Visitor.BuildWithBulk(command);
                     Func<int, string> suffixGetter = index => this.Visitor.IsMultiple ? $"_m{this.Visitor.CommandIndex}{index}" : $"{index}";
 
                     Action<object, int> sqlExecute = null;
@@ -217,6 +217,8 @@ public class PostgreSqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IPos
                     foreach (var updateObj in updateObjs)
                     {
                         sqlExecute.Invoke(updateObj, index);
+                        index++;
+
                         if (index >= bulkCount)
                         {
                             command.CommandText = builder.ToString();
@@ -225,9 +227,7 @@ public class PostgreSqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IPos
                             fixedParameterSetter?.Invoke(command.Parameters);
                             builder.Clear();
                             index = 0;
-                            continue;
                         }
-                        index++;
                     }
                     if (index > 0)
                     {
@@ -346,7 +346,7 @@ public class PostgreSqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IPos
             case ActionMode.Bulk:
                 {
                     var builder = new StringBuilder();
-                    (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter) = this.Visitor.BuildWithBulk(command);
+                    (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter, _) = this.Visitor.BuildWithBulk(command);
                     Func<int, string> suffixGetter = index => this.Visitor.IsMultiple ? $"_m{this.Visitor.CommandIndex}{index}" : $"{index}";
 
                     Action<object, int> sqlExecute = null;
@@ -381,6 +381,8 @@ public class PostgreSqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IPos
                     foreach (var updateObj in updateObjs)
                     {
                         sqlExecute.Invoke(updateObj, index);
+                        index++;
+
                         if (index >= bulkCount)
                         {
                             command.CommandText = builder.ToString();
@@ -389,9 +391,7 @@ public class PostgreSqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IPos
                             fixedParameterSetter?.Invoke(command.Parameters);
                             builder.Clear();
                             index = 0;
-                            continue;
                         }
-                        index++;
                     }
                     if (index > 0)
                     {
@@ -423,7 +423,7 @@ public class PostgreSqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IPos
     #endregion
 
     #region ToSql
-    public new string ToSql(out List<IDbDataParameter> dbParameters)
+    public override string ToSql(out List<IDbDataParameter> dbParameters)
     {
         string sql;
         dbParameters = null;
@@ -685,7 +685,7 @@ public class PostgreSqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntit
             case ActionMode.Bulk:
                 {
                     var builder = new StringBuilder();
-                    (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter) = this.Visitor.BuildWithBulk(command);
+                    (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter, _) = this.Visitor.BuildWithBulk(command);
                     Func<int, string> suffixGetter = index => this.Visitor.IsMultiple ? $"_m{this.Visitor.CommandIndex}{index}" : $"{index}";
 
                     Action<object, int> sqlExecute = null;
@@ -719,6 +719,8 @@ public class PostgreSqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntit
                     foreach (var updateObj in updateObjs)
                     {
                         sqlExecute.Invoke(updateObj, index);
+                        index++;
+
                         if (index >= bulkCount)
                         {
                             command.CommandText = builder.ToString();
@@ -727,9 +729,7 @@ public class PostgreSqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntit
                             fixedParameterSetter?.Invoke(command.Parameters);
                             builder.Clear();
                             index = 0;
-                            continue;
                         }
-                        index++;
                     }
                     if (index > 0)
                     {
@@ -848,7 +848,7 @@ public class PostgreSqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntit
             case ActionMode.Bulk:
                 {
                     var builder = new StringBuilder();
-                    (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter) = this.Visitor.BuildWithBulk(command);
+                    (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter, _) = this.Visitor.BuildWithBulk(command);
                     Func<int, string> suffixGetter = index => this.Visitor.IsMultiple ? $"_m{this.Visitor.CommandIndex}{index}" : $"{index}";
 
                     Action<object, int> sqlExecute = null;
@@ -883,6 +883,8 @@ public class PostgreSqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntit
                     foreach (var updateObj in updateObjs)
                     {
                         sqlExecute.Invoke(updateObj, index);
+                        index++;
+
                         if (index >= bulkCount)
                         {
                             command.CommandText = builder.ToString();
@@ -891,9 +893,7 @@ public class PostgreSqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntit
                             fixedParameterSetter?.Invoke(command.Parameters);
                             builder.Clear();
                             index = 0;
-                            continue;
                         }
-                        index++;
                     }
                     if (index > 0)
                     {
@@ -925,7 +925,7 @@ public class PostgreSqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntit
     #endregion
 
     #region ToSql
-    public new string ToSql(out List<IDbDataParameter> dbParameters)
+    public override string ToSql(out List<IDbDataParameter> dbParameters)
     {
         string sql;
         dbParameters = null;

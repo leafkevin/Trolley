@@ -382,14 +382,22 @@ class PostgreSqlTheaCommand : ITheaCommand
         }
         return result;
     }
-    public void Dispose() => this.command.Dispose();
+    public void Dispose()
+    {
+        this.command.Dispose();
+        this.Parameters.Clear();
+    }
+
+#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+    public async ValueTask DisposeAsync()
+    {
+        await this.command.DisposeAsync();
+        this.Parameters.Clear();
+#else
     public ValueTask DisposeAsync()
     {
-#if NETCOREAPP3_0_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-        this.command.DisposeAsync();
-#else
         this.Dispose();
-#endif  
         return default;
+#endif
     }
 }

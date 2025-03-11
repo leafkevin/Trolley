@@ -38,18 +38,20 @@ public interface IQueryVisitor : IDisposable
     int PageSize { get; set; }
     bool IsNeedCommandTableAlias { get; set; }
     bool IsNeedFetchShardingTables { get; }
+    bool IsNeedFormatShardingTables { get; set; }
+    bool IsNeedUnionShardingTables { get; set; }
     List<TableSegment> ShardingTables { get; set; }
     bool IsFromQuery { get; set; }
     bool IsFromCommand { get; set; }
     bool IsUseMaster { get; }
     bool IsNeedPaging { get; set; }
-    bool IsShardingTables { get; set; }
 
     string BuildSql(out List<SqlFieldSegment> readerFields);
     string BuildCommandSql(out IDataParameterCollection dbParameters);
-    string BuildShardingPagingSql(string rawSql);
+    string BuildShardingSql(string formatSql);
     string BuildCteTableSql(string tableName, out List<SqlFieldSegment> readerFields, out bool isRecursive);
 
+    string BuildShardingTableNamesSql(string orgTableName, string tableSchema = null);
     string BuildTableShardingsSql();
     void SetShardingTables(List<string> shardingTables);
     void UseTable(bool isIncludeMany, params string[] tableNames);

@@ -991,11 +991,11 @@ public class RepositoryHelper
                 var valuesSetter = BuildFieldsSqlParametersPart(dbContext, entityType, insertObjType, 2, 1, 0, false, false, false, null, null, "(", tailSql)
                     as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
 
-                if (dbContext.ShardingProvider != null && dbContext.ShardingProvider.TryGetTableSharding(entityType, out _))
+                if (dbContext.ShardingProvider != null && dbContext.ShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
                 {
                     return (dbContext, command, insertObjs) =>
                     {
-                        var myTableName = dbContext.GetShardingTableName(entityType, insertObjType, insertObjs);
+                        var myTableName = GetShardingTableName(tableShardingInfo, entityMapper, insertObjType, insertObjs);
                         var builder = new StringBuilder();
                         builder.Append($"INSERT INTO {ormProvider.GetTableName(myTableName)}");
                         fieldsSetter.Invoke(builder, dbContext, insertObjs);
@@ -1062,6 +1062,8 @@ public class RepositoryHelper
                 {
                     if (index > 0) builder.Append(',');
                     valuesSetter.Invoke(command.Parameters, builder, dbContext, insertObj, index.ToString());
+                    index++;
+
                     if (index >= bulkCount)
                     {
                         command.CommandText = builder.ToString();
@@ -1070,9 +1072,7 @@ public class RepositoryHelper
                         command.Parameters.Clear();
                         builder.Append($"INSERT INTO {ormProvider.GetTableName(tableName)}{fieldsSql}");
                         index = 0;
-                        continue;
                     }
-                    index++;
                 }
                 if (index > 0)
                 {
@@ -1085,12 +1085,13 @@ public class RepositoryHelper
             }
 
             Func<DbContext, ITheaCommand, IEnumerable, int, int> commandExecutor = null;
-            if (dbContext.ShardingProvider != null && dbContext.ShardingProvider.TryGetTableSharding(entityType, out _))
+            var entityMapper = dbContext.MapProvider.GetEntityMap(entityType);
+            if (dbContext.ShardingProvider != null && dbContext.ShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
             {
                 commandExecutor = (dbContext, command, insertObjs, bulkCount) =>
                 {
                     int count = 0;
-                    var tabledInsertObjs = dbContext.SplitShardingParameters(entityType, insertObjs);
+                    var tabledInsertObjs = SplitShardingParameters(tableShardingInfo, entityMapper, insertObjType, insertObjs);
                     foreach (var tabledInsertObj in tabledInsertObjs)
                     {
                         count += Execute(dbContext, command, tabledInsertObj.Key, tabledInsertObj.Value, bulkCount);
@@ -1100,7 +1101,6 @@ public class RepositoryHelper
             }
             else
             {
-                var entityMapper = dbContext.MapProvider.GetEntityMap(entityType);
                 var tableName = entityMapper.TableName;
                 commandExecutor = (dbContext, command, insertObjs, bulkCount) => Execute(dbContext, command, tableName, insertObjs, bulkCount);
             }
@@ -1135,6 +1135,8 @@ public class RepositoryHelper
                 {
                     if (index > 0) builder.Append(',');
                     valuesSetter.Invoke(command.Parameters, builder, dbContext, insertObj, index.ToString());
+                    index++;
+
                     if (index >= bulkCount)
                     {
                         command.CommandText = builder.ToString();
@@ -1143,9 +1145,7 @@ public class RepositoryHelper
                         command.Parameters.Clear();
                         builder.Append($"INSERT INTO {ormProvider.GetTableName(tableName)}{fieldsSql}");
                         index = 0;
-                        continue;
                     }
-                    index++;
                 }
                 if (index > 0)
                 {
@@ -1156,14 +1156,14 @@ public class RepositoryHelper
                 }
                 return count;
             }
-
+            var entityMapper = dbContext.MapProvider.GetEntityMap(entityType);
             Func<DbContext, ITheaCommand, IEnumerable, int, CancellationToken, Task<int>> commandExecutor = null;
-            if (dbContext.ShardingProvider != null && dbContext.ShardingProvider.TryGetTableSharding(entityType, out _))
+            if (dbContext.ShardingProvider != null && dbContext.ShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
             {
                 commandExecutor = async (dbContext, command, insertObjs, bulkCount, cancellationToken) =>
                 {
                     int count = 0;
-                    var tabledInsertObjs = dbContext.SplitShardingParameters(entityType, insertObjs);
+                    var tabledInsertObjs = SplitShardingParameters(tableShardingInfo, entityMapper, insertObjType, insertObjs);
                     foreach (var tabledInsertObj in tabledInsertObjs)
                     {
                         count += await Execute(dbContext, command, tabledInsertObj.Key, tabledInsertObj.Value, bulkCount, cancellationToken);
@@ -1173,7 +1173,6 @@ public class RepositoryHelper
             }
             else
             {
-                var entityMapper = dbContext.MapProvider.GetEntityMap(entityType);
                 var tableName = entityMapper.TableName;
                 commandExecutor = async (dbContext, command, insertObjs, bulkCount, cancellationToken) => await Execute(dbContext, command, tableName, insertObjs, bulkCount, cancellationToken);
             }
@@ -1525,79 +1524,56 @@ public class RepositoryHelper
         });
     }
 
-    public static Dictionary<string, List<object>> SplitShardingParameters(IEntityMapProvider mapProvider, ITableShardingProvider shardingProvider, Type entityType, IEnumerable parameters)
+    public static Dictionary<string, List<object>> SplitShardingParameters(TableShardingInfo tableShardingInfo, EntityMap entityMapper, Type insertObjType, IEnumerable insertObjs)
     {
         var result = new Dictionary<string, List<object>>();
-        Type parameterType = null;
-        foreach (var parameter in parameters)
+        foreach (var insertObj in insertObjs)
         {
-            parameterType = parameter.GetType();
-            break;
-        }
-        foreach (var parameter in parameters)
-        {
-            var tableName = GetShardingTableName(mapProvider, shardingProvider, entityType, parameterType, parameter);
+            var tableName = GetShardingTableName(tableShardingInfo, entityMapper, insertObjType, insertObj);
             if (!result.TryGetValue(tableName, out var myParameters))
                 result.Add(tableName, myParameters = new List<object>());
-            myParameters.Add(parameter);
+            myParameters.Add(insertObj);
         }
         return result;
     }
-    public static string GetShardingTableName(IEntityMapProvider mapProvider, ITableShardingProvider shardingProvider, Type entityType, Type parameterType, object parameter)
+    public static string GetShardingTableName(TableShardingInfo tableShardingInfo, EntityMap entityMapper, Type parameterType, object parameter)
     {
-        var entityMapper = mapProvider.GetEntityMap(entityType);
+        var entityType = entityMapper.EntityType;
         var tableName = entityMapper.TableName;
-        if (TryBuildShardingTableNameGetter(shardingProvider, entityType, parameterType, out var tableNameGetter))
-            return tableNameGetter.Invoke(tableName, parameter);
-        return tableName;
-    }
-    public static bool TryBuildShardingTableNameGetter(ITableShardingProvider shardingProvider, Type entityType, Type parameterType, out Func<string, object, string> tableNameGetter)
-    {
-        if (shardingProvider == null || !shardingProvider.TryGetTableSharding(entityType, out var shardingTable))
-        {
-            tableNameGetter = null;
-            return false;
-        }
-        if (shardingTable.DependOnMembers == null || shardingTable.DependOnMembers.Count == 0)
-            throw new NotSupportedException($"实体表{entityType.FullName}有设置分表，但未指定依赖字段，插入数据无法确定分表");
-
         var cacheKey = GetCacheKey(entityType, parameterType);
-        if (shardingTable.DependOnMembers.Count > 1)
+        var tableNameGetter = shardingTableNameGetters.GetOrAdd(cacheKey, f =>
         {
-            if (typeof(IDictionary<string, object>).IsAssignableFrom(parameterType))
+            if (tableShardingInfo.DependOnMembers.Count > 1)
             {
-                tableNameGetter = shardingTableNameGetters.GetOrAdd(cacheKey, f =>
+                if (typeof(IDictionary<string, object>).IsAssignableFrom(parameterType))
                 {
                     return (string origName, object parameter) =>
                     {
                         var dict = parameter as IDictionary<string, object>;
-                        (var isContainsKey, var field1Value) = dict.ContainsLowerKey(shardingTable.DependOnMembers[0].ToLower());
+                        (var isContainsKey, var field1Value) = dict.ContainsLowerKey(tableShardingInfo.DependOnMembers[0].ToLower());
                         if (!isContainsKey)
-                            throw new MissingMemberException($"实体表{entityType.FullName}已设置分表并依赖成员{shardingTable.DependOnMembers[0]}映射的字段，但当前字典中并不包含key:{shardingTable.DependOnMembers[0]}的键值");
-                        (isContainsKey, var field2Value) = dict.ContainsLowerKey(shardingTable.DependOnMembers[1].ToLower());
+                            throw new MissingMemberException($"实体表{entityType.FullName}已设置分表并依赖成员{tableShardingInfo.DependOnMembers[0]}映射的字段，但当前字典中并不包含key:{tableShardingInfo.DependOnMembers[0]}的键值");
+                        (isContainsKey, var field2Value) = dict.ContainsLowerKey(tableShardingInfo.DependOnMembers[1].ToLower());
                         if (!isContainsKey)
-                            throw new MissingMemberException($"实体表{entityType.FullName}已设置分表并依赖成员{shardingTable.DependOnMembers[1]}映射的字段，但当前字典中不包含key:{shardingTable.DependOnMembers[1]}的键值");
+                            throw new MissingMemberException($"实体表{entityType.FullName}已设置分表并依赖成员{tableShardingInfo.DependOnMembers[1]}映射的字段，但当前字典中不包含key:{tableShardingInfo.DependOnMembers[1]}的键值");
 
-                        var tableNameRuleGetter = shardingTable.Rule as Func<string, object, object, string>;
+                        var tableNameRuleGetter = tableShardingInfo.Rule as Func<string, object, object, string>;
                         return tableNameRuleGetter.Invoke(origName, field1Value, field2Value);
                     };
-                });
-            }
-            else
-            {
-                tableNameGetter = shardingTableNameGetters.GetOrAdd(cacheKey, f =>
+                }
+                else
                 {
                     var origNameExpr = Expression.Parameter(typeof(string), "origName");
                     var parameterObjExpr = Expression.Parameter(typeof(object), "parameterObj");
-                    var tableNameRuleGetter = shardingTable.Rule as Func<string, object, object, string>;
-                    //TODO:处理大小写
+                    var tableNameRuleGetter = tableShardingInfo.Rule as Func<string, object, object, string>;
+
                     var memberNames = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                        .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field)
-                        .Select(f => f.Name).ToList();
-                    (var isContains, var memberName1) = memberNames.ContainsLower(shardingTable.DependOnMembers[0].ToLower());
-                    if (!isContains) throw new MissingMemberException($"实体表{entityType.FullName}已设置分表并依赖成员{shardingTable.DependOnMembers[0]}映射的字段，但当前参数中并不包含{shardingTable.DependOnMembers[0]}成员");
-                    (isContains, var memberName2) = memberNames.ContainsLower(shardingTable.DependOnMembers[1].ToLower());
-                    if (!isContains) throw new MissingMemberException($"实体表{entityType.FullName}已设置分表并依赖成员{shardingTable.DependOnMembers[1]}映射的字段，但当前参数中并不包含{shardingTable.DependOnMembers[1]}成员");
+                         .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field)
+                         .Select(f => f.Name).ToList();
+                    (var isContains, var memberName1) = memberNames.ContainsLower(tableShardingInfo.DependOnMembers[0].ToLower());
+                    if (!isContains) throw new MissingMemberException($"实体表{entityType.FullName}已设置分表并依赖成员{tableShardingInfo.DependOnMembers[0]}映射的字段，但当前参数中并不包含{tableShardingInfo.DependOnMembers[0]}成员");
+                    (isContains, var memberName2) = memberNames.ContainsLower(tableShardingInfo.DependOnMembers[1].ToLower());
+                    if (!isContains) throw new MissingMemberException($"实体表{entityType.FullName}已设置分表并依赖成员{tableShardingInfo.DependOnMembers[1]}映射的字段，但当前参数中并不包含{tableShardingInfo.DependOnMembers[1]}成员");
 
                     var typedParameterObjExpr = Expression.Convert(parameterObjExpr, parameterType);
                     Expression field1Expr = Expression.PropertyOrField(typedParameterObjExpr, memberName1);
@@ -1609,39 +1585,33 @@ public class RepositoryHelper
                     var getterExpr = Expression.Constant(tableNameRuleGetter, typeof(Func<string, object, object, string>));
                     var bodyExpr = Expression.Invoke(getterExpr, origNameExpr, field1Expr, field2Expr);
                     return Expression.Lambda<Func<string, object, string>>(bodyExpr, origNameExpr, parameterObjExpr).Compile();
-                });
+                }
             }
-        }
-        else
-        {
-            if (typeof(IDictionary<string, object>).IsAssignableFrom(parameterType))
+            else
             {
-                tableNameGetter = shardingTableNameGetters.GetOrAdd(cacheKey, f =>
+                if (typeof(IDictionary<string, object>).IsAssignableFrom(parameterType))
                 {
                     return (string origName, object parameter) =>
                     {
                         var dict = parameter as IDictionary<string, object>;
-                        (var isContainsKey, var fieldValue) = dict.ContainsLowerKey(shardingTable.DependOnMembers[0].ToLower());
+                        (var isContainsKey, var fieldValue) = dict.ContainsLowerKey(tableShardingInfo.DependOnMembers[0].ToLower());
                         if (!isContainsKey)
-                            throw new MissingMemberException($"实体表{entityType.FullName}已设置分表并依赖成员{shardingTable.DependOnMembers[0]}映射的字段，但当前字典中并不包含key:{shardingTable.DependOnMembers[0]}的键值");
+                            throw new MissingMemberException($"实体表{entityType.FullName}已设置分表并依赖成员{tableShardingInfo.DependOnMembers[0]}映射的字段，但当前字典中并不包含key:{tableShardingInfo.DependOnMembers[0]}的键值");
 
-                        var tableNameRuleGetter = shardingTable.Rule as Func<string, object, string>;
+                        var tableNameRuleGetter = tableShardingInfo.Rule as Func<string, object, string>;
                         return tableNameRuleGetter.Invoke(origName, fieldValue);
                     };
-                });
-            }
-            else
-            {
-                tableNameGetter = shardingTableNameGetters.GetOrAdd(cacheKey, f =>
+                }
+                else
                 {
                     var origNameExpr = Expression.Parameter(typeof(string), "origName");
                     var parameterObjExpr = Expression.Parameter(typeof(object), "parameterObj");
-                    var tableNameRuleGetter = shardingTable.Rule as Func<string, object, string>;
+                    var tableNameRuleGetter = tableShardingInfo.Rule as Func<string, object, string>;
                     var memberNames = parameterType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                        .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field)
-                        .Select(f => f.Name).ToList();
-                    (var isContains, var memberName) = memberNames.ContainsLower(shardingTable.DependOnMembers[0].ToLower());
-                    if (!isContains) throw new MissingMemberException($"实体表{entityType.FullName}已设置分表并依赖成员{shardingTable.DependOnMembers[0]}映射的字段，但当前参数中并不包含{shardingTable.DependOnMembers[0]}成员");
+                         .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field)
+                         .Select(f => f.Name).ToList();
+                    (var isContains, var memberName) = memberNames.ContainsLower(tableShardingInfo.DependOnMembers[0].ToLower());
+                    if (!isContains) throw new MissingMemberException($"实体表{entityType.FullName}已设置分表并依赖成员{tableShardingInfo.DependOnMembers[0]}映射的字段，但当前参数中并不包含{tableShardingInfo.DependOnMembers[0]}成员");
 
                     var typedParameterObjExpr = Expression.Convert(parameterObjExpr, parameterType);
                     Expression fieldExpr = Expression.PropertyOrField(typedParameterObjExpr, memberName);
@@ -1650,24 +1620,10 @@ public class RepositoryHelper
                     var getterExpr = Expression.Constant(tableNameRuleGetter, typeof(Func<string, object, string>));
                     var bodyExpr = Expression.Invoke(getterExpr, origNameExpr, fieldExpr);
                     return Expression.Lambda<Func<string, object, string>>(bodyExpr, origNameExpr, parameterObjExpr).Compile();
-                });
+                }
             }
-        }
-        return true;
-    }
-    public static void BuildDictWhereSqlParameters(IDataParameterCollection dbParameters, StringBuilder builder, DbContext dbContext, IDictionary<string, object> dict)
-    {
-        EntityMap entityMapper = null;
-        var ormProvider = dbContext.OrmProvider;
-        foreach (var item in dict)
-        {
-            if (!entityMapper.TryGetMemberMap(item.Key, out var memberMapper)
-                || memberMapper.IsIgnore || memberMapper.IsNavigation)
-                continue;
-            builder.Append($"{memberMapper.FieldName}={item.Value}");
-            var valueGetter = ormProvider.GetParameterValueGetter(item.Value.GetType(), memberMapper.UnderlyingType, !memberMapper.IsRequired, dbContext.Options);
-            valueGetter.Invoke(item.Value);
-        }
+        });
+        return tableNameGetter.Invoke(tableName, parameter);
     }
     public static object CreateListInstance(Type elementType)
     {

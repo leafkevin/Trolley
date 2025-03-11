@@ -240,6 +240,8 @@ public class Updated<TEntity> : IUpdated<TEntity>
                     foreach (var updateObj in updateObjs)
                     {
                         sqlExecuter.Invoke(updateObj, index);
+                        index++;
+
                         if (index >= bulkCount)
                         {
                             command.CommandText = builder.ToString();
@@ -249,9 +251,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
                             firstParametersSetter?.Invoke(command.Parameters);
                             builder.Clear();
                             index = 0;
-                            continue;
                         }
-                        index++;
                     }
                     if (index > 0)
                     {
@@ -345,6 +345,8 @@ public class Updated<TEntity> : IUpdated<TEntity>
                     foreach (var updateObj in updateObjs)
                     {
                         sqlExecuter.Invoke(updateObj, index);
+                        index++;
+
                         if (index >= bulkCount)
                         {
                             command.CommandText = builder.ToString();
@@ -354,9 +356,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
                             firstParametersSetter?.Invoke(command.Parameters);
                             builder.Clear();
                             index = 0;
-                            continue;
                         }
-                        index++;
                     }
                     if (index > 0)
                     {

@@ -194,7 +194,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
         {
             case ActionMode.Bulk:
                 var builder = new StringBuilder();
-                (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter) = this.Visitor.BuildWithBulk(command);
+                (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter, _) = this.Visitor.BuildWithBulk(command);
                 Func<int, string> suffixGetter = index => this.Visitor.IsMultiple ? $"_m{this.Visitor.CommandIndex}{index}" : $"{index}";
 
                 Action<object, int> sqlExecuter = null;
@@ -227,6 +227,8 @@ public class Updated<TEntity> : IUpdated<TEntity>
                 foreach (var updateObj in updateObjs)
                 {
                     sqlExecuter.Invoke(updateObj, index);
+                    index++;
+
                     if (index >= bulkCount)
                     {
                         command.CommandText = builder.ToString();
@@ -235,9 +237,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
                         fixedParameterSetter?.Invoke(command.Parameters);
                         builder.Clear();
                         index = 0;
-                        continue;
                     }
-                    index++;
                 }
                 if (index > 0)
                 {
@@ -270,7 +270,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
         {
             case ActionMode.Bulk:
                 var builder = new StringBuilder();
-                (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter) = this.Visitor.BuildWithBulk(command);
+                (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter, _) = this.Visitor.BuildWithBulk(command);
                 Func<int, string> suffixGetter = index => this.Visitor.IsMultiple ? $"_m{this.Visitor.CommandIndex}{index}" : $"{index}";
 
                 Action<object, int> sqlExecuter = null;
@@ -303,6 +303,8 @@ public class Updated<TEntity> : IUpdated<TEntity>
                 foreach (var updateObj in updateObjs)
                 {
                     sqlExecuter.Invoke(updateObj, index);
+                    index++;
+
                     if (index >= bulkCount)
                     {
                         command.CommandText = builder.ToString();
@@ -311,9 +313,7 @@ public class Updated<TEntity> : IUpdated<TEntity>
                         fixedParameterSetter?.Invoke(command.Parameters);
                         builder.Clear();
                         index = 0;
-                        continue;
                     }
-                    index++;
                 }
                 if (index > 0)
                 {

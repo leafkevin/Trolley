@@ -293,12 +293,7 @@ public class MultipleQuery : IMultipleQuery, IDisposable
     #endregion
 
     private IQueryVisitor CreateQueryVisitor(char tableAsStart)
-    {
-        var visitor = this.OrmProvider.NewQueryVisitor(this.DbContext);
-        visitor.TableAsStart = tableAsStart;
-        visitor.DbParameters = this.Command.Parameters;
-        return visitor;
-    }
+        => this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart, this.Command.Parameters);
 }
 public class ReaderAfter
 {

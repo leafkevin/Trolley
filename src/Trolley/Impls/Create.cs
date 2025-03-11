@@ -121,7 +121,7 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
             case ActionMode.Bulk:
                 {
                     var builder = new StringBuilder();
-                    (var isNeedSplit, var tableName, var insertObjs, var bulkCount,
+                    (var tableName, var tabledInsertObjs, var insertObjs, var bulkCount,
                         var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
 
                     int executor(string tableName, IEnumerable insertObjs)
@@ -131,6 +131,8 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                         {
                             if (index > 0) builder.Append(',');
                             loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
+                            index++;
+
                             if (index >= bulkCount)
                             {
                                 command.CommandText = builder.ToString();
@@ -139,9 +141,7 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                                 command.Parameters.Clear();
                                 firstSqlSetter.Invoke(command.Parameters, builder, tableName);
                                 index = 0;
-                                continue;
                             }
-                            index++;
                         }
                         if (index > 0)
                         {
@@ -153,10 +153,8 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                         return count;
                     }
                     connection.Open();
-                    if (isNeedSplit)
+                    if (tabledInsertObjs != null)
                     {
-                        var entityType = this.Visitor.Tables[0].EntityType;
-                        var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
                         foreach (var tabledInsertObj in tabledInsertObjs)
                         {
                             firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
@@ -194,7 +192,7 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
             case ActionMode.Bulk:
                 {
                     var builder = new StringBuilder();
-                    (var isNeedSplit, var tableName, var insertObjs, var bulkCount,
+                    (var tableName, var tabledInsertObjs, var insertObjs, var bulkCount,
                         var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
 
                     async Task<int> executor(string tableName, IEnumerable insertObjs)
@@ -204,6 +202,8 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                         {
                             if (index > 0) builder.Append(',');
                             loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
+                            index++;
+
                             if (index >= bulkCount)
                             {
                                 command.CommandText = builder.ToString();
@@ -213,9 +213,7 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                                 firstSqlSetter.Invoke(command.Parameters, builder, tableName);
                                 index = 0;
                                 bulkIndex++;
-                                continue;
                             }
-                            index++;
                         }
                         if (index > 0)
                         {
@@ -227,10 +225,8 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                         return count;
                     }
                     await connection.OpenAsync(cancellationToken);
-                    if (isNeedSplit)
+                    if (tabledInsertObjs != null)
                     {
-                        var entityType = this.Visitor.Tables[0].EntityType;
-                        var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
                         foreach (var tabledInsertObj in tabledInsertObjs)
                         {
                             firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);

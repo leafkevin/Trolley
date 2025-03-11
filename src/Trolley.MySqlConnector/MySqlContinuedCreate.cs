@@ -77,7 +77,6 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCre
     {
         int result = 0;
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        bool isNeedSplit = false;
         var entityType = typeof(TEntity);
         switch (this.Visitor.ActionMode)
         {
@@ -92,12 +91,12 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCre
                     }
                     var dialectOrmProvider = this.OrmProvider as MySqlProvider;
                     var sqlVisitor = this.Visitor as SqlVisitor;
-                    if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out var shardingTable))
+                    if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
                     {
-                        isNeedSplit = this.Visitor.Tables[0].Body == null;
+                        var isNeedSplit = this.Visitor.Tables[0].Body == null;
                         if (isNeedSplit)
                         {
-                            var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
+                            var tabledInsertObjs = this.Visitor.SplitShardingParameters(tableShardingInfo, insertObjs);
                             foreach (var tabledInsertObj in tabledInsertObjs)
                             {
                                 result += dialectOrmProvider.ExecuteBulkCopy(false, this.DbContext, sqlVisitor, connection, insertObjType, tabledInsertObj.Value, timeoutSeconds, tabledInsertObj.Key);
@@ -111,8 +110,8 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCre
             case ActionMode.Bulk:
                 {
                     var builder = new StringBuilder();
-                    (isNeedSplit, var tableName, var insertObjs, var bulkCount, var firstSqlSetter,
-                        var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
+                    (var tableName, var tabledInsertObjs, var insertObjs, var bulkCount,
+                        var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
                     int Execute(string tableName, IEnumerable insertObjs)
                     {
                         int count = 0, index = 0;
@@ -120,6 +119,8 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCre
                         {
                             if (index > 0) builder.Append(',');
                             loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
+                            index++;
+
                             if (index >= bulkCount)
                             {
                                 command.CommandText = builder.ToString();
@@ -128,9 +129,7 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCre
                                 command.Parameters.Clear();
                                 firstSqlSetter.Invoke(command.Parameters, builder, tableName);
                                 index = 0;
-                                continue;
                             }
-                            index++;
                         }
                         if (index > 0)
                         {
@@ -142,9 +141,9 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCre
                         return count;
                     };
                     connection.Open();
-                    if (isNeedSplit)
+
+                    if (tabledInsertObjs != null)
                     {
-                        var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
                         foreach (var tabledInsertObj in tabledInsertObjs)
                         {
                             firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
@@ -176,7 +175,6 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCre
     {
         int result = 0;
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        bool isNeedSplit;
         var entityType = typeof(TEntity);
         switch (this.Visitor.ActionMode)
         {
@@ -191,12 +189,12 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCre
                     }
                     var dialectOrmProvider = this.OrmProvider as MySqlProvider;
                     var sqlVisitor = this.Visitor as SqlVisitor;
-                    if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out var shardingTable))
+                    if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
                     {
-                        isNeedSplit = this.Visitor.Tables[0].Body == null;
+                        var isNeedSplit = this.Visitor.Tables[0].Body == null;
                         if (isNeedSplit)
                         {
-                            var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
+                            var tabledInsertObjs = this.Visitor.SplitShardingParameters(tableShardingInfo, insertObjs);
                             foreach (var tabledInsertObj in tabledInsertObjs)
                             {
                                 result += await dialectOrmProvider.ExecuteBulkCopyAsync(false, this.DbContext, sqlVisitor, connection, insertObjType, tabledInsertObj.Value, timeoutSeconds, cancellationToken, tabledInsertObj.Key);
@@ -210,7 +208,7 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCre
             case ActionMode.Bulk:
                 {
                     var builder = new StringBuilder();
-                    (isNeedSplit, var tableName, var insertObjs, var bulkCount,
+                    (var tableName, var tabledInsertObjs, var insertObjs, var bulkCount,
                         var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
                     async Task<int> executor(string tableName, IEnumerable insertObjs)
                     {
@@ -219,6 +217,8 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCre
                         {
                             if (index > 0) builder.Append(',');
                             loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
+                            index++;
+
                             if (index >= bulkCount)
                             {
                                 command.CommandText = builder.ToString();
@@ -227,9 +227,7 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCre
                                 command.Parameters.Clear();
                                 firstSqlSetter.Invoke(command.Parameters, builder, tableName);
                                 index = 0;
-                                continue;
                             }
-                            index++;
                         }
                         if (index > 0)
                         {
@@ -241,9 +239,8 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCre
                         return count;
                     };
                     await connection.OpenAsync(cancellationToken);
-                    if (isNeedSplit)
+                    if (tabledInsertObjs != null)
                     {
-                        var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
                         foreach (var tabledInsertObj in tabledInsertObjs)
                         {
                             firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
@@ -343,7 +340,6 @@ public class MySqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySq
     {
         int result = 0;
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        bool isNeedSplit = false;
         var entityType = typeof(TEntity);
         switch (this.Visitor.ActionMode)
         {
@@ -358,12 +354,12 @@ public class MySqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySq
                     }
                     var dialectOrmProvider = this.OrmProvider as MySqlProvider;
                     var sqlVisitor = this.Visitor as SqlVisitor;
-                    if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out var shardingTable))
+                    if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
                     {
-                        isNeedSplit = this.Visitor.Tables[0].Body == null;
+                        var isNeedSplit = this.Visitor.Tables[0].Body == null;
                         if (isNeedSplit)
                         {
-                            var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
+                            var tabledInsertObjs = this.Visitor.SplitShardingParameters(tableShardingInfo, insertObjs);
                             foreach (var tabledInsertObj in tabledInsertObjs)
                             {
                                 result += dialectOrmProvider.ExecuteBulkCopy(false, this.DbContext, sqlVisitor, connection, insertObjType, tabledInsertObj.Value, timeoutSeconds, tabledInsertObj.Key);
@@ -377,7 +373,7 @@ public class MySqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySq
             case ActionMode.Bulk:
                 {
                     var builder = new StringBuilder();
-                    (isNeedSplit, var tableName, var insertObjs, var bulkCount,
+                    (var tableName, var tabledInsertObjs, var insertObjs, var bulkCount,
                         var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
                     int Execute(string tableName, IEnumerable insertObjs)
                     {
@@ -386,6 +382,8 @@ public class MySqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySq
                         {
                             if (index > 0) builder.Append(',');
                             loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
+                            index++;
+
                             if (index >= bulkCount)
                             {
                                 command.CommandText = builder.ToString();
@@ -394,9 +392,7 @@ public class MySqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySq
                                 command.Parameters.Clear();
                                 firstSqlSetter.Invoke(command.Parameters, builder, tableName);
                                 index = 0;
-                                continue;
                             }
-                            index++;
                         }
                         if (index > 0)
                         {
@@ -408,9 +404,8 @@ public class MySqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySq
                         return count;
                     };
                     connection.Open();
-                    if (isNeedSplit)
+                    if (tabledInsertObjs != null)
                     {
-                        var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
                         foreach (var tabledInsertObj in tabledInsertObjs)
                         {
                             firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
@@ -442,7 +437,6 @@ public class MySqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySq
     {
         int result = 0;
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        bool isNeedSplit;
         var entityType = typeof(TEntity);
         switch (this.Visitor.ActionMode)
         {
@@ -457,12 +451,12 @@ public class MySqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySq
                     }
                     var dialectOrmProvider = this.OrmProvider as MySqlProvider;
                     var sqlVisitor = this.Visitor as SqlVisitor;
-                    if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out var shardingTable))
+                    if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
                     {
-                        isNeedSplit = this.Visitor.Tables[0].Body == null;
+                        var isNeedSplit = this.Visitor.Tables[0].Body == null;
                         if (isNeedSplit)
                         {
-                            var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
+                            var tabledInsertObjs = this.Visitor.SplitShardingParameters(tableShardingInfo, insertObjs);
                             foreach (var tabledInsertObj in tabledInsertObjs)
                             {
                                 result += await dialectOrmProvider.ExecuteBulkCopyAsync(false, this.DbContext, sqlVisitor, connection, insertObjType, tabledInsertObj.Value, timeoutSeconds, cancellationToken, tabledInsertObj.Key);
@@ -476,7 +470,7 @@ public class MySqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySq
             case ActionMode.Bulk:
                 {
                     var builder = new StringBuilder();
-                    (isNeedSplit, var tableName, var insertObjs, var bulkCount,
+                    (var tableName, var tabledInsertObjs, var insertObjs, var bulkCount,
                         var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
                     async Task<int> Execute(string tableName, IEnumerable insertObjs)
                     {
@@ -485,6 +479,8 @@ public class MySqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySq
                         {
                             if (index > 0) builder.Append(',');
                             loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
+                            index++;
+
                             if (index >= bulkCount)
                             {
                                 command.CommandText = builder.ToString();
@@ -493,9 +489,7 @@ public class MySqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySq
                                 command.Parameters.Clear();
                                 firstSqlSetter.Invoke(command.Parameters, builder, tableName);
                                 index = 0;
-                                continue;
                             }
-                            index++;
                         }
                         if (index > 0)
                         {
@@ -507,9 +501,8 @@ public class MySqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySq
                         return count;
                     };
                     await connection.OpenAsync(cancellationToken);
-                    if (isNeedSplit)
+                    if (tabledInsertObjs != null)
                     {
-                        var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
                         foreach (var tabledInsertObj in tabledInsertObjs)
                         {
                             firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);

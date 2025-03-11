@@ -137,6 +137,8 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                             {
                                 if (index > 0) builder.Append(',');
                                 loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
+                                index++;
+
                                 if (index >= bulkCount)
                                 {
                                     command.CommandText = builder.ToString();
@@ -146,7 +148,6 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                                     index = 0;
                                     continue;
                                 }
-                                index++;
                             }
                             if (index > 0)
                             {
@@ -233,6 +234,8 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                             {
                                 if (index > 0) builder.Append(',');
                                 loopSqlSetter.Invoke(command.Parameters, builder, insertObj, index.ToString());
+                                index++;
+
                                 if (index >= bulkCount)
                                 {
                                     command.CommandText = builder.ToString();
@@ -240,9 +243,7 @@ public class Created<TEntity> : CreateInternal, ICreated<TEntity>
                                     count += await command.ExecuteNonQueryAsync(cancellationToken);
                                     clearCommand.Invoke(tableName);
                                     index = 0;
-                                    continue;
                                 }
-                                index++;
                             }
                             if (index > 0)
                             {

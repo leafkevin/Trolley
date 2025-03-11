@@ -27,7 +27,6 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
     {
         int result = 0;
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        bool isNeedSplit = false;
         var entityType = typeof(TEntity);
         switch (this.Visitor.ActionMode)
         {
@@ -42,12 +41,12 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
                     }
                     var dialectOrmProvider = this.OrmProvider as SqlServerProvider;
                     var sqlVisitor = this.Visitor as SqlVisitor;
-                    if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out var shardingTable))
+                    if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
                     {
-                        isNeedSplit = this.Visitor.Tables[0].Body == null;
+                        var isNeedSplit = this.Visitor.Tables[0].Body == null;
                         if (isNeedSplit)
                         {
-                            var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
+                            var tabledInsertObjs = this.Visitor.SplitShardingParameters(tableShardingInfo, insertObjs);
                             foreach (var tabledInsertObj in tabledInsertObjs)
                             {
                                 result += dialectOrmProvider.ExecuteBulkCopy(false, this.DbContext, sqlVisitor, connection, insertObjType, tabledInsertObj.Value, timeoutSeconds, tabledInsertObj.Key);
@@ -61,7 +60,7 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
             case ActionMode.Bulk:
                 {
                     var builder = new StringBuilder();
-                    (isNeedSplit, var tableName, var insertObjs, var bulkCount,
+                    (var tableName, var tabledInsertObjs, var insertObjs, var bulkCount,
                         var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
                     int Execute(string tableName, IEnumerable insertObjs)
                     {
@@ -70,6 +69,8 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
                         {
                             if (index > 0) builder.Append(',');
                             loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
+                            index++;
+
                             if (index >= bulkCount)
                             {
                                 command.CommandText = builder.ToString();
@@ -78,9 +79,7 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
                                 command.Parameters.Clear();
                                 firstSqlSetter.Invoke(command.Parameters, builder, tableName);
                                 index = 0;
-                                continue;
                             }
-                            index++;
                         }
                         if (index > 0)
                         {
@@ -92,9 +91,8 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
                         return count;
                     };
                     connection.Open();
-                    if (isNeedSplit)
+                    if (tabledInsertObjs != null)
                     {
-                        var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
                         foreach (var tabledInsertObj in tabledInsertObjs)
                         {
                             firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
@@ -126,7 +124,6 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
     {
         int result = 0;
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        bool isNeedSplit;
         var entityType = typeof(TEntity);
         switch (this.Visitor.ActionMode)
         {
@@ -141,12 +138,12 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
                     }
                     var dialectOrmProvider = this.OrmProvider as SqlServerProvider;
                     var sqlVisitor = this.Visitor as SqlVisitor;
-                    if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out var shardingTable))
+                    if (this.DbContext.ShardingProvider != null && this.DbContext.ShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
                     {
-                        isNeedSplit = this.Visitor.Tables[0].Body == null;
+                        var isNeedSplit = this.Visitor.Tables[0].Body == null;
                         if (isNeedSplit)
                         {
-                            var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
+                            var tabledInsertObjs = this.Visitor.SplitShardingParameters(tableShardingInfo, insertObjs);
                             foreach (var tabledInsertObj in tabledInsertObjs)
                             {
                                 result += await dialectOrmProvider.ExecuteBulkCopyAsync(false, this.DbContext, sqlVisitor, connection, insertObjType, tabledInsertObj.Value, timeoutSeconds, cancellationToken, tabledInsertObj.Key);
@@ -160,7 +157,7 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
             case ActionMode.Bulk:
                 {
                     var builder = new StringBuilder();
-                    (isNeedSplit, var tableName, var insertObjs, var bulkCount,
+                    (var tableName, var tabledInsertObjs, var insertObjs, var bulkCount,
                         var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
                     async Task<int> Executor(string tableName, IEnumerable insertObjs)
                     {
@@ -169,6 +166,8 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
                         {
                             if (index > 0) builder.Append(',');
                             loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
+                            index++;
+
                             if (index >= bulkCount)
                             {
                                 command.CommandText = builder.ToString();
@@ -177,9 +176,7 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
                                 command.Parameters.Clear();
                                 firstSqlSetter.Invoke(command.Parameters, builder, tableName);
                                 index = 0;
-                                continue;
                             }
-                            index++;
                         }
                         if (index > 0)
                         {
@@ -191,9 +188,8 @@ public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEn
                         return count;
                     };
                     await connection.OpenAsync(cancellationToken);
-                    if (isNeedSplit)
+                    if (tabledInsertObjs != null)
                     {
-                        var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
                         foreach (var tabledInsertObj in tabledInsertObjs)
                         {
                             firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
@@ -293,7 +289,7 @@ public class SqlServerBulkCreated<TEntity, TResult> : Created<TEntity>, ISqlServ
         }
         else
         {
-            (var isNeedSplit, var tableName, var insertObjs, var bulkCount, var firstSqlSetter,
+            (var tableName, var tabledInsertObjs, var insertObjs, var bulkCount, var firstSqlSetter,
                 var loopSqlSetter, var tailSql, var readerFields) = this.Visitor.BuildWithBulk(command);
 
             var entityType = typeof(TEntity);
@@ -329,6 +325,8 @@ public class SqlServerBulkCreated<TEntity, TResult> : Created<TEntity>, ISqlServ
                 {
                     if (index > 0) builder.Append(',');
                     loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
+                    index++;
+
                     if (index >= bulkCount)
                     {
                         builder.Append(tailSql);
@@ -340,9 +338,7 @@ public class SqlServerBulkCreated<TEntity, TResult> : Created<TEntity>, ISqlServ
                         command.Parameters.Clear();
                         firstSqlSetter.Invoke(command.Parameters, builder, tableName);
                         index = 0;
-                        continue;
                     }
-                    index++;
                 }
                 if (index > 0)
                 {
@@ -356,9 +352,8 @@ public class SqlServerBulkCreated<TEntity, TResult> : Created<TEntity>, ISqlServ
                 }
             };
             connection.Open();
-            if (isNeedSplit)
+            if (tabledInsertObjs != null)
             {
-                var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
                 foreach (var tabledInsertObj in tabledInsertObjs)
                 {
                     firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);
@@ -397,7 +392,7 @@ public class SqlServerBulkCreated<TEntity, TResult> : Created<TEntity>, ISqlServ
         }
         else
         {
-            (var isNeedSplit, var tableName, var insertObjs, var bulkCount, var firstSqlSetter,
+            (var tableName, var tabledInsertObjs, var insertObjs, var bulkCount, var firstSqlSetter,
                 var loopSqlSetter, var tailSql, var readerFields) = this.Visitor.BuildWithBulk(command);
 
             var entityType = typeof(TEntity);
@@ -433,6 +428,8 @@ public class SqlServerBulkCreated<TEntity, TResult> : Created<TEntity>, ISqlServ
                 {
                     if (index > 0) builder.Append(',');
                     loopSqlSetter.Invoke(command.Parameters, builder, this.DbContext, insertObj, index.ToString());
+                    index++;
+
                     if (index >= bulkCount)
                     {
                         builder.Append(tailSql);
@@ -444,9 +441,7 @@ public class SqlServerBulkCreated<TEntity, TResult> : Created<TEntity>, ISqlServ
                         command.Parameters.Clear();
                         firstSqlSetter.Invoke(command.Parameters, builder, tableName);
                         index = 0;
-                        continue;
                     }
-                    index++;
                 }
                 if (index > 0)
                 {
@@ -460,9 +455,8 @@ public class SqlServerBulkCreated<TEntity, TResult> : Created<TEntity>, ISqlServ
                 }
             };
             await connection.OpenAsync(cancellationToken);
-            if (isNeedSplit)
+            if (tabledInsertObjs != null)
             {
-                var tabledInsertObjs = this.DbContext.SplitShardingParameters(entityType, insertObjs);
                 foreach (var tabledInsertObj in tabledInsertObjs)
                 {
                     firstSqlSetter.Invoke(command.Parameters, builder, tabledInsertObj.Key);

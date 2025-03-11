@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Text;
 
 namespace Trolley;
@@ -101,18 +102,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         var tableSegment = this.Tables[0];
         var entityType = tableSegment.EntityType;
         var entityMapper = tableSegment.Mapper;
-        string tableName;
-        if (tableSegment.IsSharding)
-            tableName = tableSegment.Body;
-        else
-        {
-            if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out _))
-                tableName = this.GetShardingTableName();
-            else tableName = entityMapper.TableName;
-        }
-        if (!string.IsNullOrEmpty(tableSegment.TableSchema))
-            tableName = $"{this.OrmProvider.GetTableName(tableSegment.TableSchema)}.{this.OrmProvider.GetTableName(tableName)}";
-        tableName = this.OrmProvider.GetTableName(tableName);
+        var tableName = this.GetTableName();
 
         if (this.IsReturnIdentity)
         {
@@ -174,7 +164,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         //多命令查询或是ToSql才会走到此分支
         //多语句执行，一次性不分批次
         var builder = new StringBuilder();
-        (var isNeedSplit, var tableName, var insertObjs, _, var firstSqlSetter,
+        (var tableName, var tabledInsertObjs, var insertObjs, _, var firstSqlSetter,
             var loopSqlSetter, var tailSql, readerFields) = this.BuildWithBulk(command);
         Action<string, IEnumerable> executor = null;
         if (tailSql != null)
@@ -206,10 +196,8 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 }
             };
         }
-        if (isNeedSplit)
+        if (tabledInsertObjs != null)
         {
-            var entityType = this.Tables[0].EntityType;
-            var tabledInsertObjs = RepositoryHelper.SplitShardingParameters(this.MapProvider, this.ShardingProvider, entityType, insertObjs);
             int index = 0;
             foreach (var tabledInsertObj in tabledInsertObjs)
             {
@@ -223,10 +211,9 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         builder.Clear();
         return sql;
     }
-    public virtual (bool, string, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
+    public virtual (string, Dictionary<string, List<object>>, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
         Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command)
     {
-        bool isNeedSplit = false;
         object firstInsertObj = null;
         Type insertObjType = null;
         (var insertObjs, var bulkCount) = ((IEnumerable, int))this.deferredSegments[0].Value;
@@ -236,13 +223,17 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             insertObjType = entity.GetType();
             break;
         }
+        string tableName = null;
+        Dictionary<string, List<object>> tabledInsertObjs = null;
         var tableSegment = this.Tables[0];
-        var tableName = tableSegment.Mapper.TableName;
         var entityType = tableSegment.EntityType;
-
-        if (tableSegment.IsSharding)
-            tableName = tableSegment.Body;
-        else isNeedSplit = this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out _);
+        if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
+        {
+            if (tableSegment.IsSharding)
+                tableName = tableSegment.Body;
+            else tabledInsertObjs = this.SplitShardingParameters(tableShardingInfo, insertObjs);
+        }
+        else tableName = tableSegment.Mapper.TableName;
 
         List<IDbDataParameter> fixedDbParameters = null;
         if (this.deferredSegments.Count > 1)
@@ -262,7 +253,8 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                     default: throw new NotSupportedException("批量插入后，只支持WithBy/IgnoreFields/OnlyFields操作");
                 }
             }
-            fixedDbParameters = this.DbParameters.Cast<IDbDataParameter>().ToList();
+            if (this.DbParameters.Count > 0)
+                fixedDbParameters = this.DbParameters.Cast<IDbDataParameter>().ToList();
             this.DbParameters = command.Parameters;
         }
         //多命令查询时，第二次以后，DbParameters有值，不能再赋值
@@ -303,7 +295,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             };
         }
 
-        return (isNeedSplit, tableName, insertObjs, bulkCount, firstSqlSetter, typedValuesSetter, null, null);
+        return (tableName, tabledInsertObjs, insertObjs, bulkCount, firstSqlSetter, typedValuesSetter, null, null);
     }
     public virtual void VisitWithBy(object insertObj)
     {
@@ -404,34 +396,106 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             return fieldNames;
         return null;
     }
-    public virtual string GetShardingTableName()
+    public virtual string GetShardingTableName(TableShardingInfo tableShardingInfo, int startIndex = 0)
     {
-        var entityType = this.Tables[0].EntityType;
-        var origTableName = this.Tables[0].Mapper.TableName;
-        if (this.deferredSegments.Count == 1)
+        var tableSegment = this.Tables[0];
+        var origTableName = tableSegment.Mapper.TableName;
+        if (tableShardingInfo.DependOnMembers.Count > 1)
         {
-            var insertObj = this.deferredSegments[0].Value;
-            var insertObjType = insertObj.GetType();
-            return this.DbContext.GetShardingTableName(entityType, insertObjType, insertObj);
+            var shardingRule = tableShardingInfo.Rule as Func<string, object, object, string>;
+            var fieldValue1 = this.GetShardingFieldValue(tableShardingInfo.DependOnMembers[0], startIndex);
+            var fieldValue2 = this.GetShardingFieldValue(tableShardingInfo.DependOnMembers[1], startIndex);
+            return shardingRule.Invoke(origTableName, fieldValue1, fieldValue2);
         }
         else
         {
-            if (!this.ShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
-                throw new Exception($"实体表{entityType.FullName}没有配置分表，不能调用此方法UseAutoTable");
-            if (tableShardingInfo.DependOnMembers.Count > 1)
-            {
-                var shardingRule = tableShardingInfo.Rule as Func<string, object, object, string>;
-                var memberValue1 = this.GetShardingFieldValue(tableShardingInfo.DependOnMembers[0]);
-                var memberValue2 = this.GetShardingFieldValue(tableShardingInfo.DependOnMembers[1]);
-                return shardingRule.Invoke(origTableName, memberValue1, memberValue2);
-            }
+            var shardingRule = tableShardingInfo.Rule as Func<string, object, string>;
+            var fieldValue = this.GetShardingFieldValue(tableShardingInfo.DependOnMembers[0], startIndex);
+            return shardingRule.Invoke(origTableName, fieldValue);
+        }
+    }
+    public virtual string GetTableName()
+    {
+        var tableSegment = this.Tables[0];
+        var entityType = tableSegment.EntityType;
+        string tableName = null;
+        if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
+        {
+            if (tableSegment.IsSharding)
+                tableName = tableSegment.Body;
+            else tableName = this.GetShardingTableName(tableShardingInfo);
+        }
+        else tableName = tableSegment.Mapper.TableName;
+
+        var tableSchema = tableSegment.TableSchema;
+        if (!string.IsNullOrEmpty(tableSegment.TableSchema))
+            tableName = $"{this.OrmProvider.GetTableName(tableSegment.TableSchema)}.{this.OrmProvider.GetTableName(tableName)}";
+        tableName = this.OrmProvider.GetTableName(tableName);
+        return tableName;
+    }
+    public Dictionary<string, List<object>> SplitShardingParameters(TableShardingInfo tableShardingInfo, IEnumerable insertObjs)
+    {
+        var result = new Dictionary<string, List<object>>();
+        Type insertObjType = null;
+        foreach (var insertObj in insertObjs)
+        {
+            insertObjType = insertObj.GetType();
+            break;
+        }
+        var origTableName = this.Tables[0].Mapper.TableName;
+        if (tableShardingInfo.DependOnMembers.Count > 1)
+        {
+            var fieldValueGetters = new List<Func<object, object>>();
+            var memberInfo1s = insertObjType.GetMember(tableShardingInfo.DependOnMembers[0]);
+            if (memberInfo1s.Length > 0)
+                fieldValueGetters.Add(f => FasterEvaluator.EvaluateAndCache(f, memberInfo1s[0]));
             else
             {
-                var shardingRule = tableShardingInfo.Rule as Func<string, object, string>;
-                var memberValue = this.GetShardingFieldValue(tableShardingInfo.DependOnMembers[0]);
-                return shardingRule.Invoke(origTableName, memberValue);
+                var fieldValue = GetShardingFieldValue(tableShardingInfo.DependOnMembers[0], 1);
+                fieldValueGetters.Add(f => fieldValue);
+            }
+            var memberInfo2s = insertObjType.GetMember(tableShardingInfo.DependOnMembers[1]);
+            if (memberInfo2s.Length > 0)
+                fieldValueGetters.Add(f => FasterEvaluator.EvaluateAndCache(f, memberInfo2s[0]));
+            else
+            {
+                var fieldValue = GetShardingFieldValue(tableShardingInfo.DependOnMembers[1], 1);
+                fieldValueGetters.Add(f => fieldValue);
+            }
+            var shardingRule = tableShardingInfo.Rule as Func<string, object, object, string>;
+            Func<object, string> tableNameGetter = f =>
+            {
+                var fieldValue1 = fieldValueGetters[0].Invoke(f);
+                var fieldValue2 = fieldValueGetters[1].Invoke(f);
+                return shardingRule.Invoke(origTableName, fieldValue1, fieldValue2);
+            };
+
+            foreach (var insertObj in insertObjs)
+            {
+                var tableName = tableNameGetter.Invoke(insertObj);
+                if (!result.TryGetValue(tableName, out var myParameters))
+                    result.Add(tableName, myParameters = new List<object>());
+                myParameters.Add(insertObj);
             }
         }
+        else
+        {
+            var shardingRule = tableShardingInfo.Rule as Func<string, object, string>;
+            var memberInfos = insertObjType.GetMember(tableShardingInfo.DependOnMembers[0]);
+            Func<object, string> tableNameGetter = f =>
+            {
+                var fieldValue = FasterEvaluator.EvaluateAndCache(f, memberInfos[0]);
+                return shardingRule.Invoke(origTableName, fieldValue);
+            };
+            foreach (var insertObj in insertObjs)
+            {
+                var tableName = tableNameGetter.Invoke(insertObj);
+                if (!result.TryGetValue(tableName, out var myParameters))
+                    result.Add(tableName, myParameters = new List<object>());
+                myParameters.Add(insertObj);
+            }
+        }
+        return result;
     }
     public virtual void Clear()
     {
@@ -454,10 +518,12 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         this.OnlyFieldNames = null;
         this.IgnoreFieldNames = null;
     }
-    private object GetShardingFieldValue(string memberName)
+    public object GetShardingFieldValue(string memberName, int startIndex = 0)
     {
-        foreach (var deferredSegment in this.deferredSegments)
+        for (int i = 0; i < this.deferredSegments.Count; i++)
         {
+            if (i < startIndex) continue;
+            var deferredSegment = this.deferredSegments[i];
             switch (deferredSegment.Type)
             {
                 case "WithBy":
@@ -479,13 +545,25 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     }
     private bool TryGetMemberValue(Type insertObjType, object insertObj, string memberName, out object memberValue)
     {
-        var memberInfos = insertObjType.GetMember(memberName);
-        if (memberInfos.Length > 0)
+        if (insertObj is IDictionary<string, object> dict)
         {
-            memberValue = FasterEvaluator.EvaluateAndCache(insertObj, memberInfos[0]);
+            (var isContainsKey, memberValue) = dict.ContainsLowerKey(memberName.ToLower());
+            return isContainsKey;
+        }
+        else
+        {
+            var memberNames = insertObjType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
+                .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field)
+                .Select(f => f.Name).ToList();
+            (var isContains, var myMemberName) = memberNames.ContainsLower(memberName.ToLower());
+            if (!isContains)
+            {
+                memberValue = null;
+                return false;
+            }
+            var memberInfo = insertObjType.GetMember(myMemberName)[0];
+            memberValue = FasterEvaluator.EvaluateAndCache(insertObj, memberInfo);
             return true;
         }
-        memberValue = null;
-        return false;
     }
 }

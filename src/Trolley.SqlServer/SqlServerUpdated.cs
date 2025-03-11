@@ -148,6 +148,8 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
                     foreach (var updateObj in updateObjs)
                     {
                         sqlExecuter.Invoke(updateObj, index);
+                        index++;
+
                         if (index >= bulkCount)
                         {
                             command.CommandText = builder.ToString();
@@ -156,9 +158,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
                             fixedParameterSetter?.Invoke(command.Parameters);
                             builder.Clear();
                             index = 0;
-                            continue;
                         }
-                        index++;
                     }
                     if (index > 0)
                     {
@@ -310,6 +310,8 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
                     foreach (var updateObj in updateObjs)
                     {
                         sqlExecute.Invoke(updateObj, index);
+                        index++;
+
                         if (index >= bulkCount)
                         {
                             command.CommandText = builder.ToString();
@@ -318,9 +320,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
                             fixedParameterSetter?.Invoke(command.Parameters);
                             builder.Clear();
                             index = 0;
-                            continue;
                         }
-                        index++;
                     }
                     if (index > 0)
                     {

@@ -9,7 +9,9 @@ namespace Trolley.MySqlConnector;
 public class MySqlQueryVisitor : QueryVisitor
 {
     public bool IsUseIgnoreInto { get; set; }
-    public MySqlQueryVisitor(DbContext dbContext, char tableAsStart = 'a', IDataParameterCollection dbParameters = null)
+    public MySqlQueryVisitor(DbContext dbContext)
+        : base(dbContext) { }
+    public MySqlQueryVisitor(DbContext dbContext, char tableAsStart, IDataParameterCollection dbParameters = null)
         : base(dbContext, tableAsStart, dbParameters) { }
 
     public override string BuildCommandSql(out IDataParameterCollection dbParameters)
@@ -161,6 +163,13 @@ public class MySqlQueryVisitor : QueryVisitor
         }
         sql = builder.ToString();
         builder.Clear();
+        return sql;
+    }
+    public override string BuildShardingTableNamesSql(string orgTableName, string tableSchema = null)
+    {
+        var sql = $"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_NAME LIKE '{orgTableName}_%'";
+        if (!string.IsNullOrEmpty(tableSchema))
+            sql += $" AND TABLE_SCHEMA='{tableSchema}'";
         return sql;
     }
     public override string BuildTableShardingsSql()

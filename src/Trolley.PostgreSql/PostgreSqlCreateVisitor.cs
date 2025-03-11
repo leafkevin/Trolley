@@ -76,19 +76,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
 
         if (string.IsNullOrEmpty(this.FromSql))
         {
-            string tableName;
-            if (tableSegment.IsSharding)
-                tableName = tableSegment.Body;
-            else
-            {
-                if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out _))
-                    tableName = this.GetShardingTableName();
-                else tableName = entityMapper.TableName;
-            }
-            var tableSchema = tableSegment.TableSchema;
-            if (!string.IsNullOrEmpty(tableSegment.TableSchema))
-                tableName = $"{this.OrmProvider.GetTableName(tableSegment.TableSchema)}.{this.OrmProvider.GetTableName(tableName)}";
-            tableName = this.OrmProvider.GetTableName(tableName);
+            var tableName = this.GetTableName();
             //Set语句中，引用了原值，就需要使用别名
             if (this.IsUseTableAlias) tableName += $" AS {tableSegment.AliasName}";
 
@@ -113,10 +101,9 @@ public class PostgreSqlCreateVisitor : CreateVisitor
         }
         return $"{this.FromSql}{tailSql}";
     }
-    public override (bool, string, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
+    public override (string, Dictionary<string, List<object>>, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
         Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command)
     {
-        bool isNeedSplit = false;
         object firstInsertObj = null;
         Type insertObjType = null;
         (var insertObjs, var bulkCount) = ((IEnumerable, int))this.deferredSegments[0].Value;
@@ -126,13 +113,17 @@ public class PostgreSqlCreateVisitor : CreateVisitor
             insertObjType = entity.GetType();
             break;
         }
+        string tableName = null;
+        Dictionary<string, List<object>> tabledInsertObjs = null;
         var tableSegment = this.Tables[0];
-        var tableName = tableSegment.Mapper.TableName;
         var entityType = tableSegment.EntityType;
-
-        if (tableSegment.IsSharding)
-            tableName = tableSegment.Body;
-        else isNeedSplit = this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out _);
+        if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
+        {
+            if (tableSegment.IsSharding)
+                tableName = tableSegment.Body;
+            else tabledInsertObjs = this.SplitShardingParameters(tableShardingInfo, insertObjs);
+        }
+        else tableName = tableSegment.Mapper.TableName;
 
         string fixedSql = "(";
         List<IDbDataParameter> fixedDbParameters = null;
@@ -161,7 +152,8 @@ public class PostgreSqlCreateVisitor : CreateVisitor
                         break;
                     default: throw new NotSupportedException("批量插入后，只支持WithBy/IgnoreFields/OnlyFields/OnConflict/Returning操作");
                 }
-                fixedDbParameters = this.DbParameters.Cast<IDbDataParameter>().ToList();
+                if (this.DbParameters.Count > 0)
+                    fixedDbParameters = this.DbParameters.Cast<IDbDataParameter>().ToList();
             }
             fixedSql = $"({this.ValuesBuilder}";
         }
@@ -194,7 +186,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
         this.ValuesBuilder.Clear();
 
         Action<IDataParameterCollection, StringBuilder, string> firstSqlSetter = null;
-        if (this.deferredSegments.Count > 1)
+        if (fixedDbParameters != null)
         {
             firstSqlSetter = (dbParameters, builder, tableName) =>
             {
@@ -212,7 +204,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
             builder.Append(')');
         };
         this.DbParameters = command.Parameters;
-        return (isNeedSplit, tableName, insertObjs, bulkCount, firstSqlSetter, loopSqlSetter, tailSql, readerFields);
+        return (tableName, tabledInsertObjs, insertObjs, bulkCount, firstSqlSetter, loopSqlSetter, tailSql, readerFields);
     }
     public void Returning(string fieldNames)
     {

@@ -15,7 +15,28 @@ namespace Trolley;
 public interface IRepository
 {
     #region Properties
+    /// <summary>
+    /// 获取或设置DbContext对象
+    /// </summary>
     DbContext DbContext { get; set; }
+    #endregion
+
+    #region GetShardingTableNames
+    /// <summary>
+    /// 获取实体TEntity满足条件的所有分表名
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="tableNameSelector">分表名选择表达式</param>
+    /// <returns>返回满足条件的所有分表</returns>
+    List<string> GetShardingTableNames<TEntity>(Func<string, bool> tableNameSelector);
+    /// <summary>
+    /// 获取实体TEntity满足条件的所有分表名
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="tableNameSelector">分表名选择表达式</param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回满足条件的所有分表</returns>
+    Task<List<string>> GetShardingTableNamesAsync<TEntity>(Func<string, bool> tableNameSelector, CancellationToken cancellationToken = default);
     #endregion
 
     #region From

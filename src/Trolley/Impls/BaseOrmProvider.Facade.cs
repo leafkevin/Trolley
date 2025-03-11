@@ -138,7 +138,8 @@ partial class BaseOrmProvider
     public virtual IDeleted<TEntity> NewDeleted<TEntity>(DbContext dbContext, IDeleteVisitor visitor) => new Deleted<TEntity>(dbContext, visitor);
     public virtual IContinuedDelete<TEntity> NewContinuedDelete<TEntity>(DbContext dbContext, IDeleteVisitor visitor) => new ContinuedDelete<TEntity>(dbContext, visitor);
 
-    public virtual IQueryVisitor NewQueryVisitor(DbContext dbContext, char tableAsStart = 'a', IDataParameterCollection dbParameters = null) => new QueryVisitor(dbContext, tableAsStart, dbParameters);
+    public virtual IQueryVisitor NewQueryVisitor(DbContext dbContext) => new QueryVisitor(dbContext);
+    public virtual IQueryVisitor NewQueryVisitor(DbContext dbContext, char tableAsStart, IDataParameterCollection dbParameters = null) => new QueryVisitor(dbContext, tableAsStart, dbParameters);
     public virtual ICreateVisitor NewCreateVisitor(DbContext dbContext, char tableAsStart = 'a') => new CreateVisitor(dbContext, tableAsStart);
     public virtual IUpdateVisitor NewUpdateVisitor(DbContext dbContext, char tableAsStart = 'a') => new UpdateVisitor(dbContext, tableAsStart);
     public virtual IDeleteVisitor NewDeleteVisitor(DbContext dbContext, char tableAsStart = 'a') => new DeleteVisitor(dbContext, tableAsStart);

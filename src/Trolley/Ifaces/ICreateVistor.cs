@@ -30,7 +30,7 @@ public interface ICreateVisitor : IDisposable
     void WithBy(object insertObj, ActionMode? actionMode = null);
     void WithByField(Expression fieldSelector, object fieldValue);
     void WithBulk(IEnumerable insertObjs, int bulkCount);
-    (bool, string, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
+    (string, Dictionary<string, List<object>>, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
         Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command);
     void IgnoreFields(string[] fieldNames);
     void IgnoreFields(Expression fieldsSelector);
@@ -38,4 +38,5 @@ public interface ICreateVisitor : IDisposable
     void OnlyFields(Expression fieldsSelector);
     DataTable ToDataTable(Type insertObjType, IEnumerable entities, List<(MemberMap, Func<object, object>)> memberMappers, string tableName = null);
     List<(MemberMap, Func<object, object>)> GetRefMemberMappers(Type insertObjType, EntityMap refEntityMapper, bool isUpdate = false);
+    Dictionary<string, List<object>> SplitShardingParameters(TableShardingInfo tableShardingInfo, IEnumerable insertObjs);
 }

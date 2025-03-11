@@ -56,7 +56,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             case ActionMode.Bulk:
                 {
                     //此SQL只能用在多命令查询时和返回ToSql两个场景
-                    (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter) = this.BuildWithBulk(command);
+                    (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter, _) = this.BuildWithBulk(command);
                     Func<int, string> suffixGetter = index => this.IsMultiple ? $"_m{this.CommandIndex}{index}" : $"{index}";
 
                     Action<object, int> sqlExecute = null;
@@ -148,7 +148,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
 
                     int index = 0;
                     builder.Append("SET ");
-                    if (this.UpdateFields != null && this.UpdateFields.Count > 0)
+                    if (this.UpdateFields.Count > 0)
                     {
                         foreach (var setField in this.UpdateFields)
                         {
@@ -238,7 +238,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         sqlBuilder.Append(this.BuildCommand(dbContext, command, out _));
     }
     public virtual (IEnumerable, int, string, Action<IDataParameterCollection>, Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>,
-        Action<StringBuilder, DbContext, string, object, string>) BuildWithBulk(ITheaCommand command)
+        Action<StringBuilder, DbContext, string, object, string>, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command)
     {
         Type updateObjType = null;
         (var updateObjs, var bulkCount) = ((IEnumerable, int))this.deferredSegments[0].Value;
@@ -273,15 +273,19 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                     default: throw new NotSupportedException("SetBulk操作后，只支持Set/IgnoreFields/OnlyFields操作");
                 }
             }
-            foreach (var setField in this.UpdateFields)
+            if (this.UpdateFields.Count > 0)
             {
-                if (index > 0) builder.Append(',');
-                builder.Append(setField);
-                index++;
+                foreach (var setField in this.UpdateFields)
+                {
+                    if (index > 0) builder.Append(',');
+                    builder.Append(setField);
+                    index++;
+                }
+                builder.Append(',');
+                fixedSql = builder.ToString();
             }
-            builder.Append(',');
-            fixedSql = builder.ToString();
-            fixedDbParameters = this.DbParameters.Cast<IDbDataParameter>().ToList();
+            if (this.DbParameters.Count > 0)
+                fixedDbParameters = this.DbParameters.Cast<IDbDataParameter>().ToList();
             this.DbParameters = command.Parameters;
             this.UpdateFields.Clear();
             builder.Clear();
@@ -315,7 +319,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             shardingSqlSetter.Invoke(builder, dbContext, updateObj, suffix);
         };
         var tableName = tableSegment.Mapper.TableName;
-        return (updateObjs, bulkCount, tableName, fixedParametersSetter, firstSqlSetter, sqlSetter);
+        return (updateObjs, bulkCount, tableName, fixedParametersSetter, firstSqlSetter, sqlSetter, null);
     }
     public virtual void Join(string joinType, Type entityType, Expression joinOn)
     {

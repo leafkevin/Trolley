@@ -216,6 +216,8 @@ public class SqlServerContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqlS
                     foreach (var updateObj in updateObjs)
                     {
                         sqlExecute.Invoke(updateObj, index);
+                        index++;
+
                         if (index >= bulkCount)
                         {
                             command.CommandText = builder.ToString();
@@ -224,9 +226,7 @@ public class SqlServerContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqlS
                             fixedParameterSetter?.Invoke(command.Parameters);
                             builder.Clear();
                             index = 0;
-                            continue;
                         }
-                        index++;
                     }
                     if (index > 0)
                     {
@@ -252,6 +252,7 @@ public class SqlServerContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqlS
 
         command.Dispose();
         if (isNeedClose) connection.Close();
+        this.Visitor.Dispose();
         return result;
     }
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
@@ -378,6 +379,8 @@ public class SqlServerContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqlS
                     foreach (var updateObj in updateObjs)
                     {
                         sqlExecute.Invoke(updateObj, index);
+                        index++;
+
                         if (index >= bulkCount)
                         {
                             command.CommandText = builder.ToString();
@@ -386,9 +389,7 @@ public class SqlServerContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqlS
                             fixedParameterSetter?.Invoke(command.Parameters);
                             builder.Clear();
                             index = 0;
-                            continue;
                         }
-                        index++;
                     }
                     if (index > 0)
                     {
@@ -414,12 +415,13 @@ public class SqlServerContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqlS
 
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
+        this.Visitor.Dispose();
         return result;
     }
     #endregion
 
     #region ToSql
-    public new string ToSql(out List<IDbDataParameter> dbParameters)
+    public override string ToSql(out List<IDbDataParameter> dbParameters)
     {
         string sql;
         dbParameters = null;
@@ -510,8 +512,8 @@ public class SqlServerContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqlS
             }
             dbParameters = this.Visitor.DbParameters.Cast<IDbDataParameter>().ToList();
             command.Dispose();
-            if (isNeedClose) connection.Close();
         }
+        this.Visitor.Dispose();
         builder.Clear();
         return sql;
     }
@@ -574,7 +576,7 @@ public class SqlServerBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity
         => this.And(true, predicate);
     public new ISqlServerBulkContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
         => base.And(condition, ifPredicate, elsePredicate) as ISqlServerBulkContinuedUpdate<TEntity>;
-		
+
     #region Returnning
     public ISqlServerBulkUpdated<TEntity, TResult> Output<TResult>(string fieldNames)
     {
@@ -667,6 +669,7 @@ public class SqlServerBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity
                     command.CommandText = bulkCopySql;
                     connection.Open();
                     command.ExecuteNonQuery(CommandSqlType.BulkCopyUpdate);
+
                     var dialectOrmProvider = this.OrmProvider as SqlServerProvider;
                     var sqlVisitor = this.Visitor as SqlVisitor;
                     result = dialectOrmProvider.ExecuteBulkCopy(true, this.DbContext, sqlVisitor, connection, updateObjType, updateObjs, timeoutSeconds, tableName);
@@ -713,6 +716,8 @@ public class SqlServerBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity
                     foreach (var updateObj in updateObjs)
                     {
                         sqlExecute.Invoke(updateObj, index);
+                        index++;
+
                         if (index >= bulkCount)
                         {
                             command.CommandText = builder.ToString();
@@ -721,9 +726,7 @@ public class SqlServerBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity
                             fixedParameterSetter?.Invoke(command.Parameters);
                             builder.Clear();
                             index = 0;
-                            continue;
                         }
-                        index++;
                     }
                     if (index > 0)
                     {
@@ -749,6 +752,7 @@ public class SqlServerBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity
 
         command.Dispose();
         if (isNeedClose) connection.Close();
+        this.Visitor.Dispose();
         return result;
     }
     public override async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
@@ -876,6 +880,8 @@ public class SqlServerBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity
                     foreach (var updateObj in updateObjs)
                     {
                         sqlExecute.Invoke(updateObj, index);
+                        index++;
+
                         if (index >= bulkCount)
                         {
                             command.CommandText = builder.ToString();
@@ -884,9 +890,7 @@ public class SqlServerBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity
                             fixedParameterSetter?.Invoke(command.Parameters);
                             builder.Clear();
                             index = 0;
-                            continue;
                         }
-                        index++;
                     }
                     if (index > 0)
                     {
@@ -912,12 +916,13 @@ public class SqlServerBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity
 
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
+        this.Visitor.Dispose();
         return result;
     }
     #endregion
 
     #region ToSql
-    public new string ToSql(out List<IDbDataParameter> dbParameters)
+    public override string ToSql(out List<IDbDataParameter> dbParameters)
     {
         string sql;
         dbParameters = null;
@@ -1010,6 +1015,7 @@ public class SqlServerBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity
             command.Dispose();
             if (isNeedClose) connection.Close();
         }
+        this.Visitor.Dispose();
         builder.Clear();
         return sql;
     }

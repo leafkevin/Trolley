@@ -289,7 +289,7 @@ public sealed class DbContext
     public async Task<TResult> QueryScalarAsync<TEntity, TResult>(IQueryVisitor visitor, CancellationToken cancellationToken = default)
     {
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.IsUseMaster);
-        var sql = this.BuildSql(visitor, " UNION ALL ", out var readerFields);
+        (var sql, var readerFields) = await this.BuildSqlAsync(visitor, " UNION ALL ", cancellationToken);
         command.CommandText = sql;
         visitor.DbParameters.CopyTo(command.Parameters);
 
@@ -340,7 +340,7 @@ public sealed class DbContext
 
         Expression<Func<TEntity, TEntity>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
-        var sql = this.BuildSql(visitor, " UNION ALL ", out var readerFields);
+        (var sql, var readerFields) = await this.BuildSqlAsync(visitor, " UNION ALL ", cancellationToken);
         command.CommandText = sql;
         visitor.DbParameters.CopyTo(command.Parameters);
 
@@ -426,7 +426,7 @@ public sealed class DbContext
         Expression<Func<TResult, TResult>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
         visitor.IsNeedPaging = true;
-        var sql = this.BuildSql(visitor, " UNION ALL ", out var readerFields);
+        (var sql, var readerFields) = await this.BuildSqlAsync(visitor, " UNION ALL ", cancellationToken);
         command.CommandText = sql;
         visitor.DbParameters.CopyTo(command.Parameters);
 
@@ -651,18 +651,26 @@ public sealed class DbContext
     {
         string sql = null;
         readerFields = null;
-        visitor.IsShardingTables = visitor.ShardingTables != null && visitor.ShardingTables.Count > 0;
         if (visitor.IsNeedFetchShardingTables)
             this.FetchShardingTables(visitor as SqlVisitor);
         sql = visitor.BuildSql(out readerFields);
-        if (visitor.IsShardingTables)
-        {
-            //有分页，先生成不分页SQL，再Union起来，再分页            
+        if (visitor.IsNeedFormatShardingTables)
             sql = this.BuildShardingTablesSqlByFormat(visitor as SqlVisitor, sql, jointMark);
-            if (visitor.IsNeedPaging)
-                sql = visitor.BuildShardingPagingSql(sql);
-        }
+        if (visitor.IsNeedUnionShardingTables)
+            sql = visitor.BuildShardingSql(sql);
         return sql;
+    }
+    public async Task<(string, List<SqlFieldSegment>)> BuildSqlAsync(IQueryVisitor visitor, string jointMark, CancellationToken cancellationToken = default)
+    {
+        string sql = null;
+        if (visitor.IsNeedFetchShardingTables)
+            await this.FetchShardingTablesAsync(visitor as SqlVisitor, cancellationToken);
+        sql = visitor.BuildSql(out var readerFields);
+        if (visitor.IsNeedFormatShardingTables)
+            sql = this.BuildShardingTablesSqlByFormat(visitor as SqlVisitor, sql, jointMark);
+        if (visitor.IsNeedUnionShardingTables)
+            sql = visitor.BuildShardingSql(sql);
+        return (sql, readerFields);
     }
     public void FetchShardingTables(SqlVisitor visitor)
     {
@@ -701,10 +709,6 @@ public sealed class DbContext
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
     }
-    public Dictionary<string, List<object>> SplitShardingParameters(Type entityType, IEnumerable parameters)
-        => RepositoryHelper.SplitShardingParameters(this.MapProvider, this.ShardingProvider, entityType, parameters);
-    public string GetShardingTableName(Type entityType, Type parameterType, object parameter)
-        => RepositoryHelper.GetShardingTableName(this.MapProvider, this.ShardingProvider, entityType, parameterType, parameter);
     public string BuildShardingTablesSqlByFormat(SqlVisitor visitor, string formatSql, string jointMark)
     {
         //查询，分表多个表时，都使用表名替换生成分表sql

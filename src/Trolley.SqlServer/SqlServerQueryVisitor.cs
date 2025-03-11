@@ -9,7 +9,10 @@ namespace Trolley.SqlServer;
 public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
 {
     public string OutputSql { get; set; }
-    public SqlServerQueryVisitor(DbContext dbContext, char tableAsStart = 'a', IDataParameterCollection dbParameters = null)
+
+    public SqlServerQueryVisitor(DbContext dbContext)
+        : base(dbContext) { }
+    public SqlServerQueryVisitor(DbContext dbContext, char tableAsStart, IDataParameterCollection dbParameters = null)
         : base(dbContext, tableAsStart, dbParameters) { }
 
     public override string BuildSql(out List<SqlFieldSegment> readerFields)
@@ -44,7 +47,8 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
 
         //先判断表是否有多分表isManySharding
         string tableSql = null;
-        bool isManySharding = false;
+        var hasShardingTables = this.ShardingTables != null && this.ShardingTables.Count > 0;
+        var isManySharding = false;
         if (this.Tables.Count > 0)
         {
             //每个表都要有单独的GUID值，否则有类似的表前缀名，也会被替换导致表名替换错误
@@ -68,7 +72,8 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
                     builder.Append(" " + tableSegment.SuffixRawSql);
                 if (!string.IsNullOrEmpty(tableSegment.OnExpr))
                     builder.Append($" ON {tableSegment.OnExpr}");
-                if (tableSegment.TableNames != null && tableSegment.TableNames.Count > 1)
+                if (hasShardingTables && this.ShardingTables[0] == tableSegment
+                    && tableSegment.TableNames != null && tableSegment.TableNames.Count > 1)
                     isManySharding = true;
             }
             tableSql = builder.ToString();
@@ -84,8 +89,6 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
 
         //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不对
         //SqlServer数据库，Union子句在SELECT * FROM包装后，每个列都需要有一个明确的列名，没有则需要增加as别名
-        if (isManySharding)
-            isManySharding = this.ShardingTables != null && this.ShardingTables[0].TableNames != null && this.ShardingTables[0].TableNames.Count > 1;
         bool isNeedWrap = (this.IsUnion || this.IsSecondUnion) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue);
         this.AddSelectFieldsSql(builder, this.ReaderFields, isNeedWrap);
 
@@ -107,7 +110,7 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
             builder.Append($" HAVING {this.HavingSql}");
 
         string orderBy = null;
-        if (!string.IsNullOrEmpty(this.OrderBySql))
+        if (!isManySharding && !string.IsNullOrEmpty(this.OrderBySql))
         {
             orderBy = $"ORDER BY {this.OrderBySql}";
             if (!this.skip.HasValue && !this.limit.HasValue)
@@ -119,7 +122,7 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
         if (!string.IsNullOrEmpty(headSql))
             builder.Append(headSql);
 
-        if (!this.IsShardingTables && (this.skip.HasValue || this.limit.HasValue))
+        if (!isManySharding && (this.skip.HasValue || this.limit.HasValue))
         {
             //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ /**others**/
             var pageSql = this.OrmProvider.GetPagingTemplate(this.skip, this.limit, orderBy);
@@ -132,6 +135,10 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
             builder.Append($"{pageSql}");
         }
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
+
+        if (isManySharding && (!string.IsNullOrEmpty(this.OrderBySql) || this.skip.HasValue || this.limit.HasValue))
+            this.IsNeedUnionShardingTables = true;
+
         if (isNeedWrap)
         {
             builder.Insert(0, "SELECT * FROM (");
@@ -152,7 +159,8 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
         foreach (var readerField in this.ReaderFields)
         {
             //Union后，如果没有select语句时，通常实体类型或是select分组对象
-            if (!entityMapper.TryGetMemberMap(readerField.TargetMember.Name, out var memberMapper)
+            var memberName = readerField.TargetMember.Name;
+            if (!entityMapper.TryGetMemberMap(memberName, out var memberMapper)
                 || memberMapper.IsIgnore || memberMapper.IsIgnoreInsert
                 || memberMapper.IsNavigation || memberMapper.IsAutoIncrement || memberMapper.IsRowVersion)
                 continue;
@@ -197,7 +205,8 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
 
         //先判断表是否有多分表isManySharding
         string tableSql = null;
-        bool isManySharding = false;
+        var hasShardingTables = this.ShardingTables != null && this.ShardingTables.Count > 0;
+        var isManySharding = false;
         if (this.Tables.Count > 0)
         {
             for (int i = 1; i < this.Tables.Count; i++)
@@ -220,7 +229,8 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
                     builder.Append(" " + tableSegment.SuffixRawSql);
                 if (!string.IsNullOrEmpty(tableSegment.OnExpr))
                     builder.Append($" ON {tableSegment.OnExpr}");
-                if (tableSegment.TableNames != null && tableSegment.TableNames.Count > 1)
+                if (hasShardingTables && this.ShardingTables[0] == tableSegment
+                    && tableSegment.TableNames != null && tableSegment.TableNames.Count > 1)
                     isManySharding = true;
             }
             tableSql = builder.ToString();
@@ -234,9 +244,7 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
         if (this.ReaderFields == null)
             throw new Exception("缺少Select语句");
         //SqlServer数据库，Union子句在SELECT * FROM包装后，每个列都需要有一个明确的列名，没有则需要增加as别名
-        if (isManySharding)
-            isManySharding = this.ShardingTables != null && this.ShardingTables[0].TableNames != null && this.ShardingTables[0].TableNames.Count > 1;
-        bool isNeedWrap = (this.IsUnion || this.IsSecondUnion || isManySharding) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue);
+        bool isNeedWrap = (this.IsUnion || this.IsSecondUnion) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue);
         this.AddSelectFieldsSql(builder, this.ReaderFields, isNeedWrap);
 
         string selectSql = null;
@@ -254,7 +262,7 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
             builder.Append($" HAVING {this.HavingSql}");
 
         string orderBy = null;
-        if (!string.IsNullOrEmpty(this.OrderBySql))
+        if (!isManySharding && !string.IsNullOrEmpty(this.OrderBySql))
         {
             orderBy = $"ORDER BY {this.OrderBySql}";
             if (!this.skip.HasValue && !this.limit.HasValue)
@@ -266,7 +274,7 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
         if (!string.IsNullOrEmpty(headSql))
             builder.Append(headSql);
 
-        if (this.skip.HasValue || this.limit.HasValue)
+        if (!isManySharding && (this.skip.HasValue || this.limit.HasValue))
         {
             //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ /**others**/
             var pageSql = this.OrmProvider.GetPagingTemplate(this.skip, this.limit, orderBy);
@@ -276,6 +284,9 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
             builder.Append($"{pageSql}");
         }
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
+
+        if (isManySharding && (!string.IsNullOrEmpty(this.OrderBySql) || this.skip.HasValue || this.limit.HasValue))
+            this.IsNeedUnionShardingTables = true;
 
         //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不正确
         if (isNeedWrap)
@@ -287,9 +298,16 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
         builder.Clear();
         return sql;
     }
+    public override string BuildShardingTableNamesSql(string orgTableName, string tableSchema = null)
+    {
+        var sql = $"SELECT a.name FROM sys.objects a,sys.schemas b WHERE a.schema_id=b.schema_id AND a.type='U' AND a.name LIKE '{orgTableName}_%'";
+        if (!string.IsNullOrEmpty(tableSchema))
+            sql += $" AND b.name='{tableSchema}'";
+        return sql;
+    }
     public override string BuildTableShardingsSql()
     {
-        var builder = new StringBuilder($"SELECT a.name FROM sys.objects a,sys.schemas b WHERE a.schema_id=b.schema_id AND A.type='U' AND ");
+        var builder = new StringBuilder($"SELECT a.name FROM sys.objects a,sys.schemas b WHERE a.schema_id=b.schema_id AND a.type='U' AND ");
         var schemaBuilders = new Dictionary<string, StringBuilder>();
         foreach (var tableSegment in this.ShardingTables)
         {

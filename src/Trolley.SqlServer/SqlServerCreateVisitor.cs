@@ -70,20 +70,7 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
         var entityType = tableSegment.EntityType;
         var entityMapper = tableSegment.Mapper;
 
-        string tableName;
-        if (tableSegment.IsSharding)
-            tableName = tableSegment.Body;
-        else
-        {
-            if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out _))
-                tableName = this.GetShardingTableName();
-            else tableName = entityMapper.TableName;
-        }
-        var tableSchema = tableSegment.TableSchema;
-        if (!string.IsNullOrEmpty(tableSegment.TableSchema))
-            tableName = $"{this.OrmProvider.GetTableName(tableSegment.TableSchema)}.{this.OrmProvider.GetTableName(tableName)}";
-        tableName = this.OrmProvider.GetTableName(tableName);
-
+        var tableName = this.GetTableName();
         if (this.OutputSql != null && this.IsReturnIdentity)
             throw new NotSupportedException("返回Identity，不支持同时Returning操作");
 
@@ -101,7 +88,7 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
         //多命令查询或是ToSql才会走到此分支
         //多语句执行，一次性不分批次
         var builder = new StringBuilder();
-        (var isNeedSplit, var tableName, var insertObjs, _, var firstSqlSetter,
+        (var tableName, var tabledInsertObjs, var insertObjs, _, var firstSqlSetter,
             var loopSqlSetter, _, readerFields) = this.BuildWithBulk(command);
         void Execute(string tableName, IEnumerable insertObjs)
         {
@@ -114,10 +101,8 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
                 index++;
             }
         }
-        if (isNeedSplit)
+        if (tabledInsertObjs != null)
         {
-            var entityType = this.Tables[0].EntityType;
-            var tabledInsertObjs = RepositoryHelper.SplitShardingParameters(this.MapProvider, this.ShardingProvider, entityType, insertObjs);
             int index = 0;
             foreach (var tabledInsertObj in tabledInsertObjs)
             {
@@ -131,10 +116,9 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
         builder.Clear();
         return sql;
     }
-    public override (bool, string, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
+    public override (string, Dictionary<string, List<object>>, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
         Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command)
     {
-        bool isNeedSplit = false;
         object firstInsertObj = null;
         Type insertObjType = null;
         (var insertObjs, var bulkCount) = ((IEnumerable, int))this.deferredSegments[0].Value;
@@ -144,13 +128,17 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
             insertObjType = entity.GetType();
             break;
         }
+        string tableName = null;
+        Dictionary<string, List<object>> tabledInsertObjs = null;
         var tableSegment = this.Tables[0];
-        var tableName = tableSegment.Mapper.TableName;
         var entityType = tableSegment.EntityType;
-
-        if (tableSegment.IsSharding)
-            tableName = tableSegment.Body;
-        else isNeedSplit = this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out _);
+        if (this.ShardingProvider != null && this.ShardingProvider.TryGetTableSharding(entityType, out var tableShardingInfo))
+        {
+            if (tableSegment.IsSharding)
+                tableName = tableSegment.Body;
+            else tabledInsertObjs = this.SplitShardingParameters(tableShardingInfo, insertObjs);
+        }
+        else tableName = tableSegment.Mapper.TableName;
 
         string fixedSql = "(";
         List<IDbDataParameter> fixedDbParameters = null;
@@ -176,7 +164,8 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
                         break;
                     default: throw new NotSupportedException("批量插入后，只支持WithBy/IgnoreFields/OnlyFields/Output操作");
                 }
-                fixedDbParameters = this.DbParameters.Cast<IDbDataParameter>().ToList();
+                if (this.DbParameters.Count > 0)
+                    fixedDbParameters = this.DbParameters.Cast<IDbDataParameter>().ToList();
             }
             fixedSql = $"({this.ValuesBuilder}";
         }
@@ -200,7 +189,7 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
         this.ValuesBuilder.Clear();
 
         Action<IDataParameterCollection, StringBuilder, string> firstSqlSetter = null;
-        if (this.deferredSegments.Count > 1)
+        if (fixedDbParameters != null)
         {
             firstSqlSetter = (dbParameters, builder, tableName) =>
             {
@@ -218,7 +207,7 @@ public class SqlServerCreateVisitor : CreateVisitor, ICreateVisitor
             builder.Append(')');
         };
         this.DbParameters = command.Parameters;
-        return (isNeedSplit, tableName, insertObjs, bulkCount, firstSqlSetter, loopSqlSetter, null, readerFields);
+        return (tableName, tabledInsertObjs, insertObjs, bulkCount, firstSqlSetter, loopSqlSetter, null, readerFields);
     }
     public void WithLock(string lockName) => this.LockName = lockName;
     public void Output(string fieldNames)

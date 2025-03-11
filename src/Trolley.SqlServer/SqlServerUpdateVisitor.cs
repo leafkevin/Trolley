@@ -132,7 +132,7 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
                     {
                         builder.Append($"UPDATE {aliasName} SET ");
                         int index = 0;
-                        if (this.UpdateFields != null && this.UpdateFields.Count > 0)
+                        if (this.UpdateFields.Count > 0)
                         {
                             foreach (var setField in this.UpdateFields)
                             {
@@ -158,7 +158,7 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
 
                         int index = 0;
                         builder.Append(" SET ");
-                        if (this.UpdateFields != null && this.UpdateFields.Count > 0)
+                        if (this.UpdateFields.Count > 0)
                         {
                             foreach (var setField in this.UpdateFields)
                             {
@@ -257,15 +257,19 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
                     default: throw new NotSupportedException("SetBulk操作后，只支持Set/IgnoreFields/OnlyFields/Output操作");
                 }
             }
-            foreach (var setField in this.UpdateFields)
+            if (this.UpdateFields.Count > 0)
             {
-                if (index > 0) builder.Append(',');
-                builder.Append(setField);
-                index++;
+                foreach (var setField in this.UpdateFields)
+                {
+                    if (index > 0) builder.Append(',');
+                    builder.Append(setField);
+                    index++;
+                }
+                builder.Append(',');
+                fixedSql = builder.ToString();
             }
-            builder.Append(',');
-            fixedSql = builder.ToString();
-            fixedDbParameters = this.DbParameters.Cast<IDbDataParameter>().ToList();
+            if (this.DbParameters.Count > 0)
+                fixedDbParameters = this.DbParameters.Cast<IDbDataParameter>().ToList();
             this.DbParameters = command.Parameters;
             this.UpdateFields.Clear();
             builder.Clear();

@@ -46,9 +46,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public int PageNumber { get; set; }
     public int PageSize { get; set; }
     public bool IsNeedPaging { get; set; } = false;
-    public bool IsShardingTables { get; set; }
 
-    public QueryVisitor(DbContext dbContext, char tableAsStart = 'a', IDataParameterCollection dbParameters = null)
+    public QueryVisitor(DbContext dbContext) => this.DbContext = dbContext;
+    public QueryVisitor(DbContext dbContext, char tableAsStart, IDataParameterCollection dbParameters = null)
     {
         this.DbContext = dbContext;
         this.TableAsStart = tableAsStart;
@@ -92,7 +92,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         //先判断表是否有多分表isManySharding
         string tableSql = null;
-        bool isManySharding = false;
+        var hasShardingTables = this.ShardingTables != null && this.ShardingTables.Count > 0;
+        var isManySharding = false;
         if (this.Tables.Count > 0)
         {
             //每个表都要有单独的GUID值，否则有类似的表前缀名，也会被替换导致表名替换错误
@@ -116,7 +117,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     builder.Append(" " + tableSegment.SuffixRawSql);
                 if (!string.IsNullOrEmpty(tableSegment.OnExpr))
                     builder.Append($" ON {tableSegment.OnExpr}");
-                if (tableSegment.TableNames != null && tableSegment.TableNames.Count > 1)
+                if (hasShardingTables && this.ShardingTables[0] == tableSegment
+                    && tableSegment.TableNames != null && tableSegment.TableNames.Count > 1)
                     isManySharding = true;
             }
             tableSql = builder.ToString();
@@ -149,7 +151,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             builder.Append($" HAVING {this.HavingSql}");
 
         string orderBy = null;
-        if (!string.IsNullOrEmpty(this.OrderBySql))
+        if (!isManySharding && !string.IsNullOrEmpty(this.OrderBySql))
         {
             orderBy = $"ORDER BY {this.OrderBySql}";
             if (!this.skip.HasValue && !this.limit.HasValue)
@@ -161,7 +163,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (!string.IsNullOrEmpty(headSql))
             builder.Append(headSql);
 
-        if (!this.IsShardingTables && (this.skip.HasValue || this.limit.HasValue))
+        if (!isManySharding && (this.skip.HasValue || this.limit.HasValue))
         {
             //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ /**others**/
             var pageSql = this.OrmProvider.GetPagingTemplate(this.skip, this.limit, orderBy);
@@ -175,9 +177,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
 
+        if (isManySharding && (!string.IsNullOrEmpty(this.OrderBySql) || this.skip.HasValue || this.limit.HasValue))
+            this.IsNeedUnionShardingTables = true;
+
         //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不正确
-        if (isManySharding)
-            isManySharding = this.ShardingTables != null && this.ShardingTables[0].TableNames != null && this.ShardingTables[0].TableNames.Count > 1;
         bool isNeedWrap = (this.IsUnion || this.IsSecondUnion) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue);
         if (isNeedWrap)
         {
@@ -246,7 +249,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         //先判断表是否有多分表isManySharding
         string tableSql = null;
-        bool isManySharding = false;
+        var hasShardingTables = this.ShardingTables != null && this.ShardingTables.Count > 0;
+        var isManySharding = false;
         if (this.Tables.Count > 0)
         {
             for (int i = 1; i < this.Tables.Count; i++)
@@ -269,7 +273,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     builder.Append(" " + tableSegment.SuffixRawSql);
                 if (!string.IsNullOrEmpty(tableSegment.OnExpr))
                     builder.Append($" ON {tableSegment.OnExpr}");
-                if (tableSegment.TableNames != null && tableSegment.TableNames.Count > 1)
+                if (hasShardingTables && this.ShardingTables[0] == tableSegment
+                    && tableSegment.TableNames != null && tableSegment.TableNames.Count > 1)
                     isManySharding = true;
             }
             tableSql = builder.ToString();
@@ -299,7 +304,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             builder.Append($" HAVING {this.HavingSql}");
 
         string orderBy = null;
-        if (!string.IsNullOrEmpty(this.OrderBySql))
+        if (!isManySharding && !string.IsNullOrEmpty(this.OrderBySql))
         {
             orderBy = $"ORDER BY {this.OrderBySql}";
             if (!this.skip.HasValue && !this.limit.HasValue)
@@ -311,7 +316,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (!string.IsNullOrEmpty(headSql))
             builder.Append(headSql);
 
-        if (this.skip.HasValue || this.limit.HasValue)
+        if (!isManySharding && (this.skip.HasValue || this.limit.HasValue))
         {
             //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ /**others**/
             var pageSql = this.OrmProvider.GetPagingTemplate(this.skip, this.limit, orderBy);
@@ -322,10 +327,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
 
+        if (isManySharding && (!string.IsNullOrEmpty(this.OrderBySql) || this.skip.HasValue || this.limit.HasValue))
+            this.IsNeedUnionShardingTables = true;
+
         //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不正确
-        if (isManySharding)
-            isManySharding = this.ShardingTables != null && this.ShardingTables[0].TableNames != null && this.ShardingTables[0].TableNames.Count > 1;
-        bool isNeedWrap = (this.IsUnion || this.IsSecondUnion || isManySharding) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue);
+        bool isNeedWrap = (this.IsUnion || this.IsSecondUnion) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue);
         if (isNeedWrap)
         {
             builder.Insert(0, "SELECT * FROM (");
@@ -333,19 +339,16 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         sql = builder.ToString();
         builder.Clear();
-        builder = null;
         return sql;
     }
-    public virtual string BuildShardingPagingSql(string rawSql)
+    public virtual string BuildShardingSql(string formatSql)
     {
-        //select * from (...) order by ... limit 10 offset 10
-        var tableSql = $"({rawSql})";
-
-        int index = 0;
+        var sql = formatSql;
         string orderBy = null;
         var builder = new StringBuilder();
         if (this.OrderByFields != null)
         {
+            int index = 0;
             foreach (var orderByField in this.OrderByFields)
             {
                 var readerField = orderByField.Field.TargetMember ?? orderByField.Field.FromMember;
@@ -359,15 +362,25 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             orderBy = " ORDER BY " + builder.ToString();
             builder.Clear();
         }
-        var pageSql = this.OrmProvider.GetPagingTemplate(this.skip, this.limit, orderBy);
-        pageSql = pageSql.Replace("/**fields**/", "*");
-        pageSql = pageSql.Replace("/**tables**/", $"{tableSql} b");
-        pageSql = pageSql.Replace(" /**others**/", "");
 
-        if (this.IsNeedPaging && this.skip.HasValue && this.limit.HasValue)
-            builder.Append($"SELECT COUNT(*) FROM {tableSql} a;");
-        builder.Append($"{pageSql}");
-        var sql = builder.ToString();
+        if (this.skip.HasValue || this.limit.HasValue)
+        {
+            //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ /**others**/
+            var pageSql = this.OrmProvider.GetPagingTemplate(this.skip, this.limit, orderBy);
+            pageSql = pageSql.Replace("/**fields**/", "*");
+            pageSql = pageSql.Replace("/**tables**/", $"({formatSql}) b");
+            pageSql = pageSql.Replace(" /**others**/", "");
+
+            if (this.IsNeedPaging && this.skip.HasValue && this.limit.HasValue)
+                builder.Append($"SELECT COUNT(*) FROM ({formatSql}) a;");
+            builder.Append($"{pageSql}");
+            sql = builder.ToString();
+        }
+        else if (!string.IsNullOrEmpty(orderBy))
+        {
+            builder.Append($"SELECT * FROM ({formatSql}) a {orderBy}");
+            sql = builder.ToString();
+        }
         builder.Clear();
         return sql;
     }
@@ -1818,7 +1831,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (subQuery.Visitor.ShardingTables != null && subQuery.Visitor.ShardingTables.Count > 0)
         {
             tableSegment.IsSharding = true;
-            this.IsNeedFetchShardingTables = subQuery.Visitor.IsNeedFetchShardingTables;
+            this.IsNeedFetchShardingTables = this.IsNeedFetchShardingTables || subQuery.Visitor.IsNeedFetchShardingTables;
+            this.IsNeedUnionShardingTables = this.IsNeedUnionShardingTables || subQuery.Visitor.IsNeedUnionShardingTables;
+            this.IsNeedFormatShardingTables = this.IsNeedFormatShardingTables || subQuery.Visitor.IsNeedFormatShardingTables;
             if (this.ShardingTables == null)
                 this.ShardingTables = subQuery.Visitor.ShardingTables;
             else

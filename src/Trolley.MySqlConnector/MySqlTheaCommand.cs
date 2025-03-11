@@ -383,6 +383,14 @@ class MySqlTheaCommand : ITheaCommand
         }
         return result;
     }
-    public void Dispose() => this.command.Dispose();
-    public async ValueTask DisposeAsync() => await this.command.DisposeAsync();
+    public void Dispose()
+    {
+        this.command.Dispose();
+        this.Parameters.Clear();
+    }
+    public async ValueTask DisposeAsync()
+    {
+        await this.command.DisposeAsync();
+        this.Parameters.Clear();
+    }
 }

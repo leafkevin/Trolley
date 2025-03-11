@@ -24,6 +24,49 @@ public class Repository : IRepository
     public Repository(DbContext dbContext) => this.DbContext = dbContext;
     #endregion
 
+    public List<string> GetShardingTableNames<TEntity>(Func<string, bool> tableNameSelector)
+    {
+        var visitor = this.OrmProvider.NewQueryVisitor(this.DbContext);
+        var entityMapper = this.MapProvider.GetEntityMap(typeof(TEntity));
+        var tableName = entityMapper.TableName + "_";
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
+        command.CommandText = visitor.BuildShardingTableNamesSql(tableName);
+        command.CommandType = CommandType.Text;
+
+        connection.Open();
+        var behavior = CommandBehavior.SequentialAccess;
+        using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
+        var result = new List<string>();
+        while (reader.Read())
+            result.Add(reader.ToValue<string>(this.DbContext));
+
+        reader.Dispose();
+        command.Dispose();
+        if (isNeedClose) connection.Close();
+        return result;
+    }
+    public async Task<List<string>> GetShardingTableNamesAsync<TEntity>(Func<string, bool> tableNameSelector, CancellationToken cancellationToken = default)
+    {
+        var visitor = this.OrmProvider.NewQueryVisitor(this.DbContext);
+        var entityMapper = this.MapProvider.GetEntityMap(typeof(TEntity));
+        var tableName = entityMapper.TableName + "_";
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
+        command.CommandText = visitor.BuildShardingTableNamesSql(tableName);
+        command.CommandType = CommandType.Text;
+
+        await connection.OpenAsync(cancellationToken);
+        var behavior = CommandBehavior.SequentialAccess;
+        using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
+        var result = new List<string>();
+        while (await reader.ReadAsync(cancellationToken))
+            result.Add(reader.ToValue<string>(this.DbContext));
+
+        await reader.DisposeAsync();
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
+        return result;
+    }
+
     #region From
     public virtual IQuery<T> From<T>(char tableAsStart = 'a')
     {
@@ -696,6 +739,8 @@ public class Repository : IRepository
             {
                 if (index > 0) builder.Append(';');
                 typedCommandInitializer.Invoke(command.Parameters, builder, this.DbContext, updateObj, index.ToString());
+                index++;
+
                 if (index >= bulkCount)
                 {
                     command.CommandText = builder.ToString();
@@ -703,9 +748,7 @@ public class Repository : IRepository
                     command.Parameters.Clear();
                     builder.Clear();
                     index = 0;
-                    continue;
                 }
-                index++;
             }
             if (index > 0)
             {
@@ -757,6 +800,8 @@ public class Repository : IRepository
             {
                 if (index > 0) builder.Append(';');
                 typedCommandInitializer.Invoke(command.Parameters, builder, this.DbContext, updateObj, index.ToString());
+                index++;
+
                 if (index >= bulkCount)
                 {
                     command.CommandText = builder.ToString();
@@ -764,9 +809,7 @@ public class Repository : IRepository
                     command.Parameters.Clear();
                     builder.Clear();
                     index = 0;
-                    continue;
                 }
-                index++;
             }
             if (index > 0)
             {
