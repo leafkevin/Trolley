@@ -48,9 +48,8 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
             case ActionMode.Bulk:
                 {
                     //此SQL只能用在多命令查询时和返回ToSql两个场景
-                    (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter) = this.BuildWithBulk(command);
+                    (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter, readerFields) = this.BuildWithBulk(command);
                     Func<int, string> suffixGetter = index => this.IsMultiple ? $"_m{this.CommandIndex}{index}" : $"{index}";
-                    readerFields = this.ReaderFields;
                     Action<object, int> sqlExecute = null;
                     if (this.ShardingTables != null && this.ShardingTables.Count > 0)
                     {
@@ -216,7 +215,7 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
         return sql;
     }
     public override (IEnumerable, int, string, Action<IDataParameterCollection>, Action<IDataParameterCollection, StringBuilder, DbContext, string, object, string>,
-        Action<StringBuilder, DbContext, string, object, string>) BuildWithBulk(ITheaCommand command)
+        Action<StringBuilder, DbContext, string, object, string>, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command)
     {
         Type updateObjType = null;
         (var updateObjs, var bulkCount) = ((IEnumerable, int))this.deferredSegments[0].Value;
@@ -324,7 +323,7 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
             };
         }
         var tableName = tableSegment.Mapper.TableName;
-        return (updateObjs, bulkCount, tableName, fixedParametersSetter, firstSqlSetter, sqlSetter);
+        return (updateObjs, bulkCount, tableName, fixedParametersSetter, firstSqlSetter, sqlSetter, this.ReaderFields);
     }
     public override string BuildTableShardingsSql()
     {

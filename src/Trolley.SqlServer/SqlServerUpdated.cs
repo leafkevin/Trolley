@@ -114,7 +114,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
             case ActionMode.Bulk:
                 {
                     var builder = new StringBuilder();
-                    (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter) = this.Visitor.BuildWithBulk(command);
+                    (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter, var readerFields) = this.Visitor.BuildWithBulk(command);
                     Func<int, string> suffixGetter = index => this.Visitor.IsMultiple ? $"_m{this.Visitor.CommandIndex}{index}" : $"{index}";
 
                     Action<object, int> sqlExecuter = null;
@@ -275,7 +275,7 @@ public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEn
             case ActionMode.Bulk:
                 {
                     var builder = new StringBuilder();
-                    (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter) = this.Visitor.BuildWithBulk(command);
+                    (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter, _) = this.Visitor.BuildWithBulk(command);
                     Func<int, string> suffixGetter = index => this.Visitor.IsMultiple ? $"_m{this.Visitor.CommandIndex}{index}" : $"{index}";
 
                     Action<object, int> sqlExecute = null;
@@ -481,15 +481,12 @@ public class SqlServerUpdated<TEntity, TResult> : Updated<TEntity>, ISqlServerUp
         using var reader = command.ExecuteReader(CommandSqlType.Update, CommandBehavior.SequentialAccess);
         if (this.Visitor.IsNeedFetchShardingTables)
         {
-            while (true)
+            while (reader.Read())
+                result = reader.ToEntity<TResult>(this.DbContext, readerFields);
+            while (reader.NextResult())
             {
-                if (reader.Read())
-                {
+                while (reader.Read())
                     result = reader.ToEntity<TResult>(this.DbContext, readerFields);
-                    break;
-                }
-                if (!reader.NextResult())
-                    break;
             }
         }
         else if (reader.Read())
@@ -518,15 +515,12 @@ public class SqlServerUpdated<TEntity, TResult> : Updated<TEntity>, ISqlServerUp
 
         if (this.Visitor.IsNeedFetchShardingTables)
         {
-            while (true)
+            while (await reader.ReadAsync(cancellationToken))
+                result = reader.ToEntity<TResult>(this.DbContext, readerFields);
+            while (await reader.NextResultAsync(cancellationToken))
             {
-                if (await reader.ReadAsync(cancellationToken))
-                {
+                while (await reader.ReadAsync(cancellationToken))
                     result = reader.ToEntity<TResult>(this.DbContext, readerFields);
-                    break;
-                }
-                if (!await reader.NextResultAsync())
-                    break;
             }
         }
         else if (await reader.ReadAsync(cancellationToken))
@@ -659,25 +653,79 @@ public class SqlServerBulkUpdated<TEntity, TResult> : Updated<TEntity>, ISqlServ
         var result = new List<TResult>();
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
 
+        (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter, var readerFields) = this.Visitor.BuildWithBulk(command);
+        Func<int, string> suffixGetter = index => this.Visitor.IsMultiple ? $"_m{this.Visitor.CommandIndex}{index}" : $"{index}";
+
+        var builder = new StringBuilder();
+        Action<object, int> sqlExecuter = null;
+        Action readerExecuter = null;
+        if (this.Visitor.ShardingTables != null && this.Visitor.ShardingTables.Count > 0)
+        {
+            sqlExecuter = (updateObj, index) =>
+            {
+                if (index > 0) builder.Append(';');
+                var tableNames = this.Visitor.ShardingTables[0].TableNames;
+                firstSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableNames[0], updateObj, suffixGetter.Invoke(index));
+                for (int i = 1; i < tableNames.Count; i++)
+                {
+                    builder.Append(';');
+                    sqlSetter.Invoke(builder, this.DbContext, tableNames[i], updateObj, suffixGetter.Invoke(index));
+                }
+            };
+            readerExecuter = () =>
+            {
+                command.CommandText = builder.ToString();
+                using var reader = command.ExecuteReader(CommandSqlType.BulkUpdate, CommandBehavior.SequentialAccess);
+                while (reader.Read())
+                    result.Add(reader.ToEntity<TResult>(this.DbContext, readerFields));
+                while (reader.NextResult())
+                {
+                    while (reader.Read())
+                        result.Add(reader.ToEntity<TResult>(this.DbContext, readerFields));
+                }
+                reader.Dispose();
+                command.Parameters.Clear();
+                builder.Clear();
+            };
+        }
+        else
+        {
+            sqlExecuter = (updateObj, index) =>
+            {
+                if (index > 0) builder.Append(';');
+                firstSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableName, updateObj, suffixGetter.Invoke(index));
+            };
+            readerExecuter = () =>
+            {
+                command.CommandText = builder.ToString();
+                using var reader = command.ExecuteReader(CommandSqlType.BulkUpdate, CommandBehavior.SequentialAccess);
+                while (reader.Read())
+                    result.Add(reader.ToEntity<TResult>(this.DbContext, readerFields));
+                reader.Dispose();
+                command.Parameters.Clear();
+                builder.Clear();
+            };
+        }
+        int index = 0;
         if (this.Visitor.IsNeedFetchShardingTables)
             this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
-        command.CommandText = this.Visitor.BuildCommand(this.DbContext, command, out var readerFields);
-
+        fixedParameterSetter?.Invoke(command.Parameters);
         connection.Open();
-        using var reader = command.ExecuteReader(CommandSqlType.Update, CommandBehavior.SequentialAccess);
-        while (reader.Read())
+
+        foreach (var updateObj in updateObjs)
         {
-            result.Add(reader.ToEntity<TResult>(this.DbContext, readerFields));
-        }
-        while (reader.NextResult())
-        {
-            while (reader.Read())
+            sqlExecuter.Invoke(updateObj, index);
+            index++;
+
+            if (index >= bulkCount)
             {
-                result.Add(reader.ToEntity<TResult>(this.DbContext, readerFields));
+                readerExecuter();
+                fixedParameterSetter?.Invoke(command.Parameters);
+                index = 0;
             }
         }
+        if (index > 0) readerExecuter();
 
-        reader.Dispose();
         command.Dispose();
         if (isNeedClose) connection.Close();
         this.Visitor.Dispose();
@@ -688,25 +736,79 @@ public class SqlServerBulkUpdated<TEntity, TResult> : Updated<TEntity>, ISqlServ
         var result = new List<TResult>();
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
 
-        if (this.Visitor.IsNeedFetchShardingTables)
-            await this.DbContext.FetchShardingTablesAsync(this.Visitor as SqlVisitor);
-        command.CommandText = this.Visitor.BuildCommand(this.DbContext, command, out var readerFields);
+        (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter, var readerFields) = this.Visitor.BuildWithBulk(command);
+        Func<int, string> suffixGetter = index => this.Visitor.IsMultiple ? $"_m{this.Visitor.CommandIndex}{index}" : $"{index}";
 
-        await connection.OpenAsync(cancellationToken);
-        using var reader = await command.ExecuteReaderAsync(CommandSqlType.Update, CommandBehavior.SequentialAccess, cancellationToken);
-        while (await reader.ReadAsync(cancellationToken))
+        var builder = new StringBuilder();
+        Action<object, int> sqlExecuter = null;
+        Func<Task> readerExecuter = null;
+        if (this.Visitor.ShardingTables != null && this.Visitor.ShardingTables.Count > 0)
         {
-            result.Add(reader.ToEntity<TResult>(this.DbContext, readerFields));
-        }
-        while (await reader.NextResultAsync())
-        {
-            while (await reader.ReadAsync(cancellationToken))
+            sqlExecuter = (updateObj, index) =>
             {
-                result.Add(reader.ToEntity<TResult>(this.DbContext, readerFields));
+                if (index > 0) builder.Append(';');
+                var tableNames = this.Visitor.ShardingTables[0].TableNames;
+                firstSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableNames[0], updateObj, suffixGetter.Invoke(index));
+                for (int i = 1; i < tableNames.Count; i++)
+                {
+                    builder.Append(';');
+                    sqlSetter.Invoke(builder, this.DbContext, tableNames[i], updateObj, suffixGetter.Invoke(index));
+                }
+            };
+            readerExecuter = async () =>
+            {
+                command.CommandText = builder.ToString();
+                using var reader = await command.ExecuteReaderAsync(CommandSqlType.BulkUpdate, CommandBehavior.SequentialAccess, cancellationToken);
+                while (await reader.ReadAsync(cancellationToken))
+                    result.Add(reader.ToEntity<TResult>(this.DbContext, readerFields));
+                while (await reader.NextResultAsync(cancellationToken))
+                {
+                    while (await reader.ReadAsync(cancellationToken))
+                        result.Add(reader.ToEntity<TResult>(this.DbContext, readerFields));
+                }
+                await reader.DisposeAsync();
+                command.Parameters.Clear();
+                builder.Clear();
+            };
+        }
+        else
+        {
+            sqlExecuter = (updateObj, index) =>
+            {
+                if (index > 0) builder.Append(';');
+                firstSqlSetter.Invoke(command.Parameters, builder, this.DbContext, tableName, updateObj, suffixGetter.Invoke(index));
+            };
+            readerExecuter = async () =>
+            {
+                command.CommandText = builder.ToString();
+                using var reader = await command.ExecuteReaderAsync(CommandSqlType.BulkUpdate, CommandBehavior.SequentialAccess, cancellationToken);
+                while (await reader.ReadAsync(cancellationToken))
+                    result.Add(reader.ToEntity<TResult>(this.DbContext, readerFields));
+                await reader.DisposeAsync();
+                command.Parameters.Clear();
+                builder.Clear();
+            };
+        }
+        int index = 0;
+        if (this.Visitor.IsNeedFetchShardingTables)
+            await this.DbContext.FetchShardingTablesAsync(this.Visitor as SqlVisitor, cancellationToken);
+        fixedParameterSetter?.Invoke(command.Parameters);
+        await connection.OpenAsync(cancellationToken);
+
+        foreach (var updateObj in updateObjs)
+        {
+            sqlExecuter.Invoke(updateObj, index);
+            index++;
+
+            if (index >= bulkCount)
+            {
+                await readerExecuter();
+                fixedParameterSetter?.Invoke(command.Parameters);
+                index = 0;
             }
         }
+        if (index > 0) await readerExecuter();
 
-        await reader.DisposeAsync();
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         this.Visitor.Dispose();

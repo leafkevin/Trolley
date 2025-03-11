@@ -277,9 +277,9 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
     #endregion
 
     #region Exists
-    public virtual bool Exists(Expression<Func<<#=tables#>, bool>> predicate) => this.QueryFirstValue<int>("COUNT(1)") > 0;
+    public virtual bool Exists(Expression<Func<<#=tables#>, bool>> predicate) => base.Exists(predicate);
     public virtual async Task<bool> ExistsAsync(Expression<Func<<#=tables#>, bool>> predicate, CancellationToken cancellationToken = default)
-        => await this.QueryFirstValueAsync<int>("COUNT(*)", null, cancellationToken) > 0;
+        => await base.ExistsAsync(predicate, cancellationToken);
     #endregion
 }
 <#  }#>

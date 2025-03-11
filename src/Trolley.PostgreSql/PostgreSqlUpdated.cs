@@ -481,15 +481,12 @@ public class PostgreSqlUpdated<TEntity, TResult> : Updated<TEntity>, IPostgreSql
         using var reader = command.ExecuteReader(CommandSqlType.Update, CommandBehavior.SequentialAccess);
         if (this.Visitor.IsNeedFetchShardingTables)
         {
-            while (true)
+            while (reader.Read())
+                result = reader.ToEntity<TResult>(this.DbContext, readerFields);
+            while (reader.NextResult())
             {
-                if (reader.Read())
-                {
+                while (reader.Read())
                     result = reader.ToEntity<TResult>(this.DbContext, readerFields);
-                    break;
-                }
-                if (!reader.NextResult())
-                    break;
             }
         }
         else if (reader.Read())
@@ -518,15 +515,13 @@ public class PostgreSqlUpdated<TEntity, TResult> : Updated<TEntity>, IPostgreSql
 
         if (this.Visitor.IsNeedFetchShardingTables)
         {
-            while (true)
+            //多分表更新，会取最后一个表的更新数据
+            while (await reader.ReadAsync(cancellationToken))
+                result = reader.ToEntity<TResult>(this.DbContext, readerFields);
+            while (await reader.NextResultAsync(cancellationToken))
             {
-                if (await reader.ReadAsync(cancellationToken))
-                {
+                while (await reader.ReadAsync(cancellationToken))
                     result = reader.ToEntity<TResult>(this.DbContext, readerFields);
-                    break;
-                }
-                if (!await reader.NextResultAsync())
-                    break;
             }
         }
         else if (await reader.ReadAsync(cancellationToken))

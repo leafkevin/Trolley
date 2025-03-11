@@ -143,6 +143,19 @@ public class QueryBase : QueryInternal, IQueryBase
     }
     #endregion
 
+    #region Exists
+    protected virtual bool Exists(Expression predicate)
+    {
+        this.Visitor.Where(predicate);
+        return this.QueryScalar<int>("COUNT(1)") > 0;
+    }
+    protected virtual async Task<bool> ExistsAsync(Expression predicate, CancellationToken cancellationToken = default)
+    {
+        this.Visitor.Where(predicate);
+        return await this.QueryScalarAsync<int>("COUNT(*)", null, cancellationToken) > 0;
+    }
+    #endregion
+
     #region ToSql
     public virtual string ToSql(out List<IDbDataParameter> dbParameters)
     {
@@ -508,9 +521,9 @@ public class Query<T> : QueryBase, IQuery<T>
     #endregion
 
     #region Exists
-    public virtual bool Exists(Expression<Func<T, bool>> predicate) => this.QueryScalar<int>("COUNT(1)") > 0;
+    public virtual bool Exists(Expression<Func<T, bool>> predicate) => base.Exists(predicate);
     public virtual async Task<bool> ExistsAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default)
-        => await this.QueryScalarAsync<int>("COUNT(*)", null, cancellationToken) > 0;
+        => await base.ExistsAsync(predicate, cancellationToken);
     #endregion
 
     #region Count

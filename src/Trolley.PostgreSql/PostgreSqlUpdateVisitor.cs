@@ -24,9 +24,8 @@ public class PostgreSqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
             case ActionMode.Bulk:
                 {
                     //此SQL只能用在多命令查询时和返回ToSql两个场景
-                    (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter, _) = this.BuildWithBulk(command);
+                    (var updateObjs, var bulkCount, var tableName, var fixedParameterSetter, var firstSqlSetter, var sqlSetter, readerFields) = this.BuildWithBulk(command);
                     Func<int, string> suffixGetter = index => this.IsMultiple ? $"_m{this.CommandIndex}{index}" : $"{index}";
-                    readerFields = this.ReaderFields;
                     Action<object, int> sqlExecute = null;
                     if (this.ShardingTables != null && this.ShardingTables.Count > 0)
                     {
