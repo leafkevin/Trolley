@@ -582,15 +582,15 @@ public class PostgreSqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntit
     #endregion
 
     #region Returnning
-    public IPostgreSqlBulkUpdated<TEntity, TResult> Returning<TResult>(string fieldNames)
+    public IPostgreSqlUpdated<TEntity, TResult> Returning<TResult>(string fieldNames)
     {
         this.DialectVisitor.Returning(fieldNames);
-        return new PostgreSqlBulkUpdated<TEntity, TResult>(this.DbContext, this.Visitor);
+        return new PostgreSqlUpdated<TEntity, TResult>(this.DbContext, this.Visitor);
     }
-    public IPostgreSqlBulkUpdated<TEntity, TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector)
+    public IPostgreSqlUpdated<TEntity, TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector)
     {
         this.DialectVisitor.Returning(fieldsSelector);
-        return new PostgreSqlBulkUpdated<TEntity, TResult>(this.DbContext, this.Visitor);
+        return new PostgreSqlUpdated<TEntity, TResult>(this.DbContext, this.Visitor);
     }
     #endregion
 

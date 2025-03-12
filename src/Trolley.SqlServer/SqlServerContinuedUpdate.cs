@@ -578,15 +578,15 @@ public class SqlServerBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity
         => base.And(condition, ifPredicate, elsePredicate) as ISqlServerBulkContinuedUpdate<TEntity>;
 
     #region Returnning
-    public ISqlServerBulkUpdated<TEntity, TResult> Output<TResult>(string fieldNames)
+    public ISqlServerUpdated<TEntity, TResult> Output<TResult>(string fieldNames)
     {
         this.DialectVisitor.Output(fieldNames);
-        return new SqlServerBulkUpdated<TEntity, TResult>(this.DbContext, this.Visitor);
+        return new SqlServerUpdated<TEntity, TResult>(this.DbContext, this.Visitor);
     }
-    public ISqlServerBulkUpdated<TEntity, TResult> Output<TResult>(Expression<Func<ISqlServerOutput<TEntity>, TResult>> fieldsSelector)
+    public ISqlServerUpdated<TEntity, TResult> Output<TResult>(Expression<Func<ISqlServerOutput<TEntity>, TResult>> fieldsSelector)
     {
         this.DialectVisitor.Output(fieldsSelector);
-        return new SqlServerBulkUpdated<TEntity, TResult>(this.DbContext, this.Visitor);
+        return new SqlServerUpdated<TEntity, TResult>(this.DbContext, this.Visitor);
     }
     #endregion
     #endregion

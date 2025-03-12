@@ -1609,8 +1609,9 @@ public class UnitTest6 : UnitTestBase
         Assert.Equal(2, order.Products[1]);
         Assert.Equal(3, order.Products[2]);
         Assert.True(order.TotalAmount == parameter.TotalAmount);
-        Assert.True(result1.Id == parameter.Id);
-        Assert.True(result1.TotalAmount == parameter.TotalAmount);
+        var result = result1.FirstOrDefault();
+        Assert.True(result.Id == parameter.Id);
+        Assert.True(result.TotalAmount == parameter.TotalAmount);
 
         var sql2 = repository.Update<Order>()
             .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
@@ -1667,10 +1668,11 @@ public class UnitTest6 : UnitTestBase
         Assert.Equal(2, order.Products[1]);
         Assert.Equal(3, order.Products[2]);
         Assert.True(order.TotalAmount == parameter.TotalAmount);
-        Assert.True(result2.Id == parameter.Id);
-        Assert.True(result2.TotalAmount == parameter.TotalAmount);
+        var result3 = result2.FirstOrDefault();
+        Assert.True(result3.Id == parameter.Id);
+        Assert.True(result3.TotalAmount == parameter.TotalAmount);
         var jsonTypeHandler = new JsonTypeHandler();
-        Assert.True(jsonTypeHandler.ToFieldValue(null, result2.Products).ToString() == "[1,2,3]");
+        Assert.True(jsonTypeHandler.ToFieldValue(null, result3.Products).ToString() == "[1,2,3]");
     }
     [Fact]
     public async Task Update_SetBulk_Returning()

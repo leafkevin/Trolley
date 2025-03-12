@@ -1355,8 +1355,9 @@ public class UnitTest3 : UnitTestBase
         Assert.Equal(2, order.Products[1]);
         Assert.Equal(3, order.Products[2]);
         Assert.True(order.TotalAmount == parameter.TotalAmount);
-        Assert.True(result1.Id == parameter.Id);
-        Assert.True(result1.TotalAmount == parameter.TotalAmount);
+        var result = result1.FirstOrDefault();
+        Assert.True(result.Id == parameter.Id);
+        Assert.True(result.TotalAmount == parameter.TotalAmount);
 
         var sql2 = repository.Update<Order>()
             .Set(f => new
@@ -1405,10 +1406,11 @@ public class UnitTest3 : UnitTestBase
         Assert.Equal(2, order.Products[1]);
         Assert.Equal(3, order.Products[2]);
         Assert.True(order.TotalAmount == parameter.TotalAmount);
-        Assert.True(result2.Id == parameter.Id);
-        Assert.True(result2.TotalAmount == parameter.TotalAmount - 50);
+        var result3 = result2.FirstOrDefault();
+        Assert.True(result3.Id == parameter.Id);
+        Assert.True(result3.TotalAmount == parameter.TotalAmount - 50);
         var jsonTypeHandler = new JsonTypeHandler();
-        Assert.True(jsonTypeHandler.ToFieldValue(null, result2.Products).ToString() == "[1,2,3]");
+        Assert.True(jsonTypeHandler.ToFieldValue(null, result3.Products).ToString() == "[1,2,3]");
     }
 
     [Fact]
