@@ -639,6 +639,24 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
                     this.ReaderFields.Add(sqlSegment);
                 }
                 break;
+            case ExpressionType.Parameter:
+                foreach (var memberMapper in entityMapper.MemberMaps)
+                {
+                    if (memberMapper.IsIgnore || memberMapper.IsNavigation)
+                        continue;
+                    this.ReaderFields.Add(new SqlFieldSegment
+                    {
+                        FieldType = SqlFieldType.Field,
+                        FromMember = memberMapper.Member,
+                        TargetMember = memberMapper.Member,
+                        SegmentType = memberMapper.MemberType,
+                        NativeDbType = memberMapper.NativeDbType,
+                        TypeHandler = memberMapper.TypeHandler,
+                        Body = memberMapper.FieldName
+                    });
+                }
+                builder.Append("INSERTED.*");
+                break;
             default:
                 this.VisitAndDeferred(new SqlFieldSegment { Expression = fieldsSelector });
                 for (int i = 0; i < this.ReaderFields.Count; i++)
@@ -646,7 +664,7 @@ public class SqlServerUpdateVisitor : UpdateVisitor, IUpdateVisitor
                     var readerField = this.ReaderFields[i];
                     if (i > 0) builder.Append(',');
                     builder.Append(readerField.Body);
-                    if (readerField.IsNeedAlias)
+                    if (readerField.IsNeedAlias || readerField.IsConstant || readerField.IsVariable || readerField.HasParameter || readerField.IsExpression || readerField.IsMethodCall)
                         builder.Append($" AS {this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}");
                 }
                 break;

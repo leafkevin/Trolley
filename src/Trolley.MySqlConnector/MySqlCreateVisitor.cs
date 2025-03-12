@@ -600,6 +600,17 @@ public class MySqlCreateVisitor : CreateVisitor
                 }
                 builder.Append('*');
                 break;
+            default:
+                this.VisitAndDeferred(new SqlFieldSegment { Expression = fieldsSelector });
+                for (int i = 0; i < this.ReaderFields.Count; i++)
+                {
+                    var readerField = this.ReaderFields[i];
+                    if (i > 0) builder.Append(',');
+                    builder.Append(readerField.Body);
+                    if (readerField.IsNeedAlias || readerField.IsConstant || readerField.IsVariable || readerField.HasParameter || readerField.IsExpression || readerField.IsMethodCall)
+                        builder.Append($" AS {this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}");
+                }
+                break;
         }
         this.OutputSql = builder.ToString();
         builder.Clear();
