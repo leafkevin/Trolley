@@ -38,8 +38,10 @@ public interface IQueryVisitor : IDisposable
     int PageSize { get; set; }
     bool IsNeedCommandTableAlias { get; set; }
     bool IsNeedFetchShardingTables { get; }
-    bool IsNeedFormatShardingTables { get; set; }
-    bool IsNeedUnionShardingTables { get; set; }
+    bool IsNeedFormatShardingTables { get; }
+    bool IsNeedUnionShardingTables { get; }
+    bool IsManyShardingTables { get; }
+    string ShardingFieldAlias { get; set; }
     List<TableSegment> ShardingTables { get; set; }
     bool IsFromQuery { get; set; }
     bool IsFromCommand { get; set; }

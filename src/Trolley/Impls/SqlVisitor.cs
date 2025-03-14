@@ -55,6 +55,8 @@ public class SqlVisitor : ISqlVisitor
     public bool IsNeedFetchShardingTables { get; set; }
     public bool IsNeedUnionShardingTables { get; set; }
     public bool IsNeedFormatShardingTables { get; set; }
+    public bool IsManyShardingTables { get; set; }
+    public string ShardingFieldAlias { get; set; }
     public List<TableSegment> ShardingTables { get; set; }
 
     public SqlVisitor() { }
@@ -84,7 +86,7 @@ public class SqlVisitor : ISqlVisitor
         {
             tableSegment.ShardingType = ShardingTableType.SingleTable;
             tableSegment.Body = tableNames[0];
-        }        
+        }
     }
     public void UseTable(bool isIncludeMany, Func<string, bool> tableNamePredicate)
     {

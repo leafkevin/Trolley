@@ -269,34 +269,40 @@ public sealed class DbContext
         if (isNeedClose) await connection.CloseAsync();
         return result;
     }
-    public TResult QueryScalar<TEntity, TResult>(IQueryVisitor visitor)
+    public TResult QueryScalar<TResult>(IQueryVisitor visitor, string shardingFieldAlias)
     {
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.IsUseMaster);
-        var sql = this.BuildSql(visitor, " UNION ALL ", out var readerFields);
+        visitor.ShardingFieldAlias = shardingFieldAlias;
+        var sql = this.BuildSql(visitor, " UNION ALL ", out _);
+        sql = this.BuildScalarShardingSql(visitor, sql);
         command.CommandText = sql;
         visitor.DbParameters.CopyTo(command.Parameters);
 
         connection.Open();
         TResult result = default;
         var objResult = command.ExecuteScalar(CommandSqlType.Select);
-        if (objResult != null) result = (TResult)Convert.ChangeType(objResult, typeof(TResult));
+        if (objResult != null && objResult is not DBNull)
+            result = (TResult)Convert.ChangeType(objResult, typeof(TResult));
 
         command.Dispose();
         if (isNeedClose) connection.Close();
         visitor.Dispose();
         return result;
     }
-    public async Task<TResult> QueryScalarAsync<TEntity, TResult>(IQueryVisitor visitor, CancellationToken cancellationToken = default)
+    public async Task<TResult> QueryScalarAsync<TResult>(IQueryVisitor visitor, string shardingFieldAlias, CancellationToken cancellationToken = default)
     {
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.IsUseMaster);
+        visitor.ShardingFieldAlias = shardingFieldAlias;
         (var sql, var readerFields) = await this.BuildSqlAsync(visitor, " UNION ALL ", cancellationToken);
+        sql = this.BuildScalarShardingSql(visitor, sql);
         command.CommandText = sql;
         visitor.DbParameters.CopyTo(command.Parameters);
 
         await connection.OpenAsync(cancellationToken);
         TResult result = default;
         var objResult = await command.ExecuteScalarAsync(CommandSqlType.Select, cancellationToken);
-        if (objResult != null) result = (TResult)Convert.ChangeType(objResult, typeof(TResult));
+        if (objResult != null && objResult is not DBNull)
+            result = (TResult)Convert.ChangeType(objResult, typeof(TResult));
 
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
@@ -672,6 +678,33 @@ public sealed class DbContext
             sql = visitor.BuildShardingSql(sql);
         return (sql, readerFields);
     }
+    public string BuildScalarShardingSql(IQueryVisitor visitor, string rawSql)
+    {
+        if (visitor.IsManyShardingTables && visitor.ShardingFieldAlias != null)
+        {
+            string aggFields = null;
+            switch (visitor.ShardingFieldAlias)
+            {
+                case "COUNT_VALUE":
+                    aggFields = "SUM(COUNT_VALUE)";
+                    break;
+                case "SUM_VALUE":
+                    aggFields = "SUM(SUM_VALUE)";
+                    break;
+                case "AVG_VALUE":
+                    aggFields = "AVG(AVG_VALUE)";
+                    break;
+                case "MAX_VALUE":
+                    aggFields = "MAX(MAX_VALUE)";
+                    break;
+                case "MIN_VALUE":
+                    aggFields = "MIN(MIN_VALUE)";
+                    break;
+            }
+            return $"SELECT {aggFields} FROM ({rawSql}) AS t";
+        }
+        return rawSql;
+    }
     public void FetchShardingTables(SqlVisitor visitor)
     {
         var fetchSql = visitor.BuildTableShardingsSql();
@@ -786,5 +819,5 @@ public sealed class DbContext
         }
         return true;
     }
-    #endregion    
+    #endregion
 }

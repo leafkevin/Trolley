@@ -55,7 +55,6 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         //先判断表是否有多分表isManySharding
         string tableSql = null;
         var hasShardingTables = this.ShardingTables != null && this.ShardingTables.Count > 0;
-        var isManySharding = false;
         if (this.Tables.Count > 0)
         {
             //每个表都要有单独的GUID值，否则有类似的表前缀名，也会被替换导致表名替换错误
@@ -81,7 +80,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                     builder.Append($" ON {tableSegment.OnExpr}");
                 if (hasShardingTables && this.ShardingTables[0] == tableSegment
                     && tableSegment.TableNames != null && tableSegment.TableNames.Count > 1)
-                    isManySharding = true;
+                    this.IsManyShardingTables = true;
             }
             tableSql = builder.ToString();
         }
@@ -97,6 +96,8 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         if (this.IsDistinctOn)
             builder.Append($"DISTINCT ON ({this.DistinctOnSql}) ");
         this.AddSelectFieldsSql(builder, this.ReaderFields);
+        if (this.IsManyShardingTables && this.ShardingFieldAlias != null)
+            builder.Append($" AS {this.ShardingFieldAlias}");
 
         string selectSql = null;
         if (this.IsDistinct)
@@ -116,7 +117,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
             builder.Append($" HAVING {this.HavingSql}");
 
         string orderBy = null;
-        if (!isManySharding && !string.IsNullOrEmpty(this.OrderBySql))
+        if (!this.IsManyShardingTables && !string.IsNullOrEmpty(this.OrderBySql))
         {
             orderBy = $"ORDER BY {this.OrderBySql}";
             if (!this.skip.HasValue && !this.limit.HasValue)
@@ -128,7 +129,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         if (!string.IsNullOrEmpty(headSql))
             builder.Append(headSql);
 
-        if (!isManySharding && (this.skip.HasValue || this.limit.HasValue))
+        if (!this.IsManyShardingTables && (this.skip.HasValue || this.limit.HasValue))
         {
             //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ /**others**/
             var pageSql = this.OrmProvider.GetPagingTemplate(this.skip, this.limit, orderBy);
@@ -142,7 +143,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         }
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
 
-        if (isManySharding && (!string.IsNullOrEmpty(this.OrderBySql) || this.skip.HasValue || this.limit.HasValue))
+        if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.OrderBySql) || this.skip.HasValue || this.limit.HasValue))
             this.IsNeedUnionShardingTables = true;
 
         //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不正确
@@ -217,7 +218,6 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         //先判断表是否有多分表isManySharding
         string tableSql = null;
         var hasShardingTables = this.ShardingTables != null && this.ShardingTables.Count > 0;
-        var isManySharding = false;
         if (this.Tables.Count > 0)
         {
             for (int i = 1; i < this.Tables.Count; i++)
@@ -242,7 +242,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                     builder.Append($" ON {tableSegment.OnExpr}");
                 if (hasShardingTables && this.ShardingTables[0] == tableSegment
                     && tableSegment.TableNames != null && tableSegment.TableNames.Count > 1)
-                    isManySharding = true;
+                    this.IsManyShardingTables = true;
             }
             tableSql = builder.ToString();
         }
@@ -258,6 +258,8 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         if (this.IsDistinctOn)
             builder.Append($"DISTINCT ON ({this.DistinctOnSql}) ");
         this.AddSelectFieldsSql(builder, this.ReaderFields);
+        if (this.IsManyShardingTables && this.ShardingFieldAlias != null)
+            builder.Append($" AS {this.ShardingFieldAlias}");
 
         string selectSql = null;
         if (this.IsDistinct)
@@ -274,7 +276,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
             builder.Append($" HAVING {this.HavingSql}");
 
         string orderBy = null;
-        if (!isManySharding && !string.IsNullOrEmpty(this.OrderBySql))
+        if (!this.IsManyShardingTables && !string.IsNullOrEmpty(this.OrderBySql))
         {
             orderBy = $"ORDER BY {this.OrderBySql}";
             if (!this.skip.HasValue && !this.limit.HasValue)
@@ -286,7 +288,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         if (!string.IsNullOrEmpty(headSql))
             builder.Append(headSql);
 
-        if (!isManySharding && (this.skip.HasValue || this.limit.HasValue))
+        if (!this.IsManyShardingTables && (this.skip.HasValue || this.limit.HasValue))
         {
             //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ /**others**/
             var pageSql = this.OrmProvider.GetPagingTemplate(this.skip, this.limit, orderBy);
@@ -297,7 +299,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         }
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
 
-        if (isManySharding && (!string.IsNullOrEmpty(this.OrderBySql) || this.skip.HasValue || this.limit.HasValue))
+        if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.OrderBySql) || this.skip.HasValue || this.limit.HasValue))
             this.IsNeedUnionShardingTables = true;
 
         //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不正确

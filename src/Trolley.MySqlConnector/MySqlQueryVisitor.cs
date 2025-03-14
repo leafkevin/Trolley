@@ -76,7 +76,7 @@ public class MySqlQueryVisitor : QueryVisitor
 
         //先判断表是否有多分表isManySharding
         string tableSql = null;
-        bool isManySharding = false;
+        var hasShardingTables = this.ShardingTables != null && this.ShardingTables.Count > 0;
         if (this.Tables.Count > 0)
         {
             for (int i = 1; i < this.Tables.Count; i++)
@@ -99,8 +99,9 @@ public class MySqlQueryVisitor : QueryVisitor
                     builder.Append(" " + tableSegment.SuffixRawSql);
                 if (!string.IsNullOrEmpty(tableSegment.OnExpr))
                     builder.Append($" ON {tableSegment.OnExpr}");
-                if (tableSegment.TableNames != null && tableSegment.TableNames.Count > 1)
-                    isManySharding = true;
+                if (hasShardingTables && this.ShardingTables[0] == tableSegment
+                    && tableSegment.TableNames != null && tableSegment.TableNames.Count > 1)
+                    this.IsManyShardingTables = true;
             }
             tableSql = builder.ToString();
         }
@@ -113,6 +114,8 @@ public class MySqlQueryVisitor : QueryVisitor
         if (this.ReaderFields == null)
             throw new Exception("缺少Select语句");
         this.AddSelectFieldsSql(builder, this.ReaderFields);
+        if (this.IsManyShardingTables && this.ShardingFieldAlias != null)
+            builder.Append($" AS {this.ShardingFieldAlias}");
 
         string selectSql = null;
         if (this.IsDistinct)
@@ -129,7 +132,7 @@ public class MySqlQueryVisitor : QueryVisitor
             builder.Append($" HAVING {this.HavingSql}");
 
         string orderBy = null;
-        if (!string.IsNullOrEmpty(this.OrderBySql))
+        if (!this.IsManyShardingTables && !string.IsNullOrEmpty(this.OrderBySql))
         {
             orderBy = $"ORDER BY {this.OrderBySql}";
             if (!this.skip.HasValue && !this.limit.HasValue)
@@ -141,7 +144,7 @@ public class MySqlQueryVisitor : QueryVisitor
         if (!string.IsNullOrEmpty(headSql))
             builder.Append(headSql);
 
-        if (this.skip.HasValue || this.limit.HasValue)
+        if (!this.IsManyShardingTables && (this.skip.HasValue || this.limit.HasValue))
         {
             //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ /**others**/
             var pageSql = this.OrmProvider.GetPagingTemplate(this.skip, this.limit, orderBy);
@@ -152,10 +155,11 @@ public class MySqlQueryVisitor : QueryVisitor
         }
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
 
+        if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.OrderBySql) || this.skip.HasValue || this.limit.HasValue))
+            this.IsNeedUnionShardingTables = true;
+
         //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不正确
-        if (isManySharding)
-            isManySharding = this.ShardingTables != null && this.ShardingTables[0].TableNames != null && this.ShardingTables[0].TableNames.Count > 1;
-        bool isNeedWrap = (this.IsUnion || this.IsSecondUnion || isManySharding) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue);
+        bool isNeedWrap = (this.IsUnion || this.IsSecondUnion) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue);
         if (isNeedWrap)
         {
             builder.Insert(0, "SELECT * FROM (");
