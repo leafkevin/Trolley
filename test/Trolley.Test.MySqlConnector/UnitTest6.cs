@@ -1753,6 +1753,51 @@ public class UnitTest6 : UnitTestBase
         }
     }
     [Fact]
+    public async Task ManySharding_Aggregate()
+    {
+        //await this.InitSharding();
+        var repository = this.dbFactory.Create();
+        var tenantId = "104";
+        var beginTime = DateTime.Parse("2024-04-05");
+        var endTime = DateTime.Parse("2024-06-05");
+        var result1 = await repository.From<Order>()
+            .UseTableByRange(tenantId, beginTime, endTime)
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .UseTable<Order>((orderOrigName, userOrigName, orderTableName)
+                => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+            .Where((a, b) => a.TotalAmount > 100)
+            .CountAsync((a, b) => a.Id);
+        var scalarValue1 = await repository.QueryScalarAsync<int>("SELECT SUM(COUNT_VALUE) FROM (SELECT COUNT(a.`Id`) AS COUNT_VALUE FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` WHERE a.`TotalAmount`>100 UNION ALL SELECT COUNT(a.`Id`) AS COUNT_VALUE FROM `sys_order_104_202406` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` WHERE a.`TotalAmount`>100) AS t");
+        Assert.Equal(scalarValue1, result1);
+
+        var result2 = await repository.From<Order>()
+            .UseTableByRange(tenantId, beginTime, endTime)
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .UseTable<Order>((orderOrigName, userOrigName, orderTableName)
+                => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+            .SumAsync((a, b) => a.TotalAmount);
+        var scalarValue2 = await repository.QueryScalarAsync<double>("SELECT SUM(SUM_VALUE) FROM (SELECT SUM(a.`TotalAmount`) AS SUM_VALUE FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` UNION ALL SELECT SUM(a.`TotalAmount`) AS SUM_VALUE FROM `sys_order_104_202406` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id`) AS t");
+        Assert.Equal(scalarValue2, result2);
+
+        result2 = await repository.From<Order>()
+            .UseTableByRange(tenantId, beginTime, endTime)
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .UseTable<Order>((orderOrigName, userOrigName, orderTableName)
+                => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+            .MaxAsync((a, b) => a.TotalAmount);
+        scalarValue2 = await repository.QueryScalarAsync<double>("SELECT MAX(MAX_VALUE) FROM (SELECT MAX(a.`TotalAmount`) AS MAX_VALUE FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` UNION ALL SELECT MAX(a.`TotalAmount`) AS MAX_VALUE FROM `sys_order_104_202406` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id`) AS t");
+        Assert.Equal(scalarValue2, result2);
+
+        result2 = await repository.From<Order>()
+            .UseTableByRange(tenantId, beginTime, endTime)
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .UseTable<Order>((orderOrigName, userOrigName, orderTableName)
+                => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+            .AvgAsync((a, b) => a.TotalAmount);
+        scalarValue2 = await repository.QueryScalarAsync<double>("SELECT AVG(AVG_VALUE) FROM (SELECT a.`TotalAmount` AS AVG_VALUE FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` UNION ALL SELECT a.`TotalAmount` AS AVG_VALUE FROM `sys_order_104_202406` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id`) AS t");
+        Assert.Equal(scalarValue2, result2);
+    }
+    [Fact]
     public void TableSchema()
     {
         var repository = this.dbFactory.Create();

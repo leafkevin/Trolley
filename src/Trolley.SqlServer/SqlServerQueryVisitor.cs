@@ -441,6 +441,10 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
                     //body里面的值，是原始的值或是字段名
                     if (readerField.TableSegment != null && readerField.TableSegment.TableType == TableType.CteSelfRef)
                         body = $"{readerField.TableSegment.AliasName}.{this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}";
+
+                    //在前面select时，有可能是多分表并且是AVG操作时，没有包裹AVG函数，现在确认不是多分表，需要加上AVG函数包裹
+                    if (this.IsNeedFormatShardingTables && this.ShardingFieldAlias == "AVG_VALUE" && !this.IsManyShardingTables)
+                        body = $"AVG({body})";
                     builder.Append(body);
                     //生成SQL的时候，才加上AS别名
                     if (this.IsNeedAlias(readerField, isOnlyField, isSecondUnionWrap))

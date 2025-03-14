@@ -1804,7 +1804,7 @@ public class UnitTest6 : UnitTestBase
             .UseTable("sys_order_104_202405", "sys_order_105_202405")
             .SetBulkCopy(orders)
             .ToSql(out var dbParameters);
-        //Assert.True(sql == "CREATE TEMPORARY TABLE `sys_order_0c0f27d1c0224df38030d8e78b03f8c4`(\r\n`Id` varchar(50) NOT NULL,\r\n`TotalAmount` double,\r\n`ProductCount` int,\r\n`UpdatedAt` datetime,\r\nPRIMARY KEY(`Id`)\r\n);\r\nUPDATE `sys_order_104_202405` a INNER JOIN `sys_order_0c0f27d1c0224df38030d8e78b03f8c4` b ON a.`Id`=b.`Id` SET a.`TotalAmount`=b.`TotalAmount`,a.`ProductCount`=b.`ProductCount`,a.`UpdatedAt`=b.`UpdatedAt`;UPDATE `sys_order_105_202405` a INNER JOIN `sys_order_0c0f27d1c0224df38030d8e78b03f8c4` b ON a.`Id`=b.`Id` SET a.`TotalAmount`=b.`TotalAmount`,a.`ProductCount`=b.`ProductCount`,a.`UpdatedAt`=b.`UpdatedAt`;DROP TABLE `sys_order_0c0f27d1c0224df38030d8e78b03f8c4`");
+        //Assert.True(sql == "CREATE TEMPORARY TABLE [sys_order_0c0f27d1c0224df38030d8e78b03f8c4`(\r\n`Id` varchar(50) NOT NULL,\r\n`TotalAmount` double,\r\n`ProductCount` int,\r\n`UpdatedAt` datetime,\r\nPRIMARY KEY(`Id`)\r\n);\r\nUPDATE [sys_order_104_202405` a INNER JOIN [sys_order_0c0f27d1c0224df38030d8e78b03f8c4` b ON a.`Id`=b.`Id` SET a.`TotalAmount`=b.`TotalAmount`,a.`ProductCount`=b.`ProductCount`,a.`UpdatedAt`=b.`UpdatedAt`;UPDATE [sys_order_105_202405` a INNER JOIN [sys_order_0c0f27d1c0224df38030d8e78b03f8c4` b ON a.`Id`=b.`Id` SET a.`TotalAmount`=b.`TotalAmount`,a.`ProductCount`=b.`ProductCount`,a.`UpdatedAt`=b.`UpdatedAt`;DROP TABLE [sys_order_0c0f27d1c0224df38030d8e78b03f8c4`");
 
         await repository.BeginTransactionAsync();
         var result = await repository.Update<Order>()
@@ -1950,6 +1950,85 @@ public class UnitTest6 : UnitTestBase
             Assert.True(result.Order.Details.Count > 0);
             Assert.True(result.Order.Details[0].Amount > 0);
         }
+    }
+    [Fact]
+    public async Task ManySharding_Paging()
+    {
+        //await this.InitSharding();
+        var repository = this.dbFactory.Create();
+        var tenantId = "104";
+        var beginTime = DateTime.Parse("2024-04-05");
+        var endTime = DateTime.Parse("2024-06-05");
+        var result = await repository.From<Order>()
+            .UseTableByRange(tenantId, beginTime, endTime)
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .UseTable<Order>((orderOrigName, userOrigName, orderTableName)
+                => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+            .Select((a, b) => new { a.Id, a.BuyerId, a.TotalAmount, a.CreatedAt })
+            .Page(1, 10)
+            .ToPageListAsync();
+        if (result != null)
+        {
+            Assert.Equal(10, result.Count);
+        }
+        result = await repository.From<Order>()
+            .UseTableByRange(tenantId, beginTime, endTime)
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .UseTable<Order>((orderOrigName, userOrigName, orderTableName)
+                => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+            .Select((a, b) => new { a.Id, a.BuyerId, a.TotalAmount, a.CreatedAt })
+            .Page(3, 10)
+            .OrderBy(f => f.BuyerId).OrderByDescending(f => f.CreatedAt)
+            .ToPageListAsync();
+        if (result != null)
+        {
+            Assert.Equal(10, result.Count);
+        }
+    }
+    [Fact]
+    public async Task ManySharding_Aggregate()
+    {
+        //await this.InitSharding();
+        var repository = this.dbFactory.Create();
+        var tenantId = "104";
+        var beginTime = DateTime.Parse("2024-04-05");
+        var endTime = DateTime.Parse("2024-06-05");
+        var result1 = await repository.From<Order>()
+            .UseTableByRange(tenantId, beginTime, endTime)
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .UseTable<Order>((orderOrigName, userOrigName, orderTableName)
+                => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+            .Where((a, b) => a.TotalAmount > 100)
+            .CountAsync((a, b) => a.Id);
+        var scalarValue1 = await repository.QueryScalarAsync<int>("SELECT COUNT(a.[Id]) FROM [sys_order_104_202405] a INNER JOIN [sys_user_104] b ON a.[BuyerId]=b.[Id] WHERE a.[TotalAmount]>100");
+        Assert.Equal(scalarValue1, result1);
+
+        var result2 = await repository.From<Order>()
+            .UseTableByRange(tenantId, beginTime, endTime)
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .UseTable<Order>((orderOrigName, userOrigName, orderTableName)
+                => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+            .SumAsync((a, b) => a.TotalAmount);
+        var scalarValue2 = await repository.QueryScalarAsync<double>("SELECT SUM(a.[TotalAmount]) FROM [sys_order_104_202405] a INNER JOIN [sys_user_104] b ON a.[BuyerId]=b.[Id]");
+        Assert.Equal(scalarValue2, result2);
+
+        result2 = await repository.From<Order>()
+            .UseTableByRange(tenantId, beginTime, endTime)
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .UseTable<Order>((orderOrigName, userOrigName, orderTableName)
+                => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+            .MaxAsync((a, b) => a.TotalAmount);
+        scalarValue2 = await repository.QueryScalarAsync<double>("SELECT MAX(a.[TotalAmount]) FROM [sys_order_104_202405] a INNER JOIN [sys_user_104] b ON a.[BuyerId]=b.[Id]");
+        Assert.Equal(scalarValue2, result2);
+
+        result2 = await repository.From<Order>()
+            .UseTableByRange(tenantId, beginTime, endTime)
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .UseTable<Order>((orderOrigName, userOrigName, orderTableName)
+                => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+            .AvgAsync((a, b) => a.TotalAmount);
+        scalarValue2 = await repository.QueryScalarAsync<double>("SELECT AVG(a.[TotalAmount]) FROM [sys_order_104_202405] a INNER JOIN [sys_user_104] b ON a.[BuyerId]=b.[Id]");
+        Assert.Equal(scalarValue2, result2);
     }
     [Fact]
     public async Task Query_ManySharding_SingleTable_Include_TableSchema()

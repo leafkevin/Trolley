@@ -1296,14 +1296,17 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         if (!string.IsNullOrEmpty(sqlFormat))
         {
+            //单值操作，SELECT COUNT(1)/*等
+            if (this.ReaderFields == null)
+                this.ReaderFields = new List<SqlFieldSegment> { new SqlFieldSegment { Body = sqlFormat } };
             //单值操作，SELECT COUNT(DISTINCT b.Id),MAX(b.Amount),COUNT(1)等
-            if (this.ReaderFields != null && this.ReaderFields.Count > 0)
+            else if (this.ReaderFields != null && this.ReaderFields.Count > 0
+                && !(this.IsNeedFormatShardingTables && this.ShardingFieldAlias == "AVG_VALUE"))
             {
+                //当有多分表并且是AVG场景时，UNION之后，再做AVG操作
                 var readerField = this.ReaderFields[0];
                 readerField.Body = string.Format(sqlFormat, readerField.Body);
             }
-            //单值操作，SELECT COUNT(1)/*等
-            else this.ReaderFields = new List<SqlFieldSegment> { new SqlFieldSegment { Body = sqlFormat } };
         }
         this.IsSelect = false;
     }
@@ -1932,6 +1935,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     //body里面的值，是原始的值或是字段名
                     if (readerField.TableSegment != null && readerField.TableSegment.TableType == TableType.CteSelfRef)
                         body = $"{readerField.TableSegment.AliasName}.{this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}";
+
+                    //在前面select时，有可能是多分表并且是AVG操作时，没有包裹AVG函数，现在确认不是多分表，需要加上AVG函数包裹
+                    if (this.IsNeedFormatShardingTables && this.ShardingFieldAlias == "AVG_VALUE" && !this.IsManyShardingTables)
+                        body = $"AVG({body})";
                     builder.Append(body);
                     //生成SQL的时候，才加上AS别名
                     if (this.IsNeedAlias(readerField, isOnlyField))

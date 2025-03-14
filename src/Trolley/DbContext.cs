@@ -269,10 +269,9 @@ public sealed class DbContext
         if (isNeedClose) await connection.CloseAsync();
         return result;
     }
-    public TResult QueryScalar<TResult>(IQueryVisitor visitor, string shardingFieldAlias)
+    public TResult QueryScalar<TResult>(IQueryVisitor visitor)
     {
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.IsUseMaster);
-        visitor.ShardingFieldAlias = shardingFieldAlias;
         var sql = this.BuildSql(visitor, " UNION ALL ", out _);
         sql = this.BuildScalarShardingSql(visitor, sql);
         command.CommandText = sql;
@@ -289,10 +288,9 @@ public sealed class DbContext
         visitor.Dispose();
         return result;
     }
-    public async Task<TResult> QueryScalarAsync<TResult>(IQueryVisitor visitor, string shardingFieldAlias, CancellationToken cancellationToken = default)
+    public async Task<TResult> QueryScalarAsync<TResult>(IQueryVisitor visitor, CancellationToken cancellationToken = default)
     {
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.IsUseMaster);
-        visitor.ShardingFieldAlias = shardingFieldAlias;
         (var sql, var readerFields) = await this.BuildSqlAsync(visitor, " UNION ALL ", cancellationToken);
         sql = this.BuildScalarShardingSql(visitor, sql);
         command.CommandText = sql;

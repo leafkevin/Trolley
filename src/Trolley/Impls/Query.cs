@@ -175,16 +175,18 @@ public class QueryBase : QueryInternal, IQueryBase
     }
     #endregion
 
-    #region QueryFirstValue
+    #region QueryScalar
     protected TTarget QueryScalar<TTarget>(string sqlFormat, string shardingFieldAlias, Expression fieldExpr = null)
     {
+        this.Visitor.ShardingFieldAlias = shardingFieldAlias;
         this.Visitor.Select(sqlFormat, fieldExpr);
-        return this.DbContext.QueryScalar<TTarget>(this.Visitor, shardingFieldAlias);
+        return this.DbContext.QueryScalar<TTarget>(this.Visitor);
     }
     protected async Task<TTarget> QueryScalarAsync<TTarget>(string sqlFormat, string shardingFieldAlias, Expression fieldExpr = null, CancellationToken cancellationToken = default)
     {
+        this.Visitor.ShardingFieldAlias = shardingFieldAlias;
         this.Visitor.Select(sqlFormat, fieldExpr);
-        return await this.DbContext.QueryScalarAsync<TTarget>(this.Visitor, shardingFieldAlias, cancellationToken);
+        return await this.DbContext.QueryScalarAsync<TTarget>(this.Visitor, cancellationToken);
     }
     #endregion
 }
