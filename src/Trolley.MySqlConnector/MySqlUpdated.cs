@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Trolley.MySqlConnector;
 
-public class MySqlUpdated<TEntity> : Updated<TEntity>, IMySqlUpdated<TEntity>
+public class MySqlUpdated<TEntity> : Updated<TEntity>
 {
     #region Properties
     public MySqlUpdateVisitor DialectVisitor { get; protected set; }

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Trolley.PostgreSql;
 
-public class PostgreSqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IPostgreSqlCreated<TEntity>, IPostgreSqlContinuedCreate<TEntity>
+public class PostgreSqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IPostgreSqlContinuedCreate<TEntity>
 {
     #region Properties
     public PostgreSqlCreateVisitor DialectVisitor { get; private set; }
@@ -265,7 +265,7 @@ public class PostgreSqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IPos
     }
     #endregion
 }
-public class PostgreSqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IPostgreSqlCreated<TEntity>, IPostgreSqlBulkContinuedCreate<TEntity>
+public class PostgreSqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IPostgreSqlBulkContinuedCreate<TEntity>
 {
     #region Properties
     public PostgreSqlCreateVisitor DialectVisitor { get; private set; }

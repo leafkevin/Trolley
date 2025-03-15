@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Trolley.PostgreSql;
 
-public class PostgreSqlCreated<TEntity> : Created<TEntity>, IPostgreSqlCreated<TEntity>
+public class PostgreSqlCreated<TEntity> : Created<TEntity>
 {
     #region Properties
     public PostgreSqlCreateVisitor DialectVisitor { get; protected set; }

@@ -4,8 +4,7 @@ using System.Threading.Tasks;
 
 namespace Trolley.SqlServer;
 
-public interface ISqlServerUpdated<TEntity> : IUpdated<TEntity> { }
-public interface ISqlServerUpdated<TEntity, TResult> : ISqlServerUpdated<TEntity>
+public interface ISqlServerUpdated<TEntity, TResult> : IUpdated<TEntity>
 {
     #region Execute
     /// <summary>

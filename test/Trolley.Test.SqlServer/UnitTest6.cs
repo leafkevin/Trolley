@@ -1044,7 +1044,7 @@ public class UnitTest6 : UnitTestBase
         var sql = repository.From<Order>()
             .UseTable(f => f.Contains("_104_") && int.Parse(f[^6..]) > 202001)
             .Include(f => f.Details)
-            .UseTable<Order>((origOrderName, origOrderDetailName, orderName) =>
+            .UseTableMap<Order>((origOrderName, origOrderDetailName, orderName) =>
                 orderName.Replace(origOrderName, origOrderDetailName))
             .Where(f => f.ProductCount > productCount)
             .ToSql(out _);
@@ -1053,7 +1053,7 @@ public class UnitTest6 : UnitTestBase
         var result = repository.From<Order>()
             .UseTable(f => f.Contains("_104_") && int.Parse(f[^6..]) > 202001)
             .Include(f => f.Details)
-            .UseTable<Order>((origOrderName, origOrderDetailName, orderName) =>
+            .UseTableMap<Order>((origOrderName, origOrderDetailName, orderName) =>
                 orderName.Replace(origOrderName, origOrderDetailName))
             .Where(f => f.ProductCount > productCount)
             .ToList();
@@ -1074,7 +1074,7 @@ public class UnitTest6 : UnitTestBase
         sql = repository.From<Order>()
             .UseTable("sys_order_104_202405", "sys_order_105_202405")
             .Include(f => f.Details)
-            .UseTable<Order>((origOrderName, origOrderDetailName, orderName) =>
+            .UseTableMap<Order>((origOrderName, origOrderDetailName, orderName) =>
                 orderName.Replace(origOrderName, origOrderDetailName))
             .Where(f => f.ProductCount > productCount)
             .ToSql(out _);
@@ -1083,7 +1083,7 @@ public class UnitTest6 : UnitTestBase
         result = repository.From<Order>()
             .UseTable("sys_order_104_202405", "sys_order_105_202405")
             .Include(f => f.Details)
-            .UseTable<Order>((origOrderName, origOrderDetailName, orderName) =>
+            .UseTableMap<Order>((origOrderName, origOrderDetailName, orderName) =>
                 orderName.Replace(origOrderName, origOrderDetailName))
             .Where(f => f.ProductCount > productCount)
             .ToList();
@@ -1149,11 +1149,11 @@ public class UnitTest6 : UnitTestBase
             .From(f => f.From<OrderDetail>()
                 .UseTable("sys_order_detail_104_202405", "sys_order_detail_105_202405")
                 .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
-                .UseTable<OrderDetail>((orderOrigName, userOrigName, orderTableName) => orderTableName.Replace(orderOrigName, userOrigName))
+                .UseTableMap<OrderDetail>((orderOrigName, userOrigName, orderTableName) => orderTableName.Replace(orderOrigName, userOrigName))
                 .GroupBy((a, b) => new { OrderId = b.Id, b.BuyerId })
                 .Select((x, a, b) => new { Group = x.Grouping, ProductCount = x.CountDistinct(a.ProductId) }))
             .InnerJoin<User>((x, y) => x.Group.BuyerId == y.Id)
-            .UseTable<OrderDetail>((orderOrigName, userOrigName, orderTableName) =>
+            .UseTableMap<OrderDetail>((orderOrigName, userOrigName, orderTableName) =>
             {
                 var tableName = orderTableName.Replace(orderOrigName, userOrigName);
                 return tableName[..^7];
@@ -1173,11 +1173,11 @@ public class UnitTest6 : UnitTestBase
             .From(f => f.From<OrderDetail>()
                 .UseTable("sys_order_detail_104_202405", "sys_order_detail_105_202405")
                 .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
-                .UseTable<OrderDetail>((orderOrigName, userOrigName, orderTableName) => orderTableName.Replace(orderOrigName, userOrigName))
+                .UseTableMap<OrderDetail>((orderOrigName, userOrigName, orderTableName) => orderTableName.Replace(orderOrigName, userOrigName))
                 .GroupBy((a, b) => new { OrderId = b.Id, b.BuyerId })
                 .Select((x, a, b) => new { Group = x.Grouping, ProductCount = x.CountDistinct(a.ProductId) }))
             .InnerJoin<User>((x, y) => x.Group.BuyerId == y.Id)
-            .UseTable<OrderDetail>((orderOrigName, userOrigName, orderTableName) =>
+            .UseTableMap<OrderDetail>((orderOrigName, userOrigName, orderTableName) =>
             {
                 var tableName = orderTableName.Replace(orderOrigName, userOrigName);
                 return tableName[..^7];
@@ -1210,7 +1210,7 @@ public class UnitTest6 : UnitTestBase
         var sql = repository.From<Order>()
             .UseTable("sys_order_104_202405", "sys_order_105_202405")
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
-            .UseTable<Order>((orderOrigName, userOrigName, orderTableName) =>
+            .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName) =>
             {
                 var tableName = orderTableName.Replace(orderOrigName, userOrigName);
                 return tableName[..^7];
@@ -1227,7 +1227,7 @@ public class UnitTest6 : UnitTestBase
         var result = repository.From<Order>()
             .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
-            .UseTable<Order>((orderOrigName, userOrigName, orderTableName) =>
+            .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName) =>
             {
                 var tableName = orderTableName.Replace(orderOrigName, userOrigName);
                 return tableName[..^7];
@@ -1254,7 +1254,7 @@ public class UnitTest6 : UnitTestBase
         var sql = repository.From<Order>()
             .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
-            .UseTable<Order>((orderOrigName, userOrigName, orderTableName) =>
+            .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName) =>
             {
                 var tableName = orderTableName.Replace(orderOrigName, userOrigName);
                 return tableName[..^7];
@@ -1271,7 +1271,7 @@ public class UnitTest6 : UnitTestBase
         var result = repository.From<Order>()
             .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
-            .UseTable<Order>((orderOrigName, userOrigName, orderTableName) =>
+            .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName) =>
             {
                 var tableName = orderTableName.Replace(orderOrigName, userOrigName);
                 return tableName[..^7];
@@ -1298,7 +1298,7 @@ public class UnitTest6 : UnitTestBase
         var sql = repository.From<Order>()
             .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
             .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
-            .UseTable<Order>((orderOrigName, orderDetailOrigName, orderTableName) => orderTableName.Replace(orderOrigName, orderDetailOrigName))
+            .UseTableMap<Order>((orderOrigName, orderDetailOrigName, orderTableName) => orderTableName.Replace(orderOrigName, orderDetailOrigName))
             .Where((a, b) => a.ProductCount > productCount)
             .Select((x, y) => new
             {
@@ -1311,7 +1311,7 @@ public class UnitTest6 : UnitTestBase
         var result = repository.From<Order>()
             .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
             .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
-            .UseTable<Order>((orderOrigName, orderDetailOrigName, orderTableName) => orderTableName.Replace(orderOrigName, orderDetailOrigName))
+            .UseTableMap<Order>((orderOrigName, orderDetailOrigName, orderTableName) => orderTableName.Replace(orderOrigName, orderDetailOrigName))
             .Where((a, b) => a.ProductCount > productCount)
             .Select((x, y) => new
             {
@@ -1865,7 +1865,7 @@ public class UnitTest6 : UnitTestBase
         sql = repository.From<Order>()
            .UseTableByRange("104", beginTime, endTime)
            .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
-           .UseTable<Order>((orderOrigName, userOrigName, orderTableName) =>
+           .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName) =>
            {
                var tableName = orderTableName.Replace(orderOrigName, userOrigName);
                return tableName[..^7];
@@ -1883,7 +1883,7 @@ public class UnitTest6 : UnitTestBase
         var orderInfos = repository.From<Order>()
             .UseTableByRange("104", beginTime, endTime)
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
-            .UseTable<Order>((orderOrigName, userOrigName, orderTableName) =>
+            .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName) =>
             {
                 var tableName = orderTableName.Replace(orderOrigName, userOrigName);
                 return tableName[..^7];
@@ -1911,17 +1911,17 @@ public class UnitTest6 : UnitTestBase
             .From(f => f.From<Order>()
                 .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
                 .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
-                .UseTable<Order>((orderOrigName, userOrigName, orderTableName)
+                .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
                     => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
                 .LeftJoin<OrderDetail>((a, b, c) => a.Id == c.OrderId)
-                .UseTable<Order>((orderOrigName, orderDetailOrigName, orderTableName)
+                .UseTableMap<Order>((orderOrigName, orderDetailOrigName, orderTableName)
                     => orderTableName.Replace(orderOrigName, orderDetailOrigName))
                 .GroupBy((a, b, c) => new { a.BuyerId, OrderId = a.Id, a.OrderNo })
                 .Having((x, a, b, c) => x.CountDistinct(c.ProductId) > count)
                 .Select((a, b, c, d) => new { a.Grouping.BuyerId, a.Grouping.OrderId, a.Grouping.OrderNo, ProductTotal = a.CountDistinct(d.ProductId) }))
             .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
             .IncludeMany((a, b) => b.Details, f => f.Amount > amount)
-            .UseTable<Order>((orderOrigName, orderDetailOrigName, orderTableName)
+            .UseTableMap<Order>((orderOrigName, orderDetailOrigName, orderTableName)
                 => orderTableName.Replace(orderOrigName, orderDetailOrigName))
             .Select((x, y) => new { y.Disputes, x.BuyerId, x.OrderId, x.OrderNo, x.ProductTotal, Order = y })
             .ToSql(out var dbParameters);
@@ -1933,17 +1933,17 @@ public class UnitTest6 : UnitTestBase
             .From(f => f.From<Order>()
                 .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
                 .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
-                .UseTable<Order>((orderOrigName, userOrigName, orderTableName)
+                .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
                     => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
                 .LeftJoin<OrderDetail>((a, b, c) => a.Id == c.OrderId)
-                .UseTable<Order>((orderOrigName, orderDetailOrigName, orderTableName)
+                .UseTableMap<Order>((orderOrigName, orderDetailOrigName, orderTableName)
                     => orderTableName.Replace(orderOrigName, orderDetailOrigName))
                 .GroupBy((a, b, c) => new { a.BuyerId, OrderId = a.Id, a.OrderNo })
                 .Having((x, a, b, c) => x.CountDistinct(c.ProductId) > count)
                 .Select((a, b, c, d) => new { a.Grouping.BuyerId, a.Grouping.OrderId, a.Grouping.OrderNo, ProductTotal = a.CountDistinct(d.ProductId) }))
             .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
             .IncludeMany((a, b) => b.Details, f => f.Amount > amount)
-            .UseTable<Order>((orderOrigName, orderDetailOrigName, orderTableName)
+            .UseTableMap<Order>((orderOrigName, orderDetailOrigName, orderTableName)
                 => orderTableName.Replace(orderOrigName, orderDetailOrigName))
             .Select((x, y) => new { y.Disputes, x.BuyerId, x.OrderId, x.OrderNo, x.ProductTotal, Order = y })
             .First();
@@ -1967,7 +1967,7 @@ public class UnitTest6 : UnitTestBase
         var result = await repository.From<Order>()
             .UseTableByRange(tenantId, beginTime, endTime)
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
-            .UseTable<Order>((orderOrigName, userOrigName, orderTableName)
+            .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
                 => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
             .Select((a, b) => new { a.Id, a.BuyerId, a.TotalAmount, a.CreatedAt })
             .Page(1, 10)
@@ -1979,7 +1979,7 @@ public class UnitTest6 : UnitTestBase
         result = await repository.From<Order>()
             .UseTableByRange(tenantId, beginTime, endTime)
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
-            .UseTable<Order>((orderOrigName, userOrigName, orderTableName)
+            .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
                 => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
             .Select((a, b) => new { a.Id, a.BuyerId, a.TotalAmount, a.CreatedAt })
             .Page(3, 10)
@@ -2001,7 +2001,7 @@ public class UnitTest6 : UnitTestBase
         var result1 = await repository.From<Order>()
             .UseTableByRange(tenantId, beginTime, endTime)
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
-            .UseTable<Order>((orderOrigName, userOrigName, orderTableName)
+            .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
                 => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
             .Where((a, b) => a.TotalAmount > 100)
             .CountAsync((a, b) => a.Id);
@@ -2011,7 +2011,7 @@ public class UnitTest6 : UnitTestBase
         var result2 = await repository.From<Order>()
             .UseTableByRange(tenantId, beginTime, endTime)
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
-            .UseTable<Order>((orderOrigName, userOrigName, orderTableName)
+            .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
                 => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
             .SumAsync((a, b) => a.TotalAmount);
         var scalarValue2 = await repository.QueryScalarAsync<double>("SELECT SUM(a.[TotalAmount]) FROM [sys_order_104_202405] a INNER JOIN [sys_user_104] b ON a.[BuyerId]=b.[Id]");
@@ -2020,7 +2020,7 @@ public class UnitTest6 : UnitTestBase
         result2 = await repository.From<Order>()
             .UseTableByRange(tenantId, beginTime, endTime)
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
-            .UseTable<Order>((orderOrigName, userOrigName, orderTableName)
+            .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
                 => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
             .MaxAsync((a, b) => a.TotalAmount);
         scalarValue2 = await repository.QueryScalarAsync<double>("SELECT MAX(a.[TotalAmount]) FROM [sys_order_104_202405] a INNER JOIN [sys_user_104] b ON a.[BuyerId]=b.[Id]");
@@ -2029,7 +2029,7 @@ public class UnitTest6 : UnitTestBase
         result2 = await repository.From<Order>()
             .UseTableByRange(tenantId, beginTime, endTime)
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
-            .UseTable<Order>((orderOrigName, userOrigName, orderTableName)
+            .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
                 => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
             .AvgAsync((a, b) => a.TotalAmount);
         scalarValue2 = await repository.QueryScalarAsync<double>("SELECT AVG(a.[TotalAmount]) FROM [sys_order_104_202405] a INNER JOIN [sys_user_104] b ON a.[BuyerId]=b.[Id]");
@@ -2046,7 +2046,7 @@ public class UnitTest6 : UnitTestBase
             .UseTableSchema("myschema")
             .Include(f => f.Details)
             .UseTableSchema("myschema")
-            .UseTable<Order>((origOrderName, origOrderDetailName, orderName) =>
+            .UseTableMap<Order>((origOrderName, origOrderDetailName, orderName) =>
                 orderName.Replace(origOrderName, origOrderDetailName))
             .Where(f => f.ProductCount > productCount)
             .ToSql(out _);
@@ -2057,7 +2057,7 @@ public class UnitTest6 : UnitTestBase
             .UseTableSchema("myschema")
             .Include(f => f.Details)
             .UseTableSchema("myschema")
-            .UseTable<Order>((origOrderName, origOrderDetailName, orderName) =>
+            .UseTableMap<Order>((origOrderName, origOrderDetailName, orderName) =>
                 orderName.Replace(origOrderName, origOrderDetailName))
             .Where(f => f.ProductCount > productCount)
             .ToList();
@@ -2080,7 +2080,7 @@ public class UnitTest6 : UnitTestBase
             .UseTableSchema("myschema")
             .Include(f => f.Details)
             .UseTableSchema("myschema")
-            .UseTable<Order>((origOrderName, origOrderDetailName, orderName) =>
+            .UseTableMap<Order>((origOrderName, origOrderDetailName, orderName) =>
                 orderName.Replace(origOrderName, origOrderDetailName))
             .Where(f => f.ProductCount > productCount)
             .ToSql(out _);
@@ -2091,7 +2091,7 @@ public class UnitTest6 : UnitTestBase
             .UseTableSchema("myschema")
             .Include(f => f.Details)
             .UseTableSchema("myschema")
-            .UseTable<Order>((origOrderName, origOrderDetailName, orderName) =>
+            .UseTableMap<Order>((origOrderName, origOrderDetailName, orderName) =>
                 orderName.Replace(origOrderName, origOrderDetailName))
             .Where(f => f.ProductCount > productCount)
             .ToList();

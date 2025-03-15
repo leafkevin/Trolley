@@ -4,8 +4,7 @@ using System.Threading.Tasks;
 
 namespace Trolley.PostgreSql;
 
-public interface IPostgreSqlUpdated<TEntity> : IUpdated<TEntity> { }
-public interface IPostgreSqlUpdated<TEntity, TResult> : IPostgreSqlUpdated<TEntity>
+public interface IPostgreSqlUpdated<TEntity, TResult> : IUpdated<TEntity>
 {
     #region Execute
     /// <summary>

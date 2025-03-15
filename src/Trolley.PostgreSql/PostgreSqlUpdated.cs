@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Trolley.PostgreSql;
 
-public class PostgreSqlUpdated<TEntity> : Updated<TEntity>, IPostgreSqlUpdated<TEntity>
+public class PostgreSqlUpdated<TEntity> : Updated<TEntity>
 {
     #region Properties
     public PostgreSqlUpdateVisitor DialectVisitor { get; protected set; }

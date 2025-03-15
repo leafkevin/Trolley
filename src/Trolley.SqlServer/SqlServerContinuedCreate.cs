@@ -257,7 +257,7 @@ public class SqlServerContinuedCreate<TEntity> : ContinuedCreate<TEntity>, ISqlS
     }
     #endregion
 }
-public class SqlServerBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, ISqlServerCreated<TEntity>, ISqlServerBulkContinuedCreate<TEntity>
+public class SqlServerBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, ISqlServerBulkContinuedCreate<TEntity>
 {
     #region Properties
     public SqlServerCreateVisitor DialectVisitor { get; private set; }

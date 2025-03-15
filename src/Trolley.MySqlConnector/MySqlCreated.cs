@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Trolley.MySqlConnector;
 
-public class MySqlCreated<TEntity> : Created<TEntity>, IMySqlCreated<TEntity>
+public class MySqlCreated<TEntity> : Created<TEntity>
 {
     #region Properties
     public MySqlCreateVisitor DialectVisitor { get; protected set; }

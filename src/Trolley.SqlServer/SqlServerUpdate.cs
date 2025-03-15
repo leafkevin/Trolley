@@ -78,7 +78,7 @@ public class SqlServerUpdate<TEntity> : Update<TEntity>, ISqlServerUpdate<TEntit
     #endregion
 
     #region WithBulkCopy
-    public ISqlServerUpdated<TEntity> SetBulkCopy(IEnumerable updateObjs, int? timeoutSeconds = null)
+    public IUpdated<TEntity> SetBulkCopy(IEnumerable updateObjs, int? timeoutSeconds = null)
     {
         if (updateObjs == null)
             throw new ArgumentNullException(nameof(updateObjs));
@@ -94,7 +94,7 @@ public class SqlServerUpdate<TEntity> : Update<TEntity>, ISqlServerUpdate<TEntit
         }
         if (isEmpty) throw new Exception("批量更新，updateObjs参数至少要有一条数据");
         this.DialectVisitor.WithBulkCopy(updateObjs, timeoutSeconds);
-        return this.OrmProvider.NewUpdated<TEntity>(this.DbContext, this.Visitor) as ISqlServerUpdated<TEntity>;
+        return this.OrmProvider.NewUpdated<TEntity>(this.DbContext, this.Visitor);
     }
     #endregion
 }

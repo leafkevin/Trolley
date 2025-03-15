@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Trolley.SqlServer;
 
-public class SqlServerContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqlServerUpdated<TEntity>, ISqlServerContinuedUpdate<TEntity>
+public class SqlServerContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqlServerContinuedUpdate<TEntity>
 {
     #region Properties
     public SqlServerUpdateVisitor DialectVisitor { get; private set; }
@@ -64,11 +64,6 @@ public class SqlServerContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqlS
     #endregion
 
     #region Where/And
-    public new ISqlServerUpdated<TEntity> Where<TWhereObj>(TWhereObj whereObj)
-    {
-        base.Where(whereObj);
-        return this;
-    }
     public new ISqlServerContinuedUpdate<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
         => this.Where(true, predicate);
     public new ISqlServerContinuedUpdate<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
@@ -519,7 +514,7 @@ public class SqlServerContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, ISqlS
     }
     #endregion
 }
-public class SqlServerBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity>, ISqlServerUpdated<TEntity>, ISqlServerBulkContinuedUpdate<TEntity>
+public class SqlServerBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity>, ISqlServerBulkContinuedUpdate<TEntity>
 {
     #region Properties
     public SqlServerUpdateVisitor DialectVisitor { get; private set; }
@@ -563,11 +558,6 @@ public class SqlServerBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity
     #endregion
 
     #region Where/And
-    public new ISqlServerUpdated<TEntity> Where<TWhereObj>(TWhereObj whereObj)
-    {
-        base.Where(whereObj);
-        return this;
-    }
     public new ISqlServerBulkContinuedUpdate<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
         => this.Where(true, predicate);
     public new ISqlServerBulkContinuedUpdate<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)

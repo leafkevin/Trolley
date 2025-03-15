@@ -18,8 +18,8 @@ public class PostgreSqlQuery<T> : Query<T>, IPostgreSqlQuery<T>
         => base.UseTable(tableNames) as IPostgreSqlQuery<T>;
     public new IPostgreSqlQuery<T> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlQuery<T>;
-    public new IPostgreSqlQuery<T> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
-        => base.UseTable<TMasterSharding>(tableNameGetter) as IPostgreSqlQuery<T>;
+    public new IPostgreSqlQuery<T> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+        => base.UseTableMap<TMasterSharding>(tableNameGetter) as IPostgreSqlQuery<T>;
     public new IPostgreSqlQuery<T> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as IPostgreSqlQuery<T>;
     public new IPostgreSqlQuery<T> UseTableByRange(object beginFieldValue, object endFieldValue)
@@ -234,8 +234,8 @@ public class PostgreSqlQuery<T1, T2> : Query<T1, T2>, IPostgreSqlQuery<T1, T2>
         => base.UseTable(tableNames) as IPostgreSqlQuery<T1, T2>;
     public new IPostgreSqlQuery<T1, T2> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlQuery<T1, T2>;
-    public new IPostgreSqlQuery<T1, T2> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
-        => base.UseTable<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2>;
+    public new IPostgreSqlQuery<T1, T2> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+        => base.UseTableMap<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2>;
     public new IPostgreSqlQuery<T1, T2> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as IPostgreSqlQuery<T1, T2>;
     public new IPostgreSqlQuery<T1, T2> UseTableByRange(object beginFieldValue, object endFieldValue)
@@ -346,8 +346,8 @@ public class PostgreSqlQuery<T1, T2, T3> : Query<T1, T2, T3>, IPostgreSqlQuery<T
         => base.UseTable(tableNames) as IPostgreSqlQuery<T1, T2, T3>;
     public new IPostgreSqlQuery<T1, T2, T3> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlQuery<T1, T2, T3>;
-    public new IPostgreSqlQuery<T1, T2, T3> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
-        => base.UseTable<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3>;
+    public new IPostgreSqlQuery<T1, T2, T3> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+        => base.UseTableMap<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3>;
     public new IPostgreSqlQuery<T1, T2, T3> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as IPostgreSqlQuery<T1, T2, T3>;
     public new IPostgreSqlQuery<T1, T2, T3> UseTableByRange(object beginFieldValue, object endFieldValue)
@@ -458,8 +458,8 @@ public class PostgreSqlQuery<T1, T2, T3, T4> : Query<T1, T2, T3, T4>, IPostgreSq
         => base.UseTable(tableNames) as IPostgreSqlQuery<T1, T2, T3, T4>;
     public new IPostgreSqlQuery<T1, T2, T3, T4> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlQuery<T1, T2, T3, T4>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
-        => base.UseTable<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+        => base.UseTableMap<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4>;
     public new IPostgreSqlQuery<T1, T2, T3, T4> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as IPostgreSqlQuery<T1, T2, T3, T4>;
     public new IPostgreSqlQuery<T1, T2, T3, T4> UseTableByRange(object beginFieldValue, object endFieldValue)
@@ -570,8 +570,8 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5> : Query<T1, T2, T3, T4, T5>, IP
         => base.UseTable(tableNames) as IPostgreSqlQuery<T1, T2, T3, T4, T5>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
-        => base.UseTable<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4, T5>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+        => base.UseTableMap<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4, T5>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as IPostgreSqlQuery<T1, T2, T3, T4, T5>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5> UseTableByRange(object beginFieldValue, object endFieldValue)
@@ -682,8 +682,8 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6> : Query<T1, T2, T3, T4, T5,
         => base.UseTable(tableNames) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
-        => base.UseTable<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4, T5, T6>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+        => base.UseTableMap<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4, T5, T6>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> UseTableByRange(object beginFieldValue, object endFieldValue)
@@ -794,8 +794,8 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> : Query<T1, T2, T3, T4,
         => base.UseTable(tableNames) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
-        => base.UseTable<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+        => base.UseTableMap<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> UseTableByRange(object beginFieldValue, object endFieldValue)
@@ -906,8 +906,8 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> : Query<T1, T2, T3,
         => base.UseTable(tableNames) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
-        => base.UseTable<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+        => base.UseTableMap<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableByRange(object beginFieldValue, object endFieldValue)
@@ -1018,8 +1018,8 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : Query<T1, T2,
         => base.UseTable(tableNames) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
-        => base.UseTable<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+        => base.UseTableMap<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableByRange(object beginFieldValue, object endFieldValue)
@@ -1130,8 +1130,8 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : Query<T1
         => base.UseTable(tableNames) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
-        => base.UseTable<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+        => base.UseTableMap<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableByRange(object beginFieldValue, object endFieldValue)
@@ -1242,8 +1242,8 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : Que
         => base.UseTable(tableNames) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
-        => base.UseTable<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+        => base.UseTableMap<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableByRange(object beginFieldValue, object endFieldValue)
@@ -1354,8 +1354,8 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
         => base.UseTable(tableNames) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
-        => base.UseTable<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+        => base.UseTableMap<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableByRange(object beginFieldValue, object endFieldValue)
@@ -1466,8 +1466,8 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
         => base.UseTable(tableNames) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
-        => base.UseTable<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+        => base.UseTableMap<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableByRange(object beginFieldValue, object endFieldValue)
@@ -1578,8 +1578,8 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
         => base.UseTable(tableNames) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
-        => base.UseTable<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+        => base.UseTableMap<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableByRange(object beginFieldValue, object endFieldValue)
@@ -1690,8 +1690,8 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
         => base.UseTable(tableNames) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
-        => base.UseTable<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+        => base.UseTableMap<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableByRange(object beginFieldValue, object endFieldValue)
@@ -1802,8 +1802,8 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
         => base.UseTable(tableNames) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
-        => base.UseTable<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+        => base.UseTableMap<TMasterSharding>(tableNameGetter) as PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableBy(object field1Value, object field2Value = null)
         => base.UseTableBy(field1Value, field2Value) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableByRange(object beginFieldValue, object endFieldValue)

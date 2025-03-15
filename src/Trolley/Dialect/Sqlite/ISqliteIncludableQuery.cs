@@ -31,7 +31,7 @@ public interface ISqliteIncludableQuery<T, TMember> : IIncludableQuery<T, TMembe
     /// repository.From&lt;Order&gt;()
     ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTable&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
     ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -47,7 +47,7 @@ public interface ISqliteIncludableQuery<T, TMember> : IIncludableQuery<T, TMembe
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前表分表名获取委托</param>
     /// <returns>返回导航属性查询对象</returns>
-    new ISqliteIncludableQuery<T, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    new ISqliteIncludableQuery<T, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值确定TMember表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
@@ -64,7 +64,7 @@ public interface ISqliteIncludableQuery<T, TMember> : IIncludableQuery<T, TMembe
     new ISqliteIncludableQuery<T, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
     /// 根据1个固定字段值和1个字段值范围确定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTable&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
+    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
     /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
     /// </summary>
     /// <param name="fieldValue1">第一个值</param>
@@ -143,7 +143,7 @@ public interface ISqliteIncludableQuery<T1, T2, TMember> : IIncludableQuery<T1, 
     /// repository.From&lt;Order&gt;()
     ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTable&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
     ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -159,7 +159,7 @@ public interface ISqliteIncludableQuery<T1, T2, TMember> : IIncludableQuery<T1, 
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前表分表名获取委托</param>
     /// <returns>返回导航属性查询对象</returns>
-    new ISqliteIncludableQuery<T1, T2, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    new ISqliteIncludableQuery<T1, T2, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
@@ -176,7 +176,7 @@ public interface ISqliteIncludableQuery<T1, T2, TMember> : IIncludableQuery<T1, 
     new ISqliteIncludableQuery<T1, T2, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
     /// 根据1个固定字段值和1个字段值范围确定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTable&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
+    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
     /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
     /// </summary>
     /// <param name="fieldValue1">第一个值</param>
@@ -256,7 +256,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, TMember> : IIncludableQuery<
     /// repository.From&lt;Order&gt;()
     ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTable&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
     ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -272,7 +272,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, TMember> : IIncludableQuery<
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前表分表名获取委托</param>
     /// <returns>返回导航属性查询对象</returns>
-    new ISqliteIncludableQuery<T1, T2, T3, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    new ISqliteIncludableQuery<T1, T2, T3, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
@@ -289,7 +289,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, TMember> : IIncludableQuery<
     new ISqliteIncludableQuery<T1, T2, T3, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
     /// 根据1个固定字段值和1个字段值范围确定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTable&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
+    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
     /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
     /// </summary>
     /// <param name="fieldValue1">第一个值</param>
@@ -370,7 +370,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, T4, TMember> : IIncludableQu
     /// repository.From&lt;Order&gt;()
     ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTable&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
     ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -386,7 +386,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, T4, TMember> : IIncludableQu
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前表分表名获取委托</param>
     /// <returns>返回导航属性查询对象</returns>
-    new ISqliteIncludableQuery<T1, T2, T3, T4, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    new ISqliteIncludableQuery<T1, T2, T3, T4, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
@@ -403,7 +403,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, T4, TMember> : IIncludableQu
     new ISqliteIncludableQuery<T1, T2, T3, T4, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
     /// 根据1个固定字段值和1个字段值范围确定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTable&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
+    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
     /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
     /// </summary>
     /// <param name="fieldValue1">第一个值</param>
@@ -485,7 +485,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, T4, T5, TMember> : IIncludab
     /// repository.From&lt;Order&gt;()
     ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTable&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
     ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -501,7 +501,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, T4, T5, TMember> : IIncludab
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前表分表名获取委托</param>
     /// <returns>返回导航属性查询对象</returns>
-    new ISqliteIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    new ISqliteIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
@@ -518,7 +518,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, T4, T5, TMember> : IIncludab
     new ISqliteIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
     /// 根据1个固定字段值和1个字段值范围确定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTable&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
+    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
     /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
     /// </summary>
     /// <param name="fieldValue1">第一个值</param>
@@ -601,7 +601,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : IIncl
     /// repository.From&lt;Order&gt;()
     ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTable&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
     ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -617,7 +617,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : IIncl
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前表分表名获取委托</param>
     /// <returns>返回导航属性查询对象</returns>
-    new ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    new ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
@@ -634,7 +634,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : IIncl
     new ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
     /// 根据1个固定字段值和1个字段值范围确定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTable&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
+    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
     /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
     /// </summary>
     /// <param name="fieldValue1">第一个值</param>
@@ -718,7 +718,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : I
     /// repository.From&lt;Order&gt;()
     ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTable&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
     ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -734,7 +734,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : I
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前表分表名获取委托</param>
     /// <returns>返回导航属性查询对象</returns>
-    new ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    new ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
@@ -751,7 +751,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : I
     new ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
     /// 根据1个固定字段值和1个字段值范围确定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTable&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
+    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
     /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
     /// </summary>
     /// <param name="fieldValue1">第一个值</param>
@@ -836,7 +836,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember>
     /// repository.From&lt;Order&gt;()
     ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTable&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
     ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -852,7 +852,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember>
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前表分表名获取委托</param>
     /// <returns>返回导航属性查询对象</returns>
-    new ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    new ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
@@ -869,7 +869,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember>
     new ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
     /// 根据1个固定字段值和1个字段值范围确定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTable&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
+    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
     /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
     /// </summary>
     /// <param name="fieldValue1">第一个值</param>
@@ -955,7 +955,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMem
     /// repository.From&lt;Order&gt;()
     ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTable&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
     ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -971,7 +971,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMem
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前表分表名获取委托</param>
     /// <returns>返回导航属性查询对象</returns>
-    new ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    new ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
@@ -988,7 +988,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMem
     new ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
     /// 根据1个固定字段值和1个字段值范围确定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTable&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
+    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
     /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
     /// </summary>
     /// <param name="fieldValue1">第一个值</param>
@@ -1075,7 +1075,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10,
     /// repository.From&lt;Order&gt;()
     ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTable&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
     ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -1091,7 +1091,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10,
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前表分表名获取委托</param>
     /// <returns>返回导航属性查询对象</returns>
-    new ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    new ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
@@ -1108,7 +1108,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10,
     new ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
     /// 根据1个固定字段值和1个字段值范围确定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTable&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
+    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
     /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
     /// </summary>
     /// <param name="fieldValue1">第一个值</param>
@@ -1196,7 +1196,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10,
     /// repository.From&lt;Order&gt;()
     ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTable&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
     ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -1212,7 +1212,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10,
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前表分表名获取委托</param>
     /// <returns>返回导航属性查询对象</returns>
-    new ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    new ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
@@ -1229,7 +1229,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10,
     new ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
     /// 根据1个固定字段值和1个字段值范围确定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTable&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
+    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
     /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
     /// </summary>
     /// <param name="fieldValue1">第一个值</param>
@@ -1318,7 +1318,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10,
     /// repository.From&lt;Order&gt;()
     ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTable&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
     ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -1334,7 +1334,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10,
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前表分表名获取委托</param>
     /// <returns>返回导航属性查询对象</returns>
-    new ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    new ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
@@ -1351,7 +1351,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10,
     new ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
     /// 根据1个固定字段值和1个字段值范围确定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTable&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
+    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
     /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
     /// </summary>
     /// <param name="fieldValue1">第一个值</param>
@@ -1441,7 +1441,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10,
     /// repository.From&lt;Order&gt;()
     ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTable&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
     ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -1457,7 +1457,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10,
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前表分表名获取委托</param>
     /// <returns>返回导航属性查询对象</returns>
-    new ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    new ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
@@ -1474,7 +1474,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10,
     new ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
     /// 根据1个固定字段值和1个字段值范围确定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTable&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
+    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
     /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
     /// </summary>
     /// <param name="fieldValue1">第一个值</param>
@@ -1565,7 +1565,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10,
     /// repository.From&lt;Order&gt;()
     ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTable&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
     ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -1581,7 +1581,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10,
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前表分表名获取委托</param>
     /// <returns>返回导航属性查询对象</returns>
-    new ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    new ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
@@ -1598,7 +1598,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10,
     new ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
     /// 根据1个固定字段值和1个字段值范围确定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTable&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
+    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
     /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
     /// </summary>
     /// <param name="fieldValue1">第一个值</param>
@@ -1690,7 +1690,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10,
     /// repository.From&lt;Order&gt;()
     ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
-    ///     .UseTable&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
     ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
@@ -1706,7 +1706,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10,
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前表分表名获取委托</param>
     /// <returns>返回导航属性查询对象</returns>
-    new ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    new ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
@@ -1723,7 +1723,7 @@ public interface ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10,
     new ISqliteIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
     /// 根据1个固定字段值和1个字段值范围确定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTable&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
+    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
     /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
     /// </summary>
     /// <param name="fieldValue1">第一个值</param>

@@ -73,7 +73,7 @@ public class SqlVisitor : ISqlVisitor
             tableSegment.TableNames = new List<string>(tableNames);
             this.ShardingTables ??= new();
             if (this.ShardingTables.Exists(f => f.ShardingType < ShardingTableType.SubordinateMap))
-                throw new NotSupportedException("一个查询语句中仅支持一个主表多个分表，其他表多个分表只能调用方法UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)构造与主表表名称映射实现多个分表");
+                throw new NotSupportedException("一个查询语句中仅支持一个主表多个分表，其他表多个分表只能调用方法UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)构造与主表表名称映射实现多个分表");
             if (!this.ShardingTables.Contains(tableSegment))
             {
                 tableSegment.ShardingId = Guid.NewGuid().ToString("N");
@@ -122,7 +122,7 @@ public class SqlVisitor : ISqlVisitor
         tableSegment.IsSharding = true;
         tableSegment.ShardingType = ShardingTableType.SubordinateMap;
         if (this.ShardingTables == null)
-            throw new NotSupportedException("当主表有多个分表时，才能使用此方法UseTable<TMasterSharding>(Func<string, string, string, string> tableNameGetter)");
+            throw new NotSupportedException("当主表有多个分表时，才能使用此方法UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)");
         //分表依赖，只要取一个主表就行，因为分表规则都是一样的
         tableSegment.ShardingDependent = this.ShardingTables.Find(f => f.EntityType == masterEntityType);
         tableSegment.ShardingMapGetter = tableNameGetter;

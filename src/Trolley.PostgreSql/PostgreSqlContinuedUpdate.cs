@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Trolley.PostgreSql;
 
-public class PostgreSqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IPostgreSqlUpdated<TEntity>, IPostgreSqlContinuedUpdate<TEntity>
+public class PostgreSqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IPostgreSqlContinuedUpdate<TEntity>
 {
     #region Properties
     public PostgreSqlUpdateVisitor DialectVisitor { get; private set; }
@@ -64,13 +64,8 @@ public class PostgreSqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IPos
     #endregion
 
     #region Where/And
-    public new IPostgreSqlUpdated<TEntity> Where<TWhereObj>(TWhereObj whereObj)
-    {
-        base.Where(whereObj);
-        return this;
-    }
     public new IPostgreSqlContinuedUpdate<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
-        => this.Where(true, predicate);
+         => this.Where(true, predicate);
     public new IPostgreSqlContinuedUpdate<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
         => base.Where(condition, ifPredicate, elsePredicate) as IPostgreSqlContinuedUpdate<TEntity>;
     public new IPostgreSqlContinuedUpdate<TEntity> And(Expression<Func<TEntity, bool>> predicate)
@@ -522,7 +517,7 @@ public class PostgreSqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IPos
     }
     #endregion
 }
-public class PostgreSqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity>, IPostgreSqlUpdated<TEntity>, IPostgreSqlBulkContinuedUpdate<TEntity>
+public class PostgreSqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity>, IPostgreSqlBulkContinuedUpdate<TEntity>
 {
     #region Properties
     public PostgreSqlUpdateVisitor DialectVisitor { get; private set; }
@@ -566,11 +561,6 @@ public class PostgreSqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntit
     #endregion
 
     #region Where/And
-    public new IPostgreSqlUpdated<TEntity> Where<TWhereObj>(TWhereObj whereObj)
-    {
-        base.Where(whereObj);
-        return this;
-    }
     public new IPostgreSqlBulkContinuedUpdate<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
         => this.Where(true, predicate);
     public new IPostgreSqlBulkContinuedUpdate<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)

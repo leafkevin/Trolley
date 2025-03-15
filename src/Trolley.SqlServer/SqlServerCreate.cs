@@ -43,7 +43,7 @@ public class SqlServerCreate<TEntity> : Create<TEntity>, ISqlServerCreate<TEntit
     #endregion
 
     #region WithBulkCopy
-    public ISqlServerCreated<TEntity> WithBulkCopy(IEnumerable insertObjs, int? timeoutSeconds = null)
+    public ICreated<TEntity> WithBulkCopy(IEnumerable insertObjs, int? timeoutSeconds = null)
     {
         if (insertObjs == null)
             throw new ArgumentNullException(nameof(insertObjs));
@@ -60,7 +60,7 @@ public class SqlServerCreate<TEntity> : Create<TEntity>, ISqlServerCreate<TEntit
         if (isEmpty) throw new Exception("批量更新，insertObjs参数至少要有一条数据");
 
         this.DialectVisitor.WithBulkCopy(insertObjs, timeoutSeconds);
-        return this.OrmProvider.NewCreated<TEntity>(this.DbContext, this.Visitor) as ISqlServerCreated<TEntity>;
+        return this.OrmProvider.NewCreated<TEntity>(this.DbContext, this.Visitor);
     }
     #endregion
 

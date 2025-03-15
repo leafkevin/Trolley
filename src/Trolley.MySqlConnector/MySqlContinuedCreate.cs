@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Trolley.MySqlConnector;
 
-public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCreated<TEntity>, IMySqlContinuedCreate<TEntity>
+public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlContinuedCreate<TEntity>
 {
     #region Properties
     public MySqlCreateVisitor DialectVisitor { get; private set; }
@@ -270,7 +270,7 @@ public class MySqlContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCre
     }
     #endregion
 }
-public class MySqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlCreated<TEntity>, IMySqlBulkContinuedCreate<TEntity>
+public class MySqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, IMySqlBulkContinuedCreate<TEntity>
 {
     #region Properties
     public MySqlCreateVisitor DialectVisitor { get; private set; }

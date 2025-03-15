@@ -1,11 +1,10 @@
 ﻿using System.Collections.Generic;
-using System.Threading.Tasks;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Trolley.MySqlConnector;
 
-public interface IMySqlCreated<TEntity> : ICreated<TEntity> { }
-public interface IMySqlCreated<TEntity, TResult> : IMySqlCreated<TEntity>
+public interface IMySqlCreated<TEntity, TResult> : ICreated<TEntity>
 {
     #region Execute
     /// <summary>
@@ -21,7 +20,7 @@ public interface IMySqlCreated<TEntity, TResult> : IMySqlCreated<TEntity>
     new Task<TResult> ExecuteAsync(CancellationToken cancellationToken = default);
     #endregion
 }
-public interface IMySqlBulkCreated<TEntity, TResult> : IMySqlCreated<TEntity>
+public interface IMySqlBulkCreated<TEntity, TResult> : ICreated<TEntity>
 {
     #region Execute
     /// <summary>

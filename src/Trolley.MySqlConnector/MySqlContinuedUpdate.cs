@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Trolley.MySqlConnector;
 
-public class MySqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IMySqlUpdated<TEntity>, IMySqlContinuedUpdate<TEntity>
+public class MySqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IMySqlContinuedUpdate<TEntity>
 {
     #region Properties
     public MySqlUpdateVisitor DialectVisitor { get; private set; }
@@ -64,11 +64,6 @@ public class MySqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IMySqlUpd
     #endregion
 
     #region Where/And
-    public new IMySqlUpdated<TEntity> Where<TWhereObj>(TWhereObj whereObj)
-    {
-        base.Where(whereObj);
-        return this;
-    }
     public new IMySqlContinuedUpdate<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
         => this.Where(true, predicate);
     public new IMySqlContinuedUpdate<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
@@ -506,7 +501,7 @@ public class MySqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IMySqlUpd
     }
     #endregion
 }
-public class MySqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity>, IMySqlUpdated<TEntity>, IMySqlBulkContinuedUpdate<TEntity>
+public class MySqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity>, IMySqlBulkContinuedUpdate<TEntity>
 {
     #region Properties
     public MySqlUpdateVisitor DialectVisitor { get; private set; }
@@ -550,13 +545,8 @@ public class MySqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity>, I
     #endregion
 
     #region Where/And
-    public new IMySqlUpdated<TEntity> Where<TWhereObj>(TWhereObj whereObj)
-    {
-        base.Where(whereObj);
-        return this;
-    }
     public new IMySqlBulkContinuedUpdate<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
-        => this.Where(true, predicate);
+         => this.Where(true, predicate);
     public new IMySqlBulkContinuedUpdate<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
         => base.Where(condition, ifPredicate, elsePredicate) as IMySqlBulkContinuedUpdate<TEntity>;
     public new IMySqlBulkContinuedUpdate<TEntity> And(Expression<Func<TEntity, bool>> predicate)

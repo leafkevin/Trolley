@@ -8291,7 +8291,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
         var sql = repository.From<Order>()
             .UseTable(f => f.Contains("_104_") && int.Parse(f[^6..]) > 202001)
             .Include(f => f.Details)
-            .UseTable<Order>((origOrderName, origOrderDetailName, orderName) =>
+            .UseTableMap<Order>((origOrderName, origOrderDetailName, orderName) =>
                 orderName.Replace(origOrderName, origOrderDetailName))
             .Where(f => f.ProductCount > productCount)
             .ToSql(out _);
@@ -8300,7 +8300,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
         var result = repository.From<Order>()
             .UseTable(f => f.Contains("_104_") && int.Parse(f[^6..]) > 202001)
             .Include(f => f.Details)
-            .UseTable<Order>((origOrderName, origOrderDetailName, orderName) =>
+            .UseTableMap<Order>((origOrderName, origOrderDetailName, orderName) =>
                 orderName.Replace(origOrderName, origOrderDetailName))
             .Where(f => f.ProductCount > productCount)
             .ToList();
@@ -8321,7 +8321,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
         sql = repository.From<Order>()
             .UseTable("sys_order_104_202405", "sys_order_105_202405")
             .Include(f => f.Details)
-            .UseTable<Order>((origOrderName, origOrderDetailName, orderName) =>
+            .UseTableMap<Order>((origOrderName, origOrderDetailName, orderName) =>
                 orderName.Replace(origOrderName, origOrderDetailName))
             .Where(f => f.ProductCount > productCount)
             .ToSql(out _);
@@ -8330,7 +8330,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
         result = repository.From<Order>()
             .UseTable("sys_order_104_202405", "sys_order_105_202405")
             .Include(f => f.Details)
-            .UseTable<Order>((origOrderName, origOrderDetailName, orderName) =>
+            .UseTableMap<Order>((origOrderName, origOrderDetailName, orderName) =>
                 orderName.Replace(origOrderName, origOrderDetailName))
             .Where(f => f.ProductCount > productCount)
             .ToList();
@@ -8384,11 +8384,11 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
             .From(f => f.From<OrderDetail>()
                 .UseTable("sys_order_detail_104_202405", "sys_order_detail_105_202405")
                 .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
-                .UseTable<OrderDetail>((orderOrigName, userOrigName, orderTableName) => orderTableName.Replace(orderOrigName, userOrigName))
+                .UseTableMap<OrderDetail>((orderOrigName, userOrigName, orderTableName) => orderTableName.Replace(orderOrigName, userOrigName))
                 .GroupBy((a, b) => new { OrderId = b.Id, b.BuyerId })
                 .Select((x, a, b) => new { Group = x.Grouping, ProductCount = x.CountDistinct(a.ProductId) }))
             .InnerJoin<User>((x, y) => x.Group.BuyerId == y.Id)
-            .UseTable<OrderDetail>((orderOrigName, userOrigName, orderTableName) =>
+            .UseTableMap<OrderDetail>((orderOrigName, userOrigName, orderTableName) =>
                 orderTableName.Replace(orderOrigName, userOrigName)[..^7])
             .Where((a, b) => a.ProductCount > 1)
             .Select((x, y) => new
@@ -8405,11 +8405,11 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
             .From(f => f.From<OrderDetail>()
                 .UseTable("sys_order_detail_104_202405", "sys_order_detail_105_202405")
                 .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
-                .UseTable<OrderDetail>((orderOrigName, userOrigName, orderTableName) => orderTableName.Replace(orderOrigName, userOrigName))
+                .UseTableMap<OrderDetail>((orderOrigName, userOrigName, orderTableName) => orderTableName.Replace(orderOrigName, userOrigName))
                 .GroupBy((a, b) => new { OrderId = b.Id, b.BuyerId })
                 .Select((x, a, b) => new { Group = x.Grouping, ProductCount = x.CountDistinct(a.ProductId) }))
             .InnerJoin<User>((x, y) => x.Group.BuyerId == y.Id)
-            .UseTable<OrderDetail>((orderOrigName, userOrigName, orderTableName) =>
+            .UseTableMap<OrderDetail>((orderOrigName, userOrigName, orderTableName) =>
             {
                 var tableName = orderTableName.Replace(orderOrigName, userOrigName);
                 return tableName[..^7];
@@ -8442,7 +8442,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
         var sql = repository.From<Order>()
             .UseTable("sys_order_104_202405", "sys_order_105_202405")
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
-            .UseTable<Order>((orderOrigName, userOrigName, orderTableName) =>
+            .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName) =>
             {
                 var tableName = orderTableName.Replace(orderOrigName, userOrigName);
                 return tableName[..^7];
@@ -8459,7 +8459,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
         var result = repository.From<Order>()
             .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
-            .UseTable<Order>((orderOrigName, userOrigName, orderTableName) =>
+            .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName) =>
             {
                 var tableName = orderTableName.Replace(orderOrigName, userOrigName);
                 return tableName[..^7];
@@ -8486,7 +8486,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
         var sql = repository.From<Order>()
             .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
-            .UseTable<Order>((orderOrigName, userOrigName, orderTableName) =>
+            .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName) =>
             {
                 var tableName = orderTableName.Replace(orderOrigName, userOrigName);
                 return tableName[..^7];
@@ -8503,7 +8503,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
         var result = repository.From<Order>()
             .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
-            .UseTable<Order>((orderOrigName, userOrigName, orderTableName) =>
+            .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName) =>
             {
                 var tableName = orderTableName.Replace(orderOrigName, userOrigName);
                 return tableName[..^7];
@@ -8530,7 +8530,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
         var sql = repository.From<Order>()
             .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
             .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
-            .UseTable<Order>((orderOrigName, orderDetailOrigName, orderTableName) => orderTableName.Replace(orderOrigName, orderDetailOrigName))
+            .UseTableMap<Order>((orderOrigName, orderDetailOrigName, orderTableName) => orderTableName.Replace(orderOrigName, orderDetailOrigName))
             .Where((a, b) => a.ProductCount > productCount)
             .Select((x, y) => new
             {
@@ -8543,7 +8543,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
         var result = repository.From<Order>()
             .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
             .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
-            .UseTable<Order>((orderOrigName, orderDetailOrigName, orderTableName)
+            .UseTableMap<Order>((orderOrigName, orderDetailOrigName, orderTableName)
                 => orderTableName.Replace(orderOrigName, orderDetailOrigName))
             .Where((a, b) => a.ProductCount > productCount)
             .Select((x, y) => new
@@ -8869,7 +8869,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
         sql = repository.From<Order>()
            .UseTableByRange("104", beginTime, endTime)
            .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
-           .UseTable<Order>((orderOrigName, userOrigName, orderTableName) =>
+           .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName) =>
            {
                var tableName = orderTableName.Replace(orderOrigName, userOrigName);
                return tableName[..^7];
@@ -8887,7 +8887,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
         var orderInfos = repository.From<Order>()
             .UseTableByRange("104", beginTime, endTime)
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
-            .UseTable<Order>((orderOrigName, userOrigName, orderTableName) =>
+            .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName) =>
             {
                 var tableName = orderTableName.Replace(orderOrigName, userOrigName);
                 return tableName[..^7];
@@ -8915,17 +8915,17 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
             .From(f => f.From<Order>()
                 .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
                 .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
-                .UseTable<Order>((orderOrigName, userOrigName, orderTableName)
+                .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
                     => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
                 .LeftJoin<OrderDetail>((a, b, c) => a.Id == c.OrderId)
-                .UseTable<Order>((orderOrigName, orderDetailOrigName, orderTableName)
+                .UseTableMap<Order>((orderOrigName, orderDetailOrigName, orderTableName)
                     => orderTableName.Replace(orderOrigName, orderDetailOrigName))
                 .GroupBy((a, b, c) => new { a.BuyerId, OrderId = a.Id, a.OrderNo })
                 .Having((x, a, b, c) => x.CountDistinct(c.ProductId) > count)
                 .Select((a, b, c, d) => new { a.Grouping.BuyerId, a.Grouping.OrderId, a.Grouping.OrderNo, ProductTotal = a.CountDistinct(d.ProductId) }))
             .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
             .IncludeMany((a, b) => b.Details, f => f.Amount > amount)
-            .UseTable<Order>((orderOrigName, orderDetailOrigName, orderTableName)
+            .UseTableMap<Order>((orderOrigName, orderDetailOrigName, orderTableName)
                 => orderTableName.Replace(orderOrigName, orderDetailOrigName))
             .Select((x, y) => new { y.Disputes, x.BuyerId, x.OrderId, x.OrderNo, x.ProductTotal, Order = y })
             .ToSql(out var dbParameters);
@@ -8937,17 +8937,17 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
             .From(f => f.From<Order>()
                 .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
                 .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
-                .UseTable<Order>((orderOrigName, userOrigName, orderTableName)
+                .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
                     => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
                 .LeftJoin<OrderDetail>((a, b, c) => a.Id == c.OrderId)
-                .UseTable<Order>((orderOrigName, orderDetailOrigName, orderTableName)
+                .UseTableMap<Order>((orderOrigName, orderDetailOrigName, orderTableName)
                     => orderTableName.Replace(orderOrigName, orderDetailOrigName))
                 .GroupBy((a, b, c) => new { a.BuyerId, OrderId = a.Id, a.OrderNo })
                 .Having((x, a, b, c) => x.CountDistinct(c.ProductId) > count)
                 .Select((a, b, c, d) => new { a.Grouping.BuyerId, a.Grouping.OrderId, a.Grouping.OrderNo, ProductTotal = a.CountDistinct(d.ProductId) }))
             .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
             .IncludeMany((a, b) => b.Details, f => f.Amount > amount)
-            .UseTable<Order>((orderOrigName, orderDetailOrigName, orderTableName)
+            .UseTableMap<Order>((orderOrigName, orderDetailOrigName, orderTableName)
                 => orderTableName.Replace(orderOrigName, orderDetailOrigName))
             .Select((x, y) => new { y.Disputes, x.BuyerId, x.OrderId, x.OrderNo, x.ProductTotal, Order = y })
             .First();
@@ -9019,7 +9019,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
             .UseTableSchema("myschema")
             .Include(f => f.Details)
             .UseTableSchema("myschema")
-            .UseTable<Order>((origOrderName, origOrderDetailName, orderName) =>
+            .UseTableMap<Order>((origOrderName, origOrderDetailName, orderName) =>
                 orderName.Replace(origOrderName, origOrderDetailName))
             .Where(f => f.ProductCount > productCount)
             .ToSql(out _);
@@ -9030,7 +9030,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
             .UseTableSchema("myschema")
             .Include(f => f.Details)
             .UseTableSchema("myschema")
-            .UseTable<Order>((origOrderName, origOrderDetailName, orderName) =>
+            .UseTableMap<Order>((origOrderName, origOrderDetailName, orderName) =>
                 orderName.Replace(origOrderName, origOrderDetailName))
             .Where(f => f.ProductCount > productCount)
             .ToList();
@@ -9053,7 +9053,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
             .UseTableSchema("myschema")
             .Include(f => f.Details)
             .UseTableSchema("myschema")
-            .UseTable<Order>((origOrderName, origOrderDetailName, orderName) =>
+            .UseTableMap<Order>((origOrderName, origOrderDetailName, orderName) =>
                 orderName.Replace(origOrderName, origOrderDetailName))
             .Where(f => f.ProductCount > productCount)
             .ToSql(out _);
@@ -9064,7 +9064,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
             .UseTableSchema("myschema")
             .Include(f => f.Details)
             .UseTableSchema("myschema")
-            .UseTable<Order>((origOrderName, origOrderDetailName, orderName) =>
+            .UseTableMap<Order>((origOrderName, origOrderDetailName, orderName) =>
                 orderName.Replace(origOrderName, origOrderDetailName))
             .Where(f => f.ProductCount > productCount)
             .ToList();

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Trolley.SqlServer;
 
-public class SqlServerCreated<TEntity> : Created<TEntity>, ISqlServerCreated<TEntity>
+public class SqlServerCreated<TEntity> : Created<TEntity>
 {
     #region Properties
     public SqlServerCreateVisitor DialectVisitor { get; protected set; }

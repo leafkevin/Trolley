@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Trolley.SqlServer;
 
-public class SqlServerUpdated<TEntity> : Updated<TEntity>, ISqlServerUpdated<TEntity>
+public class SqlServerUpdated<TEntity> : Updated<TEntity>
 {
     #region Properties
     public SqlServerUpdateVisitor DialectVisitor { get; protected set; }

@@ -205,7 +205,7 @@ public interface IPostgreSqlContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
     /// <typeparam name="TWhereObj">where条件对象类型</typeparam>
     /// <param name="whereObj">where条件对象，whereObj对象内所有与当前实体表TEntity名称相同的栏位都将参与where条件过滤，可以是匿名对象、命名对象或是字典，推荐使用匿名对象，不能为null</param>
     /// <returns>返回更新对象</returns>
-    new IPostgreSqlUpdated<TEntity> Where<TWhereObj>(TWhereObj whereObj);
+    new IUpdated<TEntity> Where<TWhereObj>(TWhereObj whereObj);
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -382,7 +382,7 @@ public interface IPostgreSqlBulkContinuedUpdate<TEntity> : IBulkContinuedUpdate<
     /// <typeparam name="TWhereObj">where条件对象类型</typeparam>
     /// <param name="whereObj">where条件对象，whereObj对象内所有与当前实体表TEntity名称相同的栏位都将参与where条件过滤，可以是匿名对象、命名对象或是字典，推荐使用匿名对象，不能为null</param>
     /// <returns>返回更新对象</returns>
-    new IPostgreSqlUpdated<TEntity> Where<TWhereObj>(TWhereObj whereObj);
+    new IUpdated<TEntity> Where<TWhereObj>(TWhereObj whereObj);
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>

@@ -61,7 +61,7 @@ public interface IPostgreSqlCreate<TEntity> : ICreate<TEntity>
     /// </summary>
     /// <param name="insertObjs">插入的对象集合</param>
     /// <returns>返回插入对象</returns>
-    IPostgreSqlCreated<TEntity> WithBulkCopy(IEnumerable insertObjs);
+    ICreated<TEntity> WithBulkCopy(IEnumerable insertObjs);
     #endregion
 
     #region From
