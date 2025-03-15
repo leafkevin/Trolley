@@ -92,6 +92,22 @@ public interface IQueryBase : IQuery
     /// <returns>返回数据条数</returns>
     Task<long> LongCountAsync(CancellationToken cancellationToken = default);
     #endregion
+
+    #region Exists
+    /// <summary>
+    /// 判断数据是否存在，存在为true，否则为false
+    /// </summary>
+    /// <param name="predicate">条件表达式</param>
+    /// <returns>返回布尔值，存在为true，否则为false</returns>
+    bool Exists();
+    /// <summary>
+    /// 判断数据是否存在，存在为true，否则为false
+    /// </summary>
+    /// <param name="predicate">条件表达式</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns>返回布尔值，存在为true，否则为false</returns>
+    Task<bool> ExistsAsync(CancellationToken cancellationToken = default);
+    #endregion
 }
 /// <summary>
 /// 查询对象
@@ -863,22 +879,6 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回Dictionary&lt;TKey, TValue&gt;字典或没有任何元素的Dictionary&lt;TKey, TValue&gt;空字典</returns>
     Task<Dictionary<TKey, TValue>> ToDictionaryAsync<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector, CancellationToken cancellationToken = default) where TKey : notnull;
     #endregion
-
-    #region Exists
-    /// <summary>
-    /// 判断数据是否存在，存在为true，否则为false
-    /// </summary>
-    /// <param name="predicate">条件表达式</param>
-    /// <returns>返回布尔值，存在为true，否则为false</returns>
-    bool Exists(Expression<Func<T, bool>> predicate);
-    /// <summary>
-    /// 判断数据是否存在，存在为true，否则为false
-    /// </summary>
-    /// <param name="predicate">条件表达式</param>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回布尔值，存在为true，否则为false</returns>
-    Task<bool> ExistsAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default);
-    #endregion
 }
 /// <summary>
 /// CTE表查询对象
@@ -1454,22 +1454,6 @@ public interface IQuery<<#=tables#>> : IQueryBase
     /// <param name="cancellationToken"></param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    #endregion
-
-    #region Exists
-    /// <summary>
-    /// 判断数据是否存在，存在为true，否则为false
-    /// </summary>
-    /// <param name="predicate">条件表达式</param>
-    /// <returns>返回布尔值，存在为true，否则为false</returns>
-    bool Exists(Expression<Func<<#=tables#>, bool>> predicate);
-    /// <summary>
-    /// 判断数据是否存在，存在为true，否则为false
-    /// </summary>
-    /// <param name="predicate">条件表达式</param>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回布尔值，存在为true，否则为false</returns>
-    Task<bool> ExistsAsync(Expression<Func<<#=tables#>, bool>> predicate, CancellationToken cancellationToken = default);
     #endregion
 }
 <#  }#>

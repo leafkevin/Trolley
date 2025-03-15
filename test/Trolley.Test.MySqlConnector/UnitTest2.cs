@@ -1196,11 +1196,11 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
         Assert.True(result.Count > 0);
 
         sql = repository.From<User>()
-            .Where(f => repository.From<Company>('b').Exists(t => t.Name.Contains("谷歌") && f.CompanyId == t.Id))
+            .Where(f => repository.From<Company>('b').Where(t => t.Name.Contains("谷歌") && f.CompanyId == t.Id).Exists())
             .ToSql(out _);
         Assert.Equal("SELECT a.`Id`,a.`TenantId`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`SourceType`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_user` a WHERE EXISTS(SELECT * FROM `sys_company` b WHERE b.`Name` LIKE '%谷歌%' AND a.`CompanyId`=b.`Id`)", sql);
         result = repository.From<User>()
-            .Where(f => repository.From<Company>('b').Exists(t => t.Name.Contains("谷歌") && f.CompanyId == t.Id))
+            .Where(f => repository.From<Company>('b').Where(t => t.Name.Contains("谷歌") && f.CompanyId == t.Id).Exists())
             .ToList();
         Assert.NotNull(result);
         Assert.True(result.Count > 0);
@@ -1208,13 +1208,15 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
         sql = repository.From<User>()
             .Where(f => repository.From<Order>('b')
                 .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
-                .Exists((x, y) => x.BuyerId == f.Id && y.Price > 200))
+                .Where((x, y) => x.BuyerId == f.Id && y.Price > 200)
+                .Exists())
             .ToSql(out _);
         Assert.Equal("SELECT a.`Id`,a.`TenantId`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`SourceType`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_user` a WHERE EXISTS(SELECT * FROM `sys_order` b INNER JOIN `sys_order_detail` c ON b.`Id`=c.`OrderId` WHERE b.`BuyerId`=a.`Id` AND c.`Price`>200)", sql);
         result = repository.From<User>()
             .Where(f => repository.From<Order>('b')
                 .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
-                .Exists((x, y) => x.BuyerId == f.Id && y.Price > 200))
+                .Where((x, y) => x.BuyerId == f.Id && y.Price > 200)
+                .Exists())
             .ToList();
         Assert.NotNull(result);
         Assert.True(result.Count > 0);
@@ -1222,39 +1224,43 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
         sql = repository.From<User>()
             .Where(f => repository.From<Order, OrderDetail>('b')
                .InnerJoin((x, y) => x.Id == y.OrderId)
-               .Exists((x, y) => x.BuyerId == f.Id && y.Price > 200))
+               .Where((x, y) => x.BuyerId == f.Id && y.Price > 200)
+                .Exists())
             .ToSql(out _);
         Assert.Equal("SELECT a.`Id`,a.`TenantId`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`SourceType`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_user` a WHERE EXISTS(SELECT * FROM `sys_order` b INNER JOIN `sys_order_detail` c ON b.`Id`=c.`OrderId` WHERE b.`BuyerId`=a.`Id` AND c.`Price`>200)", sql);
         result = repository.From<User>()
             .Where(f => repository.From<Order, OrderDetail>('b')
                .InnerJoin((x, y) => x.Id == y.OrderId)
-               .Exists((x, y) => x.BuyerId == f.Id && y.Price > 200))
+               .Where((x, y) => x.BuyerId == f.Id && y.Price > 200)
+                .Exists())
             .ToList();
         Assert.NotNull(result);
         Assert.True(result.Count > 0);
 
         sql = repository.From<User>()
             .Where(f => repository.From<Order, OrderDetail>('b')
-               .Exists((x, y) => x.Id == y.OrderId && x.BuyerId == f.Id && y.Price > 200))
+               .Where((x, y) => x.Id == y.OrderId && x.BuyerId == f.Id && y.Price > 200)
+                .Exists())
             .ToSql(out _);
         Assert.Equal("SELECT a.`Id`,a.`TenantId`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`SourceType`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_user` a WHERE EXISTS(SELECT * FROM `sys_order` b,`sys_order_detail` c WHERE b.`Id`=c.`OrderId` AND b.`BuyerId`=a.`Id` AND c.`Price`>200)", sql);
         result = repository.From<User>()
             .Where(f => repository.From<Order, OrderDetail>('b')
-               .Exists((x, y) => x.Id == y.OrderId && x.BuyerId == f.Id && y.Price > 200))
+               .Where((x, y) => x.Id == y.OrderId && x.BuyerId == f.Id && y.Price > 200)
+                .Exists())
            .ToList();
         Assert.NotNull(result);
         Assert.True(result.Count > 0);
 
         sql = repository.From<User>()
             .Where(f => repository.From<Order, OrderDetail>('b')
-                .Where((x, y) => x.Id == y.OrderId)
-                .Exists((x, y) => x.BuyerId == f.Id && y.Price > 200))
+                .Where((x, y) => x.Id == y.OrderId && x.BuyerId == f.Id && y.Price > 200)
+                .Exists())
             .ToSql(out _);
         Assert.Equal("SELECT a.`Id`,a.`TenantId`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`SourceType`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_user` a WHERE EXISTS(SELECT * FROM `sys_order` b,`sys_order_detail` c WHERE b.`Id`=c.`OrderId` AND b.`BuyerId`=a.`Id` AND c.`Price`>200)", sql);
         result = repository.From<User>()
             .Where(f => repository.From<Order, OrderDetail>('b')
-                .Where((x, y) => x.Id == y.OrderId)
-                .Exists((x, y) => x.BuyerId == f.Id && y.Price > 200))
+                .Where((x, y) => x.Id == y.OrderId && x.BuyerId == f.Id && y.Price > 200)
+                .Exists())
             .ToList();
         Assert.NotNull(result);
         Assert.True(result.Count > 0);

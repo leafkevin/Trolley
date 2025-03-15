@@ -85,6 +85,22 @@ public interface IQueryBase : IQuery
     /// <returns>返回数据条数</returns>
     Task<long> LongCountAsync(CancellationToken cancellationToken = default);
     #endregion
+
+    #region Exists
+    /// <summary>
+    /// 判断数据是否存在，存在为true，否则为false
+    /// </summary>
+    /// <param name="predicate">条件表达式</param>
+    /// <returns>返回布尔值，存在为true，否则为false</returns>
+    bool Exists();
+    /// <summary>
+    /// 判断数据是否存在，存在为true，否则为false
+    /// </summary>
+    /// <param name="predicate">条件表达式</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns>返回布尔值，存在为true，否则为false</returns>
+    Task<bool> ExistsAsync(CancellationToken cancellationToken = default);
+    #endregion
 }
 /// <summary>
 /// 查询对象
@@ -162,15 +178,6 @@ public interface IQuery<T> : IQueryBase
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象</returns>
     IQuery<T> UseTableSchema(string tableSchema);
-    #endregion
-
-    #region UseMaster
-    /// <summary>
-    /// 使用主库查询
-    /// </summary>
-    /// <param name="isUseMaster">使用主库为true，默认值为true</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T> UseMaster(bool isUseMaster = true);
     #endregion
 
     #region Union/UnionAll
@@ -865,22 +872,6 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回Dictionary&lt;TKey, TValue&gt;字典或没有任何元素的Dictionary&lt;TKey, TValue&gt;空字典</returns>
     Task<Dictionary<TKey, TValue>> ToDictionaryAsync<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector, CancellationToken cancellationToken = default) where TKey : notnull;
     #endregion
-
-    #region Exists
-    /// <summary>
-    /// 判断数据是否存在，存在为true，否则为false
-    /// </summary>
-    /// <param name="predicate">条件表达式</param>
-    /// <returns>返回布尔值，存在为true，否则为false</returns>
-    bool Exists(Expression<Func<T, bool>> predicate);
-    /// <summary>
-    /// 判断数据是否存在，存在为true，否则为false
-    /// </summary>
-    /// <param name="predicate">条件表达式</param>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回布尔值，存在为true，否则为false</returns>
-    Task<bool> ExistsAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default);
-    #endregion
 }
 /// <summary>
 /// CTE表查询对象
@@ -1423,22 +1414,6 @@ public interface IQuery<T1, T2> : IQueryBase
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
-
-    #region Exists
-    /// <summary>
-    /// 判断数据是否存在，存在为true，否则为false
-    /// </summary>
-    /// <param name="predicate">条件表达式</param>
-    /// <returns>返回布尔值，存在为true，否则为false</returns>
-    bool Exists(Expression<Func<T1, T2, bool>> predicate);
-    /// <summary>
-    /// 判断数据是否存在，存在为true，否则为false
-    /// </summary>
-    /// <param name="predicate">条件表达式</param>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回布尔值，存在为true，否则为false</returns>
-    Task<bool> ExistsAsync(Expression<Func<T1, T2, bool>> predicate, CancellationToken cancellationToken = default);
-    #endregion
 }
 /// <summary>
 /// 多表T1, T2, T3查询
@@ -1976,22 +1951,6 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     /// <param name="cancellationToken"></param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    #endregion
-
-    #region Exists
-    /// <summary>
-    /// 判断数据是否存在，存在为true，否则为false
-    /// </summary>
-    /// <param name="predicate">条件表达式</param>
-    /// <returns>返回布尔值，存在为true，否则为false</returns>
-    bool Exists(Expression<Func<T1, T2, T3, bool>> predicate);
-    /// <summary>
-    /// 判断数据是否存在，存在为true，否则为false
-    /// </summary>
-    /// <param name="predicate">条件表达式</param>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回布尔值，存在为true，否则为false</returns>
-    Task<bool> ExistsAsync(Expression<Func<T1, T2, T3, bool>> predicate, CancellationToken cancellationToken = default);
     #endregion
 }
 /// <summary>
@@ -2531,22 +2490,6 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     /// <param name="cancellationToken"></param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    #endregion
-
-    #region Exists
-    /// <summary>
-    /// 判断数据是否存在，存在为true，否则为false
-    /// </summary>
-    /// <param name="predicate">条件表达式</param>
-    /// <returns>返回布尔值，存在为true，否则为false</returns>
-    bool Exists(Expression<Func<T1, T2, T3, T4, bool>> predicate);
-    /// <summary>
-    /// 判断数据是否存在，存在为true，否则为false
-    /// </summary>
-    /// <param name="predicate">条件表达式</param>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回布尔值，存在为true，否则为false</returns>
-    Task<bool> ExistsAsync(Expression<Func<T1, T2, T3, T4, bool>> predicate, CancellationToken cancellationToken = default);
     #endregion
 }
 /// <summary>
@@ -3088,22 +3031,6 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
-
-    #region Exists
-    /// <summary>
-    /// 判断数据是否存在，存在为true，否则为false
-    /// </summary>
-    /// <param name="predicate">条件表达式</param>
-    /// <returns>返回布尔值，存在为true，否则为false</returns>
-    bool Exists(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate);
-    /// <summary>
-    /// 判断数据是否存在，存在为true，否则为false
-    /// </summary>
-    /// <param name="predicate">条件表达式</param>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回布尔值，存在为true，否则为false</returns>
-    Task<bool> ExistsAsync(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate, CancellationToken cancellationToken = default);
-    #endregion
 }
 /// <summary>
 /// 多表T1, T2, T3, T4, T5, T6查询
@@ -3644,22 +3571,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     /// <param name="cancellationToken"></param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    #endregion
-
-    #region Exists
-    /// <summary>
-    /// 判断数据是否存在，存在为true，否则为false
-    /// </summary>
-    /// <param name="predicate">条件表达式</param>
-    /// <returns>返回布尔值，存在为true，否则为false</returns>
-    bool Exists(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate);
-    /// <summary>
-    /// 判断数据是否存在，存在为true，否则为false
-    /// </summary>
-    /// <param name="predicate">条件表达式</param>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回布尔值，存在为true，否则为false</returns>
-    Task<bool> ExistsAsync(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate, CancellationToken cancellationToken = default);
     #endregion
 }
 /// <summary>
@@ -4203,22 +4114,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
-
-    #region Exists
-    /// <summary>
-    /// 判断数据是否存在，存在为true，否则为false
-    /// </summary>
-    /// <param name="predicate">条件表达式</param>
-    /// <returns>返回布尔值，存在为true，否则为false</returns>
-    bool Exists(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> predicate);
-    /// <summary>
-    /// 判断数据是否存在，存在为true，否则为false
-    /// </summary>
-    /// <param name="predicate">条件表达式</param>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回布尔值，存在为true，否则为false</returns>
-    Task<bool> ExistsAsync(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> predicate, CancellationToken cancellationToken = default);
-    #endregion
 }
 /// <summary>
 /// 多表T1, T2, T3, T4, T5, T6, T7, T8查询
@@ -4761,22 +4656,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     /// <param name="cancellationToken"></param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    #endregion
-
-    #region Exists
-    /// <summary>
-    /// 判断数据是否存在，存在为true，否则为false
-    /// </summary>
-    /// <param name="predicate">条件表达式</param>
-    /// <returns>返回布尔值，存在为true，否则为false</returns>
-    bool Exists(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate);
-    /// <summary>
-    /// 判断数据是否存在，存在为true，否则为false
-    /// </summary>
-    /// <param name="predicate">条件表达式</param>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回布尔值，存在为true，否则为false</returns>
-    Task<bool> ExistsAsync(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate, CancellationToken cancellationToken = default);
     #endregion
 }
 /// <summary>
@@ -5322,22 +5201,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
-
-    #region Exists
-    /// <summary>
-    /// 判断数据是否存在，存在为true，否则为false
-    /// </summary>
-    /// <param name="predicate">条件表达式</param>
-    /// <returns>返回布尔值，存在为true，否则为false</returns>
-    bool Exists(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate);
-    /// <summary>
-    /// 判断数据是否存在，存在为true，否则为false
-    /// </summary>
-    /// <param name="predicate">条件表达式</param>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回布尔值，存在为true，否则为false</returns>
-    Task<bool> ExistsAsync(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate, CancellationToken cancellationToken = default);
-    #endregion
 }
 /// <summary>
 /// 多表T1, T2, T3, T4, T5, T6, T7, T8, T9, T10查询
@@ -5882,22 +5745,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     /// <param name="cancellationToken"></param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    #endregion
-
-    #region Exists
-    /// <summary>
-    /// 判断数据是否存在，存在为true，否则为false
-    /// </summary>
-    /// <param name="predicate">条件表达式</param>
-    /// <returns>返回布尔值，存在为true，否则为false</returns>
-    bool Exists(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate);
-    /// <summary>
-    /// 判断数据是否存在，存在为true，否则为false
-    /// </summary>
-    /// <param name="predicate">条件表达式</param>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回布尔值，存在为true，否则为false</returns>
-    Task<bool> ExistsAsync(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate, CancellationToken cancellationToken = default);
     #endregion
 }
 /// <summary>
@@ -6445,22 +6292,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
-
-    #region Exists
-    /// <summary>
-    /// 判断数据是否存在，存在为true，否则为false
-    /// </summary>
-    /// <param name="predicate">条件表达式</param>
-    /// <returns>返回布尔值，存在为true，否则为false</returns>
-    bool Exists(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate);
-    /// <summary>
-    /// 判断数据是否存在，存在为true，否则为false
-    /// </summary>
-    /// <param name="predicate">条件表达式</param>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回布尔值，存在为true，否则为false</returns>
-    Task<bool> ExistsAsync(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate, CancellationToken cancellationToken = default);
-    #endregion
 }
 /// <summary>
 /// 多表T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12查询
@@ -7007,22 +6838,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     /// <param name="cancellationToken"></param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    #endregion
-
-    #region Exists
-    /// <summary>
-    /// 判断数据是否存在，存在为true，否则为false
-    /// </summary>
-    /// <param name="predicate">条件表达式</param>
-    /// <returns>返回布尔值，存在为true，否则为false</returns>
-    bool Exists(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate);
-    /// <summary>
-    /// 判断数据是否存在，存在为true，否则为false
-    /// </summary>
-    /// <param name="predicate">条件表达式</param>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回布尔值，存在为true，否则为false</returns>
-    Task<bool> ExistsAsync(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate, CancellationToken cancellationToken = default);
     #endregion
 }
 /// <summary>
@@ -7572,22 +7387,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
-
-    #region Exists
-    /// <summary>
-    /// 判断数据是否存在，存在为true，否则为false
-    /// </summary>
-    /// <param name="predicate">条件表达式</param>
-    /// <returns>返回布尔值，存在为true，否则为false</returns>
-    bool Exists(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate);
-    /// <summary>
-    /// 判断数据是否存在，存在为true，否则为false
-    /// </summary>
-    /// <param name="predicate">条件表达式</param>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回布尔值，存在为true，否则为false</returns>
-    Task<bool> ExistsAsync(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate, CancellationToken cancellationToken = default);
-    #endregion
 }
 /// <summary>
 /// 多表T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14查询
@@ -8136,22 +7935,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <param name="cancellationToken"></param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    #endregion
-
-    #region Exists
-    /// <summary>
-    /// 判断数据是否存在，存在为true，否则为false
-    /// </summary>
-    /// <param name="predicate">条件表达式</param>
-    /// <returns>返回布尔值，存在为true，否则为false</returns>
-    bool Exists(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate);
-    /// <summary>
-    /// 判断数据是否存在，存在为true，否则为false
-    /// </summary>
-    /// <param name="predicate">条件表达式</param>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回布尔值，存在为true，否则为false</returns>
-    Task<bool> ExistsAsync(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate, CancellationToken cancellationToken = default);
     #endregion
 }
 /// <summary>
@@ -8703,22 +8486,6 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TField>> fieldExpr, CancellationToken cancellationToken = default);
     #endregion
-
-    #region Exists
-    /// <summary>
-    /// 判断数据是否存在，存在为true，否则为false
-    /// </summary>
-    /// <param name="predicate">条件表达式</param>
-    /// <returns>返回布尔值，存在为true，否则为false</returns>
-    bool Exists(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> predicate);
-    /// <summary>
-    /// 判断数据是否存在，存在为true，否则为false
-    /// </summary>
-    /// <param name="predicate">条件表达式</param>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回布尔值，存在为true，否则为false</returns>
-    Task<bool> ExistsAsync(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> predicate, CancellationToken cancellationToken = default);
-    #endregion
 }
 /// <summary>
 /// 多表T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16查询
@@ -9125,21 +8892,5 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <param name="cancellationToken"></param>
     /// <returns>返回该字段的最小值</returns>
     Task<TField> MinAsync<TField>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TField>> fieldExpr, CancellationToken cancellationToken = default);
-    #endregion
-
-    #region Exists
-    /// <summary>
-    /// 判断数据是否存在，存在为true，否则为false
-    /// </summary>
-    /// <param name="predicate">条件表达式</param>
-    /// <returns>返回布尔值，存在为true，否则为false</returns>
-    bool Exists(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> predicate);
-    /// <summary>
-    /// 判断数据是否存在，存在为true，否则为false
-    /// </summary>
-    /// <param name="predicate">条件表达式</param>
-    /// <param name="cancellationToken"></param>
-    /// <returns>返回布尔值，存在为true，否则为false</returns>
-    Task<bool> ExistsAsync(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> predicate, CancellationToken cancellationToken = default);
     #endregion
 }

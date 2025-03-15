@@ -29,56 +29,56 @@ public class QueryBase : QueryInternal, IQueryBase
     #endregion
 
     #region Count/Aggregate Internal
-    protected int CountInternal<TField>(Expression fieldExpr)
+    protected int CountInternal(Expression fieldExpr)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
         return this.QueryScalar<int>("COUNT({0})", "COUNT_VALUE", fieldExpr);
     }
-    protected async Task<int> CountInternalAsync<TField>(Expression fieldExpr, CancellationToken cancellationToken = default)
+    protected async Task<int> CountInternalAsync(Expression fieldExpr, CancellationToken cancellationToken = default)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
         return await this.QueryScalarAsync<int>("COUNT({0})", "COUNT_VALUE", fieldExpr, cancellationToken);
     }
-    protected int CountDistinctInternal<TField>(Expression fieldExpr)
+    protected int CountDistinctInternal(Expression fieldExpr)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
         return this.QueryScalar<int>("COUNT(DISTINCT {0})", "COUNT_VALUE", fieldExpr);
     }
-    protected async Task<int> CountDistinctInternalAsync<TField>(Expression fieldExpr, CancellationToken cancellationToken = default)
+    protected async Task<int> CountDistinctInternalAsync(Expression fieldExpr, CancellationToken cancellationToken = default)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
         return await this.QueryScalarAsync<int>("COUNT(DISTINCT {0})", "COUNT_VALUE", fieldExpr, cancellationToken);
     }
-    protected long LongCountInternal<TField>(Expression fieldExpr)
+    protected long LongCountInternal(Expression fieldExpr)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
         return this.QueryScalar<long>("COUNT({0})", "COUNT_VALUE", fieldExpr);
     }
-    protected async Task<long> LongCountInternalAsync<TField>(Expression fieldExpr, CancellationToken cancellationToken = default)
+    protected async Task<long> LongCountInternalAsync(Expression fieldExpr, CancellationToken cancellationToken = default)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
         return await this.QueryScalarAsync<long>("COUNT({0})", "COUNT_VALUE", fieldExpr, cancellationToken);
     }
-    protected long LongCountDistinctInternal<TField>(Expression fieldExpr)
+    protected long LongCountDistinctInternal(Expression fieldExpr)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
 
         return this.QueryScalar<long>("COUNT(DISTINCT {0})", "COUNT_VALUE", fieldExpr);
     }
-    protected async Task<long> LongCountDistinctInternalAsync<TField>(Expression fieldExpr, CancellationToken cancellationToken = default)
+    protected async Task<long> LongCountDistinctInternalAsync(Expression fieldExpr, CancellationToken cancellationToken = default)
     {
         if (fieldExpr == null)
             throw new ArgumentNullException(nameof(fieldExpr));
@@ -144,16 +144,9 @@ public class QueryBase : QueryInternal, IQueryBase
     #endregion
 
     #region Exists
-    protected virtual bool Exists(Expression predicate)
-    {
-        this.Visitor.Where(predicate);
-        return this.QueryScalar<int>("COUNT(1)", "COUNT_VALUE") > 0;
-    }
-    protected virtual async Task<bool> ExistsAsync(Expression predicate, CancellationToken cancellationToken = default)
-    {
-        this.Visitor.Where(predicate);
-        return await this.QueryScalarAsync<int>("COUNT(*)", "COUNT_VALUE", null, cancellationToken) > 0;
-    }
+    public virtual bool Exists() => this.QueryScalar<int>("COUNT(1)", "COUNT_VALUE") > 0;
+    public virtual async Task<bool> ExistsAsync(CancellationToken cancellationToken = default)
+        => await this.QueryScalarAsync<int>("COUNT(*)", "COUNT_VALUE", null, cancellationToken) > 0;
     #endregion
 
     #region ToSql
@@ -522,29 +515,23 @@ public class Query<T> : QueryBase, IQuery<T>
     }
     #endregion
 
-    #region Exists
-    public virtual bool Exists(Expression<Func<T, bool>> predicate) => base.Exists(predicate);
-    public virtual async Task<bool> ExistsAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default)
-        => await base.ExistsAsync(predicate, cancellationToken);
-    #endregion
-
     #region Count
     public virtual int Count<TField>(Expression<Func<T, TField>> fieldExpr)
-        => base.CountInternal<TField>(fieldExpr);
+        => base.CountInternal(fieldExpr);
     public virtual async Task<int> CountAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await base.CountInternalAsync<TField>(fieldExpr, cancellationToken);
+        => await base.CountInternalAsync(fieldExpr, cancellationToken);
     public virtual int CountDistinct<TField>(Expression<Func<T, TField>> fieldExpr)
-        => base.CountDistinctInternal<TField>(fieldExpr);
+        => base.CountDistinctInternal(fieldExpr);
     public virtual async Task<int> CountDistinctAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await base.CountDistinctInternalAsync<TField>(fieldExpr, cancellationToken);
+        => await base.CountDistinctInternalAsync(fieldExpr, cancellationToken);
     public virtual long LongCount<TField>(Expression<Func<T, TField>> fieldExpr)
-        => base.LongCountInternal<TField>(fieldExpr);
+        => base.LongCountInternal(fieldExpr);
     public virtual async Task<long> LongCountAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await base.LongCountInternalAsync<TField>(fieldExpr, cancellationToken);
+        => await base.LongCountInternalAsync(fieldExpr, cancellationToken);
     public virtual long LongCountDistinct<TField>(Expression<Func<T, TField>> fieldExpr)
-        => base.LongCountDistinctInternal<TField>(fieldExpr);
+        => base.LongCountDistinctInternal(fieldExpr);
     public virtual async Task<long> LongCountDistinctAsync<TField>(Expression<Func<T, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await base.LongCountDistinctInternalAsync<TField>(fieldExpr);
+        => await base.LongCountDistinctInternalAsync(fieldExpr);
     #endregion
 
     #region Aggregate

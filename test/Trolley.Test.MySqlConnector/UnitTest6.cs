@@ -1330,7 +1330,8 @@ public class UnitTest6 : UnitTestBase
             .UseTableBy("104", DateTime.Parse("2024-05-24"))
             .Where(f => repository.From<User>('b')
                 .UseTableBy("104", DateTime.Parse("2024-05-24"))
-                .Exists(t => t.Id == f.BuyerId && t.Age < 25))
+                .Where(t => t.Id == f.BuyerId && t.Age < 25)
+                .Exists())
             .ToSql(out _);
         Assert.Equal("SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_order_104_202405` a WHERE EXISTS(SELECT * FROM `sys_user_104` b WHERE b.`Id`=a.`BuyerId` AND b.`Age`<25)", sql);
 
@@ -1338,7 +1339,8 @@ public class UnitTest6 : UnitTestBase
             .UseTableBy("104", DateTime.Parse("2024-05-24"))
             .Where(f => repository.From<User>('b')
                 .UseTableBy("104", DateTime.Parse("2024-05-24"))
-                .Exists(t => t.Id == f.BuyerId && t.Age < 25))
+                .Where(t => t.Id == f.BuyerId && t.Age < 25)
+                .Exists())
             .ToList();
         if (result.Count > 0)
         {
@@ -1357,7 +1359,8 @@ public class UnitTest6 : UnitTestBase
                 .UseTableBy("104", DateTime.Parse("2024-05-24"))
                 .InnerJoin<OrderDetail>((x, y) => f.Id == y.OrderId)
                 .UseTableBy("104", DateTime.Parse("2024-05-24"))
-                .Exists((x, y) => x.Id == f.BuyerId && x.Age <= 25 && y.Price > 100))
+                .Where((x, y) => x.Id == f.BuyerId && x.Age <= 25 && y.Price > 100)
+                .Exists())
             .ToSql(out _);
         Assert.Equal("SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_order_104_202405` a WHERE EXISTS(SELECT * FROM `sys_user_104` b INNER JOIN `sys_order_detail_104_202405` c ON a.`Id`=c.`OrderId` WHERE b.`Id`=a.`BuyerId` AND b.`Age`<=25 AND c.`Price`>100)", sql);
 
@@ -1367,7 +1370,8 @@ public class UnitTest6 : UnitTestBase
                 .UseTableBy("104", DateTime.Parse("2024-05-24"))
                 .InnerJoin<OrderDetail>((x, y) => f.Id == y.OrderId)
                 .UseTableBy("104", DateTime.Parse("2024-05-24"))
-                .Exists((x, y) => x.Id == f.BuyerId && x.Age <= 25 && y.Price > 100))
+                .Where((x, y) => x.Id == f.BuyerId && x.Age <= 25 && y.Price > 100)
+                .Exists())
             .ToSql(out _);
         Assert.Equal("SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`ProductCount`,a.`TotalAmount`,a.`BuyerId`,a.`BuyerSource`,a.`SellerId`,a.`Products`,a.`Disputes`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy` FROM `sys_order_104_202405` a WHERE EXISTS(SELECT * FROM `sys_user_104` b INNER JOIN `sys_order_detail_104_202405` c ON a.`Id`=c.`OrderId` WHERE b.`Id`=a.`BuyerId` AND b.`Age`<=25 AND c.`Price`>100)", sql);
 
@@ -1377,7 +1381,8 @@ public class UnitTest6 : UnitTestBase
                 .UseTableBy("104", DateTime.Parse("2024-05-24"))
                 .InnerJoin<OrderDetail>((x, y) => f.Id == y.OrderId)
                 .UseTableBy("104", DateTime.Parse("2024-05-24"))
-                .Exists((x, y) => x.Id == f.BuyerId && x.Age <= 25 && y.Price > 100))
+                .Where((x, y) => x.Id == f.BuyerId && x.Age <= 25 && y.Price > 100)
+                .Exists())
             .ToList();
         if (result.Count > 0)
         {

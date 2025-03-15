@@ -240,21 +240,21 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
 
     #region Count
     public virtual int Count<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr)
-        => base.CountInternal<TField>(fieldExpr);
+        => base.CountInternal(fieldExpr);
     public virtual async Task<int> CountAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await base.CountInternalAsync<TField>(fieldExpr, cancellationToken);
+        => await base.CountInternalAsync(fieldExpr, cancellationToken);
     public virtual int CountDistinct<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr)
-        => base.CountDistinctInternal<TField>(fieldExpr);
+        => base.CountDistinctInternal(fieldExpr);
     public virtual async Task<int> CountDistinctAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await base.CountDistinctInternalAsync<TField>(fieldExpr, cancellationToken);
+        => await base.CountDistinctInternalAsync(fieldExpr, cancellationToken);
     public virtual long LongCount<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr)
-        => base.LongCountInternal<TField>(fieldExpr);
+        => base.LongCountInternal(fieldExpr);
     public virtual async Task<long> LongCountAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await base.LongCountInternalAsync<TField>(fieldExpr, cancellationToken);
+        => await base.LongCountInternalAsync(fieldExpr, cancellationToken);
     public virtual long LongCountDistinct<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr)
-        => base.LongCountDistinctInternal<TField>(fieldExpr);
+        => base.LongCountDistinctInternal(fieldExpr);
     public virtual async Task<long> LongCountDistinctAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default)
-        => await base.LongCountDistinctInternalAsync<TField>(fieldExpr, cancellationToken);
+        => await base.LongCountDistinctInternalAsync(fieldExpr, cancellationToken);
     #endregion
 
     #region Aggregate
@@ -274,12 +274,6 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
         => base.MinInternal<TField>(fieldExpr);
     public virtual async Task<TField> MinAsync<TField>(Expression<Func<<#=tables#>, TField>> fieldExpr, CancellationToken cancellationToken = default)
         => await base.MinInternalAsync<TField>(fieldExpr, cancellationToken);
-    #endregion
-
-    #region Exists
-    public virtual bool Exists(Expression<Func<<#=tables#>, bool>> predicate) => base.Exists(predicate);
-    public virtual async Task<bool> ExistsAsync(Expression<Func<<#=tables#>, bool>> predicate, CancellationToken cancellationToken = default)
-        => await base.ExistsAsync(predicate, cancellationToken);
     #endregion
 }
 <#  }#>
