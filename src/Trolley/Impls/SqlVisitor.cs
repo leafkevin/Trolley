@@ -732,7 +732,7 @@ public class SqlVisitor : ISqlVisitor
         var declaringType = methodCallExpr.Method.DeclaringType;
         if (declaringType == typeof(Sql) || declaringType == typeof(IRepository)
            || typeof(IAggregateSelect).IsAssignableFrom(declaringType)
-           || declaringType.IsGenericType && declaringType.FullName.StartsWith("Trolley.IQuery"))
+           || declaringType == typeof(IQueryBase))
         {
             sqlSegment = this.VisitSqlMethodCall(sqlSegment);
             sqlSegment.SegmentType = methodCallExpr.Type;
@@ -1722,17 +1722,19 @@ public class SqlVisitor : ISqlVisitor
                     break;
                 case "Exists":
                 case "ExistsAsync":
-                    lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
-                    var builder = new StringBuilder("SELECT * FROM ");
-                    if (genericArguments.Length > 0)
+                    if (callExpr.Arguments.Count > 0)
                     {
-                        foreach (var argsExpr in lambdaArgsExpr.Parameters)
+                        lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
+                        if (genericArguments.Length > 0)
                         {
-                            queryVisitor.From(argsExpr.Name[0], argsExpr.Type);
+                            foreach (var argsExpr in lambdaArgsExpr.Parameters)
+                            {
+                                queryVisitor.From(argsExpr.Name[0], argsExpr.Type);
+                            }
                         }
+                        queryVisitor.RefTableAliases = this.TableAliases;
+                        queryVisitor.Where(lambdaArgsExpr);                      
                     }
-                    queryVisitor.RefTableAliases = this.TableAliases;
-                    queryVisitor.Where(lambdaArgsExpr);
                     queryVisitor.Select("*");
                     queryVisitor.RefTableAliases = null;
                     break;
