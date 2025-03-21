@@ -481,7 +481,17 @@ public static class Extensions
     {
         var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader");
         var ormProviderExpr = Expression.Constant(dbContext.OrmProvider);
-        var entityMapper = dbContext.MapProvider.GetEntityMap(entityType);
+        bool hasMapper = false;
+        List<MemberInfo> memberInfos = null;
+        IFieldMapHandler fieldMapHandler = null;
+        if (dbContext.MapProvider.TryGetEntityMap(entityType, out var entityMapper))
+            hasMapper = true;
+        else
+        {
+            memberInfos = entityType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
+                .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field).ToList();
+            fieldMapHandler = dbContext.MapProvider.FieldMapHandler;
+        }
         var index = 0;
         var target = NewBuildInfo(entityType);
         var blockParameters = new List<ParameterExpression>();
@@ -491,17 +501,26 @@ public static class Extensions
         {
             var memberName = reader.GetName(index);
             //使用原始SQL才有可能SQL中的字段名与成员名不一致，或是没有加 AS成员名
-            if (!entityMapper.TryGetMemberMap(memberName, out var memberMapper))
+            MemberInfo memberInfo = null;
+            ITypeHandler typeHandler = null;
+            if (hasMapper)
+            {
+                if (!entityMapper.TryGetMemberMap(memberName, out var memberMapper))
+                    throw new Exception($"SQL中字段{memberName}映射不到模型{entityType.FullName}任何栏位,或者没有添加AS子句");
+                memberInfo = memberMapper.Member;
+                typeHandler = memberMapper.TypeHandler;
+            }
+            else if (!fieldMapHandler.TryFindMember(memberName, memberInfos, out memberInfo))
                 throw new Exception($"SQL中字段{memberName}映射不到模型{entityType.FullName}任何栏位,或者没有添加AS子句");
 
             var fieldType = reader.GetFieldType(index);
             var readerValueExpr = GetReaderValue(dbContext, ormProviderExpr, readerExpr, Expression.Constant(index),
-                  memberMapper.MemberType, fieldType, memberMapper.TypeHandler, blockParameters, blockBodies);
+                memberInfo.GetMemberType(), fieldType, typeHandler, blockParameters, blockBodies);
 
             if (!target.IsDefault)
                 target.Arguments.Add(readerValueExpr);
-            else if (memberMapper.Member.CanWrite())
-                target.Bindings.Add(Expression.Bind(memberMapper.Member, readerValueExpr));
+            else if (memberInfo.CanWrite())
+                target.Bindings.Add(Expression.Bind(memberInfo, readerValueExpr));
             index++;
         }
         var resultLabelExpr = Expression.Label(entityType);

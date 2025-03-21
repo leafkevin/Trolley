@@ -1965,16 +1965,23 @@ public class UnitTest6 : UnitTestBase
     [Fact]
     public async Task CreateShardingTable()
     {
-        var tenantId = 1;
+        var tenantId = "104";
         var now = DateTime.Now;
-        var sql = "DROP TABLE sys_order_detail_test;DROP TABLE sys_order_detail_test1;";
         var repository = this.dbFactory.Create();
         var tableName1 = repository.GetShardingTableNameBy<OrderDetail>(tenantId, now);
         var tableName2 = repository.GetShardingTableNameBy<OrderDetail>(tenantId, now.AddMonths(1));
-        sql += $"DROP TABLE {tableName1};DROP TABLE {tableName2}";
+        var tableNames = new List<string> { tableName1, tableName2 };
+        var existedTableNames = repository.GetShardingTableNames<OrderDetail>(f => tableNames.Contains(f));
+        string sql = null;
+        if (existedTableNames.Count > 0)
+        {
+            sql = "DROP TABLE " + string.Join(";DROP TABLE ", existedTableNames);
+            await repository.ExecuteAsync(sql);
+        }
+        repository.CreateShardingTable<OrderDetail>(tableName1);
+        await repository.CreateShardingTableAsync<OrderDetail>(tableName2);
+        sql = $"DROP TABLE {tableName1};DROP TABLE {tableName2}";
         await repository.ExecuteAsync(sql);
-        repository.CreateShardingTable<OrderDetail>("sys_order_detail_test");
-        await repository.CreateShardingTableAsync<OrderDetail>("sys_order_detail_test1");
         repository.CreateShardingTableBy<OrderDetail>(tenantId, now);
         await repository.CreateShardingTableByAsync<OrderDetail>(tenantId, now.AddMonths(1));
     }

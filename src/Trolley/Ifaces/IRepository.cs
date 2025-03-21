@@ -27,18 +27,20 @@ public interface IRepository
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="tableNameSelector">分表名选择表达式</param>
+    /// <param name="tableSchema">分表所在的TableSchema</param>
     /// <returns>返回满足条件的所有分表</returns>
-    List<string> GetShardingTableNames<TEntity>(Func<string, bool> tableNameSelector);
+    List<string> GetShardingTableNames<TEntity>(Func<string, bool> tableNameSelector, string tableSchema = null);
     /// <summary>
     /// 获取实体TEntity满足条件的所有分表名
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="tableNameSelector">分表名选择表达式</param>
+    /// <param name="tableSchema">分表所在的TableSchema</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回满足条件的所有分表</returns>
-    Task<List<string>> GetShardingTableNamesAsync<TEntity>(Func<string, bool> tableNameSelector, CancellationToken cancellationToken = default);
+    Task<List<string>> GetShardingTableNamesAsync<TEntity>(Func<string, bool> tableNameSelector, string tableSchema = null, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 创建实体TEntity的tableName分表，表结构与实体TEntity相同并生成所有索引等信息
+    /// 在当前数据库中创建实体TEntity的tableName分表，表结构与实体TEntity相同并生成所有索引等信息
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="tableName">分表名称</param>
@@ -53,7 +55,7 @@ public interface IRepository
     /// <returns>返回分表名</returns>
     string GetShardingTableNameBy<TEntity>(object field1Value, object field2Value = null);
     /// <summary>
-    /// 创建实体TEntity的tableName分表，表结构与实体TEntity相同并生成所有索引等信息
+    /// 在当前数据库中创建实体TEntity的tableName分表，表结构与实体TEntity相同并生成所有索引等信息
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="tableName">分表名称</param>
@@ -62,14 +64,14 @@ public interface IRepository
     /// <returns></returns>
     Task CreateShardingTableAsync<TEntity>(string tableName, string fromTableSchema = null, CancellationToken cancellationToken = default);
     /// <summary>
-    /// 创建实体TEntity表分表，根据字段值确定TEntity表分表名，表结构与实体TEntity相同并生成所有索引等信息
+    /// 在当前数据库中创建实体TEntity的tableName分表，根据字段值确定TEntity表分表名，字段值的顺序与配置的字段顺序保持一致，表结构与实体TEntity相同并生成所有索引等信息
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
     void CreateShardingTableBy<TEntity>(object field1Value, object field2Value = null);
     /// <summary>
-    /// 创建实体TEntity表分表，根据字段值确定TEntity表分表名，表结构与实体TEntity相同并生成所有索引等信息
+    /// 在当前数据库中创建实体TEntity的tableName分表，根据字段值确定TEntity表分表名，字段值的顺序与配置的字段顺序保持一致，表结构与实体TEntity相同并生成所有索引等信息
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="field1Value">字段1值</param>

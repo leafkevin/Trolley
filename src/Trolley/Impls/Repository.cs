@@ -25,8 +25,8 @@ public class Repository : IRepository
     #endregion
 
     #region ShardingTable
-    public virtual List<string> GetShardingTableNames<TEntity>(Func<string, bool> tableNameSelector) => null;
-    public virtual Task<List<string>> GetShardingTableNamesAsync<TEntity>(Func<string, bool> tableNameSelector, CancellationToken cancellationToken = default) => null;
+    public virtual List<string> GetShardingTableNames<TEntity>(Func<string, bool> tableNameSelector, string tableSchema = null) => null;
+    public virtual Task<List<string>> GetShardingTableNamesAsync<TEntity>(Func<string, bool> tableNameSelector, string tableSchema = null, CancellationToken cancellationToken = default) => null;
     public virtual void CreateShardingTable<TEntity>(string tableName, string fromTableSchema = null) { }
     public virtual Task CreateShardingTableAsync<TEntity>(string tableName, string fromTableSchema = null, CancellationToken cancellationToken = default) => Task.CompletedTask;
     public virtual string GetShardingTableNameBy<TEntity>(object field1Value, object field2Value = null) => null;
@@ -461,7 +461,7 @@ public class Repository : IRepository
         command.CommandType = commandType;
 
         connection.Open();
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+        var behavior = CommandBehavior.SequentialAccess;
         using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
         var result = new List<TEntity>();
         var entityType = typeof(TEntity);
@@ -534,7 +534,7 @@ public class Repository : IRepository
             Array.ForEach(parameters, f => command.Parameters.Add(f));
 
         connection.Open();
-        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+        var behavior = CommandBehavior.SequentialAccess;
         using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
         var result = new List<TEntity>();
         var entityType = typeof(TEntity);
