@@ -2357,7 +2357,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
         return result;
     }
     public abstract bool TryGetMathMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter);
-    protected (string, string) GetFullTableName(string tableName)
+    public (string, string) GetFullTableName(string tableName)
     {
         if (tableName.Contains('.'))
         {

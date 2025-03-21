@@ -24,48 +24,15 @@ public class Repository : IRepository
     public Repository(DbContext dbContext) => this.DbContext = dbContext;
     #endregion
 
-    public List<string> GetShardingTableNames<TEntity>(Func<string, bool> tableNameSelector)
-    {
-        var visitor = this.OrmProvider.NewQueryVisitor(this.DbContext);
-        var entityMapper = this.MapProvider.GetEntityMap(typeof(TEntity));
-        var tableName = entityMapper.TableName + "_";
-        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
-        command.CommandText = visitor.BuildShardingTableNamesSql(tableName);
-        command.CommandType = CommandType.Text;
-
-        connection.Open();
-        var behavior = CommandBehavior.SequentialAccess;
-        using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
-        var result = new List<string>();
-        while (reader.Read())
-            result.Add(reader.ToValue<string>(this.DbContext));
-
-        reader.Dispose();
-        command.Dispose();
-        if (isNeedClose) connection.Close();
-        return result;
-    }
-    public async Task<List<string>> GetShardingTableNamesAsync<TEntity>(Func<string, bool> tableNameSelector, CancellationToken cancellationToken = default)
-    {
-        var visitor = this.OrmProvider.NewQueryVisitor(this.DbContext);
-        var entityMapper = this.MapProvider.GetEntityMap(typeof(TEntity));
-        var tableName = entityMapper.TableName + "_";
-        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
-        command.CommandText = visitor.BuildShardingTableNamesSql(tableName);
-        command.CommandType = CommandType.Text;
-
-        await connection.OpenAsync(cancellationToken);
-        var behavior = CommandBehavior.SequentialAccess;
-        using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
-        var result = new List<string>();
-        while (await reader.ReadAsync(cancellationToken))
-            result.Add(reader.ToValue<string>(this.DbContext));
-
-        await reader.DisposeAsync();
-        await command.DisposeAsync();
-        if (isNeedClose) await connection.CloseAsync();
-        return result;
-    }
+    #region ShardingTable
+    public virtual List<string> GetShardingTableNames<TEntity>(Func<string, bool> tableNameSelector) => null;
+    public virtual Task<List<string>> GetShardingTableNamesAsync<TEntity>(Func<string, bool> tableNameSelector, CancellationToken cancellationToken = default) => null;
+    public virtual void CreateShardingTable<TEntity>(string tableName, string fromTableSchema = null) { }
+    public virtual Task CreateShardingTableAsync<TEntity>(string tableName, string fromTableSchema = null, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    public virtual string GetShardingTableNameBy<TEntity>(object field1Value, object field2Value = null) => null;
+    public virtual void CreateShardingTableBy<TEntity>(object field1Value, object field2Value = null) { }
+    public virtual Task CreateShardingTableByAsync<TEntity>(object field1Value, object field2Value = null, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    #endregion
 
     #region From
     public virtual IQuery<T> From<T>(char tableAsStart = 'a')

@@ -1962,4 +1962,20 @@ public class UnitTest6 : UnitTestBase
         Assert.NotNull(result);
         Assert.Equal("104", result.TenantId);
     }
+    [Fact]
+    public async Task CreateShardingTable()
+    {
+        var tenantId = 1;
+        var now = DateTime.Now;
+        var sql = "DROP TABLE sys_order_detail_test;DROP TABLE sys_order_detail_test1;";
+        var repository = this.dbFactory.Create();
+        var tableName1 = repository.GetShardingTableNameBy<OrderDetail>(tenantId, now);
+        var tableName2 = repository.GetShardingTableNameBy<OrderDetail>(tenantId, now.AddMonths(1));
+        sql += $"DROP TABLE {tableName1};DROP TABLE {tableName2}";
+        await repository.ExecuteAsync(sql);
+        repository.CreateShardingTable<OrderDetail>("sys_order_detail_test");
+        await repository.CreateShardingTableAsync<OrderDetail>("sys_order_detail_test1");
+        repository.CreateShardingTableBy<OrderDetail>(tenantId, now);
+        await repository.CreateShardingTableByAsync<OrderDetail>(tenantId, now.AddMonths(1));
+    }
 }

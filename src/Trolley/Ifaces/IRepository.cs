@@ -21,7 +21,7 @@ public interface IRepository
     DbContext DbContext { get; set; }
     #endregion
 
-    #region GetShardingTableNames
+    #region ShardingTableNames
     /// <summary>
     /// 获取实体TEntity满足条件的所有分表名
     /// </summary>
@@ -37,6 +37,46 @@ public interface IRepository
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回满足条件的所有分表</returns>
     Task<List<string>> GetShardingTableNamesAsync<TEntity>(Func<string, bool> tableNameSelector, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// 创建实体TEntity的tableName分表，表结构与实体TEntity相同并生成所有索引等信息
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="tableName">分表名称</param>
+    /// <param name="fromTableSchema">实体表所在的TableSchema</param>
+    void CreateShardingTable<TEntity>(string tableName, string fromTableSchema = null);
+    /// <summary>
+    /// 根据字段值确定TEntity表分表名，最多支持2个字段值
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="field2Value">字段2值</param>
+    /// <returns>返回分表名</returns>
+    string GetShardingTableNameBy<TEntity>(object field1Value, object field2Value = null);
+    /// <summary>
+    /// 创建实体TEntity的tableName分表，表结构与实体TEntity相同并生成所有索引等信息
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="tableName">分表名称</param>
+    /// <param name="fromTableSchema">实体表所在的TableSchema</param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns></returns>
+    Task CreateShardingTableAsync<TEntity>(string tableName, string fromTableSchema = null, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// 创建实体TEntity表分表，根据字段值确定TEntity表分表名，表结构与实体TEntity相同并生成所有索引等信息
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="field2Value">字段2值</param>
+    void CreateShardingTableBy<TEntity>(object field1Value, object field2Value = null);
+    /// <summary>
+    /// 创建实体TEntity表分表，根据字段值确定TEntity表分表名，表结构与实体TEntity相同并生成所有索引等信息
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="field2Value">字段2值</param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns></returns>
+    Task CreateShardingTableByAsync<TEntity>(object field1Value, object field2Value = null, CancellationToken cancellationToken = default);
     #endregion
 
     #region From

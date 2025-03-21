@@ -353,8 +353,19 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             int index = 0;
             foreach (var orderByField in this.OrderByFields)
             {
-                var readerField = orderByField.Field.TargetMember ?? orderByField.Field.FromMember;
-                var fieldName = this.OrmProvider.GetFieldName(readerField.Name);
+                string fieldName = null;
+                if (orderByField.Field.FromMember != null && orderByField.Field.TargetMember.Name == orderByField.Field.FromMember.Name)
+                {
+                    fieldName = orderByField.Field.Body;
+                    var startIndex = fieldName.IndexOf('.');
+                    if (startIndex > 0)
+                        fieldName = fieldName.Substring(startIndex + 1);
+                }
+                else
+                {
+                    fieldName = orderByField.Field.TargetMember.Name;
+                    fieldName = this.OrmProvider.GetFieldName(fieldName);
+                }
                 if (index > 0) builder.Append(',');
                 builder.Append(fieldName);
                 if (!string.IsNullOrEmpty(orderByField.OrderSuffix))

@@ -817,5 +817,32 @@ public sealed class DbContext
         }
         return true;
     }
+    public string GetShardingTableBy(EntityMap entityMappper, object field1Value, object field2Value = null)
+    {
+        var entityType = entityMappper.EntityType;
+        if (this.ShardingProvider == null || !this.ShardingProvider.TryGetTableSharding(entityType, out var shardingTable))
+            throw new Exception($"实体表{entityType.FullName}没有配置分表，无需调用此方法");
+        if (shardingTable.DependOnMembers == null || shardingTable.DependOnMembers.Count == 0)
+            throw new Exception($"实体表{entityType.FullName}没有配置分表依赖的字段");
+
+        var origTableName = entityMappper.TableName;
+        string tableName = null;
+        if (field1Value == null)
+            throw new ArgumentNullException($"实体{entityType.FullName}的分表规则依赖字段，字段值field1Value不能为null");
+
+        if (shardingTable.DependOnMembers.Count > 1)
+        {
+            if (field2Value == null)
+                throw new ArgumentNullException($"实体{entityType.FullName}的分表规则依赖2个字段，字段值field2Value不能为null");
+            var shardingRule = shardingTable.Rule as Func<string, object, object, string>;
+            tableName = shardingRule.Invoke(origTableName, field1Value, field2Value);
+        }
+        else
+        {
+            var shardingRule = shardingTable.Rule as Func<string, object, string>;
+            tableName = shardingRule.Invoke(origTableName, field1Value);
+        }
+        return tableName;
+    }
     #endregion
 }

@@ -53,7 +53,6 @@ public interface IQueryVisitor : IDisposable
     string BuildShardingSql(string formatSql);
     string BuildCteTableSql(string tableName, out List<SqlFieldSegment> readerFields, out bool isRecursive);
 
-    string BuildShardingTableNamesSql(string orgTableName, string tableSchema = null);
     string BuildTableShardingsSql();
     void SetShardingTables(List<string> shardingTables);
     void UseTable(bool isIncludeMany, params string[] tableNames);

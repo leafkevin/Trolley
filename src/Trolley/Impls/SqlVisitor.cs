@@ -1733,7 +1733,7 @@ public class SqlVisitor : ISqlVisitor
                             }
                         }
                         queryVisitor.RefTableAliases = this.TableAliases;
-                        queryVisitor.Where(lambdaArgsExpr);                      
+                        queryVisitor.Where(lambdaArgsExpr);
                     }
                     queryVisitor.Select("*");
                     queryVisitor.RefTableAliases = null;
