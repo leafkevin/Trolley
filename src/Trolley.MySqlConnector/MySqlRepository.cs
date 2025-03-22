@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -149,7 +150,7 @@ public class MySqlRepository : Repository, IMySqlRepository
             if (!string.IsNullOrEmpty(columnInfo.DefaultValue))
                 builder.Append($" DEFAULT {columnInfo.DefaultValue}");
             if (!string.IsNullOrEmpty(columnInfo.Description))
-                builder.Append($" COMMENT {columnInfo.Description}");
+                builder.Append($" COMMENT '{columnInfo.Description}'");
             builder.AppendLine(",");
         }
         var indexNames = indexInfos.Select(f => f.IndexName).Distinct().ToList();
@@ -183,7 +184,7 @@ public class MySqlRepository : Repository, IMySqlRepository
         }
         builder.AppendLine();
         builder.AppendLine($") ENGINE={collationInfo.Engine} CHARACTER SET={collationInfo.CharacterSetName} COLLATE={collationInfo.CollationName}");
-        await this.ExecuteAsync(builder.ToString(), cancellationToken);
+        await this.ExecuteAsync(builder.ToString(), null, CommandType.Text, cancellationToken);
     }
     public override string GetShardingTableNameBy<TEntity>(object field1Value, object field2Value = null)
     {
