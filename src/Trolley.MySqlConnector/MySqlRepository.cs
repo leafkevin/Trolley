@@ -70,8 +70,10 @@ public class MySqlRepository : Repository, IMySqlRepository
         var builder = new StringBuilder($"CREATE TABLE {this.OrmProvider.GetTableName(tableName)}");
         builder.AppendLine();
         builder.AppendLine("(");
-        foreach (var columnInfo in columnInfos)
+        for (int i = 0; i < columnInfos.Count; i++)
         {
+            if (i > 0) builder.AppendLine(",");
+            var columnInfo = columnInfos[i];
             builder.Append($"{this.OrmProvider.GetFieldName(columnInfo.ColumnName)} {columnInfo.ColumnType}");
             if (columnInfo.IsNullable == "NO")
                 builder.Append(" NOT");
@@ -82,12 +84,11 @@ public class MySqlRepository : Repository, IMySqlRepository
                 builder.Append($" DEFAULT {columnInfo.DefaultValue}");
             if (!string.IsNullOrEmpty(columnInfo.Description))
                 builder.Append($" COMMENT {columnInfo.Description}");
-            builder.AppendLine(",");
         }
         var indexNames = indexInfos.Select(f => f.IndexName).Distinct().ToList();
         for (int i = 0; i < indexNames.Count; i++)
         {
-            if (i > 0) builder.AppendLine(",");
+            builder.AppendLine(",");
             var indexName = indexNames[i];
             var indexInfo = indexInfos.First(f => f.IndexName == indexName);
             if (indexInfo.IndexName == "PRIMARY")
@@ -114,7 +115,12 @@ public class MySqlRepository : Repository, IMySqlRepository
             builder.Append($") USING {indexInfo.IndexType}");
         }
         builder.AppendLine();
-        builder.AppendLine($") ENGINE={collationInfo.Engine} CHARACTER SET={collationInfo.CharacterSetName} COLLATE={collationInfo.CollationName}");
+        builder.Append($") ENGINE={collationInfo.Engine} CHARACTER SET={collationInfo.CharacterSetName} COLLATE={collationInfo.CollationName}");
+        if (!string.IsNullOrEmpty(collationInfo.TableComment))
+        {
+            builder.AppendLine(";");
+            builder.Append($"ALTER TABLE {this.OrmProvider.GetTableName(tableName)} COMMENT '{collationInfo.TableComment}'");
+        }
         this.Execute(builder.ToString());
     }
     public override async Task CreateShardingTableAsync<TEntity>(string tableName, string fromTableSchema = null, CancellationToken cancellationToken = default)
@@ -128,7 +134,7 @@ public class MySqlRepository : Repository, IMySqlRepository
         var shardingPart = tableName.Substring(orgTableName.Length);
         using var reader = await this.QueryMultipleAsync(f =>
         {
-            f.QueryFirst<CollationInfo>($"SELECT a.ENGINE,b.COLLATION_NAME,b.CHARACTER_SET_NAME FROM INFORMATION_SCHEMA.`TABLES` a,INFORMATION_SCHEMA.`COLLATION_CHARACTER_SET_APPLICABILITY` b WHERE a.TABLE_COLLATION=b.COLLATION_NAME AND a.TABLE_SCHEMA='{fromTableSchema}' AND a.TABLE_NAME='{orgTableName}' ")
+            f.QueryFirst<CollationInfo>($"SELECT a.TABLE_COMMENT,a.ENGINE,b.COLLATION_NAME,b.CHARACTER_SET_NAME FROM INFORMATION_SCHEMA.`TABLES` a,INFORMATION_SCHEMA.`COLLATION_CHARACTER_SET_APPLICABILITY` b WHERE a.TABLE_COLLATION=b.COLLATION_NAME AND a.TABLE_SCHEMA='{fromTableSchema}' AND a.TABLE_NAME='{orgTableName}' ")
              .Query<ColumnInfo>($"SELECT COLUMN_NAME,COLUMN_TYPE,COLUMN_COMMENT Description,COLUMN_DEFAULT DefaultValue,EXTRA IsIdentity,IS_NULLABLE FROM INFORMATION_SCHEMA.`COLUMNS` WHERE TABLE_SCHEMA='{fromTableSchema}' AND TABLE_NAME='{orgTableName}' ORDER BY ORDINAL_POSITION")
              .Query<IndexInfo>($"SELECT NON_UNIQUE,INDEX_NAME,SEQ_IN_INDEX,COLUMN_NAME,COLLATION,INDEX_TYPE FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_NAME='{orgTableName}' AND TABLE_SCHEMA='{fromTableSchema}'");
         }, cancellationToken);
@@ -139,8 +145,10 @@ public class MySqlRepository : Repository, IMySqlRepository
         var builder = new StringBuilder($"CREATE TABLE {this.OrmProvider.GetTableName(tableName)}");
         builder.AppendLine();
         builder.AppendLine("(");
-        foreach (var columnInfo in columnInfos)
+        for (int i = 0; i < columnInfos.Count; i++)
         {
+            if (i > 0) builder.AppendLine(",");
+            var columnInfo = columnInfos[i];
             builder.Append($"{this.OrmProvider.GetFieldName(columnInfo.ColumnName)} {columnInfo.ColumnType}");
             if (columnInfo.IsNullable == "NO")
                 builder.Append(" NOT");
@@ -151,12 +159,11 @@ public class MySqlRepository : Repository, IMySqlRepository
                 builder.Append($" DEFAULT {columnInfo.DefaultValue}");
             if (!string.IsNullOrEmpty(columnInfo.Description))
                 builder.Append($" COMMENT '{columnInfo.Description}'");
-            builder.AppendLine(",");
         }
         var indexNames = indexInfos.Select(f => f.IndexName).Distinct().ToList();
         for (int i = 0; i < indexNames.Count; i++)
         {
-            if (i > 0) builder.AppendLine(",");
+            builder.AppendLine(",");
             var indexName = indexNames[i];
             var indexInfo = indexInfos.First(f => f.IndexName == indexName);
             if (indexInfo.IndexName == "PRIMARY")
@@ -183,30 +190,19 @@ public class MySqlRepository : Repository, IMySqlRepository
             builder.Append($") USING {indexInfo.IndexType}");
         }
         builder.AppendLine();
-        builder.AppendLine($") ENGINE={collationInfo.Engine} CHARACTER SET={collationInfo.CharacterSetName} COLLATE={collationInfo.CollationName}");
+        builder.Append($") ENGINE={collationInfo.Engine} CHARACTER SET={collationInfo.CharacterSetName} COLLATE={collationInfo.CollationName}");
+        if (!string.IsNullOrEmpty(collationInfo.TableComment))
+        {
+            builder.AppendLine(";");
+            builder.Append($"ALTER TABLE {this.OrmProvider.GetTableName(tableName)} COMMENT '{collationInfo.TableComment}'");
+        }
         await this.ExecuteAsync(builder.ToString(), null, CommandType.Text, cancellationToken);
-    }
-    public override string GetShardingTableNameBy<TEntity>(object field1Value, object field2Value = null)
-    {
-        var entityMapper = this.MapProvider.GetEntityMap(typeof(TEntity));
-        return this.DbContext.GetShardingTableBy(entityMapper, field1Value, field2Value);
-    }
-    public override void CreateShardingTableBy<TEntity>(object field1Value, object field2Value = null)
-    {
-        var entityMapper = this.MapProvider.GetEntityMap(typeof(TEntity));
-        var tableName = this.DbContext.GetShardingTableBy(entityMapper, field1Value, field2Value);
-        this.CreateShardingTable<TEntity>(tableName);
-    }
-    public override async Task CreateShardingTableByAsync<TEntity>(object field1Value, object field2Value = null, CancellationToken cancellationToken = default)
-    {
-        var entityMapper = this.MapProvider.GetEntityMap(typeof(TEntity));
-        var tableName = this.DbContext.GetShardingTableBy(entityMapper, field1Value, field2Value);
-        await this.CreateShardingTableAsync<TEntity>(tableName, null, cancellationToken);
     }
     #endregion
 
     class CollationInfo
     {
+        public string TableComment { get; set; }
         public string Engine { get; set; }
         public string CollationName { get; set; }
         public string CharacterSetName { get; set; }

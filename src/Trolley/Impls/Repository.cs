@@ -29,9 +29,23 @@ public class Repository : IRepository
     public virtual Task<List<string>> GetShardingTableNamesAsync<TEntity>(Func<string, bool> tableNameSelector, string tableSchema = null, CancellationToken cancellationToken = default) => null;
     public virtual void CreateShardingTable<TEntity>(string tableName, string fromTableSchema = null) { }
     public virtual Task CreateShardingTableAsync<TEntity>(string tableName, string fromTableSchema = null, CancellationToken cancellationToken = default) => Task.CompletedTask;
-    public virtual string GetShardingTableNameBy<TEntity>(object field1Value, object field2Value = null) => null;
-    public virtual void CreateShardingTableBy<TEntity>(object field1Value, object field2Value = null) { }
-    public virtual Task CreateShardingTableByAsync<TEntity>(object field1Value, object field2Value = null, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    public virtual string GetShardingTableNameBy<TEntity>(object field1Value, object field2Value = null)
+    {
+        var entityMapper = this.MapProvider.GetEntityMap(typeof(TEntity));
+        return this.DbContext.GetShardingTableBy(entityMapper, field1Value, field2Value);
+    }
+    public virtual void CreateShardingTableBy<TEntity>(object field1Value, object field2Value = null)
+    {
+        var entityMapper = this.MapProvider.GetEntityMap(typeof(TEntity));
+        var tableName = this.DbContext.GetShardingTableBy(entityMapper, field1Value, field2Value);
+        this.CreateShardingTable<TEntity>(tableName);
+    }
+    public virtual async Task CreateShardingTableByAsync<TEntity>(object field1Value, object field2Value = null, CancellationToken cancellationToken = default)
+    {
+        var entityMapper = this.MapProvider.GetEntityMap(typeof(TEntity));
+        var tableName = this.DbContext.GetShardingTableBy(entityMapper, field1Value, field2Value);
+        await this.CreateShardingTableAsync<TEntity>(tableName, null, cancellationToken);
+    }
     #endregion
 
     #region From

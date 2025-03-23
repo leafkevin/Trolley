@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Trolley.PostgreSql;
 
@@ -88,61 +88,109 @@ public class PostgreSqlRepository : Repository, IPostgreSqlRepository
         var shardingPart = tableName.Substring(orgTableName.Length);
         using var reader = this.QueryMultiple(f =>
         {
-            f.Query<ColumnInfo>($"select c.attname ColumnName,c.attndims ArrayDimens,case when c.atttypmod>0 and c.atttypmod<32767 then c.atttypmod-4 else c.attlen end Length,e.description,pg_get_expr(g.adbin,g.adrelid) DefaultValue,f.conname is not null,h.refobjid is not null,c.attnotnull IsNullable from pg_class a\r\n inner join pg_namespace b on a.relnamespace = b.oid inner join pg_attribute c on a.oid = c.attrelid and c.attnum>0\r\n inner join pg_type d on c.atttypid = d.oid\tleft join pg_description e on e.objoid = c.attrelid and e.objsubid = c.attnum\r\n left join pg_constraint f on a.oid=f.conrelid and f.contype='p' and f.conkey @> array[c.attnum]\r\n left join pg_attrdef g on a.oid=g.adrelid and c.attnum=g.adnum\r\n left join (select dp.refobjid,dp.refobjsubid from pg_depend dp,pg_class cs where dp.objid=cs.oid and cs.relkind='S') h on a.oid=h.refobjid and c.attnum=h.refobjsubid\r\n where a.relkind='r' and b.nspname='{{tableSchema}}' and a.relname='{{tableName}}' order by c.attnum asc")
-             .Query<IndexInfo>($"SELECT NON_UNIQUE,INDEX_NAME,SEQ_IN_INDEX,COLUMN_NAME,COLLATION,INDEX_TYPE FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_NAME='{orgTableName}' AND TABLE_SCHEMA='{fromTableSchema}'");
+            f.Query<TableInfo>($"select cast(obj_description(a.oid) as varchar) description,c.spcname tablespace from pg_class a inner join pg_namespace b on a.relnamespace=b.oid left join pg_tablespace c on a.reltablespace=c.oid where a.relkind='r' and b.nspname='{fromTableSchema}' and a.relname='{orgTableName}'")
+             .Query<ColumnInfo>(@$"select c.attnum ColumnIndex,c.attname ColumnName,c.attndims ArrayDimens,concat_ws('',d.typname,SUBSTRING(format_type(c.atttypid,c.atttypmod) from '\(.*\)')) columnType,e.description,pg_get_expr(f.adbin,f.adrelid) DefaultValue,g.refobjid IsIdentity,c.attnotnull IsRequired 
+from pg_class a inner join pg_namespace b on a.relnamespace=b.oid inner join pg_attribute c on a.oid=c.attrelid and c.attnum>0 inner join pg_type d on c.atttypid=d.oid left join pg_description e on e.objoid=c.attrelid and e.objsubid=c.attnum left join pg_attrdef f on a.oid=f.adrelid 
+and c.attnum=f.adnum left join (select dp.refobjid,dp.refobjsubid from pg_depend dp,pg_class cs where dp.objid=cs.oid and cs.relkind='S') g on a.oid=g.refobjid and c.attnum=g.refobjsubid where a.relkind='r' and b.nspname='{fromTableSchema}' and a.relname='{orgTableName}' order by c.attnum asc")
+             .Query<IndexInfo>($"select c.attname ColumnName,b.relname IndexName,a.indisunique IsUnique,a.indisprimary IsPrimary,not a.indisclustered IsClustered,pg_index_column_has_property(b.oid,c.attnum,'desc') IsDesc,d.amname IndexType from pg_index a inner join pg_class b " +
+                $"on b.oid=a.indexrelid inner join pg_attribute c on c.attnum>0 and c.attrelid=b.oid inner join pg_am d ON b.relam=d.oid inner join pg_namespace e on e.oid=b.relnamespace inner join pg_class f on f.oid=a.indrelid WHERE f.relname='{orgTableName}' and e.nspname='{fromTableSchema}'");
         });
-        var collationInfo = reader.ReadFirst<CollationInfo>();
+        var tableInfo = reader.ReadFirst<TableInfo>();
         var columnInfos = reader.Read<ColumnInfo>();
         var indexInfos = reader.Read<IndexInfo>();
 
-        var builder = new StringBuilder($"CREATE TABLE {this.OrmProvider.GetTableName(tableName)}");
+        var builder = new StringBuilder($"CREATE TABLE IF NOT EXISTS {this.OrmProvider.GetTableName(tableName)}");
         builder.AppendLine();
         builder.AppendLine("(");
-        foreach (var columnInfo in columnInfos)
-        {
-            builder.Append($"{this.OrmProvider.GetFieldName(columnInfo.ColumnName)} {columnInfo.ColumnType}");
-            if (columnInfo.IsNullable == "NO")
-                builder.Append(" NOT");
-            builder.Append(" NULL");
-            if (columnInfo.IsIdentity == "auto_increment")
-                builder.Append(" AUTO_INCREMENT");
-            if (!string.IsNullOrEmpty(columnInfo.DefaultValue))
-                builder.Append($" DEFAULT {columnInfo.DefaultValue}");
-            if (!string.IsNullOrEmpty(columnInfo.Description))
-                builder.Append($" COMMENT {columnInfo.Description}");
-            builder.AppendLine(",");
-        }
-        var indexNames = indexInfos.Select(f => f.IndexName).Distinct().ToList();
-        for (int i = 0; i < indexNames.Count; i++)
+        var commentBuilder = new StringBuilder();
+        if (tableInfo != null && !string.IsNullOrEmpty(tableInfo.Description))
+            commentBuilder.AppendLine($"COMMENT ON TABLE {this.OrmProvider.GetTableName(tableName)} IS '{tableInfo.Description}';");
+        for (int i = 0; i < columnInfos.Count; i++)
         {
             if (i > 0) builder.AppendLine(",");
-            var indexName = indexNames[i];
-            var indexInfo = indexInfos.First(f => f.IndexName == indexName);
-            if (indexInfo.IndexName == "PRIMARY")
-                builder.Append($"CONSTRAINT `pk_{tableName}` PRIMARY KEY");
-            else
+            var columnInfo = columnInfos[i];
+            builder.Append($"{this.OrmProvider.GetFieldName(columnInfo.ColumnName)} {columnInfo.ColumnType}");
+            if (columnInfo.IsRequired)
+                builder.Append(" NOT");
+            builder.Append(" NULL");
+            if (!string.IsNullOrEmpty(columnInfo.IsIdentity))
             {
-                if (!indexInfo.NonUnique)
-                    builder.Append("UNIQUE ");
-                builder.Append("INDEX ");
-                var myIndexName = indexName + shardingPart;
-                builder.Append(this.OrmProvider.GetFieldName(myIndexName));
+                if (!string.IsNullOrEmpty(columnInfo.DefaultValue) && columnInfo.DefaultValue.Contains("nextval"))
+                {
+                    var dataType = columnInfo.ColumnType switch
+                    {
+                        "int2" => "SMALLSERIAL",
+                        "int8" => "BIGSERIAL",
+                        _ => "SERIAL"
+                    };
+                    builder.Append($" {dataType}");
+                }
+                else builder.Append(" GENERATED BY DEFAULT AS IDENTITY");
             }
-            builder.Append('(');
-            var myIndexInfos = indexInfos.Where(f => f.IndexName == indexName)
-                .OrderBy(f => f.SeqInIndex).ToList();
+            if (!string.IsNullOrEmpty(columnInfo.DefaultValue) && columnInfo.DefaultValue.Contains("nextval"))
+            {
+                builder.Append(" DEFAULT ");
+                if (columnInfo.DefaultValue.StartsWith("NULL"))
+                    builder.Append("NULL");
+                else builder.Append(columnInfo.DefaultValue);
+            }
+            if (!string.IsNullOrEmpty(columnInfo.Description))
+                commentBuilder.AppendLine($"COMMENT ON COLUMN {tableName}.{this.OrmProvider.GetFieldName(columnInfo.ColumnName)} IS '{columnInfo.Description}';");
+        }
+        var myIndexInfos = indexInfos.FindAll(f => f.IsPrimary);
+        if (myIndexInfos.Count > 0)
+        {
+            builder.AppendLine(",");
+            builder.Append($"CONSTRAINT {this.OrmProvider.GetFieldName($"pk_{tableName}")} PRIMARY KEY(");
             for (int j = 0; j < myIndexInfos.Count; j++)
             {
                 if (j > 0) builder.Append(',');
-                var myIndexInfo = myIndexInfos[j];
-                builder.Append(this.OrmProvider.GetFieldName(myIndexInfo.ColumnName));
-                var orderBy = myIndexInfo.Collation == "A" ? "ASC" : "DESC";
-                builder.Append($" {orderBy}");
+                var columnInfo = myIndexInfos[j];
+                builder.Append(this.OrmProvider.GetFieldName(columnInfo.ColumnName));
+                if (columnInfo.IsDesc)
+                    builder.Append(" DESC");
             }
-            builder.Append($") USING {indexInfo.IndexType}");
+            builder.AppendLine(")");
         }
-        builder.AppendLine();
-        builder.AppendLine($") ENGINE={collationInfo.Engine} CHARACTER SET={collationInfo.CharacterSetName} COLLATE={collationInfo.CollationName}");
+        builder.Append(')');
+        if (tableInfo != null && !string.IsNullOrEmpty(tableInfo.TableSpace))
+            builder.Append($" TABLESPACE {tableInfo.TableSpace}");
+
+        if (indexInfos.Exists(f => !f.IsPrimary))
+        {
+            var indexNames = indexInfos.Where(f => !f.IsPrimary).Select(f => f.IndexName).Distinct().ToList();
+            for (int i = 0; i < indexNames.Count; i++)
+            {
+                builder.AppendLine(";");
+                builder.Append("CREATE ");
+                var indexName = indexNames[i];
+                var indexInfo = indexInfos.First(f => f.IndexName == indexName);
+                if (indexInfo.IsUnique)
+                    builder.Append("UNIQUE ");
+                builder.Append("INDEX IF NOT EXISTS ");
+                var myIndexName = indexInfo.IndexName + shardingPart;
+                builder.Append(this.OrmProvider.GetFieldName(myIndexName));
+                builder.Append($" ON {this.OrmProvider.GetTableName(tableName)}");
+                if (!string.IsNullOrEmpty(indexInfo.IndexType))
+                    builder.Append($" USING {indexInfo.IndexType}");
+                builder.Append('(');
+                myIndexInfos = indexInfos.FindAll(f => f.IndexName == indexName);
+                for (int j = 0; j < myIndexInfos.Count; j++)
+                {
+                    if (j > 0) builder.Append(',');
+                    var columnInfo = myIndexInfos[j];
+                    builder.Append(this.OrmProvider.GetFieldName(columnInfo.ColumnName));
+                    if (columnInfo.IsDesc)
+                        builder.Append(" DESC");
+                }
+                builder.Append(')');
+            }
+        }
+        if (commentBuilder.Length > 0)
+        {
+            builder.AppendLine(";");
+            builder.AppendLine(commentBuilder.ToString());
+        }
         this.Execute(builder.ToString());
     }
     public override async Task CreateShardingTableAsync<TEntity>(string tableName, string fromTableSchema = null, CancellationToken cancellationToken = default)
@@ -156,62 +204,109 @@ public class PostgreSqlRepository : Repository, IPostgreSqlRepository
         var shardingPart = tableName.Substring(orgTableName.Length);
         using var reader = await this.QueryMultipleAsync(f =>
         {
-            f.QueryFirst<CollationInfo>($"SELECT a.ENGINE,b.COLLATION_NAME,b.CHARACTER_SET_NAME FROM INFORMATION_SCHEMA.`TABLES` a,INFORMATION_SCHEMA.`COLLATION_CHARACTER_SET_APPLICABILITY` b WHERE a.TABLE_COLLATION=b.COLLATION_NAME AND a.TABLE_SCHEMA='{fromTableSchema}' AND a.TABLE_NAME='{orgTableName}' ")
-             .Query<ColumnInfo>($"SELECT COLUMN_NAME,COLUMN_TYPE,COLUMN_COMMENT Description,COLUMN_DEFAULT DefaultValue,EXTRA IsIdentity,IS_NULLABLE FROM INFORMATION_SCHEMA.`COLUMNS` WHERE TABLE_SCHEMA='{fromTableSchema}' AND TABLE_NAME='{orgTableName}' ORDER BY ORDINAL_POSITION")
-             .Query<IndexInfo>($"SELECT NON_UNIQUE,INDEX_NAME,SEQ_IN_INDEX,COLUMN_NAME,COLLATION,INDEX_TYPE FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_NAME='{orgTableName}' AND TABLE_SCHEMA='{fromTableSchema}'");
-        }, cancellationToken);
-        var collationInfo = await reader.ReadFirstAsync<CollationInfo>(cancellationToken);
-        var columnInfos = await reader.ReadAsync<ColumnInfo>(cancellationToken);
-        var indexInfos = await reader.ReadAsync<IndexInfo>(cancellationToken);
+            f.Query<TableInfo>($"select cast(obj_description(a.oid) as varchar) description,c.spcname tablespace from pg_class a inner join pg_namespace b on a.relnamespace=b.oid left join pg_tablespace c on a.reltablespace=c.oid where a.relkind='r' and b.nspname='{fromTableSchema}' and a.relname='{orgTableName}'")
+             .Query<ColumnInfo>(@$"select c.attnum ColumnIndex,c.attname ColumnName,c.attndims ArrayDimens,concat_ws('',d.typname,SUBSTRING(format_type(c.atttypid,c.atttypmod) from '\(.*\)')) columnType,e.description,pg_get_expr(f.adbin,f.adrelid) DefaultValue,g.refobjid IsIdentity,c.attnotnull IsRequired 
+from pg_class a inner join pg_namespace b on a.relnamespace=b.oid inner join pg_attribute c on a.oid=c.attrelid and c.attnum>0 inner join pg_type d on c.atttypid=d.oid left join pg_description e on e.objoid=c.attrelid and e.objsubid=c.attnum left join pg_attrdef f on a.oid=f.adrelid 
+and c.attnum=f.adnum left join (select dp.refobjid,dp.refobjsubid from pg_depend dp,pg_class cs where dp.objid=cs.oid and cs.relkind='S') g on a.oid=g.refobjid and c.attnum=g.refobjsubid where a.relkind='r' and b.nspname='{fromTableSchema}' and a.relname='{orgTableName}' order by c.attnum asc")
+             .Query<IndexInfo>($"select c.attname ColumnName,b.relname IndexName,a.indisunique IsUnique,a.indisprimary IsPrimary,not a.indisclustered IsClustered,pg_index_column_has_property(b.oid,c.attnum,'desc') IsDesc,d.amname IndexType from pg_index a inner join pg_class b " +
+                $"on b.oid=a.indexrelid inner join pg_attribute c on c.attnum>0 and c.attrelid=b.oid inner join pg_am d ON b.relam=d.oid inner join pg_namespace e on e.oid=b.relnamespace inner join pg_class f on f.oid=a.indrelid WHERE f.relname='{orgTableName}' and e.nspname='{fromTableSchema}'");
+        });
+        var tableInfo = await reader.ReadFirstAsync<TableInfo>();
+        var columnInfos = await reader.ReadAsync<ColumnInfo>();
+        var indexInfos = await reader.ReadAsync<IndexInfo>();
 
-        var builder = new StringBuilder($"CREATE TABLE {this.OrmProvider.GetTableName(tableName)}");
+        var builder = new StringBuilder($"CREATE TABLE IF NOT EXISTS {this.OrmProvider.GetTableName(tableName)}");
         builder.AppendLine();
         builder.AppendLine("(");
-        foreach (var columnInfo in columnInfos)
-        {
-            builder.Append($"{this.OrmProvider.GetFieldName(columnInfo.ColumnName)} {columnInfo.ColumnType}");
-            if (columnInfo.IsNullable == "NO")
-                builder.Append(" NOT");
-            builder.Append(" NULL");
-            if (columnInfo.IsIdentity == "auto_increment")
-                builder.Append(" AUTO_INCREMENT");
-            if (!string.IsNullOrEmpty(columnInfo.DefaultValue))
-                builder.Append($" DEFAULT {columnInfo.DefaultValue}");
-            if (!string.IsNullOrEmpty(columnInfo.Description))
-                builder.Append($" COMMENT {columnInfo.Description}");
-            builder.AppendLine(",");
-        }
-        var indexNames = indexInfos.Select(f => f.IndexName).Distinct().ToList();
-        for (int i = 0; i < indexNames.Count; i++)
+        var commentBuilder = new StringBuilder();
+        if (tableInfo != null && !string.IsNullOrEmpty(tableInfo.Description))
+            commentBuilder.AppendLine($"COMMENT ON TABLE {this.OrmProvider.GetTableName(tableName)} IS '{tableInfo.Description}';");
+        for (int i = 0; i < columnInfos.Count; i++)
         {
             if (i > 0) builder.AppendLine(",");
-            var indexName = indexNames[i];
-            var indexInfo = indexInfos.First(f => f.IndexName == indexName);
-            if (indexInfo.IndexName == "PRIMARY")
-                builder.Append($"CONSTRAINT `pk_{tableName}` PRIMARY KEY");
-            else
+            var columnInfo = columnInfos[i];
+            builder.Append($"{this.OrmProvider.GetFieldName(columnInfo.ColumnName)} {columnInfo.ColumnType}");
+            if (columnInfo.IsRequired)
+                builder.Append(" NOT");
+            builder.Append(" NULL");
+            if (!string.IsNullOrEmpty(columnInfo.IsIdentity))
             {
-                if (!indexInfo.NonUnique)
-                    builder.Append("UNIQUE ");
-                builder.Append("INDEX ");
-                var myIndexName = indexName + shardingPart;
-                builder.Append(this.OrmProvider.GetFieldName(myIndexName));
+                if (!string.IsNullOrEmpty(columnInfo.DefaultValue) && columnInfo.DefaultValue.Contains("nextval"))
+                {
+                    var dataType = columnInfo.ColumnType switch
+                    {
+                        "int2" => "SMALLSERIAL",
+                        "int8" => "BIGSERIAL",
+                        _ => "SERIAL"
+                    };
+                    builder.Append($" {dataType}");
+                }
+                else builder.Append(" GENERATED BY DEFAULT AS IDENTITY");
             }
-            builder.Append('(');
-            var myIndexInfos = indexInfos.Where(f => f.IndexName == indexName)
-                .OrderBy(f => f.SeqInIndex).ToList();
+            if (!string.IsNullOrEmpty(columnInfo.DefaultValue) && columnInfo.DefaultValue.Contains("nextval"))
+            {
+                builder.Append(" DEFAULT ");
+                if (columnInfo.DefaultValue.StartsWith("NULL"))
+                    builder.Append("NULL");
+                else builder.Append(columnInfo.DefaultValue);
+            }
+            if (!string.IsNullOrEmpty(columnInfo.Description))
+                commentBuilder.AppendLine($"COMMENT ON COLUMN {tableName}.{this.OrmProvider.GetFieldName(columnInfo.ColumnName)} IS '{columnInfo.Description}';");
+        }
+        var myIndexInfos = indexInfos.FindAll(f => f.IsPrimary);
+        if (myIndexInfos.Count > 0)
+        {
+            builder.AppendLine(",");
+            builder.Append($"CONSTRAINT {this.OrmProvider.GetFieldName($"pk_{tableName}")} PRIMARY KEY(");
             for (int j = 0; j < myIndexInfos.Count; j++)
             {
                 if (j > 0) builder.Append(',');
-                var myIndexInfo = myIndexInfos[j];
-                builder.Append(this.OrmProvider.GetFieldName(myIndexInfo.ColumnName));
-                var orderBy = myIndexInfo.Collation == "A" ? "ASC" : "DESC";
-                builder.Append($" {orderBy}");
+                var columnInfo = myIndexInfos[j];
+                builder.Append(this.OrmProvider.GetFieldName(columnInfo.ColumnName));
+                if (columnInfo.IsDesc)
+                    builder.Append(" DESC");
             }
-            builder.Append($") USING {indexInfo.IndexType}");
+            builder.AppendLine(")");
         }
-        builder.AppendLine();
-        builder.AppendLine($") ENGINE={collationInfo.Engine} CHARACTER SET={collationInfo.CharacterSetName} COLLATE={collationInfo.CollationName}");
+        builder.Append(')');
+        if (tableInfo != null && !string.IsNullOrEmpty(tableInfo.TableSpace))
+            builder.Append($" TABLESPACE {tableInfo.TableSpace}");
+
+        if (indexInfos.Exists(f => !f.IsPrimary))
+        {
+            var indexNames = indexInfos.Where(f => !f.IsPrimary).Select(f => f.IndexName).Distinct().ToList();
+            for (int i = 0; i < indexNames.Count; i++)
+            {
+                builder.AppendLine(";");
+                builder.Append("CREATE ");
+                var indexName = indexNames[i];
+                var indexInfo = indexInfos.First(f => f.IndexName == indexName);
+                if (indexInfo.IsUnique)
+                    builder.Append("UNIQUE ");
+                builder.Append("INDEX IF NOT EXISTS ");
+                var myIndexName = indexInfo.IndexName + shardingPart;
+                builder.Append(this.OrmProvider.GetFieldName(myIndexName));
+                builder.Append($" ON {this.OrmProvider.GetTableName(tableName)}");
+                if (!string.IsNullOrEmpty(indexInfo.IndexType))
+                    builder.Append($" USING {indexInfo.IndexType}");
+                builder.Append('(');
+                myIndexInfos = indexInfos.FindAll(f => f.IndexName == indexName);
+                for (int j = 0; j < myIndexInfos.Count; j++)
+                {
+                    if (j > 0) builder.Append(',');
+                    var columnInfo = myIndexInfos[j];
+                    builder.Append(this.OrmProvider.GetFieldName(columnInfo.ColumnName));
+                    if (columnInfo.IsDesc)
+                        builder.Append(" DESC");
+                }
+                builder.Append(')');
+            }
+        }
+        if (commentBuilder.Length > 0)
+        {
+            builder.AppendLine(";");
+            builder.AppendLine(commentBuilder.ToString());
+        }
         await this.ExecuteAsync(builder.ToString(), cancellationToken);
     }
     public override string GetShardingTableNameBy<TEntity>(object field1Value, object field2Value = null)
@@ -233,30 +328,31 @@ public class PostgreSqlRepository : Repository, IPostgreSqlRepository
     }
     #endregion
 
-    class CollationInfo
+    class TableInfo
     {
-        public string Engine { get; set; }
-        public string CollationName { get; set; }
-        public string CharacterSetName { get; set; }
+        public string Description { get; set; }
+        public string TableSpace { get; set; }
     }
     class ColumnInfo
     {
+        public int ColumnIndex { get; set; }
         public string ColumnName { get; set; }
         public int ArrayDimens { get; set; }
         public string ColumnType { get; set; }
         public int Length { get; set; }
         public string IsIdentity { get; set; }
-        public string IsNullable { get; set; }
+        public bool IsRequired { get; set; }
         public string Description { get; set; }
         public string DefaultValue { get; set; }
     }
     class IndexInfo
     {
-        public bool NonUnique { get; set; }
         public string IndexName { get; set; }
-        public int SeqInIndex { get; set; }
         public string ColumnName { get; set; }
         public string IndexType { get; set; }
-        public string Collation { get; set; }
+        public bool IsUnique { get; set; }
+        public bool IsPrimary { get; set; }
+        public bool IsClustered { get; set; }
+        public bool IsDesc { get; set; }
     }
 }
