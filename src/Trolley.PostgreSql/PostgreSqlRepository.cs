@@ -209,7 +209,10 @@ and c.attnum=f.adnum left join (select dp.refobjid,dp.refobjsubid from pg_depend
 from pg_class a inner join pg_namespace b on a.relnamespace=b.oid inner join pg_attribute c on a.oid=c.attrelid and c.attnum>0 inner join pg_type d on c.atttypid=d.oid left join pg_description e on e.objoid=c.attrelid and e.objsubid=c.attnum left join pg_attrdef f on a.oid=f.adrelid 
 and c.attnum=f.adnum left join (select dp.refobjid,dp.refobjsubid from pg_depend dp,pg_class cs where dp.objid=cs.oid and cs.relkind='S') g on a.oid=g.refobjid and c.attnum=g.refobjsubid where a.relkind='r' and b.nspname='{fromTableSchema}' and a.relname='{orgTableName}' order by c.attnum asc")
              .Query<IndexInfo>($"select c.attname ColumnName,b.relname IndexName,a.indisunique IsUnique,a.indisprimary IsPrimary,not a.indisclustered IsClustered,pg_index_column_has_property(b.oid,c.attnum,'desc') IsDesc,d.amname IndexType from pg_index a inner join pg_class b " +
-                $"on b.oid=a.indexrelid inner join pg_attribute c on c.attnum>0 and c.attrelid=b.oid inner join pg_am d ON b.relam=d.oid inner join pg_namespace e on e.oid=b.relnamespace inner join pg_class f on f.oid=a.indrelid WHERE f.relname='{orgTableName}' and e.nspname='{fromTableSchema}'");
+                $"on b.oid=a.indexrelid inner join pg_attribute c on c.attnum>0 and c.attrelid=b.oid inner join pg_am d ON b.relam=d.oid inner join pg_namespace e on e.oid=b.relnamespace inner join pg_class f on f.oid=a.indrelid WHERE f.relname='{orgTableName}' and e.nspname='{fromTableSchema}'")
+             .Query<IndexInfo>(@$"SELECT c.conname AS constraint_name,d.attname column_name,e.relname ref_table,f.attname ref_column_name,CASE c.confdeltype WHEN 'a' THEN 'NO ACTION' WHEN 'r' THEN 'RESTRICT' WHEN 'c' THEN 'CASCADE' WHEN 'n' THEN 'SET NULL' WHEN 'd' THEN 'SET DEFAULT' END AS delete_action,
+CASE c.confupdtype WHEN 'a' THEN 'NO ACTION' WHEN 'r' THEN 'RESTRICT' WHEN 'c' THEN 'CASCADE' WHEN 'n' THEN 'SET NULL' WHEN 'd' THEN 'SET DEFAULT' END AS update_action FROM pg_class a INNER JOIN pg_namespace b ON a.relnamespace=b.oid INNER JOIN pg_constraint c ON a.oid=c.conrelid and 
+c.contype='f' INNER JOIN pg_attribute d ON d.attnum=ANY(c.conkey) AND d.attrelid=c.conrelid INNER JOIN pg_class e ON c.confrelid=e.oid INNER JOIN pg_attribute f ON f.attnum=ANY(c.confkey) AND f.attrelid=c.confrelid WHERE b.nspname='{fromTableSchema}' and a.relname='{orgTableName}'");
         });
         var tableInfo = await reader.ReadFirstAsync<TableInfo>();
         var columnInfos = await reader.ReadAsync<ColumnInfo>();
@@ -354,5 +357,14 @@ and c.attnum=f.adnum left join (select dp.refobjid,dp.refobjsubid from pg_depend
         public bool IsPrimary { get; set; }
         public bool IsClustered { get; set; }
         public bool IsDesc { get; set; }
+    }
+    class ForeignKeyInfo
+    {
+        public string ConstraintName { get; set; }
+        public string ColumnName { get; set; }
+        public string RefTable { get; set; }
+        public string RefColumnName { get; set; }
+        public string DeleteAction { get; set; }
+        public string UpdateAction { get; set; }
     }
 }
