@@ -487,7 +487,8 @@ public partial class MySqlProvider : BaseOrmProvider
         var orgTableName = entityMapper.TableName;
         tableSchema ??= dbContext.DefaultTableSchema;
         var sql = $"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_NAME LIKE '{orgTableName}_%' AND TABLE_SCHEMA='{tableSchema}'";
-        return dbContext.Query<string>(sql);
+        var tableNames = dbContext.Query<string>(sql);
+        return tableNames.FindAll(f => tableNameSelector(f));
     }
     public virtual async Task<List<string>> GetShardingTableNamesAsync<TEntity>(DbContext dbContext, Func<string, bool> tableNameSelector, string tableSchema = null, CancellationToken cancellationToken = default)
     {
@@ -495,7 +496,8 @@ public partial class MySqlProvider : BaseOrmProvider
         var orgTableName = entityMapper.TableName;
         tableSchema ??= dbContext.DefaultTableSchema;
         var sql = $"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_NAME LIKE '{orgTableName}_%' AND TABLE_SCHEMA='{tableSchema}'";
-        return await dbContext.QueryAsync<string>(sql, cancellationToken: cancellationToken);
+        var tableNames = await dbContext.QueryAsync<string>(sql, cancellationToken: cancellationToken);
+        return tableNames.FindAll(f => tableNameSelector(f));
     }
     public int ExecuteBulkCopy(bool isUpdate, DbContext dbContext, SqlVisitor visitor, ITheaConnection connection, Type insertObjType, IEnumerable insertObjs, int? timeoutSeconds, string tableName = null)
     {

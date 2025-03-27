@@ -255,7 +255,7 @@ public class Query<T> : QueryBase, IQuery<T>
 
     #region GetShardingTableNames
     public virtual List<string> GetShardingTableNames(Func<string, bool> tableNameSelector) => null;
-    public virtual Task<List<string>> GetShardingTableNamesAsync<TEntity>(Func<string, bool> tableNameSelector, CancellationToken cancellationToken = default)
+    public virtual Task<List<string>> GetShardingTableNamesAsync(Func<string, bool> tableNameSelector, CancellationToken cancellationToken = default)
         => Task.FromResult(this.GetShardingTableNames(tableNameSelector));
     #endregion
 

@@ -5,6 +5,7 @@ namespace Trolley.PostgreSql;
 partial class PostgreSqlProvider
 {
     public override IRepository CreateRepository(DbContext dbContext) => new PostgreSqlRepository(dbContext);
+
     public override IQueryVisitor NewQueryVisitor(DbContext dbContext, char tableAsStart = 'a', IDataParameterCollection dbParameters = null)
         => new PostgreSqlQueryVisitor(dbContext, tableAsStart, dbParameters);
 

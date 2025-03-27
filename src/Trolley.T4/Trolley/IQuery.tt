@@ -187,6 +187,31 @@ public interface IQuery<T> : IQueryBase
     IQuery<T> UseTableSchema(string tableSchema);
     #endregion
 
+    #region GetShardingTableNames
+    /// <summary>
+    /// 获取实体TEntity满足条件的所有分表名
+    /// </summary>
+    /// <param name="tableNameSelector">分表名选择表达式</param>
+    /// <returns>返回满足条件的所有分表</returns>
+    List<string> GetShardingTableNames(Func<string, bool> tableNameSelector);
+    /// <summary>
+    /// 获取实体TEntity满足条件的所有分表名
+    /// </summary>
+    /// <param name="tableNameSelector">分表名选择表达式</param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回满足条件的所有分表</returns>
+    Task<List<string>> GetShardingTableNamesAsync(Func<string, bool> tableNameSelector, CancellationToken cancellationToken = default);
+    #endregion
+
+    #region UseMaster
+    /// <summary>
+    /// 强制使用主库查询
+    /// </summary>
+    /// <param name="isUseMaster">是否使用主库，true使用主库</param>
+    /// <returns></returns>
+    IQuery<T> UseMaster(bool isUseMaster = true);
+    #endregion
+
     #region Union/UnionAll
     /// <summary>
     /// Union操作，去掉重复记录，用法：

@@ -43,7 +43,7 @@ public class PostgreSqlQuery<T> : Query<T>, IPostgreSqlQuery<T>
         var tableSchema = this.Visitor.Tables[0].TableSchema;
         return this.dialectProvider.GetShardingTableNames<T>(this.DbContext, tableNameSelector, tableSchema);
     }
-    public override async Task<List<string>> GetShardingTableNamesAsync<TEntity>(Func<string, bool> tableNameSelector, CancellationToken cancellationToken = default)
+    public override async Task<List<string>> GetShardingTableNamesAsync(Func<string, bool> tableNameSelector, CancellationToken cancellationToken = default)
     {
         var tableSchema = this.Visitor.Tables[0].TableSchema;
         return await this.dialectProvider.GetShardingTableNamesAsync<T>(this.DbContext, tableNameSelector, tableSchema);
