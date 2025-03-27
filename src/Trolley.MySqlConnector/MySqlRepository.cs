@@ -10,6 +10,10 @@ namespace Trolley.MySqlConnector;
 
 public class MySqlRepository : Repository, IMySqlRepository
 {
+    #region fields
+    private MySqlProvider dialectProvider => this.OrmProvider as MySqlProvider;
+    #endregion
+
     #region Constructor
     public MySqlRepository(DbContext dbContext) :
         base(dbContext)
@@ -33,21 +37,9 @@ public class MySqlRepository : Repository, IMySqlRepository
 
     #region ShardingTable
     public override List<string> GetShardingTableNames<TEntity>(Func<string, bool> tableNameSelector, string tableSchema = null)
-    {
-        var entityMapper = this.MapProvider.GetEntityMap(typeof(TEntity));
-        var orgTableName = entityMapper.TableName;
-        tableSchema ??= this.DbContext.DefaultTableSchema;
-        var sql = $"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_NAME LIKE '{orgTableName}_%' AND TABLE_SCHEMA='{tableSchema}'";
-        return this.Query<string>(sql);
-    }
+        => this.dialectProvider.GetShardingTableNames<TEntity>(this.DbContext, tableNameSelector, tableSchema);
     public override async Task<List<string>> GetShardingTableNamesAsync<TEntity>(Func<string, bool> tableNameSelector, string tableSchema = null, CancellationToken cancellationToken = default)
-    {
-        var entityMapper = this.MapProvider.GetEntityMap(typeof(TEntity));
-        var orgTableName = entityMapper.TableName;
-        tableSchema ??= this.DbContext.DefaultTableSchema;
-        var sql = $"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_NAME LIKE '{orgTableName}_%' AND TABLE_SCHEMA='{tableSchema}'";
-        return await this.QueryAsync<string>(sql);
-    }
+        => await this.dialectProvider.GetShardingTableNamesAsync<TEntity>(this.DbContext, tableNameSelector, tableSchema, cancellationToken);
     public override void CreateShardingTable<TEntity>(string tableName, string fromTableSchema = null)
     {
         var entityType = typeof(TEntity);

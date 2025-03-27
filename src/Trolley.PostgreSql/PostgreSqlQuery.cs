@@ -8,6 +8,10 @@ namespace Trolley.PostgreSql;
 
 public class PostgreSqlQuery<T> : Query<T>, IPostgreSqlQuery<T>
 {
+    #region Fields
+    private PostgreSqlProvider dialectProvider => this.DbContext.OrmProvider as PostgreSqlProvider;
+    #endregion
+
     #region Constructor
     public PostgreSqlQuery(DbContext dbContext, IQueryVisitor visitor)
         : base(dbContext, visitor) { }
@@ -31,6 +35,19 @@ public class PostgreSqlQuery<T> : Query<T>, IPostgreSqlQuery<T>
     #region UseTableSchema
     public new IPostgreSqlQuery<T> UseTableSchema(string tableSchema)
         => base.UseTableSchema(tableSchema) as IPostgreSqlQuery<T>;
+    #endregion
+
+    #region GetShardingTableNames
+    public override List<string> GetShardingTableNames(Func<string, bool> tableNameSelector)
+    {
+        var tableSchema = this.Visitor.Tables[0].TableSchema;
+        return this.dialectProvider.GetShardingTableNames<T>(this.DbContext, tableNameSelector, tableSchema);
+    }
+    public override async Task<List<string>> GetShardingTableNamesAsync<TEntity>(Func<string, bool> tableNameSelector, CancellationToken cancellationToken = default)
+    {
+        var tableSchema = this.Visitor.Tables[0].TableSchema;
+        return await this.dialectProvider.GetShardingTableNamesAsync<T>(this.DbContext, tableNameSelector, tableSchema);
+    }
     #endregion
 
     #region Union/UnionAll

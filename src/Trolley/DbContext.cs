@@ -94,6 +94,73 @@ public sealed class DbContext
     #endregion
 
     #region Query
+    public List<TEntity> Query<TEntity>(string rawSql, object parameters = null, CommandType commandType = CommandType.Text)
+    {
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
+        if (parameters != null)
+        {
+            var whereObjType = parameters.GetType();
+            if (!whereObjType.IsEntityType(out _))
+                throw new NotSupportedException("不支持的参数类型，Query方法的parameters参数，支持实体类型参数，命名、匿名对象或是字典对象");
+        }
+
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(false);
+        if (parameters != null)
+        {
+            var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.OrmProvider, rawSql, parameters);
+            commandInitializer.Invoke(command.Parameters, this.OrmProvider, parameters);
+        }
+        command.CommandText = rawSql;
+        command.CommandType = commandType;
+
+        connection.Open();
+        var behavior = CommandBehavior.SequentialAccess;
+        using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
+        var result = new List<TEntity>();
+        var entityType = typeof(TEntity);
+        while (reader.Read())
+            result.Add(reader.ToEntity<TEntity>(this));
+
+        reader.Dispose();
+        command.Dispose();
+        if (isNeedClose) connection.Close();
+        return result;
+    }
+    public async Task<List<TEntity>> QueryAsync<TEntity>(string rawSql, object parameters = null, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
+        if (parameters != null)
+        {
+            var whereObjType = parameters.GetType();
+            if (!whereObjType.IsEntityType(out _))
+                throw new NotSupportedException("不支持的参数类型，QueryAsync方法的parameters参数，支持实体类型参数，命名、匿名对象或是字典对象");
+        }
+
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(false);
+        if (parameters != null)
+        {
+            var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.OrmProvider, rawSql, parameters);
+            commandInitializer.Invoke(command.Parameters, this.OrmProvider, parameters);
+        }
+        command.CommandText = rawSql;
+        command.CommandType = commandType;
+
+        await connection.OpenAsync(cancellationToken);
+        var behavior = CommandBehavior.SequentialAccess;
+        using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
+        var result = new List<TEntity>();
+        var entityType = typeof(TEntity);
+        while (await reader.ReadAsync(cancellationToken))
+            result.Add(reader.ToEntity<TEntity>(this));
+
+        await reader.DisposeAsync();
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
+        return result;
+    }
+
     public TResult Query<TEntity, TResult>(object whereObj, bool isSingle, Func<ITheaDataReader, TResult> readerInitializer)
     {
         if (whereObj == null)

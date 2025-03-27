@@ -11,7 +11,7 @@ public class MultiIncludableQuery<T, TMember> : MultiQuery<T>, IMultiIncludableQ
     #endregion
 
     #region Constructor
-    public MultiIncludableQuery(MultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany)
+    public MultiIncludableQuery(IMultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany)
         : base(multiQuery, visitor)
     {
         this.IsIncludeMany = isIncludeMany;
@@ -38,7 +38,7 @@ public class MultiIncludableQuery<T1, T2, TMember> : MultiQuery<T1, T2>, IMultiI
     #endregion
 
     #region Constructor
-    public MultiIncludableQuery(MultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany)
+    public MultiIncludableQuery(IMultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany)
         : base(multiQuery, visitor)
     {
         this.IsIncludeMany = isIncludeMany;
@@ -65,7 +65,7 @@ public class MultiIncludableQuery<T1, T2, T3, TMember> : MultiQuery<T1, T2, T3>,
     #endregion
 
     #region Constructor
-    public MultiIncludableQuery(MultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany)
+    public MultiIncludableQuery(IMultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany)
         : base(multiQuery, visitor)
     {
         this.IsIncludeMany = isIncludeMany;
@@ -92,7 +92,7 @@ public class MultiIncludableQuery<T1, T2, T3, T4, TMember> : MultiQuery<T1, T2, 
     #endregion
 
     #region Constructor
-    public MultiIncludableQuery(MultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany)
+    public MultiIncludableQuery(IMultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany)
         : base(multiQuery, visitor)
     {
         this.IsIncludeMany = isIncludeMany;
@@ -119,7 +119,7 @@ public class MultiIncludableQuery<T1, T2, T3, T4, T5, TMember> : MultiQuery<T1, 
     #endregion
 
     #region Constructor
-    public MultiIncludableQuery(MultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany)
+    public MultiIncludableQuery(IMultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany)
         : base(multiQuery, visitor)
     {
         this.IsIncludeMany = isIncludeMany;
@@ -146,7 +146,7 @@ public class MultiIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : MultiQuery<
     #endregion
 
     #region Constructor
-    public MultiIncludableQuery(MultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany)
+    public MultiIncludableQuery(IMultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany)
         : base(multiQuery, visitor)
     {
         this.IsIncludeMany = isIncludeMany;
@@ -173,7 +173,7 @@ public class MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : MultiQu
     #endregion
 
     #region Constructor
-    public MultiIncludableQuery(MultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany)
+    public MultiIncludableQuery(IMultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany)
         : base(multiQuery, visitor)
     {
         this.IsIncludeMany = isIncludeMany;
@@ -200,7 +200,7 @@ public class MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> : Mul
     #endregion
 
     #region Constructor
-    public MultiIncludableQuery(MultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany)
+    public MultiIncludableQuery(IMultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany)
         : base(multiQuery, visitor)
     {
         this.IsIncludeMany = isIncludeMany;
@@ -227,7 +227,7 @@ public class MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> :
     #endregion
 
     #region Constructor
-    public MultiIncludableQuery(MultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany)
+    public MultiIncludableQuery(IMultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany)
         : base(multiQuery, visitor)
     {
         this.IsIncludeMany = isIncludeMany;
@@ -254,7 +254,7 @@ public class MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMemb
     #endregion
 
     #region Constructor
-    public MultiIncludableQuery(MultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany)
+    public MultiIncludableQuery(IMultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany)
         : base(multiQuery, visitor)
     {
         this.IsIncludeMany = isIncludeMany;
@@ -281,7 +281,7 @@ public class MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     #endregion
 
     #region Constructor
-    public MultiIncludableQuery(MultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany)
+    public MultiIncludableQuery(IMultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany)
         : base(multiQuery, visitor)
     {
         this.IsIncludeMany = isIncludeMany;
@@ -308,7 +308,7 @@ public class MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     #endregion
 
     #region Constructor
-    public MultiIncludableQuery(MultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany)
+    public MultiIncludableQuery(IMultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany)
         : base(multiQuery, visitor)
     {
         this.IsIncludeMany = isIncludeMany;
@@ -335,7 +335,7 @@ public class MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     #endregion
 
     #region Constructor
-    public MultiIncludableQuery(MultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany)
+    public MultiIncludableQuery(IMultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany)
         : base(multiQuery, visitor)
     {
         this.IsIncludeMany = isIncludeMany;
@@ -362,7 +362,7 @@ public class MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     #endregion
 
     #region Constructor
-    public MultiIncludableQuery(MultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany)
+    public MultiIncludableQuery(IMultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany)
         : base(multiQuery, visitor)
     {
         this.IsIncludeMany = isIncludeMany;
@@ -389,7 +389,7 @@ public class MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     #endregion
 
     #region Constructor
-    public MultiIncludableQuery(MultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany)
+    public MultiIncludableQuery(IMultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany)
         : base(multiQuery, visitor)
     {
         this.IsIncludeMany = isIncludeMany;
@@ -416,7 +416,7 @@ public class MultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     #endregion
 
     #region Constructor
-    public MultiIncludableQuery(MultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany)
+    public MultiIncludableQuery(IMultipleQuery multiQuery, IQueryVisitor visitor, bool isIncludeMany)
         : base(multiQuery, visitor)
     {
         this.IsIncludeMany = isIncludeMany;

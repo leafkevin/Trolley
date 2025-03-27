@@ -6,11 +6,11 @@ namespace Trolley;
 public class MultiGroupingQueryBase<TGrouping> : QueryInternal, IMultiGroupingQueryBase<TGrouping>
 {
     #region Properties
-    public MultipleQuery MultipleQuery { get; set; }
+    public IMultipleQuery MultipleQuery { get; set; }
     #endregion
 
     #region Constructor
-    public MultiGroupingQueryBase(MultipleQuery multiQuery, IQueryVisitor visitor)
+    public MultiGroupingQueryBase(IMultipleQuery multiQuery, IQueryVisitor visitor)
     {
         this.MultipleQuery = multiQuery;
         this.Visitor = visitor;
@@ -33,7 +33,7 @@ public class MultiGroupingQueryBase<TGrouping> : QueryInternal, IMultiGroupingQu
 class MultiGroupingQuery<T, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMultiGroupingQuery<T, TGrouping>
 {
     #region Constructor
-    public MultiGroupingQuery(MultipleQuery multiQuery, IQueryVisitor visitor)
+    public MultiGroupingQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
         : base(multiQuery, visitor) { }
     #endregion
 
@@ -75,7 +75,7 @@ class MultiGroupingQuery<T, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMul
 public class MultiGroupingQuery<T1, T2, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMultiGroupingQuery<T1, T2, TGrouping>
 {
     #region Constructor
-    public MultiGroupingQuery(MultipleQuery multiQuery, IQueryVisitor visitor)
+    public MultiGroupingQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
         : base(multiQuery, visitor) { }
     #endregion
 
@@ -117,7 +117,7 @@ public class MultiGroupingQuery<T1, T2, TGrouping> : MultiGroupingQueryBase<TGro
 public class MultiGroupingQuery<T1, T2, T3, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMultiGroupingQuery<T1, T2, T3, TGrouping>
 {
     #region Constructor
-    public MultiGroupingQuery(MultipleQuery multiQuery, IQueryVisitor visitor)
+    public MultiGroupingQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
         : base(multiQuery, visitor) { }
     #endregion
 
@@ -159,7 +159,7 @@ public class MultiGroupingQuery<T1, T2, T3, TGrouping> : MultiGroupingQueryBase<
 public class MultiGroupingQuery<T1, T2, T3, T4, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMultiGroupingQuery<T1, T2, T3, T4, TGrouping>
 {
     #region Constructor
-    public MultiGroupingQuery(MultipleQuery multiQuery, IQueryVisitor visitor)
+    public MultiGroupingQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
         : base(multiQuery, visitor) { }
     #endregion
 
@@ -201,7 +201,7 @@ public class MultiGroupingQuery<T1, T2, T3, T4, TGrouping> : MultiGroupingQueryB
 public class MultiGroupingQuery<T1, T2, T3, T4, T5, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMultiGroupingQuery<T1, T2, T3, T4, T5, TGrouping>
 {
     #region Constructor
-    public MultiGroupingQuery(MultipleQuery multiQuery, IQueryVisitor visitor)
+    public MultiGroupingQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
         : base(multiQuery, visitor) { }
     #endregion
 
@@ -243,7 +243,7 @@ public class MultiGroupingQuery<T1, T2, T3, T4, T5, TGrouping> : MultiGroupingQu
 public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping>
 {
     #region Constructor
-    public MultiGroupingQuery(MultipleQuery multiQuery, IQueryVisitor visitor)
+    public MultiGroupingQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
         : base(multiQuery, visitor) { }
     #endregion
 
@@ -285,7 +285,7 @@ public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> : MultiGroupi
 public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping>
 {
     #region Constructor
-    public MultiGroupingQuery(MultipleQuery multiQuery, IQueryVisitor visitor)
+    public MultiGroupingQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
         : base(multiQuery, visitor) { }
     #endregion
 
@@ -327,7 +327,7 @@ public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> : MultiGr
 public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping>
 {
     #region Constructor
-    public MultiGroupingQuery(MultipleQuery multiQuery, IQueryVisitor visitor)
+    public MultiGroupingQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
         : base(multiQuery, visitor) { }
     #endregion
 
@@ -369,7 +369,7 @@ public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> : Mul
 public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping>
 {
     #region Constructor
-    public MultiGroupingQuery(MultipleQuery multiQuery, IQueryVisitor visitor)
+    public MultiGroupingQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
         : base(multiQuery, visitor) { }
     #endregion
 
@@ -411,7 +411,7 @@ public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> :
 public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping>
 {
     #region Constructor
-    public MultiGroupingQuery(MultipleQuery multiQuery, IQueryVisitor visitor)
+    public MultiGroupingQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
         : base(multiQuery, visitor) { }
     #endregion
 
@@ -453,7 +453,7 @@ public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGroupi
 public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping>
 {
     #region Constructor
-    public MultiGroupingQuery(MultipleQuery multiQuery, IQueryVisitor visitor)
+    public MultiGroupingQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
         : base(multiQuery, visitor) { }
     #endregion
 
@@ -495,7 +495,7 @@ public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TG
 public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping>
 {
     #region Constructor
-    public MultiGroupingQuery(MultipleQuery multiQuery, IQueryVisitor visitor)
+    public MultiGroupingQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
         : base(multiQuery, visitor) { }
     #endregion
 
@@ -537,7 +537,7 @@ public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
 public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping>
 {
     #region Constructor
-    public MultiGroupingQuery(MultipleQuery multiQuery, IQueryVisitor visitor)
+    public MultiGroupingQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
         : base(multiQuery, visitor) { }
     #endregion
 
@@ -579,7 +579,7 @@ public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
 public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping>
 {
     #region Constructor
-    public MultiGroupingQuery(MultipleQuery multiQuery, IQueryVisitor visitor)
+    public MultiGroupingQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
         : base(multiQuery, visitor) { }
     #endregion
 
@@ -621,7 +621,7 @@ public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
 public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>
 {
     #region Constructor
-    public MultiGroupingQuery(MultipleQuery multiQuery, IQueryVisitor visitor)
+    public MultiGroupingQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
         : base(multiQuery, visitor) { }
     #endregion
 
@@ -663,7 +663,7 @@ public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
 public class MultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping> : MultiGroupingQueryBase<TGrouping>, IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TGrouping>
 {
     #region Constructor
-    public MultiGroupingQuery(MultipleQuery multiQuery, IQueryVisitor visitor)
+    public MultiGroupingQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
         : base(multiQuery, visitor) { }
     #endregion
 }

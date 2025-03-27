@@ -187,6 +187,7 @@ public class Query<T> : QueryBase, IQuery<T>
 {
     #region Fields
     private int? offset;
+    private int pageNumber;
     private int pageSize;
     #endregion
 
@@ -250,6 +251,12 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.UseMaster(isUseMaster);
         return this;
     }
+    #endregion
+
+    #region GetShardingTableNames
+    public virtual List<string> GetShardingTableNames(Func<string, bool> tableNameSelector) => null;
+    public virtual Task<List<string>> GetShardingTableNamesAsync<TEntity>(Func<string, bool> tableNameSelector, CancellationToken cancellationToken = default)
+        => Task.FromResult(this.GetShardingTableNames(tableNameSelector));
     #endregion
 
     #region Union/UnionAll
@@ -490,8 +497,8 @@ public class Query<T> : QueryBase, IQuery<T>
         this.offset = offset;
         if (this.pageSize > 0)
         {
-            var pageIndex = (int)Math.Ceiling((double)this.offset.Value / this.pageSize);
-            this.Visitor.Page(pageIndex + 1, this.pageSize);
+            this.pageNumber = (int)Math.Ceiling((double)offset / this.pageSize) + 1;
+            this.Visitor.Page(this.pageNumber, this.pageSize);
         }
         else this.Visitor.Skip(offset);
         return this;
@@ -501,14 +508,15 @@ public class Query<T> : QueryBase, IQuery<T>
         this.pageSize = limit;
         if (this.offset.HasValue)
         {
-            var pageIndex = (int)Math.Ceiling((double)this.offset.Value / limit);
-            this.Visitor.Page(pageIndex + 1, limit);
+            this.pageNumber = (int)Math.Ceiling((double)offset / this.pageSize) + 1;
+            this.Visitor.Page(this.pageNumber, this.pageSize);
         }
         else this.Visitor.Take(limit);
         return this;
     }
     public virtual IQuery<T> Page(int pageNumber, int pageSize)
     {
+        this.pageNumber = pageNumber;
         this.pageSize = pageSize;
         this.Visitor.Page(pageNumber, pageSize);
         return this;

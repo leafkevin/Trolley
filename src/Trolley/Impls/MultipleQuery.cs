@@ -7,16 +7,15 @@ using System.Text;
 
 namespace Trolley;
 
-public class MultipleQuery : IMultipleQuery, IDisposable
+public class MultipleQuery : IMultipleQuery
 {
     #region Fields
-    protected internal bool isUseMaster = false;
     protected StringBuilder sqlBuilder = new();
     #endregion
 
     #region Properties
+    public bool IsUserMaster { get; private set; }
     public DbContext DbContext { get; protected set; }
-    public string DbKey => this.DbContext.DbKey;
     public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
     public IEntityMapProvider MapProvider => this.DbContext.MapProvider;
     public IDbCommand Command { get; private set; }
@@ -30,14 +29,18 @@ public class MultipleQuery : IMultipleQuery, IDisposable
         this.ReaderAfters = new();
         this.Command = this.OrmProvider.CreateCommand();
     }
-    #endregion
+    #endregion   
 
     #region UseMaster
     public IMultipleQuery UseMaster(bool isUseMaster = true)
     {
-        this.isUseMaster = isUseMaster;
+        this.IsUserMaster = isUseMaster;
         return this;
     }
+    #endregion
+
+    #region GetShardingTableNames
+    public virtual IMultipleQuery GetShardingTableNames<TEntity>(Func<string, bool> tableNameSelector, string tableSchema = null) => this;
     #endregion
 
     #region From
@@ -294,13 +297,4 @@ public class MultipleQuery : IMultipleQuery, IDisposable
 
     private IQueryVisitor CreateQueryVisitor(char tableAsStart)
         => this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart, this.Command.Parameters);
-}
-public class ReaderAfter
-{
-    public Type TargetType { get; set; }
-    public Func<ITheaDataReader, object> ReaderGetter { get; set; }
-    public IQueryVisitor QueryVisitor { get; set; }
-    public bool IsSingle { get; set; }
-    public int PageNumber { get; set; }
-    public int PageSize { get; set; }
 }

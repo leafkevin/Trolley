@@ -455,87 +455,9 @@ public class Repository : IRepository
 
     #region Query
     public virtual List<TEntity> Query<TEntity>(string rawSql, object parameters = null, CommandType commandType = CommandType.Text)
-    {
-        if (string.IsNullOrEmpty(rawSql))
-            throw new ArgumentNullException(nameof(rawSql));
-        if (parameters != null)
-        {
-            var whereObjType = parameters.GetType();
-            if (!whereObjType.IsEntityType(out _))
-                throw new NotSupportedException("不支持的参数类型，Query方法的parameters参数，支持实体类型参数，命名、匿名对象或是字典对象");
-        }
-
-        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
-        if (parameters != null)
-        {
-            var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.OrmProvider, rawSql, parameters);
-            commandInitializer.Invoke(command.Parameters, this.OrmProvider, parameters);
-        }
-        command.CommandText = rawSql;
-        command.CommandType = commandType;
-
-        connection.Open();
-        var behavior = CommandBehavior.SequentialAccess;
-        using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
-        var result = new List<TEntity>();
-        var entityType = typeof(TEntity);
-        if (entityType.IsEntityType(out _))
-        {
-            while (reader.Read())
-                result.Add(reader.ToEntity<TEntity>(this.DbContext));
-        }
-        else
-        {
-            while (reader.Read())
-                result.Add(reader.ToValue<TEntity>(this.DbContext));
-        }
-
-        reader.Dispose();
-        command.Dispose();
-        if (isNeedClose) connection.Close();
-        return result;
-    }
+        => this.DbContext.Query<TEntity>(rawSql, parameters, CommandType.Text);
     public virtual async Task<List<TEntity>> QueryAsync<TEntity>(string rawSql, object parameters = null, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
-    {
-        if (string.IsNullOrEmpty(rawSql))
-            throw new ArgumentNullException(nameof(rawSql));
-        if (parameters != null)
-        {
-            var whereObjType = parameters.GetType();
-            if (!whereObjType.IsEntityType(out _))
-                throw new NotSupportedException("不支持的参数类型，QueryAsync方法的parameters参数，支持实体类型参数，命名、匿名对象或是字典对象");
-        }
-
-        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
-        if (parameters != null)
-        {
-            var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.OrmProvider, rawSql, parameters);
-            commandInitializer.Invoke(command.Parameters, this.OrmProvider, parameters);
-        }
-        command.CommandText = rawSql;
-        command.CommandType = commandType;
-
-        await connection.OpenAsync(cancellationToken);
-        var behavior = CommandBehavior.SequentialAccess;
-        using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
-        var result = new List<TEntity>();
-        var entityType = typeof(TEntity);
-        if (entityType.IsEntityType(out _))
-        {
-            while (await reader.ReadAsync(cancellationToken))
-                result.Add(reader.ToEntity<TEntity>(this.DbContext));
-        }
-        else
-        {
-            while (await reader.ReadAsync(cancellationToken))
-                result.Add(reader.ToValue<TEntity>(this.DbContext));
-        }
-
-        await reader.DisposeAsync();
-        await command.DisposeAsync();
-        if (isNeedClose) await connection.CloseAsync();
-        return result;
-    }
+        => await this.DbContext.QueryAsync<TEntity>(rawSql, parameters, commandType, cancellationToken);
     public virtual List<TEntity> Query<TEntity>(CommandType commandType, string rawSql, params DbParameter[] parameters)
     {
         if (string.IsNullOrEmpty(rawSql))
@@ -1072,9 +994,9 @@ public class Repository : IRepository
         if (subQueries == null)
             throw new ArgumentNullException(nameof(subQueries));
 
-        using var multiQuery = new MultipleQuery(this.DbContext);
+        using var multiQuery = this.OrmProvider.NewMultipleQuery(this.DbContext);
         subQueries.Invoke(multiQuery);
-        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(multiQuery.isUseMaster, multiQuery.Command);
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(multiQuery.IsUserMaster, multiQuery.Command);
         multiQuery.Command.Connection = connection.BaseConnection;
         command.CommandText = multiQuery.BuildSql(out var readerAfters);
         connection.Open();
@@ -1087,9 +1009,9 @@ public class Repository : IRepository
         if (subQueries == null)
             throw new ArgumentNullException(nameof(subQueries));
 
-        using var multiQuery = new MultipleQuery(this.DbContext);
+        using var multiQuery = this.OrmProvider.NewMultipleQuery(this.DbContext);
         subQueries.Invoke(multiQuery);
-        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(multiQuery.isUseMaster, multiQuery.Command);
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(multiQuery.IsUserMaster, multiQuery.Command);
         multiQuery.Command.Connection = connection.BaseConnection;
         command.CommandText = multiQuery.BuildSql(out var readerAfters);
         await connection.OpenAsync(cancellationToken);

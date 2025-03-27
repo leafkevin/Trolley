@@ -481,6 +481,22 @@ public partial class MySqlProvider : BaseOrmProvider
         formatter = null;
         return false;
     }
+    public virtual List<string> GetShardingTableNames<TEntity>(DbContext dbContext, Func<string, bool> tableNameSelector, string tableSchema = null)
+    {
+        var entityMapper = dbContext.MapProvider.GetEntityMap(typeof(TEntity));
+        var orgTableName = entityMapper.TableName;
+        tableSchema ??= dbContext.DefaultTableSchema;
+        var sql = $"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_NAME LIKE '{orgTableName}_%' AND TABLE_SCHEMA='{tableSchema}'";
+        return dbContext.Query<string>(sql);
+    }
+    public virtual async Task<List<string>> GetShardingTableNamesAsync<TEntity>(DbContext dbContext, Func<string, bool> tableNameSelector, string tableSchema = null, CancellationToken cancellationToken = default)
+    {
+        var entityMapper = dbContext.MapProvider.GetEntityMap(typeof(TEntity));
+        var orgTableName = entityMapper.TableName;
+        tableSchema ??= dbContext.DefaultTableSchema;
+        var sql = $"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_NAME LIKE '{orgTableName}_%' AND TABLE_SCHEMA='{tableSchema}'";
+        return await dbContext.QueryAsync<string>(sql, cancellationToken: cancellationToken);
+    }
     public int ExecuteBulkCopy(bool isUpdate, DbContext dbContext, SqlVisitor visitor, ITheaConnection connection, Type insertObjType, IEnumerable insertObjs, int? timeoutSeconds, string tableName = null)
     {
         var entityMapper = visitor.Tables[0].Mapper;

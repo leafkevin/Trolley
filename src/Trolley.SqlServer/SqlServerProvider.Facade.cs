@@ -7,6 +7,7 @@ partial class SqlServerProvider
     public override IRepository CreateRepository(DbContext dbContext) => new SqlServerRepository(dbContext);
     public override IQueryVisitor NewQueryVisitor(DbContext dbContext, char tableAsStart = 'a', IDataParameterCollection dbParameters = null)
         => new SqlServerQueryVisitor(dbContext, tableAsStart, dbParameters);
+    public override IMultipleQuery NewMultipleQuery(DbContext dbContext) => new SqlServerMultipleQuery(dbContext);
     public override IFromCommand<T> NewFromCommand<T>(DbContext dbContext, IQueryVisitor visitor)
         => new SqlServerFromCommand<T>(dbContext, visitor);
     public override IFromCommand<T1, T2> NewFromCommand<T1, T2>(DbContext dbContext, IQueryVisitor visitor)

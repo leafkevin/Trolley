@@ -7,7 +7,7 @@ namespace Trolley;
 public class MultiQuery<T1, T2> : MultiQueryBase, IMultiQuery<T1, T2>
 {
     #region Constructor
-    public MultiQuery(MultipleQuery multiQuery, IQueryVisitor visitor)
+    public MultiQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
         : base(multiQuery, visitor) { }
     #endregion
 
@@ -372,7 +372,7 @@ public class MultiQuery<T1, T2> : MultiQueryBase, IMultiQuery<T1, T2>
 public class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
 {
     #region Constructor
-    public MultiQuery(MultipleQuery multiQuery, IQueryVisitor visitor)
+    public MultiQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
         : base(multiQuery, visitor) { }
     #endregion
 
@@ -737,7 +737,7 @@ public class MultiQuery<T1, T2, T3> : MultiQueryBase, IMultiQuery<T1, T2, T3>
 public class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4>
 {
     #region Constructor
-    public MultiQuery(MultipleQuery multiQuery, IQueryVisitor visitor)
+    public MultiQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
         : base(multiQuery, visitor) { }
     #endregion
 
@@ -1102,7 +1102,7 @@ public class MultiQuery<T1, T2, T3, T4> : MultiQueryBase, IMultiQuery<T1, T2, T3
 public class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4, T5>
 {
     #region Constructor
-    public MultiQuery(MultipleQuery multiQuery, IQueryVisitor visitor)
+    public MultiQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
         : base(multiQuery, visitor) { }
     #endregion
 
@@ -1467,7 +1467,7 @@ public class MultiQuery<T1, T2, T3, T4, T5> : MultiQueryBase, IMultiQuery<T1, T2
 public class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4, T5, T6>
 {
     #region Constructor
-    public MultiQuery(MultipleQuery multiQuery, IQueryVisitor visitor)
+    public MultiQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
         : base(multiQuery, visitor) { }
     #endregion
 
@@ -1832,7 +1832,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6> : MultiQueryBase, IMultiQuery<T1
 public class MultiQuery<T1, T2, T3, T4, T5, T6, T7> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4, T5, T6, T7>
 {
     #region Constructor
-    public MultiQuery(MultipleQuery multiQuery, IQueryVisitor visitor)
+    public MultiQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
         : base(multiQuery, visitor) { }
     #endregion
 
@@ -2197,7 +2197,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7> : MultiQueryBase, IMultiQuer
 public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8>
 {
     #region Constructor
-    public MultiQuery(MultipleQuery multiQuery, IQueryVisitor visitor)
+    public MultiQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
         : base(multiQuery, visitor) { }
     #endregion
 
@@ -2562,7 +2562,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : MultiQueryBase, IMulti
 public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>
 {
     #region Constructor
-    public MultiQuery(MultipleQuery multiQuery, IQueryVisitor visitor)
+    public MultiQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
         : base(multiQuery, visitor) { }
     #endregion
 
@@ -2927,7 +2927,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : MultiQueryBase, IM
 public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
 {
     #region Constructor
-    public MultiQuery(MultipleQuery multiQuery, IQueryVisitor visitor)
+    public MultiQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
         : base(multiQuery, visitor) { }
     #endregion
 
@@ -3292,7 +3292,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : MultiQueryBas
 public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
 {
     #region Constructor
-    public MultiQuery(MultipleQuery multiQuery, IQueryVisitor visitor)
+    public MultiQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
         : base(multiQuery, visitor) { }
     #endregion
 
@@ -3657,7 +3657,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : MultiQue
 public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>
 {
     #region Constructor
-    public MultiQuery(MultipleQuery multiQuery, IQueryVisitor visitor)
+    public MultiQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
         : base(multiQuery, visitor) { }
     #endregion
 
@@ -4022,7 +4022,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : Mul
 public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>
 {
     #region Constructor
-    public MultiQuery(MultipleQuery multiQuery, IQueryVisitor visitor)
+    public MultiQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
         : base(multiQuery, visitor) { }
     #endregion
 
@@ -4387,7 +4387,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
 public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>
 {
     #region Constructor
-    public MultiQuery(MultipleQuery multiQuery, IQueryVisitor visitor)
+    public MultiQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
         : base(multiQuery, visitor) { }
     #endregion
 
@@ -4752,7 +4752,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>
 {
     #region Constructor
-    public MultiQuery(MultipleQuery multiQuery, IQueryVisitor visitor)
+    public MultiQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
         : base(multiQuery, visitor) { }
     #endregion
 
@@ -5117,7 +5117,7 @@ public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 public class MultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> : MultiQueryBase, IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>
 {
     #region Constructor
-    public MultiQuery(MultipleQuery multiQuery, IQueryVisitor visitor)
+    public MultiQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
         : base(multiQuery, visitor) { }
     #endregion
 

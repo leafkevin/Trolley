@@ -2510,6 +2510,22 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
         formatter = null;
         return false;
     }
+    public virtual List<string> GetShardingTableNames<TEntity>(DbContext dbContext, Func<string, bool> tableNameSelector, string tableSchema = null)
+    {
+        var entityMapper = dbContext.MapProvider.GetEntityMap(typeof(TEntity));
+        var orgTableName = entityMapper.TableName;
+        tableSchema ??= dbContext.DefaultTableSchema;
+        var sql = $"SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND a.relname LIKE '{orgTableName}_%' AND b.nspname='{tableSchema}'";
+        return dbContext.Query<string>(sql);
+    }
+    public virtual async Task<List<string>> GetShardingTableNamesAsync<TEntity>(DbContext dbContext, Func<string, bool> tableNameSelector, string tableSchema = null, CancellationToken cancellationToken = default)
+    {
+        var entityMapper = dbContext.MapProvider.GetEntityMap(typeof(TEntity));
+        var orgTableName = entityMapper.TableName;
+        tableSchema ??= dbContext.DefaultTableSchema;
+        var sql = $"SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND a.relname LIKE '{orgTableName}_%' AND b.nspname='{tableSchema}'";
+        return await dbContext.QueryAsync<string>(sql);
+    }
     public int ExecuteBulkCopy(bool isUpdate, DbContext dbContext, SqlVisitor visitor, ITheaConnection connection, Type insertObjType, IEnumerable insertObjs, string tableName = null)
     {
         var entityMapper = visitor.Tables[0].Mapper;

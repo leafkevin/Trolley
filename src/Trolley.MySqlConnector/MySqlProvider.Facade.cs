@@ -7,6 +7,7 @@ partial class MySqlProvider
     public override IRepository CreateRepository(DbContext dbContext) => new MySqlRepository(dbContext);
     public override IQueryVisitor NewQueryVisitor(DbContext dbContext, char tableAsStart = 'a', IDataParameterCollection dbParameters = null)
         => new MySqlQueryVisitor(dbContext, tableAsStart, dbParameters);
+    public override IMultipleQuery NewMultipleQuery(DbContext dbContext) => new MySqlMultipleQuery(dbContext);
     public override IFromCommand<T> NewFromCommand<T>(DbContext dbContext, IQueryVisitor visitor)
         => new MySqlFromCommand<T>(dbContext, visitor);
     public override IFromCommand<T1, T2> NewFromCommand<T1, T2>(DbContext dbContext, IQueryVisitor visitor)

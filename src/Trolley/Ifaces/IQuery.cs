@@ -180,6 +180,32 @@ public interface IQuery<T> : IQueryBase
     IQuery<T> UseTableSchema(string tableSchema);
     #endregion
 
+    #region GetShardingTableNames
+    /// <summary>
+    /// 获取实体TEntity满足条件的所有分表名
+    /// </summary>
+    /// <param name="tableNameSelector">分表名选择表达式</param>
+    /// <returns>返回满足条件的所有分表</returns>
+    List<string> GetShardingTableNames(Func<string, bool> tableNameSelector);
+    /// <summary>
+    /// 获取实体TEntity满足条件的所有分表名
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="tableNameSelector">分表名选择表达式</param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回满足条件的所有分表</returns>
+    Task<List<string>> GetShardingTableNamesAsync<TEntity>(Func<string, bool> tableNameSelector, CancellationToken cancellationToken = default);
+    #endregion
+
+    #region UseMaster
+    /// <summary>
+    /// 强制使用主库查询
+    /// </summary>
+    /// <param name="isUseMaster">是否使用主库，true使用主库</param>
+    /// <returns></returns>
+    IQuery<T> UseMaster(bool isUseMaster = true);
+    #endregion
+
     #region Union/UnionAll
     /// <summary>
     /// Union操作，去掉重复记录，用法：
@@ -957,6 +983,15 @@ public interface IQuery<T1, T2> : IQueryBase
     IQuery<T1, T2> UseTableSchema(string tableSchema);
     #endregion
 
+    #region UseMaster
+    /// <summary>
+    /// 强制使用主库查询
+    /// </summary>
+    /// <param name="isUseMaster">是否使用主库，true使用主库</param>
+    /// <returns></returns>
+    IQuery<T1, T2> UseMaster(bool isUseMaster = true);
+    #endregion
+
     #region WithTable
     /// <summary>
     /// 使用子查询作为临时表，方便后面做关联查询，用法：
@@ -1493,6 +1528,15 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region UseMaster
+    /// <summary>
+    /// 强制使用主库查询
+    /// </summary>
+    /// <param name="isUseMaster">是否使用主库，true使用主库</param>
+    /// <returns></returns>
+    IQuery<T1, T2, T3> UseMaster(bool isUseMaster = true);
     #endregion
 
     #region WithTable
@@ -2032,6 +2076,15 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region UseMaster
+    /// <summary>
+    /// 强制使用主库查询
+    /// </summary>
+    /// <param name="isUseMaster">是否使用主库，true使用主库</param>
+    /// <returns></returns>
+    IQuery<T1, T2, T3, T4> UseMaster(bool isUseMaster = true);
     #endregion
 
     #region WithTable
@@ -2574,6 +2627,15 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     IQuery<T1, T2, T3, T4, T5> UseTableSchema(string tableSchema);
     #endregion
 
+    #region UseMaster
+    /// <summary>
+    /// 强制使用主库查询
+    /// </summary>
+    /// <param name="isUseMaster">是否使用主库，true使用主库</param>
+    /// <returns></returns>
+    IQuery<T1, T2, T3, T4, T5> UseMaster(bool isUseMaster = true);
+    #endregion
+
     #region WithTable
     /// <summary>
     /// 使用子查询作为临时表，方便后面做关联查询，用法：
@@ -3113,6 +3175,15 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region UseMaster
+    /// <summary>
+    /// 强制使用主库查询
+    /// </summary>
+    /// <param name="isUseMaster">是否使用主库，true使用主库</param>
+    /// <returns></returns>
+    IQuery<T1, T2, T3, T4, T5, T6> UseMaster(bool isUseMaster = true);
     #endregion
 
     #region WithTable
@@ -3657,6 +3728,15 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     IQuery<T1, T2, T3, T4, T5, T6, T7> UseTableSchema(string tableSchema);
     #endregion
 
+    #region UseMaster
+    /// <summary>
+    /// 强制使用主库查询
+    /// </summary>
+    /// <param name="isUseMaster">是否使用主库，true使用主库</param>
+    /// <returns></returns>
+    IQuery<T1, T2, T3, T4, T5, T6, T7> UseMaster(bool isUseMaster = true);
+    #endregion
+
     #region WithTable
     /// <summary>
     /// 使用子查询作为临时表，方便后面做关联查询，用法：
@@ -4198,6 +4278,15 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region UseMaster
+    /// <summary>
+    /// 强制使用主库查询
+    /// </summary>
+    /// <param name="isUseMaster">是否使用主库，true使用主库</param>
+    /// <returns></returns>
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseMaster(bool isUseMaster = true);
     #endregion
 
     #region WithTable
@@ -4744,6 +4833,15 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableSchema(string tableSchema);
     #endregion
 
+    #region UseMaster
+    /// <summary>
+    /// 强制使用主库查询
+    /// </summary>
+    /// <param name="isUseMaster">是否使用主库，true使用主库</param>
+    /// <returns></returns>
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseMaster(bool isUseMaster = true);
+    #endregion
+
     #region WithTable
     /// <summary>
     /// 使用子查询作为临时表，方便后面做关联查询，用法：
@@ -5287,6 +5385,15 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region UseMaster
+    /// <summary>
+    /// 强制使用主库查询
+    /// </summary>
+    /// <param name="isUseMaster">是否使用主库，true使用主库</param>
+    /// <returns></returns>
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseMaster(bool isUseMaster = true);
     #endregion
 
     #region WithTable
@@ -5835,6 +5942,15 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableSchema(string tableSchema);
     #endregion
 
+    #region UseMaster
+    /// <summary>
+    /// 强制使用主库查询
+    /// </summary>
+    /// <param name="isUseMaster">是否使用主库，true使用主库</param>
+    /// <returns></returns>
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseMaster(bool isUseMaster = true);
+    #endregion
+
     #region WithTable
     /// <summary>
     /// 使用子查询作为临时表，方便后面做关联查询，用法：
@@ -6380,6 +6496,15 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region UseMaster
+    /// <summary>
+    /// 强制使用主库查询
+    /// </summary>
+    /// <param name="isUseMaster">是否使用主库，true使用主库</param>
+    /// <returns></returns>
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseMaster(bool isUseMaster = true);
     #endregion
 
     #region WithTable
@@ -6930,6 +7055,15 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableSchema(string tableSchema);
     #endregion
 
+    #region UseMaster
+    /// <summary>
+    /// 强制使用主库查询
+    /// </summary>
+    /// <param name="isUseMaster">是否使用主库，true使用主库</param>
+    /// <returns></returns>
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseMaster(bool isUseMaster = true);
+    #endregion
+
     #region WithTable
     /// <summary>
     /// 使用子查询作为临时表，方便后面做关联查询，用法：
@@ -7477,6 +7611,15 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region UseMaster
+    /// <summary>
+    /// 强制使用主库查询
+    /// </summary>
+    /// <param name="isUseMaster">是否使用主库，true使用主库</param>
+    /// <returns></returns>
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseMaster(bool isUseMaster = true);
     #endregion
 
     #region WithTable
@@ -8029,6 +8172,15 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableSchema(string tableSchema);
     #endregion
 
+    #region UseMaster
+    /// <summary>
+    /// 强制使用主库查询
+    /// </summary>
+    /// <param name="isUseMaster">是否使用主库，true使用主库</param>
+    /// <returns></returns>
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseMaster(bool isUseMaster = true);
+    #endregion
+
     #region WithTable
     /// <summary>
     /// 使用子查询作为临时表，方便后面做关联查询，用法：
@@ -8578,6 +8730,15 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <param name="tableSchema">指定TableSchema</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableSchema(string tableSchema);
+    #endregion
+
+    #region UseMaster
+    /// <summary>
+    /// 强制使用主库查询
+    /// </summary>
+    /// <param name="isUseMaster">是否使用主库，true使用主库</param>
+    /// <returns></returns>
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseMaster(bool isUseMaster = true);
     #endregion
 
     #region Include

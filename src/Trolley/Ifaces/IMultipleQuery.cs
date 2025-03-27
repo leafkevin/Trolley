@@ -1,10 +1,19 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Data;
 using System.Linq.Expressions;
 
 namespace Trolley;
 
-public interface IMultipleQuery
+public interface IMultipleQuery : IDisposable
 {
+    #region Properties
+    bool IsUserMaster { get; }
+    DbContext DbContext { get; }
+    IDbCommand Command { get; }
+    List<ReaderAfter> ReaderAfters { get; }
+    #endregion
+
     #region UseMaster
     /// <summary>
     /// 使用主库查询
@@ -12,6 +21,18 @@ public interface IMultipleQuery
     /// <param name="isUseMaster">使用主库为true，默认值为true</param>
     /// <returns>返回查询对象</returns>
     IMultipleQuery UseMaster(bool isUseMaster = true);
+    #endregion
+
+    #region GetShardingTableNames
+    /// <summary>
+    /// <summary>
+    /// 获取实体TEntity满足条件的所有分表名
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="tableNameSelector">分表名选择表达式</param>
+    /// <param name="tableSchema">分表所在的TableSchema</param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery GetShardingTableNames<TEntity>(Func<string, bool> tableNameSelector, string tableSchema = null);
     #endregion
 
     #region From
@@ -247,4 +268,18 @@ public interface IMultipleQuery
     /// <returns>返回查询对象</returns>
     IMultipleQuery Exists<TEntity>(Expression<Func<TEntity, bool>> predicate = null);
     #endregion
+
+    #region AddReader/BuildSql
+    void AddReader(Type targetType, string sql, Func<ITheaDataReader, object> readerGetter, bool isSingle, IQueryVisitor queryVisitor = null, int pageNumber = 0, int pageSize = 0);
+    string BuildSql(out List<ReaderAfter> readerAfters);
+    #endregion
+}
+public class ReaderAfter
+{
+    public Type TargetType { get; set; }
+    public Func<ITheaDataReader, object> ReaderGetter { get; set; }
+    public IQueryVisitor QueryVisitor { get; set; }
+    public bool IsSingle { get; set; }
+    public int PageNumber { get; set; }
+    public int PageSize { get; set; }
 }

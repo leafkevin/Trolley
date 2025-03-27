@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Text;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace Trolley;
 
@@ -10,13 +13,13 @@ public class MultiQueryBase : IMultiQueryBase
 {
     #region Properties
     public IQueryVisitor Visitor { get; set; }
-    public MultipleQuery MultipleQuery { get; set; }
+    public IMultipleQuery MultipleQuery { get; set; }
     public DbContext DbContext => this.MultipleQuery.DbContext;
     public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
     #endregion
 
     #region Constructor
-    public MultiQueryBase(MultipleQuery multipleQuery, IQueryVisitor visitor)
+    public MultiQueryBase(IMultipleQuery multipleQuery, IQueryVisitor visitor)
     {
         this.MultipleQuery = multipleQuery;
         this.Visitor = visitor;
@@ -67,7 +70,7 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
     #endregion
 
     #region Constructor
-    public MultiQuery(MultipleQuery multiQuery, IQueryVisitor visitor)
+    public MultiQuery(IMultipleQuery multiQuery, IQueryVisitor visitor)
         : base(multiQuery, visitor) { }
     #endregion
 
@@ -110,6 +113,14 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
     {
         this.Visitor.UseTableSchema(false, tableSchema);
         return this;
+    }
+    #endregion
+
+    #region GetShardingTableNames
+    public virtual IMultipleQuery GetShardingTableNames(Func<string, bool> tableNameSelector)
+    {
+        var tableSchema = this.Visitor.Tables[0].TableSchema;
+        return this.MultipleQuery.GetShardingTableNames<T>(tableNameSelector, tableSchema);
     }
     #endregion
 
@@ -385,8 +396,8 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
         this.offset = offset;
         if (this.pageSize > 0)
         {
-            var pageIndex = (int)Math.Ceiling((double)this.offset.Value / this.pageSize);
-            this.Visitor.Page(pageIndex + 1, this.pageSize);
+            this.pageNumber = (int)Math.Ceiling((double)offset / this.pageSize) + 1;
+            this.Visitor.Page(this.pageNumber, this.pageSize);
         }
         else this.Visitor.Skip(offset);
         return this;
@@ -396,8 +407,8 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
         this.pageSize = limit;
         if (this.offset.HasValue)
         {
-            var pageIndex = (int)Math.Ceiling((double)this.offset.Value / limit);
-            this.Visitor.Page(pageIndex + 1, limit);
+            this.pageNumber = (int)Math.Ceiling((double)this.offset.Value / limit) + 1;
+            this.Visitor.Page(this.pageNumber, limit);
         }
         else this.Visitor.Take(limit);
         return this;
