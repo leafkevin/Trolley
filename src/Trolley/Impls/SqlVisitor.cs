@@ -271,7 +271,6 @@ public class SqlVisitor : ISqlVisitor
         tableSegment.TableSchema = tableSchema;
     }
     public void UseMaster(bool isUseMaster = true) => this.IsUseMaster = isUseMaster;
-    public virtual string BuildShardingTableNamesSql(string orgTableName, string tableSchema = null) => null;
     public virtual string BuildTableShardingsSql() => null;
     public void SetShardingTables(List<string> shardingTables)
     {

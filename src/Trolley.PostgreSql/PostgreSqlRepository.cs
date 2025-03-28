@@ -9,6 +9,10 @@ namespace Trolley.PostgreSql;
 
 public class PostgreSqlRepository : Repository, IPostgreSqlRepository
 {
+    #region fields
+    private PostgreSqlProvider dialectProvider => this.OrmProvider as PostgreSqlProvider;
+    #endregion
+
     #region Constructor
     public PostgreSqlRepository(DbContext dbContext) :
         base(dbContext)
@@ -62,21 +66,9 @@ public class PostgreSqlRepository : Repository, IPostgreSqlRepository
 
     #region ShardingTable
     public override List<string> GetShardingTableNames<TEntity>(Func<string, bool> tableNameSelector, string tableSchema = null)
-    {
-        var entityMapper = this.MapProvider.GetEntityMap(typeof(TEntity));
-        var orgTableName = entityMapper.TableName;
-        tableSchema ??= this.DbContext.DefaultTableSchema;
-        var sql = $"SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND a.relname LIKE '{orgTableName}_%' AND b.nspname='{tableSchema}'";
-        return this.Query<string>(sql);
-    }
+        => this.dialectProvider.GetShardingTableNames<TEntity>(this.DbContext, tableNameSelector, tableSchema);
     public override async Task<List<string>> GetShardingTableNamesAsync<TEntity>(Func<string, bool> tableNameSelector, string tableSchema = null, CancellationToken cancellationToken = default)
-    {
-        var entityMapper = this.MapProvider.GetEntityMap(typeof(TEntity));
-        var orgTableName = entityMapper.TableName;
-        tableSchema ??= this.DbContext.DefaultTableSchema;
-        var sql = $"SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND a.relname LIKE '{orgTableName}_%' AND b.nspname='{tableSchema}'";
-        return await this.QueryAsync<string>(sql);
-    }
+        => await this.dialectProvider.GetShardingTableNamesAsync<TEntity>(this.DbContext, tableNameSelector, tableSchema, cancellationToken);
     public override void CreateShardingTable<TEntity>(string tableName, string fromTableSchema = null)
     {
         var entityType = typeof(TEntity);
@@ -312,23 +304,6 @@ c.contype='f' INNER JOIN pg_attribute d ON d.attnum=ANY(c.conkey) AND d.attrelid
         }
         await this.ExecuteAsync(builder.ToString(), cancellationToken);
     }
-    public override string GetShardingTableNameBy<TEntity>(object field1Value, object field2Value = null)
-    {
-        var entityMapper = this.MapProvider.GetEntityMap(typeof(TEntity));
-        return this.DbContext.GetShardingTableBy(entityMapper, field1Value, field2Value);
-    }
-    public override void CreateShardingTableBy<TEntity>(object field1Value, object field2Value = null)
-    {
-        var entityMapper = this.MapProvider.GetEntityMap(typeof(TEntity));
-        var tableName = this.DbContext.GetShardingTableBy(entityMapper, field1Value, field2Value);
-        this.CreateShardingTable<TEntity>(tableName);
-    }
-    public override async Task CreateShardingTableByAsync<TEntity>(object field1Value, object field2Value = null, CancellationToken cancellationToken = default)
-    {
-        var entityMapper = this.MapProvider.GetEntityMap(typeof(TEntity));
-        var tableName = this.DbContext.GetShardingTableBy(entityMapper, field1Value, field2Value);
-        await this.CreateShardingTableAsync<TEntity>(tableName, null, cancellationToken);
-    }
     #endregion
 
     class TableInfo
@@ -355,7 +330,6 @@ c.contype='f' INNER JOIN pg_attribute d ON d.attnum=ANY(c.conkey) AND d.attrelid
         public string IndexType { get; set; }
         public bool IsUnique { get; set; }
         public bool IsPrimary { get; set; }
-        public bool IsClustered { get; set; }
         public bool IsDesc { get; set; }
     }
     class ForeignKeyInfo

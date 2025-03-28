@@ -300,13 +300,6 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
         builder.Clear();
         return sql;
     }
-    public override string BuildShardingTableNamesSql(string orgTableName, string tableSchema = null)
-    {
-        var sql = $"SELECT a.name FROM sys.objects a,sys.schemas b WHERE a.schema_id=b.schema_id AND a.type='U' AND a.name LIKE '{orgTableName}_%'";
-        if (!string.IsNullOrEmpty(tableSchema))
-            sql += $" AND b.name='{tableSchema}'";
-        return sql;
-    }
     public override string BuildTableShardingsSql()
     {
         var builder = new StringBuilder($"SELECT a.name FROM sys.objects a,sys.schemas b WHERE a.schema_id=b.schema_id AND a.type='U' AND ");

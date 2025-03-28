@@ -44,7 +44,7 @@ public class Repository : IRepository
     {
         var entityMapper = this.MapProvider.GetEntityMap(typeof(TEntity));
         var tableName = this.DbContext.GetShardingTableBy(entityMapper, field1Value, field2Value);
-        await this.CreateShardingTableAsync<TEntity>(tableName, null, cancellationToken);
+        await this.CreateShardingTableAsync<TEntity>(tableName, cancellationToken: cancellationToken);
     }
     #endregion
 

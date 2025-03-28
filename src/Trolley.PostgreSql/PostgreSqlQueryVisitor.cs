@@ -313,13 +313,6 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         builder.Clear();
         return sql;
     }
-    public override string BuildShardingTableNamesSql(string orgTableName, string tableSchema = null)
-    {
-        var sql = $"SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND a.relname LIKE '{orgTableName}_%'";
-        if (!string.IsNullOrEmpty(tableSchema))
-            sql += $" AND b.nspname='{tableSchema}'";
-        return sql;
-    }
     public override string BuildTableShardingsSql()
     {
         var builder = new StringBuilder($"SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND ");
