@@ -53,13 +53,15 @@ public class MySqlRepository : Repository, IMySqlRepository
         {
             f.QueryFirst<CollationInfo>($"select a.engine,b.collation_name,b.character_set_name from information_schema.tables a,information_schema.collation_character_set_applicability b where a.table_collation=b.collation_name and a.table_schema='{fromTableSchema}' and a.table_name='{orgTableName}' ")
              .Query<ColumnInfo>($"select column_name,column_type,column_comment description,column_default default_value,extra,is_nullable from information_schema.columns where table_schema='{fromTableSchema}' and table_name='{orgTableName}' order by ordinal_position")
-             .Query<IndexInfo>(@$"select a.non_unique,a.index_name,a.seq_in_index,a.column_name,a.collation,a.index_type,b.constraint_type,c.referenced_table_name ref_table,c.referenced_column_name ref_column_name,d.update_rule,d.delete_rule from information_schema.statistics a
-left join information_schema.table_constraints b on a.table_schema=b.table_schema and a.table_name=b.table_name and a.index_name=b.constraint_name left join information_schema.key_column_usage c on a.table_schema=c.table_schema and a.table_name=c.table_name and a.index_name=c.constraint_name 
-and a.column_name=c.column_name left join information_schema.referential_constraints d on a.table_schema=d.constraint_schema and a.table_name=d.table_name and a.index_name=d.constraint_name and b.constraint_type='FOREIGN KEY' where a.table_schema='{fromTableSchema}' and a.table_name='{orgTableName}'");
+             .Query<IndexInfo>(@$"select a.non_unique,a.index_name,a.seq_in_index,a.column_name,a.collation,a.index_type,b.constraint_type from information_schema.statistics a left join information_schema.table_constraints b 
+on a.table_schema=b.table_schema and a.table_name=b.table_name and a.index_name=b.constraint_name where IFNULL(b.constraint_type,'')<>'FOREIGN KEY' and a.table_schema='{fromTableSchema}' and a.table_name='{orgTableName}'")
+             .Query<ForeignKeyInfo>($@"select a.constraint_name,a.column_name,a.referenced_table_name ref_table,a.referenced_column_name ref_column_name,b.update_rule update_rule,b.delete_rule delete_rule from information_schema.key_column_usage a inner join 
+information_schema.referential_constraints b on a.table_schema=b.constraint_schema and a.table_name=b.table_name and a.constraint_name=b.constraint_name and b.referenced_table_name IS NOT NULL where a.table_schema='{fromTableSchema}' and a.table_name='{orgTableName}'");
         });
         var collationInfo = reader.ReadFirst<CollationInfo>();
         var columnInfos = reader.Read<ColumnInfo>();
         var indexInfos = reader.Read<IndexInfo>();
+        var foreignKeyInfos = reader.Read<ForeignKeyInfo>();
 
         var builder = new StringBuilder($"CREATE TABLE {this.OrmProvider.GetTableName(tableName)}");
         builder.AppendLine();
@@ -84,21 +86,16 @@ and a.column_name=c.column_name left join information_schema.referential_constra
         {
             builder.AppendLine(",");
             var indexInfo = indexInfos.First(f => f.IndexName == indexName);
-            var myIndexName = indexName + shardingPart;
-            switch (indexInfo.ConstraintType)
+            if (indexInfo.ConstraintType == "PRIMARY KEY")
+                builder.Append($"{indexInfo.ConstraintType}");
+            else
             {
-                case "PRIMARY KEY":
-                    builder.Append($"{indexInfo.ConstraintType} USING {indexInfo.IndexType}");
-                    break;
-                case "FOREIGN KEY":
-                    builder.Append($"{indexInfo.ConstraintType} {this.OrmProvider.GetFieldName(myIndexName)}");
-                    break;
-                default:
-                    if (!indexInfo.NonUnique)
-                        builder.Append("UNIQUE ");
-                    builder.Append($"INDEX {this.OrmProvider.GetFieldName(myIndexName)} USING {indexInfo.IndexType}");
-                    break;
+                if (!indexInfo.NonUnique)
+                    builder.Append("UNIQUE ");
+                var myIndexName = indexName + shardingPart;
+                builder.Append($"INDEX {this.OrmProvider.GetFieldName(myIndexName)}");
             }
+            builder.Append($" USING {indexInfo.IndexType}");
             builder.Append('(');
             var myIndexInfos = indexInfos.Where(f => f.IndexName == indexName)
                 .OrderBy(f => f.SeqInIndex).ToList();
@@ -111,11 +108,14 @@ and a.column_name=c.column_name left join information_schema.referential_constra
                     builder.Append($" DESC");
             }
             builder.Append(')');
-            if (indexInfo.ConstraintType == "FOREIGN KEY")
-            {
-                builder.Append($" REFERENCES {this.OrmProvider.GetTableName(indexInfo.RefTable)}(");
-                builder.Append($"{this.OrmProvider.GetFieldName(indexInfo.RefColumnName)}) ON DELETE {indexInfo.DeleteRule} ON UPDATE {indexInfo.UpdateRule}");
-            }
+        }
+        indexNames = foreignKeyInfos.Select(f => f.ConstraintName).Distinct().ToList();
+        foreach (var indexName in indexNames)
+        {
+            builder.AppendLine(",");
+            var indexInfo = foreignKeyInfos.First(f => f.ConstraintName == indexName);
+            builder.Append($"FOREIGN KEY ({this.OrmProvider.GetFieldName(indexInfo.ColumnName)}) REFERENCES {this.OrmProvider.GetTableName(indexInfo.RefTable)}");
+            builder.Append($"({this.OrmProvider.GetFieldName(indexInfo.RefColumnName)}) ON DELETE {indexInfo.DeleteRule} ON UPDATE {indexInfo.UpdateRule}");
         }
         builder.AppendLine();
         builder.Append($") ENGINE={collationInfo.Engine} CHARACTER SET={collationInfo.CharacterSetName} COLLATE={collationInfo.CollationName}");
@@ -136,13 +136,15 @@ and a.column_name=c.column_name left join information_schema.referential_constra
         {
             f.QueryFirst<CollationInfo>($"select a.engine,b.collation_name,b.character_set_name from information_schema.tables a,information_schema.collation_character_set_applicability b where a.table_collation=b.collation_name and a.table_schema='{fromTableSchema}' and a.table_name='{orgTableName}' ")
              .Query<ColumnInfo>($"select column_name,column_type,column_comment description,column_default default_value,extra,is_nullable from information_schema.columns where table_schema='{fromTableSchema}' and table_name='{orgTableName}' order by ordinal_position")
-             .Query<IndexInfo>(@$"select a.non_unique,a.index_name,a.seq_in_index,a.column_name,a.collation,a.index_type,b.constraint_type,c.referenced_table_name ref_table,c.referenced_column_name ref_column_name,d.update_rule,d.delete_rule from information_schema.statistics a
-left join information_schema.table_constraints b on a.table_schema=b.table_schema and a.table_name=b.table_name and a.index_name=b.constraint_name left join information_schema.key_column_usage c on a.table_schema=c.table_schema and a.table_name=c.table_name and a.index_name=c.constraint_name 
-and a.column_name=c.column_name left join information_schema.referential_constraints d on a.table_schema=d.constraint_schema and a.table_name=d.table_name and a.index_name=d.constraint_name and b.constraint_type='FOREIGN KEY' where a.table_schema='{fromTableSchema}' and a.table_name='{orgTableName}'");
+             .Query<IndexInfo>(@$"select a.non_unique,a.index_name,a.seq_in_index,a.column_name,a.collation,a.index_type,b.constraint_type from information_schema.statistics a left join information_schema.table_constraints b 
+on a.table_schema=b.table_schema and a.table_name=b.table_name and a.index_name=b.constraint_name where IFNULL(b.constraint_type,'')<>'FOREIGN KEY' and a.table_schema='{fromTableSchema}' and a.table_name='{orgTableName}'")
+             .Query<ForeignKeyInfo>($@"select a.constraint_name,a.column_name,a.referenced_table_name ref_table,a.referenced_column_name ref_column_name,b.update_rule update_rule,b.delete_rule delete_rule from information_schema.key_column_usage a inner join 
+information_schema.referential_constraints b on a.table_schema=b.constraint_schema and a.table_name=b.table_name and a.constraint_name=b.constraint_name and b.referenced_table_name IS NOT NULL where a.table_schema='{fromTableSchema}' and a.table_name='{orgTableName}'");
         }, cancellationToken);
         var collationInfo = await reader.ReadFirstAsync<CollationInfo>(cancellationToken);
         var columnInfos = await reader.ReadAsync<ColumnInfo>(cancellationToken);
         var indexInfos = await reader.ReadAsync<IndexInfo>(cancellationToken);
+        var foreignKeyInfos = await reader.ReadAsync<ForeignKeyInfo>();
 
         var builder = new StringBuilder($"CREATE TABLE {this.OrmProvider.GetTableName(tableName)}");
         builder.AppendLine();
@@ -167,21 +169,16 @@ and a.column_name=c.column_name left join information_schema.referential_constra
         {
             builder.AppendLine(",");
             var indexInfo = indexInfos.First(f => f.IndexName == indexName);
-            var myIndexName = indexName + shardingPart;
-            switch (indexInfo.ConstraintType)
+            if (indexInfo.ConstraintType == "PRIMARY KEY")
+                builder.Append($"{indexInfo.ConstraintType}");
+            else
             {
-                case "PRIMARY KEY":
-                    builder.Append($"{indexInfo.ConstraintType} USING {indexInfo.IndexType}");
-                    break;
-                case "FOREIGN KEY":
-                    builder.Append($"{indexInfo.ConstraintType} {this.OrmProvider.GetFieldName(myIndexName)}");
-                    break;
-                default:
-                    if (!indexInfo.NonUnique)
-                        builder.Append("UNIQUE ");
-                    builder.Append($"INDEX {this.OrmProvider.GetFieldName(myIndexName)} USING {indexInfo.IndexType}");
-                    break;
+                if (!indexInfo.NonUnique)
+                    builder.Append("UNIQUE ");
+                var myIndexName = indexName + shardingPart;
+                builder.Append($"INDEX {this.OrmProvider.GetFieldName(myIndexName)}");
             }
+            builder.Append($" USING {indexInfo.IndexType}");
             builder.Append('(');
             var myIndexInfos = indexInfos.Where(f => f.IndexName == indexName)
                 .OrderBy(f => f.SeqInIndex).ToList();
@@ -194,11 +191,14 @@ and a.column_name=c.column_name left join information_schema.referential_constra
                     builder.Append($" DESC");
             }
             builder.Append(')');
-            if (indexInfo.ConstraintType == "FOREIGN KEY")
-            {
-                builder.Append($" REFERENCES {this.OrmProvider.GetTableName(indexInfo.RefTable)}(");
-                builder.Append($"{this.OrmProvider.GetFieldName(indexInfo.RefColumnName)}) ON DELETE {indexInfo.DeleteRule} ON UPDATE {indexInfo.UpdateRule}");
-            }
+        }
+        indexNames = foreignKeyInfos.Select(f => f.ConstraintName).Distinct().ToList();
+        foreach (var indexName in indexNames)
+        {
+            builder.AppendLine(",");
+            var indexInfo = foreignKeyInfos.First(f => f.ConstraintName == indexName);
+            builder.Append($"FOREIGN KEY ({this.OrmProvider.GetFieldName(indexInfo.ColumnName)}) REFERENCES {this.OrmProvider.GetTableName(indexInfo.RefTable)}");
+            builder.Append($"({this.OrmProvider.GetFieldName(indexInfo.RefColumnName)}) ON DELETE {indexInfo.DeleteRule} ON UPDATE {indexInfo.UpdateRule}");
         }
         builder.AppendLine();
         builder.Append($") ENGINE={collationInfo.Engine} CHARACTER SET={collationInfo.CharacterSetName} COLLATE={collationInfo.CollationName}");
@@ -233,6 +233,11 @@ and a.column_name=c.column_name left join information_schema.referential_constra
         public string IndexType { get; set; }
         public string Collation { get; set; }
         public string ConstraintType { get; set; }
+    }
+    class ForeignKeyInfo
+    {
+        public string ConstraintName { get; set; }
+        public string ColumnName { get; set; }
         public string RefTable { get; set; }
         public string RefColumnName { get; set; }
         public string DeleteRule { get; set; }

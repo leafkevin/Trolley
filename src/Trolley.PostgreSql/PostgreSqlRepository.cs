@@ -84,12 +84,16 @@ public class PostgreSqlRepository : Repository, IPostgreSqlRepository
              .Query<ColumnInfo>(@$"select c.attnum ColumnIndex,c.attname ColumnName,c.attndims ArrayDimens,concat_ws('',d.typname,SUBSTRING(format_type(c.atttypid,c.atttypmod) from '\(.*\)')) columnType,e.description,pg_get_expr(f.adbin,f.adrelid) DefaultValue,g.refobjid IsIdentity,c.attnotnull IsRequired 
 from pg_class a inner join pg_namespace b on a.relnamespace=b.oid inner join pg_attribute c on a.oid=c.attrelid and c.attnum>0 inner join pg_type d on c.atttypid=d.oid left join pg_description e on e.objoid=c.attrelid and e.objsubid=c.attnum left join pg_attrdef f on a.oid=f.adrelid 
 and c.attnum=f.adnum left join (select dp.refobjid,dp.refobjsubid from pg_depend dp,pg_class cs where dp.objid=cs.oid and cs.relkind='S') g on a.oid=g.refobjid and c.attnum=g.refobjsubid where a.relkind='r' and b.nspname='{fromTableSchema}' and a.relname='{orgTableName}' order by c.attnum asc")
-             .Query<IndexInfo>(@$"select c.attname ColumnName,b.relname IndexName,a.indisunique IsUnique,a.indisprimary IsPrimary,not a.indisclustered IsClustered,pg_index_column_has_property(b.oid,c.attnum,'desc') IsDesc,d.amname IndexType from pg_index a inner join pg_class b 
-on b.oid=a.indexrelid inner join pg_attribute c on c.attnum>0 and c.attrelid=b.oid inner join pg_am d ON b.relam=d.oid inner join pg_namespace e on e.oid=b.relnamespace inner join pg_class f on f.oid=a.indrelid WHERE f.relname='{orgTableName}' and e.nspname='{fromTableSchema}'");
+             .Query<IndexInfo>(@$"select c.attname ColumnName,b.relname IndexName,a.indisunique IsUnique,a.indisprimary IsPrimary,pg_index_column_has_property(b.oid,c.attnum,'desc') IsDesc,d.amname IndexType from pg_index a inner join pg_class b on b.oid=a.indexrelid 
+inner join pg_attribute c on c.attnum>0 and c.attrelid=b.oid inner join pg_am d ON b.relam=d.oid inner join pg_namespace e on e.oid=b.relnamespace inner join pg_class f on f.oid=a.indrelid WHERE f.relname='{orgTableName}' and e.nspname='{fromTableSchema}'")
+             .Query<ForeignKeyInfo>($@"SELECT c.conname AS constraint_name,d.attname column_name,e.relname ref_table,f.attname ref_column_name,CASE c.confdeltype WHEN 'a' THEN 'NO ACTION' WHEN 'r' THEN 'RESTRICT' WHEN 'c' THEN 'CASCADE' WHEN 'n' THEN 'SET NULL' WHEN 'd' THEN 'SET DEFAULT' END 
+AS delete_rule,CASE c.confupdtype WHEN 'a' THEN 'NO ACTION' WHEN 'r' THEN 'RESTRICT' WHEN 'c' THEN 'CASCADE' WHEN 'n' THEN 'SET NULL' WHEN 'd' THEN 'SET DEFAULT' END AS update_rule FROM pg_class a INNER JOIN pg_namespace b ON a.relnamespace=b.oid INNER JOIN pg_constraint c ON a.oid=c.conrelid 
+and c.contype='f' INNER JOIN pg_attribute d ON d.attnum=ANY(c.conkey) AND d.attrelid=c.conrelid INNER JOIN pg_class e ON c.confrelid=e.oid INNER JOIN pg_attribute f ON f.attnum=ANY(c.confkey) AND f.attrelid=c.confrelid WHERE b.nspname='{fromTableSchema}' and a.relname='{orgTableName}'");
         });
         var tableInfo = reader.ReadFirst<TableInfo>();
         var columnInfos = reader.Read<ColumnInfo>();
         var indexInfos = reader.Read<IndexInfo>();
+        var foreignKeyInfos = reader.Read<ForeignKeyInfo>();
 
         var builder = new StringBuilder($"CREATE TABLE IF NOT EXISTS {this.OrmProvider.GetTableName(tableName)}");
         builder.AppendLine();
@@ -129,11 +133,59 @@ on b.oid=a.indexrelid inner join pg_attribute c on c.attnum>0 and c.attrelid=b.o
             if (!string.IsNullOrEmpty(columnInfo.Description))
                 commentBuilder.AppendLine($"COMMENT ON COLUMN {tableName}.{this.OrmProvider.GetFieldName(columnInfo.ColumnName)} IS '{columnInfo.Description}';");
         }
-        var myIndexInfos = indexInfos.FindAll(f => f.IsPrimary);
-        if (myIndexInfos.Count > 0)
+        var indexNames = indexInfos.Where(f => f.IsPrimary || f.IsUnique)
+            .Select(f => f.IndexName).Distinct().ToList();
+        foreach (var indexName in indexNames)
         {
             builder.AppendLine(",");
-            builder.Append($"CONSTRAINT {this.OrmProvider.GetFieldName($"pk_{tableName}")} PRIMARY KEY(");
+            var indexInfo = indexInfos.First(f => f.IndexName == indexName);
+
+            if (indexInfo.IsPrimary)
+                builder.Append($"CONSTRAINT {this.OrmProvider.GetFieldName($"pk_{tableName}")} PRIMARY KEY");
+            else
+            {
+                var myIndexName = indexName + shardingPart;
+                builder.Append($"CONSTRAINT {this.OrmProvider.GetFieldName(myIndexName)} UNIQUE");
+            }
+            builder.Append('(');
+            var myIndexInfos = indexInfos.Where(f => f.IndexName == indexName).ToList();
+            for (int j = 0; j < myIndexInfos.Count; j++)
+            {
+                if (j > 0) builder.Append(',');
+                var myIndexInfo = myIndexInfos[j];
+                builder.Append(this.OrmProvider.GetFieldName(myIndexInfo.ColumnName));
+                if (myIndexInfo.IsDesc)
+                    builder.Append($" DESC");
+            }
+            builder.Append(')');
+        }
+
+        indexNames = foreignKeyInfos.Select(f => f.ConstraintName).Distinct().ToList();
+        foreach (var indexName in indexNames)
+        {
+            builder.AppendLine(",");
+            var myIndexName = indexName + shardingPart;
+            var myIndexInfo = foreignKeyInfos.Find(f => f.ConstraintName == indexName);
+            builder.Append($"CONSTRAINT {this.OrmProvider.GetFieldName(myIndexName)} FOREIGN KEY({this.OrmProvider.GetFieldName(myIndexInfo.ColumnName)}) ");
+            builder.Append($"REFERENCES {this.OrmProvider.GetTableName(myIndexInfo.RefTable)}({this.OrmProvider.GetFieldName(myIndexInfo.RefColumnName)}) ");
+            builder.Append($"ON DELETE {myIndexInfo.DeleteRule} ON UPDATE {myIndexInfo.UpdateRule}");
+        }
+        builder.AppendLine();
+        builder.Append(')');
+        if (tableInfo != null && !string.IsNullOrEmpty(tableInfo.TableSpace))
+            builder.Append($" TABLESPACE {tableInfo.TableSpace}");
+
+        indexNames = indexInfos.Where(f => !f.IsPrimary && !f.IsUnique)
+            .Select(f => f.IndexName).Distinct().ToList();
+        foreach (var indexName in indexNames)
+        {
+            builder.AppendLine(";");
+            var myIndexName = indexName + shardingPart;
+            var indexInfo = indexInfos.First(f => f.IndexName == indexName);
+            builder.Append($"CREATE INDEX IF NOT EXISTS {this.OrmProvider.GetFieldName(myIndexName)} ON {this.OrmProvider.GetTableName(tableName)} USING {indexInfo.IndexType}");
+
+            var myIndexInfos = indexInfos.FindAll(f => f.IsPrimary);
+            builder.Append('(');
             for (int j = 0; j < myIndexInfos.Count; j++)
             {
                 if (j > 0) builder.Append(',');
@@ -142,42 +194,9 @@ on b.oid=a.indexrelid inner join pg_attribute c on c.attnum>0 and c.attrelid=b.o
                 if (columnInfo.IsDesc)
                     builder.Append(" DESC");
             }
-            builder.AppendLine(")");
+            builder.Append(')');
         }
-        builder.Append(')');
-        if (tableInfo != null && !string.IsNullOrEmpty(tableInfo.TableSpace))
-            builder.Append($" TABLESPACE {tableInfo.TableSpace}");
-
-        if (indexInfos.Exists(f => !f.IsPrimary))
-        {
-            var indexNames = indexInfos.Where(f => !f.IsPrimary).Select(f => f.IndexName).Distinct().ToList();
-            for (int i = 0; i < indexNames.Count; i++)
-            {
-                builder.AppendLine(";");
-                builder.Append("CREATE ");
-                var indexName = indexNames[i];
-                var indexInfo = indexInfos.First(f => f.IndexName == indexName);
-                if (indexInfo.IsUnique)
-                    builder.Append("UNIQUE ");
-                builder.Append("INDEX IF NOT EXISTS ");
-                var myIndexName = indexInfo.IndexName + shardingPart;
-                builder.Append(this.OrmProvider.GetFieldName(myIndexName));
-                builder.Append($" ON {this.OrmProvider.GetTableName(tableName)}");
-                if (!string.IsNullOrEmpty(indexInfo.IndexType))
-                    builder.Append($" USING {indexInfo.IndexType}");
-                builder.Append('(');
-                myIndexInfos = indexInfos.FindAll(f => f.IndexName == indexName);
-                for (int j = 0; j < myIndexInfos.Count; j++)
-                {
-                    if (j > 0) builder.Append(',');
-                    var columnInfo = myIndexInfos[j];
-                    builder.Append(this.OrmProvider.GetFieldName(columnInfo.ColumnName));
-                    if (columnInfo.IsDesc)
-                        builder.Append(" DESC");
-                }
-                builder.Append(')');
-            }
-        }
+        builder.AppendLine(";");
         if (commentBuilder.Length > 0)
         {
             builder.AppendLine(";");
@@ -200,15 +219,16 @@ on b.oid=a.indexrelid inner join pg_attribute c on c.attnum>0 and c.attrelid=b.o
              .Query<ColumnInfo>(@$"select c.attnum ColumnIndex,c.attname ColumnName,c.attndims ArrayDimens,concat_ws('',d.typname,SUBSTRING(format_type(c.atttypid,c.atttypmod) from '\(.*\)')) columnType,e.description,pg_get_expr(f.adbin,f.adrelid) DefaultValue,g.refobjid IsIdentity,c.attnotnull IsRequired 
 from pg_class a inner join pg_namespace b on a.relnamespace=b.oid inner join pg_attribute c on a.oid=c.attrelid and c.attnum>0 inner join pg_type d on c.atttypid=d.oid left join pg_description e on e.objoid=c.attrelid and e.objsubid=c.attnum left join pg_attrdef f on a.oid=f.adrelid 
 and c.attnum=f.adnum left join (select dp.refobjid,dp.refobjsubid from pg_depend dp,pg_class cs where dp.objid=cs.oid and cs.relkind='S') g on a.oid=g.refobjid and c.attnum=g.refobjsubid where a.relkind='r' and b.nspname='{fromTableSchema}' and a.relname='{orgTableName}' order by c.attnum asc")
-             .Query<IndexInfo>($"select c.attname ColumnName,b.relname IndexName,a.indisunique IsUnique,a.indisprimary IsPrimary,not a.indisclustered IsClustered,pg_index_column_has_property(b.oid,c.attnum,'desc') IsDesc,d.amname IndexType from pg_index a inner join pg_class b " +
-                $"on b.oid=a.indexrelid inner join pg_attribute c on c.attnum>0 and c.attrelid=b.oid inner join pg_am d ON b.relam=d.oid inner join pg_namespace e on e.oid=b.relnamespace inner join pg_class f on f.oid=a.indrelid WHERE f.relname='{orgTableName}' and e.nspname='{fromTableSchema}'")
-             .Query<IndexInfo>(@$"SELECT c.conname AS constraint_name,d.attname column_name,e.relname ref_table,f.attname ref_column_name,CASE c.confdeltype WHEN 'a' THEN 'NO ACTION' WHEN 'r' THEN 'RESTRICT' WHEN 'c' THEN 'CASCADE' WHEN 'n' THEN 'SET NULL' WHEN 'd' THEN 'SET DEFAULT' END AS delete_action,
-CASE c.confupdtype WHEN 'a' THEN 'NO ACTION' WHEN 'r' THEN 'RESTRICT' WHEN 'c' THEN 'CASCADE' WHEN 'n' THEN 'SET NULL' WHEN 'd' THEN 'SET DEFAULT' END AS update_action FROM pg_class a INNER JOIN pg_namespace b ON a.relnamespace=b.oid INNER JOIN pg_constraint c ON a.oid=c.conrelid and 
-c.contype='f' INNER JOIN pg_attribute d ON d.attnum=ANY(c.conkey) AND d.attrelid=c.conrelid INNER JOIN pg_class e ON c.confrelid=e.oid INNER JOIN pg_attribute f ON f.attnum=ANY(c.confkey) AND f.attrelid=c.confrelid WHERE b.nspname='{fromTableSchema}' and a.relname='{orgTableName}'");
+             .Query<IndexInfo>(@$"select c.attname ColumnName,b.relname IndexName,a.indisunique IsUnique,a.indisprimary IsPrimary,pg_index_column_has_property(b.oid,c.attnum,'desc') IsDesc,d.amname IndexType from pg_index a inner join pg_class b on b.oid=a.indexrelid 
+inner join pg_attribute c on c.attnum>0 and c.attrelid=b.oid inner join pg_am d ON b.relam=d.oid inner join pg_namespace e on e.oid=b.relnamespace inner join pg_class f on f.oid=a.indrelid WHERE f.relname='{orgTableName}' and e.nspname='{fromTableSchema}'")
+             .Query<ForeignKeyInfo>($@"SELECT c.conname AS constraint_name,d.attname column_name,e.relname ref_table,f.attname ref_column_name,CASE c.confdeltype WHEN 'a' THEN 'NO ACTION' WHEN 'r' THEN 'RESTRICT' WHEN 'c' THEN 'CASCADE' WHEN 'n' THEN 'SET NULL' WHEN 'd' THEN 'SET DEFAULT' END 
+AS delete_rule,CASE c.confupdtype WHEN 'a' THEN 'NO ACTION' WHEN 'r' THEN 'RESTRICT' WHEN 'c' THEN 'CASCADE' WHEN 'n' THEN 'SET NULL' WHEN 'd' THEN 'SET DEFAULT' END AS update_rule FROM pg_class a INNER JOIN pg_namespace b ON a.relnamespace=b.oid INNER JOIN pg_constraint c ON a.oid=c.conrelid 
+and c.contype='f' INNER JOIN pg_attribute d ON d.attnum=ANY(c.conkey) AND d.attrelid=c.conrelid INNER JOIN pg_class e ON c.confrelid=e.oid INNER JOIN pg_attribute f ON f.attnum=ANY(c.confkey) AND f.attrelid=c.confrelid WHERE b.nspname='{fromTableSchema}' and a.relname='{orgTableName}'");
         });
         var tableInfo = await reader.ReadFirstAsync<TableInfo>();
         var columnInfos = await reader.ReadAsync<ColumnInfo>();
         var indexInfos = await reader.ReadAsync<IndexInfo>();
+        var foreignKeyInfos = await reader.ReadAsync<ForeignKeyInfo>();
 
         var builder = new StringBuilder($"CREATE TABLE IF NOT EXISTS {this.OrmProvider.GetTableName(tableName)}");
         builder.AppendLine();
@@ -248,11 +268,58 @@ c.contype='f' INNER JOIN pg_attribute d ON d.attnum=ANY(c.conkey) AND d.attrelid
             if (!string.IsNullOrEmpty(columnInfo.Description))
                 commentBuilder.AppendLine($"COMMENT ON COLUMN {tableName}.{this.OrmProvider.GetFieldName(columnInfo.ColumnName)} IS '{columnInfo.Description}';");
         }
-        var myIndexInfos = indexInfos.FindAll(f => f.IsPrimary);
-        if (myIndexInfos.Count > 0)
+        var indexNames = indexInfos.Where(f => f.IsPrimary || f.IsUnique)
+            .Select(f => f.IndexName).Distinct().ToList();
+        foreach (var indexName in indexNames)
         {
             builder.AppendLine(",");
-            builder.Append($"CONSTRAINT {this.OrmProvider.GetFieldName($"pk_{tableName}")} PRIMARY KEY(");
+            var indexInfo = indexInfos.First(f => f.IndexName == indexName);
+
+            if (indexInfo.IsPrimary)
+                builder.Append($"CONSTRAINT {this.OrmProvider.GetFieldName($"pk_{tableName}")} PRIMARY KEY");
+            else
+            {
+                var myIndexName = indexName + shardingPart;
+                builder.Append($"CONSTRAINT {this.OrmProvider.GetFieldName(myIndexName)} UNIQUE");
+            }
+            builder.Append('(');
+            var myIndexInfos = indexInfos.Where(f => f.IndexName == indexName).ToList();
+            for (int j = 0; j < myIndexInfos.Count; j++)
+            {
+                if (j > 0) builder.Append(',');
+                var myIndexInfo = myIndexInfos[j];
+                builder.Append(this.OrmProvider.GetFieldName(myIndexInfo.ColumnName));
+                if (myIndexInfo.IsDesc)
+                    builder.Append($" DESC");
+            }
+            builder.Append(')');
+        }
+
+        indexNames = foreignKeyInfos.Select(f => f.ConstraintName).Distinct().ToList();
+        foreach (var indexName in indexNames)
+        {
+            builder.AppendLine(",");
+            var myIndexName = indexName + shardingPart;
+            var myIndexInfo = foreignKeyInfos.Find(f => f.ConstraintName == indexName);
+            builder.Append($"CONSTRAINT {this.OrmProvider.GetFieldName(myIndexName)} FOREIGN KEY({this.OrmProvider.GetFieldName(myIndexInfo.ColumnName)}) ");
+            builder.Append($"REFERENCES {this.OrmProvider.GetTableName(myIndexInfo.RefTable)}({this.OrmProvider.GetFieldName(myIndexInfo.RefColumnName)}) ");
+            builder.Append($"ON DELETE {myIndexInfo.DeleteRule} ON UPDATE {myIndexInfo.UpdateRule}");
+        }
+        builder.Append(')');
+        if (tableInfo != null && !string.IsNullOrEmpty(tableInfo.TableSpace))
+            builder.Append($" TABLESPACE {tableInfo.TableSpace}");
+
+        indexNames = indexInfos.Where(f => !f.IsPrimary && !f.IsUnique)
+            .Select(f => f.IndexName).Distinct().ToList();
+        foreach (var indexName in indexNames)
+        {
+            builder.AppendLine(";");
+            var myIndexName = indexName + shardingPart;
+            var indexInfo = indexInfos.First(f => f.IndexName == indexName);
+            builder.Append($"CREATE INDEX IF NOT EXISTS {this.OrmProvider.GetFieldName(myIndexName)} ON {this.OrmProvider.GetTableName(tableName)} USING {indexInfo.IndexType}");
+
+            var myIndexInfos = indexInfos.FindAll(f => f.IsPrimary);
+            builder.Append('(');
             for (int j = 0; j < myIndexInfos.Count; j++)
             {
                 if (j > 0) builder.Append(',');
@@ -261,41 +328,7 @@ c.contype='f' INNER JOIN pg_attribute d ON d.attnum=ANY(c.conkey) AND d.attrelid
                 if (columnInfo.IsDesc)
                     builder.Append(" DESC");
             }
-            builder.AppendLine(")");
-        }
-        builder.Append(')');
-        if (tableInfo != null && !string.IsNullOrEmpty(tableInfo.TableSpace))
-            builder.Append($" TABLESPACE {tableInfo.TableSpace}");
-
-        if (indexInfos.Exists(f => !f.IsPrimary))
-        {
-            var indexNames = indexInfos.Where(f => !f.IsPrimary).Select(f => f.IndexName).Distinct().ToList();
-            for (int i = 0; i < indexNames.Count; i++)
-            {
-                builder.AppendLine(";");
-                builder.Append("CREATE ");
-                var indexName = indexNames[i];
-                var indexInfo = indexInfos.First(f => f.IndexName == indexName);
-                if (indexInfo.IsUnique)
-                    builder.Append("UNIQUE ");
-                builder.Append("INDEX IF NOT EXISTS ");
-                var myIndexName = indexInfo.IndexName + shardingPart;
-                builder.Append(this.OrmProvider.GetFieldName(myIndexName));
-                builder.Append($" ON {this.OrmProvider.GetTableName(tableName)}");
-                if (!string.IsNullOrEmpty(indexInfo.IndexType))
-                    builder.Append($" USING {indexInfo.IndexType}");
-                builder.Append('(');
-                myIndexInfos = indexInfos.FindAll(f => f.IndexName == indexName);
-                for (int j = 0; j < myIndexInfos.Count; j++)
-                {
-                    if (j > 0) builder.Append(',');
-                    var columnInfo = myIndexInfos[j];
-                    builder.Append(this.OrmProvider.GetFieldName(columnInfo.ColumnName));
-                    if (columnInfo.IsDesc)
-                        builder.Append(" DESC");
-                }
-                builder.Append(')');
-            }
+            builder.Append(')');
         }
         if (commentBuilder.Length > 0)
         {
@@ -338,7 +371,7 @@ c.contype='f' INNER JOIN pg_attribute d ON d.attnum=ANY(c.conkey) AND d.attrelid
         public string ColumnName { get; set; }
         public string RefTable { get; set; }
         public string RefColumnName { get; set; }
-        public string DeleteAction { get; set; }
-        public string UpdateAction { get; set; }
+        public string DeleteRule { get; set; }
+        public string UpdateRule { get; set; }
     }
 }
