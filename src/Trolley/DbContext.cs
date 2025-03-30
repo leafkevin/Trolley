@@ -25,7 +25,7 @@ public sealed class DbContext
     public Type DefaultEnumMapDbType => this.Options.DefaultEnumMapDbType;
     public DbInterceptors DbInterceptors => this.Options.DbInterceptors;
     public OrmDbFactoryOptions Options { get; set; }
-    #endregion   
+    #endregion
 
     #region UseMasterCommand/UseSlaveCommand
     public (bool, ITheaConnection, ITheaCommand) UseMasterCommand()

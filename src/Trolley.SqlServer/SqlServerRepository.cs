@@ -48,15 +48,19 @@ public class SqlServerRepository : Repository, ISqlServerRepository
         var shardingPart = tableName.Substring(orgTableName.Length);
         using var reader = this.QueryMultiple(f =>
         {
-            f.Query<TableInfo>($"select cast(obj_description(a.oid) as varchar) description,c.spcname tablespace from pg_class a inner join pg_namespace b on a.relnamespace=b.oid left join pg_tablespace c on a.reltablespace=c.oid where a.relkind='r' and b.nspname='{fromTableSchema}' and a.relname='{orgTableName}'")
-             .Query<ColumnInfo>(@$"SELECT c.name AS column_name,ty.name AS data_type,c.max_length,c.precision,c.scale,c.is_nullable,c.is_identity,c.is_computed,c.is_sparse,c.is_filestream,OBJECT_DEFINITION(c.default_object_id) AS default_value,ep.value AS description FROM sys.columns c INNER JOIN sys.tables t ON 
-c.object_id=t.object_id INNER JOIN sys.schemas s ON t.schema_id=s.schema_id INNER JOIN sys.types ty ON c.user_type_id=ty.user_type_id LEFT JOIN sys.extended_properties ep ON c.object_id=ep.major_id AND c.column_id=ep.minor_id AND ep.name='MS_Description' WHERE s.name='{fromTableSchema}' AND t.name='{orgTableName}' ORDER BY c.column_id")
-             .Query<IndexInfo>(@$"SELECT i.name AS index_name,i.type_desc AS index_type,i.is_unique,i.is_primary_key,i.is_unique_constraint is_unique,c.name AS column_name,ic.is_descending_key AS is_desc FROM sys.tables t INNER JOIN sys.schemas s ON t.schema_id = s.schema_id INNER JOIN sys.indexes i 
-ON t.object_id=i.object_id INNER JOIN sys.index_columns ic ON i.object_id=ic.object_id AND i.index_id=ic.index_id INNER JOIN sys.columns c ON ic.object_id=c.object_id AND ic.column_id=c.column_id WHERE s.name='{fromTableSchema}' AND t.name='{orgTableName}' ORDER BY i.name,ic.key_ordinal");
+            f.Query<TableInfo>($"select c.value description from sys.sysobjects a INNER JOIN sys.schemas b ON a.schema_id=b.schema_id inner join sys.extended_properties cb on a.id=c.major_id and c.minor_id=0 and c.name='MS_Description' where a.xtype='U' and b.name='{fromTableSchema}' and a.name='{orgTableName}'")
+             .Query<ColumnInfo>(@$"SELECT c.name AS column_name,ty.name AS data_type,c.max_length,c.precision,c.scale,c.is_nullable,c.is_identity,OBJECT_DEFINITION(c.default_object_id) AS default_value,ep.value AS description FROM sys.columns c INNER JOIN sys.tables t ON c.object_id=t.object_id 
+INNER JOIN sys.schemas s ON t.schema_id=s.schema_id INNER JOIN sys.types ty ON c.user_type_id=ty.user_type_id LEFT JOIN sys.extended_properties ep ON c.object_id=ep.major_id AND c.column_id=ep.minor_id AND ep.name='MS_Description' WHERE s.name='{fromTableSchema}' AND t.name='{orgTableName}' ORDER BY c.column_id")
+             .Query<IndexInfo>(@$"SELECT i.name AS index_name,i.type_desc AS index_type,i.is_unique,i.is_primary_key,c.name AS column_name,ic.is_descending_key AS is_desc FROM sys.tables t INNER JOIN sys.schemas s ON t.schema_id = s.schema_id INNER JOIN sys.indexes i ON 
+t.object_id=i.object_id INNER JOIN sys.index_columns ic ON i.object_id=ic.object_id AND i.index_id=ic.index_id INNER JOIN sys.columns c ON ic.object_id=c.object_id AND ic.column_id=c.column_id WHERE s.name='{fromTableSchema}' AND t.name='{orgTableName}' ORDER BY i.name,ic.key_ordinal")
+             .Query<ForeignKeyInfo>(@$"SELECT fk.name index_name,COL_NAME(fkc.parent_object_id,fkc.parent_column_id) column_name,SCHEMA_NAME(pt.schema_id)+'.'+OBJECT_NAME(fk.referenced_object_id) ref_table,COL_NAME(fkc.referenced_object_id,fkc.referenced_column_id) 
+ref_column_name,fk.delete_referential_action_desc delete_rule,fk.update_referential_action_desc update_rule FROM sys.foreign_keys fk INNER JOIN sys.foreign_key_columns fkc ON fk.object_id=fkc.constraint_object_id INNER JOIN sys.tables pt ON 
+fk.referenced_object_id=pt.object_id INNER JOIN sys.tables ft ON fk.parent_object_id=ft.object_id WHERE SCHEMA_NAME(ft.schema_id)='{fromTableSchema}' and OBJECT_NAME(fk.parent_object_id)='{orgTableName}' ORDER BY fk.name");
         });
         var tableInfo = reader.ReadFirst<TableInfo>();
         var columnInfos = reader.Read<ColumnInfo>();
         var indexInfos = reader.Read<IndexInfo>();
+        var foreignKeyInfos = reader.Read<ForeignKeyInfo>();
 
         var builder = new StringBuilder($"CREATE TABLE IF NOT EXISTS {this.OrmProvider.GetTableName(tableName)}");
         builder.AppendLine();
@@ -276,7 +280,6 @@ c.contype='f' INNER JOIN pg_attribute d ON d.attnum=ANY(c.conkey) AND d.attrelid
     class TableInfo
     {
         public string Description { get; set; }
-        public string TableSpace { get; set; }
     }
     class ColumnInfo
     {
