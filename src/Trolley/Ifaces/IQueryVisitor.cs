@@ -31,6 +31,7 @@ public interface IQueryVisitor : IDisposable
     /// IncludeMany表，第二次执行时的参数列表，通常是Filter中使用的参数
     /// </summary>
     IDataParameterCollection NextDbParameters { get; set; }
+    List<SqlFieldSegment> ReaderFields { get; }
     bool IsSecondUnion { get; set; }
     bool IsUseCteTable { get; set; }
     char TableAsStart { get; set; }

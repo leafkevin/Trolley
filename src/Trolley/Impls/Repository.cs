@@ -132,18 +132,20 @@ public class Repository : IRepository
         return this.DbContext.QueryById<TEntity, TEntity>(whereKey, true, reader =>
         {
             TEntity result = default;
+            var deserializer = reader.GetReaderDeserializer(typeof(TEntity), this.DbContext);
             if (reader.Read())
-                result = reader.ToEntity<TEntity>(this.DbContext);
+                result = (TEntity)deserializer.Invoke(reader);
             return result;
         });
     }
     public virtual async Task<TEntity> GetByIdAsync<TEntity>(object whereKey, CancellationToken cancellationToken = default)
     {
-        return await this.DbContext.QueryByIdAsync<TEntity, TEntity>(whereKey, true, async reader =>
+        return await this.DbContext.QueryByIdAsync<TEntity, TEntity>(whereKey, true, async (reader, cancellationToken) =>
         {
             TEntity result = default;
+            var deserializer = reader.GetReaderDeserializer(typeof(TEntity), this.DbContext);
             if (await reader.ReadAsync(cancellationToken))
-                result = reader.ToEntity<TEntity>(this.DbContext);
+                result = (TEntity)deserializer.Invoke(reader);
             return result;
         }, cancellationToken);
     }
@@ -155,18 +157,20 @@ public class Repository : IRepository
         return this.DbContext.QueryById<TEntity, List<TEntity>>(whereKeys, false, reader =>
         {
             var result = new List<TEntity>();
+            var deserializer = reader.GetReaderDeserializer(typeof(TEntity), this.DbContext);
             while (reader.Read())
-                result.Add(reader.ToEntity<TEntity>(this.DbContext));
+                result.Add((TEntity)deserializer.Invoke(reader));
             return result;
         });
     }
     public virtual async Task<List<TEntity>> GetByIdsAsync<TEntity>(IEnumerable whereKeys, CancellationToken cancellationToken = default)
     {
-        return await this.DbContext.QueryByIdAsync<TEntity, List<TEntity>>(whereKeys, false, async reader =>
+        return await this.DbContext.QueryByIdAsync<TEntity, List<TEntity>>(whereKeys, false, async (reader, cancellationToken) =>
         {
             var result = new List<TEntity>();
+            var deserializer = reader.GetReaderDeserializer(typeof(TEntity), this.DbContext);
             while (await reader.ReadAsync(cancellationToken))
-                result.Add(reader.ToEntity<TEntity>(this.DbContext));
+                result.Add((TEntity)deserializer.Invoke(reader));
             return result;
         }, cancellationToken);
     }
@@ -309,19 +313,13 @@ public class Repository : IRepository
 
         connection.Open();
         TEntity result = default;
-        if (entityType.IsEntityType(out _))
-        {
-            var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-            using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
-            if (reader.Read())
-                result = reader.ToEntity<TEntity>(this.DbContext);
-            reader.Dispose();
-        }
-        else
-        {
-            var objResult = command.ExecuteScalar(CommandSqlType.Select);
-            if (objResult != null) result = (TEntity)Convert.ChangeType(objResult, typeof(TEntity));
-        }
+
+        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+        using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
+        var deserializer = reader.GetReaderDeserializer(typeof(TEntity), this.DbContext);
+        if (reader.Read())
+            result = (TEntity)deserializer.Invoke(reader);
+        reader.Dispose();
 
         command.Dispose();
         if (isNeedClose) connection.Close();
@@ -350,19 +348,13 @@ public class Repository : IRepository
 
         await connection.OpenAsync(cancellationToken);
         TEntity result = default;
-        if (entityType.IsEntityType(out _))
-        {
-            var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-            using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
-            if (await reader.ReadAsync(cancellationToken))
-                result = reader.ToEntity<TEntity>(this.DbContext);
-            await reader.DisposeAsync();
-        }
-        else
-        {
-            var objResult = await command.ExecuteScalarAsync(CommandSqlType.Select, cancellationToken);
-            if (objResult != null) result = (TEntity)Convert.ChangeType(objResult, typeof(TEntity));
-        }
+
+        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+        using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
+        var deserializer = reader.GetReaderDeserializer(typeof(TEntity), this.DbContext);
+        if (await reader.ReadAsync(cancellationToken))
+            result = (TEntity)deserializer.Invoke(reader);
+        await reader.DisposeAsync();
 
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
@@ -382,19 +374,12 @@ public class Repository : IRepository
 
         connection.Open();
         TEntity result = default;
-        if (entityType.IsEntityType(out _))
-        {
-            var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-            using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
-            if (reader.Read())
-                result = reader.ToEntity<TEntity>(this.DbContext);
-            reader.Dispose();
-        }
-        else
-        {
-            var objResult = command.ExecuteScalar(CommandSqlType.Select);
-            if (objResult != null) result = (TEntity)Convert.ChangeType(objResult, typeof(TEntity));
-        }
+        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+        using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
+        var deserializer = reader.GetReaderDeserializer(typeof(TEntity), this.DbContext);
+        if (reader.Read())
+            result = (TEntity)deserializer.Invoke(reader);
+        reader.Dispose();
 
         command.Dispose();
         if (isNeedClose) connection.Close();
@@ -414,19 +399,12 @@ public class Repository : IRepository
 
         await connection.OpenAsync(cancellationToken);
         TEntity result = default;
-        if (entityType.IsEntityType(out _))
-        {
-            var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
-            using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
-            if (await reader.ReadAsync(cancellationToken))
-                result = reader.ToEntity<TEntity>(this.DbContext);
-            await reader.DisposeAsync();
-        }
-        else
-        {
-            var objResult = await command.ExecuteScalarAsync(CommandSqlType.Select, cancellationToken);
-            if (objResult != null) result = (TEntity)Convert.ChangeType(objResult, typeof(TEntity));
-        }
+        var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
+        using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
+        var deserializer = reader.GetReaderDeserializer(typeof(TEntity), this.DbContext);
+        if (await reader.ReadAsync(cancellationToken))
+            result = (TEntity)deserializer.Invoke(reader);
+        await reader.DisposeAsync();
 
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
@@ -437,17 +415,19 @@ public class Repository : IRepository
     {
         return this.DbContext.Query<TEntity, TEntity>(whereObj, true, reader =>
         {
+            var deserializer = reader.GetReaderDeserializer(typeof(TEntity), this.DbContext);
             if (reader.Read())
-                return reader.ToEntity<TEntity>(this.DbContext);
+                return (TEntity)deserializer.Invoke(reader);
             return default;
         });
     }
     public virtual async Task<TEntity> QueryFirstAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default)
     {
-        return await this.DbContext.QueryAsync<TEntity, TEntity>(whereObj, true, async reader =>
+        return await this.DbContext.QueryAsync<TEntity, TEntity>(whereObj, true, async (reader, cancellationToken) =>
         {
+            var deserializer = reader.GetReaderDeserializer(typeof(TEntity), this.DbContext);
             if (await reader.ReadAsync(cancellationToken))
-                return reader.ToEntity<TEntity>(this.DbContext);
+                return (TEntity)deserializer.Invoke(reader);
             return default;
         }, cancellationToken);
     }
@@ -472,18 +452,10 @@ public class Repository : IRepository
         connection.Open();
         var behavior = CommandBehavior.SequentialAccess;
         using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
+        var deserializer = reader.GetReaderDeserializer(typeof(TEntity), this.DbContext);
         var result = new List<TEntity>();
-        var entityType = typeof(TEntity);
-        if (entityType.IsEntityType(out _))
-        {
-            while (reader.Read())
-                result.Add(reader.ToEntity<TEntity>(this.DbContext));
-        }
-        else
-        {
-            while (reader.Read())
-                result.Add(reader.ToValue<TEntity>(this.DbContext));
-        }
+        while (reader.Read())
+            result.Add((TEntity)deserializer.Invoke(reader));
 
         reader.Dispose();
         command.Dispose();
@@ -504,20 +476,12 @@ public class Repository : IRepository
         await connection.OpenAsync(cancellationToken);
         var behavior = CommandBehavior.SequentialAccess;
         using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
+        var deserializer = reader.GetReaderDeserializer(typeof(TEntity), this.DbContext);
         var result = new List<TEntity>();
-        var entityType = typeof(TEntity);
-        if (entityType.IsEntityType(out _))
-        {
-            while (await reader.ReadAsync(cancellationToken))
-                result.Add(reader.ToEntity<TEntity>(this.DbContext));
-        }
-        else
-        {
-            while (await reader.ReadAsync(cancellationToken))
-                result.Add(reader.ToValue<TEntity>(this.DbContext));
-        }
-
+        while (await reader.ReadAsync(cancellationToken))
+            result.Add((TEntity)deserializer.Invoke(reader));
         await reader.DisposeAsync();
+
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         return result;
@@ -526,19 +490,21 @@ public class Repository : IRepository
     {
         return this.DbContext.Query<TEntity, List<TEntity>>(whereObj, false, reader =>
         {
+            var deserializer = reader.GetReaderDeserializer(typeof(TEntity), this.DbContext);
             var result = new List<TEntity>();
             while (reader.Read())
-                result.Add(reader.ToEntity<TEntity>(this.DbContext));
+                result.Add((TEntity)deserializer.Invoke(reader));
             return result;
         });
     }
     public virtual async Task<List<TEntity>> QueryAsync<TEntity>(object whereObj, CancellationToken cancellationToken = default)
     {
-        return await this.DbContext.QueryAsync<TEntity, List<TEntity>>(whereObj, false, async reader =>
+        return await this.DbContext.QueryAsync<TEntity, List<TEntity>>(whereObj, false, async (reader, cancellationToken) =>
         {
+            var deserializer = reader.GetReaderDeserializer(typeof(TEntity), this.DbContext);
             var result = new List<TEntity>();
             while (await reader.ReadAsync(cancellationToken))
-                result.Add(reader.ToEntity<TEntity>(this.DbContext));
+                result.Add((TEntity)deserializer.Invoke(reader));
             return result;
         }, cancellationToken);
     }

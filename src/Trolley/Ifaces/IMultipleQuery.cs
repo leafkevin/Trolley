@@ -270,14 +270,13 @@ public interface IMultipleQuery : IDisposable
     #endregion
 
     #region AddReader/BuildSql
-    void AddReader(Type targetType, string sql, Func<ITheaDataReader, object> readerGetter, bool isSingle, IQueryVisitor queryVisitor = null, int pageNumber = 0, int pageSize = 0);
+    void AddReader(Type targetType, string sql, bool isSingle, IQueryVisitor queryVisitor = null, int pageNumber = 0, int pageSize = 0);
     string BuildSql(out List<ReaderAfter> readerAfters);
     #endregion
 }
 public class ReaderAfter
 {
     public Type TargetType { get; set; }
-    public Func<ITheaDataReader, object> ReaderGetter { get; set; }
     public IQueryVisitor QueryVisitor { get; set; }
     public bool IsSingle { get; set; }
     public int PageNumber { get; set; }

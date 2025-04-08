@@ -51,7 +51,7 @@ public class MySqlRepository : Repository, IMySqlRepository
         var shardingPart = tableName.Substring(orgTableName.Length);
         using var reader = this.QueryMultiple(f =>
         {
-            f.QueryFirst<CollationInfo>($"select a.engine,b.collation_name,b.character_set_name from information_schema.tables a,information_schema.collation_character_set_applicability b where a.table_collation=b.collation_name and a.table_schema='{fromTableSchema}' and a.table_name='{orgTableName}' ")
+            f.QueryFirst<CollationInfo>($"select a.engine,b.collation_name,b.character_set_name from information_schema.tables a,information_schema.collation_character_set_applicability b where a.table_collation=b.collation_name and a.table_schema='{fromTableSchema}' and a.table_name='{orgTableName}'")
              .Query<ColumnInfo>($"select column_name,column_type,column_comment description,column_default default_value,extra,is_nullable from information_schema.columns where table_schema='{fromTableSchema}' and table_name='{orgTableName}' order by ordinal_position")
              .Query<IndexInfo>(@$"select a.non_unique,a.index_name,a.seq_in_index,a.column_name,a.collation,a.index_type,b.constraint_type from information_schema.statistics a left join information_schema.table_constraints b 
 on a.table_schema=b.table_schema and a.table_name=b.table_name and a.index_name=b.constraint_name where IFNULL(b.constraint_type,'')<>'FOREIGN KEY' and a.table_schema='{fromTableSchema}' and a.table_name='{orgTableName}'")
@@ -63,7 +63,7 @@ information_schema.referential_constraints b on a.table_schema=b.constraint_sche
         var indexInfos = reader.Read<IndexInfo>();
         var foreignKeyInfos = reader.Read<ForeignKeyInfo>();
 
-        var builder = new StringBuilder($"CREATE TABLE {this.OrmProvider.GetTableName(tableName)}");
+        var builder = new StringBuilder($"CREATE TABLE IF NOT EXISTS {this.OrmProvider.GetTableName(tableName)}");
         builder.AppendLine();
         builder.AppendLine("(");
         for (int i = 0; i < columnInfos.Count; i++)
@@ -79,7 +79,7 @@ information_schema.referential_constraints b on a.table_schema=b.constraint_sche
             if (!string.IsNullOrEmpty(columnInfo.DefaultValue))
                 builder.Append($" DEFAULT {columnInfo.DefaultValue}");
             if (!string.IsNullOrEmpty(columnInfo.Description))
-                builder.Append($" COMMENT {columnInfo.Description}");
+                builder.Append($" COMMENT '{columnInfo.Description}'");
         }
         var indexNames = indexInfos.Select(f => f.IndexName).Distinct().ToList();
         foreach (var indexName in indexNames)
@@ -134,7 +134,7 @@ information_schema.referential_constraints b on a.table_schema=b.constraint_sche
         var shardingPart = tableName.Substring(orgTableName.Length);
         using var reader = await this.QueryMultipleAsync(f =>
         {
-            f.QueryFirst<CollationInfo>($"select a.engine,b.collation_name,b.character_set_name from information_schema.tables a,information_schema.collation_character_set_applicability b where a.table_collation=b.collation_name and a.table_schema='{fromTableSchema}' and a.table_name='{orgTableName}' ")
+            f.QueryFirst<CollationInfo>($"select a.engine,b.collation_name,b.character_set_name from information_schema.tables a,information_schema.collation_character_set_applicability b where a.table_collation=b.collation_name and a.table_schema='{fromTableSchema}' and a.table_name='{orgTableName}'")
              .Query<ColumnInfo>($"select column_name,column_type,column_comment description,column_default default_value,extra,is_nullable from information_schema.columns where table_schema='{fromTableSchema}' and table_name='{orgTableName}' order by ordinal_position")
              .Query<IndexInfo>(@$"select a.non_unique,a.index_name,a.seq_in_index,a.column_name,a.collation,a.index_type,b.constraint_type from information_schema.statistics a left join information_schema.table_constraints b 
 on a.table_schema=b.table_schema and a.table_name=b.table_name and a.index_name=b.constraint_name where IFNULL(b.constraint_type,'')<>'FOREIGN KEY' and a.table_schema='{fromTableSchema}' and a.table_name='{orgTableName}'")
@@ -146,7 +146,7 @@ information_schema.referential_constraints b on a.table_schema=b.constraint_sche
         var indexInfos = await reader.ReadAsync<IndexInfo>(cancellationToken);
         var foreignKeyInfos = await reader.ReadAsync<ForeignKeyInfo>();
 
-        var builder = new StringBuilder($"CREATE TABLE {this.OrmProvider.GetTableName(tableName)}");
+        var builder = new StringBuilder($"CREATE TABLE IF NOT EXISTS {this.OrmProvider.GetTableName(tableName)}");
         builder.AppendLine();
         builder.AppendLine("(");
         for (int i = 0; i < columnInfos.Count; i++)
@@ -162,7 +162,7 @@ information_schema.referential_constraints b on a.table_schema=b.constraint_sche
             if (!string.IsNullOrEmpty(columnInfo.DefaultValue))
                 builder.Append($" DEFAULT {columnInfo.DefaultValue}");
             if (!string.IsNullOrEmpty(columnInfo.Description))
-                builder.Append($" COMMENT {columnInfo.Description}");
+                builder.Append($" COMMENT '{columnInfo.Description}'");
         }
         var indexNames = indexInfos.Select(f => f.IndexName).Distinct().ToList();
         foreach (var indexName in indexNames)

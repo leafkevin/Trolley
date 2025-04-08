@@ -35,22 +35,19 @@ public class SqlServerDeleted<TEntity, TResult> : Deleted<TEntity>, ISqlServerDe
         connection.Open();
 
         using var reader = command.ExecuteReader(CommandSqlType.Delete, CommandBehavior.SequentialAccess);
+        var readerDeserializer = reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);
         while (reader.Read())
-        {
-            result.Add(reader.ToEntity<TResult>(this.DbContext, readerFields));
-        }
+            result.Add((TResult)readerDeserializer.Invoke(reader));
         while (reader.NextResult())
         {
             while (reader.Read())
-            {
-                result.Add(reader.ToEntity<TResult>(this.DbContext, readerFields));
-            }
+                result.Add((TResult)readerDeserializer.Invoke(reader));
         }
 
         reader.Dispose();
         command.Dispose();
         if (isNeedClose) connection.Close();
-		this.Visitor.Dispose();
+        this.Visitor.Dispose();
         return result;
     }
     public new async Task<List<TResult>> ExecuteAsync(CancellationToken cancellationToken = default)
@@ -65,22 +62,19 @@ public class SqlServerDeleted<TEntity, TResult> : Deleted<TEntity>, ISqlServerDe
         command.CommandText = this.Visitor.BuildCommand(command, out var readerFields);
         await connection.OpenAsync(cancellationToken);
         using var reader = await command.ExecuteReaderAsync(CommandSqlType.Delete, CommandBehavior.SequentialAccess, cancellationToken);
+        var readerDeserializer = reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);
         while (await reader.ReadAsync(cancellationToken))
-        {
-            result.Add(reader.ToEntity<TResult>(this.DbContext, readerFields));
-        }
+            result.Add((TResult)readerDeserializer.Invoke(reader));
         while (await reader.NextResultAsync(cancellationToken))
         {
             while (await reader.ReadAsync(cancellationToken))
-            {
-                result.Add(reader.ToEntity<TResult>(this.DbContext, readerFields));
-            }
+                result.Add((TResult)readerDeserializer.Invoke(reader));
         }
 
         await reader.DisposeAsync();
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
-		this.Visitor.Dispose();
+        this.Visitor.Dispose();
         return result;
     }
     #endregion

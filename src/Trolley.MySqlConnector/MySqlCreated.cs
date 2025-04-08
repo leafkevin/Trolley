@@ -89,7 +89,8 @@ public class MySqlCreated<TEntity> : Created<TEntity>
                             command.Parameters.Clear();
                         }
                         return count;
-                    };
+                    }
+
                     connection.Open();
                     if (tabledInsertObjs != null)
                     {
@@ -186,7 +187,8 @@ public class MySqlCreated<TEntity> : Created<TEntity>
                             command.Parameters.Clear();
                         }
                         return count;
-                    };
+                    }
+
                     await connection.OpenAsync(cancellationToken);
                     if (tabledInsertObjs != null)
                     {
@@ -282,10 +284,9 @@ public class MySqlBulkCreated<TEntity, TResult> : Created<TEntity>, IMySqlBulkCr
             command.CommandText = dialectVisitor.BuildCommand(command, false, out var readerFields);
             connection.Open();
             using var reader = command.ExecuteReader(CommandSqlType.BulkInsert, CommandBehavior.SequentialAccess);
+            var readerDeserializer = reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);
             while (reader.Read())
-            {
-                result.Add(reader.ToEntity<TResult>(this.DbContext, readerFields));
-            }
+                result.Add((TResult)readerDeserializer.Invoke(reader));
         }
         else
         {
@@ -295,28 +296,7 @@ public class MySqlBulkCreated<TEntity, TResult> : Created<TEntity>, IMySqlBulkCr
             var entityType = typeof(TEntity);
             var resultType = typeof(TResult);
             var builder = new StringBuilder();
-            Action<DbContext, List<TResult>, ITheaDataReader> initializer = null;
-
-            if (resultType.IsEntityType(out _))
-            {
-                initializer = (dbContext, result, reader) =>
-                {
-                    while (reader.Read())
-                    {
-                        result.Add(reader.ToEntity<TResult>(dbContext, readerFields));
-                    }
-                };
-            }
-            else
-            {
-                initializer = (dbContext, result, reader) =>
-                {
-                    while (reader.Read())
-                    {
-                        result.Add(reader.ToValue<TResult>(dbContext));
-                    }
-                };
-            }
+            Func<ITheaDataReader, object> readerDeserializer = null;
 
             void Execute(string tableName, IEnumerable insertObjs)
             {
@@ -332,7 +312,9 @@ public class MySqlBulkCreated<TEntity, TResult> : Created<TEntity>, IMySqlBulkCr
                         builder.Append(tailSql);
                         command.CommandText = builder.ToString();
                         using var reader = command.ExecuteReader(CommandSqlType.BulkInsert, CommandBehavior.SequentialAccess);
-                        initializer.Invoke(this.DbContext, result, reader);
+                        readerDeserializer ??= reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);
+                        while (reader.Read())
+                            result.Add((TResult)readerDeserializer.Invoke(reader));
                         reader.Dispose();
                         builder.Clear();
                         command.Parameters.Clear();
@@ -345,12 +327,14 @@ public class MySqlBulkCreated<TEntity, TResult> : Created<TEntity>, IMySqlBulkCr
                     builder.Append(tailSql);
                     command.CommandText = builder.ToString();
                     using var reader = command.ExecuteReader(CommandSqlType.BulkInsert, CommandBehavior.SequentialAccess);
-                    initializer.Invoke(this.DbContext, result, reader);
+                    readerDeserializer ??= reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);
+                    while (reader.Read())
+                        result.Add((TResult)readerDeserializer.Invoke(reader));
                     reader.Dispose();
                     builder.Clear();
                     command.Parameters.Clear();
                 }
-            };
+            }
             connection.Open();
             if (tabledInsertObjs != null)
             {
@@ -385,10 +369,9 @@ public class MySqlBulkCreated<TEntity, TResult> : Created<TEntity>, IMySqlBulkCr
             command.CommandText = dialectVisitor.BuildCommand(command, false, out var readerFields);
             await connection.OpenAsync(cancellationToken);
             using var reader = await command.ExecuteReaderAsync(CommandSqlType.BulkInsert, CommandBehavior.SequentialAccess, cancellationToken);
+            var readerDeserializer = reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);
             while (await reader.ReadAsync(cancellationToken))
-            {
-                result.Add(reader.ToEntity<TResult>(this.DbContext, readerFields));
-            }
+                result.Add((TResult)readerDeserializer.Invoke(reader));
         }
         else
         {
@@ -398,28 +381,7 @@ public class MySqlBulkCreated<TEntity, TResult> : Created<TEntity>, IMySqlBulkCr
             var entityType = typeof(TEntity);
             var resultType = typeof(TResult);
             var builder = new StringBuilder();
-            Func<DbContext, List<TResult>, ITheaDataReader, CancellationToken, Task> initializer = null;
-
-            if (resultType.IsEntityType(out _))
-            {
-                initializer = async (dbContext, result, reader, cancellationToken) =>
-                {
-                    while (await reader.ReadAsync(cancellationToken))
-                    {
-                        result.Add(reader.ToEntity<TResult>(dbContext, readerFields));
-                    }
-                };
-            }
-            else
-            {
-                initializer = async (dbContext, result, reader, cancellationToken) =>
-                {
-                    while (await reader.ReadAsync(cancellationToken))
-                    {
-                        result.Add(reader.ToValue<TResult>(dbContext));
-                    }
-                };
-            }
+            Func<ITheaDataReader, object> readerDeserializer = null;
 
             async Task Execute(string tableName, IEnumerable insertObjs)
             {
@@ -435,7 +397,9 @@ public class MySqlBulkCreated<TEntity, TResult> : Created<TEntity>, IMySqlBulkCr
                         builder.Append(tailSql);
                         command.CommandText = builder.ToString();
                         using var reader = await command.ExecuteReaderAsync(CommandSqlType.BulkInsert, CommandBehavior.SequentialAccess, cancellationToken);
-                        await initializer.Invoke(this.DbContext, result, reader, cancellationToken);
+                        readerDeserializer ??= reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);
+                        while (await reader.ReadAsync(cancellationToken))
+                            result.Add((TResult)readerDeserializer.Invoke(reader));
                         await reader.DisposeAsync();
                         builder.Clear();
                         command.Parameters.Clear();
@@ -448,12 +412,15 @@ public class MySqlBulkCreated<TEntity, TResult> : Created<TEntity>, IMySqlBulkCr
                     builder.Append(tailSql);
                     command.CommandText = builder.ToString();
                     using var reader = await command.ExecuteReaderAsync(CommandSqlType.BulkInsert, CommandBehavior.SequentialAccess, cancellationToken);
-                    await initializer.Invoke(this.DbContext, result, reader, cancellationToken);
+                    readerDeserializer ??= reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);
+                    while (await reader.ReadAsync(cancellationToken))
+                        result.Add((TResult)readerDeserializer.Invoke(reader));
                     await reader.DisposeAsync();
                     builder.Clear();
                     command.Parameters.Clear();
                 }
-            };
+            }
+
             await connection.OpenAsync(cancellationToken);
             if (tabledInsertObjs != null)
             {

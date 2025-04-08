@@ -20,10 +20,11 @@ public static class Extensions
         typeof(DateOnly),typeof(TimeOnly),
 #endif
         typeof(BitArray),typeof(DBNull)];
-    private static readonly ConcurrentDictionary<int, Delegate> typeReaderDeserializerCache = new();
-    private static readonly ConcurrentDictionary<int, Delegate> valueTupleReaderDeserializerCache = new();
-    private static readonly ConcurrentDictionary<int, Delegate> queryReaderDeserializerCache = new();
-    private static readonly ConcurrentDictionary<int, Delegate> readerValueConverterCache = new();
+
+    private static readonly ConcurrentDictionary<int, Func<ITheaDataReader, object>> valueTupleReaderDeserializerCache = new();
+    private static readonly ConcurrentDictionary<int, Func<ITheaDataReader, object>> typeReaderDeserializerCache = new();
+    private static readonly ConcurrentDictionary<int, Func<ITheaDataReader, object>> queryReaderDeserializerCache = new();
+
 
     public static OrmDbFactoryBuilder Configure<TModelConfiguration>(this OrmDbFactoryBuilder builder, OrmProviderType ormProviderType) where TModelConfiguration : class, IModelConfiguration, new()
         => builder.Configure(ormProviderType, new TModelConfiguration());
@@ -225,140 +226,152 @@ public static class Extensions
         var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(targetType, fieldType, dbContext.Options);
         return (TValue)valueGetter.Invoke(reader.GetValue(0));
     }
-    /// <summary>
-    /// 使用SQL+参数查询，返回的是单纯的实体
-    /// </summary>
-    /// <typeparam name="TEntity"></typeparam>
-    /// <param name="reader"></param>
-    /// <param name="dbContext"></param>
-    /// <returns></returns>
-    public static TEntity ToEntity<TEntity>(this ITheaDataReader reader, DbContext dbContext)
+    public static Func<ITheaDataReader, object> GetReaderDeserializer(this ITheaDataReader reader, Type entityType, DbContext dbContext)
     {
-        if (reader.FieldCount == 1)
-            return reader.ToValue<TEntity>(dbContext);
-
-        var entityType = typeof(TEntity);
-        if (entityType == typeof(object))
+        if (reader.FieldCount == 1 && !entityType.IsEntityType(out _))
         {
-            var row = new List<object>();
-            for (var i = 0; i < reader.FieldCount; i++)
+            var fieldType = reader.GetFieldType(0);
+            if (fieldType == entityType)
+                return reader => reader.GetValue(0);
+            else
             {
-                var dbValue = reader.GetValue(i);
-                row.Add(dbValue is DBNull ? null : dbValue);
+                var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(entityType, fieldType, dbContext.Options);
+                return reader => valueGetter.Invoke(reader.GetValue(0));
             }
-            return (TEntity)(object)row;
         }
-        else if (typeof(IDictionary<string, object>).IsAssignableFrom(entityType))
-        {
-            var row = new Dictionary<string, object>();
-            for (var i = 0; i < reader.FieldCount; i++)
-            {
-                var dbValue = reader.GetValue(i);
-                row[reader.GetName(i).Trim()] = dbValue is DBNull ? null : dbValue;
-            }
-            return (TEntity)(object)row;
-        }
-
         var ormProviderType = dbContext.OrmProvider.OrmProviderType;
         var cacheKey = GetTypeReaderKey(entityType, ormProviderType, reader);
-        Delegate deserializer = null;
         if (entityType.FullName.StartsWith("System.ValueTuple`"))
         {
-            if (!valueTupleReaderDeserializerCache.TryGetValue(cacheKey, out deserializer))
-                valueTupleReaderDeserializerCache.TryAdd(cacheKey, deserializer = CreateReaderValueTupleDeserializer(dbContext, reader, entityType));
+            if (!valueTupleReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
+                valueTupleReaderDeserializerCache.TryAdd(cacheKey, deserializer = RepositoryHelper.CreateReaderValueTupleDeserializer(entityType, dbContext, reader));
+            return deserializer;
+        }
+        //else if (entityType == typeof(object))
+        //{
+        //    return reader =>
+        //    {
+        //        var row = new List<object>();
+        //        for (var i = 0; i < reader.FieldCount; i++)
+        //        {
+        //            var dbValue = reader.GetValue(i);
+        //            row.Add(dbValue is DBNull ? null : dbValue);
+        //        }
+        //        return (TEntity)(object)row;
+        //    };
+        //}
+        else if (typeof(IDictionary<string, object>).IsAssignableFrom(entityType))
+        {
+            return reader =>
+            {
+                var row = new Dictionary<string, object>();
+                for (var i = 0; i < reader.FieldCount; i++)
+                {
+                    var dbValue = reader.GetValue(i);
+                    row[reader.GetName(i).Trim()] = dbValue is DBNull ? null : dbValue;
+                }
+                return row;
+            };
         }
         else
         {
-            if (!typeReaderDeserializerCache.TryGetValue(cacheKey, out deserializer))
-                typeReaderDeserializerCache.TryAdd(cacheKey, deserializer = CreateReaderEntityDeserializer(dbContext, reader, entityType));
+            if (!typeReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
+                typeReaderDeserializerCache.TryAdd(cacheKey, deserializer = RepositoryHelper.CreateReaderEntityDeserializer(entityType, dbContext, reader));
+            return deserializer;
         }
-        return ((Func<ITheaDataReader, TEntity>)deserializer).Invoke(reader);
     }
-    /// <summary>
-    /// 使用非SQL查询，返回的是可能包含Include对象，包含层次的实体对象
-    /// </summary>
-    /// <typeparam name="TEntity"></typeparam>
-    /// <param name="reader"></param>
-    /// <param name="dbContext"></param>
-    /// <param name="readerFields"></param>
-    /// <param name="isUseReaderOrder"></param>
-    /// <returns></returns>
-    public static TEntity ToEntity<TEntity>(this ITheaDataReader reader, DbContext dbContext, List<SqlFieldSegment> readerFields)
+    public static Func<ITheaDataReader, object> GetReaderDeserializer(this ITheaDataReader reader, Type entityType, DbContext dbContext, List<SqlFieldSegment> readerFields)
     {
-        var entityType = typeof(TEntity);
-        if (reader.FieldCount == 1)
+        if (readerFields == null)
+            return GetReaderDeserializer(reader, entityType, dbContext);
+
+        if (reader.FieldCount == 1 && !entityType.IsEntityType(out _))
         {
             var fieldType = reader.GetFieldType(0);
-            var dbValue = reader.GetValue(0);
             if (fieldType != entityType)
             {
-                if (readerFields[0].TypeHandler != null)
-                    dbValue = readerFields[0].TypeHandler.Parse(dbContext.OrmProvider, readerFields[0].SegmentType, dbValue);
+                var typeHandler = readerFields[0].TypeHandler;
+                if (typeHandler != null)
+                    return reader => typeHandler.Parse(dbContext.OrmProvider, readerFields[0].SegmentType, reader.GetValue(0));
                 else
                 {
-                    var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(entityType, readerFields[0].SegmentType, dbContext.Options);
-                    dbValue = valueGetter.Invoke(dbValue);
+                    var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(entityType, fieldType, dbContext.Options);
+                    return reader => valueGetter.Invoke(reader.GetValue(0));
                 }
             }
-            return (TEntity)dbValue;
+            return reader => reader.GetValue(0);
         }
-
-        if (entityType == typeof(object))
-        {
-            var row = new List<object>();
-            for (var i = 0; i < reader.FieldCount; i++)
-            {
-                var dbValue = reader.GetValue(i);
-                var fieldType = reader.GetFieldType(i);
-                if (dbValue is DBNull) dbValue = null;
-                var readerField = readerFields[i];
-                if (fieldType != entityType)
-                {
-                    if (readerField.TypeHandler != null)
-                        dbValue = readerField.TypeHandler.Parse(dbContext.OrmProvider, readerField.SegmentType, dbValue);
-                    else
-                    {
-                        var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(entityType, readerField.SegmentType, dbContext.Options);
-                        dbValue = valueGetter.Invoke(dbValue);
-                    }
-                }
-                row.Add(dbValue);
-            }
-            return (TEntity)(object)row;
-        }
-        else if (typeof(IDictionary<string, object>).IsAssignableFrom(entityType))
-        {
-            var row = new Dictionary<string, object>();
-            for (var i = 0; i < reader.FieldCount; i++)
-            {
-                var dbValue = reader.GetValue(i);
-                var fieldType = reader.GetFieldType(i);
-                if (dbValue is DBNull) dbValue = null;
-                var readerField = readerFields[i];
-                if (fieldType != entityType)
-                {
-                    if (readerField.TypeHandler != null)
-                        dbValue = readerField.TypeHandler.Parse(dbContext.OrmProvider, readerField.SegmentType, dbValue);
-                    else
-                    {
-                        var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(entityType, readerField.SegmentType, dbContext.Options);
-                        dbValue = valueGetter.Invoke(dbValue);
-                    }
-                }
-                row.Add(readerField.TargetMember.Name, dbValue);
-            }
-            return (TEntity)(object)row;
-        }
-
         var ormProviderType = dbContext.OrmProvider.OrmProviderType;
         var cacheKey = GetTypeReaderKey(entityType, ormProviderType, reader, readerFields);
-        if (!queryReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
+        if (entityType.FullName.StartsWith("System.ValueTuple`"))
         {
-            deserializer = CreateReaderDeserializer(dbContext, reader, entityType, readerFields);
-            queryReaderDeserializerCache.TryAdd(cacheKey, deserializer);
+            if (!valueTupleReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
+                valueTupleReaderDeserializerCache.TryAdd(cacheKey, deserializer = RepositoryHelper.CreateReaderValueTupleDeserializer(entityType, dbContext, reader));
+            return deserializer;
         }
-        return ((Func<ITheaDataReader, TEntity>)deserializer).Invoke(reader);
+        //else if (entityType == typeof(object))
+        //{
+        //    var valueGetters = new List<Func<ITheaDataReader, object>>();
+        //    for (var i = 0; i < reader.FieldCount; i++)
+        //    {
+        //        var fieldType = reader.GetFieldType(i);
+        //        var readerField = readerFields[i];
+        //        if (fieldType != entityType)
+        //        {
+        //            if (readerField.TypeHandler != null)
+        //            {
+        //                valueGetters.Add(reader =>
+        //                {
+        //                    var dbValue = reader.GetValue(i);
+        //                    dbValue = readerField.TypeHandler.Parse(dbContext.OrmProvider, readerField.SegmentType, dbValue);
+        //                    return dbValue is DBNull ? null : dbValue;
+        //                });
+        //            }
+        //            else
+        //            {
+        //                var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(entityType, readerField.SegmentType, dbContext.Options);
+        //                valueGetters.Add(reader =>
+        //                {
+        //                    var dbValue = valueGetter.Invoke(reader.GetValue(i));
+        //                    return dbValue is DBNull ? null : dbValue;
+        //                });
+        //            }
+        //        }
+        //        else valueGetters.Add(reader =>
+        //        {
+        //            var dbValue = reader.GetValue(i);
+        //            return dbValue is DBNull ? null : dbValue;
+        //        });
+        //    }
+        //    return reader =>
+        //    {
+        //        var row = new List<object>();
+        //        valueGetters.ForEach(f => row.Add(f.Invoke(reader)));
+        //        return (TEntity)(object)row;
+        //    };
+        //}
+        else if (typeof(IDictionary<string, object>).IsAssignableFrom(entityType))
+        {
+            return reader =>
+            {
+                var row = new Dictionary<string, object>();
+                for (var i = 0; i < reader.FieldCount; i++)
+                {
+                    var dbValue = reader.GetValue(i);
+                    row[reader.GetName(i)] = dbValue is DBNull ? null : dbValue;
+                }
+                return row;
+            };
+        }
+        else
+        {
+            //TEntity类型与Target类型，不一定一致，可能是dynamic或是object类型，内部还是它真正的Target类型
+            if (!queryReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
+                queryReaderDeserializerCache.TryAdd(cacheKey, deserializer = RepositoryHelper.CreateReaderEntityDeserializer(entityType, dbContext, reader, readerFields));
+            return deserializer;
+        }
     }
+
     /// <summary>
     /// 用在方法调用中，判断!=,NOT IN,NOT LIKE三种情况
     /// </summary>
@@ -402,11 +415,12 @@ public static class Extensions
             return default;
         if (readerValue is IConvertible convertible)
             return (T)Convert.ChangeType(readerValue, typeof(T));
-        var fieldType = readerValue.GetType();
+
         var targetType = typeof(T);
-        //分布式数据库，默认值栏位是byte[]类型，需要转换为string类型值
+        //兼容某些分布式数据库，byte[]类型转换为string类型
         if (readerValue is byte[] bytes && targetType == typeof(string))
             return (T)(object)UTF8Encoding.UTF8.GetString(bytes);
+        var fieldType = readerValue.GetType();
         throw new NotSupportedException($"不支持的类型转换，{fieldType.FullName}->{targetType.FullName}");
     }
 #if !NETCOREAPP2_0_OR_GREATER || !NETSTANDARD2_1_OR_GREATER
@@ -476,329 +490,6 @@ public static class Extensions
         if (string.IsNullOrEmpty(value)) return value;
         if (value.Length > 1) return value.Substring(0, 1).ToLower() + value.Substring(1);
         else return value.ToLower();
-    }
-    private static Delegate CreateReaderEntityDeserializer(DbContext dbContext, ITheaDataReader reader, Type entityType)
-    {
-        var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader");
-        var ormProviderExpr = Expression.Constant(dbContext.OrmProvider);
-        bool hasMapper = false;
-        List<MemberInfo> memberInfos = null;
-        IFieldMapHandler fieldMapHandler = null;
-        if (dbContext.MapProvider.TryGetEntityMap(entityType, out var entityMapper))
-            hasMapper = true;
-        else
-        {
-            memberInfos = entityType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                .Where(f => f.MemberType == MemberTypes.Property || f.MemberType == MemberTypes.Field).ToList();
-            fieldMapHandler = dbContext.MapProvider.FieldMapHandler;
-        }
-        var index = 0;
-        var target = NewBuildInfo(entityType);
-        var blockParameters = new List<ParameterExpression>();
-        var blockBodies = new List<Expression>();
-
-        while (index < reader.FieldCount)
-        {
-            var memberName = reader.GetName(index);
-            //使用原始SQL才有可能SQL中的字段名与成员名不一致，或是没有加 AS成员名
-            MemberInfo memberInfo = null;
-            ITypeHandler typeHandler = null;
-            if (hasMapper)
-            {
-                if (!entityMapper.TryGetMemberMap(memberName, out var memberMapper))
-                    throw new Exception($"SQL中字段{memberName}映射不到模型{entityType.FullName}任何栏位,或者没有添加AS子句");
-                memberInfo = memberMapper.Member;
-                typeHandler = memberMapper.TypeHandler;
-            }
-            else if (!fieldMapHandler.TryFindMember(memberName, memberInfos, out memberInfo))
-                throw new Exception($"SQL中字段{memberName}映射不到模型{entityType.FullName}任何栏位,或者没有添加AS子句");
-
-            var fieldType = reader.GetFieldType(index);
-            var readerValueExpr = GetReaderValue(dbContext, ormProviderExpr, readerExpr, Expression.Constant(index),
-                memberInfo.GetMemberType(), fieldType, typeHandler, blockParameters, blockBodies);
-
-            if (!target.IsDefault)
-                target.Arguments.Add(readerValueExpr);
-            else if (memberInfo.CanWrite())
-                target.Bindings.Add(Expression.Bind(memberInfo, readerValueExpr));
-            index++;
-        }
-        var resultLabelExpr = Expression.Label(entityType);
-        Expression returnExpr;
-        if (target.IsDefault) returnExpr = Expression.MemberInit(Expression.New(target.Constructor), target.Bindings);
-        else returnExpr = Expression.New(target.Constructor, target.Arguments);
-
-        blockBodies.Add(Expression.Return(resultLabelExpr, returnExpr));
-        blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(entityType)));
-        return Expression.Lambda(Expression.Block(blockParameters, blockBodies), readerExpr).Compile();
-    }
-    private static Delegate CreateReaderValueTupleDeserializer(DbContext dbContext, ITheaDataReader reader, Type entityType)
-    {
-        var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader");
-        var ormProviderExpr = Expression.Constant(dbContext.OrmProvider);
-        var index = 0;
-        var target = NewBuildInfo(entityType);
-        var blockParameters = new List<ParameterExpression>();
-        var blockBodies = new List<Expression>();
-        while (index < reader.FieldCount)
-        {
-            //使用原始SQL才有可能SQL中的字段名与成员名不一致，或是没有加 AS成员名
-            var fieldType = reader.GetFieldType(index);
-            var memberInfo = entityType.GetMember($"Item{index + 1}")[0];
-            var memberType = memberInfo.GetMemberType();
-            var readerValueExpr = GetReaderValue(dbContext, ormProviderExpr, readerExpr,
-                Expression.Constant(index), memberType, fieldType, null, blockParameters, blockBodies);
-            target.Arguments.Add(readerValueExpr);
-            index++;
-        }
-        var resultLabelExpr = Expression.Label(entityType);
-        var returnExpr = Expression.New(target.Constructor, target.Arguments);
-
-        blockBodies.Add(Expression.Return(resultLabelExpr, returnExpr));
-        blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(entityType)));
-        return Expression.Lambda(Expression.Block(blockParameters, blockBodies), readerExpr).Compile();
-    }
-    private static Delegate CreateReaderDeserializer(DbContext dbContext, ITheaDataReader reader, Type entityType, List<SqlFieldSegment> readerFields)
-    {
-        var blockParameters = new List<ParameterExpression>();
-        var blockBodies = new List<Expression>();
-        var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader");
-        var parameterExprs = new List<ParameterExpression> { readerExpr };
-        var ormProviderExpr = Expression.Constant(dbContext.OrmProvider);
-
-        //IDataReader的索引，readerFields的索引
-        int index = 0, readerIndex = 0;
-        var root = NewBuildInfo(entityType);
-        var current = root;
-        var parent = root;
-        var readerBuilders = new Dictionary<SqlFieldSegment, EntityBuildInfo>();
-        var deferredBuilds = new Stack<EntityBuildInfo>();
-
-        if (readerFields.Count == 1 && readerFields[0].FieldType == SqlFieldType.RawSql)
-        {
-            var memberNames = entityType.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                .Where(f => f.CanWrite()).Select(f => f.Name).ToList();
-
-            if (!root.IsDefault)
-                throw new NotSupportedException($"不支持使用原始SQL创建没有默认构造函数的实体，实体类型:{entityType.FullName}");
-
-            while (index < reader.FieldCount)
-            {
-                var fieldName = reader.GetName(index);
-                (var isContains, var memberName) = memberNames.ContainsLower(fieldName.ToLower());
-                var memberInfo = entityType.GetMember(memberName)[0];
-                if (!memberInfo.CanWrite()) continue;
-                Expression readerValueExpr = null;
-                if (!isContains) continue;
-                var fieldType = reader.GetFieldType(index);
-
-                var indexExpr = Expression.Constant(index);
-                readerValueExpr = GetReaderValue(dbContext, ormProviderExpr, readerExpr, indexExpr, memberInfo.GetMemberType(), fieldType, null, blockParameters, blockBodies);
-                if (!root.IsDefault)
-                    root.Arguments.Add(readerValueExpr);
-                else if (memberInfo.CanWrite())
-                    root.Bindings.Add(Expression.Bind(memberInfo, readerValueExpr));
-                index++;
-            }
-        }
-        else
-        {
-            while (readerIndex < readerFields.Count)
-            {
-                var readerField = readerFields[readerIndex];
-                //readerFields个数与IDataReader返回的Field个数不一致的场景，readerFields是根据Type类型来生成的，
-                //SQL语句也不是生成的，通常是原始SQL，才会走到此处
-                if (index >= reader.FieldCount && readerField.FieldType != SqlFieldType.IncludeRef)
-                {
-                    var readerValueExpr = Expression.Default(readerField.TargetMember.GetMemberType());
-                    if (!root.IsDefault) root.Arguments.Add(readerValueExpr);
-                    readerIndex++;
-                    continue;
-                }
-                if (readerField.FieldType == SqlFieldType.Field)
-                {
-                    var fieldType = reader.GetFieldType(index);
-                    var readerValueExpr = GetReaderValue(dbContext, ormProviderExpr, readerExpr, Expression.Constant(index),
-                        readerField.SegmentType, fieldType, readerField.TypeHandler, blockParameters, blockBodies);
-                    if (!root.IsDefault) root.Arguments.Add(readerValueExpr);
-                    else if (readerField.TargetMember.CanWrite()) root.Bindings.Add(Expression.Bind(readerField.TargetMember, readerValueExpr));
-                    index++;
-                }
-                else
-                {
-                    Expression readerValueExpr = null;
-                    SqlFieldSegment childReaderField = null;
-                    var childIndex = 0;
-                    var endIndex = index;
-                    //当无参数的Deferred函数调用，ReaderFields的值为null，也没有从数据库读取字段，count=0
-                    if (readerField.Fields != null)
-                        endIndex += readerField.Fields.Count;
-
-                    if (readerField.FieldType == SqlFieldType.DeferredFields)
-                    {
-                        if (readerField.SegmentType.IsEntityType(out _))
-                        {
-                            current = NewBuildInfo(readerField.SegmentType, readerField.TargetMember, parent);
-                            readerBuilders.Add(readerField, current);
-                        }
-                        Expression bodyExpr = readerField.DeferredExpression;
-                        //$"{f.OrderNo} : {f.TotalAmount.ToString("C")}"
-                        //f.TotalAmount.ToString("C")
-                        //"TotalAmount: " + (f.Price * f.Quantity).ToString("C")
-                        //this.DeferredInvoke(f.Price, f.Quantity)
-                        Expression executeExpr = null;
-                        if (readerField.Fields != null && readerField.Fields.Count > 0)
-                        {
-                            var visitor = new ReplaceParameterVisitor();
-                            bodyExpr = visitor.Visit(readerField.DeferredExpression);
-                            var argsExprs = new List<Expression>();
-                            while (index < endIndex)
-                            {
-                                var fieldType = reader.GetFieldType(index);
-                                //延迟的方法调用，有字段值作为方法参数就读取，没有什么也不做
-                                childReaderField = readerField.Fields[childIndex];
-                                readerValueExpr = GetReaderValue(dbContext, ormProviderExpr, readerExpr, Expression.Constant(index),
-                                    childReaderField.SegmentType, fieldType, childReaderField.TypeHandler, blockParameters, blockBodies);
-                                argsExprs.Add(readerValueExpr);
-                                childIndex++;
-                                index++;
-                            }
-                            executeExpr = Expression.Invoke(Expression.Lambda(bodyExpr, visitor.NewParameters), argsExprs);
-                        }
-                        else executeExpr = Expression.Invoke(Expression.Lambda(bodyExpr));
-                        //把延迟方法调用委托当作参数传进来，这样缓存才有效，相同key，不同的延迟方法
-                        if (!current.IsDefault) current.Arguments.Add(executeExpr);
-                        else if (readerField.TargetMember.CanWrite()) current.Bindings.Add(Expression.Bind(readerField.TargetMember, executeExpr));
-                    }
-                    else if (readerField.FieldType == SqlFieldType.IncludeRef)
-                    {
-                        //Include导航属性引用不能单独Select，前面一定有Parameter访问
-                        //Include导航属性引用单独处理，先设置默认值，在整个实体初始化完后，再设置具体值，初始化Action在成员访问的时候，已经构建好了
-                        var refReaderField = readerField.Value as SqlFieldSegment;
-                        var instanceExpr = readerBuilders[refReaderField].InstanceExpr;
-                        //此处生成的副本，从新new的一个对象
-                        if (!parent.IsDefault) parent.Arguments.Add(instanceExpr);
-                        else if (readerField.TargetMember.CanWrite()) parent.Bindings.Add(Expression.Bind(readerField.TargetMember, instanceExpr));
-                        readerIndex++;
-                        continue;
-                    }
-                    else
-                    {
-                        //默认是目标类型，并且也只有第一个ReaderField才是目标类型
-                        if (!readerField.IsTargetType)
-                        {
-                            if (readerField.Parent != null)
-                                parent = readerBuilders[readerField.Parent];
-                            else parent = root;
-                            current = NewBuildInfo(readerField.SegmentType, readerField.TargetMember, parent);
-                        }
-                        while (index < endIndex)
-                        {
-                            var fieldType = reader.GetFieldType(index);
-                            childReaderField = readerField.Fields[childIndex];
-                            readerValueExpr = GetReaderValue(dbContext, ormProviderExpr, readerExpr, Expression.Constant(index),
-                                childReaderField.SegmentType, fieldType, childReaderField.TypeHandler, blockParameters, blockBodies);
-
-                            if (!current.IsDefault) current.Arguments.Add(readerValueExpr);
-                            else if (childReaderField.TargetMember.CanWrite()) current.Bindings.Add(Expression.Bind(childReaderField.TargetMember, readerValueExpr));
-                            childIndex++;
-                            index++;
-                        }
-
-                        //有include对象
-                        if (readerField.HasNextInclude)
-                        {
-                            deferredBuilds.Push(current);
-                            readerBuilders.Add(readerField, current);
-                        }
-                        else
-                        {
-                            do
-                            {
-                                //创建子对象，并赋值给父对象的属性,直到Select语句
-                                Expression instanceExpr = null;
-                                if (current.IsDefault)
-                                    instanceExpr = Expression.MemberInit(Expression.New(current.Constructor), current.Bindings);
-                                else instanceExpr = Expression.New(current.Constructor, current.Arguments);
-                                current.InstanceExpr = instanceExpr;
-                                //赋值给父对象的属性
-                                if (current.Parent == null)
-                                    break;
-                                if (!current.Parent.IsDefault) current.Parent.Arguments.Add(instanceExpr);
-                                else if (current.FromMember.CanWrite()) current.Parent.Bindings.Add(Expression.Bind(current.FromMember, instanceExpr));
-                            }
-                            while (deferredBuilds.TryPop(out current));
-                        }
-                    }
-                }
-                readerIndex++;
-            }
-        }
-
-        var resultLabelExpr = Expression.Label(entityType);
-        Expression returnExpr = null;
-        if (root.IsDefault)
-            returnExpr = Expression.MemberInit(Expression.New(root.Constructor), root.Bindings);
-        else returnExpr = Expression.New(root.Constructor, root.Arguments);
-
-        blockBodies.Add(Expression.Return(resultLabelExpr, returnExpr));
-        blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(entityType)));
-        return Expression.Lambda(Expression.Block(blockParameters, blockBodies), parameterExprs).Compile();
-    }
-    private static Expression GetReaderValue(DbContext dbContext, Expression ormProviderExpr, ParameterExpression readerExpr, Expression indexExpr, Type targetType, Type fieldType, ITypeHandler typeHandler, List<ParameterExpression> blockParameters, List<Expression> blockBodies)
-    {
-        var methodInfo = typeof(ITheaDataReader).GetMethod(nameof(ITheaDataReader.GetValue), [typeof(int)]);
-        var readerValueExpr = AssignLocalParameter(typeof(object), Expression.Call(readerExpr, methodInfo, indexExpr), blockParameters, blockBodies);
-        var isNullable = targetType.IsNullableType(out var underlyingType);
-        Expression targetValueExpr = null;
-        if (typeHandler != null)
-        {
-            methodInfo = typeof(ITypeHandler).GetMethod(nameof(ITypeHandler.Parse), [typeof(IOrmProvider), typeof(Type), typeof(object)]);
-            var typeHandlerExpr = Expression.Constant(typeHandler);
-            var underlyingTypeExpr = Expression.Constant(underlyingType);
-            targetValueExpr = Expression.Call(typeHandlerExpr, methodInfo, ormProviderExpr, underlyingTypeExpr, readerValueExpr);
-        }
-        else
-        {
-            var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(targetType, fieldType, dbContext.Options);
-            targetValueExpr = Expression.Invoke(Expression.Constant(valueGetter), readerValueExpr);
-        }
-        blockBodies.Add(Expression.Assign(readerValueExpr, targetValueExpr));
-        return Expression.Convert(readerValueExpr, targetType);
-    }
-    private static EntityBuildInfo NewBuildInfo(Type targetType, MemberInfo fromMember = null, EntityBuildInfo parent = null)
-    {
-        bool isDefaultCtor = false;
-        List<MemberBinding> bindings = null;
-        List<Expression> ctorArguments = null;
-
-        var ctor = targetType.GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
-        if (ctor != null)
-        {
-            bindings = new List<MemberBinding>();
-            isDefaultCtor = true;
-        }
-        else
-        {
-            ctor = targetType.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).OrderBy(f => f.IsPublic ? 0 : (f.IsPrivate ? 2 : 1)).First();
-            ctorArguments = new List<Expression>();
-        }
-        return new EntityBuildInfo
-        {
-            IsDefault = isDefaultCtor,
-            Constructor = ctor,
-            Bindings = bindings,
-            Arguments = ctorArguments,
-            FromMember = fromMember,
-            Parent = parent
-        };
-    }
-    private static ParameterExpression AssignLocalParameter(Type type, Expression valueExpr, List<ParameterExpression> blockParameters, List<Expression> blockBodies)
-    {
-        var objLocalExpr = Expression.Variable(type, $"local{blockParameters.Count}");
-        blockParameters.Add(objLocalExpr);
-        blockBodies.Add(Expression.Assign(objLocalExpr, valueExpr));
-        return objLocalExpr;
     }
     private static int GetTypeReaderKey(Type entityType, OrmProviderType ormProviderType, ITheaDataReader reader, List<SqlFieldSegment> readerFields)
     {
@@ -880,14 +571,5 @@ public static class Extensions
         return hashCode;
 #endif
     }
-    class EntityBuildInfo
-    {
-        public bool IsDefault { get; set; }
-        public ConstructorInfo Constructor { get; set; }
-        public List<MemberBinding> Bindings { get; set; }
-        public List<Expression> Arguments { get; set; }
-        public MemberInfo FromMember { get; set; }
-        public EntityBuildInfo Parent { get; set; }
-        public Expression InstanceExpr { get; set; }
-    }
+
 }

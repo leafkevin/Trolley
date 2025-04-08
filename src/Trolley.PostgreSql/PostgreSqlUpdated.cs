@@ -470,16 +470,18 @@ public class PostgreSqlUpdated<TEntity, TResult> : Updated<TEntity>, IPostgreSql
         var result = new List<TResult>();
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
 
+        Func<ITheaDataReader, object> readerDeserializer = null;
         Action<CommandSqlType, string, List<SqlFieldSegment>> readerExecuter = (sqlType, sql, readerFields) =>
         {
             command.CommandText = sql;
             using var reader = command.ExecuteReader(sqlType, CommandBehavior.SequentialAccess);
+            readerDeserializer ??= reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);
             while (reader.Read())
-                result.Add(reader.ToEntity<TResult>(this.DbContext, readerFields));
+                result.Add((TResult)readerDeserializer.Invoke(reader));
             while (reader.NextResult())
             {
                 while (reader.Read())
-                    result.Add(reader.ToEntity<TResult>(this.DbContext, readerFields));
+                    result.Add((TResult)readerDeserializer.Invoke(reader));
             }
             reader.Dispose();
             command.Parameters.Clear();
@@ -556,16 +558,18 @@ public class PostgreSqlUpdated<TEntity, TResult> : Updated<TEntity>, IPostgreSql
         var result = new List<TResult>();
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
 
+        Func<ITheaDataReader, object> readerDeserializer = null;
         Func<CommandSqlType, string, List<SqlFieldSegment>, Task> readerExecuter = async (sqlType, sql, readerFields) =>
         {
             command.CommandText = sql;
             using var reader = await command.ExecuteReaderAsync(sqlType, CommandBehavior.SequentialAccess, cancellationToken);
+            readerDeserializer ??= reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);
             while (await reader.ReadAsync(cancellationToken))
-                result.Add(reader.ToEntity<TResult>(this.DbContext, readerFields));
+                result.Add((TResult)readerDeserializer.Invoke(reader));
             while (await reader.NextResultAsync(cancellationToken))
             {
                 while (await reader.ReadAsync(cancellationToken))
-                    result.Add(reader.ToEntity<TResult>(this.DbContext, readerFields));
+                    result.Add((TResult)readerDeserializer.Invoke(reader));
             }
             await reader.DisposeAsync();
             command.Parameters.Clear();

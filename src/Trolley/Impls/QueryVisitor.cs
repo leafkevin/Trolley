@@ -724,14 +724,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         foreach (var includeSegment in this.IncludeTables)
         {
             var navigationType = includeSegment.FromMember.NavigationType;
-            var includeValues = RepositoryHelper.CreateListInstance(navigationType);
             var rootPath = includeSegment.Path.Substring(0, 1);
             var rootReaderField = this.ReaderFields.Find(f => f.Path == rootPath);
             //当最外层实体是参数访问时，此值为null
             var firstMember = rootReaderField.TargetMember;
-
-            while (reader.Read())
-                this.AddIncludeValue(navigationType, includeValues, reader);
+            var includeValues = RepositoryHelper.ReadList(navigationType, reader, this.DbContext);
             Action<object> includeValuesSetter = f => this.SetIncludeValueToTarget(targetType, firstMember, includeSegment, f, includeValues);
             deferredInitializers.Add((includeValues, includeValuesSetter));
         }
@@ -763,13 +760,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         foreach (var includeSegment in this.IncludeTables)
         {
             var navigationType = includeSegment.FromMember.NavigationType;
-            var includeValues = RepositoryHelper.CreateListInstance(navigationType);
             var rootPath = includeSegment.Path.Substring(0, 1);
             var rootReaderField = this.ReaderFields.Find(f => f.Path == rootPath);
             var firstMember = rootReaderField.TargetMember;
-
-            while (await reader.ReadAsync(cancellationToken))
-                this.AddIncludeValue(navigationType, includeValues, reader);
+            var includeValues = await RepositoryHelper.ReadListAsync(navigationType, reader, this.DbContext, cancellationToken);
             Action<object> includeValuesSetter = f => this.SetIncludeValueToTarget(targetType, firstMember, includeSegment, f, includeValues);
             deferredInitializers.Add((includeValues, includeValuesSetter));
         }
@@ -794,31 +788,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             }
         }
         await reader.NextResultAsync(cancellationToken);
-    }
-    private void AddIncludeValue(Type elementType, object includeValues, ITheaDataReader reader)
-    {
-        var typedReaderElementSetter = typedReaderElementSetters.GetOrAdd(elementType, f =>
-        {
-            var anonObjsExpr = Expression.Parameter(typeof(object), "anonObjs");
-            var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader");
-            var dbContextExpr = Expression.Parameter(typeof(DbContext), "dbContext");
-
-            var blockParameters = new List<ParameterExpression>();
-            var blockBodies = new List<Expression>();
-            var listType = typeof(List<>).MakeGenericType(elementType);
-            var typedListExpr = Expression.Variable(listType, "typedList");
-            blockParameters.Add(typedListExpr);
-            blockBodies.Add(Expression.Assign(typedListExpr, Expression.Convert(anonObjsExpr, listType)));
-
-            var methodInfo = typeof(Extensions).GetMethod(nameof(Extensions.ToEntity), [typeof(ITheaDataReader), typeof(DbContext)]);
-            methodInfo = methodInfo.MakeGenericMethod(elementType);
-            var elementExpr = Expression.Call(methodInfo, readerExpr, dbContextExpr);
-            methodInfo = listType.GetMethod("Add", [elementType]);
-            blockBodies.Add(Expression.Call(typedListExpr, methodInfo, elementExpr));
-            return Expression.Lambda<Action<object, ITheaDataReader, DbContext>>(
-                Expression.Block(blockParameters, blockBodies), anonObjsExpr, readerExpr, dbContextExpr).Compile();
-        });
-        typedReaderElementSetter.Invoke(includeValues, reader, this.DbContext);
     }
     private void SetIncludeValueToTarget(Type targetType, MemberInfo firstMember, TableSegment includeSegment, object target, object includeValues)
     {

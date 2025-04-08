@@ -118,9 +118,9 @@ public sealed class DbContext
         var behavior = CommandBehavior.SequentialAccess;
         using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
         var result = new List<TEntity>();
-        var entityType = typeof(TEntity);
-        while (reader.Read())
-            result.Add(reader.ToEntity<TEntity>(this));
+        var deserializer = reader.GetReaderDeserializer(typeof(TEntity), this);
+        if (reader.Read())
+            result.Add((TEntity)deserializer.Invoke(reader));
 
         reader.Dispose();
         command.Dispose();
@@ -151,9 +151,9 @@ public sealed class DbContext
         var behavior = CommandBehavior.SequentialAccess;
         using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
         var result = new List<TEntity>();
-        var entityType = typeof(TEntity);
-        while (await reader.ReadAsync(cancellationToken))
-            result.Add(reader.ToEntity<TEntity>(this));
+        var deserializer = reader.GetReaderDeserializer(typeof(TEntity), this);
+        if (await reader.ReadAsync(cancellationToken))
+            result.Add((TEntity)deserializer.Invoke(reader));
 
         await reader.DisposeAsync();
         await command.DisposeAsync();
@@ -206,7 +206,7 @@ public sealed class DbContext
         if (isNeedClose) connection.Close();
         return result;
     }
-    public async Task<TResult> QueryAsync<TEntity, TResult>(object whereObj, bool isSingle, Func<ITheaDataReader, Task<TResult>> readerInitializer, CancellationToken cancellationToken = default)
+    public async Task<TResult> QueryAsync<TEntity, TResult>(object whereObj, bool isSingle, Func<ITheaDataReader, CancellationToken, Task<TResult>> readerInitializer, CancellationToken cancellationToken = default)
     {
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
@@ -245,7 +245,7 @@ public sealed class DbContext
         await connection.OpenAsync(cancellationToken);
         var behavior = isSingle ? CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow : CommandBehavior.SequentialAccess;
         using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
-        var result = await readerInitializer.Invoke(reader);
+        var result = await readerInitializer.Invoke(reader, cancellationToken);
 
         await reader.DisposeAsync();
         await command.DisposeAsync();
@@ -294,7 +294,7 @@ public sealed class DbContext
         if (isNeedClose) connection.Close();
         return result;
     }
-    public async Task<TResult> QueryByIdAsync<TEntity, TResult>(object whereKeys, bool isSingle, Func<ITheaDataReader, Task<TResult>> readerInitializer, CancellationToken cancellationToken = default)
+    public async Task<TResult> QueryByIdAsync<TEntity, TResult>(object whereKeys, bool isSingle, Func<ITheaDataReader, CancellationToken, Task<TResult>> readerInitializer, CancellationToken cancellationToken = default)
     {
         if (whereKeys == null)
             throw new ArgumentNullException(nameof(whereKeys));
@@ -329,7 +329,7 @@ public sealed class DbContext
         await connection.OpenAsync(cancellationToken);
         var behavior = isSingle ? CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow : CommandBehavior.SequentialAccess;
         using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
-        var result = await readerInitializer.Invoke(reader);
+        var result = await readerInitializer.Invoke(reader, cancellationToken);
 
         await reader.DisposeAsync();
         await command.DisposeAsync();
@@ -404,7 +404,7 @@ public sealed class DbContext
         visitor.Dispose();
         return result;
     }
-    public async Task<TResult> QueryFromAsync<TEntity, TResult>(IQueryVisitor visitor, bool isSingle, Func<Type, ITheaDataReader, List<SqlFieldSegment>, Task<TResult>> readerInitializer, CancellationToken cancellationToken = default)
+    public async Task<TResult> QueryFromAsync<TEntity, TResult>(IQueryVisitor visitor, bool isSingle, Func<Type, ITheaDataReader, List<SqlFieldSegment>, CancellationToken, Task<TResult>> readerInitializer, CancellationToken cancellationToken = default)
     {
         var entityType = typeof(TEntity);
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.IsUseMaster);
@@ -418,7 +418,7 @@ public sealed class DbContext
         await connection.OpenAsync(cancellationToken);
         var behavior = isSingle ? CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow : CommandBehavior.SequentialAccess;
         var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
-        var result = await readerInitializer.Invoke(entityType, reader, readerFields);
+        var result = await readerInitializer.Invoke(entityType, reader, readerFields, cancellationToken);
         if (visitor.BuildIncludeSql(entityType, result, isSingle, out sql))
         {
             await reader.DisposeAsync();
@@ -458,20 +458,9 @@ public sealed class DbContext
 
         reader.NextResult();
         var entityType = typeof(TResult);
-        if (entityType.IsEntityType(out _))
-        {
-            while (reader.Read())
-            {
-                result.Data.Add(reader.ToEntity<TResult>(this, readerFields));
-            }
-        }
-        else
-        {
-            while (reader.Read())
-            {
-                result.Data.Add(reader.ToValue<TResult>(this));
-            }
-        }
+        var deserializer = reader.GetReaderDeserializer(typeof(TResult), this, readerFields);
+        while (reader.Read())
+            result.Data.Add((TResult)deserializer.Invoke(reader));
         result.Count = result.Data.Count;
         if (visitor.BuildIncludeSql(entityType, result.Data, false, out sql))
         {
@@ -509,22 +498,11 @@ public sealed class DbContext
         result.PageNumber = visitor.PageNumber;
         result.PageSize = visitor.PageSize;
 
-        await reader.NextResultAsync(cancellationToken);
         var entityType = typeof(TResult);
-        if (entityType.IsEntityType(out _))
-        {
-            while (await reader.ReadAsync(cancellationToken))
-            {
-                result.Data.Add(reader.ToEntity<TResult>(this, readerFields));
-            }
-        }
-        else
-        {
-            while (await reader.ReadAsync(cancellationToken))
-            {
-                result.Data.Add(reader.ToValue<TResult>(this));
-            }
-        }
+        await reader.NextResultAsync(cancellationToken);
+        var deserializer = reader.GetReaderDeserializer(typeof(TResult), this, readerFields);
+        while (await reader.ReadAsync(cancellationToken))
+            result.Data.Add((TResult)deserializer.Invoke(reader));
         result.Count = result.Data.Count;
         if (visitor.BuildIncludeSql(entityType, result.Data, false, out sql))
         {
@@ -634,8 +612,9 @@ public sealed class DbContext
 
         connection.Open();
         using var reader = command.ExecuteReader(CommandSqlType.Insert, CommandBehavior.SequentialAccess);
+        var deserializer = reader.GetReaderDeserializer(typeof(TResult), this, readerFields);
         if (reader.Read())
-            result = reader.ToEntity<TResult>(this, readerFields);
+            result = (TResult)deserializer.Invoke(reader);
 
         reader.Dispose();
         command.Dispose();
@@ -651,8 +630,9 @@ public sealed class DbContext
 
         await connection.OpenAsync(cancellationToken);
         using var reader = await command.ExecuteReaderAsync(CommandSqlType.Insert, CommandBehavior.SequentialAccess, cancellationToken);
+        var deserializer = reader.GetReaderDeserializer(typeof(TResult), this, readerFields);
         if (await reader.ReadAsync(cancellationToken))
-            result = reader.ToEntity<TResult>(this, readerFields);
+            result = (TResult)deserializer.Invoke(reader);
 
         await reader.DisposeAsync();
         await command.DisposeAsync();

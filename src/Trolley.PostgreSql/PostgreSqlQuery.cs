@@ -167,26 +167,20 @@ public class PostgreSqlQuery<T> : Query<T>, IPostgreSqlQuery<T>
         return this.DbContext.QueryFrom<T, T>(this.Visitor, true, (entityType, reader, readerFields) =>
         {
             T result = default;
+            var deserializer = reader.GetReaderDeserializer(typeof(T), this.DbContext, readerFields);
             if (reader.Read())
-            {
-                if (entityType.IsEntityType(out _))
-                    result = reader.ToEntity<T>(this.DbContext, readerFields);
-                else result = reader.ToValue<T>(this.DbContext);
-            }
+                result = (T)deserializer.Invoke(reader);
             return result;
         });
     }
     public override async Task<T> FirstAsync(CancellationToken cancellationToken = default)
     {
-        return await this.DbContext.QueryFromAsync<T, T>(this.Visitor, true, async (entityType, reader, readerFields) =>
+        return await this.DbContext.QueryFromAsync<T, T>(this.Visitor, true, async (entityType, reader, readerFields, cancellationToken) =>
         {
             T result = default;
+            var deserializer = reader.GetReaderDeserializer(typeof(T), this.DbContext, readerFields);
             if (await reader.ReadAsync(cancellationToken))
-            {
-                if (entityType.IsEntityType(out _))
-                    result = reader.ToEntity<T>(this.DbContext, readerFields);
-                else result = reader.ToValue<T>(this.DbContext);
-            }
+                result = (T)deserializer.Invoke(reader);
             return result;
         }, cancellationToken);
     }
@@ -195,42 +189,20 @@ public class PostgreSqlQuery<T> : Query<T>, IPostgreSqlQuery<T>
         return this.DbContext.QueryFrom<T, List<T>>(this.Visitor, false, (entityType, reader, readerFields) =>
         {
             var result = new List<T>();
-            if (entityType.IsEntityType(out _))
-            {
-                while (reader.Read())
-                {
-                    result.Add(reader.ToEntity<T>(this.DbContext, readerFields));
-                }
-            }
-            else
-            {
-                while (reader.Read())
-                {
-                    result.Add(reader.ToValue<T>(this.DbContext));
-                }
-            }
+            var deserializer = reader.GetReaderDeserializer(typeof(T), this.DbContext, readerFields);
+            while (reader.Read())
+                result.Add((T)deserializer.Invoke(reader));
             return result;
         });
     }
     public override async Task<List<T>> ToListAsync(CancellationToken cancellationToken = default)
     {
-        return await this.DbContext.QueryFromAsync<T, List<T>>(this.Visitor, false, async (entityType, reader, readerFields) =>
+        return await this.DbContext.QueryFromAsync<T, List<T>>(this.Visitor, false, async (entityType, reader, readerFields, cancellationToken) =>
         {
             var result = new List<T>();
-            if (entityType.IsEntityType(out _))
-            {
-                while (await reader.ReadAsync(cancellationToken))
-                {
-                    result.Add(reader.ToEntity<T>(this.DbContext, readerFields));
-                }
-            }
-            else
-            {
-                while (await reader.ReadAsync(cancellationToken))
-                {
-                    result.Add(reader.ToValue<T>(this.DbContext));
-                }
-            }
+            var deserializer = reader.GetReaderDeserializer(typeof(T), this.DbContext, readerFields);
+            while (await reader.ReadAsync(cancellationToken))
+                result.Add((T)deserializer.Invoke(reader));
             return result;
         }, cancellationToken);
     }

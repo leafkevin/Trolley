@@ -465,10 +465,16 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                                 || underlyingType == typeof(Collection<>).MakeGenericType(elelmentTypes)
                                 || underlyingType.IsInterface)
                             {
+                                var enumerableExpr = Expression.Parameter(typeof(object), "enumerable");
+                                var parametersType = typeof(IEnumerable<>).MakeGenericType(elelmentTypes[0]);
+                                var typedEnumerableExpr = Expression.Convert(enumerableExpr, parametersType);
+                                var methodInfo = typeof(Enumerable).GetMethod(nameof(Enumerable.ToArray), [parametersType]);
+                                var bodyExpr = Expression.Call(methodInfo, typedEnumerableExpr);
+                                var arrayCreater = Expression.Lambda<Func<object, object>>(bodyExpr, enumerableExpr).Compile();
                                 typeHandler = value =>
                                 {
                                     if (value is DBNull) return null;
-                                    return RepositoryHelper.ToArray(elelmentTypes[0], value);
+                                    return arrayCreater.Invoke(value);
                                 };
                             }
                         }
@@ -1102,21 +1108,45 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                             if (underlyingType == typeof(List<>).MakeGenericType(elelmentTypes)
                                 || underlyingType.IsInterface)
                             {
+                                var collectionExpr = Expression.Parameter(typeof(object), "collection");
+                                var parametersType = typeof(IEnumerable<>).MakeGenericType(elelmentTypes[0]);
+                                var typedCollectionExpr = Expression.Convert(collectionExpr, parametersType);
+                                var listType = typeof(List<>).MakeGenericType(elelmentTypes[0]);
+                                var bodyExpr = Expression.New(listType.GetConstructor([parametersType]), typedCollectionExpr);
+                                var listCreater = Expression.Lambda<Func<object, object>>(bodyExpr, collectionExpr).Compile();
                                 typeHandler = value =>
                                 {
                                     if (value is DBNull) return null;
-                                    return RepositoryHelper.CreateListInstance(elelmentTypes[0], value);
+                                    return listCreater.Invoke(value);
                                 };
                             }
                             else if (underlyingType == typeof(Collection<>).MakeGenericType(elelmentTypes))
                             {
+                                var listExpr = Expression.Parameter(typeof(object), "collection");
+                                var parametersType = typeof(IList<>).MakeGenericType(elelmentTypes[0]);
+                                var typedListExpr = Expression.Convert(listExpr, parametersType);
+                                var collectionType = typeof(Collection<>).MakeGenericType(elelmentTypes[0]);
+                                var bodyExpr = Expression.New(collectionType.GetConstructor([parametersType]), typedListExpr);
+                                var listCreater = Expression.Lambda<Func<object, object>>(bodyExpr, listExpr).Compile();
                                 typeHandler = value =>
                                 {
                                     if (value is DBNull) return null;
-                                    return RepositoryHelper.CreateCollectionInstance(elelmentTypes[0], value);
+                                    return listCreater.Invoke(value);
                                 };
                             }
                         }
+                    }
+                }
+                else if (fieldType == typeof(byte[]))
+                {
+                    //兼容某些分布式数据库，byte[]类型转换为string类型
+                    if (underlyingType == typeof(string))
+                    {
+                        typeHandler = value =>
+                        {
+                            if (value is DBNull) return null;
+                            return UTF8Encoding.UTF8.GetString((byte[])value);
+                        };
                     }
                 }
                 else if (underlyingType.IsEnumType(out _))
@@ -2185,6 +2215,13 @@ public partial class PostgreSqlProvider : BaseOrmProvider
                                         return Convert.ChangeType(value, underlyingType);
                                     };
                                 }
+                                break;
+                            case TypeCode.Object:
+                                typeHandler = value =>
+                                {
+                                    if (value is DBNull) return null;
+                                    return value;
+                                };
                                 break;
                         }
                     }

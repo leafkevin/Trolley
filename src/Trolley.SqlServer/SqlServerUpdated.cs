@@ -474,12 +474,13 @@ public class SqlServerUpdated<TEntity, TResult> : Updated<TEntity>, ISqlServerUp
         {
             command.CommandText = sql;
             using var reader = command.ExecuteReader(sqlType, CommandBehavior.SequentialAccess);
+            var deserializer = reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);
             while (reader.Read())
-                result.Add(reader.ToEntity<TResult>(this.DbContext, readerFields));
+                result.Add((TResult)deserializer.Invoke(reader));
             while (reader.NextResult())
             {
                 while (reader.Read())
-                    result.Add(reader.ToEntity<TResult>(this.DbContext, readerFields));
+                    result.Add((TResult)deserializer.Invoke(reader));
             }
             reader.Dispose();
             command.Parameters.Clear();
@@ -560,12 +561,13 @@ public class SqlServerUpdated<TEntity, TResult> : Updated<TEntity>, ISqlServerUp
         {
             command.CommandText = sql;
             using var reader = await command.ExecuteReaderAsync(sqlType, CommandBehavior.SequentialAccess, cancellationToken);
+            var deserializer = reader.GetReaderDeserializer(typeof(TResult), this.DbContext, readerFields);
             while (await reader.ReadAsync(cancellationToken))
-                result.Add(reader.ToEntity<TResult>(this.DbContext, readerFields));
+                result.Add((TResult)deserializer.Invoke(reader));
             while (await reader.NextResultAsync(cancellationToken))
             {
                 while (await reader.ReadAsync(cancellationToken))
-                    result.Add(reader.ToEntity<TResult>(this.DbContext, readerFields));
+                    result.Add((TResult)deserializer.Invoke(reader));
             }
             await reader.DisposeAsync();
             command.Parameters.Clear();

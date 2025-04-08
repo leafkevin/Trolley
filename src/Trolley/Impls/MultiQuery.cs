@@ -3,9 +3,6 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
-using System.Threading;
 
 namespace Trolley;
 
@@ -55,8 +52,7 @@ public class MultiQueryBase : IMultiQueryBase
     {
         this.Visitor.Select(sqlFormat, fieldExpr);
         var sql = this.Visitor.BuildSql(out _);
-        Func<ITheaDataReader, object> readerGetter = reader => reader.ToValue<TTarget>(this.DbContext);
-        this.MultipleQuery.AddReader(typeof(TTarget), sql, readerGetter, true);
+        this.MultipleQuery.AddReader(typeof(TTarget), sql, true);
         return this.MultipleQuery;
     }
     #endregion
@@ -505,15 +501,7 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
         Expression<Func<T, T>> defaultExpr = f => f;
         this.Visitor.SelectDefault(defaultExpr);
         var sql = this.Visitor.BuildSql(out var readerFields);
-        var targetType = typeof(T);
-        Func<ITheaDataReader, object> readerGetter = null;
-        if (targetType.IsEntityType(out _))
-            readerGetter = reader => reader.ToEntity<T>(this.DbContext, readerFields);
-        else readerGetter = reader => reader.ToValue<T>(this.DbContext);
-        IQueryVisitor queryVisitor = null;
-        if (this.Visitor.HasIncludeTables())
-            queryVisitor = this.Visitor;
-        this.MultipleQuery.AddReader(targetType, sql, readerGetter, isSingle, queryVisitor, this.Visitor.PageNumber, this.Visitor.PageSize);
+        this.MultipleQuery.AddReader(typeof(T), sql, isSingle, this.Visitor, this.Visitor.PageNumber, this.Visitor.PageSize);
         return this.MultipleQuery;
     }
     #endregion
