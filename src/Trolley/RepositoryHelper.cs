@@ -1623,25 +1623,6 @@ public static class RepositoryHelper
         });
         return tableNameGetter.Invoke(tableName, parameter);
     }
-
-    public static List<TEntity> ReadList<TEntity>(ITheaDataReader reader, DbContext dbContext)
-    {
-        var result = new List<TEntity>();
-        var entityType = typeof(TEntity);
-        var deserializer = reader.GetReaderDeserializer(entityType, dbContext);
-        while (reader.Read())
-            result.Add((TEntity)deserializer.Invoke(reader));
-        return result;
-    }
-    public static async Task<List<TEntity>> ReadListAsync<TEntity>(ITheaDataReader reader, DbContext dbContext, CancellationToken cancellationToken)
-    {
-        var result = new List<TEntity>();
-        var entityType = typeof(TEntity);
-        var deserializer = reader.GetReaderDeserializer(entityType, dbContext);
-        while (await reader.ReadAsync(cancellationToken))
-            result.Add((TEntity)deserializer.Invoke(reader));
-        return result;
-    }
     public static object ReadList(Type entityType, ITheaDataReader reader, DbContext dbContext)
     {
         var cacheKey = GetCacheKey(entityType, dbContext.OrmProvider.OrmProviderType);
@@ -1979,7 +1960,7 @@ public static class RepositoryHelper
             }
         }
 
-        var resultLabelExpr = Expression.Label(entityType);
+        var resultLabelExpr = Expression.Label(typeof(object));
         Expression returnExpr = null;
         if (root.IsDefault)
             returnExpr = Expression.MemberInit(Expression.New(root.Constructor), root.Bindings);

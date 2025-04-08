@@ -7,6 +7,8 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace Trolley;
 
@@ -371,7 +373,24 @@ public static class Extensions
             return deserializer;
         }
     }
-
+    public static List<TEntity> ReadList<TEntity>(this ITheaDataReader reader, DbContext dbContext)
+    {
+        var result = new List<TEntity>();
+        var entityType = typeof(TEntity);
+        var deserializer = reader.GetReaderDeserializer(entityType, dbContext);
+        while (reader.Read())
+            result.Add((TEntity)deserializer.Invoke(reader));
+        return result;
+    }
+    public static async Task<List<TEntity>> ReadListAsync<TEntity>(this ITheaDataReader reader, DbContext dbContext, CancellationToken cancellationToken)
+    {
+        var result = new List<TEntity>();
+        var entityType = typeof(TEntity);
+        var deserializer = reader.GetReaderDeserializer(entityType, dbContext);
+        while (await reader.ReadAsync(cancellationToken))
+            result.Add((TEntity)deserializer.Invoke(reader));
+        return result;
+    }
     /// <summary>
     /// 用在方法调用中，判断!=,NOT IN,NOT LIKE三种情况
     /// </summary>

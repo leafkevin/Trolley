@@ -221,7 +221,7 @@ public class MultipleQuery : IMultipleQuery
         var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.DbContext, entityType, whereObjType, whereObj, true, isBulk);
         var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string, string>;
         var sql = typedCommandInitializer.Invoke(this.Command.Parameters, this.DbContext, whereObj, $"_m{this.ReaderAfters.Count}");
-        this.AddReader(typeof(int), sql, true);
+        this.AddReader(typeof(bool), sql, true);
         return this;
     }
     public IMultipleQuery Exists<TEntity>(Expression<Func<TEntity, bool>> wherePredicate)
@@ -231,7 +231,7 @@ public class MultipleQuery : IMultipleQuery
 
         var sql = this.From<TEntity>().Where(wherePredicate)
             .SelectAggregate((x, f) => x.Count()).ToSql(out _);
-        this.AddReader(typeof(int), sql, true);
+        this.AddReader(typeof(bool), sql, true);
         return this;
     }
     #endregion

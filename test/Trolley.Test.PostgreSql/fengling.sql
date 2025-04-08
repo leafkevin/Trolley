@@ -223,6 +223,8 @@ CREATE TABLE "public"."sys_product" (
 -- ----------------------------
 -- Table structure for sys_user
 -- ----------------------------
+DROP FUNCTION IF EXISTS "public"."get_user";
+
 DROP TABLE IF EXISTS "public"."sys_user";
 CREATE TABLE "public"."sys_user" (
   "Id" int4 NOT NULL,
