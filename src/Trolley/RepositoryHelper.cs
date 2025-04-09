@@ -1631,7 +1631,7 @@ public static class RepositoryHelper
             var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader");
             var dbContextExpr = Expression.Parameter(typeof(DbContext), "dbContext");
             var blockBodies = new List<Expression>();
-            var methodInfo = typeof(Extensions).GetMethod(nameof(ReadList));
+            var methodInfo = typeof(Extensions).GetMethod(nameof(ReadTypedList));
             methodInfo = methodInfo.MakeGenericMethod(entityType);
             var targetType = typeof(List<>).MakeGenericType(entityType);
             var resultLabelExpr = Expression.Label(targetType);
@@ -1651,7 +1651,7 @@ public static class RepositoryHelper
             var dbContextExpr = Expression.Parameter(typeof(DbContext), "dbContext");
             var cancellationTokenExpr = Expression.Parameter(typeof(CancellationToken), "cancellationToken");
             var blockBodies = new List<Expression>();
-            var methodInfo = typeof(Extensions).GetMethod(nameof(ReadListAsync));
+            var methodInfo = typeof(Extensions).GetMethod(nameof(ReadTypedListAsync));
             methodInfo = methodInfo.MakeGenericMethod(entityType);
             var listType = typeof(List<>).MakeGenericType(entityType);
             var targetType = typeof(Task<>).MakeGenericType(listType);
@@ -1663,6 +1663,25 @@ public static class RepositoryHelper
         });
         return (Task<object>)typedReaderDeserializer.DynamicInvoke(reader, cancellationToken);
     }
+    public static List<TEntity> ReadTypedList<TEntity>(this ITheaDataReader reader, DbContext dbContext)
+    {
+        var result = new List<TEntity>();
+        var entityType = typeof(TEntity);
+        var deserializer = reader.GetReaderDeserializer(entityType, dbContext);
+        while (reader.Read())
+            result.Add((TEntity)deserializer.Invoke(reader));
+        return result;
+    }
+    public static async Task<List<TEntity>> ReadTypedListAsync<TEntity>(this ITheaDataReader reader, DbContext dbContext, CancellationToken cancellationToken)
+    {
+        var result = new List<TEntity>();
+        var entityType = typeof(TEntity);
+        var deserializer = reader.GetReaderDeserializer(entityType, dbContext);
+        while (await reader.ReadAsync(cancellationToken))
+            result.Add((TEntity)deserializer.Invoke(reader));
+        return result;
+    }
+
     public static DateTime ToUtcTime(DateTime dateTime)
     {
         if (dateTime.Kind == DateTimeKind.Local)
