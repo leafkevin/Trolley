@@ -55,7 +55,7 @@ public class SqlVisitor : ISqlVisitor
     public bool IsNeedUnionShardingTables { get; set; }
     public bool IsNeedFormatShardingTables { get; set; }
     public bool IsManyShardingTables { get; set; }
-    public string ShardingFieldAlias { get; set; }
+    public string AggFieldAlias { get; set; }
     public List<TableSegment> ShardingTables { get; set; }
 
     public SqlVisitor() { }
@@ -1149,7 +1149,7 @@ public class SqlVisitor : ISqlVisitor
                 }
                 else sqlSegment.Change("COUNT(1)", false, true);
                 sqlSegment.IsAggField = true;
-                sqlSegment.AggFunc = "COUNT";
+                sqlSegment.AggFunc = "SUM";
                 break;
             case "CountDistinct":
             case "LongCountDistinct":
@@ -1159,7 +1159,8 @@ public class SqlVisitor : ISqlVisitor
                     sqlSegment.Change($"COUNT(DISTINCT {sqlSegment.Body})", false, true);
                 }
                 sqlSegment.IsAggField = true;
-                sqlSegment.AggFunc = "COUNT";
+                //TODO:分表后，count(distinct)，这个聚合结果是不准确的
+                sqlSegment.AggFunc = "MAX";
                 break;
             case "Sum":
                 if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
@@ -1177,6 +1178,7 @@ public class SqlVisitor : ISqlVisitor
                     sqlSegment.Change($"AVG({sqlSegment.Body})", false, true);
                 }
                 sqlSegment.IsAggField = true;
+                //TODO:分表后，avg()，这个聚合结果是不准确的
                 sqlSegment.AggFunc = "AVG";
                 break;
             case "Max":

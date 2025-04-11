@@ -96,9 +96,20 @@ public class PostgreSqlQueryVisitor : QueryVisitor
 
         if (this.IsDistinctOn)
             builder.Append($"DISTINCT ON ({this.DistinctOnSql}) ");
+
+        if (this.IsManyShardingTables && !string.IsNullOrEmpty(this.GroupBySql))
+        {
+            //当有多分表时，有分组，Select字段中，没有完全的分组字段，则需要补全所有分组字段
+            foreach (var groupByField in this.GroupByFields)
+            {
+                if (this.ReaderFields.Exists(f => f.FromMember == groupByField.FromMember))
+                    continue;
+                this.ReaderFields.Add(groupByField);
+            }
+        }
         this.AddSelectFieldsSql(builder, this.ReaderFields);
-        if (this.IsManyShardingTables && this.ShardingFieldAlias != null)
-            builder.Append($" AS {this.ShardingFieldAlias}");
+        if (this.IsManyShardingTables && this.AggFieldAlias != null)
+            builder.Append($" AS {this.AggFieldAlias}");
 
         string selectSql = null;
         if (this.IsDistinct)
@@ -144,7 +155,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         }
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
 
-        if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.OrderBySql) || this.skip.HasValue || this.limit.HasValue))
+        if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.GroupBySql) || !string.IsNullOrEmpty(this.OrderBySql) || this.skip.HasValue || this.limit.HasValue))
             this.IsNeedUnionShardingTables = true;
 
         //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不正确
@@ -258,9 +269,20 @@ public class PostgreSqlQueryVisitor : QueryVisitor
 
         if (this.IsDistinctOn)
             builder.Append($"DISTINCT ON ({this.DistinctOnSql}) ");
+
+        if (this.IsManyShardingTables && !string.IsNullOrEmpty(this.GroupBySql))
+        {
+            //当有多分表时，有分组，Select字段中，没有完全的分组字段，则需要补全所有分组字段
+            foreach (var groupByField in this.GroupByFields)
+            {
+                if (this.ReaderFields.Exists(f => f.FromMember == groupByField.FromMember))
+                    continue;
+                this.ReaderFields.Add(groupByField);
+            }
+        }
         this.AddSelectFieldsSql(builder, this.ReaderFields);
-        if (this.IsManyShardingTables && this.ShardingFieldAlias != null)
-            builder.Append($" AS {this.ShardingFieldAlias}");
+        if (this.IsManyShardingTables && this.AggFieldAlias != null)
+            builder.Append($" AS {this.AggFieldAlias}");
 
         string selectSql = null;
         if (this.IsDistinct)
@@ -300,7 +322,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         }
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
 
-        if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.OrderBySql) || this.skip.HasValue || this.limit.HasValue))
+        if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.GroupBySql) || !string.IsNullOrEmpty(this.OrderBySql) || this.skip.HasValue || this.limit.HasValue))
             this.IsNeedUnionShardingTables = true;
 
         //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不正确

@@ -171,13 +171,13 @@ public class QueryBase : QueryInternal, IQueryBase
     #region QueryScalar
     protected TTarget QueryScalar<TTarget>(string sqlFormat, string shardingFieldAlias, Expression fieldExpr = null)
     {
-        this.Visitor.ShardingFieldAlias = shardingFieldAlias;
+        this.Visitor.AggFieldAlias = shardingFieldAlias;
         this.Visitor.Select(sqlFormat, fieldExpr);
         return this.DbContext.QueryScalar<TTarget>(this.Visitor);
     }
     protected async Task<TTarget> QueryScalarAsync<TTarget>(string sqlFormat, string shardingFieldAlias, Expression fieldExpr = null, CancellationToken cancellationToken = default)
     {
-        this.Visitor.ShardingFieldAlias = shardingFieldAlias;
+        this.Visitor.AggFieldAlias = shardingFieldAlias;
         this.Visitor.Select(sqlFormat, fieldExpr);
         return await this.DbContext.QueryScalarAsync<TTarget>(this.Visitor, cancellationToken);
     }

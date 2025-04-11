@@ -114,8 +114,8 @@ public class MySqlQueryVisitor : QueryVisitor
         if (this.ReaderFields == null)
             throw new Exception("缺少Select语句");
         this.AddSelectFieldsSql(builder, this.ReaderFields);
-        if (this.IsManyShardingTables && this.ShardingFieldAlias != null)
-            builder.Append($" AS {this.ShardingFieldAlias}");
+        if (this.IsManyShardingTables && this.AggFieldAlias != null)
+            builder.Append($" AS {this.AggFieldAlias}");
 
         string selectSql = null;
         if (this.IsDistinct)

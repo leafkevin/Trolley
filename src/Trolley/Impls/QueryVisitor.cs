@@ -143,8 +143,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             }
         }
         this.AddSelectFieldsSql(builder, this.ReaderFields);
-        if (this.IsManyShardingTables && this.ShardingFieldAlias != null)
-            builder.Append($" AS {this.ShardingFieldAlias}");
+        if (this.IsManyShardingTables && this.AggFieldAlias != null)
+            builder.Append($" AS {this.AggFieldAlias}");
 
         string selectSql = null;
         if (this.IsDistinct)
@@ -310,8 +310,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             }
         }
         this.AddSelectFieldsSql(builder, this.ReaderFields);
-        if (this.IsManyShardingTables && this.ShardingFieldAlias != null)
-            builder.Append($" AS {this.ShardingFieldAlias}");
+        if (this.IsManyShardingTables && this.AggFieldAlias != null)
+            builder.Append($" AS {this.AggFieldAlias}");
 
         string selectSql = null;
         if (this.IsDistinct)
@@ -1364,7 +1364,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 this.ReaderFields = new List<SqlFieldSegment> { new SqlFieldSegment { Body = sqlFormat } };
             //单值操作，SELECT COUNT(DISTINCT b.Id),MAX(b.Amount),COUNT(1)等
             else if (this.ReaderFields != null && this.ReaderFields.Count > 0
-                && !(this.IsNeedFormatShardingTables && this.ShardingFieldAlias == "AVG_VALUE"))
+                && !(this.IsNeedFormatShardingTables && this.AggFieldAlias == "AVG_VALUE"))
             {
                 //当有多分表并且是AVG场景时，UNION之后，再做AVG操作
                 var readerField = this.ReaderFields[0];
@@ -2000,7 +2000,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         body = $"{readerField.TableSegment.AliasName}.{this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}";
 
                     //在前面select时，有可能是多分表并且是AVG操作时，没有包裹AVG函数，现在确认不是多分表，需要加上AVG函数包裹
-                    if (this.IsNeedFormatShardingTables && this.ShardingFieldAlias == "AVG_VALUE" && !this.IsManyShardingTables)
+                    if (this.IsNeedFormatShardingTables && this.AggFieldAlias == "AVG_VALUE" && !this.IsManyShardingTables)
                         body = $"AVG({body})";
                     builder.Append(body);
                     //生成SQL的时候，才加上AS别名

@@ -725,10 +725,10 @@ public sealed class DbContext
     }
     public string BuildScalarShardingSql(IQueryVisitor visitor, string rawSql)
     {
-        if (visitor.IsManyShardingTables && visitor.ShardingFieldAlias != null)
+        if (visitor.IsManyShardingTables && visitor.AggFieldAlias != null)
         {
             string aggFields = null;
-            switch (visitor.ShardingFieldAlias)
+            switch (visitor.AggFieldAlias)
             {
                 case "COUNT_VALUE":
                     aggFields = "SUM(COUNT_VALUE)";

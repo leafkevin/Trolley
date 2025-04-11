@@ -42,7 +42,7 @@ public interface IQueryVisitor : IDisposable
     bool IsNeedFormatShardingTables { get; }
     bool IsNeedUnionShardingTables { get; }
     bool IsManyShardingTables { get; }
-    string ShardingFieldAlias { get; set; }
+    string AggFieldAlias { get; set; }
     List<TableSegment> ShardingTables { get; set; }
     bool IsFromQuery { get; set; }
     bool IsFromCommand { get; set; }
