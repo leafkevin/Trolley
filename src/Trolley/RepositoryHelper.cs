@@ -1631,7 +1631,7 @@ public static class RepositoryHelper
             var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader");
             var dbContextExpr = Expression.Parameter(typeof(DbContext), "dbContext");
             var blockBodies = new List<Expression>();
-            var methodInfo = typeof(Extensions).GetMethod(nameof(ReadTypedList));
+            var methodInfo = typeof(RepositoryHelper).GetMethod(nameof(ReadTypedList));
             methodInfo = methodInfo.MakeGenericMethod(entityType);
             var targetType = typeof(List<>).MakeGenericType(entityType);
             var resultLabelExpr = Expression.Label(targetType);
@@ -1651,7 +1651,7 @@ public static class RepositoryHelper
             var dbContextExpr = Expression.Parameter(typeof(DbContext), "dbContext");
             var cancellationTokenExpr = Expression.Parameter(typeof(CancellationToken), "cancellationToken");
             var blockBodies = new List<Expression>();
-            var methodInfo = typeof(Extensions).GetMethod(nameof(ReadTypedListAsync));
+            var methodInfo = typeof(RepositoryHelper).GetMethod(nameof(ReadTypedListAsync));
             methodInfo = methodInfo.MakeGenericMethod(entityType);
             var listType = typeof(List<>).MakeGenericType(entityType);
             var targetType = typeof(Task<>).MakeGenericType(listType);

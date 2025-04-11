@@ -49,7 +49,6 @@ public class SqlVisitor : ISqlVisitor
     public string WhereSql { get; set; }
     public OperationType LastWhereOperationType { get; set; } = OperationType.None;
 
-    public List<SqlFieldSegment> GroupFields { get; set; }
     public List<TableSegment> IncludeTables { get; set; }
     public List<IQuery> RefQueries { get; set; } = new();
     public bool IsNeedFetchShardingTables { get; set; }
@@ -111,7 +110,7 @@ public class SqlVisitor : ISqlVisitor
         }
         this.IsNeedFormatShardingTables = true;
     }
-    public void UseTable(bool isIncludeMany, Type masterEntityType, Func<string, string, string, string> tableNameGetter)
+    public void UseTableMap(bool isIncludeMany, Type masterEntityType, Func<string, string, string, string> tableNameGetter)
     {
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
         if (this.ShardingProvider == null || !this.ShardingProvider.TryGetTableSharding(tableSegment.EntityType, out var shardingTable))
@@ -2353,7 +2352,6 @@ public class SqlVisitor : ISqlVisitor
         this.RefTableAliases = null;
         this.ReaderFields = null;
         this.WhereSql = null;
-        this.GroupFields = null;
         this.IncludeTables = null;
 
         //设置null，不能清空，以免给返回的参数丢失

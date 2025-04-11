@@ -32,7 +32,7 @@ public class IncludableQuery<T, TMember> : Query<T>, IIncludableQuery<T, TMember
     public new IIncludableQuery<T, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
     public new IIncludableQuery<T, TMember> UseTableBy(object field1Value, object field2Value = null)
@@ -101,7 +101,7 @@ public class IncludableQuery<T1, T2, TMember> : Query<T1, T2>, IIncludableQuery<
     public new IIncludableQuery<T1, T2, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
     public new IIncludableQuery<T1, T2, TMember> UseTableBy(object field1Value, object field2Value = null)
@@ -170,7 +170,7 @@ public class IncludableQuery<T1, T2, T3, TMember> : Query<T1, T2, T3>, IIncludab
     public new IIncludableQuery<T1, T2, T3, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
     public new IIncludableQuery<T1, T2, T3, TMember> UseTableBy(object field1Value, object field2Value = null)
@@ -239,7 +239,7 @@ public class IncludableQuery<T1, T2, T3, T4, TMember> : Query<T1, T2, T3, T4>, I
     public new IIncludableQuery<T1, T2, T3, T4, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
     public new IIncludableQuery<T1, T2, T3, T4, TMember> UseTableBy(object field1Value, object field2Value = null)
@@ -308,7 +308,7 @@ public class IncludableQuery<T1, T2, T3, T4, T5, TMember> : Query<T1, T2, T3, T4
     public new IIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
     public new IIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableBy(object field1Value, object field2Value = null)
@@ -377,7 +377,7 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : Query<T1, T2, T3
     public new IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
     public new IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableBy(object field1Value, object field2Value = null)
@@ -446,7 +446,7 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : Query<T1, T2
     public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
     public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableBy(object field1Value, object field2Value = null)
@@ -515,7 +515,7 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> : Query<T1
     public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
     public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableBy(object field1Value, object field2Value = null)
@@ -584,7 +584,7 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> : Quer
     public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
     public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableBy(object field1Value, object field2Value = null)
@@ -653,7 +653,7 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> :
     public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
     public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableBy(object field1Value, object field2Value = null)
@@ -722,7 +722,7 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMemb
     public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
     public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableBy(object field1Value, object field2Value = null)
@@ -791,7 +791,7 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
     public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableBy(object field1Value, object field2Value = null)
@@ -860,7 +860,7 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
     public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableBy(object field1Value, object field2Value = null)
@@ -929,7 +929,7 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
     public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableBy(object field1Value, object field2Value = null)
@@ -998,7 +998,7 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(this.IsIncludeMany, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
     public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableBy(object field1Value, object field2Value = null)

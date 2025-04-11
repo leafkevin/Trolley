@@ -58,7 +58,7 @@ public interface IQueryVisitor : IDisposable
     void SetShardingTables(List<string> shardingTables);
     void UseTable(bool isIncludeMany, params string[] tableNames);
     void UseTable(bool isIncludeMany, Func<string, bool> tableNamePredicate);
-    void UseTable(bool isIncludeMany, Type masterEntityType, Func<string, string, string, string> tableNameGetter);
+    void UseTableMap(bool isIncludeMany, Type masterEntityType, Func<string, string, string, string> tableNameGetter);
     void UseTableBy(bool isIncludeMany, object field1Value, object field2Value = null);
     void UseTableByRange(bool isIncludeMany, object beginFieldValue, object endFieldValue);
     void UseTableByRange(bool isIncludeMany, object fieldValue1, object fieldValue2, object fieldValue3);

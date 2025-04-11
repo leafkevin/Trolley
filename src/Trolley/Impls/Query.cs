@@ -217,7 +217,7 @@ public class Query<T> : QueryBase, IQuery<T>
     public virtual IQuery<T> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(false, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
         return this;
     }
     public virtual IQuery<T> UseTableBy(object field1Value, object field2Value = null)

@@ -38,6 +38,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     /// </summary>
     public bool IsSecondUnion { get; set; } = false;
     public TableSegment LastIncludeSegment { get; set; }
+    public List<SqlFieldSegment> GroupByFields { get; set; }
     public List<OrderByField> OrderByFields { get; set; }
 
     public bool IsRecursive { get; set; }
@@ -178,7 +179,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
 
-        if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.OrderBySql) || this.skip.HasValue || this.limit.HasValue))
+        if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.GroupBySql) || !string.IsNullOrEmpty(this.OrderBySql) || this.skip.HasValue || this.limit.HasValue))
             this.IsNeedUnionShardingTables = true;
 
         //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不正确
@@ -348,6 +349,31 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var sql = formatSql;
         string orderBy = null;
         var builder = new StringBuilder();
+        if (this.GroupByFields != null)
+        {
+            int index = 0;
+            foreach (var groupByField in this.GroupByFields)
+            {
+                string fieldName = null;
+                if (groupByField.FromMember != null && groupByField.TargetMember.Name == groupByField.FromMember.Name)
+                {
+                    fieldName = groupByField.Body;
+                    var startIndex = fieldName.IndexOf('.');
+                    if (startIndex > 0)
+                        fieldName = fieldName.Substring(startIndex + 1);
+                }
+                else
+                {
+                    fieldName = groupByField.TargetMember.Name;
+                    fieldName = this.OrmProvider.GetFieldName(fieldName);
+                }
+                if (index > 0) builder.Append(',');
+                builder.Append(fieldName);
+                index++;
+            }
+            orderBy = " ORDER BY " + builder.ToString();
+            builder.Clear();
+        }
         if (this.OrderByFields != null)
         {
             int index = 0;
@@ -1059,7 +1085,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         this.ClearUnionSql();
         this.InitTableAlias(lambdaExpr);
-        this.GroupFields = new();
+        this.GroupByFields = new();
         switch (lambdaExpr.Body.NodeType)
         {
             case ExpressionType.New:
@@ -1077,7 +1103,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     builder.Append(fieldName);
                     sqlSegment.TargetMember = memberInfo;
                     sqlSegment.SegmentType = memberInfo.GetMemberType();
-                    this.GroupFields.Add(sqlSegment);
+                    this.GroupByFields.Add(sqlSegment);
                     index++;
                 }
                 //GroupBy SQL中不含别名
@@ -1091,7 +1117,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     var memberInfo = memberExpr.Member;
                     sqlSegment.TargetMember = memberInfo;
                     sqlSegment.SegmentType = memberInfo.GetMemberType();
-                    this.GroupFields.Add(sqlSegment);
+                    this.GroupByFields.Add(sqlSegment);
                     this.GroupBySql = fieldName;
                 }
                 break;
@@ -1113,11 +1139,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //访问Grouping字段，并且Grouping对象是一个字段
         if (this.IsGroupingMember(lambdaExpr.Body as MemberExpression))
         {
-            for (int i = 0; i < this.GroupFields.Count; i++)
+            for (int i = 0; i < this.GroupByFields.Count; i++)
             {
                 if (i > 0) builder.Append(',');
-                builder.Append(this.GroupFields[i].Body);
-                var orderField = new OrderByField { Field = this.GroupFields[i] };
+                builder.Append(this.GroupByFields[i].Body);
+                var orderField = new OrderByField { Field = this.GroupByFields[i] };
                 this.OrderByFields.Add(orderField);
                 if (orderType == "DESC")
                 {
@@ -1139,11 +1165,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         //OrderBy访问分组
                         if (this.IsGroupingMember(argumentExpr as MemberExpression))
                         {
-                            for (int i = 0; i < this.GroupFields.Count; i++)
+                            for (int i = 0; i < this.GroupByFields.Count; i++)
                             {
                                 if (i > 0) builder.Append(',');
-                                builder.Append(this.GroupFields[i].Body);
-                                var orderField = new OrderByField { Field = this.GroupFields[i] };
+                                builder.Append(this.GroupByFields[i].Body);
+                                var orderField = new OrderByField { Field = this.GroupByFields[i] };
                                 this.OrderByFields.Add(orderField);
                                 if (orderType == "DESC")
                                 {
@@ -1173,11 +1199,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     var memberExpr = lambdaExpr.Body as MemberExpression;
                     if (this.IsGroupingMember(memberExpr))
                     {
-                        for (int i = 0; i < this.GroupFields.Count; i++)
+                        for (int i = 0; i < this.GroupByFields.Count; i++)
                         {
                             if (i > 0) builder.Append(',');
-                            builder.Append(this.GroupFields[i].Body);
-                            var orderField = new OrderByField { Field = this.GroupFields[i] };
+                            builder.Append(this.GroupByFields[i].Body);
+                            var orderField = new OrderByField { Field = this.GroupByFields[i] };
                             this.OrderByFields.Add(orderField);
                             if (orderType == "DESC")
                             {
@@ -1188,7 +1214,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     }
                     else if (this.IsGroupingMember(memberExpr.Expression as MemberExpression))
                     {
-                        var readerField = this.GroupFields.Find(f => f.TargetMember.Name == memberExpr.Member.Name);
+                        var readerField = this.GroupByFields.Find(f => f.TargetMember.Name == memberExpr.Member.Name);
                         builder.Append(readerField.Body);
                         var orderField = new OrderByField { Field = readerField };
                         this.OrderByFields.Add(orderField);
@@ -1224,7 +1250,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.IsWhere = false;
     }
 
-    public virtual void SelectGrouping() => this.ReaderFields = this.GroupFields;
+    public virtual void SelectGrouping() => this.ReaderFields = this.GroupByFields;
     public virtual void SelectDefault(Expression defaultExpr)
     {
         if (this.ReaderFields != null && this.ReaderFields.Count > 0)
@@ -1443,9 +1469,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             {
                 List<SqlFieldSegment> groupFields = new();
                 //在子查询中，Select了Group分组对象，为了避免在Clear时，把GroupFields元素清掉，放到一个新列表中
-                if (this.GroupFields.Count > 1)
+                if (this.GroupByFields.Count > 1)
                 {
-                    this.GroupFields.ForEach(f => groupFields.Add(f.Clone()));
+                    this.GroupByFields.ForEach(f => groupFields.Add(f.Clone()));
                     sqlSegment.FieldType = SqlFieldType.Entity;
                     sqlSegment.HasField = true;
                     sqlSegment.FromMember = memberInfo;
@@ -1453,14 +1479,14 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     sqlSegment.SegmentType = memberInfo.GetMemberType();
                     sqlSegment.Fields = groupFields;
                 }
-                else sqlSegment = this.GroupFields[0].Clone();
+                else sqlSegment = this.GroupByFields[0].Clone();
                 return sqlSegment;
             }
             //Select((x, a, b, ... ) => new { x.Grouping.Id, x.Grouping.Name, ... });
             else if (this.IsGroupingMember(memberExpr.Expression as MemberExpression))
             {
                 //此时是Grouping对象字段的引用，最外面可能会更改成员名称，要复制一份，防止更改Grouping对象中的字段
-                var readerField = this.GroupFields.Find(f => f.TargetMember.Name == memberInfo.Name);
+                var readerField = this.GroupByFields.Find(f => f.TargetMember.Name == memberInfo.Name);
                 sqlSegment = readerField.Clone();
                 return sqlSegment;
             }
@@ -1992,7 +2018,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.IsDistinct = false;
         this.IncludeTables?.Clear();
         this.LastIncludeSegment = null;
-        this.GroupFields?.Clear();
+        this.GroupByFields?.Clear();
         this.IsSecondUnion = false;
         this.IsUseCteTable = true;
         this.IsNeedTableAlias = true;
@@ -2010,6 +2036,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         this.deferredSegments = null;
         this.LastIncludeSegment = null;
+        this.GroupByFields = null;
         this.OrderByFields = null;
         this.SelfRefQueryObj = null;
 

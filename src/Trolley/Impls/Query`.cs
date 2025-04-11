@@ -27,7 +27,7 @@ public class Query<T1, T2> : QueryBase, IQuery<T1, T2>
     public virtual IQuery<T1, T2> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(false, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
         return this;
     }
     public virtual IQuery<T1, T2> UseTableBy(object field1Value, object field2Value = null)
@@ -269,7 +269,7 @@ public class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
     public virtual IQuery<T1, T2, T3> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(false, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
         return this;
     }
     public virtual IQuery<T1, T2, T3> UseTableBy(object field1Value, object field2Value = null)
@@ -511,7 +511,7 @@ public class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
     public virtual IQuery<T1, T2, T3, T4> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(false, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4> UseTableBy(object field1Value, object field2Value = null)
@@ -753,7 +753,7 @@ public class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
     public virtual IQuery<T1, T2, T3, T4, T5> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(false, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5> UseTableBy(object field1Value, object field2Value = null)
@@ -995,7 +995,7 @@ public class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T
     public virtual IQuery<T1, T2, T3, T4, T5, T6> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(false, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6> UseTableBy(object field1Value, object field2Value = null)
@@ -1237,7 +1237,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(false, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> UseTableBy(object field1Value, object field2Value = null)
@@ -1479,7 +1479,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(false, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableBy(object field1Value, object field2Value = null)
@@ -1721,7 +1721,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(false, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableBy(object field1Value, object field2Value = null)
@@ -1963,7 +1963,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(false, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableBy(object field1Value, object field2Value = null)
@@ -2205,7 +2205,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQ
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(false, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableBy(object field1Value, object field2Value = null)
@@ -2447,7 +2447,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBas
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(false, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableBy(object field1Value, object field2Value = null)
@@ -2689,7 +2689,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Que
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(false, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableBy(object field1Value, object field2Value = null)
@@ -2931,7 +2931,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> 
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(false, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableBy(object field1Value, object field2Value = null)
@@ -3173,7 +3173,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(false, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableBy(object field1Value, object field2Value = null)
@@ -3415,7 +3415,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(false, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableBy(object field1Value, object field2Value = null)

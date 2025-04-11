@@ -8,6 +8,7 @@ namespace Trolley.PostgreSql;
 
 public class PostgreSqlQueryVisitor : QueryVisitor
 {
+    private bool isDisposed;
     public PostgreSqlQueryVisitor(DbContext dbContext)
         : base(dbContext) { }
     public PostgreSqlQueryVisitor(DbContext dbContext, char tableAsStart, IDataParameterCollection dbParameters = null)
@@ -410,11 +411,11 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         //访问Grouping字段，并且Grouping对象是一个字段
         if (this.IsGroupingMember(lambdaExpr.Body as MemberExpression))
         {
-            for (int i = 0; i < this.GroupFields.Count; i++)
+            for (int i = 0; i < this.GroupByFields.Count; i++)
             {
                 if (i > 0) builder.Append(',');
-                builder.Append(this.GroupFields[i].Body);
-                var orderField = new OrderByField { Field = this.GroupFields[i] };
+                builder.Append(this.GroupByFields[i].Body);
+                var orderField = new OrderByField { Field = this.GroupByFields[i] };
                 this.OrderByFields.Add(orderField);
                 if (orderType == "DESC")
                 {
@@ -451,11 +452,11 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                         //OrderBy访问分组
                         if (this.IsGroupingMember(argumentExpr as MemberExpression))
                         {
-                            for (int i = 0; i < this.GroupFields.Count; i++)
+                            for (int i = 0; i < this.GroupByFields.Count; i++)
                             {
                                 if (i > 0) builder.Append(',');
-                                builder.Append(this.GroupFields[i].Body);
-                                var orderField = new OrderByField { Field = this.GroupFields[i] };
+                                builder.Append(this.GroupByFields[i].Body);
+                                var orderField = new OrderByField { Field = this.GroupByFields[i] };
                                 this.OrderByFields.Add(orderField);
                                 if (orderType == "DESC")
                                 {
@@ -500,11 +501,11 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                     var memberExpr = lambdaExpr.Body as MemberExpression;
                     if (this.IsGroupingMember(memberExpr))
                     {
-                        for (int i = 0; i < this.GroupFields.Count; i++)
+                        for (int i = 0; i < this.GroupByFields.Count; i++)
                         {
                             if (i > 0) builder.Append(',');
-                            builder.Append(this.GroupFields[i].Body);
-                            var orderField = new OrderByField { Field = this.GroupFields[i] };
+                            builder.Append(this.GroupByFields[i].Body);
+                            var orderField = new OrderByField { Field = this.GroupByFields[i] };
                             this.OrderByFields.Add(orderField);
                             if (orderType == "DESC")
                             {
@@ -515,7 +516,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                     }
                     else if (this.IsGroupingMember(memberExpr.Expression as MemberExpression))
                     {
-                        var readerField = this.GroupFields.Find(f => f.TargetMember.Name == memberExpr.Member.Name);
+                        var readerField = this.GroupByFields.Find(f => f.TargetMember.Name == memberExpr.Member.Name);
                         builder.Append(readerField.Body);
                         var orderField = new OrderByField { Field = readerField };
                         this.OrderByFields.Add(orderField);
@@ -613,9 +614,9 @@ public class PostgreSqlQueryVisitor : QueryVisitor
             {
                 List<SqlFieldSegment> groupFields = new();
                 //在子查询中，Select了Group分组对象，为了避免在Clear时，把GroupFields元素清掉，放到一个新列表中
-                if (this.GroupFields.Count > 1)
+                if (this.GroupByFields.Count > 1)
                 {
-                    this.GroupFields.ForEach(f => groupFields.Add(f.Clone()));
+                    this.GroupByFields.ForEach(f => groupFields.Add(f.Clone()));
                     sqlSegment.FieldType = SqlFieldType.Entity;
                     sqlSegment.HasField = true;
                     sqlSegment.FromMember = memberInfo;
@@ -623,7 +624,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                     sqlSegment.SegmentType = memberInfo.GetMemberType();
                     sqlSegment.Fields = groupFields;
                 }
-                else sqlSegment = this.GroupFields[0].Clone();
+                else sqlSegment = this.GroupByFields[0].Clone();
                 return sqlSegment;
             }
             else if (this.IsDistinctOnMember(memberExpr))
@@ -649,7 +650,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
             else if (this.IsGroupingMember(memberExpr.Expression as MemberExpression))
             {
                 //此时是Grouping对象字段的引用，最外面可能会更改成员名称，要复制一份，防止更改Grouping对象中的字段
-                var readerField = this.GroupFields.Find(f => f.TargetMember.Name == memberInfo.Name);
+                var readerField = this.GroupByFields.Find(f => f.TargetMember.Name == memberInfo.Name);
                 sqlSegment = readerField.Clone();
                 return sqlSegment;
             }
@@ -968,6 +969,15 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         var sql = builder.ToString();
         builder.Clear();
         return sqlSegment.Change(sql, false, true);
+    }
+    public override void Dispose()
+    {
+        if (this.isDisposed)
+            return;
+        this.isDisposed = true;
+
+        this.DistinctOnFields = null;
+        base.Dispose();
     }
     private bool IsDistinctOnMember(MemberExpression memberExpr)
     {

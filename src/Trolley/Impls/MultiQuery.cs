@@ -84,7 +84,7 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
     public virtual IMultiQuery<T> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
         var masterEntityType = typeof(TMasterSharding);
-        this.Visitor.UseTable(false, masterEntityType, tableNameGetter);
+        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
         return this;
     }
     public virtual IMultiQuery<T> UseTableBy(object field1Value, object field2Value = null)
