@@ -131,6 +131,17 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //方案：在buildSql时确定，ReaderFields要重新排好序，include字段放到对应主表字段后面，表别名顺序不变
         if (this.ReaderFields == null)
             throw new Exception("缺少Select语句");
+
+        if (this.IsManyShardingTables && !string.IsNullOrEmpty(this.GroupBySql))
+        {
+            //当有多分表时，有分组，Select字段中，没有完全的分组字段，则需要补全所有分组字段
+            foreach (var groupByField in this.GroupByFields)
+            {
+                if (this.ReaderFields.Exists(f => f.FromMember == groupByField.FromMember))
+                    continue;
+                this.ReaderFields.Add(groupByField);
+            }
+        }
         this.AddSelectFieldsSql(builder, this.ReaderFields);
         if (this.IsManyShardingTables && this.ShardingFieldAlias != null)
             builder.Append($" AS {this.ShardingFieldAlias}");
@@ -288,6 +299,16 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //方案：在buildSql时确定，ReaderFields要重新排好序，include字段放到对应主表字段后面，表别名顺序不变
         if (this.ReaderFields == null)
             throw new Exception("缺少Select语句");
+        if (this.IsManyShardingTables && !string.IsNullOrEmpty(this.GroupBySql))
+        {
+            //当有多分表时，有分组，Select字段中，没有完全的分组字段，则需要补全所有分组字段
+            foreach (var groupByField in this.GroupByFields)
+            {
+                if (this.ReaderFields.Exists(f => f.FromMember == groupByField.FromMember))
+                    continue;
+                this.ReaderFields.Add(groupByField);
+            }
+        }
         this.AddSelectFieldsSql(builder, this.ReaderFields);
         if (this.IsManyShardingTables && this.ShardingFieldAlias != null)
             builder.Append($" AS {this.ShardingFieldAlias}");
@@ -330,7 +351,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
 
-        if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.OrderBySql) || this.skip.HasValue || this.limit.HasValue))
+        if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.GroupBySql) || !string.IsNullOrEmpty(this.OrderBySql) || this.skip.HasValue || this.limit.HasValue))
             this.IsNeedUnionShardingTables = true;
 
         //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不正确
@@ -347,7 +368,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual string BuildShardingSql(string formatSql)
     {
         var sql = formatSql;
+        string groupBy = null;
         string orderBy = null;
+        string selectSql = "*";
         var builder = new StringBuilder();
         if (this.GroupByFields != null)
         {
@@ -355,23 +378,47 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             foreach (var groupByField in this.GroupByFields)
             {
                 string fieldName = null;
-                if (groupByField.FromMember != null && groupByField.TargetMember.Name == groupByField.FromMember.Name)
+                if (groupByField.IsNeedAlias)
+                {
+                    fieldName = groupByField.TargetMember.Name;
+                    fieldName = this.OrmProvider.GetFieldName(fieldName);
+                }
+                else
                 {
                     fieldName = groupByField.Body;
                     var startIndex = fieldName.IndexOf('.');
                     if (startIndex > 0)
                         fieldName = fieldName.Substring(startIndex + 1);
                 }
-                else
-                {
-                    fieldName = groupByField.TargetMember.Name;
-                    fieldName = this.OrmProvider.GetFieldName(fieldName);
-                }
                 if (index > 0) builder.Append(',');
                 builder.Append(fieldName);
                 index++;
             }
-            orderBy = " ORDER BY " + builder.ToString();
+            groupBy = " GROUP BY " + builder.ToString();
+            builder.Clear();
+            index = 0;
+            foreach (var readerField in this.ReaderFields)
+            {
+                string fieldName = null;
+                if (readerField.IsNeedAlias)
+                {
+                    fieldName = readerField.TargetMember.Name;
+                    fieldName = this.OrmProvider.GetFieldName(fieldName);
+                }
+                else
+                {
+                    fieldName = readerField.Body;
+                    var startIndex = fieldName.IndexOf('.');
+                    if (startIndex > 0)
+                        fieldName = fieldName.Substring(startIndex + 1);
+                }
+                if (readerField.IsAggField)
+                    fieldName = $"{readerField.AggFunc}({fieldName}) AS {fieldName}";
+                if (index > 0) builder.Append(',');
+                builder.Append(fieldName);
+                index++;
+            }
+            selectSql = builder.ToString();
             builder.Clear();
         }
         if (this.OrderByFields != null)
@@ -380,17 +427,17 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             foreach (var orderByField in this.OrderByFields)
             {
                 string fieldName = null;
-                if (orderByField.Field.FromMember != null && orderByField.Field.TargetMember.Name == orderByField.Field.FromMember.Name)
+                if (orderByField.Field.IsNeedAlias)
+                {
+                    fieldName = orderByField.Field.TargetMember.Name;
+                    fieldName = this.OrmProvider.GetFieldName(fieldName);
+                }
+                else
                 {
                     fieldName = orderByField.Field.Body;
                     var startIndex = fieldName.IndexOf('.');
                     if (startIndex > 0)
                         fieldName = fieldName.Substring(startIndex + 1);
-                }
-                else
-                {
-                    fieldName = orderByField.Field.TargetMember.Name;
-                    fieldName = this.OrmProvider.GetFieldName(fieldName);
                 }
                 if (index > 0) builder.Append(',');
                 builder.Append(fieldName);
@@ -401,23 +448,33 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             orderBy = " ORDER BY " + builder.ToString();
             builder.Clear();
         }
-
+        bool isFormated = false;
+        if (!string.IsNullOrEmpty(groupBy))
+        {
+            builder.Append($"SELECT {selectSql} FROM ({formatSql}) a");
+            if (!string.IsNullOrEmpty(groupBy))
+                builder.Append($" {groupBy}");
+            sql = builder.ToString();
+            isFormated = true;
+            builder.Clear();
+        }
         if (this.skip.HasValue || this.limit.HasValue)
         {
             //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ /**others**/
             var pageSql = this.OrmProvider.GetPagingTemplate(this.skip, this.limit, orderBy);
             pageSql = pageSql.Replace("/**fields**/", "*");
-            pageSql = pageSql.Replace("/**tables**/", $"({formatSql}) b");
+            pageSql = pageSql.Replace("/**tables**/", $"({sql}) b");
             pageSql = pageSql.Replace(" /**others**/", "");
 
             if (this.IsNeedPaging && this.skip.HasValue && this.limit.HasValue)
-                builder.Append($"SELECT COUNT(*) FROM ({formatSql}) a;");
+                builder.Append($"SELECT COUNT(*) FROM ({sql}) a;");
             builder.Append($"{pageSql}");
             sql = builder.ToString();
         }
         else if (!string.IsNullOrEmpty(orderBy))
         {
-            builder.Append($"SELECT * FROM ({formatSql}) a {orderBy}");
+            if (!isFormated) builder.Append($"SELECT * FROM ({sql}) a");
+            builder.Append($" {orderBy}");
             sql = builder.ToString();
         }
         builder.Clear();

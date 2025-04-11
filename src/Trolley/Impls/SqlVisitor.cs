@@ -1148,6 +1148,8 @@ public class SqlVisitor : ISqlVisitor
                     sqlSegment.Change($"COUNT({sqlSegment.Body})", false, true);
                 }
                 else sqlSegment.Change("COUNT(1)", false, true);
+                sqlSegment.IsAggField = true;
+                sqlSegment.AggFunc = "COUNT";
                 break;
             case "CountDistinct":
             case "LongCountDistinct":
@@ -1156,6 +1158,8 @@ public class SqlVisitor : ISqlVisitor
                     sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                     sqlSegment.Change($"COUNT(DISTINCT {sqlSegment.Body})", false, true);
                 }
+                sqlSegment.IsAggField = true;
+                sqlSegment.AggFunc = "COUNT";
                 break;
             case "Sum":
                 if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
@@ -1163,6 +1167,8 @@ public class SqlVisitor : ISqlVisitor
                     sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                     sqlSegment.Change($"SUM({sqlSegment.Body})", false, true);
                 }
+                sqlSegment.IsAggField = true;
+                sqlSegment.AggFunc = "SUM";
                 break;
             case "Avg":
                 if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
@@ -1170,6 +1176,8 @@ public class SqlVisitor : ISqlVisitor
                     sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                     sqlSegment.Change($"AVG({sqlSegment.Body})", false, true);
                 }
+                sqlSegment.IsAggField = true;
+                sqlSegment.AggFunc = "AVG";
                 break;
             case "Max":
                 if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
@@ -1177,6 +1185,8 @@ public class SqlVisitor : ISqlVisitor
                     sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                     sqlSegment.Change($"MAX({sqlSegment.Body})", false, true);
                 }
+                sqlSegment.IsAggField = true;
+                sqlSegment.AggFunc = "MAX";
                 break;
             case "Min":
                 if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
@@ -1184,6 +1194,8 @@ public class SqlVisitor : ISqlVisitor
                     sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                     sqlSegment.Change($"MIN({sqlSegment.Body})", false, true);
                 }
+                sqlSegment.IsAggField = true;
+                sqlSegment.AggFunc = "MIN";
                 break;
         }
         return sqlSegment;
@@ -1286,6 +1298,8 @@ public class SqlVisitor : ISqlVisitor
                         builder.Append($"COUNT({sqlSegment.Body})");
                     }
                     else builder.Append("COUNT(*)");
+                    sqlSegment.IsAggField = true;
+                    sqlSegment.AggFunc = "COUNT";
                     break;
                 case "CountDistinct":
                 case "LongCountDistinct":
@@ -1294,6 +1308,8 @@ public class SqlVisitor : ISqlVisitor
                         sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                         builder.Append($"COUNT(DISTINCT {sqlSegment.Body})");
                     }
+                    sqlSegment.IsAggField = true;
+                    sqlSegment.AggFunc = "COUNT_VALUE";
                     break;
                 case "Sum":
                     if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
@@ -1301,6 +1317,8 @@ public class SqlVisitor : ISqlVisitor
                         sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                         builder.Append($"SUM({sqlSegment.Body})");
                     }
+                    sqlSegment.IsAggField = true;
+                    sqlSegment.AggFunc = "SUM";
                     break;
                 case "Avg":
                     if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
@@ -1308,6 +1326,8 @@ public class SqlVisitor : ISqlVisitor
                         sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                         builder.Append($"AVG({sqlSegment.Body})");
                     }
+                    sqlSegment.IsAggField = true;
+                    sqlSegment.AggFunc = "AVG";
                     break;
                 case "Max":
                     if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
@@ -1315,6 +1335,8 @@ public class SqlVisitor : ISqlVisitor
                         sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                         builder.Append($"MAX({sqlSegment.Body})");
                     }
+                    sqlSegment.IsAggField = true;
+                    sqlSegment.AggFunc = "MAX";
                     break;
                 case "Min":
                     if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
@@ -1322,6 +1344,8 @@ public class SqlVisitor : ISqlVisitor
                         sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                         builder.Append($"MIN({sqlSegment.Body})");
                     }
+                    sqlSegment.IsAggField = true;
+                    sqlSegment.AggFunc = "MIN";
                     break;
             }
         }
