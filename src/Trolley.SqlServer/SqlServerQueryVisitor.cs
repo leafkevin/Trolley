@@ -122,7 +122,8 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
             builder.Append($" HAVING {this.HavingSql}");
 
         string orderBy = null;
-        if (!this.IsManyShardingTables && !string.IsNullOrEmpty(this.OrderBySql))
+        if (!string.IsNullOrEmpty(this.OrderBySql) && (!this.IsManyShardingTables
+            || (this.IsManyShardingTables && !this.skip.HasValue && this.limit.HasValue)))
         {
             orderBy = $"ORDER BY {this.OrderBySql}";
             if (!this.skip.HasValue && !this.limit.HasValue)
@@ -289,7 +290,8 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
             builder.Append($" HAVING {this.HavingSql}");
 
         string orderBy = null;
-        if (!this.IsManyShardingTables && !string.IsNullOrEmpty(this.OrderBySql))
+        if (!string.IsNullOrEmpty(this.OrderBySql) && (!this.IsManyShardingTables
+            || (this.IsManyShardingTables && !this.skip.HasValue && this.limit.HasValue)))
         {
             orderBy = $"ORDER BY {this.OrderBySql}";
             if (!this.skip.HasValue && !this.limit.HasValue)

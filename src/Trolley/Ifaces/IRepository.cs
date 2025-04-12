@@ -29,7 +29,7 @@ public interface IRepository
     /// <param name="tableNameSelector">分表名选择表达式</param>
     /// <param name="tableSchema">分表所在的TableSchema</param>
     /// <returns>返回满足条件的所有分表</returns>
-    List<string> GetShardingTableNames<TEntity>(Func<string, bool> tableNameSelector, string tableSchema = null);
+    List<string> GetShardingTableNames<TEntity>(Func<string, bool> tableNameSelector = null, string tableSchema = null);
     /// <summary>
     /// 获取实体TEntity满足条件的所有分表名
     /// </summary>
@@ -38,7 +38,7 @@ public interface IRepository
     /// <param name="tableSchema">分表所在的TableSchema</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回满足条件的所有分表</returns>
-    Task<List<string>> GetShardingTableNamesAsync<TEntity>(Func<string, bool> tableNameSelector, string tableSchema = null, CancellationToken cancellationToken = default);
+    Task<List<string>> GetShardingTableNamesAsync<TEntity>(Func<string, bool> tableNameSelector = null, string tableSchema = null, CancellationToken cancellationToken = default);
     /// <summary>
     /// 在当前数据库中创建实体TEntity的tableName分表，表结构与实体TEntity相同并生成所有索引等信息
     /// </summary>

@@ -453,23 +453,27 @@ sys.index_columns ic,sys.indexes i where ic.object_id=i.object_id and ic.index_i
             entityMapper.IsMapped = true;
         }
     }
-    public virtual List<string> GetShardingTableNames<TEntity>(DbContext dbContext, Func<string, bool> tableNameSelector, string tableSchema = null)
+    public virtual List<string> GetShardingTableNames<TEntity>(DbContext dbContext, Func<string, bool> tableNameSelector = null, string tableSchema = null)
     {
         var entityMapper = dbContext.MapProvider.GetEntityMap(typeof(TEntity));
         var orgTableName = entityMapper.TableName;
         tableSchema ??= dbContext.DefaultTableSchema;
         var sql = $"SELECT a.name FROM sys.objects a,sys.schemas b WHERE a.schema_id=b.schema_id AND a.type='U' AND a.name LIKE '{orgTableName}_%' AND b.name='{tableSchema}'";
         var tableNames = dbContext.Query<string>(sql);
-        return tableNames.FindAll(f => tableNameSelector(f));
+        if (tableNameSelector != null)
+            return tableNames.FindAll(f => tableNameSelector(f));
+        return tableNames;
     }
-    public virtual async Task<List<string>> GetShardingTableNamesAsync<TEntity>(DbContext dbContext, Func<string, bool> tableNameSelector, string tableSchema = null, CancellationToken cancellationToken = default)
+    public virtual async Task<List<string>> GetShardingTableNamesAsync<TEntity>(DbContext dbContext, Func<string, bool> tableNameSelector = null, string tableSchema = null, CancellationToken cancellationToken = default)
     {
         var entityMapper = dbContext.MapProvider.GetEntityMap(typeof(TEntity));
         var orgTableName = entityMapper.TableName;
         tableSchema ??= dbContext.DefaultTableSchema;
         var sql = $"SELECT a.name FROM sys.objects a,sys.schemas b WHERE a.schema_id=b.schema_id AND a.type='U' AND a.name LIKE '{orgTableName}_%' AND b.name='{tableSchema}'";
         var tableNames = await dbContext.QueryAsync<string>(sql);
-        return tableNames.FindAll(f => tableNameSelector(f));
+        if (tableNameSelector != null)
+            return tableNames.FindAll(f => tableNameSelector(f));
+        return tableNames;
     }
     public override bool TryGetMyMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)
     {

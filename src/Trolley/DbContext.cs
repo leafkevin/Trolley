@@ -119,7 +119,7 @@ public sealed class DbContext
         using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
         var result = new List<TEntity>();
         var deserializer = reader.GetReaderDeserializer(typeof(TEntity), this);
-        if (reader.Read())
+        while (reader.Read())
             result.Add((TEntity)deserializer.Invoke(reader));
 
         reader.Dispose();
@@ -152,7 +152,7 @@ public sealed class DbContext
         using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
         var result = new List<TEntity>();
         var deserializer = reader.GetReaderDeserializer(typeof(TEntity), this);
-        if (await reader.ReadAsync(cancellationToken))
+        while (await reader.ReadAsync(cancellationToken))
             result.Add((TEntity)deserializer.Invoke(reader));
 
         await reader.DisposeAsync();
