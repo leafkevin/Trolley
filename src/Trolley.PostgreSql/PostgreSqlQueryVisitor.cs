@@ -53,7 +53,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         var headSql = builder.ToString();
         builder.Clear();
 
-        //先判断表是否有多分表isManySharding
+        //先判断表是否有多分表IsManyShardingTables
         string tableSql = null;
         var hasShardingTables = this.ShardingTables != null && this.ShardingTables.Count > 0;
         if (this.Tables.Count > 0)
@@ -141,7 +141,8 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         if (!string.IsNullOrEmpty(headSql))
             builder.Append(headSql);
 
-        if (!this.IsManyShardingTables && (this.skip.HasValue || this.limit.HasValue))
+        if (!this.IsManyShardingTables && (this.skip.HasValue || this.limit.HasValue)
+            || (this.IsManyShardingTables && !this.skip.HasValue && this.limit.HasValue))
         {
             //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ /**others**/
             var pageSql = this.OrmProvider.GetPagingTemplate(this.skip, this.limit, orderBy);
@@ -159,7 +160,8 @@ public class PostgreSqlQueryVisitor : QueryVisitor
             this.IsNeedUnionShardingTables = true;
 
         //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不正确
-        bool isNeedWrap = (this.IsUnion || this.IsSecondUnion) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue);
+        bool isNeedWrap = ((this.IsUnion || this.IsSecondUnion) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue))
+            || (this.IsManyShardingTables && !this.skip.HasValue && this.limit.HasValue);
         if (isNeedWrap)
         {
             builder.Insert(0, "SELECT * FROM (");
@@ -311,7 +313,8 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         if (!string.IsNullOrEmpty(headSql))
             builder.Append(headSql);
 
-        if (!this.IsManyShardingTables && (this.skip.HasValue || this.limit.HasValue))
+        if (!this.IsManyShardingTables && (this.skip.HasValue || this.limit.HasValue)
+            || (this.IsManyShardingTables && !this.skip.HasValue && this.limit.HasValue))
         {
             //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ /**others**/
             var pageSql = this.OrmProvider.GetPagingTemplate(this.skip, this.limit, orderBy);
@@ -326,7 +329,8 @@ public class PostgreSqlQueryVisitor : QueryVisitor
             this.IsNeedUnionShardingTables = true;
 
         //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不正确
-        bool isNeedWrap = (this.IsUnion || this.IsSecondUnion) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue);
+        bool isNeedWrap = ((this.IsUnion || this.IsSecondUnion) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue))
+            || (this.IsManyShardingTables && !this.skip.HasValue && this.limit.HasValue);
         if (isNeedWrap)
         {
             builder.Insert(0, "SELECT * FROM (");

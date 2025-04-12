@@ -87,8 +87,19 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
             throw new Exception("缺少Select语句");
 
         //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不对
-        //SqlServer数据库，Union子句在SELECT * FROM包装后，每个列都需要有一个明确的列名，没有则需要增加as别名
-        bool isNeedWrap = (this.IsUnion || this.IsSecondUnion) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue);
+        //SqlServer数据库，Union子句在SELECT * FROM包装后，每个列都需要有一个明确的列名，没有则需要增加as别名       	
+        if (this.IsManyShardingTables && !string.IsNullOrEmpty(this.GroupBySql))
+        {
+            //当有多分表时，有分组，Select字段中，没有完全的分组字段，则需要补全所有分组字段
+            foreach (var groupByField in this.GroupByFields)
+            {
+                if (this.ReaderFields.Exists(f => f.FromMember == groupByField.FromMember))
+                    continue;
+                this.ReaderFields.Add(groupByField);
+            }
+        }
+        bool isNeedWrap = ((this.IsUnion || this.IsSecondUnion) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue))
+            || (this.IsManyShardingTables && !this.skip.HasValue && this.limit.HasValue);
         this.AddSelectFieldsSql(builder, this.ReaderFields, isNeedWrap);
         if (this.IsManyShardingTables && this.AggFieldAlias != null)
             builder.Append($" AS {this.AggFieldAlias}");
@@ -123,7 +134,8 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
         if (!string.IsNullOrEmpty(headSql))
             builder.Append(headSql);
 
-        if (!this.IsManyShardingTables && (this.skip.HasValue || this.limit.HasValue))
+        if (!this.IsManyShardingTables && (this.skip.HasValue || this.limit.HasValue)
+            || (this.IsManyShardingTables && !this.skip.HasValue && this.limit.HasValue))
         {
             //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ /**others**/
             var pageSql = this.OrmProvider.GetPagingTemplate(this.skip, this.limit, orderBy);
@@ -137,7 +149,7 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
         }
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
 
-        if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.OrderBySql) || this.skip.HasValue || this.limit.HasValue))
+        if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.GroupBySql) || !string.IsNullOrEmpty(this.OrderBySql) || this.skip.HasValue || this.limit.HasValue))
             this.IsNeedUnionShardingTables = true;
 
         if (isNeedWrap)
@@ -243,8 +255,21 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
         //方案：在buildSql时确定，ReaderFields要重新排好序，include字段放到对应主表字段后面，表别名顺序不变
         if (this.ReaderFields == null)
             throw new Exception("缺少Select语句");
+
+        if (this.IsManyShardingTables && !string.IsNullOrEmpty(this.GroupBySql))
+        {
+            //当有多分表时，有分组，Select字段中，没有完全的分组字段，则需要补全所有分组字段
+            foreach (var groupByField in this.GroupByFields)
+            {
+                if (this.ReaderFields.Exists(f => f.FromMember == groupByField.FromMember))
+                    continue;
+                this.ReaderFields.Add(groupByField);
+            }
+        }
         //SqlServer数据库，Union子句在SELECT * FROM包装后，每个列都需要有一个明确的列名，没有则需要增加as别名
-        bool isNeedWrap = (this.IsUnion || this.IsSecondUnion) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue);
+        bool isNeedWrap = ((this.IsUnion || this.IsSecondUnion) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue))
+            || (this.IsManyShardingTables && !this.skip.HasValue && this.limit.HasValue);
+
         this.AddSelectFieldsSql(builder, this.ReaderFields, isNeedWrap);
         if (this.IsManyShardingTables && this.AggFieldAlias != null)
             builder.Append($" AS {this.AggFieldAlias}");
@@ -276,7 +301,8 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
         if (!string.IsNullOrEmpty(headSql))
             builder.Append(headSql);
 
-        if (!this.IsManyShardingTables && (this.skip.HasValue || this.limit.HasValue))
+        if (!this.IsManyShardingTables && (this.skip.HasValue || this.limit.HasValue)
+            || (this.IsManyShardingTables && !this.skip.HasValue && this.limit.HasValue))
         {
             //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ /**others**/
             var pageSql = this.OrmProvider.GetPagingTemplate(this.skip, this.limit, orderBy);
@@ -287,7 +313,7 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
         }
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
 
-        if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.OrderBySql) || this.skip.HasValue || this.limit.HasValue))
+        if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.GroupBySql) || !string.IsNullOrEmpty(this.OrderBySql) || this.skip.HasValue || this.limit.HasValue))
             this.IsNeedUnionShardingTables = true;
 
         //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不正确

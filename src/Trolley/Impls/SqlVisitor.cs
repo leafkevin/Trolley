@@ -222,7 +222,12 @@ public class SqlVisitor : ISqlVisitor
             }
             tableSegment.TableNames.AddRange(tableNames);
         }
-        else tableSegment.Body = tableNames[0];
+        else
+        {
+            if (tableNames == null || tableNames.Count == 0)
+                throw new Exception($"没有搜索到满足条件的{tableSegment.Mapper.TableName}分表");
+            tableSegment.Body = tableNames[0];
+        }
         this.IsNeedFetchShardingTables = true;
         this.IsNeedFormatShardingTables = true;
     }
@@ -258,7 +263,12 @@ public class SqlVisitor : ISqlVisitor
             }
             tableSegment.TableNames.AddRange(tableNames);
         }
-        else tableSegment.Body = tableNames[0];
+        else
+        {
+            if (tableNames == null || tableNames.Count == 0)
+                throw new Exception($"没有搜索到满足条件的{tableSegment.Mapper.TableName}分表");
+            tableSegment.Body = tableNames[0];
+        }
         this.IsNeedFetchShardingTables = true;
         this.IsNeedFormatShardingTables = true;
     }
@@ -338,6 +348,8 @@ public class SqlVisitor : ISqlVisitor
                 tableSegment.TableNames = tableNames;
             else
             {
+                if (tableNames == null || tableNames.Count == 0)
+                    throw new Exception($"没有搜索到满足条件的{tableSegment.Mapper.TableName}分表");
                 tableSegment.Body = tableNames[0];
                 tableSegment.TableNames = null;
                 this.ShardingTables.Remove(tableSegment);
