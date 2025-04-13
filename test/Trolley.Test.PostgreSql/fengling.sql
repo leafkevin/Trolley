@@ -68,24 +68,45 @@ CREATE TABLE "public"."sys_menu" (
 -- Table structure for sys_order
 -- ----------------------------
 DROP TABLE IF EXISTS "public"."sys_order";
-CREATE TABLE "public"."sys_order" (
-  "Id" varchar(50) NOT NULL,
-  "TenantId" varchar(50) NOT NULL,
-  "OrderNo" varchar(50)  NULL DEFAULT NULL,
-  "ProductCount" int4 NULL DEFAULT NULL,
-  "TotalAmount" float8 NULL DEFAULT NULL,
-  "BuyerId" int4 NULL DEFAULT NULL,
-  "BuyerSource" varchar(50) NULL DEFAULT NULL,
-  "SellerId" int4 NULL DEFAULT NULL,  
-  "Products" jsonb NULL DEFAULT NULL,
-  "Disputes" jsonb NULL DEFAULT NULL,
-  "IsEnabled" bool NULL DEFAULT NULL,
-  "CreatedAt" timestamp(6) NULL DEFAULT NULL,
-  "CreatedBy" int4 NULL DEFAULT NULL,  
-  "UpdatedAt" timestamp(6) NULL DEFAULT NULL,
-  "UpdatedBy" int4 NULL DEFAULT NULL,
-  CONSTRAINT "pk_sys_order" PRIMARY KEY("Id")
+----------------TABLE [sys_order] BEGIN----------------
+--DROP TABLE IF EXISTS "sys_order";
+CREATE TABLE "public"."sys_order"
+(
+    "Id" VARCHAR(50) NOT NULL,
+    "TenantId" VARCHAR(50) NULL,
+    "OrderNo" VARCHAR(50) NULL,
+    "ProductCount" INTEGER NULL,
+    "TotalAmount" DECIMAL(18,2) NULL,
+    "BuyerId" INTEGER NULL,
+    "BuyerSource" VARCHAR(50) NULL,
+    "SellerId" INTEGER NULL,
+    "Products" JSONB NULL,
+    "Disputes" JSONB NULL,
+    "IsEnabled" BOOLEAN NULL,
+    "CreatedBy" VARCHAR(50) NOT NULL,
+    "CreatedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "UpdatedBy" VARCHAR(50) NOT NULL,
+    "UpdatedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "pk_sys_order" PRIMARY KEY("Id")
 );
+COMMENT ON TABLE "public"."sys_order" IS  '订单表';
+COMMENT ON COLUMN "public"."sys_order"."Id" IS '订单ID';
+COMMENT ON COLUMN "public"."sys_order"."TenantId" IS '租户ID';
+COMMENT ON COLUMN "public"."sys_order"."OrderNo" IS '订单编码';
+COMMENT ON COLUMN "public"."sys_order"."ProductCount" IS '产品个数';
+COMMENT ON COLUMN "public"."sys_order"."TotalAmount" IS '订单金额';
+COMMENT ON COLUMN "public"."sys_order"."BuyerId" IS '买家ID';
+COMMENT ON COLUMN "public"."sys_order"."BuyerSource" IS '买家来源';
+COMMENT ON COLUMN "public"."sys_order"."SellerId" IS '卖家ID';
+COMMENT ON COLUMN "public"."sys_order"."Products" IS '产品明细';
+COMMENT ON COLUMN "public"."sys_order"."Disputes" IS '争议';
+COMMENT ON COLUMN "public"."sys_order"."IsEnabled" IS '是否启用';
+COMMENT ON COLUMN "public"."sys_order"."CreatedBy" IS '创建人';
+COMMENT ON COLUMN "public"."sys_order"."CreatedAt" IS '创建日期';
+COMMENT ON COLUMN "public"."sys_order"."UpdatedBy" IS '最后更新人';
+COMMENT ON COLUMN "public"."sys_order"."UpdatedAt" IS '最后更新日期';
+----------------TABLE [sys_order] END----------------
+
 -- ----------------------------
 -- Table structure for sys_order
 -- ----------------------------

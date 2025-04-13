@@ -69,12 +69,13 @@ public class PostgreSqlRepository : Repository, IPostgreSqlRepository
         => this.dialectProvider.GetShardingTableNames<TEntity>(this.DbContext, tableNameSelector, tableSchema);
     public override async Task<List<string>> GetShardingTableNamesAsync<TEntity>(Func<string, bool> tableNameSelector = null, string tableSchema = null, CancellationToken cancellationToken = default)
         => await this.dialectProvider.GetShardingTableNamesAsync<TEntity>(this.DbContext, tableNameSelector, tableSchema, cancellationToken);
-    public override void CreateShardingTable<TEntity>(string tableName, string fromTableSchema = null)
+    public override void CreateShardingTable<TEntity>(string tableName, string tableSchema = null, string fromTableSchema = null)
     {
         var entityType = typeof(TEntity);
         if (!this.MapProvider.TryGetEntityMap(entityType, out var entityMapper))
             throw new Exception($"未找到{entityType.FullName}实体映射");
 
+        tableSchema ??= this.DbContext.DefaultTableSchema;
         fromTableSchema ??= this.DbContext.DefaultTableSchema;
         var orgTableName = entityMapper.TableName;
         var shardingPart = tableName.Substring(orgTableName.Length);
@@ -95,12 +96,12 @@ and c.contype='f' INNER JOIN pg_attribute d ON d.attnum=ANY(c.conkey) AND d.attr
         var indexInfos = reader.Read<IndexInfo>();
         var foreignKeyInfos = reader.Read<ForeignKeyInfo>();
 
-        var builder = new StringBuilder($"CREATE TABLE IF NOT EXISTS {this.OrmProvider.GetTableName(tableName)}");
+        var builder = new StringBuilder($"CREATE TABLE IF NOT EXISTS {this.OrmProvider.GetFieldName(tableSchema)}.{this.OrmProvider.GetTableName(tableName)}");
         builder.AppendLine();
         builder.AppendLine("(");
         var commentBuilder = new StringBuilder();
         if (tableInfo != null && !string.IsNullOrEmpty(tableInfo.Description))
-            commentBuilder.AppendLine($"COMMENT ON TABLE {this.OrmProvider.GetTableName(tableName)} IS '{tableInfo.Description}';");
+            commentBuilder.AppendLine($"COMMENT ON TABLE {this.OrmProvider.GetFieldName(tableSchema)}.{this.OrmProvider.GetTableName(tableName)} IS '{tableInfo.Description}';");
         for (int i = 0; i < columnInfos.Count; i++)
         {
             if (i > 0) builder.AppendLine(",");
@@ -131,7 +132,7 @@ and c.contype='f' INNER JOIN pg_attribute d ON d.attnum=ANY(c.conkey) AND d.attr
                 else builder.Append(columnInfo.DefaultValue);
             }
             if (!string.IsNullOrEmpty(columnInfo.Description))
-                commentBuilder.AppendLine($"COMMENT ON COLUMN {tableName}.{this.OrmProvider.GetFieldName(columnInfo.ColumnName)} IS '{columnInfo.Description}';");
+                commentBuilder.AppendLine($"COMMENT ON COLUMN {this.OrmProvider.GetFieldName(tableSchema)}.{this.OrmProvider.GetTableName(tableName)}.{this.OrmProvider.GetFieldName(columnInfo.ColumnName)} IS '{columnInfo.Description}';");
         }
         var indexNames = indexInfos.Where(f => f.IsPrimary || f.IsUnique)
             .Select(f => f.IndexName).Distinct().ToList();
@@ -182,7 +183,7 @@ and c.contype='f' INNER JOIN pg_attribute d ON d.attnum=ANY(c.conkey) AND d.attr
             builder.AppendLine(";");
             var myIndexName = indexName + shardingPart;
             var indexInfo = indexInfos.First(f => f.IndexName == indexName);
-            builder.Append($"CREATE INDEX IF NOT EXISTS {this.OrmProvider.GetFieldName(myIndexName)} ON {this.OrmProvider.GetTableName(tableName)} USING {indexInfo.IndexType}");
+            builder.Append($"CREATE INDEX IF NOT EXISTS {this.OrmProvider.GetFieldName(myIndexName)} ON {tableSchema}.{this.OrmProvider.GetTableName(tableName)} USING {indexInfo.IndexType}");
 
             var myIndexInfos = indexInfos.FindAll(f => f.IsPrimary);
             builder.Append('(');
@@ -196,7 +197,6 @@ and c.contype='f' INNER JOIN pg_attribute d ON d.attnum=ANY(c.conkey) AND d.attr
             }
             builder.Append(')');
         }
-        builder.AppendLine(";");
         if (commentBuilder.Length > 0)
         {
             builder.AppendLine(";");
@@ -204,12 +204,13 @@ and c.contype='f' INNER JOIN pg_attribute d ON d.attnum=ANY(c.conkey) AND d.attr
         }
         this.Execute(builder.ToString());
     }
-    public override async Task CreateShardingTableAsync<TEntity>(string tableName, string fromTableSchema = null, CancellationToken cancellationToken = default)
+    public override async Task CreateShardingTableAsync<TEntity>(string tableName, string tableSchema = null, string fromTableSchema = null, CancellationToken cancellationToken = default)
     {
         var entityType = typeof(TEntity);
         if (!this.MapProvider.TryGetEntityMap(entityType, out var entityMapper))
             throw new Exception($"未找到{entityType.FullName}实体映射");
 
+        tableSchema ??= this.DbContext.DefaultTableSchema;
         fromTableSchema ??= this.DbContext.DefaultTableSchema;
         var orgTableName = entityMapper.TableName;
         var shardingPart = tableName.Substring(orgTableName.Length);
@@ -230,12 +231,12 @@ and c.contype='f' INNER JOIN pg_attribute d ON d.attnum=ANY(c.conkey) AND d.attr
         var indexInfos = await reader.ReadAsync<IndexInfo>();
         var foreignKeyInfos = await reader.ReadAsync<ForeignKeyInfo>();
 
-        var builder = new StringBuilder($"CREATE TABLE IF NOT EXISTS {this.OrmProvider.GetTableName(tableName)}");
+        var builder = new StringBuilder($"CREATE TABLE IF NOT EXISTS {this.OrmProvider.GetFieldName(tableSchema)}.{this.OrmProvider.GetTableName(tableName)}");
         builder.AppendLine();
         builder.AppendLine("(");
         var commentBuilder = new StringBuilder();
         if (tableInfo != null && !string.IsNullOrEmpty(tableInfo.Description))
-            commentBuilder.AppendLine($"COMMENT ON TABLE {this.OrmProvider.GetTableName(tableName)} IS '{tableInfo.Description}';");
+            commentBuilder.AppendLine($"COMMENT ON TABLE {this.OrmProvider.GetFieldName(tableSchema)}.{this.OrmProvider.GetTableName(tableName)} IS '{tableInfo.Description}';");
         for (int i = 0; i < columnInfos.Count; i++)
         {
             if (i > 0) builder.AppendLine(",");
@@ -266,7 +267,7 @@ and c.contype='f' INNER JOIN pg_attribute d ON d.attnum=ANY(c.conkey) AND d.attr
                 else builder.Append(columnInfo.DefaultValue);
             }
             if (!string.IsNullOrEmpty(columnInfo.Description))
-                commentBuilder.AppendLine($"COMMENT ON COLUMN {tableName}.{this.OrmProvider.GetFieldName(columnInfo.ColumnName)} IS '{columnInfo.Description}';");
+                commentBuilder.AppendLine($"COMMENT ON COLUMN {this.OrmProvider.GetFieldName(tableSchema)}.{this.OrmProvider.GetTableName(tableName)}.{this.OrmProvider.GetFieldName(columnInfo.ColumnName)} IS '{columnInfo.Description}';");
         }
         var indexNames = indexInfos.Where(f => f.IsPrimary || f.IsUnique)
             .Select(f => f.IndexName).Distinct().ToList();
@@ -305,6 +306,7 @@ and c.contype='f' INNER JOIN pg_attribute d ON d.attnum=ANY(c.conkey) AND d.attr
             builder.Append($"REFERENCES {this.OrmProvider.GetTableName(myIndexInfo.RefTable)}({this.OrmProvider.GetFieldName(myIndexInfo.RefColumnName)}) ");
             builder.Append($"ON DELETE {myIndexInfo.DeleteRule} ON UPDATE {myIndexInfo.UpdateRule}");
         }
+        builder.AppendLine();
         builder.Append(')');
         if (tableInfo != null && !string.IsNullOrEmpty(tableInfo.TableSpace))
             builder.Append($" TABLESPACE {tableInfo.TableSpace}");
@@ -316,7 +318,7 @@ and c.contype='f' INNER JOIN pg_attribute d ON d.attnum=ANY(c.conkey) AND d.attr
             builder.AppendLine(";");
             var myIndexName = indexName + shardingPart;
             var indexInfo = indexInfos.First(f => f.IndexName == indexName);
-            builder.Append($"CREATE INDEX IF NOT EXISTS {this.OrmProvider.GetFieldName(myIndexName)} ON {this.OrmProvider.GetTableName(tableName)} USING {indexInfo.IndexType}");
+            builder.Append($"CREATE INDEX IF NOT EXISTS {this.OrmProvider.GetFieldName(myIndexName)} ON {tableSchema}.{this.OrmProvider.GetTableName(tableName)} USING {indexInfo.IndexType}");
 
             var myIndexInfos = indexInfos.FindAll(f => f.IsPrimary);
             builder.Append('(');
@@ -346,11 +348,8 @@ and c.contype='f' INNER JOIN pg_attribute d ON d.attnum=ANY(c.conkey) AND d.attr
     }
     class ColumnInfo
     {
-        public int ColumnIndex { get; set; }
         public string ColumnName { get; set; }
-        public int ArrayDimens { get; set; }
         public string ColumnType { get; set; }
-        public int Length { get; set; }
         public string IsIdentity { get; set; }
         public bool IsRequired { get; set; }
         public string Description { get; set; }

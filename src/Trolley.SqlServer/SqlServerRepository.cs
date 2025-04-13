@@ -37,12 +37,13 @@ public class SqlServerRepository : Repository, ISqlServerRepository
         => this.dialectProvider.GetShardingTableNames<TEntity>(this.DbContext, tableNameSelector, tableSchema);
     public override async Task<List<string>> GetShardingTableNamesAsync<TEntity>(Func<string, bool> tableNameSelector = null, string tableSchema = null, CancellationToken cancellationToken = default)
         => await this.dialectProvider.GetShardingTableNamesAsync<TEntity>(this.DbContext, tableNameSelector, tableSchema, cancellationToken);
-    public override void CreateShardingTable<TEntity>(string tableName, string fromTableSchema = null)
+    public override void CreateShardingTable<TEntity>(string tableName, string tableSchema, string fromTableSchema = null)
     {
         var entityType = typeof(TEntity);
         if (!this.MapProvider.TryGetEntityMap(entityType, out var entityMapper))
             throw new Exception($"未找到{entityType.FullName}实体映射");
 
+        tableSchema ??= this.DbContext.DefaultTableSchema;
         fromTableSchema ??= this.DbContext.DefaultTableSchema;
         var orgTableName = entityMapper.TableName;
         var shardingPart = tableName.Substring(orgTableName.Length);
@@ -63,106 +64,110 @@ fk.referenced_object_id=pt.object_id INNER JOIN sys.tables ft ON fk.parent_objec
         var foreignKeyInfos = reader.Read<ForeignKeyInfo>();
 
         var builder = new StringBuilder();
-        builder.AppendLine($"IF OBJECT_ID(N'{fromTableSchema}.{tableName}',N'U') IS NULL ");
+        builder.AppendLine($"IF OBJECT_ID('{tableSchema}.{tableName}','U') IS NULL ");
         builder.AppendLine("BEGIN");
-        builder.Append($"CREATE TABLE {this.OrmProvider.GetTableName(tableName)}");
+        builder.Append($"CREATE TABLE {this.OrmProvider.GetTableName(tableSchema)}.{this.OrmProvider.GetTableName(tableName)}");
         builder.AppendLine();
         builder.AppendLine("(");
         var commentBuilder = new StringBuilder();
         if (tableInfo != null && !string.IsNullOrEmpty(tableInfo.Description))
-            commentBuilder.AppendLine($"COMMENT ON TABLE {this.OrmProvider.GetTableName(tableName)} IS '{tableInfo.Description}';");
-        //for (int i = 0; i < columnInfos.Count; i++)
-        //{
-        //    if (i > 0) builder.AppendLine(",");
-        //    var columnInfo = columnInfos[i];
-        //    builder.Append($"{this.OrmProvider.GetFieldName(columnInfo.ColumnName)} {columnInfo.DataType}");
+            commentBuilder.AppendLine($"EXEC sys.sp_addextendedproperty @name=N'MS_Description',@value=N'{tableInfo.Description}',@level0type=N'SCHEMA',@level0name=N'{tableSchema}',@level1type=N'TABLE',@level1name=N'{tableName}';");
+        for (int i = 0; i < columnInfos.Count; i++)
+        {
+            if (i > 0) builder.AppendLine(",");
+            var columnInfo = columnInfos[i];
+            builder.Append($"{this.OrmProvider.GetFieldName(columnInfo.ColumnName)} {columnInfo.DataType}");
 
-        //    string[] lenType = ["char", "varchar", "nchar", "nvarchar", "binary", "varbinary"];
-        //    if (lenType.Contains(columnInfo.DataType))
-        //    {
-        //        string length = columnInfo.MaxLength.ToString();
-        //        if (columnInfo.MaxLength == -1) length = "MAX";
-        //        else
-        //        {
-        //            length = columnInfo.DataType switch
-        //            {
-        //                "char" => $"{columnInfo.MaxLength}",
-        //                "varchar" => $"{columnInfo.MaxLength}",
-        //                "nchar" => $"{columnInfo.MaxLength / 2}",
-        //                "nvarchar" => $"{columnInfo.MaxLength / 2}",
-        //                "binary" => $"{columnInfo.MaxLength}",
-        //                "varbinary" => $"{columnInfo.MaxLength}",
-        //                _ => $"{columnInfo.MaxLength}"
-        //            };
-        //        }
-        //        builder.Append($"({columnInfo.MaxLength})");
-        //    }
-        //    switch (columnInfo.DataType)
-        //    {
-        //        case "decimal":
-        //        case "numeric":
-        //            builder.Append($"({columnInfo.Precision},{columnInfo.Scale})");
-        //            break;
-        //    }
-        //    if (!columnInfo.IsNullable)
-        //        builder.Append(" NOT");
-        //    builder.Append(" NULL");
-        //    if (string.IsNullOrEmpty(columnInfo.IsIdentity))
-        //        builder.Append(" IDENTITY");
-        //    if (!string.IsNullOrEmpty(columnInfo.DefaultValue))
-        //        builder.Append($" DEFAULT {columnInfo.DefaultValue}");
-        //    if (!string.IsNullOrEmpty(columnInfo.Description))
-        //        commentBuilder.AppendLine($"COMMENT ON COLUMN {tableName}.{this.OrmProvider.GetFieldName(columnInfo.ColumnName)} IS '{columnInfo.Description}';");
-        //}
-        //var myIndexInfos = indexInfos.FindAll(f => f.IsPrimary);
-        //if (myIndexInfos.Count > 0)
-        //{
-        //    builder.AppendLine(",");
-        //    builder.Append($"CONSTRAINT {this.OrmProvider.GetFieldName($"pk_{tableName}")} PRIMARY KEY(");
-        //    for (int j = 0; j < myIndexInfos.Count; j++)
-        //    {
-        //        if (j > 0) builder.Append(',');
-        //        var columnInfo = myIndexInfos[j];
-        //        builder.Append(this.OrmProvider.GetFieldName(columnInfo.ColumnName));
-        //        if (columnInfo.IsDesc)
-        //            builder.Append(" DESC");
-        //    }
-        //    builder.AppendLine(")");
-        //}
-        //builder.Append(')');
-        //if (tableInfo != null && !string.IsNullOrEmpty(tableInfo.TableSpace))
-        //    builder.Append($" TABLESPACE {tableInfo.TableSpace}");
+            string[] lenType = ["char", "varchar", "nchar", "nvarchar", "binary", "varbinary"];
+            if (lenType.Contains(columnInfo.DataType))
+            {
+                string length = columnInfo.MaxLength.ToString();
+                if (columnInfo.MaxLength == -1) length = "MAX";
+                else
+                {
+                    length = columnInfo.DataType switch
+                    {
+                        "char" => $"{columnInfo.MaxLength}",
+                        "varchar" => $"{columnInfo.MaxLength}",
+                        "nchar" => $"{columnInfo.MaxLength / 2}",
+                        "nvarchar" => $"{columnInfo.MaxLength / 2}",
+                        "binary" => $"{columnInfo.MaxLength}",
+                        "varbinary" => $"{columnInfo.MaxLength}",
+                        _ => $"{columnInfo.MaxLength}"
+                    };
+                }
+                builder.Append($"({length})");
+            }
+            switch (columnInfo.DataType)
+            {
+                case "decimal":
+                case "numeric":
+                    builder.Append($"({columnInfo.Precision},{columnInfo.Scale})");
+                    break;
+            }
+            if (!columnInfo.IsNullable)
+                builder.Append(" NOT");
+            builder.Append(" NULL");
+            if (columnInfo.IsIdentity)
+                builder.Append(" IDENTITY");
+            if (!string.IsNullOrEmpty(columnInfo.DefaultValue)
+                || !columnInfo.DefaultValue.StartsWith("(") && !columnInfo.DefaultValue.EndsWith(")"))
+                builder.Append($" DEFAULT {columnInfo.DefaultValue}");
+            if (!string.IsNullOrEmpty(columnInfo.Description))
+            {
+                commentBuilder.AppendLine($"EXEC sys.sp_addextendedproperty @name=N'MS_Description',@value=N'{columnInfo.Description}',@level0type=N'SCHEMA',@level0name=N'{tableSchema}',@level1type=N'TABLE',@level1name=N'{tableName}',@level2type=N'COLUMN',@level2name=N'{columnInfo.ColumnName}'");
+                commentBuilder.AppendLine("GO");
+            }
+        }
+        var myIndexInfos = indexInfos.FindAll(f => f.IsPrimary);
+        if (myIndexInfos.Count > 0)
+        {
+            builder.AppendLine(",");
+            builder.Append($"CONSTRAINT {this.OrmProvider.GetFieldName($"pk_{tableName}")} PRIMARY KEY(");
+            for (int j = 0; j < myIndexInfos.Count; j++)
+            {
+                if (j > 0) builder.Append(',');
+                var columnInfo = myIndexInfos[j];
+                builder.Append(this.OrmProvider.GetFieldName(columnInfo.ColumnName));
+                if (columnInfo.IsDesc)
+                    builder.Append(" DESC");
+            }
+            builder.AppendLine(")");
+        }
+        builder.Append(')');
+        if (tableInfo != null && !string.IsNullOrEmpty(tableInfo.TableSpace))
+            builder.Append($" TABLESPACE {tableInfo.TableSpace}");
 
-        //if (indexInfos.Exists(f => !f.IsPrimary))
-        //{
-        //    var indexNames = indexInfos.Where(f => !f.IsPrimary).Select(f => f.IndexName).Distinct().ToList();
-        //    for (int i = 0; i < indexNames.Count; i++)
-        //    {
-        //        builder.AppendLine(";");
-        //        builder.Append("CREATE ");
-        //        var indexName = indexNames[i];
-        //        var indexInfo = indexInfos.First(f => f.IndexName == indexName);
-        //        if (indexInfo.IsUnique)
-        //            builder.Append("UNIQUE ");
-        //        builder.Append("INDEX IF NOT EXISTS ");
-        //        var myIndexName = indexInfo.IndexName + shardingPart;
-        //        builder.Append(this.OrmProvider.GetFieldName(myIndexName));
-        //        builder.Append($" ON {this.OrmProvider.GetTableName(tableName)}");
-        //        if (!string.IsNullOrEmpty(indexInfo.IndexType))
-        //            builder.Append($" USING {indexInfo.IndexType}");
-        //        builder.Append('(');
-        //        myIndexInfos = indexInfos.FindAll(f => f.IndexName == indexName);
-        //        for (int j = 0; j < myIndexInfos.Count; j++)
-        //        {
-        //            if (j > 0) builder.Append(',');
-        //            var columnInfo = myIndexInfos[j];
-        //            builder.Append(this.OrmProvider.GetFieldName(columnInfo.ColumnName));
-        //            if (columnInfo.IsDesc)
-        //                builder.Append(" DESC");
-        //        }
-        //        builder.Append(')');
-        //    }
-        //}
+        if (indexInfos.Exists(f => !f.IsPrimary))
+        {
+            var indexNames = indexInfos.Where(f => !f.IsPrimary).Select(f => f.IndexName).Distinct().ToList();
+            for (int i = 0; i < indexNames.Count; i++)
+            {
+                builder.AppendLine(";");
+                builder.Append("CREATE ");
+                var indexName = indexNames[i];
+                var indexInfo = indexInfos.First(f => f.IndexName == indexName);
+                if (indexInfo.IsUnique)
+                    builder.Append("UNIQUE ");
+                builder.Append("INDEX IF NOT EXISTS ");
+                var myIndexName = indexInfo.IndexName + shardingPart;
+                builder.Append(this.OrmProvider.GetFieldName(myIndexName));
+                builder.Append($" ON {this.OrmProvider.GetTableName(tableName)}");
+                if (!string.IsNullOrEmpty(indexInfo.IndexType))
+                    builder.Append($" USING {indexInfo.IndexType}");
+                builder.Append('(');
+                myIndexInfos = indexInfos.FindAll(f => f.IndexName == indexName);
+                for (int j = 0; j < myIndexInfos.Count; j++)
+                {
+                    if (j > 0) builder.Append(',');
+                    var columnInfo = myIndexInfos[j];
+                    builder.Append(this.OrmProvider.GetFieldName(columnInfo.ColumnName));
+                    if (columnInfo.IsDesc)
+                        builder.Append(" DESC");
+                }
+                builder.Append(')');
+            }
+        }
         if (commentBuilder.Length > 0)
         {
             builder.AppendLine(";");
@@ -303,7 +308,7 @@ c.contype='f' INNER JOIN pg_attribute d ON d.attnum=ANY(c.conkey) AND d.attrelid
         public int MaxLength { get; set; }
         public int Precision { get; set; }
         public int Scale { get; set; }
-        public string IsIdentity { get; set; }
+        public bool IsIdentity { get; set; }
         public bool IsNullable { get; set; }
         public string Description { get; set; }
         public string DefaultValue { get; set; }
