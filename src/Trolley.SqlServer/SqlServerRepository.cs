@@ -49,16 +49,16 @@ public class SqlServerRepository : Repository, ISqlServerRepository
         var shardingPart = tableName.Substring(orgTableName.Length);
         using var reader = this.QueryMultiple(f =>
         {
-            f.Query<TableInfo>($"select c.value description from sys.sysobjects a INNER JOIN sys.schemas b ON a.schema_id=b.schema_id inner join sys.extended_properties cb on a.id=c.major_id and c.minor_id=0 and c.name='MS_Description' where a.xtype='U' and b.name='{fromTableSchema}' and a.name='{orgTableName}'")
+            f.Query<string>($"select c.value from sys.tables a INNER JOIN sys.schemas b ON a.schema_id=b.schema_id left join sys.extended_properties c on a.object_id=c.major_id and c.minor_id=0 and c.name='MS_Description' where a.type='U' and b.name='{fromTableSchema}' and a.name='{orgTableName}'")
              .Query<ColumnInfo>(@$"SELECT c.name AS column_name,ty.name AS data_type,c.max_length,c.precision,c.scale,c.is_nullable,c.is_identity,OBJECT_DEFINITION(c.default_object_id) AS default_value,ep.value AS description FROM sys.columns c INNER JOIN sys.tables t ON c.object_id=t.object_id 
 INNER JOIN sys.schemas s ON t.schema_id=s.schema_id INNER JOIN sys.types ty ON c.user_type_id=ty.user_type_id LEFT JOIN sys.extended_properties ep ON c.object_id=ep.major_id AND c.column_id=ep.minor_id AND ep.name='MS_Description' WHERE s.name='{fromTableSchema}' AND t.name='{orgTableName}' ORDER BY c.column_id")
              .Query<IndexInfo>(@$"SELECT i.name AS index_name,i.type_desc AS index_type,i.is_unique,i.is_primary_key,c.name AS column_name,ic.is_descending_key AS is_desc FROM sys.tables t INNER JOIN sys.schemas s ON t.schema_id = s.schema_id INNER JOIN sys.indexes i ON 
 t.object_id=i.object_id INNER JOIN sys.index_columns ic ON i.object_id=ic.object_id AND i.index_id=ic.index_id INNER JOIN sys.columns c ON ic.object_id=c.object_id AND ic.column_id=c.column_id WHERE s.name='{fromTableSchema}' AND t.name='{orgTableName}' ORDER BY i.name,ic.key_ordinal")
-             .Query<ForeignKeyInfo>(@$"SELECT fk.name constraint_name,COL_NAME(fkc.parent_object_id,fkc.parent_column_id) column_name,SCHEMA_NAME(pt.schema_id)+'.'+OBJECT_NAME(fk.referenced_object_id) ref_table,COL_NAME(fkc.referenced_object_id,fkc.referenced_column_id) 
+             .Query<ForeignKeyInfo>(@$"SELECT fk.name constraint_name,COL_NAME(fkc.parent_object_id,fkc.parent_column_id) column_name,SCHEMA_NAME(pt.schema_id) ref_table_schema,OBJECT_NAME(fk.referenced_object_id) ref_table,COL_NAME(fkc.referenced_object_id,fkc.referenced_column_id) 
 ref_column_name,fk.delete_referential_action_desc delete_rule,fk.update_referential_action_desc update_rule FROM sys.foreign_keys fk INNER JOIN sys.foreign_key_columns fkc ON fk.object_id=fkc.constraint_object_id INNER JOIN sys.tables pt ON 
 fk.referenced_object_id=pt.object_id INNER JOIN sys.tables ft ON fk.parent_object_id=ft.object_id WHERE SCHEMA_NAME(ft.schema_id)='{fromTableSchema}' and OBJECT_NAME(fk.parent_object_id)='{orgTableName}' ORDER BY fk.name");
         });
-        var tableInfo = reader.ReadFirst<TableInfo>();
+        var description = reader.ReadFirst<string>();
         var columnInfos = reader.Read<ColumnInfo>();
         var indexInfos = reader.Read<IndexInfo>();
         var foreignKeyInfos = reader.Read<ForeignKeyInfo>();
@@ -66,15 +66,11 @@ fk.referenced_object_id=pt.object_id INNER JOIN sys.tables ft ON fk.parent_objec
         var builder = new StringBuilder();
         builder.AppendLine($"IF OBJECT_ID(N'{tableSchema}.{tableName}',N'U') IS NULL ");
         builder.AppendLine("BEGIN");
-        builder.Append($"CREATE TABLE {this.OrmProvider.GetTableName(tableSchema)}.{this.OrmProvider.GetTableName(tableName)}");
-        builder.AppendLine();
+        builder.AppendLine($"CREATE TABLE {this.OrmProvider.GetTableName(tableSchema)}.{this.OrmProvider.GetTableName(tableName)}");
         builder.AppendLine("(");
         var commentBuilder = new StringBuilder();
-        if (tableInfo != null && !string.IsNullOrEmpty(tableInfo.Description))
-        {
-            commentBuilder.AppendLine($"EXEC sys.sp_addextendedproperty @name=N'MS_Description',@value=N'{tableInfo.Description}',@level0type=N'SCHEMA',@level0name=N'{tableSchema}',@level1type=N'TABLE',@level1name=N'{tableName}'");
-            commentBuilder.AppendLine("GO");
-        }
+        if (!string.IsNullOrEmpty(description))
+            commentBuilder.AppendLine($"EXEC sys.sp_addextendedproperty @name=N'MS_Description',@value=N'{description}',@level0type=N'SCHEMA',@level0name=N'{tableSchema}',@level1type=N'TABLE',@level1name=N'{tableName}'");
         for (int i = 0; i < columnInfos.Count; i++)
         {
             if (i > 0) builder.AppendLine(",");
@@ -113,16 +109,12 @@ fk.referenced_object_id=pt.object_id INNER JOIN sys.tables ft ON fk.parent_objec
             builder.Append(" NULL");
             if (columnInfo.IsIdentity)
                 builder.Append(" IDENTITY");
-            if (!string.IsNullOrEmpty(columnInfo.DefaultValue)
-                || !columnInfo.DefaultValue.StartsWith("(") && !columnInfo.DefaultValue.EndsWith(")"))
-                builder.Append($" DEFAULT {columnInfo.DefaultValue}");
+            if (!string.IsNullOrEmpty(columnInfo.DefaultValue))
+                builder.Append($" DEFAULT {columnInfo.DefaultValue.TrimStart('(').TrimEnd(')')}");
             if (!string.IsNullOrEmpty(columnInfo.Description))
-            {
                 commentBuilder.AppendLine($"EXEC sys.sp_addextendedproperty @name=N'MS_Description',@value=N'{columnInfo.Description}',@level0type=N'SCHEMA',@level0name=N'{tableSchema}',@level1type=N'TABLE',@level1name=N'{tableName}',@level2type=N'COLUMN',@level2name=N'{columnInfo.ColumnName}'");
-                commentBuilder.AppendLine("GO");
-            }
         }
-        var myIndexInfos = indexInfos.FindAll(f => f.IsPrimary);
+        var myIndexInfos = indexInfos.FindAll(f => f.IsPrimaryKey);
         if (myIndexInfos.Count > 0)
         {
             builder.AppendLine(",");
@@ -135,18 +127,18 @@ fk.referenced_object_id=pt.object_id INNER JOIN sys.tables ft ON fk.parent_objec
                 if (columnInfo.IsDesc)
                     builder.Append(" DESC");
             }
-            builder.AppendLine(")");
+            builder.Append(')');
         }
 
-        if (indexInfos.Exists(f => !f.IsPrimary))
+        if (indexInfos.Exists(f => !f.IsPrimaryKey))
         {
-            var indexNames = indexInfos.FindAll(f => !f.IsPrimary).Select(f => f.IndexName).Distinct().ToList();
+            var indexNames = indexInfos.FindAll(f => !f.IsPrimaryKey).Select(f => f.IndexName).Distinct().ToList();
             for (int i = 0; i < indexNames.Count; i++)
             {
                 builder.AppendLine(",");
                 var indexName = indexNames[i];
                 var myIndexName = indexName + shardingPart;
-                builder.Append($"CONSTRAINT {this.OrmProvider.GetFieldName(myIndexName)} ");
+                builder.Append($"INDEX {this.OrmProvider.GetFieldName(myIndexName)} ");
                 var indexInfo = indexInfos.First(f => f.IndexName == indexName);
                 if (indexInfo.IsUnique)
                     builder.Append("UNIQUE ");
@@ -180,21 +172,21 @@ fk.referenced_object_id=pt.object_id INNER JOIN sys.tables ft ON fk.parent_objec
                     var columnInfo = myForeignKeyInfos[j];
                     builder.Append(this.OrmProvider.GetFieldName(columnInfo.ColumnName));
                 }
-                builder.Append($") REFERENCES {this.OrmProvider.GetTableName(myIndexInfo.RefTable)}(");
+                builder.Append($") REFERENCES {this.OrmProvider.GetFieldName(myIndexInfo.RefTableSchema)}.{this.OrmProvider.GetTableName(myIndexInfo.RefTable)}(");
                 for (int j = 0; j < myForeignKeyInfos.Count; j++)
                 {
                     if (j > 0) builder.Append(',');
                     var columnInfo = myForeignKeyInfos[j];
                     builder.Append(this.OrmProvider.GetFieldName(columnInfo.RefColumnName));
                 }
-                builder.Append($") ON DELETE {myIndexInfo.DeleteRule} ON UPDATE {myIndexInfo.UpdateRule}");
+                builder.Append($") ON DELETE {myIndexInfo.DeleteRule.Replace("_", " ")} ON UPDATE {myIndexInfo.UpdateRule.Replace("_", " ")}");
             }
         }
+        builder.AppendLine();
         builder.AppendLine(")");
-        builder.AppendLine("GO");
-        if (commentBuilder.Length > 0)
-            builder.AppendLine(commentBuilder.ToString());
         builder.AppendLine("END");
+        if (commentBuilder.Length > 0)
+            builder.Append(commentBuilder.ToString());
         this.Execute(builder.ToString());
     }
     public override async Task CreateShardingTableAsync<TEntity>(string tableName, string tableSchema, string fromTableSchema = null, CancellationToken cancellationToken = default)
@@ -209,32 +201,28 @@ fk.referenced_object_id=pt.object_id INNER JOIN sys.tables ft ON fk.parent_objec
         var shardingPart = tableName.Substring(orgTableName.Length);
         using var reader = await this.QueryMultipleAsync(f =>
         {
-            f.Query<TableInfo>($"select c.value description from sys.sysobjects a INNER JOIN sys.schemas b ON a.schema_id=b.schema_id inner join sys.extended_properties cb on a.id=c.major_id and c.minor_id=0 and c.name='MS_Description' where a.xtype='U' and b.name='{fromTableSchema}' and a.name='{orgTableName}'")
+            f.Query<string>($"select c.value from sys.tables a INNER JOIN sys.schemas b ON a.schema_id=b.schema_id left join sys.extended_properties c on a.object_id=c.major_id and c.minor_id=0 and c.name='MS_Description' where a.type='U' and b.name='{fromTableSchema}' and a.name='{orgTableName}'")
              .Query<ColumnInfo>(@$"SELECT c.name AS column_name,ty.name AS data_type,c.max_length,c.precision,c.scale,c.is_nullable,c.is_identity,OBJECT_DEFINITION(c.default_object_id) AS default_value,ep.value AS description FROM sys.columns c INNER JOIN sys.tables t ON c.object_id=t.object_id 
 INNER JOIN sys.schemas s ON t.schema_id=s.schema_id INNER JOIN sys.types ty ON c.user_type_id=ty.user_type_id LEFT JOIN sys.extended_properties ep ON c.object_id=ep.major_id AND c.column_id=ep.minor_id AND ep.name='MS_Description' WHERE s.name='{fromTableSchema}' AND t.name='{orgTableName}' ORDER BY c.column_id")
              .Query<IndexInfo>(@$"SELECT i.name AS index_name,i.type_desc AS index_type,i.is_unique,i.is_primary_key,c.name AS column_name,ic.is_descending_key AS is_desc FROM sys.tables t INNER JOIN sys.schemas s ON t.schema_id = s.schema_id INNER JOIN sys.indexes i ON 
 t.object_id=i.object_id INNER JOIN sys.index_columns ic ON i.object_id=ic.object_id AND i.index_id=ic.index_id INNER JOIN sys.columns c ON ic.object_id=c.object_id AND ic.column_id=c.column_id WHERE s.name='{fromTableSchema}' AND t.name='{orgTableName}' ORDER BY i.name,ic.key_ordinal")
-             .Query<ForeignKeyInfo>(@$"SELECT fk.name constraint_name,COL_NAME(fkc.parent_object_id,fkc.parent_column_id) column_name,SCHEMA_NAME(pt.schema_id)+'.'+OBJECT_NAME(fk.referenced_object_id) ref_table,COL_NAME(fkc.referenced_object_id,fkc.referenced_column_id) 
+             .Query<ForeignKeyInfo>(@$"SELECT fk.name constraint_name,COL_NAME(fkc.parent_object_id,fkc.parent_column_id) column_name,SCHEMA_NAME(pt.schema_id) ref_table_schema,OBJECT_NAME(fk.referenced_object_id) ref_table,COL_NAME(fkc.referenced_object_id,fkc.referenced_column_id) 
 ref_column_name,fk.delete_referential_action_desc delete_rule,fk.update_referential_action_desc update_rule FROM sys.foreign_keys fk INNER JOIN sys.foreign_key_columns fkc ON fk.object_id=fkc.constraint_object_id INNER JOIN sys.tables pt ON 
 fk.referenced_object_id=pt.object_id INNER JOIN sys.tables ft ON fk.parent_object_id=ft.object_id WHERE SCHEMA_NAME(ft.schema_id)='{fromTableSchema}' and OBJECT_NAME(fk.parent_object_id)='{orgTableName}' ORDER BY fk.name");
         });
-        var tableInfo = await reader.ReadFirstAsync<TableInfo>();
-        var columnInfos = await reader.ReadAsync<ColumnInfo>();
-        var indexInfos = await reader.ReadAsync<IndexInfo>();
-        var foreignKeyInfos = await reader.ReadAsync<ForeignKeyInfo>();
+        var description = await reader.ReadFirstAsync<string>(cancellationToken);
+        var columnInfos = await reader.ReadAsync<ColumnInfo>(cancellationToken);
+        var indexInfos = await reader.ReadAsync<IndexInfo>(cancellationToken);
+        var foreignKeyInfos = await reader.ReadAsync<ForeignKeyInfo>(cancellationToken);
 
         var builder = new StringBuilder();
         builder.AppendLine($"IF OBJECT_ID(N'{tableSchema}.{tableName}',N'U') IS NULL ");
         builder.AppendLine("BEGIN");
-        builder.Append($"CREATE TABLE {this.OrmProvider.GetTableName(tableSchema)}.{this.OrmProvider.GetTableName(tableName)}");
-        builder.AppendLine();
+        builder.AppendLine($"CREATE TABLE {this.OrmProvider.GetTableName(tableSchema)}.{this.OrmProvider.GetTableName(tableName)}");
         builder.AppendLine("(");
         var commentBuilder = new StringBuilder();
-        if (tableInfo != null && !string.IsNullOrEmpty(tableInfo.Description))
-        {
-            commentBuilder.AppendLine($"EXEC sys.sp_addextendedproperty @name=N'MS_Description',@value=N'{tableInfo.Description}',@level0type=N'SCHEMA',@level0name=N'{tableSchema}',@level1type=N'TABLE',@level1name=N'{tableName}'");
-            commentBuilder.AppendLine("GO");
-        }
+        if (!string.IsNullOrEmpty(description))
+            commentBuilder.AppendLine($"EXEC sys.sp_addextendedproperty @name=N'MS_Description',@value=N'{description}',@level0type=N'SCHEMA',@level0name=N'{tableSchema}',@level1type=N'TABLE',@level1name=N'{tableName}'");
         for (int i = 0; i < columnInfos.Count; i++)
         {
             if (i > 0) builder.AppendLine(",");
@@ -273,16 +261,12 @@ fk.referenced_object_id=pt.object_id INNER JOIN sys.tables ft ON fk.parent_objec
             builder.Append(" NULL");
             if (columnInfo.IsIdentity)
                 builder.Append(" IDENTITY");
-            if (!string.IsNullOrEmpty(columnInfo.DefaultValue)
-                || !columnInfo.DefaultValue.StartsWith("(") && !columnInfo.DefaultValue.EndsWith(")"))
-                builder.Append($" DEFAULT {columnInfo.DefaultValue}");
+            if (!string.IsNullOrEmpty(columnInfo.DefaultValue))
+                builder.Append($" DEFAULT {columnInfo.DefaultValue.TrimStart('(').TrimEnd(')')}");
             if (!string.IsNullOrEmpty(columnInfo.Description))
-            {
                 commentBuilder.AppendLine($"EXEC sys.sp_addextendedproperty @name=N'MS_Description',@value=N'{columnInfo.Description}',@level0type=N'SCHEMA',@level0name=N'{tableSchema}',@level1type=N'TABLE',@level1name=N'{tableName}',@level2type=N'COLUMN',@level2name=N'{columnInfo.ColumnName}'");
-                commentBuilder.AppendLine("GO");
-            }
         }
-        var myIndexInfos = indexInfos.FindAll(f => f.IsPrimary);
+        var myIndexInfos = indexInfos.FindAll(f => f.IsPrimaryKey);
         if (myIndexInfos.Count > 0)
         {
             builder.AppendLine(",");
@@ -295,18 +279,18 @@ fk.referenced_object_id=pt.object_id INNER JOIN sys.tables ft ON fk.parent_objec
                 if (columnInfo.IsDesc)
                     builder.Append(" DESC");
             }
-            builder.AppendLine(")");
+            builder.Append(')');
         }
 
-        if (indexInfos.Exists(f => !f.IsPrimary))
+        if (indexInfos.Exists(f => !f.IsPrimaryKey))
         {
-            var indexNames = indexInfos.FindAll(f => !f.IsPrimary).Select(f => f.IndexName).Distinct().ToList();
+            var indexNames = indexInfos.FindAll(f => !f.IsPrimaryKey).Select(f => f.IndexName).Distinct().ToList();
             for (int i = 0; i < indexNames.Count; i++)
             {
                 builder.AppendLine(",");
                 var indexName = indexNames[i];
                 var myIndexName = indexName + shardingPart;
-                builder.Append($"CONSTRAINT {this.OrmProvider.GetFieldName(myIndexName)} ");
+                builder.Append($"INDEX {this.OrmProvider.GetFieldName(myIndexName)} ");
                 var indexInfo = indexInfos.First(f => f.IndexName == indexName);
                 if (indexInfo.IsUnique)
                     builder.Append("UNIQUE ");
@@ -340,29 +324,25 @@ fk.referenced_object_id=pt.object_id INNER JOIN sys.tables ft ON fk.parent_objec
                     var columnInfo = myForeignKeyInfos[j];
                     builder.Append(this.OrmProvider.GetFieldName(columnInfo.ColumnName));
                 }
-                builder.Append($") REFERENCES {this.OrmProvider.GetTableName(myIndexInfo.RefTable)}(");
+                builder.Append($") REFERENCES {this.OrmProvider.GetFieldName(myIndexInfo.RefTableSchema)}.{this.OrmProvider.GetTableName(myIndexInfo.RefTable)}(");
                 for (int j = 0; j < myForeignKeyInfos.Count; j++)
                 {
                     if (j > 0) builder.Append(',');
                     var columnInfo = myForeignKeyInfos[j];
                     builder.Append(this.OrmProvider.GetFieldName(columnInfo.RefColumnName));
                 }
-                builder.Append($") ON DELETE {myIndexInfo.DeleteRule} ON UPDATE {myIndexInfo.UpdateRule}");
+                builder.Append($") ON DELETE {myIndexInfo.DeleteRule.Replace("_", " ")} ON UPDATE {myIndexInfo.UpdateRule.Replace("_", " ")}");
             }
         }
+        builder.AppendLine();
         builder.AppendLine(")");
-        builder.AppendLine("GO");
-        if (commentBuilder.Length > 0)
-            builder.AppendLine(commentBuilder.ToString());
         builder.AppendLine("END");
+        if (commentBuilder.Length > 0)
+            builder.Append(commentBuilder.ToString());
         await this.ExecuteAsync(builder.ToString(), cancellationToken);
     }
     #endregion
 
-    class TableInfo
-    {
-        public string Description { get; set; }
-    }
     class ColumnInfo
     {
         public string ColumnName { get; set; }
@@ -381,13 +361,14 @@ fk.referenced_object_id=pt.object_id INNER JOIN sys.tables ft ON fk.parent_objec
         public string ColumnName { get; set; }
         public string IndexType { get; set; }
         public bool IsUnique { get; set; }
-        public bool IsPrimary { get; set; }
+        public bool IsPrimaryKey { get; set; }
         public bool IsDesc { get; set; }
     }
     class ForeignKeyInfo
     {
         public string ConstraintName { get; set; }
         public string ColumnName { get; set; }
+        public string RefTableSchema { get; set; }
         public string RefTable { get; set; }
         public string RefColumnName { get; set; }
         public string DeleteRule { get; set; }

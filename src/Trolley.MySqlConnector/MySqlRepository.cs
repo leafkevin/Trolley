@@ -144,7 +144,7 @@ information_schema.referential_constraints b on a.table_schema=b.constraint_sche
         var collationInfo = await reader.ReadFirstAsync<CollationInfo>(cancellationToken);
         var columnInfos = await reader.ReadAsync<ColumnInfo>(cancellationToken);
         var indexInfos = await reader.ReadAsync<IndexInfo>(cancellationToken);
-        var foreignKeyInfos = await reader.ReadAsync<ForeignKeyInfo>();
+        var foreignKeyInfos = await reader.ReadAsync<ForeignKeyInfo>(cancellationToken);
 
         var builder = new StringBuilder($"CREATE TABLE IF NOT EXISTS {this.OrmProvider.GetTableName(tableName)}");
         builder.AppendLine();

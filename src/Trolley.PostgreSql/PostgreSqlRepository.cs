@@ -226,10 +226,10 @@ inner join pg_attribute c on c.attnum>0 and c.attrelid=b.oid inner join pg_am d 
 AS delete_rule,CASE c.confupdtype WHEN 'a' THEN 'NO ACTION' WHEN 'r' THEN 'RESTRICT' WHEN 'c' THEN 'CASCADE' WHEN 'n' THEN 'SET NULL' WHEN 'd' THEN 'SET DEFAULT' END AS update_rule FROM pg_class a INNER JOIN pg_namespace b ON a.relnamespace=b.oid INNER JOIN pg_constraint c ON a.oid=c.conrelid 
 and c.contype='f' INNER JOIN pg_attribute d ON d.attnum=ANY(c.conkey) AND d.attrelid=c.conrelid INNER JOIN pg_class e ON c.confrelid=e.oid INNER JOIN pg_attribute f ON f.attnum=ANY(c.confkey) AND f.attrelid=c.confrelid WHERE b.nspname='{fromTableSchema}' and a.relname='{orgTableName}'");
         });
-        var tableInfo = await reader.ReadFirstAsync<TableInfo>();
-        var columnInfos = await reader.ReadAsync<ColumnInfo>();
-        var indexInfos = await reader.ReadAsync<IndexInfo>();
-        var foreignKeyInfos = await reader.ReadAsync<ForeignKeyInfo>();
+        var tableInfo = await reader.ReadFirstAsync<TableInfo>(cancellationToken);
+        var columnInfos = await reader.ReadAsync<ColumnInfo>(cancellationToken);
+        var indexInfos = await reader.ReadAsync<IndexInfo>(cancellationToken);
+        var foreignKeyInfos = await reader.ReadAsync<ForeignKeyInfo>(cancellationToken);
 
         var builder = new StringBuilder($"CREATE TABLE IF NOT EXISTS {this.OrmProvider.GetFieldName(tableSchema)}.{this.OrmProvider.GetTableName(tableName)}");
         builder.AppendLine();
