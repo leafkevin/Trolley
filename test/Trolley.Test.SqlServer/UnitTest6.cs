@@ -2109,4 +2109,27 @@ public class UnitTest6 : UnitTestBase
             }
         }
     }
+    [Fact]
+    public async Task CreateShardingTable()
+    {
+        var tenantId = "104";
+        var now = DateTime.Now;
+        var repository = this.dbFactory.Create();
+        var tableName1 = repository.GetShardingTableNameBy<Order>(tenantId, now);
+        var tableName2 = repository.GetShardingTableNameBy<Order>(tenantId, now.AddMonths(1));
+        var tableNames = new List<string> { tableName1, tableName2 };
+        var existedTableNames = repository.GetShardingTableNames<Order>(f => tableNames.Contains(f));
+        string sql = null;
+        if (existedTableNames.Count > 0)
+        {
+            sql = "DROP TABLE " + string.Join(";DROP TABLE ", existedTableNames);
+            await repository.ExecuteAsync(sql);
+        }
+        repository.CreateShardingTable<Order>(tableName1);
+        await repository.CreateShardingTableAsync<Order>(tableName2);
+        sql = $"DROP TABLE {tableName1};DROP TABLE {tableName2}";
+        await repository.ExecuteAsync(sql);
+        repository.CreateShardingTableBy<OrderDetail>(tenantId, now);
+        await repository.CreateShardingTableByAsync<OrderDetail>(tenantId, now.AddMonths(1));
+    }
 }
