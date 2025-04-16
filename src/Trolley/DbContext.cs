@@ -339,7 +339,9 @@ public sealed class DbContext
     public TResult QueryScalar<TResult>(IQueryVisitor visitor)
     {
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.IsUseMaster);
-        var sql = this.BuildSql(visitor, " UNION ALL ", out _);
+        (var isSuccess, var sql, _) = this.BuildSql(visitor, " UNION ALL ");
+        if (!isSuccess) return default;
+
         sql = this.BuildScalarShardingSql(visitor, sql);
         command.CommandText = sql;
         visitor.DbParameters.CopyTo(command.Parameters);
@@ -358,7 +360,9 @@ public sealed class DbContext
     public async Task<TResult> QueryScalarAsync<TResult>(IQueryVisitor visitor, CancellationToken cancellationToken = default)
     {
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.IsUseMaster);
-        (var sql, var readerFields) = await this.BuildSqlAsync(visitor, " UNION ALL ", cancellationToken);
+        (var isSuccess, var sql, var readerFields) = await this.BuildSqlAsync(visitor, " UNION ALL ", cancellationToken);
+        if (!isSuccess) return default;
+
         sql = this.BuildScalarShardingSql(visitor, sql);
         command.CommandText = sql;
         visitor.DbParameters.CopyTo(command.Parameters);
@@ -380,7 +384,9 @@ public sealed class DbContext
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.IsUseMaster);
         Expression<Func<TEntity, TEntity>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
-        var sql = this.BuildSql(visitor, " UNION ALL ", out var readerFields);
+        (var isSuccess, var sql, var readerFields) = this.BuildSql(visitor, " UNION ALL ");
+        if (!isSuccess) return default;
+
         command.CommandText = sql;
         visitor.DbParameters.CopyTo(command.Parameters);
 
@@ -411,7 +417,9 @@ public sealed class DbContext
 
         Expression<Func<TEntity, TEntity>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
-        (var sql, var readerFields) = await this.BuildSqlAsync(visitor, " UNION ALL ", cancellationToken);
+        (var isSuccess, var sql, var readerFields) = await this.BuildSqlAsync(visitor, " UNION ALL ", cancellationToken);
+        if (!isSuccess) return default;
+
         command.CommandText = sql;
         visitor.DbParameters.CopyTo(command.Parameters);
 
@@ -445,7 +453,9 @@ public sealed class DbContext
         Expression<Func<TResult, TResult>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
         visitor.IsNeedPaging = true;
-        var sql = this.BuildSql(visitor, " UNION ALL ", out var readerFields);
+        (var isSuccess, var sql, var readerFields) = this.BuildSql(visitor, " UNION ALL ");
+        if (!isSuccess) return default;
+
         command.CommandText = sql;
         visitor.DbParameters.CopyTo(command.Parameters);
 
@@ -486,7 +496,9 @@ public sealed class DbContext
         Expression<Func<TResult, TResult>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
         visitor.IsNeedPaging = true;
-        (var sql, var readerFields) = await this.BuildSqlAsync(visitor, " UNION ALL ", cancellationToken);
+        (var isSuccess, var sql, var readerFields) = await this.BuildSqlAsync(visitor, " UNION ALL ", cancellationToken);
+        if (!isSuccess) return result;
+
         command.CommandText = sql;
         visitor.DbParameters.CopyTo(command.Parameters);
 
@@ -698,30 +710,33 @@ public sealed class DbContext
     #endregion
 
     #region Sharding
-    public string BuildSql(IQueryVisitor visitor, string jointMark, out List<SqlFieldSegment> readerFields)
+    public (bool, string, List<SqlFieldSegment>) BuildSql(IQueryVisitor visitor, string jointMark)
     {
-        string sql = null;
-        readerFields = null;
-        if (visitor.IsNeedFetchShardingTables)
-            this.FetchShardingTables(visitor as SqlVisitor);
-        sql = visitor.BuildSql(out readerFields);
-        if (visitor.IsNeedFormatShardingTables)
-            sql = this.BuildShardingTablesSqlByFormat(visitor as SqlVisitor, sql, jointMark);
-        if (visitor.IsNeedUnionShardingTables)
-            sql = visitor.BuildShardingSql(sql);
-        return sql;
-    }
-    public async Task<(string, List<SqlFieldSegment>)> BuildSqlAsync(IQueryVisitor visitor, string jointMark, CancellationToken cancellationToken = default)
-    {
+        bool isSuccess = true;
         string sql = null;
         if (visitor.IsNeedFetchShardingTables)
-            await this.FetchShardingTablesAsync(visitor as SqlVisitor, cancellationToken);
+            isSuccess = this.FetchShardingTables(visitor as SqlVisitor);
+        if (!isSuccess) return (isSuccess, sql, null);
         sql = visitor.BuildSql(out var readerFields);
         if (visitor.IsNeedFormatShardingTables)
             sql = this.BuildShardingTablesSqlByFormat(visitor as SqlVisitor, sql, jointMark);
         if (visitor.IsNeedUnionShardingTables)
             sql = visitor.BuildShardingSql(sql);
-        return (sql, readerFields);
+        return (isSuccess, sql, readerFields);
+    }
+    public async Task<(bool, string, List<SqlFieldSegment>)> BuildSqlAsync(IQueryVisitor visitor, string jointMark, CancellationToken cancellationToken = default)
+    {
+        bool isSuccess = true;
+        string sql = null;
+        if (visitor.IsNeedFetchShardingTables)
+            isSuccess = await this.FetchShardingTablesAsync(visitor as SqlVisitor, cancellationToken);
+        if (!isSuccess) return (isSuccess, sql, null);
+        sql = visitor.BuildSql(out var readerFields);
+        if (visitor.IsNeedFormatShardingTables)
+            sql = this.BuildShardingTablesSqlByFormat(visitor as SqlVisitor, sql, jointMark);
+        if (visitor.IsNeedUnionShardingTables)
+            sql = visitor.BuildShardingSql(sql);
+        return (isSuccess, sql, readerFields);
     }
     public string BuildScalarShardingSql(IQueryVisitor visitor, string rawSql)
     {
@@ -750,7 +765,7 @@ public sealed class DbContext
         }
         return rawSql;
     }
-    public void FetchShardingTables(SqlVisitor visitor)
+    public bool FetchShardingTables(SqlVisitor visitor)
     {
         var fetchSql = visitor.BuildTableShardingsSql();
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.IsUseMaster);
@@ -762,13 +777,14 @@ public sealed class DbContext
         {
             shardingTables.Add(reader.ToValue<string>(this));
         }
-        visitor.SetShardingTables(shardingTables);
+        var hasTables = visitor.SetShardingTables(shardingTables);
 
         reader.Dispose();
         command.Dispose();
         if (isNeedClose) connection.Close();
+        return hasTables;
     }
-    public async Task FetchShardingTablesAsync(SqlVisitor visitor, CancellationToken cancellationToken = default)
+    public async Task<bool> FetchShardingTablesAsync(SqlVisitor visitor, CancellationToken cancellationToken = default)
     {
         var fetchSql = visitor.BuildTableShardingsSql();
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.IsUseMaster);
@@ -781,11 +797,12 @@ public sealed class DbContext
         {
             shardingTables.Add(reader.ToValue<string>(this));
         }
-        visitor.SetShardingTables(shardingTables);
+        var hasTables = visitor.SetShardingTables(shardingTables);
 
         await reader.DisposeAsync();
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
+        return hasTables;
     }
     public string BuildShardingTablesSqlByFormat(SqlVisitor visitor, string formatSql, string jointMark)
     {

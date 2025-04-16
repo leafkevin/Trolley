@@ -38,5 +38,5 @@ public interface IDeleteVisitor : IDisposable
 
     string GetTableName(TableSegment tableSegment);
     string BuildTableShardingsSql();
-    void SetShardingTables(List<string> shardingTables);
+    bool SetShardingTables(List<string> shardingTables);
 }

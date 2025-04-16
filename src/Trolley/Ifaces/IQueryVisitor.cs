@@ -55,7 +55,7 @@ public interface IQueryVisitor : IDisposable
     string BuildCteTableSql(string tableName, out List<SqlFieldSegment> readerFields, out bool isRecursive);
 
     string BuildTableShardingsSql();
-    void SetShardingTables(List<string> shardingTables);
+    bool SetShardingTables(List<string> shardingTables);
     void UseTable(bool isIncludeMany, params string[] tableNames);
     void UseTable(bool isIncludeMany, Func<string, bool> tableNamePredicate);
     void UseTableMap(bool isIncludeMany, Type masterEntityType, Func<string, string, string, string> tableNameGetter);

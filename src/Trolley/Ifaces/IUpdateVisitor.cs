@@ -54,7 +54,7 @@ public interface IUpdateVisitor : IDisposable
     DataTable ToDataTable(Type updateObjType, IEnumerable entities, List<(MemberMap, Func<object, object>)> memberMappers, string tableName = null);
     List<(MemberMap, Func<object, object>)> GetRefMemberMappers(Type entityType, EntityMap refEntityMapper, bool isUpdate = false);
     string BuildTableShardingsSql();
-    void SetShardingTables(List<string> shardingTables);
+    bool SetShardingTables(List<string> shardingTables);
     string GetTableName(TableSegment tableSegment);
     bool IsMemberVisit(Expression expr);
 }

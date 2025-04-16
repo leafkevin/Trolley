@@ -1205,7 +1205,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             for (int i = 0; i < this.GroupByFields.Count; i++)
             {
                 if (i > 0) builder.Append(',');
-                builder.Append(this.GroupByFields[i].Body);
+                var readerField = this.GroupByFields[i];
+                var fieldName = readerField.IsNeedAlias ? this.OrmProvider.GetFieldName(readerField.TargetMember.Name) : readerField.Body;
+                builder.Append(fieldName);
                 var orderField = new OrderByField { Field = this.GroupByFields[i] };
                 this.OrderByFields.Add(orderField);
                 if (orderType == "DESC")
@@ -1231,7 +1233,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                             for (int i = 0; i < this.GroupByFields.Count; i++)
                             {
                                 if (i > 0) builder.Append(',');
-                                builder.Append(this.GroupByFields[i].Body);
+                                var readerField = this.GroupByFields[i];
+                                var fieldName = readerField.IsNeedAlias ? this.OrmProvider.GetFieldName(readerField.TargetMember.Name) : readerField.Body;
+                                builder.Append(fieldName);
                                 var orderField = new OrderByField { Field = this.GroupByFields[i] };
                                 this.OrderByFields.Add(orderField);
                                 if (orderType == "DESC")
@@ -1278,7 +1282,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     else if (this.IsGroupingMember(memberExpr.Expression as MemberExpression))
                     {
                         var readerField = this.GroupByFields.Find(f => f.TargetMember.Name == memberExpr.Member.Name);
-                        builder.Append(readerField.Body);
+                        var fieldName = readerField.IsNeedAlias ? this.OrmProvider.GetFieldName(readerField.TargetMember.Name) : readerField.Body;
+                        builder.Append(fieldName);
                         var orderField = new OrderByField { Field = readerField };
                         this.OrderByFields.Add(orderField);
                         if (orderType == "DESC")
@@ -1290,7 +1295,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     else
                     {
                         var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = memberExpr });
-                        builder.Append(sqlSegment.Body ?? sqlSegment.Value.ToString());
+                        var fieldName = sqlSegment.IsNeedAlias ? this.OrmProvider.GetFieldName(sqlSegment.TargetMember.Name)
+                            : sqlSegment.Body ?? sqlSegment.Value.ToString();
+                        builder.Append(fieldName);
                         var orderField = new OrderByField { Field = sqlSegment };
                         this.OrderByFields.Add(orderField);
                         if (orderType == "DESC")
@@ -1726,6 +1733,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         }
                         sqlSegment.Body = fieldName;
                         sqlSegment.Fields = readerField.Fields;
+                        sqlSegment.IsNeedAlias = readerField.IsNeedAlias;
                     }
                 }
                 return sqlSegment;
@@ -1820,7 +1828,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 if (sqlSegment.FieldType != SqlFieldType.IncludeRef)
                 {
                     this.GetQuotedValue(sqlSegment, true);
-                    if (sqlSegment.IsConstant || sqlSegment.IsVariable || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
+                    if (sqlSegment.IsConstant || sqlSegment.IsVariable || sqlSegment.HasParameter || sqlSegment.IsExpression
+                        || sqlSegment.IsMethodCall || sqlSegment.FromMember != null && sqlSegment.FromMember.Name != memberInfo.Name)
                         sqlSegment.IsNeedAlias = true;
                 }
                 sqlSegment.TargetMember = memberInfo;
@@ -1842,7 +1851,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     sqlSegment.FieldType = SqlFieldType.Field;
                     //只有常量、方法调用、表达式计算，没有设置NativeDbType和TypeHandler，需要根据memberInfo类型获取
                     //常量和变量，暂时不做GetQuotedValue处理，在BuildSql时候，再进行处理，Value值保留
-                    if (sqlSegment.IsConstant || sqlSegment.IsVariable || sqlSegment.HasParameter || sqlSegment.IsExpression || sqlSegment.IsMethodCall)
+                    if (sqlSegment.IsConstant || sqlSegment.IsVariable || sqlSegment.HasParameter || sqlSegment.IsExpression
+                        || sqlSegment.IsMethodCall || sqlSegment.FromMember != null && sqlSegment.FromMember.Name != memberInfo.Name)
                         sqlSegment.IsNeedAlias = true;
                 }
                 sqlSegment.TargetMember = memberInfo;

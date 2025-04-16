@@ -661,7 +661,13 @@ public class Query<T> : QueryBase, IQuery<T>
     {
         Expression<Func<T, T>> defaultExpr = f => f;
         this.Visitor.SelectDefault(defaultExpr);
-        var sql = this.DbContext.BuildSql(this.Visitor, " UNION ALL ", out var readerFields);
+        (var isSuccess, var sql, var readerFields) = this.DbContext.BuildSql(this.Visitor, " UNION ALL ");
+        if (!isSuccess)
+        {
+            dbParameters = null;
+            return null;
+        }
+
         if (this.Visitor.IsNeedFetchShardingTables)
         {
             var builder = new StringBuilder(this.Visitor.BuildTableShardingsSql());

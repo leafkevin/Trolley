@@ -281,7 +281,7 @@ public class SqlVisitor : ISqlVisitor
     }
     public void UseMaster(bool isUseMaster = true) => this.IsUseMaster = isUseMaster;
     public virtual string BuildTableShardingsSql() => null;
-    public void SetShardingTables(List<string> shardingTables)
+    public bool SetShardingTables(List<string> shardingTables)
     {
         if (this.ShardingTables.Count > 1)
         {
@@ -340,7 +340,8 @@ public class SqlVisitor : ISqlVisitor
                         break;
                 }
                 if (tableNames == null || tableNames.Count == 0)
-                    throw new Exception($"没有搜索到满足条件的{tableSegment.Mapper.TableName}分表");
+                    return false;
+                //throw new Exception($"没有搜索到满足条件的{tableSegment.Mapper.TableName}分表");
             }
 
             //只有一个分表时，会移除ShardingTables里面元素，生成SQL时候，直接取tableSegment.Body
@@ -349,12 +350,14 @@ public class SqlVisitor : ISqlVisitor
             else
             {
                 if (tableNames == null || tableNames.Count == 0)
-                    throw new Exception($"没有搜索到满足条件的{tableSegment.Mapper.TableName}分表");
+                    return false;
+                //throw new Exception($"没有搜索到满足条件的{tableSegment.Mapper.TableName}分表");
                 tableSegment.Body = tableNames[0];
                 tableSegment.TableNames = null;
                 this.ShardingTables.Remove(tableSegment);
             }
         }
+        return true;
     }
 
     public virtual SqlFieldSegment VisitAndDeferred(SqlFieldSegment sqlSegment)
