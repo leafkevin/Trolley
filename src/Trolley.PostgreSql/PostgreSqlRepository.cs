@@ -82,7 +82,7 @@ public class PostgreSqlRepository : Repository, IPostgreSqlRepository
         using var reader = this.QueryMultiple(f =>
         {
             f.Query<TableInfo>($"select cast(obj_description(a.oid) as varchar) description,c.spcname tablespace from pg_class a inner join pg_namespace b on a.relnamespace=b.oid left join pg_tablespace c on a.reltablespace=c.oid where a.relkind='r' and b.nspname='{fromTableSchema}' and a.relname='{orgTableName}'")
-             .Query<ColumnInfo>(@$"select c.attnum ColumnIndex,c.attname ColumnName,c.attndims ArrayDimens,concat_ws('',d.typname,SUBSTRING(format_type(c.atttypid,c.atttypmod) from '\(.*\)')) columnType,e.description,pg_get_expr(f.adbin,f.adrelid) DefaultValue,g.refobjid IsIdentity,c.attnotnull IsRequired 
+             .Query<ColumnInfo>(@$"select c.attname ColumnName,c.attndims ArrayDimens,concat_ws('',d.typname,SUBSTRING(format_type(c.atttypid,c.atttypmod) from '\(.*\)')) columnType,e.description,pg_get_expr(f.adbin,f.adrelid) DefaultValue,g.refobjid IsIdentity,c.attnotnull IsRequired 
 from pg_class a inner join pg_namespace b on a.relnamespace=b.oid inner join pg_attribute c on a.oid=c.attrelid and c.attnum>0 inner join pg_type d on c.atttypid=d.oid left join pg_description e on e.objoid=c.attrelid and e.objsubid=c.attnum left join pg_attrdef f on a.oid=f.adrelid 
 and c.attnum=f.adnum left join (select dp.refobjid,dp.refobjsubid from pg_depend dp,pg_class cs where dp.objid=cs.oid and cs.relkind='S') g on a.oid=g.refobjid and c.attnum=g.refobjsubid where a.relkind='r' and b.nspname='{fromTableSchema}' and a.relname='{orgTableName}' order by c.attnum asc")
              .Query<IndexInfo>(@$"select c.attname ColumnName,b.relname IndexName,a.indisunique IsUnique,a.indisprimary IsPrimary,pg_index_column_has_property(b.oid,c.attnum,'desc') IsDesc,d.amname IndexType from pg_index a inner join pg_class b on b.oid=a.indexrelid 
@@ -217,7 +217,7 @@ and c.contype='f' INNER JOIN pg_attribute d ON d.attnum=ANY(c.conkey) AND d.attr
         using var reader = await this.QueryMultipleAsync(f =>
         {
             f.Query<TableInfo>($"select cast(obj_description(a.oid) as varchar) description,c.spcname tablespace from pg_class a inner join pg_namespace b on a.relnamespace=b.oid left join pg_tablespace c on a.reltablespace=c.oid where a.relkind='r' and b.nspname='{fromTableSchema}' and a.relname='{orgTableName}'")
-             .Query<ColumnInfo>(@$"select c.attnum ColumnIndex,c.attname ColumnName,c.attndims ArrayDimens,concat_ws('',d.typname,SUBSTRING(format_type(c.atttypid,c.atttypmod) from '\(.*\)')) columnType,e.description,pg_get_expr(f.adbin,f.adrelid) DefaultValue,g.refobjid IsIdentity,c.attnotnull IsRequired 
+             .Query<ColumnInfo>(@$"select c.attname ColumnName,c.attndims ArrayDimens,concat_ws('',d.typname,SUBSTRING(format_type(c.atttypid,c.atttypmod) from '\(.*\)')) columnType,e.description,pg_get_expr(f.adbin,f.adrelid) DefaultValue,g.refobjid IsIdentity,c.attnotnull IsRequired 
 from pg_class a inner join pg_namespace b on a.relnamespace=b.oid inner join pg_attribute c on a.oid=c.attrelid and c.attnum>0 inner join pg_type d on c.atttypid=d.oid left join pg_description e on e.objoid=c.attrelid and e.objsubid=c.attnum left join pg_attrdef f on a.oid=f.adrelid 
 and c.attnum=f.adnum left join (select dp.refobjid,dp.refobjsubid from pg_depend dp,pg_class cs where dp.objid=cs.oid and cs.relkind='S') g on a.oid=g.refobjid and c.attnum=g.refobjsubid where a.relkind='r' and b.nspname='{fromTableSchema}' and a.relname='{orgTableName}' order by c.attnum asc")
              .Query<IndexInfo>(@$"select c.attname ColumnName,b.relname IndexName,a.indisunique IsUnique,a.indisprimary IsPrimary,pg_index_column_has_property(b.oid,c.attnum,'desc') IsDesc,d.amname IndexType from pg_index a inner join pg_class b on b.oid=a.indexrelid 
@@ -349,6 +349,7 @@ and c.contype='f' INNER JOIN pg_attribute d ON d.attnum=ANY(c.conkey) AND d.attr
     class ColumnInfo
     {
         public string ColumnName { get; set; }
+        public string ArrayDimens { get; set; }
         public string ColumnType { get; set; }
         public string IsIdentity { get; set; }
         public bool IsRequired { get; set; }
