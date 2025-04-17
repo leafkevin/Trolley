@@ -106,7 +106,14 @@ and c.contype='f' INNER JOIN pg_attribute d ON d.attnum=ANY(c.conkey) AND d.attr
         {
             if (i > 0) builder.AppendLine(",");
             var columnInfo = columnInfos[i];
-            builder.Append($"{this.OrmProvider.GetFieldName(columnInfo.ColumnName)} {columnInfo.ColumnType}");
+            var columnType = columnInfo.ColumnType;
+            if (columnType.StartsWith("_") && columnInfo.ArrayDimens > 0)
+            {
+                columnType = columnType.Substring(1);
+                for (int j = 0; j < columnInfo.ArrayDimens; j++)
+                    columnType += "[]";
+            }
+            builder.Append($"{this.OrmProvider.GetFieldName(columnInfo.ColumnName)} {columnType}");
             if (columnInfo.IsRequired)
                 builder.Append(" NOT");
             builder.Append(" NULL");
@@ -241,7 +248,14 @@ and c.contype='f' INNER JOIN pg_attribute d ON d.attnum=ANY(c.conkey) AND d.attr
         {
             if (i > 0) builder.AppendLine(",");
             var columnInfo = columnInfos[i];
-            builder.Append($"{this.OrmProvider.GetFieldName(columnInfo.ColumnName)} {columnInfo.ColumnType}");
+            var columnType = columnInfo.ColumnType;
+            if (columnType.StartsWith("_") && columnInfo.ArrayDimens > 0)
+            {
+                columnType = columnType.Substring(1);
+                for (int j = 0; j < columnInfo.ArrayDimens; j++)
+                    columnType += "[]";
+            }
+            builder.Append($"{this.OrmProvider.GetFieldName(columnInfo.ColumnName)} {columnType}");
             if (columnInfo.IsRequired)
                 builder.Append(" NOT");
             builder.Append(" NULL");
@@ -349,7 +363,7 @@ and c.contype='f' INNER JOIN pg_attribute d ON d.attnum=ANY(c.conkey) AND d.attr
     class ColumnInfo
     {
         public string ColumnName { get; set; }
-        public string ArrayDimens { get; set; }
+        public int ArrayDimens { get; set; }
         public string ColumnType { get; set; }
         public string IsIdentity { get; set; }
         public bool IsRequired { get; set; }
