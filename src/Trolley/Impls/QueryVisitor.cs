@@ -187,7 +187,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             pageSql = pageSql.Replace(" /**others**/", others);
 
             if (this.IsNeedPaging && this.skip.HasValue && this.limit.HasValue)
-                builder.Append($"SELECT COUNT(*) FROM {tableSql}{whereSql};");
+            {
+                var myTableSql = $"{tableSql}{others}";
+                if (!string.IsNullOrEmpty(this.GroupBySql))
+                    myTableSql = $"(SELECT {selectSql} FROM {tableSql}{others}) a";
+                builder.Append($"SELECT COUNT(*) FROM {myTableSql};");
+            }
             builder.Append($"{pageSql}");
         }
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
