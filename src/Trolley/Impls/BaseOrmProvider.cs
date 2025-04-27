@@ -2341,7 +2341,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                             var elementArgument = visitor.GetQuotedValue(elementSegment);
                             return elementSegment.Merge(arraySegment, $"{elementArgument} {notString}IN ({builder})");
                         }
-                        else return elementSegment.Change("1<>0");
+                        else return elementSegment.Change("1=0");
                     });
                     result = true;
                 }
@@ -2371,7 +2371,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                             var notString = deferExprs.IsDeferredNot() ? "NOT " : "";
                             return elementSegment.Merge(targetSegment, $"{elementArgument} {notString}IN ({builder})");
                         }
-                        else return elementSegment.Change("1<>0");
+                        else return elementSegment.Change("1=0");
                     });
                     return true;
                 }

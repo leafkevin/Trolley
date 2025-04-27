@@ -45,7 +45,7 @@ partial class PostgreSqlProvider
                                 var elementArgument = visitor.GetQuotedValue(elementSegment);
                                 return elementSegment.Merge(arraySegment, $"{elementArgument} {notString}IN ({builder})");
                             }
-                            else return elementSegment.Change("1<>0");
+                            else return elementSegment.Change("1=0");
                         }
                         else if (arraySegment.HasField)
                         {
@@ -86,7 +86,7 @@ partial class PostgreSqlProvider
                                 var notString = deferExprs.IsDeferredNot() ? "NOT " : "";
                                 return elementSegment.Merge(targetSegment, $"{elementArgument} {notString}IN ({builder})");
                             }
-                            else return elementSegment.Change("1<>0");
+                            else return elementSegment.Change("1=0");
                         }
                         else if (targetSegment.HasField)
                         {
