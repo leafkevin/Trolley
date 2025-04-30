@@ -364,7 +364,32 @@ public class PostgreSqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, 
                 {
                     var builder = new StringBuilder();
                     (var tableName, var tabledInsertObjs, var insertObjs, var bulkCount,
-                        var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
+                        var firstSqlSetter, var loopSqlSetter, var tailSql, _) = this.Visitor.BuildWithBulk(command);
+
+                    Func<int, int> bulkExecute = null;
+                    if (!string.IsNullOrEmpty(tailSql))
+                    {
+                        bulkExecute = count =>
+                        {
+                            builder.Append(tailSql);
+                            command.CommandText = builder.ToString();
+                            count += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
+                            builder.Clear();
+                            command.Parameters.Clear();
+                            return count;
+                        };
+                    }
+                    else
+                    {
+                        bulkExecute = count =>
+                        {
+                            command.CommandText = builder.ToString();
+                            count += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
+                            builder.Clear();
+                            command.Parameters.Clear();
+                            return count;
+                        };
+                    }
                     int Execute(string tableName, IEnumerable insertObjs)
                     {
                         int count = 0, index = 0;
@@ -376,21 +401,13 @@ public class PostgreSqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, 
 
                             if (index >= bulkCount)
                             {
-                                command.CommandText = builder.ToString();
-                                count += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
-                                builder.Clear();
-                                command.Parameters.Clear();
+                                count = bulkExecute.Invoke(count);
                                 firstSqlSetter.Invoke(command.Parameters, builder, tableName);
                                 index = 0;
                             }
                         }
                         if (index > 0)
-                        {
-                            command.CommandText = builder.ToString();
-                            count += command.ExecuteNonQuery(CommandSqlType.BulkInsert);
-                            builder.Clear();
-                            command.Parameters.Clear();
-                        }
+                            count = bulkExecute.Invoke(count);
                         return count;
                     };
                     connection.Open();
@@ -461,7 +478,32 @@ public class PostgreSqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, 
                 {
                     var builder = new StringBuilder();
                     (var tableName, var tabledInsertObjs, var insertObjs, var bulkCount,
-                        var firstSqlSetter, var loopSqlSetter, _, _) = this.Visitor.BuildWithBulk(command);
+                        var firstSqlSetter, var loopSqlSetter, var tailSql, _) = this.Visitor.BuildWithBulk(command);
+
+                    Func<int, Task<int>> bulkExecute = null;
+                    if (!string.IsNullOrEmpty(tailSql))
+                    {
+                        bulkExecute = async count =>
+                        {
+                            builder.Append(tailSql);
+                            command.CommandText = builder.ToString();
+                            count += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
+                            builder.Clear();
+                            command.Parameters.Clear();
+                            return count;
+                        };
+                    }
+                    else
+                    {
+                        bulkExecute = async count =>
+                        {
+                            command.CommandText = builder.ToString();
+                            count += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
+                            builder.Clear();
+                            command.Parameters.Clear();
+                            return count;
+                        };
+                    }
                     async Task<int> Execute(string tableName, IEnumerable insertObjs)
                     {
                         int count = 0, index = 0;
@@ -473,21 +515,13 @@ public class PostgreSqlBulkContinuedCreate<TEntity> : ContinuedCreate<TEntity>, 
 
                             if (index >= bulkCount)
                             {
-                                command.CommandText = builder.ToString();
-                                count += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
-                                builder.Clear();
-                                command.Parameters.Clear();
+                                count = await bulkExecute.Invoke(count);
                                 firstSqlSetter.Invoke(command.Parameters, builder, tableName);
                                 index = 0;
                             }
                         }
                         if (index > 0)
-                        {
-                            command.CommandText = builder.ToString();
-                            count += await command.ExecuteNonQueryAsync(CommandSqlType.BulkInsert, cancellationToken);
-                            builder.Clear();
-                            command.Parameters.Clear();
-                        }
+                            count = await bulkExecute.Invoke(count);
                         return count;
                     };
                     await connection.OpenAsync(cancellationToken);

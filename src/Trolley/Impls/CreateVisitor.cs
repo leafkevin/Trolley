@@ -166,6 +166,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         var builder = new StringBuilder();
         (var tableName, var tabledInsertObjs, var insertObjs, _, var firstSqlSetter,
             var loopSqlSetter, var tailSql, readerFields) = this.BuildWithBulk(command);
+
         Action<string, IEnumerable> executor = null;
         if (tailSql != null)
         {

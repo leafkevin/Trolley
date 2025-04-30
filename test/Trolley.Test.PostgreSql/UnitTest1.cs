@@ -1466,9 +1466,46 @@ public class UnitTest1 : UnitTestBase
                 .Where(f => x.Excluded(f.TotalAmount) > f.TotalAmount))
             .ExecuteAsync();
         var order = await repository.GetByIdAsync<Order>("9");
+        var count1 = await repository.Create<Order>()
+             .WithBy(new
+             {
+                 Id = "9",
+                 TenantId = "3",
+                 OrderNo = "ON-001",
+                 BuyerId = 1,
+                 SellerId = 2,
+                 BuyerSource = buyerSource,
+                 TotalAmount = 600,
+                 Products = products,
+                 Disputes = new Dispute
+                 {
+                     Id = 2,
+                     Content = "无良商家",
+                     Result = "同意退款",
+                     Users = "Buyer2,Seller2",
+                     CreatedAt = DateTime.Now
+                 },
+                 IsEnabled = true,
+                 CreatedAt = DateTime.Now,
+                 CreatedBy = 1,
+                 UpdatedAt = DateTime.Now,
+                 UpdatedBy = 1
+             })
+             .OnConflict(x => x.UseKeys()
+                .Set(t => new
+                {
+                    TotalAmount = x.Excluded(t.TotalAmount),
+                    Products = x.Excluded(t.Products)
+                })
+                .Set(buyerSource.HasValue, f => f.BuyerSource, buyerSource)
+                .Where(f => x.Excluded(f.TotalAmount) > f.TotalAmount))
+            .ExecuteAsync();
+        var order1 = await repository.GetByIdAsync<Order>("9");
         await repository.CommitAsync();
         Assert.Equal(1, count);
         Assert.Equal(500, order.TotalAmount);
+        Assert.Equal(1, count1);
+        Assert.Equal(600, order1.TotalAmount);
         Assert.True(new JsonTypeHandler().ToFieldValue(null, order.Products).ToString() == new JsonTypeHandler().ToFieldValue(null, products).ToString());
 
         buyerSource = UserSourceType.Taobao;
@@ -1612,6 +1649,162 @@ public class UnitTest1 : UnitTestBase
         Assert.Equal(1, count);
         Assert.Equal(order.TotalAmount + 500, updatedOrder.TotalAmount);
         Assert.True(new JsonTypeHandler().ToFieldValue(null, updatedOrder.Products).ToString() == new JsonTypeHandler().ToFieldValue(null, new List<int> { 1, 2 }).ToString());
+    }
+    [Fact]
+    public async Task Insert_WithBulk_OnDuplicateKeyUpdate()
+    {
+        var repository = this.dbFactory.Create();
+        var sql = repository.Create<Product>()
+            .WithBulk(new[]
+            {
+                new
+                {
+                    Id = 1,
+                    ProductNo="PN-001",
+                    Name = "波司登羽绒服",
+                    BrandId = 1,
+                    CategoryId = 1,
+                    IsEnabled = true,
+                    CreatedAt = DateTime.Now,
+                    CreatedBy = 1,
+                    UpdatedAt = DateTime.Now,
+                    UpdatedBy = 1
+                },
+                new
+                {
+                    Id = 2,
+                    ProductNo="PN-002",
+                    Name = "雪中飞羽绒裤",
+                    BrandId = 2,
+                    CategoryId = 2,
+                    IsEnabled = true,
+                    CreatedAt = DateTime.Now,
+                    CreatedBy = 1,
+                    UpdatedAt = DateTime.Now,
+                    UpdatedBy = 1
+                },
+                new
+                {
+                    Id = 3,
+                    ProductNo="PN-003",
+                    Name = "优衣库保暖内衣",
+                    BrandId = 3,
+                    CategoryId = 3,
+                    IsEnabled = true,
+                    CreatedAt = DateTime.Now,
+                    CreatedBy = 1,
+                    UpdatedAt = DateTime.Now,
+                    UpdatedBy = 1
+                }
+            }, 50)
+            .OnConflict(x => x.UseKeys().Set(f => new
+            {
+                Name = x.Excluded(f.Name)
+            }))
+            .ToSql(out _);
+        Assert.Equal("INSERT INTO \"sys_product\" (\"Id\",\"ProductNo\",\"Name\",\"BrandId\",\"CategoryId\",\"IsEnabled\",\"CreatedAt\",\"CreatedBy\",\"UpdatedAt\",\"UpdatedBy\") VALUES (@Id0,@ProductNo0,@Name0,@BrandId0,@CategoryId0,@IsEnabled0,@CreatedAt0,@CreatedBy0,@UpdatedAt0,@UpdatedBy0),(@Id1,@ProductNo1,@Name1,@BrandId1,@CategoryId1,@IsEnabled1,@CreatedAt1,@CreatedBy1,@UpdatedAt1,@UpdatedBy1),(@Id2,@ProductNo2,@Name2,@BrandId2,@CategoryId2,@IsEnabled2,@CreatedAt2,@CreatedBy2,@UpdatedAt2,@UpdatedBy2) ON CONFLICT (\"Id\") DO UPDATE SET \"Name\"=EXCLUDED.\"Name\"", sql);
+
+        repository.BeginTransaction();
+        await repository.Delete<Product>().Where(new int[] { 1, 2, 3 }).ExecuteAsync();
+        var count = repository.Create<Product>()
+            .WithBulk(new[]
+            {
+                new
+                {
+                    Id = 1,
+                    ProductNo="PN-001",
+                    Name = "波司登羽绒服",
+                    BrandId = 1,
+                    CategoryId = 1,
+                    IsEnabled = true,
+                    CreatedAt = DateTime.Now,
+                    CreatedBy = 1,
+                    UpdatedAt = DateTime.Now,
+                    UpdatedBy = 1
+                },
+                new
+                {
+                    Id = 2,
+                    ProductNo="PN-002",
+                    Name = "雪中飞羽绒裤",
+                    BrandId = 2,
+                    CategoryId = 2,
+                    IsEnabled = true,
+                    CreatedAt = DateTime.Now,
+                    CreatedBy = 1,
+                    UpdatedAt = DateTime.Now,
+                    UpdatedBy = 1
+                },
+                new
+                {
+                    Id = 3,
+                    ProductNo="PN-003",
+                    Name = "优衣库保暖内衣",
+                    BrandId = 3,
+                    CategoryId = 3,
+                    IsEnabled = true,
+                    CreatedAt = DateTime.Now,
+                    CreatedBy = 1,
+                    UpdatedAt = DateTime.Now,
+                    UpdatedBy = 1
+                }
+            })
+            .OnConflict(x => x.UseKeys().Set(f => new
+            {
+                Name = x.Excluded(f.Name)
+            }))
+            .Execute();
+        var count1 = repository.Create<Product>()
+            .WithBulk(new[]
+            {
+                new
+                {
+                    Id = 1,
+                    ProductNo="PN-001",
+                    Name = "波司登羽绒服-11111",
+                    BrandId = 1,
+                    CategoryId = 1,
+                    IsEnabled = true,
+                    CreatedAt = DateTime.Now,
+                    CreatedBy = 1,
+                    UpdatedAt = DateTime.Now,
+                    UpdatedBy = 1
+                },
+                new
+                {
+                    Id = 2,
+                    ProductNo="PN-002",
+                    Name = "雪中飞羽绒裤-11111",
+                    BrandId = 2,
+                    CategoryId = 2,
+                    IsEnabled = true,
+                    CreatedAt = DateTime.Now,
+                    CreatedBy = 1,
+                    UpdatedAt = DateTime.Now,
+                    UpdatedBy = 1
+                },
+                new
+                {
+                    Id = 3,
+                    ProductNo="PN-003",
+                    Name = "优衣库保暖内衣-11111",
+                    BrandId = 3,
+                    CategoryId = 3,
+                    IsEnabled = true,
+                    CreatedAt = DateTime.Now,
+                    CreatedBy = 1,
+                    UpdatedAt = DateTime.Now,
+                    UpdatedBy = 1
+                }
+            })
+            .OnConflict(x => x.UseKeys().Set(f => new
+            {
+                Name = x.Excluded(f.Name)
+            }))
+            .Execute();
+        repository.Commit();
+        Assert.Equal(3, count);
+        Assert.Equal(3, count1);
     }
     [Fact]
     public async Task Insert_Returning()
