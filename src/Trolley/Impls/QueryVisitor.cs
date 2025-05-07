@@ -1873,6 +1873,18 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 sqlSegment.SegmentType = memberInfo.GetMemberType();
                 readerFields.Add(sqlSegment);
                 break;
+            case ExpressionType.AndAlso:
+            case ExpressionType.OrElse:
+                var trueExpr = this.OrmProvider.GetQuotedValue(typeof(bool), true);
+                var falseExpr = this.OrmProvider.GetQuotedValue(typeof(bool), false);
+                sqlSegment = this.VisitAndDeferred(sqlSegment);
+                var boolExpr = this.GetQuotedValue(sqlSegment, false);
+                sqlSegment.Body = $"(CASE WHEN {boolExpr} THEN {trueExpr} ELSE {falseExpr} END)";
+                sqlSegment.TargetMember = memberInfo;
+                sqlSegment.IsNeedAlias = true;
+                sqlSegment.SegmentType = memberInfo.GetMemberType();
+                readerFields.Add(sqlSegment);
+                break;
             default:
                 //常量或方法或表达式访问
                 sqlSegment = this.VisitAndDeferred(sqlSegment);

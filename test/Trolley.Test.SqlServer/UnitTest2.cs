@@ -2848,9 +2848,9 @@ SELECT a.[Id],a.[Name],a.[ParentId],b.[Url] FROM [myCteTable1] a INNER JOIN [myC
         var repository = this.dbFactory.Create();
         var sql = repository.From<Product, Brand>()
             .InnerJoin((x, y) => x.BrandId == y.Id)
-            .SelectFlattenTo((x, y) => new ProductInfo { IsEnabled = x.IsEnabled && y.IsEnabled })
+            .SelectFlattenTo((x, y) => new ProductInfo { IsEnabled = x.IsEnabled && y.IsEnabled || x.CompanyId.IsNull() })
             .ToSql(out _);
-        Assert.Equal("SELECT (CASE WHEN a.[IsEnabled]=1 AND b.[IsEnabled]=1 THEN 1 ELSE 0 END) AS [IsEnabled] FROM [sys_product] a INNER JOIN [sys_brand] b ON a.[BrandId]=b.[Id]", sql);
+        Assert.Equal("SELECT (CASE WHEN a.[IsEnabled]=1 AND b.[IsEnabled]=1 OR a.[CompanyId] IS NULL THEN 1 ELSE 0 END) AS [IsEnabled] FROM [sys_product] a INNER JOIN [sys_brand] b ON a.[BrandId]=b.[Id]", sql);
         var result = await repository.From<Product, Brand>()
             .InnerJoin((x, y) => x.BrandId == y.Id && x.IsEnabled && y.IsEnabled)
             .SelectFlattenTo((x, y) => new ProductInfo { IsEnabled = x.IsEnabled && y.IsEnabled })

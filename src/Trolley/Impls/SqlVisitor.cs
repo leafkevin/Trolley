@@ -607,7 +607,7 @@ public class SqlVisitor : ISqlVisitor
                         strLeft = $"{strLeft}={trueExpr}";
                     if (!rightSegment.IsExpression && !rightSegment.IsMethodCall)
                         strRight = $"{strRight}={trueExpr}";
-                    return sqlSegment.Merge(leftSegment, rightSegment, $"CASE WHEN {strLeft} {operators} {strRight} THEN {trueExpr} ELSE {falseExpr} END");
+                    return sqlSegment.Merge(leftSegment, rightSegment, $"{strLeft} {operators} {strRight}");
                 }
 
                 if (binaryExpr.NodeType == ExpressionType.Coalesce)
@@ -1026,8 +1026,8 @@ public class SqlVisitor : ISqlVisitor
                 }
                 else
                 {
-                    sqlSegment.Push(new DeferredExpr { OperationType = OperationType.Equal, Value = SqlFieldSegment.Null });
-                    sqlSegment = this.VisitAndDeferred(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                    sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                    sqlSegment.Change($"{this.GetQuotedValue(sqlSegment)} IS NULL");
                 }
                 break;
             case "ToParameter":

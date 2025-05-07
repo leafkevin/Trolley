@@ -2972,9 +2972,9 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
         var repository = this.dbFactory.Create();
         var sql = repository.From<Product, Brand>()
             .InnerJoin((x, y) => x.BrandId == y.Id)
-            .SelectFlattenTo((x, y) => new ProductInfo { IsEnabled = x.IsEnabled && y.IsEnabled })
+            .SelectFlattenTo((x, y) => new ProductInfo { IsEnabled = x.IsEnabled && y.IsEnabled || x.CompanyId.IsNull() })
             .ToSql(out _);
-        Assert.Equal("SELECT (CASE WHEN a.\"IsEnabled\"=TRUE AND b.\"IsEnabled\"=TRUE THEN TRUE ELSE FALSE END) AS \"IsEnabled\" FROM \"sys_product\" a INNER JOIN \"sys_brand\" b ON a.\"BrandId\"=b.\"Id\"", sql);
+        Assert.Equal("SELECT (CASE WHEN a.\"IsEnabled\"=TRUE AND b.\"IsEnabled\"=TRUE OR a.\"CompanyId\" IS NULL THEN TRUE ELSE FALSE END) AS \"IsEnabled\" FROM \"sys_product\" a INNER JOIN \"sys_brand\" b ON a.\"BrandId\"=b.\"Id\"", sql);
         var result = await repository.From<Product, Brand>()
             .InnerJoin((x, y) => x.BrandId == y.Id && x.IsEnabled && y.IsEnabled)
             .SelectFlattenTo((x, y) => new ProductInfo { IsEnabled = x.IsEnabled && y.IsEnabled })
