@@ -88,16 +88,31 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
 
         //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不对
         //SqlServer数据库，Union子句在SELECT * FROM包装后，每个列都需要有一个明确的列名，没有则需要增加as别名       	
-        if (this.IsManyShardingTables && !string.IsNullOrEmpty(this.GroupBySql))
+        if (this.IsManyShardingTables)
         {
-            //当有多分表时，有分组，Select字段中，没有完全的分组字段，则需要补全所有分组字段
-            foreach (var groupByField in this.GroupByFields)
+            if (!string.IsNullOrEmpty(this.GroupBySql))
             {
-                if (this.ReaderFields.Exists(f => f.FromMember == groupByField.FromMember))
-                    continue;
-                this.ReaderFields.Add(groupByField);
+                //当有多分表时，有分组，Select字段中，没有完全的分组字段，则需要补全所有分组字段
+                foreach (var groupByField in this.GroupByFields)
+                {
+                    if (this.ReaderFields.Exists(f => f.FromMember == groupByField.FromMember))
+                        continue;
+                    this.ReaderFields.Add(groupByField);
+                }
+            }
+            if (!string.IsNullOrEmpty(this.OrderBySql))
+            {
+                //当有多分表时，有排序，Select字段中，没有完全的分组字段，则需要补全所有分组字段
+                foreach (var orderByField in this.OrderByFields)
+                {
+                    if (this.ReaderFields.Exists(f => f.TargetMember.Name == orderByField.Field.FromMember.Name
+                        || f.FromMember == orderByField.Field.FromMember))
+                        continue;
+                    this.ReaderFields.Add(orderByField.Field);
+                }
             }
         }
+
         bool isNeedWrap = ((this.IsUnion || this.IsSecondUnion) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue))
             || (this.IsManyShardingTables && !this.skip.HasValue && this.limit.HasValue);
         this.AddSelectFieldsSql(builder, this.ReaderFields, isNeedWrap);
@@ -147,7 +162,7 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
             if (this.IsNeedPaging && this.skip.HasValue && this.limit.HasValue)
             {
                 var myTableSql = $"{tableSql}{others}";
-                if (!string.IsNullOrEmpty(this.GroupBySql))
+                if (this.IsNeedFullCountPaging)
                     myTableSql = $"(SELECT {selectSql} FROM {tableSql}{others}) a";
                 builder.Append($"SELECT COUNT(*) FROM {myTableSql};");
             }
@@ -262,16 +277,31 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
         if (this.ReaderFields == null)
             throw new Exception("缺少Select语句");
 
-        if (this.IsManyShardingTables && !string.IsNullOrEmpty(this.GroupBySql))
+        if (this.IsManyShardingTables)
         {
-            //当有多分表时，有分组，Select字段中，没有完全的分组字段，则需要补全所有分组字段
-            foreach (var groupByField in this.GroupByFields)
+            if (!string.IsNullOrEmpty(this.GroupBySql))
             {
-                if (this.ReaderFields.Exists(f => f.FromMember == groupByField.FromMember))
-                    continue;
-                this.ReaderFields.Add(groupByField);
+                //当有多分表时，有分组，Select字段中，没有完全的分组字段，则需要补全所有分组字段
+                foreach (var groupByField in this.GroupByFields)
+                {
+                    if (this.ReaderFields.Exists(f => f.FromMember == groupByField.FromMember))
+                        continue;
+                    this.ReaderFields.Add(groupByField);
+                }
+            }
+            if (!string.IsNullOrEmpty(this.OrderBySql))
+            {
+                //当有多分表时，有排序，Select字段中，没有完全的分组字段，则需要补全所有分组字段
+                foreach (var orderByField in this.OrderByFields)
+                {
+                    if (this.ReaderFields.Exists(f => f.TargetMember.Name == orderByField.Field.FromMember.Name
+                        || f.FromMember == orderByField.Field.FromMember))
+                        continue;
+                    this.ReaderFields.Add(orderByField.Field);
+                }
             }
         }
+
         //SqlServer数据库，Union子句在SELECT * FROM包装后，每个列都需要有一个明确的列名，没有则需要增加as别名
         bool isNeedWrap = ((this.IsUnion || this.IsSecondUnion) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue))
             || (this.IsManyShardingTables && !this.skip.HasValue && this.limit.HasValue);

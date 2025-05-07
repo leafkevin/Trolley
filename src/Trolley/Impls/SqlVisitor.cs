@@ -56,6 +56,7 @@ public class SqlVisitor : ISqlVisitor
     public bool IsNeedFormatShardingTables { get; set; }
     public bool IsManyShardingTables { get; set; }
     public string AggFieldAlias { get; set; }
+    public bool IsNeedFullCountPaging { get; set; }
     public List<TableSegment> ShardingTables { get; set; }
 
     public SqlVisitor() { }
@@ -775,17 +776,16 @@ public class SqlVisitor : ISqlVisitor
             //2.Select子句中Include导航成员引用访问，主表数据已经查询了，此处成员访问只是多一个引用赋值动作，做成了延迟委托调用
             string fields = null;
             List<SqlFieldSegment> readerFields = null;
-            if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count > 0)
+            var visitor = new MemberVisitor();
+            visitor.Visit(methodCallExpr);
+            //$"{f.OrderNo} : {f.TotalAmount.ToString("C")}"
+            //f.TotalAmount.ToString("C")
+            //"TotalAmount: " + (f.Price * f.Quantity).ToString("C")
+            //this.DeferredInvoke(f.Price, f.Quantity)
+            if (visitor.Members.Count > 0)
             {
                 readerFields = new List<SqlFieldSegment>();
                 var builder = new StringBuilder();
-                var visitor = new MemberVisitor();
-                visitor.Visit(methodCallExpr);
-                //$"{f.OrderNo} : {f.TotalAmount.ToString("C")}"
-                //f.TotalAmount.ToString("C")
-                //"TotalAmount: " + (f.Price * f.Quantity).ToString("C")
-                //this.DeferredInvoke(f.Price, f.Quantity)
-
                 foreach (var argsExpr in visitor.Members)
                 {
                     var argumentSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = argsExpr });
@@ -808,6 +808,7 @@ public class SqlVisitor : ISqlVisitor
                 if (readerFields.Count > 0)
                     fields = builder.ToString();
             }
+
             if (sqlSegment.IsDeferredFields || !string.IsNullOrEmpty(fields))
             {
                 if (readerFields == null)
@@ -1165,6 +1166,7 @@ public class SqlVisitor : ISqlVisitor
                 else sqlSegment.Change("COUNT(1)", false, true);
                 sqlSegment.IsAggField = true;
                 sqlSegment.AggFunc = "SUM";
+                this.IsNeedFullCountPaging = true;
                 break;
             case "CountDistinct":
             case "LongCountDistinct":
@@ -1176,6 +1178,7 @@ public class SqlVisitor : ISqlVisitor
                 sqlSegment.IsAggField = true;
                 //TODO:分表后，count(distinct)，这个聚合结果是不准确的
                 sqlSegment.AggFunc = "MAX";
+                this.IsNeedFullCountPaging = true;
                 break;
             case "Sum":
                 if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
@@ -1185,6 +1188,7 @@ public class SqlVisitor : ISqlVisitor
                 }
                 sqlSegment.IsAggField = true;
                 sqlSegment.AggFunc = "SUM";
+                this.IsNeedFullCountPaging = true;
                 break;
             case "Avg":
                 if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
@@ -1195,6 +1199,7 @@ public class SqlVisitor : ISqlVisitor
                 sqlSegment.IsAggField = true;
                 //TODO:分表后，avg()，这个聚合结果是不准确的
                 sqlSegment.AggFunc = "AVG";
+                this.IsNeedFullCountPaging = true;
                 break;
             case "Max":
                 if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
@@ -1204,6 +1209,7 @@ public class SqlVisitor : ISqlVisitor
                 }
                 sqlSegment.IsAggField = true;
                 sqlSegment.AggFunc = "MAX";
+                this.IsNeedFullCountPaging = true;
                 break;
             case "Min":
                 if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
@@ -1213,6 +1219,7 @@ public class SqlVisitor : ISqlVisitor
                 }
                 sqlSegment.IsAggField = true;
                 sqlSegment.AggFunc = "MIN";
+                this.IsNeedFullCountPaging = true;
                 break;
         }
         return sqlSegment;
@@ -1317,6 +1324,7 @@ public class SqlVisitor : ISqlVisitor
                     else builder.Append("COUNT(*)");
                     sqlSegment.IsAggField = true;
                     sqlSegment.AggFunc = "COUNT";
+                    this.IsNeedFullCountPaging = true;
                     break;
                 case "CountDistinct":
                 case "LongCountDistinct":
@@ -1327,6 +1335,7 @@ public class SqlVisitor : ISqlVisitor
                     }
                     sqlSegment.IsAggField = true;
                     sqlSegment.AggFunc = "COUNT_VALUE";
+                    this.IsNeedFullCountPaging = true;
                     break;
                 case "Sum":
                     if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
@@ -1336,6 +1345,7 @@ public class SqlVisitor : ISqlVisitor
                     }
                     sqlSegment.IsAggField = true;
                     sqlSegment.AggFunc = "SUM";
+                    this.IsNeedFullCountPaging = true;
                     break;
                 case "Avg":
                     if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
@@ -1345,6 +1355,7 @@ public class SqlVisitor : ISqlVisitor
                     }
                     sqlSegment.IsAggField = true;
                     sqlSegment.AggFunc = "AVG";
+                    this.IsNeedFullCountPaging = true;
                     break;
                 case "Max":
                     if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
@@ -1354,6 +1365,7 @@ public class SqlVisitor : ISqlVisitor
                     }
                     sqlSegment.IsAggField = true;
                     sqlSegment.AggFunc = "MAX";
+                    this.IsNeedFullCountPaging = true;
                     break;
                 case "Min":
                     if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
@@ -1363,6 +1375,7 @@ public class SqlVisitor : ISqlVisitor
                     }
                     sqlSegment.IsAggField = true;
                     sqlSegment.AggFunc = "MIN";
+                    this.IsNeedFullCountPaging = true;
                     break;
             }
         }

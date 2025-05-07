@@ -97,16 +97,31 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         if (this.IsDistinctOn)
             builder.Append($"DISTINCT ON ({this.DistinctOnSql}) ");
 
-        if (this.IsManyShardingTables && !string.IsNullOrEmpty(this.GroupBySql))
+        if (this.IsManyShardingTables)
         {
-            //当有多分表时，有分组，Select字段中，没有完全的分组字段，则需要补全所有分组字段
-            foreach (var groupByField in this.GroupByFields)
+            if (!string.IsNullOrEmpty(this.GroupBySql))
             {
-                if (this.ReaderFields.Exists(f => f.FromMember == groupByField.FromMember))
-                    continue;
-                this.ReaderFields.Add(groupByField);
+                //当有多分表时，有分组，Select字段中，没有完全的分组字段，则需要补全所有分组字段
+                foreach (var groupByField in this.GroupByFields)
+                {
+                    if (this.ReaderFields.Exists(f => f.FromMember == groupByField.FromMember))
+                        continue;
+                    this.ReaderFields.Add(groupByField);
+                }
+            }
+            if (!string.IsNullOrEmpty(this.OrderBySql))
+            {
+                //当有多分表时，有排序，Select字段中，没有完全的分组字段，则需要补全所有分组字段
+                foreach (var orderByField in this.OrderByFields)
+                {
+                    if (this.ReaderFields.Exists(f => f.TargetMember.Name == orderByField.Field.FromMember.Name
+                        || f.FromMember == orderByField.Field.FromMember))
+                        continue;
+                    this.ReaderFields.Add(orderByField.Field);
+                }
             }
         }
+
         this.AddSelectFieldsSql(builder, this.ReaderFields);
         if (this.IsManyShardingTables && this.AggFieldAlias != null)
             builder.Append($" AS {this.AggFieldAlias}");
@@ -154,7 +169,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
             if (this.IsNeedPaging && this.skip.HasValue && this.limit.HasValue)
             {
                 var myTableSql = $"{tableSql}{others}";
-                if (!string.IsNullOrEmpty(this.GroupBySql))
+                if (this.IsNeedFullCountPaging)
                     myTableSql = $"(SELECT {selectSql} FROM {tableSql}{others}) a";
                 builder.Append($"SELECT COUNT(*) FROM {myTableSql};");
             }
@@ -278,16 +293,31 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         if (this.IsDistinctOn)
             builder.Append($"DISTINCT ON ({this.DistinctOnSql}) ");
 
-        if (this.IsManyShardingTables && !string.IsNullOrEmpty(this.GroupBySql))
+        if (this.IsManyShardingTables)
         {
-            //当有多分表时，有分组，Select字段中，没有完全的分组字段，则需要补全所有分组字段
-            foreach (var groupByField in this.GroupByFields)
+            if (!string.IsNullOrEmpty(this.GroupBySql))
             {
-                if (this.ReaderFields.Exists(f => f.FromMember == groupByField.FromMember))
-                    continue;
-                this.ReaderFields.Add(groupByField);
+                //当有多分表时，有分组，Select字段中，没有完全的分组字段，则需要补全所有分组字段
+                foreach (var groupByField in this.GroupByFields)
+                {
+                    if (this.ReaderFields.Exists(f => f.FromMember == groupByField.FromMember))
+                        continue;
+                    this.ReaderFields.Add(groupByField);
+                }
+            }
+            if (!string.IsNullOrEmpty(this.OrderBySql))
+            {
+                //当有多分表时，有排序，Select字段中，没有完全的分组字段，则需要补全所有分组字段
+                foreach (var orderByField in this.OrderByFields)
+                {
+                    if (this.ReaderFields.Exists(f => f.TargetMember.Name == orderByField.Field.FromMember.Name
+                        || f.FromMember == orderByField.Field.FromMember))
+                        continue;
+                    this.ReaderFields.Add(orderByField.Field);
+                }
             }
         }
+
         this.AddSelectFieldsSql(builder, this.ReaderFields);
         if (this.IsManyShardingTables && this.AggFieldAlias != null)
             builder.Append($" AS {this.AggFieldAlias}");
