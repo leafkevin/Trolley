@@ -518,6 +518,8 @@ public class SqlVisitor : ISqlVisitor
             case ExpressionType.ExclusiveOr:
             case ExpressionType.RightShift:
             case ExpressionType.LeftShift:
+            case ExpressionType.AndAlso:
+            case ExpressionType.OrElse:
                 if (this.IsStringConcatOperator(sqlSegment, out var operatorSegment))
                     return operatorSegment;
                 //TODO:DateOnly,TimeOnly两个类型要做处理
@@ -596,6 +598,17 @@ public class SqlVisitor : ISqlVisitor
 
                 string strLeft = this.GetQuotedValue(leftSegment);
                 string strRight = this.GetQuotedValue(rightSegment);
+
+                if (binaryExpr.Type == typeof(bool) && (binaryExpr.NodeType == ExpressionType.AndAlso || binaryExpr.NodeType == ExpressionType.OrElse))
+                {
+                    var trueExpr = this.OrmProvider.GetQuotedValue(typeof(bool), true);
+                    var falseExpr = this.OrmProvider.GetQuotedValue(typeof(bool), false);
+                    if (!leftSegment.IsExpression && !leftSegment.IsMethodCall)
+                        strLeft = $"{strLeft}={trueExpr}";
+                    if (!rightSegment.IsExpression && !rightSegment.IsMethodCall)
+                        strRight = $"{strRight}={trueExpr}";
+                    return sqlSegment.Merge(leftSegment, rightSegment, $"CASE WHEN {strLeft} {operators} {strRight} THEN {trueExpr} ELSE {falseExpr} END");
+                }
 
                 if (binaryExpr.NodeType == ExpressionType.Coalesce)
                     return sqlSegment.Merge(leftSegment, rightSegment, $"{operators}({strLeft},{strRight})", false, true);

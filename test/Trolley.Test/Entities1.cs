@@ -270,3 +270,7 @@ public class UpdateEntity3
     public byte[] ByteArrayField { get; set; }
     public byte[] BitArrayField { get; set; }
 }
+public class ProductInfo
+{
+    public bool IsEnabled { get; set; }
+}

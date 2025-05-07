@@ -2966,5 +2966,20 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
             })
            .ToListAsync();
     }
+    [Fact]
+    public async Task SelectAndOrExpr()
+    {
+        var repository = this.dbFactory.Create();
+        var sql = repository.From<Product, Brand>()
+            .InnerJoin((x, y) => x.BrandId == y.Id)
+            .SelectFlattenTo((x, y) => new ProductInfo { IsEnabled = x.IsEnabled && y.IsEnabled })
+            .ToSql(out _);
+        Assert.Equal("SELECT (CASE WHEN a.\"IsEnabled\"=TRUE AND b.\"IsEnabled\"=TRUE THEN TRUE ELSE FALSE END) AS \"IsEnabled\" FROM \"sys_product\" a INNER JOIN \"sys_brand\" b ON a.\"BrandId\"=b.\"Id\"", sql);
+        var result = await repository.From<Product, Brand>()
+            .InnerJoin((x, y) => x.BrandId == y.Id && x.IsEnabled && y.IsEnabled)
+            .SelectFlattenTo((x, y) => new ProductInfo { IsEnabled = x.IsEnabled && y.IsEnabled })
+            .FirstAsync();
+        Assert.Equal(true, result.IsEnabled);
+    }
     private string DeferInvoke() => "DeferInvoke";
 }
