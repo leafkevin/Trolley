@@ -139,7 +139,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 //当有多分表时，有分组，Select字段中，没有完全的分组字段，则需要补全所有分组字段
                 foreach (var groupByField in this.GroupByFields)
                 {
-                    if (this.ReaderFields.Exists(f => f.FromMember == groupByField.FromMember))
+                    var memberInfo = groupByField.TargetMember ?? groupByField.FromMember;
+                    if (this.ReaderFields.Exists(f => f.FromMember == memberInfo))
                         continue;
                     this.ReaderFields.Add(groupByField);
                 }
@@ -149,8 +150,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 //当有多分表时，有排序，Select字段中，没有完全的分组字段，则需要补全所有分组字段
                 foreach (var orderByField in this.OrderByFields)
                 {
-                    if (this.ReaderFields.Exists(f => f.TargetMember.Name == orderByField.Field.FromMember.Name
-                        || f.FromMember == orderByField.Field.FromMember))
+                    var memberInfo = orderByField.Field.TargetMember ?? orderByField.Field.FromMember;
+                    if (this.ReaderFields.Exists(f => f.TargetMember.Name == memberInfo.Name || f.FromMember == memberInfo))
                         continue;
                     this.ReaderFields.Add(orderByField.Field);
                 }
@@ -340,8 +341,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 //当有多分表时，有排序，Select字段中，没有完全的分组字段，则需要补全所有分组字段
                 foreach (var orderByField in this.OrderByFields)
                 {
-                    if (this.ReaderFields.Exists(f => f.TargetMember.Name == orderByField.Field.FromMember.Name
-                        || f.FromMember == orderByField.Field.FromMember))
+                    var memberInfo = orderByField.Field.TargetMember ?? orderByField.Field.FromMember;
+                    if (this.ReaderFields.Exists(f => f.TargetMember.Name == memberInfo.Name || f.FromMember == memberInfo))
                         continue;
                     this.ReaderFields.Add(orderByField.Field);
                 }
