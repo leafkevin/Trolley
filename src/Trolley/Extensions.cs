@@ -75,6 +75,15 @@ public static class Extensions
         var builder = new TableShardingBuilder(tableShardingProvider);
         configuration.OnModelCreating(builder);
     }
+    public static void UseTableSharding<TTableShardingConfiguration>(this IOrmDbFactory dbFactory, OrmProviderType ormProviderType) where TTableShardingConfiguration : class, ITableShardingConfiguration, new()
+    {
+        if (!dbFactory.TryGetTableShardingProvider(ormProviderType, out var tableShardingProvider))
+            dbFactory.AddTableShardingProvider(ormProviderType, tableShardingProvider = new TableShardingProvider());
+
+        var builder = new TableShardingBuilder(tableShardingProvider);
+        var configuration = new TTableShardingConfiguration();
+        configuration.OnModelCreating(builder);
+    }
     public static void UseTableSharding(this IOrmDbFactory dbFactory, string dbKey, Action<TableShardingBuilder> shardingInitializer)
     {
         if (shardingInitializer == null)
@@ -95,6 +104,15 @@ public static class Extensions
             dbFactory.AddTableShardingProvider(dbKey, tableShardingProvider = new TableShardingProvider());
 
         var builder = new TableShardingBuilder(tableShardingProvider);
+        configuration.OnModelCreating(builder);
+    }
+    public static void UseTableSharding<TTableShardingConfiguration>(this IOrmDbFactory dbFactory, string dbKey) where TTableShardingConfiguration : class, ITableShardingConfiguration, new()
+    {
+        if (!dbFactory.TryGetTableShardingProvider(dbKey, out var tableShardingProvider))
+            dbFactory.AddTableShardingProvider(dbKey, tableShardingProvider = new TableShardingProvider());
+
+        var builder = new TableShardingBuilder(tableShardingProvider);
+        var configuration = new TTableShardingConfiguration();
         configuration.OnModelCreating(builder);
     }
 
