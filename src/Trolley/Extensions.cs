@@ -52,6 +52,52 @@ public static class Extensions
     }
     public static void Configure<TModelConfiguration>(this IOrmDbFactory dbFactory, string dbKey) where TModelConfiguration : class, IModelConfiguration, new()
        => dbFactory.Configure(dbKey, new TModelConfiguration());
+
+    public static void UseTableSharding(this IOrmDbFactory dbFactory, OrmProviderType ormProviderType, Action<TableShardingBuilder> shardingInitializer)
+    {
+        if (shardingInitializer == null)
+            throw new ArgumentNullException(nameof(shardingInitializer));
+
+        if (!dbFactory.TryGetTableShardingProvider(ormProviderType, out var tableShardingProvider))
+            dbFactory.AddTableShardingProvider(ormProviderType, tableShardingProvider = new TableShardingProvider());
+
+        var builder = new TableShardingBuilder(tableShardingProvider);
+        shardingInitializer.Invoke(builder);
+    }
+    public static void UseTableSharding(this IOrmDbFactory dbFactory, OrmProviderType ormProviderType, ITableShardingConfiguration configuration)
+    {
+        if (configuration == null)
+            throw new ArgumentNullException(nameof(configuration));
+
+        if (!dbFactory.TryGetTableShardingProvider(ormProviderType, out var tableShardingProvider))
+            dbFactory.AddTableShardingProvider(ormProviderType, tableShardingProvider = new TableShardingProvider());
+
+        var builder = new TableShardingBuilder(tableShardingProvider);
+        configuration.OnModelCreating(builder);
+    }
+    public static void UseTableSharding(this IOrmDbFactory dbFactory, string dbKey, Action<TableShardingBuilder> shardingInitializer)
+    {
+        if (shardingInitializer == null)
+            throw new ArgumentNullException(nameof(shardingInitializer));
+
+        if (!dbFactory.TryGetTableShardingProvider(dbKey, out var tableShardingProvider))
+            dbFactory.AddTableShardingProvider(dbKey, tableShardingProvider = new TableShardingProvider());
+
+        var builder = new TableShardingBuilder(tableShardingProvider);
+        shardingInitializer.Invoke(builder);
+    }
+    public static void UseTableSharding(this IOrmDbFactory dbFactory, string dbKey, ITableShardingConfiguration configuration)
+    {
+        if (configuration == null)
+            throw new ArgumentNullException(nameof(configuration));
+
+        if (!dbFactory.TryGetTableShardingProvider(dbKey, out var tableShardingProvider))
+            dbFactory.AddTableShardingProvider(dbKey, tableShardingProvider = new TableShardingProvider());
+
+        var builder = new TableShardingBuilder(tableShardingProvider);
+        configuration.OnModelCreating(builder);
+    }
+
     public static string GetQuotedValue(this IOrmProvider ormProvider, object value)
         => ormProvider.GetQuotedValue(value.GetType(), value);
     public static EntityMap GetEntityMap(this IEntityMapProvider mapProvider, Type entityType)
