@@ -34,6 +34,7 @@ public static class Extensions
         => builder.UseTableSharding(ormProviderType, new TTableShardingConfiguration());
     public static OrmDbFactoryBuilder UseTableSharding<TTableShardingConfiguration>(this OrmDbFactoryBuilder builder, string dbKey) where TTableShardingConfiguration : class, ITableShardingConfiguration, new()
         => builder.UseTableSharding(dbKey, new TTableShardingConfiguration());
+
     public static OrmDbFactoryBuilder UseFieldMapHandler<TFieldMapHandler>(this OrmDbFactoryBuilder builder) where TFieldMapHandler : class, IFieldMapHandler, new()
         => builder.UseFieldMapHandler(new TFieldMapHandler());
     public static void Configure(this IOrmDbFactory dbFactory, OrmProviderType ormProviderType, IModelConfiguration configuration)
@@ -118,6 +119,7 @@ public static class Extensions
 
     public static string GetQuotedValue(this IOrmProvider ormProvider, object value)
         => ormProvider.GetQuotedValue(value.GetType(), value);
+
     public static EntityMap GetEntityMap(this IEntityMapProvider mapProvider, Type entityType)
     {
         if (!mapProvider.TryGetEntityMap(entityType, out var mapper))

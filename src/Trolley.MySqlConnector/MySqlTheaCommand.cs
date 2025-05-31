@@ -105,6 +105,7 @@ class MySqlTheaCommand : ITheaCommand
             if (this.IsNeedClose) this.connection.Close();
             throw exception;
         }
+        else if (this.IsNeedClose) this.connection.Close();
         return recordsAffected;
     }
     public async Task<int> ExecuteNonQueryAsync(CommandSqlType sqlType, CancellationToken cancellationToken = default)
@@ -160,6 +161,7 @@ class MySqlTheaCommand : ITheaCommand
             if (this.IsNeedClose) await this.connection.CloseAsync();
             throw exception;
         }
+        else if (this.IsNeedClose) await this.connection.CloseAsync();
         return recordsAffected;
     }
     public ITheaDataReader ExecuteReader(CommandSqlType sqlType, CommandBehavior behavior = default)
@@ -216,6 +218,7 @@ class MySqlTheaCommand : ITheaCommand
             if (this.IsNeedClose) this.connection.Close();
             throw exception;
         }
+        else if (this.IsNeedClose) this.connection.Close();
         return new MySqlTheaDataReader(reader);
     }
     public async Task<ITheaDataReader> ExecuteReaderAsync(CommandSqlType sqlType, CommandBehavior behavior = default, CancellationToken cancellationToken = default)
@@ -271,6 +274,7 @@ class MySqlTheaCommand : ITheaCommand
             if (this.IsNeedClose) await this.connection.CloseAsync();
             throw exception;
         }
+        else if (this.IsNeedClose) await this.connection.CloseAsync();
         return new MySqlTheaDataReader(reader);
     }
     public object ExecuteScalar(CommandSqlType sqlType)
@@ -326,6 +330,7 @@ class MySqlTheaCommand : ITheaCommand
             if (this.IsNeedClose) this.connection.Close();
             throw exception;
         }
+        else if (this.IsNeedClose) this.connection.Close();
         return result;
     }
     public async Task<object> ExecuteScalarAsync(CommandSqlType sqlType, CancellationToken cancellationToken = default)
@@ -381,6 +386,7 @@ class MySqlTheaCommand : ITheaCommand
             if (this.IsNeedClose) await this.connection.CloseAsync();
             throw exception;
         }
+        else if (this.IsNeedClose) await this.connection.CloseAsync();
         return result;
     }
     public void Dispose()

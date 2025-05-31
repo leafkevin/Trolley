@@ -1227,8 +1227,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual void OrderBy(string orderType, Expression expr)
     {
         var lambdaExpr = expr as LambdaExpression;
-        if (lambdaExpr.Body.NodeType != ExpressionType.New && lambdaExpr.Body.NodeType != ExpressionType.MemberAccess)
-            throw new Exception("不支持的表达式访问，OrderBy只支持New或MemberAccess表达式");
 
         this.ClearUnionSql();
         var builder = new StringBuilder();
@@ -1343,6 +1341,15 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                             builder.Append(" DESC");
                             orderField.OrderSuffix = " DESC";
                         }
+                    }
+                    break;
+                default:
+                    {
+                        var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = expr });
+                        var fieldName = sqlSegment.Body ?? sqlSegment.Value.ToString();
+                        builder.Append(fieldName);
+                        if (orderType == "DESC")
+                            builder.Append(" DESC");
                     }
                     break;
             }
