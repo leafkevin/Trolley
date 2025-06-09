@@ -12,6 +12,7 @@ public class MultiGroupingQueryBase<TGrouping> : QueryInternal, IMultiGroupingQu
     #region Constructor
     public MultiGroupingQueryBase(IMultipleQuery multiQuery, IQueryVisitor visitor)
     {
+        this.DbContext = multiQuery.DbContext;
         this.MultipleQuery = multiQuery;
         this.Visitor = visitor;
     }

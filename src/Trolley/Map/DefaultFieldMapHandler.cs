@@ -13,6 +13,7 @@ public class DbTableInfo
 }
 public class DbColumnInfo
 {
+    public string TableName { get; set; }
     public string FieldName { get; set; }
     public string DataType { get; set; }
     public int ArrayDimens { get; set; }

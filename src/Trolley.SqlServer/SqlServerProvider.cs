@@ -355,6 +355,7 @@ sys.index_columns ic,sys.indexes i where ic.object_id=i.object_id and ic.index_i
             }
             tableInfo.Columns.Add(new DbColumnInfo
             {
+                TableName = tableName,
                 FieldName = reader.ToFieldValue<string>(2),
                 DataType = reader.ToFieldValue<string>(3),
                 DbColumnType = reader.ToFieldValue<string>(4),

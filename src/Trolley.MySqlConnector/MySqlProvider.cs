@@ -322,6 +322,7 @@ public partial class MySqlProvider : BaseOrmProvider
             }
             var conlumnInfo = new DbColumnInfo
             {
+                TableName = tableName,
                 FieldName = reader.ToFieldValue<string>(2),
                 DataType = reader.ToFieldValue<string>(3),
                 DbColumnType = reader.ToFieldValue<string>(4),

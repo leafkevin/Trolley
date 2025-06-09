@@ -516,7 +516,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         else if (!string.IsNullOrEmpty(orderBy))
         {
-            if (!isFormated) builder.Append($"SELECT * FROM ({sql}) a");
+            if (isFormated) builder.Append(sql);
+            else builder.Append($"SELECT * FROM ({sql}) a");
             builder.Append($" {orderBy}");
             sql = builder.ToString();
         }

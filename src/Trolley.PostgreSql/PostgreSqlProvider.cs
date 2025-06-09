@@ -2401,6 +2401,7 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
             }
             tableInfo.Columns.Add(new DbColumnInfo
             {
+                TableName = tableName,
                 FieldName = fieldName,
                 DataType = dataType,
                 DbColumnType = columnType,
