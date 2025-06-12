@@ -96,8 +96,6 @@ public class SqlVisitor : ISqlVisitor
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
         if (this.ShardingProvider == null || !this.ShardingProvider.TryGetTableSharding(tableSegment.EntityType, out var tableShardingInfo))
             throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表，无需调用此方法");
-        if (tableShardingInfo.DependOnMembers == null || tableShardingInfo.DependOnMembers.Count == 0)
-            throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表依赖的字段");
 
         tableSegment.IsSharding = true;
         tableSegment.ShardingType = ShardingTableType.MasterFilter;
@@ -116,8 +114,6 @@ public class SqlVisitor : ISqlVisitor
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
         if (this.ShardingProvider == null || !this.ShardingProvider.TryGetTableSharding(tableSegment.EntityType, out var shardingTable))
             throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表，无需调用此方法");
-        if (shardingTable.DependOnMembers == null || shardingTable.DependOnMembers.Count == 0)
-            throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表依赖的字段");
 
         tableSegment.IsSharding = true;
         tableSegment.ShardingType = ShardingTableType.SubordinateMap;
@@ -143,27 +139,25 @@ public class SqlVisitor : ISqlVisitor
     {
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
         if (this.ShardingProvider == null || !this.ShardingProvider.TryGetTableSharding(tableSegment.EntityType, out var shardingTable))
-            throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表，无需调用此方法");
-        if (shardingTable.DependOnMembers == null || shardingTable.DependOnMembers.Count == 0)
-            throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表依赖的字段");
+            throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表，不能调用此方法");
 
         tableSegment.IsSharding = true;
         var origTableName = tableSegment.Mapper.TableName;
         string tableName = null;
 
         if (field1Value == null)
-            throw new ArgumentNullException($"实体{tableSegment.EntityType.FullName}的分表规则依赖字段，字段值field1Value不能为null");
+            throw new ArgumentNullException($"实体{tableSegment.EntityType.FullName}表有配置分表规则依赖，字段值field1Value不能为null");
 
-        if (shardingTable.DependOnMembers.Count > 1)
+        if (field2Value != null)
         {
-            if (field2Value == null)
-                throw new ArgumentNullException($"实体{tableSegment.EntityType.FullName}的分表规则依赖2个字段，字段值field2Value不能为null");
             var shardingRule = shardingTable.Rule as Func<string, object, object, string>;
+            if (shardingRule == null) throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表规则，不能调用此方法");
             tableName = shardingRule.Invoke(origTableName, field1Value, field2Value);
         }
         else
         {
             var shardingRule = shardingTable.Rule as Func<string, object, string>;
+            if (shardingRule == null) throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表规则，不能调用此方法");
             tableName = shardingRule.Invoke(origTableName, field1Value);
         }
         //单个分表，直接设置body表名，当作不分表处理
@@ -195,15 +189,12 @@ public class SqlVisitor : ISqlVisitor
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
         if (this.ShardingProvider == null || !this.ShardingProvider.TryGetTableSharding(tableSegment.EntityType, out var shardingTable))
             throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表，无需调用此方法");
-        if (shardingTable.DependOnMembers == null || shardingTable.DependOnMembers.Count == 0)
-            throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表依赖的字段");
-        if (shardingTable.DependOnMembers.Count > 1)
-            throw new NotSupportedException($"实体表{tableSegment.EntityType.FullName}的分表规则依赖2个字段，不能使用此方法");
 
         tableSegment.IsSharding = true;
         tableSegment.ShardingType = ShardingTableType.TableRange;
         var origTableName = tableSegment.Mapper.TableName;
         var shardingRule = shardingTable.RangleRule as Func<string, object, object, List<string>>;
+        if (shardingRule == null) throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表范围规则，不能调用此方法");
         var tableNames = shardingRule.Invoke(origTableName, beginFieldValue, endFieldValue);
 
         tableSegment.ShardingType = ShardingTableType.TableRange;
@@ -237,14 +228,11 @@ public class SqlVisitor : ISqlVisitor
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
         if (this.ShardingProvider == null || !this.ShardingProvider.TryGetTableSharding(tableSegment.EntityType, out var shardingTable))
             throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表，无需调用此方法");
-        if (shardingTable.DependOnMembers == null || shardingTable.DependOnMembers.Count == 0)
-            throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表依赖的字段");
-        if (shardingTable.DependOnMembers.Count == 1)
-            throw new NotSupportedException($"实体{tableSegment.EntityType.FullName}的分表规则依赖1个字段，不能使用此方法");
 
         tableSegment.IsSharding = true;
         var origTableName = tableSegment.Mapper.TableName;
         var shardingRule = shardingTable.RangleRule as Func<string, object, object, object, List<string>>;
+        if (shardingRule == null) throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表范围规则，不能调用此方法");
         var tableNames = shardingRule.Invoke(origTableName, fieldValue1, fieldValue2, fieldValue3);
 
         tableSegment.ShardingType = ShardingTableType.TableRange;
