@@ -16,33 +16,93 @@ public class Query<T1, T2> : QueryBase, IQuery<T1, T2>
     #region Sharding
     public virtual IQuery<T1, T2> UseTable(params string[] tableNames)
     {
+        if (tableNames == null || tableNames.Length <= 0)
+            throw new ArgumentNullException(nameof(tableNames), "tableNames参数不能为空");
+
         this.Visitor.UseTable(false, tableNames);
         return this;
     }
     public virtual IQuery<T1, T2> UseTable(Func<string, bool> tableNamePredicate)
     {
+        if (tableNamePredicate == null)
+            throw new ArgumentNullException(nameof(tableNamePredicate), "tableNamePredicate参数不能为空");
+
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
     public virtual IQuery<T1, T2> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
+        if (tableNameGetter == null)
+            throw new ArgumentNullException(nameof(tableNameGetter), "tableNameGetter参数不能为空");
+
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
         return this;
     }
-    public virtual IQuery<T1, T2> UseTableBy(object field1Value, object field2Value = null)
+    public virtual IQuery<T1, T2> UseTableBy(object fieldValue)
     {
+        if (fieldValue == null)
+            throw new ArgumentNullException(nameof(fieldValue), "fieldValue参数不能为空");
+
+        this.Visitor.UseTableBy(false, fieldValue);
+        return this;
+    }
+    public virtual IQuery<T1, T2> UseTableBy(object field1Value, object field2Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+
         this.Visitor.UseTableBy(false, field1Value, field2Value);
+        return this;
+    }
+    public virtual IQuery<T1, T2> UseTableBy(object field1Value, object field2Value, object field3Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+        if (field3Value == null)
+            throw new ArgumentNullException(nameof(field3Value), "field3Value参数不能为空");
+
+        this.Visitor.UseTableBy(false, field1Value, field2Value, field3Value);
         return this;
     }
     public virtual IQuery<T1, T2> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
+        if (beginFieldValue == null)
+            throw new ArgumentNullException(nameof(beginFieldValue), "beginFieldValue参数不能为空");
+        if (endFieldValue == null)
+            throw new ArgumentNullException(nameof(endFieldValue), "endFieldValue参数不能为空");
+
         this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public virtual IQuery<T1, T2> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public virtual IQuery<T1, T2> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (beginField2Value == null)
+            throw new ArgumentNullException(nameof(beginField2Value), "beginField2Value参数不能为空");
+        if (endField2Value == null)
+            throw new ArgumentNullException(nameof(endField2Value), "endField2Value参数不能为空");
+
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public virtual IQuery<T1, T2> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+        if (beginField3Value == null)
+            throw new ArgumentNullException(nameof(beginField3Value), "beginField3Value参数不能为空");
+        if (endField3Value == null)
+            throw new ArgumentNullException(nameof(endField3Value), "endField3Value参数不能为空");
+
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -258,33 +318,93 @@ public class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
     #region Sharding
     public virtual IQuery<T1, T2, T3> UseTable(params string[] tableNames)
     {
+        if (tableNames == null || tableNames.Length <= 0)
+            throw new ArgumentNullException(nameof(tableNames), "tableNames参数不能为空");
+
         this.Visitor.UseTable(false, tableNames);
         return this;
     }
     public virtual IQuery<T1, T2, T3> UseTable(Func<string, bool> tableNamePredicate)
     {
+        if (tableNamePredicate == null)
+            throw new ArgumentNullException(nameof(tableNamePredicate), "tableNamePredicate参数不能为空");
+
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
     public virtual IQuery<T1, T2, T3> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
+        if (tableNameGetter == null)
+            throw new ArgumentNullException(nameof(tableNameGetter), "tableNameGetter参数不能为空");
+
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
         return this;
     }
-    public virtual IQuery<T1, T2, T3> UseTableBy(object field1Value, object field2Value = null)
+    public virtual IQuery<T1, T2, T3> UseTableBy(object fieldValue)
     {
+        if (fieldValue == null)
+            throw new ArgumentNullException(nameof(fieldValue), "fieldValue参数不能为空");
+
+        this.Visitor.UseTableBy(false, fieldValue);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3> UseTableBy(object field1Value, object field2Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+
         this.Visitor.UseTableBy(false, field1Value, field2Value);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3> UseTableBy(object field1Value, object field2Value, object field3Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+        if (field3Value == null)
+            throw new ArgumentNullException(nameof(field3Value), "field3Value参数不能为空");
+
+        this.Visitor.UseTableBy(false, field1Value, field2Value, field3Value);
         return this;
     }
     public virtual IQuery<T1, T2, T3> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
+        if (beginFieldValue == null)
+            throw new ArgumentNullException(nameof(beginFieldValue), "beginFieldValue参数不能为空");
+        if (endFieldValue == null)
+            throw new ArgumentNullException(nameof(endFieldValue), "endFieldValue参数不能为空");
+
         this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public virtual IQuery<T1, T2, T3> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public virtual IQuery<T1, T2, T3> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (beginField2Value == null)
+            throw new ArgumentNullException(nameof(beginField2Value), "beginField2Value参数不能为空");
+        if (endField2Value == null)
+            throw new ArgumentNullException(nameof(endField2Value), "endField2Value参数不能为空");
+
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+        if (beginField3Value == null)
+            throw new ArgumentNullException(nameof(beginField3Value), "beginField3Value参数不能为空");
+        if (endField3Value == null)
+            throw new ArgumentNullException(nameof(endField3Value), "endField3Value参数不能为空");
+
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -500,33 +620,93 @@ public class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
     #region Sharding
     public virtual IQuery<T1, T2, T3, T4> UseTable(params string[] tableNames)
     {
+        if (tableNames == null || tableNames.Length <= 0)
+            throw new ArgumentNullException(nameof(tableNames), "tableNames参数不能为空");
+
         this.Visitor.UseTable(false, tableNames);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4> UseTable(Func<string, bool> tableNamePredicate)
     {
+        if (tableNamePredicate == null)
+            throw new ArgumentNullException(nameof(tableNamePredicate), "tableNamePredicate参数不能为空");
+
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
+        if (tableNameGetter == null)
+            throw new ArgumentNullException(nameof(tableNameGetter), "tableNameGetter参数不能为空");
+
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
         return this;
     }
-    public virtual IQuery<T1, T2, T3, T4> UseTableBy(object field1Value, object field2Value = null)
+    public virtual IQuery<T1, T2, T3, T4> UseTableBy(object fieldValue)
     {
+        if (fieldValue == null)
+            throw new ArgumentNullException(nameof(fieldValue), "fieldValue参数不能为空");
+
+        this.Visitor.UseTableBy(false, fieldValue);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4> UseTableBy(object field1Value, object field2Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+
         this.Visitor.UseTableBy(false, field1Value, field2Value);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4> UseTableBy(object field1Value, object field2Value, object field3Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+        if (field3Value == null)
+            throw new ArgumentNullException(nameof(field3Value), "field3Value参数不能为空");
+
+        this.Visitor.UseTableBy(false, field1Value, field2Value, field3Value);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
+        if (beginFieldValue == null)
+            throw new ArgumentNullException(nameof(beginFieldValue), "beginFieldValue参数不能为空");
+        if (endFieldValue == null)
+            throw new ArgumentNullException(nameof(endFieldValue), "endFieldValue参数不能为空");
+
         this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public virtual IQuery<T1, T2, T3, T4> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public virtual IQuery<T1, T2, T3, T4> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (beginField2Value == null)
+            throw new ArgumentNullException(nameof(beginField2Value), "beginField2Value参数不能为空");
+        if (endField2Value == null)
+            throw new ArgumentNullException(nameof(endField2Value), "endField2Value参数不能为空");
+
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+        if (beginField3Value == null)
+            throw new ArgumentNullException(nameof(beginField3Value), "beginField3Value参数不能为空");
+        if (endField3Value == null)
+            throw new ArgumentNullException(nameof(endField3Value), "endField3Value参数不能为空");
+
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -742,33 +922,93 @@ public class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
     #region Sharding
     public virtual IQuery<T1, T2, T3, T4, T5> UseTable(params string[] tableNames)
     {
+        if (tableNames == null || tableNames.Length <= 0)
+            throw new ArgumentNullException(nameof(tableNames), "tableNames参数不能为空");
+
         this.Visitor.UseTable(false, tableNames);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5> UseTable(Func<string, bool> tableNamePredicate)
     {
+        if (tableNamePredicate == null)
+            throw new ArgumentNullException(nameof(tableNamePredicate), "tableNamePredicate参数不能为空");
+
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
+        if (tableNameGetter == null)
+            throw new ArgumentNullException(nameof(tableNameGetter), "tableNameGetter参数不能为空");
+
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
         return this;
     }
-    public virtual IQuery<T1, T2, T3, T4, T5> UseTableBy(object field1Value, object field2Value = null)
+    public virtual IQuery<T1, T2, T3, T4, T5> UseTableBy(object fieldValue)
     {
+        if (fieldValue == null)
+            throw new ArgumentNullException(nameof(fieldValue), "fieldValue参数不能为空");
+
+        this.Visitor.UseTableBy(false, fieldValue);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5> UseTableBy(object field1Value, object field2Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+
         this.Visitor.UseTableBy(false, field1Value, field2Value);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5> UseTableBy(object field1Value, object field2Value, object field3Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+        if (field3Value == null)
+            throw new ArgumentNullException(nameof(field3Value), "field3Value参数不能为空");
+
+        this.Visitor.UseTableBy(false, field1Value, field2Value, field3Value);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
+        if (beginFieldValue == null)
+            throw new ArgumentNullException(nameof(beginFieldValue), "beginFieldValue参数不能为空");
+        if (endFieldValue == null)
+            throw new ArgumentNullException(nameof(endFieldValue), "endFieldValue参数不能为空");
+
         this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public virtual IQuery<T1, T2, T3, T4, T5> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public virtual IQuery<T1, T2, T3, T4, T5> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (beginField2Value == null)
+            throw new ArgumentNullException(nameof(beginField2Value), "beginField2Value参数不能为空");
+        if (endField2Value == null)
+            throw new ArgumentNullException(nameof(endField2Value), "endField2Value参数不能为空");
+
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+        if (beginField3Value == null)
+            throw new ArgumentNullException(nameof(beginField3Value), "beginField3Value参数不能为空");
+        if (endField3Value == null)
+            throw new ArgumentNullException(nameof(endField3Value), "endField3Value参数不能为空");
+
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -984,33 +1224,93 @@ public class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T
     #region Sharding
     public virtual IQuery<T1, T2, T3, T4, T5, T6> UseTable(params string[] tableNames)
     {
+        if (tableNames == null || tableNames.Length <= 0)
+            throw new ArgumentNullException(nameof(tableNames), "tableNames参数不能为空");
+
         this.Visitor.UseTable(false, tableNames);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6> UseTable(Func<string, bool> tableNamePredicate)
     {
+        if (tableNamePredicate == null)
+            throw new ArgumentNullException(nameof(tableNamePredicate), "tableNamePredicate参数不能为空");
+
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
+        if (tableNameGetter == null)
+            throw new ArgumentNullException(nameof(tableNameGetter), "tableNameGetter参数不能为空");
+
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
         return this;
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6> UseTableBy(object field1Value, object field2Value = null)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6> UseTableBy(object fieldValue)
     {
+        if (fieldValue == null)
+            throw new ArgumentNullException(nameof(fieldValue), "fieldValue参数不能为空");
+
+        this.Visitor.UseTableBy(false, fieldValue);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6> UseTableBy(object field1Value, object field2Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+
         this.Visitor.UseTableBy(false, field1Value, field2Value);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6> UseTableBy(object field1Value, object field2Value, object field3Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+        if (field3Value == null)
+            throw new ArgumentNullException(nameof(field3Value), "field3Value参数不能为空");
+
+        this.Visitor.UseTableBy(false, field1Value, field2Value, field3Value);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
+        if (beginFieldValue == null)
+            throw new ArgumentNullException(nameof(beginFieldValue), "beginFieldValue参数不能为空");
+        if (endFieldValue == null)
+            throw new ArgumentNullException(nameof(endFieldValue), "endFieldValue参数不能为空");
+
         this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (beginField2Value == null)
+            throw new ArgumentNullException(nameof(beginField2Value), "beginField2Value参数不能为空");
+        if (endField2Value == null)
+            throw new ArgumentNullException(nameof(endField2Value), "endField2Value参数不能为空");
+
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+        if (beginField3Value == null)
+            throw new ArgumentNullException(nameof(beginField3Value), "beginField3Value参数不能为空");
+        if (endField3Value == null)
+            throw new ArgumentNullException(nameof(endField3Value), "endField3Value参数不能为空");
+
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -1226,33 +1526,93 @@ public class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T
     #region Sharding
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> UseTable(params string[] tableNames)
     {
+        if (tableNames == null || tableNames.Length <= 0)
+            throw new ArgumentNullException(nameof(tableNames), "tableNames参数不能为空");
+
         this.Visitor.UseTable(false, tableNames);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> UseTable(Func<string, bool> tableNamePredicate)
     {
+        if (tableNamePredicate == null)
+            throw new ArgumentNullException(nameof(tableNamePredicate), "tableNamePredicate参数不能为空");
+
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
+        if (tableNameGetter == null)
+            throw new ArgumentNullException(nameof(tableNameGetter), "tableNameGetter参数不能为空");
+
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
         return this;
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> UseTableBy(object field1Value, object field2Value = null)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> UseTableBy(object fieldValue)
     {
+        if (fieldValue == null)
+            throw new ArgumentNullException(nameof(fieldValue), "fieldValue参数不能为空");
+
+        this.Visitor.UseTableBy(false, fieldValue);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> UseTableBy(object field1Value, object field2Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+
         this.Visitor.UseTableBy(false, field1Value, field2Value);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> UseTableBy(object field1Value, object field2Value, object field3Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+        if (field3Value == null)
+            throw new ArgumentNullException(nameof(field3Value), "field3Value参数不能为空");
+
+        this.Visitor.UseTableBy(false, field1Value, field2Value, field3Value);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
+        if (beginFieldValue == null)
+            throw new ArgumentNullException(nameof(beginFieldValue), "beginFieldValue参数不能为空");
+        if (endFieldValue == null)
+            throw new ArgumentNullException(nameof(endFieldValue), "endFieldValue参数不能为空");
+
         this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (beginField2Value == null)
+            throw new ArgumentNullException(nameof(beginField2Value), "beginField2Value参数不能为空");
+        if (endField2Value == null)
+            throw new ArgumentNullException(nameof(endField2Value), "endField2Value参数不能为空");
+
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+        if (beginField3Value == null)
+            throw new ArgumentNullException(nameof(beginField3Value), "beginField3Value参数不能为空");
+        if (endField3Value == null)
+            throw new ArgumentNullException(nameof(endField3Value), "endField3Value参数不能为空");
+
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -1468,33 +1828,93 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T
     #region Sharding
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTable(params string[] tableNames)
     {
+        if (tableNames == null || tableNames.Length <= 0)
+            throw new ArgumentNullException(nameof(tableNames), "tableNames参数不能为空");
+
         this.Visitor.UseTable(false, tableNames);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTable(Func<string, bool> tableNamePredicate)
     {
+        if (tableNamePredicate == null)
+            throw new ArgumentNullException(nameof(tableNamePredicate), "tableNamePredicate参数不能为空");
+
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
+        if (tableNameGetter == null)
+            throw new ArgumentNullException(nameof(tableNameGetter), "tableNameGetter参数不能为空");
+
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
         return this;
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableBy(object field1Value, object field2Value = null)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableBy(object fieldValue)
     {
+        if (fieldValue == null)
+            throw new ArgumentNullException(nameof(fieldValue), "fieldValue参数不能为空");
+
+        this.Visitor.UseTableBy(false, fieldValue);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableBy(object field1Value, object field2Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+
         this.Visitor.UseTableBy(false, field1Value, field2Value);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableBy(object field1Value, object field2Value, object field3Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+        if (field3Value == null)
+            throw new ArgumentNullException(nameof(field3Value), "field3Value参数不能为空");
+
+        this.Visitor.UseTableBy(false, field1Value, field2Value, field3Value);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
+        if (beginFieldValue == null)
+            throw new ArgumentNullException(nameof(beginFieldValue), "beginFieldValue参数不能为空");
+        if (endFieldValue == null)
+            throw new ArgumentNullException(nameof(endFieldValue), "endFieldValue参数不能为空");
+
         this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (beginField2Value == null)
+            throw new ArgumentNullException(nameof(beginField2Value), "beginField2Value参数不能为空");
+        if (endField2Value == null)
+            throw new ArgumentNullException(nameof(endField2Value), "endField2Value参数不能为空");
+
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+        if (beginField3Value == null)
+            throw new ArgumentNullException(nameof(beginField3Value), "beginField3Value参数不能为空");
+        if (endField3Value == null)
+            throw new ArgumentNullException(nameof(endField3Value), "endField3Value参数不能为空");
+
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -1710,33 +2130,93 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T
     #region Sharding
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTable(params string[] tableNames)
     {
+        if (tableNames == null || tableNames.Length <= 0)
+            throw new ArgumentNullException(nameof(tableNames), "tableNames参数不能为空");
+
         this.Visitor.UseTable(false, tableNames);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTable(Func<string, bool> tableNamePredicate)
     {
+        if (tableNamePredicate == null)
+            throw new ArgumentNullException(nameof(tableNamePredicate), "tableNamePredicate参数不能为空");
+
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
+        if (tableNameGetter == null)
+            throw new ArgumentNullException(nameof(tableNameGetter), "tableNameGetter参数不能为空");
+
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
         return this;
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableBy(object field1Value, object field2Value = null)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableBy(object fieldValue)
     {
+        if (fieldValue == null)
+            throw new ArgumentNullException(nameof(fieldValue), "fieldValue参数不能为空");
+
+        this.Visitor.UseTableBy(false, fieldValue);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableBy(object field1Value, object field2Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+
         this.Visitor.UseTableBy(false, field1Value, field2Value);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableBy(object field1Value, object field2Value, object field3Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+        if (field3Value == null)
+            throw new ArgumentNullException(nameof(field3Value), "field3Value参数不能为空");
+
+        this.Visitor.UseTableBy(false, field1Value, field2Value, field3Value);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
+        if (beginFieldValue == null)
+            throw new ArgumentNullException(nameof(beginFieldValue), "beginFieldValue参数不能为空");
+        if (endFieldValue == null)
+            throw new ArgumentNullException(nameof(endFieldValue), "endFieldValue参数不能为空");
+
         this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (beginField2Value == null)
+            throw new ArgumentNullException(nameof(beginField2Value), "beginField2Value参数不能为空");
+        if (endField2Value == null)
+            throw new ArgumentNullException(nameof(endField2Value), "endField2Value参数不能为空");
+
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+        if (beginField3Value == null)
+            throw new ArgumentNullException(nameof(beginField3Value), "beginField3Value参数不能为空");
+        if (endField3Value == null)
+            throw new ArgumentNullException(nameof(endField3Value), "endField3Value参数不能为空");
+
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -1952,33 +2432,93 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<
     #region Sharding
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTable(params string[] tableNames)
     {
+        if (tableNames == null || tableNames.Length <= 0)
+            throw new ArgumentNullException(nameof(tableNames), "tableNames参数不能为空");
+
         this.Visitor.UseTable(false, tableNames);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTable(Func<string, bool> tableNamePredicate)
     {
+        if (tableNamePredicate == null)
+            throw new ArgumentNullException(nameof(tableNamePredicate), "tableNamePredicate参数不能为空");
+
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
+        if (tableNameGetter == null)
+            throw new ArgumentNullException(nameof(tableNameGetter), "tableNameGetter参数不能为空");
+
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
         return this;
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableBy(object field1Value, object field2Value = null)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableBy(object fieldValue)
     {
+        if (fieldValue == null)
+            throw new ArgumentNullException(nameof(fieldValue), "fieldValue参数不能为空");
+
+        this.Visitor.UseTableBy(false, fieldValue);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableBy(object field1Value, object field2Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+
         this.Visitor.UseTableBy(false, field1Value, field2Value);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableBy(object field1Value, object field2Value, object field3Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+        if (field3Value == null)
+            throw new ArgumentNullException(nameof(field3Value), "field3Value参数不能为空");
+
+        this.Visitor.UseTableBy(false, field1Value, field2Value, field3Value);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
+        if (beginFieldValue == null)
+            throw new ArgumentNullException(nameof(beginFieldValue), "beginFieldValue参数不能为空");
+        if (endFieldValue == null)
+            throw new ArgumentNullException(nameof(endFieldValue), "endFieldValue参数不能为空");
+
         this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (beginField2Value == null)
+            throw new ArgumentNullException(nameof(beginField2Value), "beginField2Value参数不能为空");
+        if (endField2Value == null)
+            throw new ArgumentNullException(nameof(endField2Value), "endField2Value参数不能为空");
+
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+        if (beginField3Value == null)
+            throw new ArgumentNullException(nameof(beginField3Value), "beginField3Value参数不能为空");
+        if (endField3Value == null)
+            throw new ArgumentNullException(nameof(endField3Value), "endField3Value参数不能为空");
+
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -2194,33 +2734,93 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQ
     #region Sharding
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTable(params string[] tableNames)
     {
+        if (tableNames == null || tableNames.Length <= 0)
+            throw new ArgumentNullException(nameof(tableNames), "tableNames参数不能为空");
+
         this.Visitor.UseTable(false, tableNames);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTable(Func<string, bool> tableNamePredicate)
     {
+        if (tableNamePredicate == null)
+            throw new ArgumentNullException(nameof(tableNamePredicate), "tableNamePredicate参数不能为空");
+
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
+        if (tableNameGetter == null)
+            throw new ArgumentNullException(nameof(tableNameGetter), "tableNameGetter参数不能为空");
+
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
         return this;
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableBy(object field1Value, object field2Value = null)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableBy(object fieldValue)
     {
+        if (fieldValue == null)
+            throw new ArgumentNullException(nameof(fieldValue), "fieldValue参数不能为空");
+
+        this.Visitor.UseTableBy(false, fieldValue);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableBy(object field1Value, object field2Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+
         this.Visitor.UseTableBy(false, field1Value, field2Value);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableBy(object field1Value, object field2Value, object field3Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+        if (field3Value == null)
+            throw new ArgumentNullException(nameof(field3Value), "field3Value参数不能为空");
+
+        this.Visitor.UseTableBy(false, field1Value, field2Value, field3Value);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
+        if (beginFieldValue == null)
+            throw new ArgumentNullException(nameof(beginFieldValue), "beginFieldValue参数不能为空");
+        if (endFieldValue == null)
+            throw new ArgumentNullException(nameof(endFieldValue), "endFieldValue参数不能为空");
+
         this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (beginField2Value == null)
+            throw new ArgumentNullException(nameof(beginField2Value), "beginField2Value参数不能为空");
+        if (endField2Value == null)
+            throw new ArgumentNullException(nameof(endField2Value), "endField2Value参数不能为空");
+
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+        if (beginField3Value == null)
+            throw new ArgumentNullException(nameof(beginField3Value), "beginField3Value参数不能为空");
+        if (endField3Value == null)
+            throw new ArgumentNullException(nameof(endField3Value), "endField3Value参数不能为空");
+
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -2436,33 +3036,93 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBas
     #region Sharding
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTable(params string[] tableNames)
     {
+        if (tableNames == null || tableNames.Length <= 0)
+            throw new ArgumentNullException(nameof(tableNames), "tableNames参数不能为空");
+
         this.Visitor.UseTable(false, tableNames);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTable(Func<string, bool> tableNamePredicate)
     {
+        if (tableNamePredicate == null)
+            throw new ArgumentNullException(nameof(tableNamePredicate), "tableNamePredicate参数不能为空");
+
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
+        if (tableNameGetter == null)
+            throw new ArgumentNullException(nameof(tableNameGetter), "tableNameGetter参数不能为空");
+
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
         return this;
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableBy(object field1Value, object field2Value = null)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableBy(object fieldValue)
     {
+        if (fieldValue == null)
+            throw new ArgumentNullException(nameof(fieldValue), "fieldValue参数不能为空");
+
+        this.Visitor.UseTableBy(false, fieldValue);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableBy(object field1Value, object field2Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+
         this.Visitor.UseTableBy(false, field1Value, field2Value);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableBy(object field1Value, object field2Value, object field3Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+        if (field3Value == null)
+            throw new ArgumentNullException(nameof(field3Value), "field3Value参数不能为空");
+
+        this.Visitor.UseTableBy(false, field1Value, field2Value, field3Value);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
+        if (beginFieldValue == null)
+            throw new ArgumentNullException(nameof(beginFieldValue), "beginFieldValue参数不能为空");
+        if (endFieldValue == null)
+            throw new ArgumentNullException(nameof(endFieldValue), "endFieldValue参数不能为空");
+
         this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (beginField2Value == null)
+            throw new ArgumentNullException(nameof(beginField2Value), "beginField2Value参数不能为空");
+        if (endField2Value == null)
+            throw new ArgumentNullException(nameof(endField2Value), "endField2Value参数不能为空");
+
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+        if (beginField3Value == null)
+            throw new ArgumentNullException(nameof(beginField3Value), "beginField3Value参数不能为空");
+        if (endField3Value == null)
+            throw new ArgumentNullException(nameof(endField3Value), "endField3Value参数不能为空");
+
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -2678,33 +3338,93 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Que
     #region Sharding
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTable(params string[] tableNames)
     {
+        if (tableNames == null || tableNames.Length <= 0)
+            throw new ArgumentNullException(nameof(tableNames), "tableNames参数不能为空");
+
         this.Visitor.UseTable(false, tableNames);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTable(Func<string, bool> tableNamePredicate)
     {
+        if (tableNamePredicate == null)
+            throw new ArgumentNullException(nameof(tableNamePredicate), "tableNamePredicate参数不能为空");
+
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
+        if (tableNameGetter == null)
+            throw new ArgumentNullException(nameof(tableNameGetter), "tableNameGetter参数不能为空");
+
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
         return this;
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableBy(object field1Value, object field2Value = null)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableBy(object fieldValue)
     {
+        if (fieldValue == null)
+            throw new ArgumentNullException(nameof(fieldValue), "fieldValue参数不能为空");
+
+        this.Visitor.UseTableBy(false, fieldValue);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableBy(object field1Value, object field2Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+
         this.Visitor.UseTableBy(false, field1Value, field2Value);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableBy(object field1Value, object field2Value, object field3Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+        if (field3Value == null)
+            throw new ArgumentNullException(nameof(field3Value), "field3Value参数不能为空");
+
+        this.Visitor.UseTableBy(false, field1Value, field2Value, field3Value);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
+        if (beginFieldValue == null)
+            throw new ArgumentNullException(nameof(beginFieldValue), "beginFieldValue参数不能为空");
+        if (endFieldValue == null)
+            throw new ArgumentNullException(nameof(endFieldValue), "endFieldValue参数不能为空");
+
         this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (beginField2Value == null)
+            throw new ArgumentNullException(nameof(beginField2Value), "beginField2Value参数不能为空");
+        if (endField2Value == null)
+            throw new ArgumentNullException(nameof(endField2Value), "endField2Value参数不能为空");
+
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+        if (beginField3Value == null)
+            throw new ArgumentNullException(nameof(beginField3Value), "beginField3Value参数不能为空");
+        if (endField3Value == null)
+            throw new ArgumentNullException(nameof(endField3Value), "endField3Value参数不能为空");
+
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -2920,33 +3640,93 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> 
     #region Sharding
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTable(params string[] tableNames)
     {
+        if (tableNames == null || tableNames.Length <= 0)
+            throw new ArgumentNullException(nameof(tableNames), "tableNames参数不能为空");
+
         this.Visitor.UseTable(false, tableNames);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTable(Func<string, bool> tableNamePredicate)
     {
+        if (tableNamePredicate == null)
+            throw new ArgumentNullException(nameof(tableNamePredicate), "tableNamePredicate参数不能为空");
+
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
+        if (tableNameGetter == null)
+            throw new ArgumentNullException(nameof(tableNameGetter), "tableNameGetter参数不能为空");
+
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
         return this;
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableBy(object field1Value, object field2Value = null)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableBy(object fieldValue)
     {
+        if (fieldValue == null)
+            throw new ArgumentNullException(nameof(fieldValue), "fieldValue参数不能为空");
+
+        this.Visitor.UseTableBy(false, fieldValue);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableBy(object field1Value, object field2Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+
         this.Visitor.UseTableBy(false, field1Value, field2Value);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableBy(object field1Value, object field2Value, object field3Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+        if (field3Value == null)
+            throw new ArgumentNullException(nameof(field3Value), "field3Value参数不能为空");
+
+        this.Visitor.UseTableBy(false, field1Value, field2Value, field3Value);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
+        if (beginFieldValue == null)
+            throw new ArgumentNullException(nameof(beginFieldValue), "beginFieldValue参数不能为空");
+        if (endFieldValue == null)
+            throw new ArgumentNullException(nameof(endFieldValue), "endFieldValue参数不能为空");
+
         this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (beginField2Value == null)
+            throw new ArgumentNullException(nameof(beginField2Value), "beginField2Value参数不能为空");
+        if (endField2Value == null)
+            throw new ArgumentNullException(nameof(endField2Value), "endField2Value参数不能为空");
+
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+        if (beginField3Value == null)
+            throw new ArgumentNullException(nameof(beginField3Value), "beginField3Value参数不能为空");
+        if (endField3Value == null)
+            throw new ArgumentNullException(nameof(endField3Value), "endField3Value参数不能为空");
+
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -3162,33 +3942,93 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
     #region Sharding
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTable(params string[] tableNames)
     {
+        if (tableNames == null || tableNames.Length <= 0)
+            throw new ArgumentNullException(nameof(tableNames), "tableNames参数不能为空");
+
         this.Visitor.UseTable(false, tableNames);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTable(Func<string, bool> tableNamePredicate)
     {
+        if (tableNamePredicate == null)
+            throw new ArgumentNullException(nameof(tableNamePredicate), "tableNamePredicate参数不能为空");
+
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
+        if (tableNameGetter == null)
+            throw new ArgumentNullException(nameof(tableNameGetter), "tableNameGetter参数不能为空");
+
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
         return this;
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableBy(object field1Value, object field2Value = null)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableBy(object fieldValue)
     {
+        if (fieldValue == null)
+            throw new ArgumentNullException(nameof(fieldValue), "fieldValue参数不能为空");
+
+        this.Visitor.UseTableBy(false, fieldValue);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableBy(object field1Value, object field2Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+
         this.Visitor.UseTableBy(false, field1Value, field2Value);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableBy(object field1Value, object field2Value, object field3Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+        if (field3Value == null)
+            throw new ArgumentNullException(nameof(field3Value), "field3Value参数不能为空");
+
+        this.Visitor.UseTableBy(false, field1Value, field2Value, field3Value);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
+        if (beginFieldValue == null)
+            throw new ArgumentNullException(nameof(beginFieldValue), "beginFieldValue参数不能为空");
+        if (endFieldValue == null)
+            throw new ArgumentNullException(nameof(endFieldValue), "endFieldValue参数不能为空");
+
         this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (beginField2Value == null)
+            throw new ArgumentNullException(nameof(beginField2Value), "beginField2Value参数不能为空");
+        if (endField2Value == null)
+            throw new ArgumentNullException(nameof(endField2Value), "endField2Value参数不能为空");
+
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+        if (beginField3Value == null)
+            throw new ArgumentNullException(nameof(beginField3Value), "beginField3Value参数不能为空");
+        if (endField3Value == null)
+            throw new ArgumentNullException(nameof(endField3Value), "endField3Value参数不能为空");
+
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -3404,33 +4244,93 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
     #region Sharding
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTable(params string[] tableNames)
     {
+        if (tableNames == null || tableNames.Length <= 0)
+            throw new ArgumentNullException(nameof(tableNames), "tableNames参数不能为空");
+
         this.Visitor.UseTable(false, tableNames);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTable(Func<string, bool> tableNamePredicate)
     {
+        if (tableNamePredicate == null)
+            throw new ArgumentNullException(nameof(tableNamePredicate), "tableNamePredicate参数不能为空");
+
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
     {
+        if (tableNameGetter == null)
+            throw new ArgumentNullException(nameof(tableNameGetter), "tableNameGetter参数不能为空");
+
         var masterEntityType = typeof(TMasterSharding);
         this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
         return this;
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableBy(object field1Value, object field2Value = null)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableBy(object fieldValue)
     {
+        if (fieldValue == null)
+            throw new ArgumentNullException(nameof(fieldValue), "fieldValue参数不能为空");
+
+        this.Visitor.UseTableBy(false, fieldValue);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableBy(object field1Value, object field2Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+
         this.Visitor.UseTableBy(false, field1Value, field2Value);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableBy(object field1Value, object field2Value, object field3Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+        if (field3Value == null)
+            throw new ArgumentNullException(nameof(field3Value), "field3Value参数不能为空");
+
+        this.Visitor.UseTableBy(false, field1Value, field2Value, field3Value);
         return this;
     }
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
+        if (beginFieldValue == null)
+            throw new ArgumentNullException(nameof(beginFieldValue), "beginFieldValue参数不能为空");
+        if (endFieldValue == null)
+            throw new ArgumentNullException(nameof(endFieldValue), "endFieldValue参数不能为空");
+
         this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (beginField2Value == null)
+            throw new ArgumentNullException(nameof(beginField2Value), "beginField2Value参数不能为空");
+        if (endField2Value == null)
+            throw new ArgumentNullException(nameof(endField2Value), "endField2Value参数不能为空");
+
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+        if (beginField3Value == null)
+            throw new ArgumentNullException(nameof(beginField3Value), "beginField3Value参数不能为空");
+        if (endField3Value == null)
+            throw new ArgumentNullException(nameof(endField3Value), "endField3Value参数不能为空");
+
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion

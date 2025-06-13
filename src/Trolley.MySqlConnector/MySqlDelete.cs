@@ -27,9 +27,19 @@ public class MySqlDelete<TEntity> : Delete<TEntity>, IMySqlDelete<TEntity>
         base.UseTable(tableNamePredicate);
         return this;
     }
-    public new IMySqlDelete<TEntity> UseTableBy(object field1Value, object field2Value = null)
+    public new IMySqlDelete<TEntity> UseTableBy(object fieldValue)
+    {
+        base.UseTableBy(fieldValue);
+        return this;
+    }
+    public new IMySqlDelete<TEntity> UseTableBy(object field1Value, object field2Value)
     {
         base.UseTableBy(field1Value, field2Value);
+        return this;
+    }
+    public new IMySqlDelete<TEntity> UseTableBy(object field1Value, object field2Value, object field3Value)
+    {
+        base.UseTableBy(field1Value, field2Value, field3Value);
         return this;
     }
     public new IMySqlDelete<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue)
@@ -37,9 +47,14 @@ public class MySqlDelete<TEntity> : Delete<TEntity>, IMySqlDelete<TEntity>
         base.UseTableByRange(beginFieldValue, endFieldValue);
         return this;
     }
-    public new IMySqlDelete<TEntity> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public new IMySqlDelete<TEntity> UseTableByRange(object field1Value1, object beginField2Value, object endField2Value)
     {
-        base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3);
+        base.UseTableByRange(field1Value1, beginField2Value, endField2Value);
+        return this;
+    }
+    public new IMySqlDelete<TEntity> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion

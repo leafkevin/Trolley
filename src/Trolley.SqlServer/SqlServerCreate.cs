@@ -19,9 +19,25 @@ public class SqlServerCreate<TEntity> : Create<TEntity>, ISqlServerCreate<TEntit
 
     #region Sharding
     public new ISqlServerCreate<TEntity> UseTable(string tableName)
-        => base.UseTable(tableName) as ISqlServerCreate<TEntity>;
-    public new ISqlServerCreate<TEntity> UseTableBy(object field1Value, object field2Value = null)
-        => base.UseTableBy(field1Value, field2Value) as ISqlServerCreate<TEntity>;
+    {
+        base.UseTable(tableName);
+        return this;
+    }
+    public new ISqlServerCreate<TEntity> UseTableBy(object field1Value)
+    {
+        base.UseTableBy(field1Value);
+        return this;
+    }
+    public new ISqlServerCreate<TEntity> UseTableBy(object field1Value, object field2Value)
+    {
+        base.UseTableBy(field1Value, field2Value);
+        return this;
+    }
+    public new ISqlServerCreate<TEntity> UseTableBy(object field1Value, object field2Value, object field3Value)
+    {
+        base.UseTableBy(field1Value, field2Value, field3Value);
+        return this;
+    }
     #endregion
 
     #region WithLock

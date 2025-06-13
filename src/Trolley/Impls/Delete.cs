@@ -29,27 +29,84 @@ public class Delete<TEntity> : IDelete<TEntity>
     #region Sharding
     public virtual IDelete<TEntity> UseTable(params string[] tableNames)
     {
+        if (tableNames == null || tableNames.Length <= 0)
+            throw new ArgumentNullException(nameof(tableNames), "tableNames参数不能为空");
+
         this.Visitor.UseTable(false, tableNames);
         return this;
     }
     public virtual IDelete<TEntity> UseTable(Func<string, bool> tableNamePredicate)
     {
+        if (tableNamePredicate == null)
+            throw new ArgumentNullException(nameof(tableNamePredicate), "tableNamePredicate参数不能为空");
+
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
-    public virtual IDelete<TEntity> UseTableBy(object field1Value, object field2Value = null)
+    public virtual IDelete<TEntity> UseTableBy(object fieldValue)
     {
+        if (fieldValue == null)
+            throw new ArgumentNullException(nameof(fieldValue), "fieldValue参数不能为空");
+
+        this.Visitor.UseTableBy(false, fieldValue);
+        return this;
+    }
+    public virtual IDelete<TEntity> UseTableBy(object field1Value, object field2Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+
         this.Visitor.UseTableBy(false, field1Value, field2Value);
+        return this;
+    }
+    public virtual IDelete<TEntity> UseTableBy(object field1Value, object field2Value, object field3Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+        if (field3Value == null)
+            throw new ArgumentNullException(nameof(field3Value), "field3Value参数不能为空");
+
+        this.Visitor.UseTableBy(false, field1Value, field2Value, field3Value);
         return this;
     }
     public virtual IDelete<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
+        if (beginFieldValue == null)
+            throw new ArgumentNullException(nameof(beginFieldValue), "beginFieldValue参数不能为空");
+        if (endFieldValue == null)
+            throw new ArgumentNullException(nameof(endFieldValue), "endFieldValue参数不能为空");
+
         this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public virtual IDelete<TEntity> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public virtual IDelete<TEntity> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (beginField2Value == null)
+            throw new ArgumentNullException(nameof(beginField2Value), "beginField2Value参数不能为空");
+        if (endField2Value == null)
+            throw new ArgumentNullException(nameof(endField2Value), "endField2Value参数不能为空");
+
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public virtual IDelete<TEntity> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        if (field1Value == null)
+            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
+        if (field2Value == null)
+            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
+        if (beginField3Value == null)
+            throw new ArgumentNullException(nameof(beginField3Value), "beginField3Value参数不能为空");
+        if (endField3Value == null)
+            throw new ArgumentNullException(nameof(endField3Value), "endField3Value参数不能为空");
+
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion

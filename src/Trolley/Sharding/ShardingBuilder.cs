@@ -34,7 +34,7 @@ public class TableShardingBuilder<TEntity>
         => this.shardingProvider = tableShardingProvider;
 
     /// <summary>
-    /// 设置第一个分表依赖的字段，后续的分表规则会依赖这个字段的值来进行分表，最多支持两个依赖字段
+    /// 设置第一个分表依赖的字段，后续的分表规则会依赖这个字段的值来进行分表，不需要手动设置分表，最多支持两个依赖字段
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
     /// <param name="fieldSelector">字段选择器</param>
@@ -56,7 +56,7 @@ public class TableShardingBuilder<TEntity>
         return new FieldShardingBuilder<TEntity, TField>(this.shardingProvider);
     }
     /// <summary>
-    /// 设置依赖1个参数值的分表规则和分表名称验证正则表达式，此分表规则不依赖于任何字段值，需要手动传入参数值来获取分表名称
+    /// 设置依赖1个参数值的分表规则和分表名称验证正则表达式，此分表规则依赖于1个参数值，需要手动传入参数值来获取分表名称，不依赖于任何字段。
     /// </summary>
     /// <typeparam name="TParameter">参数值类型</typeparam>
     /// <param name="tableNameGetter">分表名获取委托</param>
@@ -78,12 +78,12 @@ public class TableShardingBuilder<TEntity>
         return this;
     }
     /// <summary>
-    /// 设置依赖2个参数值的分表规则和分表名称验证正则表达式，此分表规则依赖于两个参数值，通常用于时间范围查询，需要手动传入参数值来获取分表名称，不依赖于任何字段值。
+    /// 设置依赖2个参数值的分表规则和分表名称验证正则表达式，此分表规则依赖于2个参数值，需要手动传入参数值来获取分表名称，不依赖于任何字段。
     /// </summary>
-    /// <typeparam name="TParameter1"></typeparam>
-    /// <typeparam name="TParameter2"></typeparam>
-    /// <param name="tableNameGetter"></param>
-    /// <param name="validateRegex"></param>
+    /// <typeparam name="TParameter1">参数值1类型</typeparam>
+    /// <typeparam name="TParameter2">参数值2类型</typeparam>
+    /// <param name="tableNameGetter">分表名获取委托</param>
+    /// <param name="validateRegex">分表名验证规则</param>
     /// <returns></returns>
     /// <exception cref="ArgumentNullException"></exception>
     public TableShardingBuilder<TEntity> UseRule<TParameter1, TParameter2>(Func<string, TParameter1, TParameter2, string> tableNameGetter, string validateRegex)
@@ -101,7 +101,31 @@ public class TableShardingBuilder<TEntity>
         return this;
     }
     /// <summary>
-    /// 设置分表范围规则，此分表规则依赖于两个参数值，通常用于时间范围查询，需要手动传入字段值来获取分表名称，要先设置分表规则后再设置范围规则。
+    /// 设置依赖3个参数值的分表规则和分表名称验证正则表达式，此分表规则依赖于3个参数值，需要手动传入参数值来获取分表名称，不依赖于任何字段。
+    /// </summary>
+    /// <typeparam name="TParameter1">参数值1类型</typeparam>
+    /// <typeparam name="TParameter2">参数值2类型</typeparam>
+    /// <typeparam name="TParameter3">参数值3类型</typeparam>
+    /// <param name="tableNameGetter">分表名获取委托</param>
+    /// <param name="validateRegex">分表名验证规则</param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentNullException"></exception>
+    public TableShardingBuilder<TEntity> UseRule<TParameter1, TParameter2, TParameter3>(Func<string, TParameter1, TParameter2, TParameter3, string> tableNameGetter, string validateRegex)
+    {
+        if (tableNameGetter == null)
+            throw new ArgumentNullException(nameof(tableNameGetter));
+        if (string.IsNullOrEmpty(validateRegex))
+            throw new ArgumentNullException(nameof(validateRegex));
+
+        var entityType = typeof(TEntity);
+        if (!this.shardingProvider.TryGetTableSharding(entityType, out var shardingTable))
+            this.shardingProvider.AddTableSharding(entityType, shardingTable = new TableShardingInfo { EntityType = entityType });
+        shardingTable.Rule = (string origName, object field1Value, object field2Value, object field3Value) => tableNameGetter(origName, (TParameter1)field1Value, (TParameter2)field2Value, (TParameter3)field3Value);
+        shardingTable.ValidateRegex = validateRegex;
+        return this;
+    }
+    /// <summary>
+    /// 设置分表范围规则，此分表规则依赖于2个参数值，通常用于时间范围查询，需要手动传入字段值来获取分表名称，要先设置分表规则后再设置范围规则。
     /// </summary>
     /// <typeparam name="TParameter">参数值类型</typeparam>
     /// <param name="tableNamesGetter">分表名获取委托</param>
@@ -119,6 +143,14 @@ public class TableShardingBuilder<TEntity>
             => tableNamesGetter(origName, (TParameter)beginFieldValue, (TParameter)endFieldValue);
         return this;
     }
+    /// <summary>
+    /// 设置分表范围规则，此分表规则依赖于3个参数值，通常用于时间范围查询，需要手动传入字段值来获取分表名称，要先设置分表规则后再设置范围规则。
+    /// </summary>
+    /// <typeparam name="TParameter1">参数值1类型</typeparam>
+    /// <typeparam name="TParameter2">参数值2类型</typeparam>
+    /// <param name="tableNamesGetter">分表名获取委托</param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentNullException"></exception>
     public TableShardingBuilder<TEntity> UseRangeRule<TParameter1, TParameter2>(Func<string, TParameter1, TParameter2, TParameter2, List<string>> tableNamesGetter)
     {
         if (tableNamesGetter == null)
@@ -127,11 +159,20 @@ public class TableShardingBuilder<TEntity>
         var entityType = typeof(TEntity);
         if (!this.shardingProvider.TryGetTableSharding(entityType, out var shardingTable))
             this.shardingProvider.AddTableSharding(entityType, shardingTable = new TableShardingInfo { EntityType = entityType });
-        shardingTable.RangleRule = (string origName, object beginField1Value, object beginField2Value, object endField2Value)
-            => tableNamesGetter(origName, (TParameter1)beginField1Value, (TParameter2)beginField2Value, (TParameter2)endField2Value);
+        shardingTable.RangleRule = (string origName, object field1Value, object beginField2Value, object endField2Value)
+            => tableNamesGetter(origName, (TParameter1)field1Value, (TParameter2)beginField2Value, (TParameter2)endField2Value);
         return this;
     }
-    public TableShardingBuilder<TEntity> UseRangeRule<TParameter1, TParameter2>(Func<string, TParameter1, TParameter1, TParameter2, List<string>> tableNamesGetter)
+    /// <summary>
+    /// 设置分表范围规则，此分表规则依赖于4个参数值，通常用于时间范围查询，需要手动传入字段值来获取分表名称，要先设置分表规则后再设置范围规则。
+    /// </summary>
+    /// <typeparam name="TParameter1">参数值1类型</typeparam>
+    /// <typeparam name="TParameter2">参数值2类型</typeparam>
+    /// <typeparam name="TParameter3">参数值3类型</typeparam>
+    /// <param name="tableNamesGetter">分表名获取委托</param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentNullException"></exception>
+    public TableShardingBuilder<TEntity> UseRangeRule<TParameter1, TParameter2, TParameter3>(Func<string, TParameter1, TParameter2, TParameter3, TParameter3, List<string>> tableNamesGetter)
     {
         if (tableNamesGetter == null)
             throw new ArgumentNullException(nameof(tableNamesGetter));
@@ -139,8 +180,8 @@ public class TableShardingBuilder<TEntity>
         var entityType = typeof(TEntity);
         if (!this.shardingProvider.TryGetTableSharding(entityType, out var shardingTable))
             this.shardingProvider.AddTableSharding(entityType, shardingTable = new TableShardingInfo { EntityType = entityType });
-        shardingTable.RangleRule = (string origName, object beginField1Value, object endField1Value, object beginField2Value)
-            => tableNamesGetter(origName, (TParameter1)beginField1Value, (TParameter1)endField1Value, (TParameter2)beginField2Value);
+        shardingTable.RangleRule = (string origName, object field1Value, object field2Value, object beginField3Value, object endField3Value)
+            => tableNamesGetter(origName, (TParameter1)field1Value, (TParameter2)field2Value, (TParameter3)beginField3Value, (TParameter3)endField3Value);
         return this;
     }
 }
@@ -243,11 +284,37 @@ public class FieldShardingBuilder<TEntity, TField1, TField2>
         var entityType = typeof(TEntity);
         if (!this.shardingProvider.TryGetTableSharding(entityType, out var shardingTable))
             this.shardingProvider.AddTableSharding(entityType, shardingTable = new TableShardingInfo { EntityType = entityType });
-        shardingTable.RangleRule = (string origName, object beginField1Value, object beginField2Value, object endField2Value)
-            => tableNamesGetter(origName, (TField1)beginField1Value, (TField2)beginField2Value, (TField2)endField2Value);
+        shardingTable.RangleRule = (string origName, object field1Value, object beginField2Value, object endField2Value)
+            => tableNamesGetter(origName, (TField1)field1Value, (TField2)beginField2Value, (TField2)endField2Value);
         return this;
     }
-    public FieldShardingBuilder<TEntity, TField1, TField2> UseRangeRule(Func<string, TField1, TField1, TField2, List<string>> tableNamesGetter)
+}
+public class FieldShardingBuilder<TEntity, TField1, TField2, TField3>
+{
+    private readonly ITableShardingProvider shardingProvider;
+    public FieldShardingBuilder(ITableShardingProvider tableShardingProvider)
+        => this.shardingProvider = tableShardingProvider;
+    /// <summary>
+    /// 设置分表名称命名规则和分表名称验证正则表达式
+    /// </summary>
+    /// <param name="tableNameGetter">分表名称获取委托</param>
+    /// <param name="validateRegex"> 分表名称验证正则表达式，用于筛选分表名称</param>
+    /// <returns></returns>
+    public FieldShardingBuilder<TEntity, TField1, TField2, TField3> UseRule(Func<string, TField1, TField2, TField3, string> tableNameGetter, string validateRegex)
+    {
+        if (tableNameGetter == null)
+            throw new ArgumentNullException(nameof(tableNameGetter));
+        if (string.IsNullOrEmpty(validateRegex))
+            throw new ArgumentNullException(nameof(validateRegex));
+
+        var entityType = typeof(TEntity);
+        if (!this.shardingProvider.TryGetTableSharding(entityType, out var shardingTable))
+            this.shardingProvider.AddTableSharding(entityType, shardingTable = new TableShardingInfo { EntityType = entityType });
+        shardingTable.Rule = (string origName, object field1Value, object field2Value, object field3Value) => tableNameGetter(origName, (TField1)field1Value, (TField2)field2Value, (TField3)field3Value);
+        shardingTable.ValidateRegex = validateRegex;
+        return this;
+    }
+    public FieldShardingBuilder<TEntity, TField1, TField2, TField3> UseRangeRule(Func<string, TField1, TField2, TField3, TField3, List<string>> tableNamesGetter)
     {
         if (tableNamesGetter == null)
             throw new ArgumentNullException(nameof(tableNamesGetter));
@@ -255,8 +322,8 @@ public class FieldShardingBuilder<TEntity, TField1, TField2>
         var entityType = typeof(TEntity);
         if (!this.shardingProvider.TryGetTableSharding(entityType, out var shardingTable))
             this.shardingProvider.AddTableSharding(entityType, shardingTable = new TableShardingInfo { EntityType = entityType });
-        shardingTable.RangleRule = (string origName, object beginField1Value, object endField1Value, object beginField2Value)
-            => tableNamesGetter(origName, (TField1)beginField1Value, (TField1)endField1Value, (TField2)beginField2Value);
+        shardingTable.RangleRule = (string origName, object field1Value, object field2Value, object beginField3Value, object endField3Value)
+            => tableNamesGetter(origName, (TField1)field1Value, (TField2)field2Value, (TField3)beginField3Value, (TField3)endField3Value);
         return this;
     }
 }

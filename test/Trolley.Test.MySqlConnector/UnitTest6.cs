@@ -20,13 +20,13 @@ public class UnitTest6 : UnitTestBase
         var services = new ServiceCollection();
         services.AddSingleton(f =>
         {
-            var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
-            var connectionString1 = "Server=localhost;Database=fengling1;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
-            var connectionString2 = "Server=localhost;Database=fengling2;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
+            var connectionString = "Server=192.168.31.67;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
+            var connectionString1 = "Server=192.168.31.67;Database=fengling1;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
+            var connectionString2 = "Server=192.168.31.67;Database=fengling2;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
             var builder = new OrmDbFactoryBuilder()
                 .Register(OrmProviderType.MySql, "fengling", connectionString, true)
-                .Register(OrmProviderType.MySql, "fengling1", connectionString1)
-                .Register(OrmProviderType.MySql, "fengling2", connectionString2)
+                //.Register(OrmProviderType.MySql, "fengling1", connectionString1)
+                //.Register(OrmProviderType.MySql, "fengling2", connectionString2)
                 .Configure<ModelConfiguration>(OrmProviderType.MySql)
                 .UseDatabaseSharding(() =>
                 {

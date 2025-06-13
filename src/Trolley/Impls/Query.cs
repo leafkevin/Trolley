@@ -220,9 +220,19 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
         return this;
     }
-    public virtual IQuery<T> UseTableBy(object field1Value, object field2Value = null)
+    public virtual IQuery<T> UseTableBy(object fieldValue)
+    {
+        this.Visitor.UseTableBy(false, fieldValue);
+        return this;
+    }
+    public virtual IQuery<T> UseTableBy(object field1Value, object field2Value)
     {
         this.Visitor.UseTableBy(false, field1Value, field2Value);
+        return this;
+    }
+    public virtual IQuery<T> UseTableBy(object field1Value, object field2Value, object field3Value)
+    {
+        this.Visitor.UseTableBy(false, field1Value, field2Value, field3Value);
         return this;
     }
     public virtual IQuery<T> UseTableByRange(object beginFieldValue, object endFieldValue)
@@ -230,9 +240,14 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public virtual IQuery<T> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public virtual IQuery<T> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public virtual IQuery<T> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion

@@ -20,15 +20,40 @@ public class SqlServerUpdate<TEntity> : Update<TEntity>, ISqlServerUpdate<TEntit
 
     #region Sharding
     public new ISqlServerUpdate<TEntity> UseTable(params string[] tableNames)
-		=> base.UseTable(tableNames) as ISqlServerUpdate<TEntity>;
+    {
+        base.UseTable(tableNames);
+        return this;
+    }
     public new ISqlServerUpdate<TEntity> UseTable(Func<string, bool> tableNamePredicate)
-		=> base.UseTable(tableNamePredicate) as ISqlServerUpdate<TEntity>;
-    public new ISqlServerUpdate<TEntity> UseTableBy(object field1Value, object field2Value = null)
-    	=> base.UseTableBy(field1Value, field2Value) as ISqlServerUpdate<TEntity>;
+    {
+        base.UseTable(tableNamePredicate);
+        return this;
+    }
+    public new ISqlServerUpdate<TEntity> UseTableBy(object field1Value, object field2Value)
+    {
+        base.UseTableBy(field1Value, field2Value);
+        return this;
+    }
+    public new ISqlServerUpdate<TEntity> UseTableBy(object field1Value, object field2Value, object field3Value)
+    {
+        base.UseTableBy(field1Value, field2Value, field3Value);
+        return this;
+    }
     public new ISqlServerUpdate<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue)
-        => base.UseTableByRange(beginFieldValue, endFieldValue) as ISqlServerUpdate<TEntity>;
-    public new ISqlServerUpdate<TEntity> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
-        => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as ISqlServerUpdate<TEntity>;
+    {
+        base.UseTableByRange(beginFieldValue, endFieldValue);
+        return this;
+    }
+    public new ISqlServerUpdate<TEntity> UseTableByRange(object field1Value1, object beginField2Value, object endField2Value)
+    {
+        base.UseTableByRange(field1Value1, beginField2Value, endField2Value);
+        return this;
+    }
+    public new ISqlServerUpdate<TEntity> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value);
+        return this;
+    }
     #endregion
 
     #region Set

@@ -146,12 +146,19 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
+    /// 根据1个字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
+    /// </summary>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="field2Value">字段2值</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T> UseTableBy(object field1Value);
+    /// <summary>
     /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> UseTableBy(object field1Value, object field2Value = null);
+    IQuery<T> UseTableBy(object field1Value, object field2Value);
     /// <summary>
     /// 根据单个字段值范围确定T表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Parse("2020-01-01"), DateTime.Now)
     /// </summary>

@@ -27,9 +27,10 @@ public interface IDeleteVisitor : IDisposable
     void UseTable(bool isIncludeMany, params string[] tableNames);
     void UseTable(bool isIncludeMany, Func<string, bool> tableNamePredicate);
     void UseTableMap(bool isIncludeMany, Type masterEntityType, Func<string, string, string, string> tableNameGetter);
-    void UseTableBy(bool isIncludeMany, object field1Value, object field2Value = null);
+    void UseTableBy(bool isIncludeMany, params object[] fieldValues);
     void UseTableByRange(bool isIncludeMany, object beginFieldValue, object endFieldValue);
-    void UseTableByRange(bool isIncludeMany, object fieldValue1, object fieldValue2, object fieldValue3);
+    void UseTableByRange(bool isIncludeMany, object fieldValue1, object beginField2Value, object endField2Value);
+    void UseTableByRange(bool isIncludeMany, object fieldValue1, object fieldValue2, object beginField3Value, object endField3Value);
     void UseTableSchema(bool isIncludeMany, string tableSchema);
 
     IDeleteVisitor WhereWith(object wherKeys);
