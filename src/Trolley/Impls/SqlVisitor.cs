@@ -156,8 +156,9 @@ public class SqlVisitor : ISqlVisitor
             case 3: shardingRule = shardingTable.Rule as Func<string, object, object, object, string>; break;
         }
         if (shardingRule == null) throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置依赖{fieldValues.Length}个字段值的分表规则");
-
-        tableName = (string)shardingRule.DynamicInvoke([origTableName, fieldValues]);
+        var parameters = new List<object> { origTableName };
+        parameters.AddRange(fieldValues);
+        tableName = (string)shardingRule.DynamicInvoke(parameters.ToArray());
         //单个分表，直接设置body表名，当作不分表处理
         if (tableSegment.TableNames == null && !string.IsNullOrEmpty(tableSegment.Body))
         {
@@ -181,23 +182,6 @@ public class SqlVisitor : ISqlVisitor
             tableSegment.ShardingType = ShardingTableType.SingleTable;
             tableSegment.Body = tableName;
         }
-    }
-    /// <summary>
-    /// 只适用于批量插入的分表规则，通常是根据某个字段值来确定分表
-    /// </summary>
-    /// <typeparam name="TEntity"></typeparam>
-    /// <param name="tableNameGetter"></param>
-    /// <exception cref="Exception"></exception>
-    /// <exception cref="ArgumentNullException"></exception>
-    public void UseTableBy<TEntity>(Func<TEntity, string> tableNameGetter)
-    {
-        var tableSegment = this.Tables.First();
-        if (this.ShardingProvider == null || !this.ShardingProvider.TryGetTableSharding(tableSegment.EntityType, out var shardingTable))
-            throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表，不能调用此方法");
-        if (tableNameGetter == null)
-            throw new ArgumentNullException("分表规则tableNameGetter不能为null");
-        tableSegment.IsSharding = true;
-        shardingTable.Rule = tableNameGetter;
     }
     public void UseTableByRange(bool isIncludeMany, object beginFieldValue, object endFieldValue)
         => this.UseTableByRange(isIncludeMany, tableSegment =>
@@ -261,6 +245,18 @@ public class SqlVisitor : ISqlVisitor
         }
         this.IsNeedFetchShardingTables = true;
         this.IsNeedFormatShardingTables = true;
+    }
+    /// <summary>
+    /// 设置插入或批量更新时的分表名获取委托，通常是根据某1个或多个字段值来确定分表，执行会根据实体字段的值自动插入、更新到对应分表中。
+    /// </summary>
+    /// <typeparam name="TParameter"></typeparam>
+    /// <param name="tableNameGetter"></param>
+    /// <exception cref="ArgumentNullException"></exception>
+    public void UseTableBy<TParameter>(Func<string, TParameter, string> tableNameGetter)
+    {
+        if (tableNameGetter == null)
+            throw new ArgumentNullException(nameof(tableNameGetter));
+        this.DbContext.BulkShardingRule = tableNameGetter;
     }
     public void UseTableSchema(bool isIncludeMany, string tableSchema)
     {

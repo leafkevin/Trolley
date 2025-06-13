@@ -20,8 +20,14 @@ public class MySqlCreate<TEntity> : Create<TEntity>, IMySqlCreate<TEntity>
     #region Sharding
     public new IMySqlCreate<TEntity> UseTable(string tableName)
         => base.UseTable(tableName) as IMySqlCreate<TEntity>;
-    public new IMySqlCreate<TEntity> UseTableBy(object field1Value, object field2Value = null)
+    public new IMySqlCreate<TEntity> UseTableBy(object fieldValue)
+        => base.UseTableBy(fieldValue) as IMySqlCreate<TEntity>;
+    public new IMySqlCreate<TEntity> UseTableBy(object field1Value, object field2Value)
         => base.UseTableBy(field1Value, field2Value) as IMySqlCreate<TEntity>;
+    public new IMySqlCreate<TEntity> UseTableBy(object field1Value, object field2Value, object field3Value)
+        => base.UseTableBy(field1Value, field2Value, field3Value) as IMySqlCreate<TEntity>;
+    public new IMySqlCreate<TEntity> UseTableBy<TInsertObj>(Func<string, TInsertObj, string> tableNameGetter)
+        => base.UseTableBy(tableNameGetter) as IMySqlCreate<TEntity>;
     #endregion
 
     #region IgnoreInto

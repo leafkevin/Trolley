@@ -73,6 +73,14 @@ public class Update<TEntity> : IUpdate<TEntity>
         this.Visitor.UseTableBy(false, field1Value, field2Value, field3Value);
         return this;
     }
+    public virtual IUpdate<TEntity> UseTableBy<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
+    {
+        if (tableNameGetter == null)
+            throw new ArgumentNullException(nameof(tableNameGetter), "tableNameGetter参数不能为空");
+
+        this.Visitor.UseTableBy(tableNameGetter);
+        return this;
+    }
     public virtual IUpdate<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
         if (beginFieldValue == null)

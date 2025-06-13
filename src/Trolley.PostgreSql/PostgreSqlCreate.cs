@@ -20,8 +20,14 @@ public class PostgreSqlCreate<TEntity> : Create<TEntity>, IPostgreSqlCreate<TEnt
     #region Sharding
     public new IPostgreSqlCreate<TEntity> UseTable(string tableName)
         => base.UseTable(tableName) as IPostgreSqlCreate<TEntity>;
-    public new IPostgreSqlCreate<TEntity> UseTableBy(object field1Value, object field2Value = null)
+    public new IPostgreSqlCreate<TEntity> UseTableBy(object fieldValue)
+        => base.UseTableBy(fieldValue) as IPostgreSqlCreate<TEntity>;
+    public new IPostgreSqlCreate<TEntity> UseTableBy(object field1Value, object field2Value)
         => base.UseTableBy(field1Value, field2Value) as IPostgreSqlCreate<TEntity>;
+    public new IPostgreSqlCreate<TEntity> UseTableBy(object field1Value, object field2Value, object field3Value)
+        => base.UseTableBy(field1Value, field2Value, field3Value) as IPostgreSqlCreate<TEntity>;
+    public new IPostgreSqlCreate<TEntity> UseTableBy<TInsertObj>(Func<string, TInsertObj, string> tableNameGetter)
+        => base.UseTableBy(tableNameGetter) as IPostgreSqlCreate<TEntity>;
     #endregion
 
     #region WithBy

@@ -18,45 +18,21 @@ public class MySqlDelete<TEntity> : Delete<TEntity>, IMySqlDelete<TEntity>
 
     #region Sharding
     public new IMySqlDelete<TEntity> UseTable(params string[] tableNames)
-    {
-        base.UseTable(tableNames);
-        return this;
-    }
+        => base.UseTable(tableNames) as IMySqlDelete<TEntity>;
     public new IMySqlDelete<TEntity> UseTable(Func<string, bool> tableNamePredicate)
-    {
-        base.UseTable(tableNamePredicate);
-        return this;
-    }
+        => base.UseTable(tableNamePredicate) as IMySqlDelete<TEntity>;
     public new IMySqlDelete<TEntity> UseTableBy(object fieldValue)
-    {
-        base.UseTableBy(fieldValue);
-        return this;
-    }
+        => base.UseTableBy(fieldValue) as IMySqlDelete<TEntity>;
     public new IMySqlDelete<TEntity> UseTableBy(object field1Value, object field2Value)
-    {
-        base.UseTableBy(field1Value, field2Value);
-        return this;
-    }
+        => base.UseTableBy(field1Value, field2Value) as IMySqlDelete<TEntity>;
     public new IMySqlDelete<TEntity> UseTableBy(object field1Value, object field2Value, object field3Value)
-    {
-        base.UseTableBy(field1Value, field2Value, field3Value);
-        return this;
-    }
+        => base.UseTableBy(field1Value, field2Value, field3Value) as IMySqlDelete<TEntity>;
     public new IMySqlDelete<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue)
-    {
-        base.UseTableByRange(beginFieldValue, endFieldValue);
-        return this;
-    }
-    public new IMySqlDelete<TEntity> UseTableByRange(object field1Value1, object beginField2Value, object endField2Value)
-    {
-        base.UseTableByRange(field1Value1, beginField2Value, endField2Value);
-        return this;
-    }
+        => base.UseTableByRange(beginFieldValue, endFieldValue) as IMySqlDelete<TEntity>;
+    public new IMySqlDelete<TEntity> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
+        => base.UseTableByRange(field1Value, beginField2Value, endField2Value) as IMySqlDelete<TEntity>;
     public new IMySqlDelete<TEntity> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
-    {
-        base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value);
-        return this;
-    }
+        => base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value) as IMySqlDelete<TEntity>;
     #endregion
 
     #region UseTableSchema

@@ -19,6 +19,7 @@ public sealed class DbContext
     public IOrmProvider OrmProvider { get; set; }
     public IEntityMapProvider MapProvider { get; set; }
     public ITableShardingProvider ShardingProvider { get; set; }
+    public object BulkShardingRule { get; set; }
     public ITheaTransaction Transaction { get; set; }
     public bool IsConstantParameterized => this.Options.IsConstantParameterized;
     public int CommandTimeout => this.Options.CommandTimeout;

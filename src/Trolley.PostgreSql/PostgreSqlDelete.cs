@@ -18,45 +18,21 @@ public class PostgreSqlDelete<TEntity> : Delete<TEntity>, IPostgreSqlDelete<TEnt
 
     #region Sharding
     public new IPostgreSqlDelete<TEntity> UseTable(params string[] tableNames)
-    {
-        base.UseTable(tableNames);
-        return this;
-    }
+        => base.UseTable(tableNames) as IPostgreSqlDelete<TEntity>;
     public new IPostgreSqlDelete<TEntity> UseTable(Func<string, bool> tableNamePredicate)
-    {
-        base.UseTable(tableNamePredicate);
-        return this;
-    }
+        => base.UseTable(tableNamePredicate) as IPostgreSqlDelete<TEntity>;
     public new IPostgreSqlDelete<TEntity> UseTableBy(object fieldValue)
-    {
-        base.UseTableBy(fieldValue);
-        return this;
-    }
+        => base.UseTableBy(fieldValue) as IPostgreSqlDelete<TEntity>;
     public new IPostgreSqlDelete<TEntity> UseTableBy(object field1Value, object field2Value)
-    {
-        base.UseTableBy(field1Value, field2Value);
-        return this;
-    }
+        => base.UseTableBy(field1Value, field2Value) as IPostgreSqlDelete<TEntity>;
     public new IPostgreSqlDelete<TEntity> UseTableBy(object field1Value, object field2Value, object field3Value)
-    {
-        base.UseTableBy(field1Value, field2Value, field3Value);
-        return this;
-    }
+        => base.UseTableBy(field1Value, field2Value, field3Value) as IPostgreSqlDelete<TEntity>;
     public new IPostgreSqlDelete<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue)
-    {
-        base.UseTableByRange(beginFieldValue, endFieldValue);
-        return this;
-    }
-    public new IPostgreSqlDelete<TEntity> UseTableByRange(object field1Value1, object beginField2Value, object endField2Value)
-    {
-        base.UseTableByRange(field1Value1, beginField2Value, endField2Value);
-        return this;
-    }
+        => base.UseTableByRange(beginFieldValue, endFieldValue) as IPostgreSqlDelete<TEntity>;
+    public new IPostgreSqlDelete<TEntity> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
+        => base.UseTableByRange(field1Value, beginField2Value, endField2Value) as IPostgreSqlDelete<TEntity>;
     public new IPostgreSqlDelete<TEntity> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
-    {
-        base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value);
-        return this;
-    }
+        => base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value) as IPostgreSqlDelete<TEntity>;
     #endregion
 
     #region UseTableSchema

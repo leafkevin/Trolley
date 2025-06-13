@@ -61,6 +61,14 @@ public class Create<TEntity> : CreateInternal, ICreate<TEntity>
         this.Visitor.UseTableBy(false, field1Value, field2Value, field3Value);
         return this;
     }
+    public virtual ICreate<TEntity> UseTableBy<TInsertObj>(Func<string, TInsertObj, string> tableNameGetter)
+    {
+        if (tableNameGetter == null)
+            throw new ArgumentNullException(nameof(tableNameGetter), "tableNameGetter参数不能为空");
+
+        this.Visitor.UseTableBy(tableNameGetter);
+        return this;
+    }
     #endregion
 
     #region UseTableSchema
