@@ -2829,7 +2829,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .InnerJoin((x, y) => x.BrandId == y.Id && x.IsEnabled && y.IsEnabled || x.CompanyId.IsNull())
             .SelectFlattenTo((x, y) => new ProductInfo { IsEnabled = x.IsEnabled && y.IsEnabled || x.CompanyId.IsNull() })
             .FirstAsync();
-        Assert.Equal(true, result.IsEnabled);
+        Assert.True(result.IsEnabled);
     }
     private string DeferInvoke() => "DeferInvoke";
 }

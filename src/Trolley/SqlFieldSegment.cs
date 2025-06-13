@@ -24,6 +24,9 @@ public enum SqlFieldType : byte
     /// 先从数据库中查询连续的一个或多个字段，再执行函数调用返回一个字段
     /// </summary>
     DeferredFields,
+    /// <summary>
+    /// 原始SQL
+    /// </summary>
     RawSql
 }
 [DebuggerDisplay("FieldType: {FieldType,nq} Body: {Body,nq} Value: {Value,nq} Expression: {Expression,nq}")]

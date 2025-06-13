@@ -24,6 +24,7 @@ public static class Extensions
     private static readonly ConcurrentDictionary<int, Func<ITheaDataReader, object>> valueTupleReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<int, Func<ITheaDataReader, object>> typeReaderDeserializerCache = new();
     private static readonly ConcurrentDictionary<int, Func<ITheaDataReader, object>> queryReaderDeserializerCache = new();
+    private static readonly ConcurrentDictionary<int, Func<ITheaDataReader, object>> deferredValueReaderDeserializerCache = new();
 
 
     public static OrmDbFactoryBuilder Configure<TModelConfiguration>(this OrmDbFactoryBuilder builder, OrmProviderType ormProviderType) where TModelConfiguration : class, IModelConfiguration, new()
@@ -313,19 +314,6 @@ public static class Extensions
                 valueTupleReaderDeserializerCache.TryAdd(cacheKey, deserializer = RepositoryHelper.CreateReaderValueTupleDeserializer(entityType, dbContext, reader));
             return deserializer;
         }
-        //else if (entityType == typeof(object))
-        //{
-        //    return reader =>
-        //    {
-        //        var row = new List<object>();
-        //        for (var i = 0; i < reader.FieldCount; i++)
-        //        {
-        //            var dbValue = reader.GetValue(i);
-        //            row.Add(dbValue is DBNull ? null : dbValue);
-        //        }
-        //        return (TEntity)(object)row;
-        //    };
-        //}
         else if (typeof(IDictionary<string, object>).IsAssignableFrom(entityType))
         {
             return reader =>
@@ -351,8 +339,18 @@ public static class Extensions
         if (readerFields == null)
             return GetReaderDeserializer(reader, entityType, dbContext);
 
+        int cacheKey = 0;
+        var ormProviderType = dbContext.OrmProvider.OrmProviderType;
         if (reader.FieldCount == 1 && !entityType.IsEntityType(out _))
         {
+            if (readerFields.Exists(f => f.FieldType == SqlFieldType.DeferredFields))
+            {
+                cacheKey = GetTypeReaderKey(entityType, ormProviderType, reader, readerFields);
+                if (!deferredValueReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
+                    deferredValueReaderDeserializerCache.TryAdd(cacheKey, deserializer = RepositoryHelper.CreateReaderDeferredValueDeserializer(entityType, dbContext, reader, readerFields));
+                return deserializer;
+            }
+
             var fieldType = reader.GetFieldType(0);
             if (fieldType != entityType)
             {
@@ -367,55 +365,14 @@ public static class Extensions
             }
             return reader => reader.GetValue(0);
         }
-        var ormProviderType = dbContext.OrmProvider.OrmProviderType;
-        var cacheKey = GetTypeReaderKey(entityType, ormProviderType, reader, readerFields);
+
+        cacheKey = GetTypeReaderKey(entityType, ormProviderType, reader, readerFields);
         if (entityType.FullName.StartsWith("System.ValueTuple`"))
         {
             if (!valueTupleReaderDeserializerCache.TryGetValue(cacheKey, out var deserializer))
                 valueTupleReaderDeserializerCache.TryAdd(cacheKey, deserializer = RepositoryHelper.CreateReaderValueTupleDeserializer(entityType, dbContext, reader));
             return deserializer;
         }
-        //else if (entityType == typeof(object))
-        //{
-        //    var valueGetters = new List<Func<ITheaDataReader, object>>();
-        //    for (var i = 0; i < reader.FieldCount; i++)
-        //    {
-        //        var fieldType = reader.GetFieldType(i);
-        //        var readerField = readerFields[i];
-        //        if (fieldType != entityType)
-        //        {
-        //            if (readerField.TypeHandler != null)
-        //            {
-        //                valueGetters.Add(reader =>
-        //                {
-        //                    var dbValue = reader.GetValue(i);
-        //                    dbValue = readerField.TypeHandler.Parse(dbContext.OrmProvider, readerField.SegmentType, dbValue);
-        //                    return dbValue is DBNull ? null : dbValue;
-        //                });
-        //            }
-        //            else
-        //            {
-        //                var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(entityType, readerField.SegmentType, dbContext.Options);
-        //                valueGetters.Add(reader =>
-        //                {
-        //                    var dbValue = valueGetter.Invoke(reader.GetValue(i));
-        //                    return dbValue is DBNull ? null : dbValue;
-        //                });
-        //            }
-        //        }
-        //        else valueGetters.Add(reader =>
-        //        {
-        //            var dbValue = reader.GetValue(i);
-        //            return dbValue is DBNull ? null : dbValue;
-        //        });
-        //    }
-        //    return reader =>
-        //    {
-        //        var row = new List<object>();
-        //        valueGetters.ForEach(f => row.Add(f.Invoke(reader)));
-        //        return (TEntity)(object)row;
-        //    };
-        //}
         else if (typeof(IDictionary<string, object>).IsAssignableFrom(entityType))
         {
             return reader =>
@@ -568,6 +525,7 @@ public static class Extensions
             hashCode.Add(reader.GetFieldType(i));
         }
         hashCode.Add(readerFields.Count);
+        int index = 0;
         foreach (var readerField in readerFields)
         {
             hashCode.Add(readerField.FieldType);
@@ -576,7 +534,10 @@ public static class Extensions
             else if (readerField.FieldType == SqlFieldType.RawSql)
                 hashCode.Add($"RawSql:{readerField.Body}");
             else if (readerField.FieldType == SqlFieldType.DeferredFields)
-                hashCode.Add($"{readerField.TargetMember.Name}:{readerField.DeferredExpression.ToString()}");
+            {
+                string fieldName = readerField.TargetMember?.Name ?? $"DeferredField{index++}";
+                hashCode.Add($"{fieldName}:{readerField.DeferredExpression.ToString()}");
+            }
             else hashCode.Add(readerField.TargetMember.Name);
         }
         return hashCode.ToHashCode();
@@ -592,6 +553,7 @@ public static class Extensions
                 hashCode = hashCode * 23 + reader.GetFieldType(i).GetHashCode();
             }
             hashCode = hashCode * 23 + readerFields.Count.GetHashCode();
+            int index = 0;
             foreach (var readerField in readerFields)
             {
                 hashCode = hashCode * 23 + readerField.FieldType.GetHashCode();
@@ -600,7 +562,10 @@ public static class Extensions
                 else if (readerField.FieldType == SqlFieldType.RawSql)
                     hashCode = hashCode * 23 + $"RawSql:{readerField.Body}".GetHashCode();
                 else if (readerField.FieldType == SqlFieldType.DeferredFields)
-                    hashCode = hashCode * 23 + $"{readerField.TargetMember.Name}:{readerField.DeferredExpression.ToString()}".GetHashCode();
+                {
+                    string fieldName = readerField.TargetMember?.Name ?? $"DeferredField{index++}";
+                    hashCode = hashCode * 23 + $"{fieldName}:{readerField.DeferredExpression.ToString()}".GetHashCode();
+                }
                 else hashCode = hashCode * 23 + readerField.TargetMember.Name.GetHashCode();
             }
         }

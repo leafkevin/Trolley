@@ -151,7 +151,7 @@ public class SqlVisitor : ISqlVisitor
         if (field2Value != null)
         {
             var shardingRule = shardingTable.Rule as Func<string, object, object, string>;
-            if (shardingRule == null) throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表规则，不能调用此方法");
+            if (shardingRule == null) throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置依赖2个字段值的分表规则");
             tableName = shardingRule.Invoke(origTableName, field1Value, field2Value);
         }
         else
@@ -1003,7 +1003,7 @@ public class SqlVisitor : ISqlVisitor
                 break;
             case "Deferred":
                 sqlSegment.IsDeferredFields = true;
-                sqlSegment = this.VisitMethodCall(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                 break;
             case "IsNull":
                 if (methodCallExpr.Arguments.Count > 1)

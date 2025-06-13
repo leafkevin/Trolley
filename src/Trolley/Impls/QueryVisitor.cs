@@ -1409,7 +1409,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     sqlSegment = this.VisitAndDeferred(sqlSegment);
                     //延迟方法调用，参数可能有多个，返回的ReaderField只有一个
                     //不一定有成员名称，无需设置TableSegment/FromMember/TargetMember，如：.Select(f => f.Age / 10 * 10)
-                    sqlSegment.FieldType = SqlFieldType.Field;
+                    //sqlSegment.FieldType = SqlFieldType.Field;
                     sqlSegment.SegmentType ??= selectExpr.Type;
                     //常量和变量body没有值，最后BuildSql时，再进行设置
                     this.ReaderFields = new List<SqlFieldSegment> { sqlSegment };
@@ -1549,6 +1549,56 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var memberExpr = sqlSegment.Expression as MemberExpression;
         var memberInfo = memberExpr.Member;
 
+        if (sqlSegment.IsDeferredFields && this.IsSelect)
+        {
+            //延迟属性访问，两种场景：
+            //主动延迟方法调用：如，把返回的枚举列转成描述，参数就是枚举列，返回值是对应的描述
+            string fields = null;
+            List<SqlFieldSegment> readerFields = null;
+            var visitor = new MemberVisitor();
+            visitor.Visit(memberExpr);
+            //$"{f.OrderNo} : {f.TotalAmount.ToString("C")}"
+            //f.TotalAmount.ToString("C")
+            //"TotalAmount: " + (f.Price * f.Quantity).ToString("C")
+            //this.DeferredInvoke(f.Price, f.Quantity)
+            if (visitor.Members.Count > 0)
+            {
+                readerFields = new List<SqlFieldSegment>();
+                var builder = new StringBuilder();
+                foreach (var argsExpr in visitor.Members)
+                {
+                    var argumentSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = argsExpr });
+                    if (argumentSegment.HasField)
+                    {
+                        sqlSegment.HasField = true;
+                        var fieldName = argumentSegment.Body;
+                        readerFields.Add(new SqlFieldSegment
+                        {
+                            SegmentType = argsExpr.Type,
+                            TargetMember = argsExpr.Member,
+                            NativeDbType = argumentSegment.NativeDbType,
+                            TypeHandler = argumentSegment.TypeHandler
+                        });
+                        if (builder.Length > 0)
+                            builder.Append(',');
+                        builder.Append(fieldName);
+                    }
+                }
+                if (readerFields.Count > 0)
+                    fields = builder.ToString();
+            }
+
+            if (readerFields == null)
+                fields = "NULL";
+            sqlSegment.IsDeferredFields = true;
+            sqlSegment.FieldType = SqlFieldType.DeferredFields;
+            sqlSegment.Body = fields;
+            sqlSegment.DeferredExpression = memberExpr;
+            sqlSegment.Fields = readerFields;
+            sqlSegment.IsMethodCall = true;
+            return sqlSegment;
+        }
+
         MemberAccessSqlFormatter formatter = null;
         if (memberExpr.Expression != null)
         {
@@ -1615,7 +1665,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 if (rootTableSegment.TableType == TableType.Entity)
                 {
                     var builder = new StringBuilder(rootTableSegment.AliasName);
-                    var memberExprs = this.GetMemberExprs(memberExpr, out var parameterExpr);
+                    var memberExprs = this.GetMemberExprs(memberExpr, out _);
                     if (memberExprs.Count > 1)
                     {
                         while (memberExprs.Count > 1)
@@ -1762,7 +1812,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                             readerField = fromReaderFields.Find(f => f.TargetMember.Name == memberExpr.Member.Name);
                         }
                         sqlSegment.FieldType = readerField.FieldType;
-                        sqlSegment.FromMember = readerField.FromMember;
+                        sqlSegment.FromMember = readerField.TargetMember ?? readerField.FromMember;
                         sqlSegment.TargetMember = readerField.TargetMember;
                         sqlSegment.SegmentType = readerField.SegmentType;
                         if (readerField.SegmentType.IsEnumType(out var underlyingType))
@@ -1770,6 +1820,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
                         sqlSegment.NativeDbType = readerField.NativeDbType;
                         sqlSegment.TypeHandler = readerField.TypeHandler;
+                        sqlSegment.TableSegment = fromSegment;
                         if (fromSegment.TableType == TableType.TempReaderFields)
                             fieldName = readerField.Body;
                         else
@@ -1779,7 +1830,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         }
                         sqlSegment.Body = fieldName;
                         sqlSegment.Fields = readerField.Fields;
-                        sqlSegment.IsNeedAlias = readerField.IsNeedAlias;
+                        sqlSegment.IsNeedAlias = false;
                     }
                 }
                 return sqlSegment;
@@ -2198,26 +2249,41 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var memberExprs = new Stack<MemberExpression>();
         while (currentExpr != null)
         {
-            if (currentExpr.NodeType == ExpressionType.Parameter)
+            switch (currentExpr.NodeType)
             {
-                parameterExpr = currentExpr as ParameterExpression;
-                break;
-            }
-            if (currentExpr.NodeType == ExpressionType.Convert)
-            {
-                var unaryExpr = currentExpr as UnaryExpression;
-                if (unaryExpr.Operand.NodeType == ExpressionType.Parameter)
-                {
-                    parameterExpr = unaryExpr.Operand as ParameterExpression;
+                case ExpressionType.Parameter:
+                    parameterExpr = currentExpr as ParameterExpression;
+                    currentExpr = null;
                     break;
-                }
-                else throw new NotSupportedException($"不支持的成员访问表达式，访问路径：{currentExpr.ToString()}");
-            }
-            if (currentExpr.NodeType == ExpressionType.MemberAccess)
-            {
-                var parentExpr = currentExpr as MemberExpression;
-                memberExprs.Push(parentExpr);
-                currentExpr = parentExpr.Expression;
+                case ExpressionType.Convert:
+                    var unaryExpr = currentExpr as UnaryExpression;
+                    currentExpr = unaryExpr.Operand;
+                    break;
+                //case ExpressionType.Call:
+                //    if(this.IsSelect)
+                //    {
+                //        //Select场景，方法调用表达式，可能是访问了Include导航属性
+                //        this.Visit(new SqlFieldSegment { Expression = currentExpr });
+                //        var methodCallExpr = currentExpr as MethodCallExpression;
+                //        if (methodCallExpr.Method.Name == nameof(IncludeSegment.GetIncludeKey))
+                //        {
+                //            //获取IncludeKey的表达式
+                //            var includeSegment = methodCallExpr.Arguments[2] as TableSegment;
+                //            if (includeSegment != null)
+                //            {
+                //                parameterExpr = methodCallExpr.Arguments[0] as ParameterExpression;
+                //                return this.GetMemberExprs(includeSegment.Expression as MemberExpression, out parameterExpr);
+                //            }
+                //        }
+                //        else throw new NotSupportedException($"不支持的Select方法调用表达式，访问路径：{currentExpr.ToString()}");
+                //    }
+                //break;
+                case ExpressionType.MemberAccess:
+                    var parentExpr = currentExpr as MemberExpression;
+                    memberExprs.Push(parentExpr);
+                    currentExpr = parentExpr.Expression;
+                    break;
+                default: throw new NotSupportedException($"不支持的成员访问表达式，访问路径：{currentExpr.ToString()}");
             }
         }
         return memberExprs;

@@ -2979,7 +2979,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
             .InnerJoin((x, y) => x.BrandId == y.Id && x.IsEnabled && y.IsEnabled)
             .SelectFlattenTo((x, y) => new ProductInfo { IsEnabled = x.IsEnabled && y.IsEnabled })
             .FirstAsync();
-        Assert.Equal(true, result.IsEnabled);
+        Assert.True(result.IsEnabled);
     }
     private string DeferInvoke() => "DeferInvoke";
 }

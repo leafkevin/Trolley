@@ -1329,7 +1329,7 @@ public class UnitTest6 : UnitTestBase
         var sql = repository.From<Order>()
             .UseTableBy("104", DateTime.Parse("2024-05-24"))
             .Where(f => repository.From<User>('b')
-                .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                .UseTableBy("104")
                 .Where(t => t.Id == f.BuyerId && t.Age < 25)
                 .Exists())
             .ToSql(out _);
@@ -1338,7 +1338,7 @@ public class UnitTest6 : UnitTestBase
         var result = repository.From<Order>()
             .UseTableBy("104", DateTime.Parse("2024-05-24"))
             .Where(f => repository.From<User>('b')
-                .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                .UseTableBy("104")
                 .Where(t => t.Id == f.BuyerId && t.Age < 25)
                 .Exists())
             .ToList();

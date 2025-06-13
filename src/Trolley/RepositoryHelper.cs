@@ -1803,6 +1803,30 @@ public static class RepositoryHelper
         blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(typeof(object))));
         return Expression.Lambda<Func<ITheaDataReader, object>>(Expression.Block(blockParameters, blockBodies), readerExpr).Compile();
     }
+    public static Func<ITheaDataReader, object> CreateReaderDeferredValueDeserializer(Type valueType, DbContext dbContext, ITheaDataReader reader, List<SqlFieldSegment> readerFields)
+    {
+        var blockParameters = new List<ParameterExpression>();
+        var blockBodies = new List<Expression>();
+        var readerExpr = Expression.Parameter(typeof(ITheaDataReader), "reader");
+        var ormProviderExpr = Expression.Constant(dbContext.OrmProvider);
+
+        var readerField = readerFields[0];
+        var visitor = new ReplaceParameterVisitor();
+        var bodyExpr = visitor.Visit(readerField.DeferredExpression);
+
+        var fieldType = reader.GetFieldType(0);
+        //延迟的方法调用，有字段值作为方法参数就读取，没有什么也不做
+        var childReaderField = readerField.Fields[0];
+        var readerValueExpr = GetReaderValue(dbContext, ormProviderExpr, readerExpr, Expression.Constant(0),
+            childReaderField.SegmentType, fieldType, childReaderField.TypeHandler, blockParameters, blockBodies);
+        var executeExpr = Expression.Invoke(Expression.Lambda(bodyExpr, visitor.NewParameters), readerValueExpr);
+
+        var resultLabelExpr = Expression.Label(typeof(object));
+        var returnExpr = Expression.Convert(executeExpr, typeof(object));
+        blockBodies.Add(Expression.Return(resultLabelExpr, returnExpr));
+        blockBodies.Add(Expression.Label(resultLabelExpr, Expression.Default(typeof(object))));
+        return Expression.Lambda<Func<ITheaDataReader, object>>(Expression.Block(blockParameters, blockBodies), readerExpr).Compile();
+    }
     public static Func<ITheaDataReader, object> CreateReaderEntityDeserializer(Type entityType, DbContext dbContext, ITheaDataReader reader, List<SqlFieldSegment> readerFields)
     {
         var blockParameters = new List<ParameterExpression>();
@@ -1878,6 +1902,7 @@ public static class RepositoryHelper
                     if (readerField.Fields != null)
                         endIndex += readerField.Fields.Count;
 
+                    //支持延迟方法调用、属性访问，一切均可延迟，但必须最后调用Deferred()方法
                     if (readerField.FieldType == SqlFieldType.DeferredFields)
                     {
                         if (readerField.SegmentType.IsEntityType(out _))
@@ -1890,6 +1915,7 @@ public static class RepositoryHelper
                         //f.TotalAmount.ToString("C")
                         //"TotalAmount: " + (f.Price * f.Quantity).ToString("C")
                         //this.DeferredInvoke(f.Price, f.Quantity)
+                        //new DateTimeOffset(DateTime.SpecifyKind(f.DateTimeField, DateTimeKind.Local)).UtcDateTime.Deferred()
                         Expression executeExpr = null;
                         if (readerField.Fields != null && readerField.Fields.Count > 0)
                         {

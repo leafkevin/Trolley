@@ -697,4 +697,39 @@ public class MethodCallUnitTest : UnitTestBase
             .ToSql(out _);
         Assert.Equal("SELECT a.[Id] FROM [sys_user] a WHERE a.[Name]=N'千11'", sql);
     }
+    [Fact]
+    public async Task Method_Property_Deferred()
+    {
+        this.Initialize(1);
+        var repository = this.dbFactory.Create();
+        //测试值类型缓存是否正确
+        var result1 = await repository.From<UpdateEntity1>()
+            .Where(f => f.Id == 1)
+            .Select(f => f.DateTimeField)
+            .FirstAsync();
+        var result2 = await repository.From<UpdateEntity1>()
+            .Where(f => f.Id == 1)
+            .Select(f => new DateTimeOffset(DateTime.SpecifyKind(f.DateTimeField, DateTimeKind.Local)).UtcDateTime.Deferred())
+            .FirstAsync();
+        var sql = repository.From<UpdateEntity1>()
+            .Where(f => f.Id == 1)
+            .Select(f => new
+            {
+                UtcDateTime = new DateTimeOffset(DateTime.SpecifyKind(f.DateTimeField, DateTimeKind.Local)).UtcDateTime.Deferred(),
+                Timestamp = f.DateTimeOffsetField.ToUnixTimeMilliseconds()
+            })
+            .ToSql(out _);
+        Assert.Equal("SELECT a.`DateTimeField`,a.`DateTimeOffsetField` FROM `sys_update_entity` a WHERE a.`Id`=1", sql);
+        var result = await repository.From<UpdateEntity1>()
+            .Where(f => f.Id == 1)
+            .Select(f => new
+            {
+                UtcDateTime = new DateTimeOffset(DateTime.SpecifyKind(f.DateTimeField, DateTimeKind.Local)).UtcDateTime.Deferred(),
+                Timestamp = f.DateTimeOffsetField.ToUnixTimeMilliseconds()
+            })
+            .FirstAsync();
+        Assert.NotNull(result);
+        Assert.True(result.UtcDateTime > DateTime.UtcNow.AddDays(-1));
+        Assert.True(result.Timestamp > DateTimeOffset.UtcNow.AddDays(-1).ToUnixTimeMilliseconds());
+    }
 }
