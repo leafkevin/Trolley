@@ -822,13 +822,22 @@ public abstract partial class BaseOrmProvider : IOrmProvider
                 }
                 else if (fieldType == typeof(byte[]))
                 {
-                    //兼容某些分布式数据库，byte[]类型转换为string类型
+                    //兼容某些分布式数据库，bit[n]类型转换为string类型
                     if (underlyingType == typeof(string))
                     {
                         typeHandler = value =>
                         {
                             if (value is DBNull) return null;
                             return UTF8Encoding.UTF8.GetString((byte[])value);
+                        };
+                    }
+                    //兼容某些数据库，bit[1]类型转换为bool类型
+                    if (underlyingType == typeof(bool))
+                    {
+                        typeHandler = value =>
+                        {
+                            if (value is DBNull) return null;
+                            return Convert.ToInt32(((byte[])value)[0]) != 0;
                         };
                     }
                 }
