@@ -110,13 +110,13 @@ public interface IQuery<T> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_104_202001", "sys_order_105_6_202002")
     /// </summary>
-    /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
+    /// <param name="tableNames">多个分表名，完整的表名，如：sys_order_202001(按时间)，sys_order_104_202001(按商户+时间)，sys_order_105_6_202002(按商户+产品+时间)</param>
     /// <returns>返回查询对象</returns>
     IQuery<T> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表1个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T表1个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -146,26 +146,11 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据1个字段值，手动指定分表名，可多次调用
+    /// 根据字段值，手动指定TEntity表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValue">字段1值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> UseTableBy(object fieldValue);
-    /// <summary>
-    /// 根据2个字段值，手动指定分表名，字段值的顺序与配置的字段顺序保持一致，可多次调用
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T> UseTableBy(object field1Value, object field2Value);
-    /// <summary>
-    /// 根据字段值，手动指定分表名，字段值的顺序与配置的字段顺序保持一致，可多次调用
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <param name="field3Value">字段3值</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T> UseTableBy(object field1Value, object field2Value, object field3Value);
+    IQuery<T> UseTableBy(params object[] fieldValues);
     /// <summary>
     /// 根据1个字段范围值，手动指定分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>

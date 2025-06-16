@@ -140,7 +140,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 foreach (var groupByField in this.GroupByFields)
                 {
                     var memberInfo = groupByField.TargetMember ?? groupByField.FromMember;
-                    if (this.ReaderFields.Exists(f => f.FromMember == memberInfo))
+                    if (this.ReaderFields.Exists(f => f.IsGroupByField && f.TargetMember.Name == memberInfo.Name || f.IsGroupingField))
                         continue;
                     this.ReaderFields.Add(groupByField);
                 }
@@ -174,9 +174,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             whereSql = $" WHERE {this.WhereSql}";
             builder.Append(whereSql);
         }
+        //有多分表还有Group By操作，每个分表语句中做Group By操作，Union All语句后，还要再做Group By操作
         if (!string.IsNullOrEmpty(this.GroupBySql))
             builder.Append($" GROUP BY {this.GroupBySql}");
-        if (!string.IsNullOrEmpty(this.HavingSql))
+        //有多分表还有Group By+Having操作，每个分表语句中只做Group By操作，不做Having操作，在Union All语句后，再做Group By+Having操作
+        if (!this.IsManyShardingTables && !string.IsNullOrEmpty(this.HavingSql))
             builder.Append($" HAVING {this.HavingSql}");
 
         string orderBy = null;
@@ -205,7 +207,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             if (this.IsNeedPaging && this.skip.HasValue && this.limit.HasValue)
             {
                 var myTableSql = $"{tableSql}{others}";
-                if (this.IsNeedFullCountPaging)
+                if (this.IsNeedFullFieldsPagingCount)
                     myTableSql = $"(SELECT {selectSql} FROM {tableSql}{others}) a";
                 builder.Append($"SELECT COUNT(*) FROM {myTableSql};");
             }
@@ -420,68 +422,33 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             int index = 0;
             foreach (var groupByField in this.GroupByFields)
             {
-                string fieldName = null;
-                if (groupByField.IsNeedAlias)
-                {
-                    fieldName = groupByField.TargetMember.Name;
-                    fieldName = this.OrmProvider.GetFieldName(fieldName);
-                }
-                else
-                {
-                    fieldName = groupByField.Body;
-                    var startIndex = fieldName.IndexOf('.');
-                    if (startIndex > 0)
-                        fieldName = fieldName.Substring(startIndex + 1);
-                }
+                var fieldName = this.OrmProvider.GetFieldName(groupByField.TargetMember.Name);
                 if (index > 0) builder.Append(',');
                 builder.Append(fieldName);
                 index++;
             }
             groupBy = " GROUP BY " + builder.ToString();
+
             builder.Clear();
-            index = 0;
-            foreach (var readerField in this.ReaderFields)
+            for (int i = 0; i < this.ReaderFields.Count; i++)
             {
-                string fieldName = null;
-                if (readerField.IsNeedAlias)
-                {
-                    fieldName = readerField.TargetMember.Name;
-                    fieldName = this.OrmProvider.GetFieldName(fieldName);
-                }
-                else
-                {
-                    fieldName = readerField.Body;
-                    var startIndex = fieldName.IndexOf('.');
-                    if (startIndex > 0)
-                        fieldName = fieldName.Substring(startIndex + 1);
-                }
+                var readerField = this.ReaderFields[i];
+                var fieldName = this.OrmProvider.GetFieldName(readerField.TargetMember.Name);
                 if (readerField.IsAggField)
-                    fieldName = $"{readerField.AggFunc}({fieldName}) AS {fieldName}";
-                if (index > 0) builder.Append(',');
+                    fieldName = $"{readerField.ShardingAggFunc}({fieldName}) AS {fieldName}";
+                if (i > 0) builder.Append(',');
                 builder.Append(fieldName);
                 index++;
             }
             selectSql = builder.ToString();
-            builder.Clear();
         }
         if (this.OrderByFields != null)
         {
             int index = 0;
+            builder.Clear();
             foreach (var orderByField in this.OrderByFields)
             {
-                string fieldName = null;
-                if (orderByField.Field.IsNeedAlias)
-                {
-                    fieldName = orderByField.Field.TargetMember.Name;
-                    fieldName = this.OrmProvider.GetFieldName(fieldName);
-                }
-                else
-                {
-                    fieldName = orderByField.Field.Body;
-                    var startIndex = fieldName.IndexOf('.');
-                    if (startIndex > 0)
-                        fieldName = fieldName.Substring(startIndex + 1);
-                }
+                var fieldName = this.OrmProvider.GetFieldName(orderByField.Field.TargetMember.Name);
                 if (index > 0) builder.Append(',');
                 builder.Append(fieldName);
                 if (!string.IsNullOrEmpty(orderByField.OrderSuffix))
@@ -489,18 +456,20 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 index++;
             }
             orderBy = " ORDER BY " + builder.ToString();
-            builder.Clear();
         }
+
+        builder.Clear();
         bool isFormated = false;
         if (!string.IsNullOrEmpty(groupBy))
         {
             builder.Append($"SELECT {selectSql} FROM ({formatSql}) a");
             if (!string.IsNullOrEmpty(groupBy))
                 builder.Append($" {groupBy}");
+            //TODO:有Having操作，要添加Having操作
             sql = builder.ToString();
             isFormated = true;
-            builder.Clear();
         }
+        //TODO:此处的ReaderFields的字段，如果有join表，需要添加alias表名前缀
         if (this.skip.HasValue || this.limit.HasValue)
         {
             //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ /**others**/
@@ -509,6 +478,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             pageSql = pageSql.Replace("/**tables**/", $"({sql}) b");
             pageSql = pageSql.Replace(" /**others**/", "");
 
+            builder.Clear();
             if (this.IsNeedPaging && this.skip.HasValue && this.limit.HasValue)
                 builder.Append($"SELECT COUNT(*) FROM ({sql}) a;");
             builder.Append($"{pageSql}");
@@ -516,6 +486,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         else if (!string.IsNullOrEmpty(orderBy))
         {
+            builder.Clear();
             if (isFormated) builder.Append(sql);
             else builder.Append($"SELECT * FROM ({sql}) a");
             builder.Append($" {orderBy}");
@@ -1223,7 +1194,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 }
                 break;
         }
-        this.IsNeedFullCountPaging = this.GroupBySql != null;
+        this.IsNeedFullFieldsPagingCount = this.GroupBySql != null;
     }
     public virtual void OrderBy(string orderType, Expression expr)
     {
@@ -1646,6 +1617,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     sqlSegment.Fields = groupFields;
                 }
                 else sqlSegment = this.GroupByFields[0].Clone();
+                sqlSegment.IsGroupingField = true;
                 return sqlSegment;
             }
             //Select((x, a, b, ... ) => new { x.Grouping.Id, x.Grouping.Name, ... });
@@ -1654,6 +1626,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 //此时是Grouping对象字段的引用，最外面可能会更改成员名称，要复制一份，防止更改Grouping对象中的字段
                 var readerField = this.GroupByFields.Find(f => f.TargetMember.Name == memberInfo.Name);
                 sqlSegment = readerField.Clone();
+                sqlSegment.IsGroupByField = true;
                 return sqlSegment;
             }
             if (memberExpr.IsParameter(out var parameterName))
@@ -1788,6 +1761,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         //IncludeMany表时，fromSegment.AliasName为null
                         if (this.IsNeedTableAlias && !string.IsNullOrEmpty(fromSegment.AliasName))
                             fieldName = fromSegment.AliasName + "." + fieldName;
+
+                        //设置是否是分组字段，以便后面分表添加分组字段处理
+                        if (this.IsSelect && this.GroupByFields != null && this.GroupByFields.Count > 0)
+                            sqlSegment.IsGroupByField = this.GroupByFields.Exists(f => f.FromMember == memberMapper.Member);
                         sqlSegment.Body = fieldName;
                     }
                     else

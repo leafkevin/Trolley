@@ -159,8 +159,11 @@ public class SqlFieldSegment
     public Expression Expression { get; set; }
     public Expression OriginalExpression { get; set; }
     public bool HasDeferred => this.DeferredExprs != null && this.DeferredExprs.Count > 0;
+    public bool IsGroupingField { get; set; }
+    public bool IsGroupByField { get; set; }
+    public bool IsOrderByField { get; set; }
     public bool IsAggField { get; set; }
-    public string AggFunc { get; set; }
+    public string ShardingAggFunc { get; set; }
     /// <summary>
     /// 常量、变量会调用此方法，默认是常量
     /// </summary>

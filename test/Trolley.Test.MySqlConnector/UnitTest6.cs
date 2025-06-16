@@ -1356,7 +1356,7 @@ public class UnitTest6 : UnitTestBase
         var sql = repository.From<Order>()
             .UseTableBy("104", DateTime.Parse("2024-05-24"))
             .Where(f => repository.From<User>('b')
-                .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                .UseTableBy("104")
                 .InnerJoin<OrderDetail>((x, y) => f.Id == y.OrderId)
                 .UseTableBy("104", DateTime.Parse("2024-05-24"))
                 .Where((x, y) => x.Id == f.BuyerId && x.Age <= 25 && y.Price > 100)
@@ -1367,7 +1367,7 @@ public class UnitTest6 : UnitTestBase
         sql = repository.From<Order>()
             .UseTableBy("104", DateTime.Parse("2024-05-24"))
             .Where(f => repository.From<User>('b')
-                .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                .UseTableBy("104")
                 .InnerJoin<OrderDetail>((x, y) => f.Id == y.OrderId)
                 .UseTableBy("104", DateTime.Parse("2024-05-24"))
                 .Where((x, y) => x.Id == f.BuyerId && x.Age <= 25 && y.Price > 100)
@@ -1378,7 +1378,7 @@ public class UnitTest6 : UnitTestBase
         var result = repository.From<Order>()
             .UseTableBy("104", DateTime.Parse("2024-05-24"))
             .Where(f => repository.From<User>('b')
-                .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                .UseTableBy("104")
                 .InnerJoin<OrderDetail>((x, y) => f.Id == y.OrderId)
                 .UseTableBy("104", DateTime.Parse("2024-05-24"))
                 .Where((x, y) => x.Id == f.BuyerId && x.Age <= 25 && y.Price > 100)
@@ -1722,6 +1722,50 @@ public class UnitTest6 : UnitTestBase
             Assert.True(result.Order.Details.Count > 0);
             Assert.True(result.Order.Details[0].Amount > 0);
         }
+    }
+    [Fact]
+    public async Task ManySharding_GroupBy()
+    {
+        //await this.InitSharding();
+        var repository = this.dbFactory.Create();
+        var tenantId = "104";
+        var beginTime = DateTime.Parse("2024-04-05");
+        var endTime = DateTime.Parse("2024-06-05");
+        var result = await repository.From<Order>()
+            .UseTableByRange(tenantId, beginTime, endTime)
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
+                => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+            .GroupBy((a, b) => new { a.BuyerId, a.CreatedAt.Year })
+            .Select((x, a, b) => new { a.BuyerId, a.CreatedAt.Year, Count = x.Count(a.Id) })
+            .ToListAsync();
+        if (result != null)
+            Assert.NotEmpty(result);
+
+        var result1 = await repository.From<Order>()
+           .UseTable("sys_order_104_202405", "sys_order_105_202405")
+           .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+           .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
+               => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+           .GroupBy((a, b) => new { a.BuyerId, a.CreatedAt.Year })
+           .Select((x, a, b) => new { a.BuyerId, a.CreatedAt.Year, Count = x.Count(a.Id) })
+           .OrderBy(f => f.Year)
+           .ToListAsync();
+        if (result1 != null)
+            Assert.NotEmpty(result1);
+
+        var result2 = await repository.From<Order>()
+          .UseTable("sys_order_104_202405", "sys_order_105_202405")
+          //.InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+          //.UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
+          //    => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+          .GroupBy(a => new { a.BuyerId, a.CreatedAt.Year })
+          .Having((x, a) => x.Count("*") > 1)
+          .Select((x, a) => new { a.BuyerId, a.CreatedAt.Year, Count = x.Count(a.Id) })
+          .OrderBy(f => f.Year)
+          .ToListAsync();
+        if (result2 != null)
+            Assert.NotEmpty(result2);
     }
     [Fact]
     public async Task ManySharding_Paging()

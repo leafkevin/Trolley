@@ -56,13 +56,17 @@ public class SqlVisitor : ISqlVisitor
     public bool IsNeedFormatShardingTables { get; set; }
     public bool IsManyShardingTables { get; set; }
     public string AggFieldAlias { get; set; }
-    public bool IsNeedFullCountPaging { get; set; }
+    /// <summary>
+    /// 分页查询的Count操作，是否需要全部字段Count
+    /// </summary>
+    public bool IsNeedFullFieldsPagingCount { get; set; }
     public List<TableSegment> ShardingTables { get; set; }
 
     public SqlVisitor() { }
     public void UseTable(bool isIncludeMany, params string[] tableNames)
     {
-        if (tableNames == null) throw new ArgumentNullException(nameof(tableNames));
+        if (tableNames == null || tableNames.Length <= 0)
+            throw new ArgumentNullException(nameof(tableNames), "tableNames参数不能为空");
 
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
         //多个分表，才当作分表处理
@@ -91,7 +95,7 @@ public class SqlVisitor : ISqlVisitor
     public void UseTable(bool isIncludeMany, Func<string, bool> tableNamePredicate)
     {
         if (tableNamePredicate == null)
-            throw new ArgumentNullException(nameof(tableNamePredicate));
+            throw new ArgumentNullException(nameof(tableNamePredicate), "tableNamePredicate参数不能为空");
 
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
         if (this.ShardingProvider == null || !this.ShardingProvider.TryGetTableSharding(tableSegment.EntityType, out var tableShardingInfo))
@@ -111,6 +115,9 @@ public class SqlVisitor : ISqlVisitor
     }
     public void UseTableMap(bool isIncludeMany, Type masterEntityType, Func<string, string, string, string> tableNameGetter)
     {
+        if (tableNameGetter == null)
+            throw new ArgumentNullException(nameof(tableNameGetter), "tableNameGetter参数不能为空");
+
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
         if (this.ShardingProvider == null || !this.ShardingProvider.TryGetTableSharding(tableSegment.EntityType, out var shardingTable))
             throw new Exception($"实体表{tableSegment.EntityType.FullName}没有配置分表，无需调用此方法");
@@ -147,6 +154,11 @@ public class SqlVisitor : ISqlVisitor
 
         if (fieldValues == null)
             throw new ArgumentNullException($"实体{tableSegment.EntityType.FullName}表有配置分表规则依赖，字段值fieldValues不能为null");
+        for (int i = 0; i < fieldValues.Length; i++)
+        {
+            if (fieldValues[i] == null)
+                throw new ArgumentNullException($"实体{tableSegment.EntityType.FullName}表有配置分表规则依赖，字段值fieldValues[{i}]不能为null");
+        }
 
         Delegate shardingRule = null;
         switch (fieldValues.Length)
@@ -215,6 +227,9 @@ public class SqlVisitor : ISqlVisitor
         });
     private void UseTableByRange(bool isIncludeMany, Func<TableSegment, List<string>> shardingTablesFetcher)
     {
+        if (shardingTablesFetcher == null)
+            throw new ArgumentNullException(nameof(shardingTablesFetcher), "shardingTablesFetcher参数不能为空");
+
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
         tableSegment.IsSharding = true;
         tableSegment.ShardingType = ShardingTableType.TableRange;
@@ -255,7 +270,7 @@ public class SqlVisitor : ISqlVisitor
     public void UseTableBy<TParameter>(Func<string, TParameter, string> tableNameGetter)
     {
         if (tableNameGetter == null)
-            throw new ArgumentNullException(nameof(tableNameGetter));
+            throw new ArgumentNullException(nameof(tableNameGetter), "tableNameGetter参数不能为空");
         this.DbContext.BulkShardingRule = tableNameGetter;
     }
     public void UseTableSchema(bool isIncludeMany, string tableSchema)
@@ -1163,8 +1178,8 @@ public class SqlVisitor : ISqlVisitor
                 }
                 else sqlSegment.Change("COUNT(1)", false, true);
                 sqlSegment.IsAggField = true;
-                sqlSegment.AggFunc = "SUM";
-                this.IsNeedFullCountPaging = true;
+                sqlSegment.ShardingAggFunc = "SUM";
+                this.IsNeedFullFieldsPagingCount = true;
                 break;
             case "CountDistinct":
             case "LongCountDistinct":
@@ -1174,9 +1189,9 @@ public class SqlVisitor : ISqlVisitor
                     sqlSegment.Change($"COUNT(DISTINCT {sqlSegment.Body})", false, true);
                 }
                 sqlSegment.IsAggField = true;
-                //TODO:分表后，count(distinct)，这个聚合结果是不准确的
-                sqlSegment.AggFunc = "MAX";
-                this.IsNeedFullCountPaging = true;
+                //TODO:已知bug，分表后，count(distinct)，这个聚合结果是不准确的
+                sqlSegment.ShardingAggFunc = "COUNT";
+                this.IsNeedFullFieldsPagingCount = true;
                 break;
             case "Sum":
                 if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
@@ -1185,8 +1200,8 @@ public class SqlVisitor : ISqlVisitor
                     sqlSegment.Change($"SUM({sqlSegment.Body})", false, true);
                 }
                 sqlSegment.IsAggField = true;
-                sqlSegment.AggFunc = "SUM";
-                this.IsNeedFullCountPaging = true;
+                sqlSegment.ShardingAggFunc = "SUM";
+                this.IsNeedFullFieldsPagingCount = true;
                 break;
             case "Avg":
                 if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
@@ -1196,8 +1211,8 @@ public class SqlVisitor : ISqlVisitor
                 }
                 sqlSegment.IsAggField = true;
                 //TODO:分表后，avg()，这个聚合结果是不准确的
-                sqlSegment.AggFunc = "AVG";
-                this.IsNeedFullCountPaging = true;
+                sqlSegment.ShardingAggFunc = "AVG";
+                this.IsNeedFullFieldsPagingCount = true;
                 break;
             case "Max":
                 if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
@@ -1206,8 +1221,8 @@ public class SqlVisitor : ISqlVisitor
                     sqlSegment.Change($"MAX({sqlSegment.Body})", false, true);
                 }
                 sqlSegment.IsAggField = true;
-                sqlSegment.AggFunc = "MAX";
-                this.IsNeedFullCountPaging = true;
+                sqlSegment.ShardingAggFunc = "MAX";
+                this.IsNeedFullFieldsPagingCount = true;
                 break;
             case "Min":
                 if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
@@ -1216,8 +1231,8 @@ public class SqlVisitor : ISqlVisitor
                     sqlSegment.Change($"MIN({sqlSegment.Body})", false, true);
                 }
                 sqlSegment.IsAggField = true;
-                sqlSegment.AggFunc = "MIN";
-                this.IsNeedFullCountPaging = true;
+                sqlSegment.ShardingAggFunc = "MIN";
+                this.IsNeedFullFieldsPagingCount = true;
                 break;
         }
         return sqlSegment;
@@ -1321,8 +1336,8 @@ public class SqlVisitor : ISqlVisitor
                     }
                     else builder.Append("COUNT(*)");
                     sqlSegment.IsAggField = true;
-                    sqlSegment.AggFunc = "COUNT";
-                    this.IsNeedFullCountPaging = true;
+                    sqlSegment.ShardingAggFunc = "COUNT";
+                    this.IsNeedFullFieldsPagingCount = true;
                     break;
                 case "CountDistinct":
                 case "LongCountDistinct":
@@ -1332,8 +1347,8 @@ public class SqlVisitor : ISqlVisitor
                         builder.Append($"COUNT(DISTINCT {sqlSegment.Body})");
                     }
                     sqlSegment.IsAggField = true;
-                    sqlSegment.AggFunc = "COUNT_VALUE";
-                    this.IsNeedFullCountPaging = true;
+                    sqlSegment.ShardingAggFunc = "COUNT_VALUE";
+                    this.IsNeedFullFieldsPagingCount = true;
                     break;
                 case "Sum":
                     if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
@@ -1342,8 +1357,8 @@ public class SqlVisitor : ISqlVisitor
                         builder.Append($"SUM({sqlSegment.Body})");
                     }
                     sqlSegment.IsAggField = true;
-                    sqlSegment.AggFunc = "SUM";
-                    this.IsNeedFullCountPaging = true;
+                    sqlSegment.ShardingAggFunc = "SUM";
+                    this.IsNeedFullFieldsPagingCount = true;
                     break;
                 case "Avg":
                     if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
@@ -1352,8 +1367,8 @@ public class SqlVisitor : ISqlVisitor
                         builder.Append($"AVG({sqlSegment.Body})");
                     }
                     sqlSegment.IsAggField = true;
-                    sqlSegment.AggFunc = "AVG";
-                    this.IsNeedFullCountPaging = true;
+                    sqlSegment.ShardingAggFunc = "AVG";
+                    this.IsNeedFullFieldsPagingCount = true;
                     break;
                 case "Max":
                     if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
@@ -1362,8 +1377,8 @@ public class SqlVisitor : ISqlVisitor
                         builder.Append($"MAX({sqlSegment.Body})");
                     }
                     sqlSegment.IsAggField = true;
-                    sqlSegment.AggFunc = "MAX";
-                    this.IsNeedFullCountPaging = true;
+                    sqlSegment.ShardingAggFunc = "MAX";
+                    this.IsNeedFullFieldsPagingCount = true;
                     break;
                 case "Min":
                     if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
@@ -1372,8 +1387,8 @@ public class SqlVisitor : ISqlVisitor
                         builder.Append($"MIN({sqlSegment.Body})");
                     }
                     sqlSegment.IsAggField = true;
-                    sqlSegment.AggFunc = "MIN";
-                    this.IsNeedFullCountPaging = true;
+                    sqlSegment.ShardingAggFunc = "MIN";
+                    this.IsNeedFullFieldsPagingCount = true;
                     break;
             }
         }
@@ -1763,12 +1778,11 @@ public class SqlVisitor : ISqlVisitor
                     else throw new NotSupportedException("不支持的方法调用");
                     break;
                 case "UseTableBy":
-                    var args0 = this.Evaluate(callExpr.Arguments[0]);
-                    object args1 = null;
-                    if (callExpr.Arguments.Count > 1)
-                        args1 = this.Evaluate(callExpr.Arguments[1]);
+                    var parameters = new List<object>();
+                    foreach (var arg in callExpr.Arguments)
+                        parameters.Add(this.Evaluate(arg));
                     entityType = methodInfo.DeclaringType.GetGenericArguments().Last();
-                    queryVisitor.UseTableBy(false, args0, args1);
+                    queryVisitor.UseTableBy(false, parameters.ToArray());
                     break;
                 case "Exists":
                 case "ExistsAsync":

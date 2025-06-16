@@ -25,47 +25,16 @@ public class Create<TEntity> : CreateInternal, ICreate<TEntity>
     #region Sharding
     public virtual ICreate<TEntity> UseTable(string tableName)
     {
-        if (string.IsNullOrEmpty(tableName))
-            throw new ArgumentNullException(nameof(tableName), "tableName参数不能为空");
-
         this.Visitor.UseTable(false, tableName);
         return this;
     }
-    public virtual ICreate<TEntity> UseTableBy(object fieldValue)
+    public virtual ICreate<TEntity> UseTableBy(params object[] fieldValues)
     {
-        if (fieldValue == null)
-            throw new ArgumentNullException(nameof(fieldValue), "fieldValue参数不能为空");
-
-        this.Visitor.UseTableBy(false, fieldValue);
-        return this;
-    }
-    public virtual ICreate<TEntity> UseTableBy(object field1Value, object field2Value)
-    {
-        if (field1Value == null)
-            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
-        if (field2Value == null)
-            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
-
-        this.Visitor.UseTableBy(false, field1Value, field2Value);
-        return this;
-    }
-    public virtual ICreate<TEntity> UseTableBy(object field1Value, object field2Value, object field3Value)
-    {
-        if (field1Value == null)
-            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
-        if (field2Value == null)
-            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
-        if (field3Value == null)
-            throw new ArgumentNullException(nameof(field3Value), "field3Value参数不能为空");
-
-        this.Visitor.UseTableBy(false, field1Value, field2Value, field3Value);
+        this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
     public virtual ICreate<TEntity> UseTableBy<TInsertObj>(Func<string, TInsertObj, string> tableNameGetter)
     {
-        if (tableNameGetter == null)
-            throw new ArgumentNullException(nameof(tableNameGetter), "tableNameGetter参数不能为空");
-
         this.Visitor.UseTableBy(tableNameGetter);
         return this;
     }

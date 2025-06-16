@@ -48,13 +48,13 @@ public interface IMultiQuery<T> : IMultiQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -84,12 +84,11 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
+    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T> UseTableBy(object field1Value, object field2Value = null);
+    /// <param name="fieldValues">字段值</param>
+    /// <returns>返回删除对象</returns>
+    IMultiQuery<T> UseTableBy(params object[] fieldValues);
     /// <summary>
     /// 根据单个字段值范围确定T表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Parse("2020-01-01"), DateTime.Now)
     /// </summary>
@@ -744,12 +743,11 @@ public interface IMultiQuery<<#=tables#>> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<<#=tables#>> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
+    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<<#=tables#>> UseTableBy(object field1Value, object field2Value = null);
+    /// <param name="fieldValues">字段值</param>
+    /// <returns>返回删除对象</returns>
+    IMultiQuery<<#=tables#>> UseTableBy(params object[] fieldValues);
     /// <summary>
     /// 根据单个字段值范围确定T表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Parse("2020-01-01"), DateTime.Now)
     /// </summary>

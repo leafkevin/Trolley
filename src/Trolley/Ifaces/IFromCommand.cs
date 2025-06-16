@@ -37,41 +37,49 @@ public interface IFromCommand<T> : IFromCommand
 {
     #region Sharding
     /// <summary>
-    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<T> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T表1个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<T> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
+    /// 根据字段值，手动指定TEntity表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    IFromCommand<T> UseTableBy(object field1Value, object field2Value = null);
+    IFromCommand<T> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据单个字段值范围确定T表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个字段范围值，手动指定分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
-    /// <param name="beginFieldValue">字段起始值</param>
-    /// <param name="endFieldValue">字段结束值</param>
+    /// <param name="beginFieldValue">字段范围起始值</param>
+    /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<T> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围确定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
-    /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个固定字段值和1个字段值范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="fieldValue1">第一个值</param>
-    /// <param name="fieldValue2">第二个值</param>
-    /// <param name="fieldValue3">第三个值</param>
+    /// <param name="field1Value">第一个值</param>
+    /// <param name="beginField2Value">字段2范围起始值</param>
+    /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
-    IFromCommand<T> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    IFromCommand<T> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <summary>
+    /// 根据2个固定字段值和1个字段范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// </summary>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="field2Value">字段2值</param>
+    /// <param name="beginField3Value">字段3范围起始值</param>
+    /// <param name="endField3Value">字段3范围结束值</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema

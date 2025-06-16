@@ -170,7 +170,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
             if (this.IsNeedPaging && this.skip.HasValue && this.limit.HasValue)
             {
                 var myTableSql = $"{tableSql}{others}";
-                if (this.IsNeedFullCountPaging)
+                if (this.IsNeedFullFieldsPagingCount)
                     myTableSql = $"(SELECT {selectSql} FROM {tableSql}{others}) a";
                 builder.Append($"SELECT COUNT(*) FROM {myTableSql};");
             }
