@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-public interface IFromCommand : IDisposable
+public interface IFromCommand
 {
     #region Visitor
     DbContext DbContext { get; }
@@ -29,20 +29,6 @@ public interface IFromCommand : IDisposable
     /// <param name="fields">原始字段字符串，默认值*</param>
     /// <returns>返回插入对象</returns>
     IFromCommand<TTarget> Select<TTarget>(string fields = "*");
-    #endregion
-
-    #region Execute
-    /// <summary>
-    /// 执行插入操作，并返回插入行数
-    /// </summary>
-    /// <returns>返回插入行数</returns>
-    int Execute();
-    /// <summary>
-    /// 执行插入操作，并返回插入行数
-    /// </summary>
-    /// <param name="cancellationToken">取消token</param>
-    /// <returns>返回插入行数</returns>
-    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
     #endregion
 
     #region ToSql
@@ -70,29 +56,29 @@ public interface IFromCommand<T> : IFromCommand
     /// <returns>返回查询对象</returns>
     IFromCommand<T> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 根据字段值，手动指定TEntity表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<T> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据1个字段范围值，手动指定分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 根据1个字段范围值，手动指定T表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<T> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="field1Value">第一个值</param>
+    /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<T> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据2个固定字段值和1个字段范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
     /// <param name="field1Value">字段1值</param>
@@ -358,6 +344,20 @@ public interface IFromCommand<T> : IFromCommand
 
     #region Take
     IFromCommand<T> Take(int limit);
+    #endregion    
+
+    #region Execute
+    /// <summary>
+    /// 执行插入操作，并返回插入行数
+    /// </summary>
+    /// <returns>返回插入行数</returns>
+    int Execute();
+    /// <summary>
+    /// 执行插入操作，并返回插入行数
+    /// </summary>
+    /// <param name="cancellationToken">取消token</param>
+    /// <returns>返回插入行数</returns>
+    Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
     #endregion
 }
 <#
@@ -403,7 +403,7 @@ public interface IFromCommand<<#=tables#>> : IFromCommand
     /// 根据1个固定字段值和1个字段值范围值，手动指定<#=currentTable#>表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="field1Value">第一个值</param>
+    /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>

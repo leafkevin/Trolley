@@ -220,19 +220,9 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
         return this;
     }
-    public virtual IQuery<T> UseTableBy(object fieldValue)
+    public virtual IQuery<T> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, fieldValue);
-        return this;
-    }
-    public virtual IQuery<T> UseTableBy(object field1Value, object field2Value)
-    {
-        this.Visitor.UseTableBy(false, field1Value, field2Value);
-        return this;
-    }
-    public virtual IQuery<T> UseTableBy(object field1Value, object field2Value, object field3Value)
-    {
-        this.Visitor.UseTableBy(false, field1Value, field2Value, field3Value);
+        this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
     public virtual IQuery<T> UseTableByRange(object beginFieldValue, object endFieldValue)

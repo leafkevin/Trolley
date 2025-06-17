@@ -63,7 +63,7 @@ public interface IIncludableQuery<T, TMember> : IIncludableQueryBase, IQuery<T>
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前表分表名获取委托</param>
     /// <returns>返回导航属性查询对象</returns>
-    IIncludableQuery<T, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    new IIncludableQuery<T, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值，手动指定TMember表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
@@ -81,7 +81,7 @@ public interface IIncludableQuery<T, TMember> : IIncludableQueryBase, IQuery<T>
     /// 根据1个固定字段值和1个字段值范围值，手动指定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="field1Value">第一个值</param>
+    /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
@@ -201,7 +201,7 @@ public interface IIncludableQuery<<#=tables#>, TMember> : IIncludableQueryBase, 
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前表分表名获取委托</param>
     /// <returns>返回导航属性查询对象</returns>
-    IIncludableQuery<<#=tables#>, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    new IIncludableQuery<<#=tables#>, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值，手动指定TMember表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
@@ -219,7 +219,7 @@ public interface IIncludableQuery<<#=tables#>, TMember> : IIncludableQueryBase, 
     /// 根据1个固定字段值和1个字段值范围值，手动指定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="field1Value">第一个值</param>
+    /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>

@@ -28,7 +28,7 @@ public interface ICreateVisitor : IDisposable
     void UseTableBy<TInsertObj>(Func<string, TInsertObj, string> tableNameGetter);
     void UseTableSchema(bool isIncludeMany, string tableSchema);
 
-    void WithBy(object insertObj, ActionMode? actionMode = null);
+    void WithBy(object insertObj);
     void WithByField(Expression fieldSelector, object fieldValue);
     void WithBulk(IEnumerable insertObjs, int bulkCount);
     (string, Dictionary<string, List<object>>, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,

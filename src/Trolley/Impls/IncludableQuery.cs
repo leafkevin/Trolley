@@ -35,19 +35,24 @@ public class IncludableQuery<T, TMember> : Query<T>, IIncludableQuery<T, TMember
         this.Visitor.UseTableMap(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
-    public new IIncludableQuery<T, TMember> UseTableBy(object field1Value, object field2Value = null)
+    public new IIncludableQuery<T, TMember> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(this.IsIncludeMany, field1Value, field2Value);
+        this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
     public new IIncludableQuery<T, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        this.Visitor.UseTableByRange(this.IsIncludeMany, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public new IIncludableQuery<T, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public new IIncludableQuery<T, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(this.IsIncludeMany, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public new IIncludableQuery<T, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -104,19 +109,24 @@ public class IncludableQuery<T1, T2, TMember> : Query<T1, T2>, IIncludableQuery<
         this.Visitor.UseTableMap(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
-    public new IIncludableQuery<T1, T2, TMember> UseTableBy(object field1Value, object field2Value = null)
+    public new IIncludableQuery<T1, T2, TMember> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(this.IsIncludeMany, field1Value, field2Value);
+        this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
     public new IIncludableQuery<T1, T2, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        this.Visitor.UseTableByRange(this.IsIncludeMany, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public new IIncludableQuery<T1, T2, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public new IIncludableQuery<T1, T2, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(this.IsIncludeMany, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public new IIncludableQuery<T1, T2, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -173,19 +183,24 @@ public class IncludableQuery<T1, T2, T3, TMember> : Query<T1, T2, T3>, IIncludab
         this.Visitor.UseTableMap(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
-    public new IIncludableQuery<T1, T2, T3, TMember> UseTableBy(object field1Value, object field2Value = null)
+    public new IIncludableQuery<T1, T2, T3, TMember> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(this.IsIncludeMany, field1Value, field2Value);
+        this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
     public new IIncludableQuery<T1, T2, T3, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        this.Visitor.UseTableByRange(this.IsIncludeMany, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public new IIncludableQuery<T1, T2, T3, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public new IIncludableQuery<T1, T2, T3, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(this.IsIncludeMany, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public new IIncludableQuery<T1, T2, T3, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -242,19 +257,24 @@ public class IncludableQuery<T1, T2, T3, T4, TMember> : Query<T1, T2, T3, T4>, I
         this.Visitor.UseTableMap(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
-    public new IIncludableQuery<T1, T2, T3, T4, TMember> UseTableBy(object field1Value, object field2Value = null)
+    public new IIncludableQuery<T1, T2, T3, T4, TMember> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(this.IsIncludeMany, field1Value, field2Value);
+        this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
     public new IIncludableQuery<T1, T2, T3, T4, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        this.Visitor.UseTableByRange(this.IsIncludeMany, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public new IIncludableQuery<T1, T2, T3, T4, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public new IIncludableQuery<T1, T2, T3, T4, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(this.IsIncludeMany, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public new IIncludableQuery<T1, T2, T3, T4, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -311,19 +331,24 @@ public class IncludableQuery<T1, T2, T3, T4, T5, TMember> : Query<T1, T2, T3, T4
         this.Visitor.UseTableMap(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
-    public new IIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableBy(object field1Value, object field2Value = null)
+    public new IIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(this.IsIncludeMany, field1Value, field2Value);
+        this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
     public new IIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        this.Visitor.UseTableByRange(this.IsIncludeMany, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public new IIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public new IIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(this.IsIncludeMany, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public new IIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -380,19 +405,24 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : Query<T1, T2, T3
         this.Visitor.UseTableMap(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
-    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableBy(object field1Value, object field2Value = null)
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(this.IsIncludeMany, field1Value, field2Value);
+        this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
     public new IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        this.Visitor.UseTableByRange(this.IsIncludeMany, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(this.IsIncludeMany, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -449,19 +479,24 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : Query<T1, T2
         this.Visitor.UseTableMap(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
-    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableBy(object field1Value, object field2Value = null)
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(this.IsIncludeMany, field1Value, field2Value);
+        this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
     public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        this.Visitor.UseTableByRange(this.IsIncludeMany, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(this.IsIncludeMany, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -518,19 +553,24 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> : Query<T1
         this.Visitor.UseTableMap(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
-    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableBy(object field1Value, object field2Value = null)
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(this.IsIncludeMany, field1Value, field2Value);
+        this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
     public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        this.Visitor.UseTableByRange(this.IsIncludeMany, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(this.IsIncludeMany, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -587,19 +627,24 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> : Quer
         this.Visitor.UseTableMap(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
-    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableBy(object field1Value, object field2Value = null)
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(this.IsIncludeMany, field1Value, field2Value);
+        this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
     public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        this.Visitor.UseTableByRange(this.IsIncludeMany, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(this.IsIncludeMany, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -656,19 +701,24 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> :
         this.Visitor.UseTableMap(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
-    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableBy(object field1Value, object field2Value = null)
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(this.IsIncludeMany, field1Value, field2Value);
+        this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
     public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        this.Visitor.UseTableByRange(this.IsIncludeMany, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(this.IsIncludeMany, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -725,19 +775,24 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMemb
         this.Visitor.UseTableMap(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
-    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableBy(object field1Value, object field2Value = null)
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(this.IsIncludeMany, field1Value, field2Value);
+        this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
     public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        this.Visitor.UseTableByRange(this.IsIncludeMany, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(this.IsIncludeMany, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -794,19 +849,24 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
         this.Visitor.UseTableMap(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
-    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableBy(object field1Value, object field2Value = null)
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(this.IsIncludeMany, field1Value, field2Value);
+        this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
     public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        this.Visitor.UseTableByRange(this.IsIncludeMany, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(this.IsIncludeMany, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -863,19 +923,24 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
         this.Visitor.UseTableMap(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
-    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableBy(object field1Value, object field2Value = null)
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(this.IsIncludeMany, field1Value, field2Value);
+        this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
     public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        this.Visitor.UseTableByRange(this.IsIncludeMany, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(this.IsIncludeMany, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -932,19 +997,24 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
         this.Visitor.UseTableMap(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
-    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableBy(object field1Value, object field2Value = null)
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(this.IsIncludeMany, field1Value, field2Value);
+        this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
     public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        this.Visitor.UseTableByRange(this.IsIncludeMany, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(this.IsIncludeMany, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -1001,19 +1071,24 @@ public class IncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
         this.Visitor.UseTableMap(this.IsIncludeMany, masterEntityType, tableNameGetter);
         return this;
     }
-    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableBy(object field1Value, object field2Value = null)
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(this.IsIncludeMany, field1Value, field2Value);
+        this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
     public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        this.Visitor.UseTableByRange(this.IsIncludeMany, beginFieldValue, endFieldValue);
+        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(this.IsIncludeMany, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public new IIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion

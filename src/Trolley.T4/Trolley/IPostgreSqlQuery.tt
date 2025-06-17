@@ -76,23 +76,23 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T> UseTableBy(object field1Value, object field2Value, object field3Value);
     /// <summary>
-    /// 根据1个字段范围值，手动指定分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 根据1个字段范围值，手动指定T表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="field1Value">第一个值</param>
+    /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据2个固定字段值和1个字段范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
     /// <param name="field1Value">字段1值</param>
@@ -712,23 +712,23 @@ public interface IPostgreSqlQuery<<#=tables#>> : IQuery<<#=tables#>>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<<#=tables#>> UseTableBy(object field1Value, object field2Value, object field3Value);
     /// <summary>
-    /// 根据1个字段范围值，手动指定分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 根据1个字段范围值，手动指定T表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<<#=tables#>> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="field1Value">第一个值</param>
+    /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<<#=tables#>> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据2个固定字段值和1个字段范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
     /// <param name="field1Value">字段1值</param>

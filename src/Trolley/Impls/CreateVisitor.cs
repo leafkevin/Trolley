@@ -117,10 +117,9 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         this.ValuesBuilder.Clear();
         return sql;
     }
-    public virtual void WithBy(object insertObj, ActionMode? actionMode = null)
+    public virtual void WithBy(object insertObj)
     {
-        if (actionMode.HasValue)
-            this.ActionMode = actionMode.Value;
+        this.ActionMode = ActionMode.Single;
         this.deferredSegments.Add(new CommandSegment
         {
             Type = "WithBy",

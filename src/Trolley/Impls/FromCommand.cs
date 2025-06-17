@@ -71,9 +71,9 @@ public class FromCommand<T> : QueryInternal, IFromCommand<T>
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
-    public virtual IFromCommand<T> UseTableBy(object field1Value, object field2Value = null)
+    public virtual IFromCommand<T> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, field1Value, field2Value);
+        this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
     public virtual IFromCommand<T> UseTableByRange(object beginFieldValue, object endFieldValue)
@@ -81,9 +81,14 @@ public class FromCommand<T> : QueryInternal, IFromCommand<T>
         this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public virtual IFromCommand<T> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public virtual IFromCommand<T> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public virtual IFromCommand<T> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -325,9 +330,9 @@ public class FromCommand<T1, T2> : FromCommand, IFromCommand<T1, T2>
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
-    public virtual IFromCommand<T1, T2> UseTableBy(object field1Value, object field2Value = null)
+    public virtual IFromCommand<T1, T2> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, field1Value, field2Value);
+        this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
     public virtual IFromCommand<T1, T2> UseTableByRange(object beginFieldValue, object endFieldValue)
@@ -335,9 +340,14 @@ public class FromCommand<T1, T2> : FromCommand, IFromCommand<T1, T2>
         this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public virtual IFromCommand<T1, T2> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public virtual IFromCommand<T1, T2> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public virtual IFromCommand<T1, T2> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -500,9 +510,9 @@ public class FromCommand<T1, T2, T3> : FromCommand, IFromCommand<T1, T2, T3>
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
-    public virtual IFromCommand<T1, T2, T3> UseTableBy(object field1Value, object field2Value = null)
+    public virtual IFromCommand<T1, T2, T3> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, field1Value, field2Value);
+        this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
     public virtual IFromCommand<T1, T2, T3> UseTableByRange(object beginFieldValue, object endFieldValue)
@@ -510,9 +520,14 @@ public class FromCommand<T1, T2, T3> : FromCommand, IFromCommand<T1, T2, T3>
         this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public virtual IFromCommand<T1, T2, T3> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public virtual IFromCommand<T1, T2, T3> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public virtual IFromCommand<T1, T2, T3> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -675,9 +690,9 @@ public class FromCommand<T1, T2, T3, T4> : FromCommand, IFromCommand<T1, T2, T3,
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
-    public virtual IFromCommand<T1, T2, T3, T4> UseTableBy(object field1Value, object field2Value = null)
+    public virtual IFromCommand<T1, T2, T3, T4> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, field1Value, field2Value);
+        this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
     public virtual IFromCommand<T1, T2, T3, T4> UseTableByRange(object beginFieldValue, object endFieldValue)
@@ -685,9 +700,14 @@ public class FromCommand<T1, T2, T3, T4> : FromCommand, IFromCommand<T1, T2, T3,
         this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public virtual IFromCommand<T1, T2, T3, T4> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public virtual IFromCommand<T1, T2, T3, T4> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public virtual IFromCommand<T1, T2, T3, T4> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -850,9 +870,9 @@ public class FromCommand<T1, T2, T3, T4, T5> : FromCommand, IFromCommand<T1, T2,
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
-    public virtual IFromCommand<T1, T2, T3, T4, T5> UseTableBy(object field1Value, object field2Value = null)
+    public virtual IFromCommand<T1, T2, T3, T4, T5> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, field1Value, field2Value);
+        this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
     public virtual IFromCommand<T1, T2, T3, T4, T5> UseTableByRange(object beginFieldValue, object endFieldValue)
@@ -860,9 +880,14 @@ public class FromCommand<T1, T2, T3, T4, T5> : FromCommand, IFromCommand<T1, T2,
         this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public virtual IFromCommand<T1, T2, T3, T4, T5> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public virtual IFromCommand<T1, T2, T3, T4, T5> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public virtual IFromCommand<T1, T2, T3, T4, T5> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion
@@ -1025,9 +1050,9 @@ public class FromCommand<T1, T2, T3, T4, T5, T6> : FromCommand, IFromCommand<T1,
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
-    public virtual IFromCommand<T1, T2, T3, T4, T5, T6> UseTableBy(object field1Value, object field2Value = null)
+    public virtual IFromCommand<T1, T2, T3, T4, T5, T6> UseTableBy(params object[] fieldValues)
     {
-        this.Visitor.UseTableBy(false, field1Value, field2Value);
+        this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
     public virtual IFromCommand<T1, T2, T3, T4, T5, T6> UseTableByRange(object beginFieldValue, object endFieldValue)
@@ -1035,9 +1060,14 @@ public class FromCommand<T1, T2, T3, T4, T5, T6> : FromCommand, IFromCommand<T1,
         this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
-    public virtual IFromCommand<T1, T2, T3, T4, T5, T6> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
+    public virtual IFromCommand<T1, T2, T3, T4, T5, T6> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public virtual IFromCommand<T1, T2, T3, T4, T5, T6> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
     #endregion

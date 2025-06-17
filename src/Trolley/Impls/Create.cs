@@ -51,7 +51,7 @@ public class Create<TEntity> : CreateInternal, ICreate<TEntity>
     #region WithBy
     public virtual IContinuedCreate<TEntity> WithBy<TInsertObject>(TInsertObject insertObj)
     {
-        base.WithByInternal(true, insertObj, ActionMode.Single);
+        base.WithByInternal(true, insertObj);
         return this.OrmProvider.NewContinuedCreate<TEntity>(this.DbContext, this.Visitor);
     }
     #endregion

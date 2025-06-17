@@ -110,13 +110,13 @@ public interface IQuery<T> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个T表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_104_202001", "sys_order_105_6_202002")
+    /// 直接指定1个或多个T表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
     /// </summary>
-    /// <param name="tableNames">多个分表名，完整的表名，如：sys_order_202001(按时间)，sys_order_104_202001(按商户+时间)，sys_order_105_6_202002(按商户+产品+时间)</param>
+    /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表1个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))
+    /// 使用表名断言确定T表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -146,29 +146,29 @@ public interface IQuery<T> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值，手动指定TEntity表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据1个字段范围值，手动指定分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 根据1个字段范围值，手动指定T表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="field1Value">第一个值</param>
+    /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据2个固定字段值和1个字段范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
     /// <param name="field1Value">字段1值</param>
@@ -920,13 +920,13 @@ public interface IQuery<T1, T2> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T2表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表1个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T2表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -956,44 +956,29 @@ public interface IQuery<T1, T2> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据1个字段值，手动指定分表名，可多次调用
+    /// 根据字段值，手动指定T2表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValue">字段1值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T1, T2> UseTableBy(object fieldValue);
+    IQuery<T1, T2> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据2个字段值，手动指定分表名，字段值的顺序与配置的字段顺序保持一致，可多次调用
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2> UseTableBy(object field1Value, object field2Value);
-    /// <summary>
-    /// 根据字段值，手动指定分表名，字段值的顺序与配置的字段顺序保持一致，可多次调用
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <param name="field3Value">字段3值</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2> UseTableBy(object field1Value, object field2Value, object field3Value);
-    /// <summary>
-    /// 根据1个字段范围值，手动指定分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 根据1个字段范围值，手动指定T2表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T2表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="field1Value">第一个值</param>
+    /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据2个固定字段值和1个字段范围值，手动指定T2表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
     /// <param name="field1Value">字段1值</param>
@@ -1481,13 +1466,13 @@ public interface IQuery<T1, T2, T3> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T3表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表1个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T3表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -1517,44 +1502,29 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据1个字段值，手动指定分表名，可多次调用
+    /// 根据字段值，手动指定T3表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValue">字段1值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3> UseTableBy(object fieldValue);
+    IQuery<T1, T2, T3> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据2个字段值，手动指定分表名，字段值的顺序与配置的字段顺序保持一致，可多次调用
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3> UseTableBy(object field1Value, object field2Value);
-    /// <summary>
-    /// 根据字段值，手动指定分表名，字段值的顺序与配置的字段顺序保持一致，可多次调用
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <param name="field3Value">字段3值</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3> UseTableBy(object field1Value, object field2Value, object field3Value);
-    /// <summary>
-    /// 根据1个字段范围值，手动指定分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 根据1个字段范围值，手动指定T3表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T3表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="field1Value">第一个值</param>
+    /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据2个固定字段值和1个字段范围值，手动指定T3表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
     /// <param name="field1Value">字段1值</param>
@@ -2043,13 +2013,13 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T4表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表1个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T4表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -2079,44 +2049,29 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据1个字段值，手动指定分表名，可多次调用
+    /// 根据字段值，手动指定T4表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValue">字段1值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4> UseTableBy(object fieldValue);
+    IQuery<T1, T2, T3, T4> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据2个字段值，手动指定分表名，字段值的顺序与配置的字段顺序保持一致，可多次调用
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4> UseTableBy(object field1Value, object field2Value);
-    /// <summary>
-    /// 根据字段值，手动指定分表名，字段值的顺序与配置的字段顺序保持一致，可多次调用
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <param name="field3Value">字段3值</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4> UseTableBy(object field1Value, object field2Value, object field3Value);
-    /// <summary>
-    /// 根据1个字段范围值，手动指定分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 根据1个字段范围值，手动指定T4表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T4表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="field1Value">第一个值</param>
+    /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据2个固定字段值和1个字段范围值，手动指定T4表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
     /// <param name="field1Value">字段1值</param>
@@ -2606,13 +2561,13 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T5表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表1个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T5表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -2642,44 +2597,29 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据1个字段值，手动指定分表名，可多次调用
+    /// 根据字段值，手动指定T5表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValue">字段1值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5> UseTableBy(object fieldValue);
+    IQuery<T1, T2, T3, T4, T5> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据2个字段值，手动指定分表名，字段值的顺序与配置的字段顺序保持一致，可多次调用
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5> UseTableBy(object field1Value, object field2Value);
-    /// <summary>
-    /// 根据字段值，手动指定分表名，字段值的顺序与配置的字段顺序保持一致，可多次调用
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <param name="field3Value">字段3值</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5> UseTableBy(object field1Value, object field2Value, object field3Value);
-    /// <summary>
-    /// 根据1个字段范围值，手动指定分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 根据1个字段范围值，手动指定T5表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T5表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="field1Value">第一个值</param>
+    /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据2个固定字段值和1个字段范围值，手动指定T5表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
     /// <param name="field1Value">字段1值</param>
@@ -3170,13 +3110,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T6表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表1个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T6表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -3206,44 +3146,29 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据1个字段值，手动指定分表名，可多次调用
+    /// 根据字段值，手动指定T6表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValue">字段1值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6> UseTableBy(object fieldValue);
+    IQuery<T1, T2, T3, T4, T5, T6> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据2个字段值，手动指定分表名，字段值的顺序与配置的字段顺序保持一致，可多次调用
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6> UseTableBy(object field1Value, object field2Value);
-    /// <summary>
-    /// 根据字段值，手动指定分表名，字段值的顺序与配置的字段顺序保持一致，可多次调用
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <param name="field3Value">字段3值</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6> UseTableBy(object field1Value, object field2Value, object field3Value);
-    /// <summary>
-    /// 根据1个字段范围值，手动指定分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 根据1个字段范围值，手动指定T6表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T6表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="field1Value">第一个值</param>
+    /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据2个固定字段值和1个字段范围值，手动指定T6表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
     /// <param name="field1Value">字段1值</param>
@@ -3735,13 +3660,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T7表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表1个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T7表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -3771,44 +3696,29 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据1个字段值，手动指定分表名，可多次调用
+    /// 根据字段值，手动指定T7表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValue">字段1值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7> UseTableBy(object fieldValue);
+    IQuery<T1, T2, T3, T4, T5, T6, T7> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据2个字段值，手动指定分表名，字段值的顺序与配置的字段顺序保持一致，可多次调用
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7> UseTableBy(object field1Value, object field2Value);
-    /// <summary>
-    /// 根据字段值，手动指定分表名，字段值的顺序与配置的字段顺序保持一致，可多次调用
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <param name="field3Value">字段3值</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7> UseTableBy(object field1Value, object field2Value, object field3Value);
-    /// <summary>
-    /// 根据1个字段范围值，手动指定分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 根据1个字段范围值，手动指定T7表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T7表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="field1Value">第一个值</param>
+    /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据2个固定字段值和1个字段范围值，手动指定T7表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
     /// <param name="field1Value">字段1值</param>
@@ -4301,13 +4211,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T8表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表1个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T8表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -4337,44 +4247,29 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据1个字段值，手动指定分表名，可多次调用
+    /// 根据字段值，手动指定T8表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValue">字段1值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableBy(object fieldValue);
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据2个字段值，手动指定分表名，字段值的顺序与配置的字段顺序保持一致，可多次调用
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableBy(object field1Value, object field2Value);
-    /// <summary>
-    /// 根据字段值，手动指定分表名，字段值的顺序与配置的字段顺序保持一致，可多次调用
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <param name="field3Value">字段3值</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableBy(object field1Value, object field2Value, object field3Value);
-    /// <summary>
-    /// 根据1个字段范围值，手动指定分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 根据1个字段范围值，手动指定T8表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T8表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="field1Value">第一个值</param>
+    /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据2个固定字段值和1个字段范围值，手动指定T8表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
     /// <param name="field1Value">字段1值</param>
@@ -4868,13 +4763,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T9表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表1个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T9表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -4904,44 +4799,29 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据1个字段值，手动指定分表名，可多次调用
+    /// 根据字段值，手动指定T9表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValue">字段1值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableBy(object fieldValue);
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据2个字段值，手动指定分表名，字段值的顺序与配置的字段顺序保持一致，可多次调用
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableBy(object field1Value, object field2Value);
-    /// <summary>
-    /// 根据字段值，手动指定分表名，字段值的顺序与配置的字段顺序保持一致，可多次调用
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <param name="field3Value">字段3值</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableBy(object field1Value, object field2Value, object field3Value);
-    /// <summary>
-    /// 根据1个字段范围值，手动指定分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 根据1个字段范围值，手动指定T9表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T9表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="field1Value">第一个值</param>
+    /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据2个固定字段值和1个字段范围值，手动指定T9表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
     /// <param name="field1Value">字段1值</param>
@@ -5436,13 +5316,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T10表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表1个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T10表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -5472,44 +5352,29 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据1个字段值，手动指定分表名，可多次调用
+    /// 根据字段值，手动指定T10表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValue">字段1值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableBy(object fieldValue);
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据2个字段值，手动指定分表名，字段值的顺序与配置的字段顺序保持一致，可多次调用
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableBy(object field1Value, object field2Value);
-    /// <summary>
-    /// 根据字段值，手动指定分表名，字段值的顺序与配置的字段顺序保持一致，可多次调用
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <param name="field3Value">字段3值</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableBy(object field1Value, object field2Value, object field3Value);
-    /// <summary>
-    /// 根据1个字段范围值，手动指定分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 根据1个字段范围值，手动指定T10表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T10表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="field1Value">第一个值</param>
+    /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据2个固定字段值和1个字段范围值，手动指定T10表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
     /// <param name="field1Value">字段1值</param>
@@ -6005,13 +5870,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T11表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表1个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T11表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -6041,44 +5906,29 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据1个字段值，手动指定分表名，可多次调用
+    /// 根据字段值，手动指定T11表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValue">字段1值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableBy(object fieldValue);
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据2个字段值，手动指定分表名，字段值的顺序与配置的字段顺序保持一致，可多次调用
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableBy(object field1Value, object field2Value);
-    /// <summary>
-    /// 根据字段值，手动指定分表名，字段值的顺序与配置的字段顺序保持一致，可多次调用
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <param name="field3Value">字段3值</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableBy(object field1Value, object field2Value, object field3Value);
-    /// <summary>
-    /// 根据1个字段范围值，手动指定分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 根据1个字段范围值，手动指定T11表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T11表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="field1Value">第一个值</param>
+    /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据2个固定字段值和1个字段范围值，手动指定T11表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
     /// <param name="field1Value">字段1值</param>
@@ -6575,13 +6425,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T12表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表1个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T12表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -6611,44 +6461,29 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据1个字段值，手动指定分表名，可多次调用
+    /// 根据字段值，手动指定T12表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValue">字段1值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableBy(object fieldValue);
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据2个字段值，手动指定分表名，字段值的顺序与配置的字段顺序保持一致，可多次调用
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableBy(object field1Value, object field2Value);
-    /// <summary>
-    /// 根据字段值，手动指定分表名，字段值的顺序与配置的字段顺序保持一致，可多次调用
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <param name="field3Value">字段3值</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableBy(object field1Value, object field2Value, object field3Value);
-    /// <summary>
-    /// 根据1个字段范围值，手动指定分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 根据1个字段范围值，手动指定T12表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T12表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="field1Value">第一个值</param>
+    /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据2个固定字段值和1个字段范围值，手动指定T12表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
     /// <param name="field1Value">字段1值</param>
@@ -7146,13 +6981,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T13表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表1个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T13表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -7182,44 +7017,29 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据1个字段值，手动指定分表名，可多次调用
+    /// 根据字段值，手动指定T13表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValue">字段1值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableBy(object fieldValue);
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据2个字段值，手动指定分表名，字段值的顺序与配置的字段顺序保持一致，可多次调用
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableBy(object field1Value, object field2Value);
-    /// <summary>
-    /// 根据字段值，手动指定分表名，字段值的顺序与配置的字段顺序保持一致，可多次调用
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <param name="field3Value">字段3值</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableBy(object field1Value, object field2Value, object field3Value);
-    /// <summary>
-    /// 根据1个字段范围值，手动指定分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 根据1个字段范围值，手动指定T13表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T13表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="field1Value">第一个值</param>
+    /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据2个固定字段值和1个字段范围值，手动指定T13表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
     /// <param name="field1Value">字段1值</param>
@@ -7718,13 +7538,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T14表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表1个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T14表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -7754,44 +7574,29 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据1个字段值，手动指定分表名，可多次调用
+    /// 根据字段值，手动指定T14表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValue">字段1值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableBy(object fieldValue);
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据2个字段值，手动指定分表名，字段值的顺序与配置的字段顺序保持一致，可多次调用
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableBy(object field1Value, object field2Value);
-    /// <summary>
-    /// 根据字段值，手动指定分表名，字段值的顺序与配置的字段顺序保持一致，可多次调用
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <param name="field3Value">字段3值</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableBy(object field1Value, object field2Value, object field3Value);
-    /// <summary>
-    /// 根据1个字段范围值，手动指定分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 根据1个字段范围值，手动指定T14表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T14表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="field1Value">第一个值</param>
+    /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据2个固定字段值和1个字段范围值，手动指定T14表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
     /// <param name="field1Value">字段1值</param>
@@ -8291,13 +8096,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T15表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表1个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T15表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -8327,44 +8132,29 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据1个字段值，手动指定分表名，可多次调用
+    /// 根据字段值，手动指定T15表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValue">字段1值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableBy(object fieldValue);
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据2个字段值，手动指定分表名，字段值的顺序与配置的字段顺序保持一致，可多次调用
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableBy(object field1Value, object field2Value);
-    /// <summary>
-    /// 根据字段值，手动指定分表名，字段值的顺序与配置的字段顺序保持一致，可多次调用
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <param name="field3Value">字段3值</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableBy(object field1Value, object field2Value, object field3Value);
-    /// <summary>
-    /// 根据1个字段范围值，手动指定分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 根据1个字段范围值，手动指定T15表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T15表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="field1Value">第一个值</param>
+    /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据2个固定字段值和1个字段范围值，手动指定T15表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
     /// <param name="field1Value">字段1值</param>
@@ -8865,13 +8655,13 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
 {
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T16表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表1个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T16表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -8901,44 +8691,29 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据1个字段值，手动指定分表名，可多次调用
+    /// 根据字段值，手动指定T16表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValue">字段1值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableBy(object fieldValue);
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据2个字段值，手动指定分表名，字段值的顺序与配置的字段顺序保持一致，可多次调用
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableBy(object field1Value, object field2Value);
-    /// <summary>
-    /// 根据字段值，手动指定分表名，字段值的顺序与配置的字段顺序保持一致，可多次调用
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <param name="field3Value">字段3值</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableBy(object field1Value, object field2Value, object field3Value);
-    /// <summary>
-    /// 根据1个字段范围值，手动指定分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    /// 根据1个字段范围值，手动指定T16表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T16表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="field1Value">第一个值</param>
+    /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据2个固定字段值和1个字段范围值，手动指定T16表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
     /// <param name="field1Value">字段1值</param>
