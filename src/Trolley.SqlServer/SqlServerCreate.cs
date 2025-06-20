@@ -20,14 +20,15 @@ public class SqlServerCreate<TEntity> : Create<TEntity>, ISqlServerCreate<TEntit
     #region Sharding
     public new ISqlServerCreate<TEntity> UseTable(string tableName)
         => base.UseTable(tableName) as ISqlServerCreate<TEntity>;
-    public new ISqlServerCreate<TEntity> UseTableBy(object fieldValue)
-        => base.UseTableBy(fieldValue) as ISqlServerCreate<TEntity>;
-    public new ISqlServerCreate<TEntity> UseTableBy(object field1Value, object field2Value)
-        => base.UseTableBy(field1Value, field2Value) as ISqlServerCreate<TEntity>;
-    public new ISqlServerCreate<TEntity> UseTableBy(object field1Value, object field2Value, object field3Value)
-        => base.UseTableBy(field1Value, field2Value, field3Value) as ISqlServerCreate<TEntity>;
+    public new ISqlServerCreate<TEntity> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as ISqlServerCreate<TEntity>;
     public new ISqlServerCreate<TEntity> UseTableBy<TInsertObj>(Func<string, TInsertObj, string> tableNameGetter)
         => base.UseTableBy(tableNameGetter) as ISqlServerCreate<TEntity>;
+    #endregion
+
+    #region UseTableSchema
+    public new ISqlServerCreate<TEntity> UseTableSchema(string tableSchema)
+        => base.UseTableBy(tableSchema) as ISqlServerCreate<TEntity>;
     #endregion
 
     #region WithLock

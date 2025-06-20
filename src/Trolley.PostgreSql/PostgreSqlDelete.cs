@@ -21,12 +21,8 @@ public class PostgreSqlDelete<TEntity> : Delete<TEntity>, IPostgreSqlDelete<TEnt
         => base.UseTable(tableNames) as IPostgreSqlDelete<TEntity>;
     public new IPostgreSqlDelete<TEntity> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlDelete<TEntity>;
-    public new IPostgreSqlDelete<TEntity> UseTableBy(object fieldValue)
-        => base.UseTableBy(fieldValue) as IPostgreSqlDelete<TEntity>;
-    public new IPostgreSqlDelete<TEntity> UseTableBy(object field1Value, object field2Value)
-        => base.UseTableBy(field1Value, field2Value) as IPostgreSqlDelete<TEntity>;
-    public new IPostgreSqlDelete<TEntity> UseTableBy(object field1Value, object field2Value, object field3Value)
-        => base.UseTableBy(field1Value, field2Value, field3Value) as IPostgreSqlDelete<TEntity>;
+    public new IPostgreSqlDelete<TEntity> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as IPostgreSqlDelete<TEntity>;
     public new IPostgreSqlDelete<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue)
         => base.UseTableByRange(beginFieldValue, endFieldValue) as IPostgreSqlDelete<TEntity>;
     public new IPostgreSqlDelete<TEntity> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
@@ -37,10 +33,7 @@ public class PostgreSqlDelete<TEntity> : Delete<TEntity>, IPostgreSqlDelete<TEnt
 
     #region UseTableSchema
     public new IPostgreSqlDelete<TEntity> UseTableSchema(string tableSchema)
-    {
-        base.UseTableSchema(tableSchema);
-        return this;
-    }
+        => base.UseTableSchema(tableSchema) as IPostgreSqlDelete<TEntity>;
     #endregion
 
     #region Where

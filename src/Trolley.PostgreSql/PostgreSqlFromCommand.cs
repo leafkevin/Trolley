@@ -12,38 +12,22 @@ public class PostgreSqlFromCommand<T> : FromCommand<T>, IPostgreSqlFromCommand<T
 
     #region Sharding
     public new IPostgreSqlFromCommand<T> UseTable(params string[] tableNames)
-    {
-        this.Visitor.UseTable(false, tableNames);
-        return this;
-    }
+        => base.UseTable(tableNames) as IPostgreSqlFromCommand<T>;
     public new IPostgreSqlFromCommand<T> UseTable(Func<string, bool> tableNamePredicate)
-    {
-        this.Visitor.UseTable(false, tableNamePredicate);
-        return this;
-    }
-    public new IPostgreSqlFromCommand<T> UseTableBy(object field1Value, object field2Value = null)
-    {
-        this.Visitor.UseTableBy(false, field1Value, field2Value);
-        return this;
-    }
+        => base.UseTable(tableNamePredicate) as IPostgreSqlFromCommand<T>;
+    public new IPostgreSqlFromCommand<T> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as IPostgreSqlFromCommand<T>;
     public new IPostgreSqlFromCommand<T> UseTableByRange(object beginFieldValue, object endFieldValue)
-    {
-        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
-        return this;
-    }
-    public new IPostgreSqlFromCommand<T> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
-    {
-        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
-        return this;
-    }
+        => base.UseTableBy(beginFieldValue, endFieldValue) as IPostgreSqlFromCommand<T>;
+    public new IPostgreSqlFromCommand<T> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
+        => base.UseTableByRange(field1Value, beginField2Value, endField2Value) as IPostgreSqlFromCommand<T>;
+    public new IPostgreSqlFromCommand<T> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+        => base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value) as IPostgreSqlFromCommand<T>;
     #endregion
 
     #region UseTableSchema
     public new IPostgreSqlFromCommand<T> UseTableSchema(string tableSchema)
-    {
-        this.Visitor.UseTableSchema(false, tableSchema);
-        return this;
-    }
+        => base.UseTableSchema(tableSchema) as IPostgreSqlFromCommand<T>;
     #endregion
 
     #region Union/UnionAll
@@ -216,56 +200,31 @@ public class PostgreSqlFromCommand<T1, T2> : FromCommand<T1, T2>, IPostgreSqlFro
 
     #region Sharding
     public new IPostgreSqlFromCommand<T1, T2> UseTable(params string[] tableNames)
-    {
-        this.Visitor.UseTable(false, tableNames);
-        return this;
-    }
+        => base.UseTable(tableNames) as IPostgreSqlFromCommand<T1, T2>;
     public new IPostgreSqlFromCommand<T1, T2> UseTable(Func<string, bool> tableNamePredicate)
-    {
-        this.Visitor.UseTable(false, tableNamePredicate);
-        return this;
-    }
-    public new IPostgreSqlFromCommand<T1, T2> UseTableBy(object field1Value, object field2Value = null)
-    {
-        this.Visitor.UseTableBy(false, field1Value, field2Value);
-        return this;
-    }
+        => base.UseTable(tableNamePredicate) as IPostgreSqlFromCommand<T1, T2>;
+    public new IPostgreSqlFromCommand<T1, T2> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as IPostgreSqlFromCommand<T1, T2>;
     public new IPostgreSqlFromCommand<T1, T2> UseTableByRange(object beginFieldValue, object endFieldValue)
-    {
-        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
-        return this;
-    }
-    public new IPostgreSqlFromCommand<T1, T2> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
-    {
-        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
-        return this;
-    }
+        => base.UseTableBy(beginFieldValue, endFieldValue) as IPostgreSqlFromCommand<T1, T2>;
+    public new IPostgreSqlFromCommand<T1, T2> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
+        => base.UseTableByRange(field1Value, beginField2Value, endField2Value) as IPostgreSqlFromCommand<T1, T2>;
+    public new IPostgreSqlFromCommand<T1, T2> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+        => base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value) as IPostgreSqlFromCommand<T1, T2>;
     #endregion
 
     #region UseTableSchema
     public new IPostgreSqlFromCommand<T1, T2> UseTableSchema(string tableSchema)
-    {
-        this.Visitor.UseTableSchema(false, tableSchema);
-        return this;
-    }
+        => base.UseTableSchema(tableSchema) as IPostgreSqlFromCommand<T1, T2>;
     #endregion
 
     #region Join
     public new IPostgreSqlFromCommand<T1, T2> InnerJoin(Expression<Func<T1, T2, bool>> joinOn)
-    {
-        base.InnerJoinInternal(joinOn);
-        return this;
-    }
+        => base.InnerJoin(joinOn) as IPostgreSqlFromCommand<T1, T2>;
     public new IPostgreSqlFromCommand<T1, T2> LeftJoin(Expression<Func<T1, T2, bool>> joinOn)
-    {
-        base.LeftJoinInternal(joinOn);
-        return this;
-    }
+        => base.LeftJoin(joinOn) as IPostgreSqlFromCommand<T1, T2>;
     public new IPostgreSqlFromCommand<T1, T2> RightJoin(Expression<Func<T1, T2, bool>> joinOn)
-    {
-        base.RightJoinInternal(joinOn);
-        return this;
-    }
+        => base.RightJoin(joinOn) as IPostgreSqlFromCommand<T1, T2>;
     public new IPostgreSqlFromCommand<T1, T2, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlFromCommand<T1, T2, TOther>;
     public new IPostgreSqlFromCommand<T1, T2, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn)
@@ -360,56 +319,31 @@ public class PostgreSqlFromCommand<T1, T2, T3> : FromCommand<T1, T2, T3>, IPostg
 
     #region Sharding
     public new IPostgreSqlFromCommand<T1, T2, T3> UseTable(params string[] tableNames)
-    {
-        this.Visitor.UseTable(false, tableNames);
-        return this;
-    }
+        => base.UseTable(tableNames) as IPostgreSqlFromCommand<T1, T2, T3>;
     public new IPostgreSqlFromCommand<T1, T2, T3> UseTable(Func<string, bool> tableNamePredicate)
-    {
-        this.Visitor.UseTable(false, tableNamePredicate);
-        return this;
-    }
-    public new IPostgreSqlFromCommand<T1, T2, T3> UseTableBy(object field1Value, object field2Value = null)
-    {
-        this.Visitor.UseTableBy(false, field1Value, field2Value);
-        return this;
-    }
+        => base.UseTable(tableNamePredicate) as IPostgreSqlFromCommand<T1, T2, T3>;
+    public new IPostgreSqlFromCommand<T1, T2, T3> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as IPostgreSqlFromCommand<T1, T2, T3>;
     public new IPostgreSqlFromCommand<T1, T2, T3> UseTableByRange(object beginFieldValue, object endFieldValue)
-    {
-        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
-        return this;
-    }
-    public new IPostgreSqlFromCommand<T1, T2, T3> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
-    {
-        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
-        return this;
-    }
+        => base.UseTableBy(beginFieldValue, endFieldValue) as IPostgreSqlFromCommand<T1, T2, T3>;
+    public new IPostgreSqlFromCommand<T1, T2, T3> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
+        => base.UseTableByRange(field1Value, beginField2Value, endField2Value) as IPostgreSqlFromCommand<T1, T2, T3>;
+    public new IPostgreSqlFromCommand<T1, T2, T3> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+        => base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value) as IPostgreSqlFromCommand<T1, T2, T3>;
     #endregion
 
     #region UseTableSchema
     public new IPostgreSqlFromCommand<T1, T2, T3> UseTableSchema(string tableSchema)
-    {
-        this.Visitor.UseTableSchema(false, tableSchema);
-        return this;
-    }
+        => base.UseTableSchema(tableSchema) as IPostgreSqlFromCommand<T1, T2, T3>;
     #endregion
 
     #region Join
     public new IPostgreSqlFromCommand<T1, T2, T3> InnerJoin(Expression<Func<T1, T2, T3, bool>> joinOn)
-    {
-        base.InnerJoinInternal(joinOn);
-        return this;
-    }
+        => base.InnerJoin(joinOn) as IPostgreSqlFromCommand<T1, T2, T3>;
     public new IPostgreSqlFromCommand<T1, T2, T3> LeftJoin(Expression<Func<T1, T2, T3, bool>> joinOn)
-    {
-        base.LeftJoinInternal(joinOn);
-        return this;
-    }
+        => base.LeftJoin(joinOn) as IPostgreSqlFromCommand<T1, T2, T3>;
     public new IPostgreSqlFromCommand<T1, T2, T3> RightJoin(Expression<Func<T1, T2, T3, bool>> joinOn)
-    {
-        base.RightJoinInternal(joinOn);
-        return this;
-    }
+        => base.RightJoin(joinOn) as IPostgreSqlFromCommand<T1, T2, T3>;
     public new IPostgreSqlFromCommand<T1, T2, T3, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlFromCommand<T1, T2, T3, TOther>;
     public new IPostgreSqlFromCommand<T1, T2, T3, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
@@ -504,56 +438,31 @@ public class PostgreSqlFromCommand<T1, T2, T3, T4> : FromCommand<T1, T2, T3, T4>
 
     #region Sharding
     public new IPostgreSqlFromCommand<T1, T2, T3, T4> UseTable(params string[] tableNames)
-    {
-        this.Visitor.UseTable(false, tableNames);
-        return this;
-    }
+        => base.UseTable(tableNames) as IPostgreSqlFromCommand<T1, T2, T3, T4>;
     public new IPostgreSqlFromCommand<T1, T2, T3, T4> UseTable(Func<string, bool> tableNamePredicate)
-    {
-        this.Visitor.UseTable(false, tableNamePredicate);
-        return this;
-    }
-    public new IPostgreSqlFromCommand<T1, T2, T3, T4> UseTableBy(object field1Value, object field2Value = null)
-    {
-        this.Visitor.UseTableBy(false, field1Value, field2Value);
-        return this;
-    }
+        => base.UseTable(tableNamePredicate) as IPostgreSqlFromCommand<T1, T2, T3, T4>;
+    public new IPostgreSqlFromCommand<T1, T2, T3, T4> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as IPostgreSqlFromCommand<T1, T2, T3, T4>;
     public new IPostgreSqlFromCommand<T1, T2, T3, T4> UseTableByRange(object beginFieldValue, object endFieldValue)
-    {
-        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
-        return this;
-    }
-    public new IPostgreSqlFromCommand<T1, T2, T3, T4> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
-    {
-        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
-        return this;
-    }
+        => base.UseTableBy(beginFieldValue, endFieldValue) as IPostgreSqlFromCommand<T1, T2, T3, T4>;
+    public new IPostgreSqlFromCommand<T1, T2, T3, T4> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
+        => base.UseTableByRange(field1Value, beginField2Value, endField2Value) as IPostgreSqlFromCommand<T1, T2, T3, T4>;
+    public new IPostgreSqlFromCommand<T1, T2, T3, T4> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+        => base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value) as IPostgreSqlFromCommand<T1, T2, T3, T4>;
     #endregion
 
     #region UseTableSchema
     public new IPostgreSqlFromCommand<T1, T2, T3, T4> UseTableSchema(string tableSchema)
-    {
-        this.Visitor.UseTableSchema(false, tableSchema);
-        return this;
-    }
+        => base.UseTableSchema(tableSchema) as IPostgreSqlFromCommand<T1, T2, T3, T4>;
     #endregion
 
     #region Join
     public new IPostgreSqlFromCommand<T1, T2, T3, T4> InnerJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn)
-    {
-        base.InnerJoinInternal(joinOn);
-        return this;
-    }
+        => base.InnerJoin(joinOn) as IPostgreSqlFromCommand<T1, T2, T3, T4>;
     public new IPostgreSqlFromCommand<T1, T2, T3, T4> LeftJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn)
-    {
-        base.LeftJoinInternal(joinOn);
-        return this;
-    }
+        => base.LeftJoin(joinOn) as IPostgreSqlFromCommand<T1, T2, T3, T4>;
     public new IPostgreSqlFromCommand<T1, T2, T3, T4> RightJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn)
-    {
-        base.RightJoinInternal(joinOn);
-        return this;
-    }
+        => base.RightJoin(joinOn) as IPostgreSqlFromCommand<T1, T2, T3, T4>;
     public new IPostgreSqlFromCommand<T1, T2, T3, T4, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlFromCommand<T1, T2, T3, T4, TOther>;
     public new IPostgreSqlFromCommand<T1, T2, T3, T4, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
@@ -648,56 +557,31 @@ public class PostgreSqlFromCommand<T1, T2, T3, T4, T5> : FromCommand<T1, T2, T3,
 
     #region Sharding
     public new IPostgreSqlFromCommand<T1, T2, T3, T4, T5> UseTable(params string[] tableNames)
-    {
-        this.Visitor.UseTable(false, tableNames);
-        return this;
-    }
+        => base.UseTable(tableNames) as IPostgreSqlFromCommand<T1, T2, T3, T4, T5>;
     public new IPostgreSqlFromCommand<T1, T2, T3, T4, T5> UseTable(Func<string, bool> tableNamePredicate)
-    {
-        this.Visitor.UseTable(false, tableNamePredicate);
-        return this;
-    }
-    public new IPostgreSqlFromCommand<T1, T2, T3, T4, T5> UseTableBy(object field1Value, object field2Value = null)
-    {
-        this.Visitor.UseTableBy(false, field1Value, field2Value);
-        return this;
-    }
+        => base.UseTable(tableNamePredicate) as IPostgreSqlFromCommand<T1, T2, T3, T4, T5>;
+    public new IPostgreSqlFromCommand<T1, T2, T3, T4, T5> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as IPostgreSqlFromCommand<T1, T2, T3, T4, T5>;
     public new IPostgreSqlFromCommand<T1, T2, T3, T4, T5> UseTableByRange(object beginFieldValue, object endFieldValue)
-    {
-        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
-        return this;
-    }
-    public new IPostgreSqlFromCommand<T1, T2, T3, T4, T5> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
-    {
-        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
-        return this;
-    }
+        => base.UseTableBy(beginFieldValue, endFieldValue) as IPostgreSqlFromCommand<T1, T2, T3, T4, T5>;
+    public new IPostgreSqlFromCommand<T1, T2, T3, T4, T5> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
+        => base.UseTableByRange(field1Value, beginField2Value, endField2Value) as IPostgreSqlFromCommand<T1, T2, T3, T4, T5>;
+    public new IPostgreSqlFromCommand<T1, T2, T3, T4, T5> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+        => base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value) as IPostgreSqlFromCommand<T1, T2, T3, T4, T5>;
     #endregion
 
     #region UseTableSchema
     public new IPostgreSqlFromCommand<T1, T2, T3, T4, T5> UseTableSchema(string tableSchema)
-    {
-        this.Visitor.UseTableSchema(false, tableSchema);
-        return this;
-    }
+        => base.UseTableSchema(tableSchema) as IPostgreSqlFromCommand<T1, T2, T3, T4, T5>;
     #endregion
 
     #region Join
     public new IPostgreSqlFromCommand<T1, T2, T3, T4, T5> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn)
-    {
-        base.InnerJoinInternal(joinOn);
-        return this;
-    }
+        => base.InnerJoin(joinOn) as IPostgreSqlFromCommand<T1, T2, T3, T4, T5>;
     public new IPostgreSqlFromCommand<T1, T2, T3, T4, T5> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn)
-    {
-        base.LeftJoinInternal(joinOn);
-        return this;
-    }
+        => base.LeftJoin(joinOn) as IPostgreSqlFromCommand<T1, T2, T3, T4, T5>;
     public new IPostgreSqlFromCommand<T1, T2, T3, T4, T5> RightJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn)
-    {
-        base.RightJoinInternal(joinOn);
-        return this;
-    }
+        => base.RightJoin(joinOn) as IPostgreSqlFromCommand<T1, T2, T3, T4, T5>;
     public new IPostgreSqlFromCommand<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlFromCommand<T1, T2, T3, T4, T5, TOther>;
     public new IPostgreSqlFromCommand<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
@@ -792,56 +676,31 @@ public class PostgreSqlFromCommand<T1, T2, T3, T4, T5, T6> : FromCommand<T1, T2,
 
     #region Sharding
     public new IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6> UseTable(params string[] tableNames)
-    {
-        this.Visitor.UseTable(false, tableNames);
-        return this;
-    }
+        => base.UseTable(tableNames) as IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6>;
     public new IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6> UseTable(Func<string, bool> tableNamePredicate)
-    {
-        this.Visitor.UseTable(false, tableNamePredicate);
-        return this;
-    }
-    public new IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6> UseTableBy(object field1Value, object field2Value = null)
-    {
-        this.Visitor.UseTableBy(false, field1Value, field2Value);
-        return this;
-    }
+        => base.UseTable(tableNamePredicate) as IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6>;
+    public new IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6>;
     public new IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6> UseTableByRange(object beginFieldValue, object endFieldValue)
-    {
-        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
-        return this;
-    }
-    public new IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
-    {
-        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
-        return this;
-    }
+        => base.UseTableBy(beginFieldValue, endFieldValue) as IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6>;
+    public new IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
+        => base.UseTableByRange(field1Value, beginField2Value, endField2Value) as IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6>;
+    public new IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+        => base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value) as IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6>;
     #endregion
 
     #region UseTableSchema
     public new IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6> UseTableSchema(string tableSchema)
-    {
-        this.Visitor.UseTableSchema(false, tableSchema);
-        return this;
-    }
+        => base.UseTableSchema(tableSchema) as IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6>;
     #endregion
 
     #region Join
     public new IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> joinOn)
-    {
-        base.InnerJoinInternal(joinOn);
-        return this;
-    }
+        => base.InnerJoin(joinOn) as IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6>;
     public new IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> joinOn)
-    {
-        base.LeftJoinInternal(joinOn);
-        return this;
-    }
+        => base.LeftJoin(joinOn) as IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6>;
     public new IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> joinOn)
-    {
-        base.RightJoinInternal(joinOn);
-        return this;
-    }
+        => base.RightJoin(joinOn) as IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6>;
     #endregion
 
     #region Where/And

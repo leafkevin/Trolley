@@ -19,41 +19,49 @@ public interface IPostgreSqlFromCommand<T> : IFromCommand<T>, IPostgreSqlFromCom
 {
     #region Sharding
     /// <summary>
-    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlFromCommand<T> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T表1个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlFromCommand<T> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
+    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlFromCommand<T> UseTableBy(object field1Value, object field2Value = null);
+    new IPostgreSqlFromCommand<T> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据单个字段值范围确定T表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个字段范围值，手动指定T表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
-    /// <param name="beginFieldValue">字段起始值</param>
-    /// <param name="endFieldValue">字段结束值</param>
+    /// <param name="beginFieldValue">字段范围起始值</param>
+    /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlFromCommand<T> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围确定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
-    /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="fieldValue1">第一个值</param>
-    /// <param name="fieldValue2">第二个值</param>
-    /// <param name="fieldValue3">第三个值</param>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="beginField2Value">字段2范围起始值</param>
+    /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlFromCommand<T> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    new IPostgreSqlFromCommand<T> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <summary>
+    /// 根据2个固定字段值和1个字段范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// </summary>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="field2Value">字段2值</param>
+    /// <param name="beginField3Value">字段3范围起始值</param>
+    /// <param name="endField3Value">字段3范围结束值</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlFromCommand<T> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -325,14 +333,14 @@ public interface IPostgreSqlFromCommand<T> : IFromCommand<T>, IPostgreSqlFromCom
 
     #region Returning
     /// <summary>
-    /// 返回插入后想要返回字段的内容，仅mariadb数据库支持
+    /// 返回插入后想要返回字段的内容
     /// </summary>
     /// <typeparam name="TResult">返回类型</typeparam>
     /// <param name="fieldNames">字段名称列表</param>
     /// <returns>返回插入的部分字段</returns>
     IPostgreSqlBulkCreated<T, TResult> Returning<TResult>(string fieldNames);
     /// <summary>
-    /// 返回插入后想要返回字段的内容，仅mariadb数据库支持
+    /// 返回插入后想要返回字段的内容
     /// </summary>
     /// <typeparam name="TResult">返回类型</typeparam>
     /// <param name="fieldsSelector">字段筛选表达式</param>
@@ -344,41 +352,49 @@ public interface IPostgreSqlFromCommand<T1, T2> : IFromCommand<T1, T2>, IPostgre
 {
     #region Sharding
     /// <summary>
-    /// 使用固定表名确定T2表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T2表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlFromCommand<T1, T2> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T2表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T2表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlFromCommand<T1, T2> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 根据字段值确定T2表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
+    /// 根据字段值，手动指定T2表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlFromCommand<T1, T2> UseTableBy(object field1Value, object field2Value = null);
+    new IPostgreSqlFromCommand<T1, T2> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据单个字段值范围确定T表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个字段范围值，手动指定T2表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
-    /// <param name="beginFieldValue">字段起始值</param>
-    /// <param name="endFieldValue">字段结束值</param>
+    /// <param name="beginFieldValue">字段范围起始值</param>
+    /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlFromCommand<T1, T2> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围确定T2表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
-    /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T2表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="fieldValue1">第一个值</param>
-    /// <param name="fieldValue2">第二个值</param>
-    /// <param name="fieldValue3">第三个值</param>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="beginField2Value">字段2范围起始值</param>
+    /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlFromCommand<T1, T2> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    new IPostgreSqlFromCommand<T1, T2> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <summary>
+    /// 根据2个固定字段值和1个字段范围值，手动指定T2表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// </summary>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="field2Value">字段2值</param>
+    /// <param name="beginField3Value">字段3范围起始值</param>
+    /// <param name="endField3Value">字段3范围结束值</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlFromCommand<T1, T2> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -640,41 +656,49 @@ public interface IPostgreSqlFromCommand<T1, T2, T3> : IFromCommand<T1, T2, T3>, 
 {
     #region Sharding
     /// <summary>
-    /// 使用固定表名确定T3表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T3表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlFromCommand<T1, T2, T3> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T3表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T3表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlFromCommand<T1, T2, T3> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 根据字段值确定T3表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
+    /// 根据字段值，手动指定T3表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlFromCommand<T1, T2, T3> UseTableBy(object field1Value, object field2Value = null);
+    new IPostgreSqlFromCommand<T1, T2, T3> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据单个字段值范围确定T表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个字段范围值，手动指定T3表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
-    /// <param name="beginFieldValue">字段起始值</param>
-    /// <param name="endFieldValue">字段结束值</param>
+    /// <param name="beginFieldValue">字段范围起始值</param>
+    /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlFromCommand<T1, T2, T3> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围确定T3表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
-    /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T3表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="fieldValue1">第一个值</param>
-    /// <param name="fieldValue2">第二个值</param>
-    /// <param name="fieldValue3">第三个值</param>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="beginField2Value">字段2范围起始值</param>
+    /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlFromCommand<T1, T2, T3> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    new IPostgreSqlFromCommand<T1, T2, T3> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <summary>
+    /// 根据2个固定字段值和1个字段范围值，手动指定T3表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// </summary>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="field2Value">字段2值</param>
+    /// <param name="beginField3Value">字段3范围起始值</param>
+    /// <param name="endField3Value">字段3范围结束值</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlFromCommand<T1, T2, T3> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -936,41 +960,49 @@ public interface IPostgreSqlFromCommand<T1, T2, T3, T4> : IFromCommand<T1, T2, T
 {
     #region Sharding
     /// <summary>
-    /// 使用固定表名确定T4表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T4表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlFromCommand<T1, T2, T3, T4> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T4表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T4表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlFromCommand<T1, T2, T3, T4> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 根据字段值确定T4表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
+    /// 根据字段值，手动指定T4表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlFromCommand<T1, T2, T3, T4> UseTableBy(object field1Value, object field2Value = null);
+    new IPostgreSqlFromCommand<T1, T2, T3, T4> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据单个字段值范围确定T表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个字段范围值，手动指定T4表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
-    /// <param name="beginFieldValue">字段起始值</param>
-    /// <param name="endFieldValue">字段结束值</param>
+    /// <param name="beginFieldValue">字段范围起始值</param>
+    /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlFromCommand<T1, T2, T3, T4> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围确定T4表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
-    /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T4表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="fieldValue1">第一个值</param>
-    /// <param name="fieldValue2">第二个值</param>
-    /// <param name="fieldValue3">第三个值</param>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="beginField2Value">字段2范围起始值</param>
+    /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlFromCommand<T1, T2, T3, T4> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    new IPostgreSqlFromCommand<T1, T2, T3, T4> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <summary>
+    /// 根据2个固定字段值和1个字段范围值，手动指定T4表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// </summary>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="field2Value">字段2值</param>
+    /// <param name="beginField3Value">字段3范围起始值</param>
+    /// <param name="endField3Value">字段3范围结束值</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlFromCommand<T1, T2, T3, T4> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -1232,41 +1264,49 @@ public interface IPostgreSqlFromCommand<T1, T2, T3, T4, T5> : IFromCommand<T1, T
 {
     #region Sharding
     /// <summary>
-    /// 使用固定表名确定T5表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T5表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlFromCommand<T1, T2, T3, T4, T5> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T5表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T5表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlFromCommand<T1, T2, T3, T4, T5> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 根据字段值确定T5表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
+    /// 根据字段值，手动指定T5表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlFromCommand<T1, T2, T3, T4, T5> UseTableBy(object field1Value, object field2Value = null);
+    new IPostgreSqlFromCommand<T1, T2, T3, T4, T5> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据单个字段值范围确定T表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个字段范围值，手动指定T5表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
-    /// <param name="beginFieldValue">字段起始值</param>
-    /// <param name="endFieldValue">字段结束值</param>
+    /// <param name="beginFieldValue">字段范围起始值</param>
+    /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlFromCommand<T1, T2, T3, T4, T5> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围确定T5表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
-    /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T5表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="fieldValue1">第一个值</param>
-    /// <param name="fieldValue2">第二个值</param>
-    /// <param name="fieldValue3">第三个值</param>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="beginField2Value">字段2范围起始值</param>
+    /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlFromCommand<T1, T2, T3, T4, T5> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    new IPostgreSqlFromCommand<T1, T2, T3, T4, T5> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <summary>
+    /// 根据2个固定字段值和1个字段范围值，手动指定T5表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// </summary>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="field2Value">字段2值</param>
+    /// <param name="beginField3Value">字段3范围起始值</param>
+    /// <param name="endField3Value">字段3范围结束值</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlFromCommand<T1, T2, T3, T4, T5> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -1528,41 +1568,49 @@ public interface IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6> : IFromCommand<T
 {
     #region Sharding
     /// <summary>
-    /// 使用固定表名确定T6表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T6表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T6表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T6表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 根据字段值确定T6表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
+    /// 根据字段值，手动指定T6表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6> UseTableBy(object field1Value, object field2Value = null);
+    new IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据单个字段值范围确定T表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个字段范围值，手动指定T6表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
-    /// <param name="beginFieldValue">字段起始值</param>
-    /// <param name="endFieldValue">字段结束值</param>
+    /// <param name="beginFieldValue">字段范围起始值</param>
+    /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围确定T6表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
-    /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T6表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="fieldValue1">第一个值</param>
-    /// <param name="fieldValue2">第二个值</param>
-    /// <param name="fieldValue3">第三个值</param>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="beginField2Value">字段2范围起始值</param>
+    /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    new IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <summary>
+    /// 根据2个固定字段值和1个字段范围值，手动指定T6表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// </summary>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="field2Value">字段2值</param>
+    /// <param name="beginField3Value">字段3范围起始值</param>
+    /// <param name="endField3Value">字段3范围结束值</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlFromCommand<T1, T2, T3, T4, T5, T6> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema

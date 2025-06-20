@@ -20,15 +20,11 @@ public class SqlServerUpdate<TEntity> : Update<TEntity>, ISqlServerUpdate<TEntit
 
     #region Sharding
     public new ISqlServerUpdate<TEntity> UseTable(params string[] tableNames)
-        => base.UseTable(tableNames) as ISqlServerUpdate<TEntity>;
+      => base.UseTable(tableNames) as ISqlServerUpdate<TEntity>;
     public new ISqlServerUpdate<TEntity> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as ISqlServerUpdate<TEntity>;
-    public new ISqlServerUpdate<TEntity> UseTableBy(object fieldValue)
-        => base.UseTableBy(fieldValue) as ISqlServerUpdate<TEntity>;
-    public new ISqlServerUpdate<TEntity> UseTableBy(object field1Value, object field2Value)
-        => base.UseTableBy(field1Value, field2Value) as ISqlServerUpdate<TEntity>;
-    public new ISqlServerUpdate<TEntity> UseTableBy(object field1Value, object field2Value, object field3Value)
-        => base.UseTableBy(field1Value, field2Value, field3Value) as ISqlServerUpdate<TEntity>;
+    public new ISqlServerUpdate<TEntity> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as ISqlServerUpdate<TEntity>;
     public new ISqlServerUpdate<TEntity> UseTableBy<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
         => base.UseTableBy(tableNameGetter) as ISqlServerUpdate<TEntity>;
     public new ISqlServerUpdate<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue)

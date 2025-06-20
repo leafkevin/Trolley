@@ -7,41 +7,28 @@ public interface ISqlServerCreate<TEntity> : ICreate<TEntity>
 {
     #region Sharding
     /// <summary>
-    /// 使用固定表名，手动指定TEntity表分表名执行插入操作，完整的表名，如：.UseTable("sys_order_202001")，按月分表
+    /// 手动指定TEntity表分表名执行插入操作，完整的表名，如：.UseTable("sys_order_202001")，按月分表
     /// </summary>
     /// <param name="tableName">完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回插入对象</returns>
     new ISqlServerCreate<TEntity> UseTable(string tableName);
     /// <summary>
-    /// 根据1个字段值，手动指定TEntity表分表名执行插入操作，可多次调用，.UseTableBy(DateTime.Now)//时间分表，今日订单
+    /// 根据字段值，手动指定TEntity表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValue">字段值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回插入对象</returns>
-    new ISqlServerCreate<TEntity> UseTableBy(object fieldValue);
+    new ISqlServerCreate<TEntity> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据2个字段值，手动指定TEntity表分表名执行插入操作，字段值的顺序与配置的字段顺序保持一致，可多次调用，
-    /// .UseTableBy(1, DateTime.Now)//商户+时间分表，商户1，今日订单
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <returns>返回插入对象</returns>
-    new ISqlServerCreate<TEntity> UseTableBy(object field1Value, object field2Value);
-    /// <summary>
-    /// 根据字段值，手动指定TEntity表分表名执行插入操作，字段值的顺序与配置的字段顺序保持一致，可多次调用，
-    /// .UseTableBy(1, 6, DateTime.Now)//商户+产品+时间分表，商户1，产品6，今日订单
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <param name="field3Value">字段3值</param>
-    /// <returns>返回插入对象</returns>
-    new ISqlServerCreate<TEntity> UseTableBy(object field1Value, object field2Value, object field3Value);
-    /// <summary>
-    /// 手动设置分表名获取委托，通常是根据某1个或多个字段值来确定分表名，执行时会根据实体字段的值自动插入对应的分表中，单条和批量插入均可使用，常用于批量操作。
+    /// 手动设置TEntity表分表名获取委托，通常是根据某1个或多个字段值来确定分表名，执行时会根据实体字段的值自动插入对应的分表中，单条和批量插入均可使用，常用于批量操作。
     /// </summary>
     /// <typeparam name="TInsertObj">插入的实体类型</typeparam>
     /// <param name="tableNameGetter">分表名获取委托</param>
     /// <exception cref="ArgumentNullException"></exception>
     new ISqlServerCreate<TEntity> UseTableBy<TInsertObj>(Func<string, TInsertObj, string> tableNameGetter);
+    #endregion
+
+    #region UseTableSchema
+    new ISqlServerCreate<TEntity> UseTableSchema(string tableSchema);
     #endregion
 
     #region WithLock

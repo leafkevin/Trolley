@@ -21,12 +21,8 @@ public class SqlServerDelete<TEntity> : Delete<TEntity>, ISqlServerDelete<TEntit
         => base.UseTable(tableNames) as ISqlServerDelete<TEntity>;
     public new ISqlServerDelete<TEntity> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as ISqlServerDelete<TEntity>;
-    public new ISqlServerDelete<TEntity> UseTableBy(object fieldValue)
-        => base.UseTableBy(fieldValue) as ISqlServerDelete<TEntity>;
-    public new ISqlServerDelete<TEntity> UseTableBy(object field1Value, object field2Value)
-        => base.UseTableBy(field1Value, field2Value) as ISqlServerDelete<TEntity>;
-    public new ISqlServerDelete<TEntity> UseTableBy(object field1Value, object field2Value, object field3Value)
-        => base.UseTableBy(field1Value, field2Value, field3Value) as ISqlServerDelete<TEntity>;
+    public new ISqlServerDelete<TEntity> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as ISqlServerDelete<TEntity>;
     public new ISqlServerDelete<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue)
         => base.UseTableByRange(beginFieldValue, endFieldValue) as ISqlServerDelete<TEntity>;
     public new ISqlServerDelete<TEntity> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
@@ -37,10 +33,7 @@ public class SqlServerDelete<TEntity> : Delete<TEntity>, ISqlServerDelete<TEntit
 
     #region UseTableSchema
     public new ISqlServerDelete<TEntity> UseTableSchema(string tableSchema)
-    {
-        base.UseTableSchema(tableSchema);
-        return this;
-    }
+        => base.UseTableSchema(tableSchema) as ISqlServerDelete<TEntity>;
     #endregion
 
     #region Where

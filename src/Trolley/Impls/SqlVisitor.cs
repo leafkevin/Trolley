@@ -1778,11 +1778,9 @@ public class SqlVisitor : ISqlVisitor
                     else throw new NotSupportedException("不支持的方法调用");
                     break;
                 case "UseTableBy":
-                    var parameters = new List<object>();
-                    foreach (var arg in callExpr.Arguments)
-                        parameters.Add(this.Evaluate(arg));
+                    var parameters = (object[])this.Evaluate(callExpr.Arguments[0]);
                     entityType = methodInfo.DeclaringType.GetGenericArguments().Last();
-                    queryVisitor.UseTableBy(false, parameters.ToArray());
+                    queryVisitor.UseTableBy(false, parameters);
                     break;
                 case "Exists":
                 case "ExistsAsync":

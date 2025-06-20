@@ -19,38 +19,22 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
 
     #region Sharding
     public new IMySqlFromCommand<T> UseTable(params string[] tableNames)
-    {
-        this.Visitor.UseTable(false, tableNames);
-        return this;
-    }
+        => base.UseTable(tableNames) as IMySqlFromCommand<T>;
     public new IMySqlFromCommand<T> UseTable(Func<string, bool> tableNamePredicate)
-    {
-        this.Visitor.UseTable(false, tableNamePredicate);
-        return this;
-    }
-    public new IMySqlFromCommand<T> UseTableBy(object field1Value, object field2Value = null)
-    {
-        this.Visitor.UseTableBy(false, field1Value, field2Value);
-        return this;
-    }
+        => base.UseTable(tableNamePredicate) as IMySqlFromCommand<T>;
+    public new IMySqlFromCommand<T> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as IMySqlFromCommand<T>;
     public new IMySqlFromCommand<T> UseTableByRange(object beginFieldValue, object endFieldValue)
-    {
-        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
-        return this;
-    }
-    public new IMySqlFromCommand<T> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
-    {
-        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
-        return this;
-    }
+        => base.UseTableBy(beginFieldValue, endFieldValue) as IMySqlFromCommand<T>;
+    public new IMySqlFromCommand<T> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
+        => base.UseTableByRange(field1Value, beginField2Value, endField2Value) as IMySqlFromCommand<T>;
+    public new IMySqlFromCommand<T> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+        => base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value) as IMySqlFromCommand<T>;
     #endregion
 
     #region UseTableSchema
     public new IMySqlFromCommand<T> UseTableSchema(string tableSchema)
-    {
-        this.Visitor.UseTableSchema(false, tableSchema);
-        return this;
-    }
+        => base.UseTableSchema(tableSchema) as IMySqlFromCommand<T>;
     #endregion
 
     #region Union/UnionAll
@@ -143,12 +127,12 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
     #endregion
 
     #region Select
-    public new IMySqlFromContinuedCreate<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>(fields) as IMySqlFromContinuedCreate<TTarget>;
-    public new IMySqlFromContinuedCreate<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr)
-        => base.Select(fieldsExpr) as IMySqlFromContinuedCreate<TTarget>;
-    public new IMySqlFromContinuedCreate<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr)
-        => base.SelectAggregate<TTarget>(fieldsExpr) as IMySqlFromContinuedCreate<TTarget>;
+    public new IMySqlFromCommand<TTarget> Select<TTarget>(string fields = "*")
+        => base.Select<TTarget>(fields) as IMySqlFromCommand<TTarget>;
+    public new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr)
+        => base.Select(fieldsExpr) as IMySqlFromCommand<TTarget>;
+    public new IMySqlFromCommand<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr)
+        => base.SelectAggregate(fieldsExpr) as IMySqlFromCommand<TTarget>;
     #endregion
 
     #region Distinct
@@ -171,6 +155,53 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
         return this;
     }
     #endregion
+
+    #region OnDuplicateKeyUpdate
+    public IMySqlFromContinuedCreate<T> OnDuplicateKeyUpdate<TUpdateFields>(TUpdateFields updateObj)
+    {
+        var sql = this.Visitor.BuildCommandSql(out _);
+        var visitor = this.NewCreateVisitor(sql);
+        visitor.OnDuplicateKeyUpdate(updateObj);
+        return new MySqlFromContinuedCreate<T>(this.DbContext, visitor);
+    }
+    public IMySqlFromContinuedCreate<T> OnDuplicateKeyUpdate<TUpdateFields>(Expression<Func<IMySqlCreateDuplicateKeyUpdate<T>, TUpdateFields>> fieldsAssignment)
+    {
+        var sql = this.Visitor.BuildCommandSql(out _);
+        var visitor = this.NewCreateVisitor(sql);
+        visitor.OnDuplicateKeyUpdate(fieldsAssignment);
+        return new MySqlFromContinuedCreate<T>(this.DbContext, visitor);
+    }
+    #endregion
+
+    #region Returnning
+    public IMySqlBulkCreated<T, TResult> Returning<TResult>(string fieldNames)
+    {
+        var sql = this.Visitor.BuildCommandSql(out _);
+        var visitor = this.NewCreateVisitor(sql);
+        visitor.Returning(fieldNames);
+        return new MySqlBulkCreated<T, TResult>(this.DbContext, visitor);
+    }
+    public IMySqlBulkCreated<T, TResult> Returning<TResult>(Expression<Func<T, TResult>> fieldsSelector)
+    {
+        var sql = this.Visitor.BuildCommandSql(out _);
+        var visitor = this.NewCreateVisitor(sql);
+        visitor.Returning(fieldsSelector);
+        return new MySqlBulkCreated<T, TResult>(this.DbContext, visitor);
+    }
+    #endregion
+
+    protected virtual MySqlCreateVisitor NewCreateVisitor(string fromSql)
+    {
+        var createVisiter = new MySqlCreateVisitor(this.DbContext, this.Visitor.TableAsStart);
+        createVisiter.Tables = this.Visitor.Tables;
+        createVisiter.IsMultiple = this.Visitor.IsMultiple;
+        createVisiter.CommandIndex = this.Visitor.CommandIndex;
+        createVisiter.RefQueries = this.Visitor.RefQueries;
+        createVisiter.ShardingTables = this.Visitor.ShardingTables;
+        createVisiter.DbParameters = this.Visitor.DbParameters;
+        createVisiter.FromSql = fromSql;
+        return createVisiter;
+    }
 }
 <#
     var count = 6;
@@ -190,56 +221,31 @@ public class MySqlFromCommand<<#=tables#>> : FromCommand<<#=tables#>>, IMySqlFro
 
     #region Sharding
     public new IMySqlFromCommand<<#=tables#>> UseTable(params string[] tableNames)
-    {
-        this.Visitor.UseTable(false, tableNames);
-        return this;
-    }
+        => base.UseTable(tableNames) as IMySqlFromCommand<<#=tables#>>;
     public new IMySqlFromCommand<<#=tables#>> UseTable(Func<string, bool> tableNamePredicate)
-    {
-        this.Visitor.UseTable(false, tableNamePredicate);
-        return this;
-    }
-    public new IMySqlFromCommand<<#=tables#>> UseTableBy(object field1Value, object field2Value = null)
-    {
-        this.Visitor.UseTableBy(false, field1Value, field2Value);
-        return this;
-    }
+        => base.UseTable(tableNamePredicate) as IMySqlFromCommand<<#=tables#>>;
+    public new IMySqlFromCommand<<#=tables#>> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as IMySqlFromCommand<<#=tables#>>;
     public new IMySqlFromCommand<<#=tables#>> UseTableByRange(object beginFieldValue, object endFieldValue)
-    {
-        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
-        return this;
-    }
-    public new IMySqlFromCommand<<#=tables#>> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
-    {
-        this.Visitor.UseTableByRange(false, fieldValue1, fieldValue2, fieldValue3);
-        return this;
-    }
+        => base.UseTableBy(beginFieldValue, endFieldValue) as IMySqlFromCommand<<#=tables#>>;
+    public new IMySqlFromCommand<<#=tables#>> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
+        => base.UseTableByRange(field1Value, beginField2Value, endField2Value) as IMySqlFromCommand<<#=tables#>>;
+    public new IMySqlFromCommand<<#=tables#>> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+        => base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value) as IMySqlFromCommand<<#=tables#>>;
     #endregion
 
     #region UseTableSchema
     public new IMySqlFromCommand<<#=tables#>> UseTableSchema(string tableSchema)
-    {
-        this.Visitor.UseTableSchema(false, tableSchema);
-        return this;
-    }
+        => base.UseTableSchema(tableSchema) as IMySqlFromCommand<<#=tables#>>;
     #endregion
 
     #region Join
     public new IMySqlFromCommand<<#=tables#>> InnerJoin(Expression<Func<<#=tables#>, bool>> joinOn)
-    {
-        base.InnerJoinInternal(joinOn);
-        return this;
-    }
+        => base.InnerJoin(joinOn) as IMySqlFromCommand<<#=tables#>>;
     public new IMySqlFromCommand<<#=tables#>> LeftJoin(Expression<Func<<#=tables#>, bool>> joinOn)
-    {
-        base.LeftJoinInternal(joinOn);
-        return this;
-    }
+        => base.LeftJoin(joinOn) as IMySqlFromCommand<<#=tables#>>;
     public new IMySqlFromCommand<<#=tables#>> RightJoin(Expression<Func<<#=tables#>, bool>> joinOn)
-    {
-        base.RightJoinInternal(joinOn);
-        return this;
-    }
+        => base.RightJoin(joinOn) as IMySqlFromCommand<<#=tables#>>;
 <#
         if( i < count)
         {
@@ -311,10 +317,10 @@ public class MySqlFromCommand<<#=tables#>> : FromCommand<<#=tables#>>, IMySqlFro
     #endregion
 
     #region Select
-    public new IMySqlFromContinuedCreate<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>(fields) as IMySqlFromContinuedCreate<TTarget>;
-    public new IMySqlFromContinuedCreate<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr)
-        => base.Select(fieldsExpr) as IMySqlFromContinuedCreate<TTarget>;
+    public new IMySqlFromCommand<TTarget> Select<TTarget>(string fields = "*")
+        => base.Select<TTarget>(fields) as IMySqlFromCommand<TTarget>;
+    public new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr)
+        => base.Select(fieldsExpr) as IMySqlFromCommand<TTarget>;
     #endregion
 
     #region Skip/Take

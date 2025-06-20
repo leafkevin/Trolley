@@ -7,7 +7,7 @@ public interface ISqlServerDelete<TEntity> : IDelete<TEntity>
 {
     #region Sharding
     /// <summary>
-    /// 直接TEntity表1个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个TEntity表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回删除对象</returns>
@@ -19,28 +19,11 @@ public interface ISqlServerDelete<TEntity> : IDelete<TEntity>
     /// <returns>返回删除对象</returns>
     new ISqlServerDelete<TEntity> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 根据1个字段值确定TEntity表分表名，可多次调用，.UseTableBy(DateTime.Now)//时间分表，今日订单
+    /// 根据字段值，手动指定TEntity表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValue">字段值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回删除对象</returns>
-    new ISqlServerDelete<TEntity> UseTableBy(object fieldValue);
-    /// <summary>
-    /// 根据2个字段值，手动指定TEntity表分表名，字段值的顺序与配置的字段顺序保持一致，可多次调用，
-    /// .UseTableBy(1, DateTime.Now)//商户+时间分表，商户1，今日订单
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <returns>返回删除对象</returns>
-    new ISqlServerDelete<TEntity> UseTableBy(object field1Value, object field2Value);
-    /// <summary>
-    /// 根据3个字段值，手动指定TEntity表分表名，字段值的顺序与配置的字段顺序保持一致，可多次调用，
-    /// .UseTableBy(1, 6, DateTime.Now)//商户+产品+时间分表，商户1，产品6，今日订单
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <param name="field3Value">字段3值</param>
-    /// <returns>返回删除对象</returns>
-    new ISqlServerDelete<TEntity> UseTableBy(object field1Value, object field2Value, object field3Value);
+    new ISqlServerDelete<TEntity> UseTableBy(params object[] fieldValues);
     /// <summary>
     /// 根据1个字段范围值，手动指定TEntity表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)，//时间分表，最近一周的订单
     /// </summary>

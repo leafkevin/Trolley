@@ -21,7 +21,7 @@ public interface ICreate<TEntity>
 
     #region Sharding
     /// <summary>
-    /// 使用固定表名，手动指定TEntity表分表名执行插入操作，完整的表名，如：.UseTable("sys_order_202001")，按月分表
+    /// 手动指定TEntity表分表名执行插入操作，完整的表名，如：.UseTable("sys_order_202001")，按月分表
     /// </summary>
     /// <param name="tableName">完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回插入对象</returns>

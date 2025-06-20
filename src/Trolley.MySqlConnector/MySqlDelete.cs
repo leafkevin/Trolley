@@ -21,12 +21,8 @@ public class MySqlDelete<TEntity> : Delete<TEntity>, IMySqlDelete<TEntity>
         => base.UseTable(tableNames) as IMySqlDelete<TEntity>;
     public new IMySqlDelete<TEntity> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IMySqlDelete<TEntity>;
-    public new IMySqlDelete<TEntity> UseTableBy(object fieldValue)
-        => base.UseTableBy(fieldValue) as IMySqlDelete<TEntity>;
-    public new IMySqlDelete<TEntity> UseTableBy(object field1Value, object field2Value)
-        => base.UseTableBy(field1Value, field2Value) as IMySqlDelete<TEntity>;
-    public new IMySqlDelete<TEntity> UseTableBy(object field1Value, object field2Value, object field3Value)
-        => base.UseTableBy(field1Value, field2Value, field3Value) as IMySqlDelete<TEntity>;
+    public new IMySqlDelete<TEntity> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as IMySqlDelete<TEntity>;
     public new IMySqlDelete<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue)
         => base.UseTableByRange(beginFieldValue, endFieldValue) as IMySqlDelete<TEntity>;
     public new IMySqlDelete<TEntity> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
@@ -37,10 +33,7 @@ public class MySqlDelete<TEntity> : Delete<TEntity>, IMySqlDelete<TEntity>
 
     #region UseTableSchema
     public new IMySqlDelete<TEntity> UseTableSchema(string tableSchema)
-    {
-        base.UseTableSchema(tableSchema);
-        return this;
-    }
+        => base.UseTableSchema(tableSchema) as IMySqlDelete<TEntity>;
     #endregion
 
     #region Where

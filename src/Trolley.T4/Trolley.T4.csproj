@@ -151,6 +151,14 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>IMySqlFromCommand.cs</LastGenOutput>
     </Content>
+    <Content Include="Trolley\IPostgreSqlFromCommand.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>IPostgreSqlFromCommand.cs</LastGenOutput>
+    </Content>
+    <Content Include="Trolley\ISqlServerFromCommand.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>ISqlServerFromCommand.cs</LastGenOutput>
+    </Content>
     <Content Include="Trolley\MySqlGroupingCommand.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>MySqlGroupingCommand.cs</LastGenOutput>
@@ -174,6 +182,10 @@
     <Content Include="Trolley\PostgreSqlDistinctOnQuery.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>PostgreSqlDistinctOnQuery.cs</LastGenOutput>
+    </Content>
+    <Content Include="Trolley\PostgreSqlFromCommand.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>PostgreSqlFromCommand.cs</LastGenOutput>
     </Content>
     <Content Include="Trolley\PostgreSqlIncludableQuery.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
@@ -294,6 +306,10 @@
     <Content Include="Trolley\IUpdateJoin.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>IUpdateJoin.cs</LastGenOutput>
+    </Content>
+    <Content Include="Trolley\SqlServerFromCommand.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>SqlServerFromCommand.cs</LastGenOutput>
     </Content>
     <Content Include="Trolley\Update.tt">
       <Generator>TextTemplatingFileGenerator</Generator>

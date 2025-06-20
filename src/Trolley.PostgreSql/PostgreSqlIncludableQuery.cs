@@ -18,12 +18,14 @@ public class PostgreSqlIncludableQuery<T, TMember> : IncludableQuery<T, TMember>
         => base.UseTable(tableNamePredicate) as IPostgreSqlIncludableQuery<T, TMember>;
     public new IPostgreSqlIncludableQuery<T, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTableMap<TMasterSharding>(tableNameGetter) as IPostgreSqlIncludableQuery<T, TMember>;
-    public new IPostgreSqlIncludableQuery<T, TMember> UseTableBy(object field1Value, object field2Value = null)
-        => base.UseTableBy(field1Value, field2Value) as IPostgreSqlIncludableQuery<T, TMember>;
+    public new IPostgreSqlIncludableQuery<T, TMember> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as IPostgreSqlIncludableQuery<T, TMember>;
     public new IPostgreSqlIncludableQuery<T, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
-        => base.UseTableByRange(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T, TMember>;
-    public new IPostgreSqlIncludableQuery<T, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
-        => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlIncludableQuery<T, TMember>;
+        => base.UseTableBy(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T, TMember>;
+    public new IPostgreSqlIncludableQuery<T, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
+        => base.UseTableByRange(field1Value, beginField2Value, endField2Value) as IPostgreSqlIncludableQuery<T, TMember>;
+    public new IPostgreSqlIncludableQuery<T, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+        => base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value) as IPostgreSqlIncludableQuery<T, TMember>;
     #endregion
 
     #region UseTableSchema
@@ -52,12 +54,14 @@ public class PostgreSqlIncludableQuery<T1, T2, TMember> : IncludableQuery<T1, T2
         => base.UseTable(tableNamePredicate) as IPostgreSqlIncludableQuery<T1, T2, TMember>;
     public new IPostgreSqlIncludableQuery<T1, T2, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTableMap<TMasterSharding>(tableNameGetter) as IPostgreSqlIncludableQuery<T1, T2, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, TMember> UseTableBy(object field1Value, object field2Value = null)
-        => base.UseTableBy(field1Value, field2Value) as IPostgreSqlIncludableQuery<T1, T2, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, TMember> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as IPostgreSqlIncludableQuery<T1, T2, TMember>;
     public new IPostgreSqlIncludableQuery<T1, T2, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
-        => base.UseTableByRange(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T1, T2, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
-        => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlIncludableQuery<T1, T2, TMember>;
+        => base.UseTableBy(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T1, T2, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
+        => base.UseTableByRange(field1Value, beginField2Value, endField2Value) as IPostgreSqlIncludableQuery<T1, T2, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+        => base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value) as IPostgreSqlIncludableQuery<T1, T2, TMember>;
     #endregion
 
     #region UseTableSchema
@@ -86,12 +90,14 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, TMember> : IncludableQuery<T1
         => base.UseTable(tableNamePredicate) as IPostgreSqlIncludableQuery<T1, T2, T3, TMember>;
     public new IPostgreSqlIncludableQuery<T1, T2, T3, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTableMap<TMasterSharding>(tableNameGetter) as IPostgreSqlIncludableQuery<T1, T2, T3, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, TMember> UseTableBy(object field1Value, object field2Value = null)
-        => base.UseTableBy(field1Value, field2Value) as IPostgreSqlIncludableQuery<T1, T2, T3, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, TMember> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as IPostgreSqlIncludableQuery<T1, T2, T3, TMember>;
     public new IPostgreSqlIncludableQuery<T1, T2, T3, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
-        => base.UseTableByRange(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T1, T2, T3, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
-        => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlIncludableQuery<T1, T2, T3, TMember>;
+        => base.UseTableBy(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T1, T2, T3, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
+        => base.UseTableByRange(field1Value, beginField2Value, endField2Value) as IPostgreSqlIncludableQuery<T1, T2, T3, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+        => base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value) as IPostgreSqlIncludableQuery<T1, T2, T3, TMember>;
     #endregion
 
     #region UseTableSchema
@@ -120,12 +126,14 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, T4, TMember> : IncludableQuer
         => base.UseTable(tableNamePredicate) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, TMember>;
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTableMap<TMasterSharding>(tableNameGetter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, TMember> UseTableBy(object field1Value, object field2Value = null)
-        => base.UseTableBy(field1Value, field2Value) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, TMember> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, TMember>;
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
-        => base.UseTableByRange(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
-        => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, TMember>;
+        => base.UseTableBy(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
+        => base.UseTableByRange(field1Value, beginField2Value, endField2Value) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+        => base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, TMember>;
     #endregion
 
     #region UseTableSchema
@@ -154,12 +162,14 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, TMember> : Includable
         => base.UseTable(tableNamePredicate) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, TMember>;
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTableMap<TMasterSharding>(tableNameGetter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableBy(object field1Value, object field2Value = null)
-        => base.UseTableBy(field1Value, field2Value) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, TMember>;
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
-        => base.UseTableByRange(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
-        => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, TMember>;
+        => base.UseTableBy(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
+        => base.UseTableByRange(field1Value, beginField2Value, endField2Value) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+        => base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, TMember>;
     #endregion
 
     #region UseTableSchema
@@ -188,12 +198,14 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> : Includ
         => base.UseTable(tableNamePredicate) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, TMember>;
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTableMap<TMasterSharding>(tableNameGetter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableBy(object field1Value, object field2Value = null)
-        => base.UseTableBy(field1Value, field2Value) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, TMember>;
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
-        => base.UseTableByRange(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
-        => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, TMember>;
+        => base.UseTableBy(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
+        => base.UseTableByRange(field1Value, beginField2Value, endField2Value) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+        => base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, TMember>;
     #endregion
 
     #region UseTableSchema
@@ -222,12 +234,14 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> : In
         => base.UseTable(tableNamePredicate) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember>;
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTableMap<TMasterSharding>(tableNameGetter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableBy(object field1Value, object field2Value = null)
-        => base.UseTableBy(field1Value, field2Value) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember>;
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
-        => base.UseTableByRange(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
-        => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember>;
+        => base.UseTableBy(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
+        => base.UseTableByRange(field1Value, beginField2Value, endField2Value) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+        => base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember>;
     #endregion
 
     #region UseTableSchema
@@ -256,12 +270,14 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> 
         => base.UseTable(tableNamePredicate) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember>;
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTableMap<TMasterSharding>(tableNameGetter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableBy(object field1Value, object field2Value = null)
-        => base.UseTableBy(field1Value, field2Value) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember>;
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
-        => base.UseTableByRange(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
-        => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember>;
+        => base.UseTableBy(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
+        => base.UseTableByRange(field1Value, beginField2Value, endField2Value) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+        => base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember>;
     #endregion
 
     #region UseTableSchema
@@ -290,12 +306,14 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMemb
         => base.UseTable(tableNamePredicate) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>;
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTableMap<TMasterSharding>(tableNameGetter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableBy(object field1Value, object field2Value = null)
-        => base.UseTableBy(field1Value, field2Value) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>;
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
-        => base.UseTableByRange(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
-        => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>;
+        => base.UseTableBy(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
+        => base.UseTableByRange(field1Value, beginField2Value, endField2Value) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+        => base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>;
     #endregion
 
     #region UseTableSchema
@@ -324,12 +342,14 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
         => base.UseTable(tableNamePredicate) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>;
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTableMap<TMasterSharding>(tableNameGetter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableBy(object field1Value, object field2Value = null)
-        => base.UseTableBy(field1Value, field2Value) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>;
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
-        => base.UseTableByRange(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
-        => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>;
+        => base.UseTableBy(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
+        => base.UseTableByRange(field1Value, beginField2Value, endField2Value) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+        => base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>;
     #endregion
 
     #region UseTableSchema
@@ -358,12 +378,14 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
         => base.UseTable(tableNamePredicate) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>;
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTableMap<TMasterSharding>(tableNameGetter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableBy(object field1Value, object field2Value = null)
-        => base.UseTableBy(field1Value, field2Value) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>;
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
-        => base.UseTableByRange(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
-        => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>;
+        => base.UseTableBy(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
+        => base.UseTableByRange(field1Value, beginField2Value, endField2Value) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+        => base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>;
     #endregion
 
     #region UseTableSchema
@@ -392,12 +414,14 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
         => base.UseTable(tableNamePredicate) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>;
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTableMap<TMasterSharding>(tableNameGetter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableBy(object field1Value, object field2Value = null)
-        => base.UseTableBy(field1Value, field2Value) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>;
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
-        => base.UseTableByRange(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
-        => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>;
+        => base.UseTableBy(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
+        => base.UseTableByRange(field1Value, beginField2Value, endField2Value) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+        => base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>;
     #endregion
 
     #region UseTableSchema
@@ -426,12 +450,14 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
         => base.UseTable(tableNamePredicate) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>;
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTableMap<TMasterSharding>(tableNameGetter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableBy(object field1Value, object field2Value = null)
-        => base.UseTableBy(field1Value, field2Value) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>;
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
-        => base.UseTableByRange(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
-        => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>;
+        => base.UseTableBy(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
+        => base.UseTableByRange(field1Value, beginField2Value, endField2Value) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+        => base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>;
     #endregion
 
     #region UseTableSchema
@@ -460,12 +486,14 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
         => base.UseTable(tableNamePredicate) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>;
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTableMap<TMasterSharding>(tableNameGetter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableBy(object field1Value, object field2Value = null)
-        => base.UseTableBy(field1Value, field2Value) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>;
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
-        => base.UseTableByRange(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
-        => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>;
+        => base.UseTableBy(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
+        => base.UseTableByRange(field1Value, beginField2Value, endField2Value) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+        => base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>;
     #endregion
 
     #region UseTableSchema
@@ -494,12 +522,14 @@ public class PostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, 
         => base.UseTable(tableNamePredicate) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>;
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTableMap<TMasterSharding>(tableNameGetter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableBy(object field1Value, object field2Value = null)
-        => base.UseTableBy(field1Value, field2Value) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>;
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
-        => base.UseTableByRange(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
-        => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>;
+        => base.UseTableBy(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
+        => base.UseTableByRange(field1Value, beginField2Value, endField2Value) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+        => base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>;
     #endregion
 
     #region UseTableSchema

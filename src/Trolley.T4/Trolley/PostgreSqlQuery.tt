@@ -29,12 +29,8 @@ public class PostgreSqlQuery<T> : Query<T>, IPostgreSqlQuery<T>
         => base.UseTable(tableNamePredicate) as IPostgreSqlQuery<T>;
     public new IPostgreSqlQuery<T> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTableMap<TMasterSharding>(tableNameGetter) as IPostgreSqlQuery<T>;
-    public new IPostgreSqlQuery<T> UseTableBy(object fieldValue)
-        => base.UseTableBy(fieldValue) as IPostgreSqlQuery<T>;
-    public new IPostgreSqlQuery<T> UseTableBy(object field1Value, object field2Value)
-        => base.UseTableBy(field1Value, field2Value) as IPostgreSqlQuery<T>;
-    public new IPostgreSqlQuery<T> UseTableBy(object field1Value, object field2Value, object field3Value)
-        => base.UseTableBy(field1Value, field2Value, field3Value) as IPostgreSqlQuery<T>;
+    public new IPostgreSqlQuery<T> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as IPostgreSqlQuery<T>;
     public new IPostgreSqlQuery<T> UseTableByRange(object beginFieldValue, object endFieldValue)
         => base.UseTableBy(beginFieldValue, endFieldValue) as IPostgreSqlQuery<T>;
     public new IPostgreSqlQuery<T> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
@@ -243,12 +239,8 @@ public class PostgreSqlQuery<<#=tables#>> : Query<<#=tables#>>, IPostgreSqlQuery
         => base.UseTable(tableNamePredicate) as IPostgreSqlQuery<<#=tables#>>;
     public new IPostgreSqlQuery<<#=tables#>> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTableMap<TMasterSharding>(tableNameGetter) as IPostgreSqlQuery<<#=tables#>>;
-    public new IPostgreSqlQuery<<#=tables#>> UseTableBy(object fieldValue)
-        => base.UseTableBy(fieldValue) as IPostgreSqlQuery<<#=tables#>>;
-    public new IPostgreSqlQuery<<#=tables#>> UseTableBy(object field1Value, object field2Value)
-        => base.UseTableBy(field1Value, field2Value) as IPostgreSqlQuery<<#=tables#>>;
-    public new IPostgreSqlQuery<<#=tables#>> UseTableBy(object field1Value, object field2Value, object field3Value)
-        => base.UseTableBy(field1Value, field2Value, field3Value) as IPostgreSqlQuery<<#=tables#>>;
+    public new IPostgreSqlQuery<<#=tables#>> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as IPostgreSqlQuery<<#=tables#>>;
     public new IPostgreSqlQuery<<#=tables#>> UseTableByRange(object beginFieldValue, object endFieldValue)
         => base.UseTableBy(beginFieldValue, endFieldValue) as IPostgreSqlQuery<<#=tables#>>;
     public new IPostgreSqlQuery<<#=tables#>> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)

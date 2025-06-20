@@ -19,29 +19,31 @@ public class PostgreSqlIncludableQuery<T, TMember> : IncludableQuery<T, TMember>
     #endregion
 
     #region Sharding
-    public override IPostgreSqlIncludableQuery<T, TMember> UseTable(params string[] tableNames)
+    public new IPostgreSqlIncludableQuery<T, TMember> UseTable(params string[] tableNames)
         => base.UseTable(tableNames) as IPostgreSqlIncludableQuery<T, TMember>;
-    public override IPostgreSqlIncludableQuery<T, TMember> UseTable(Func<string, bool> tableNamePredicate)
+    public new IPostgreSqlIncludableQuery<T, TMember> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlIncludableQuery<T, TMember>;
-    public override IPostgreSqlIncludableQuery<T, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+    public new IPostgreSqlIncludableQuery<T, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTableMap<TMasterSharding>(tableNameGetter) as IPostgreSqlIncludableQuery<T, TMember>;
-    public override IPostgreSqlIncludableQuery<T, TMember> UseTableBy(object field1Value, object field2Value = null)
-        => base.UseTableBy(field1Value, field2Value) as IPostgreSqlIncludableQuery<T, TMember>;
-    public override IPostgreSqlIncludableQuery<T, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
-        => base.UseTableByRange(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T, TMember>;
-    public override IPostgreSqlIncludableQuery<T, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
-        => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlIncludableQuery<T, TMember>;
+    public new IPostgreSqlIncludableQuery<T, TMember> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as IPostgreSqlIncludableQuery<T, TMember>;
+    public new IPostgreSqlIncludableQuery<T, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
+        => base.UseTableBy(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<T, TMember>;
+    public new IPostgreSqlIncludableQuery<T, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
+        => base.UseTableByRange(field1Value, beginField2Value, endField2Value) as IPostgreSqlIncludableQuery<T, TMember>;
+    public new IPostgreSqlIncludableQuery<T, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+        => base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value) as IPostgreSqlIncludableQuery<T, TMember>;
     #endregion
 
     #region UseTableSchema
-    public override IPostgreSqlIncludableQuery<T, TMember> UseTableSchema(string tableSchema)
+    public new IPostgreSqlIncludableQuery<T, TMember> UseTableSchema(string tableSchema)
         => base.UseTableSchema(tableSchema) as IPostgreSqlIncludableQuery<T, TMember>;
     #endregion
 
     #region ThenInclude/ThenIncludeMany
-    public override IPostgreSqlIncludableQuery<T, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
+    public new IPostgreSqlIncludableQuery<T, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
         => base.ThenInclude(member) as IPostgreSqlIncludableQuery<T, TNavigation>;
-    public override IPostgreSqlIncludableQuery<T, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null)
+    public new IPostgreSqlIncludableQuery<T, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null)
         => base.ThenIncludeMany(member, filter) as IPostgreSqlIncludableQuery<T, TElment>;
     #endregion
 }
@@ -64,29 +66,31 @@ public class PostgreSqlIncludableQuery<<#=tables#>, TMember> : IncludableQuery<<
 #>
 
     #region Sharding
-    public override IPostgreSqlIncludableQuery<<#=tables#>, TMember> UseTable(params string[] tableNames)
+    public new IPostgreSqlIncludableQuery<<#=tables#>, TMember> UseTable(params string[] tableNames)
         => base.UseTable(tableNames) as IPostgreSqlIncludableQuery<<#=tables#>, TMember>;
-    public override IPostgreSqlIncludableQuery<<#=tables#>, TMember> UseTable(Func<string, bool> tableNamePredicate)
+    public new IPostgreSqlIncludableQuery<<#=tables#>, TMember> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlIncludableQuery<<#=tables#>, TMember>;
-    public override IPostgreSqlIncludableQuery<<#=tables#>, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+    public new IPostgreSqlIncludableQuery<<#=tables#>, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
         => base.UseTableMap<TMasterSharding>(tableNameGetter) as IPostgreSqlIncludableQuery<<#=tables#>, TMember>;
-    public override IPostgreSqlIncludableQuery<<#=tables#>, TMember> UseTableBy(object field1Value, object field2Value = null)
-        => base.UseTableBy(field1Value, field2Value) as IPostgreSqlIncludableQuery<<#=tables#>, TMember>;
-    public override IPostgreSqlIncludableQuery<<#=tables#>, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
-        => base.UseTableByRange(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<<#=tables#>, TMember>;
-    public override IPostgreSqlIncludableQuery<<#=tables#>, TMember> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3)
-        => base.UseTableByRange(fieldValue1, fieldValue2, fieldValue3) as IPostgreSqlIncludableQuery<<#=tables#>, TMember>;
+    public new IPostgreSqlIncludableQuery<<#=tables#>, TMember> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as IPostgreSqlIncludableQuery<<#=tables#>, TMember>;
+    public new IPostgreSqlIncludableQuery<<#=tables#>, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
+        => base.UseTableBy(beginFieldValue, endFieldValue) as IPostgreSqlIncludableQuery<<#=tables#>, TMember>;
+    public new IPostgreSqlIncludableQuery<<#=tables#>, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
+        => base.UseTableByRange(field1Value, beginField2Value, endField2Value) as IPostgreSqlIncludableQuery<<#=tables#>, TMember>;
+    public new IPostgreSqlIncludableQuery<<#=tables#>, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+        => base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value) as IPostgreSqlIncludableQuery<<#=tables#>, TMember>;
     #endregion
 
     #region UseTableSchema
-    public override IPostgreSqlIncludableQuery<<#=tables#>, TMember> UseTableSchema(string tableSchema)
+    public new IPostgreSqlIncludableQuery<<#=tables#>, TMember> UseTableSchema(string tableSchema)
         => base.UseTableSchema(tableSchema) as IPostgreSqlIncludableQuery<<#=tables#>, TMember>;
     #endregion
 
     #region ThenInclude/ThenIncludeMany
-    public override IPostgreSqlIncludableQuery<<#=tables#>, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
+    public new IPostgreSqlIncludableQuery<<#=tables#>, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
         => base.ThenInclude(member) as IPostgreSqlIncludableQuery<<#=tables#>, TNavigation>;
-    public override IPostgreSqlIncludableQuery<<#=tables#>, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null)
+    public new IPostgreSqlIncludableQuery<<#=tables#>, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null)
         => base.ThenIncludeMany(member, filter) as IPostgreSqlIncludableQuery<<#=tables#>, TElment>;
     #endregion
 <#      }#>

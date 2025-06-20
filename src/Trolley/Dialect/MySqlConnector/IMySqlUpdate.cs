@@ -21,26 +21,11 @@ public interface IMySqlUpdate<TEntity> : IUpdate<TEntity>
     /// <returns>返回更新对象</returns>
     new IMySqlUpdate<TEntity> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 根据1个字段值确定TEntity表分表名，可多次调用，多次调用使用多个分表，如：.UseTableBy(DateTime.Now)//时间分表，今日订单
+    /// 根据字段值，手动指定TEntity表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="fieldValue">字段值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回更新对象</returns>
-    new IMySqlUpdate<TEntity> UseTableBy(object fieldValue);
-    /// <summary>
-    /// 根据2个字段值，手动指定TEntity表分表名，字段值的顺序与配置的字段顺序保持一致，可多次调用多次调用使用多个分表更新，如：.UseTableBy(1, DateTime.Now)//商户+时间分表，商户1，今日订单
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <returns>返回更新对象</returns>
-    new IMySqlUpdate<TEntity> UseTableBy(object field1Value, object field2Value);
-    /// <summary>
-    /// 根据3个字段值，手动指定TEntity表分表名，字段值的顺序与配置的字段顺序保持一致，可多次调用，多次调用使用多个分表，如：.UseTableBy(1, 6, DateTime.Now)//商户+产品+时间分表，商户1，产品6，今日订单
-    /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
-    /// <param name="field3Value">字段3值</param>
-    /// <returns>返回更新对象</returns>
-    new IMySqlUpdate<TEntity> UseTableBy(object field1Value, object field2Value, object field3Value);
+    new IMySqlUpdate<TEntity> UseTableBy(params object[] fieldValues);
     /// <summary>
     /// 手动设置分表名获取委托，通常是根据某1个或多个字段值来确定分表名，执行时会根据实体字段的值自动更新对应的分表中，单条和批量更新均可使用，常用于批量操作。
     /// </summary>
@@ -229,7 +214,7 @@ public interface IMySqlUpdate<TEntity> : IUpdate<TEntity>
 
     #region InnerJoin
     /// <summary>
-    /// InnerJoin内连接表TSource部分字段数据，更新当前表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
+    /// InnerJoin内连接表TSource部分字段数据，更新当前表TEntity数据
     /// </summary>
     /// <typeparam name="TSource">数据来源表TSource实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
@@ -239,7 +224,7 @@ public interface IMySqlUpdate<TEntity> : IUpdate<TEntity>
 
     #region LeftJoin
     /// <summary>
-    /// LeftJoin左连接表TSource部分字段数据，更新当前表TEntity数据，仅限MySql,MariaDB,PostgreSQL数据库使用
+    /// LeftJoin左连接表TSource部分字段数据，更新当前表TEntity数据
     /// </summary>
     /// <typeparam name="TSource">数据来源表TSource实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>

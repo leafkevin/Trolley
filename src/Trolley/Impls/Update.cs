@@ -29,91 +29,36 @@ public class Update<TEntity> : IUpdate<TEntity>
     #region Sharding
     public virtual IUpdate<TEntity> UseTable(params string[] tableNames)
     {
-        if (tableNames == null || tableNames.Length <= 0)
-            throw new ArgumentNullException(nameof(tableNames), "tableNames参数不能为空");
-
         this.Visitor.UseTable(false, tableNames);
         return this;
     }
     public virtual IUpdate<TEntity> UseTable(Func<string, bool> tableNamePredicate)
     {
-        if (tableNamePredicate == null)
-            throw new ArgumentNullException(nameof(tableNamePredicate), "tableNamePredicate参数不能为空");
-
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
-    public virtual IUpdate<TEntity> UseTableBy(object fieldValue)
+    public virtual IUpdate<TEntity> UseTableBy(params object[] fieldValues)
     {
-        if (fieldValue == null)
-            throw new ArgumentNullException(nameof(fieldValue), "fieldValue参数不能为空");
-
-        this.Visitor.UseTableBy(false, fieldValue);
-        return this;
-    }
-    public virtual IUpdate<TEntity> UseTableBy(object field1Value, object field2Value)
-    {
-        if (field1Value == null)
-            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
-        if (field2Value == null)
-            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
-
-        this.Visitor.UseTableBy(false, field1Value, field2Value);
-        return this;
-    }
-    public virtual IUpdate<TEntity> UseTableBy(object field1Value, object field2Value, object field3Value)
-    {
-        if (field1Value == null)
-            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
-        if (field2Value == null)
-            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
-        if (field3Value == null)
-            throw new ArgumentNullException(nameof(field3Value), "field3Value参数不能为空");
-
-        this.Visitor.UseTableBy(false, field1Value, field2Value, field3Value);
+        this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
     public virtual IUpdate<TEntity> UseTableBy<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
     {
-        if (tableNameGetter == null)
-            throw new ArgumentNullException(nameof(tableNameGetter), "tableNameGetter参数不能为空");
-
         this.Visitor.UseTableBy(tableNameGetter);
         return this;
     }
     public virtual IUpdate<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        if (beginFieldValue == null)
-            throw new ArgumentNullException(nameof(beginFieldValue), "beginFieldValue参数不能为空");
-        if (endFieldValue == null)
-            throw new ArgumentNullException(nameof(endFieldValue), "endFieldValue参数不能为空");
-
         this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
     public virtual IUpdate<TEntity> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        if (field1Value == null)
-            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
-        if (beginField2Value == null)
-            throw new ArgumentNullException(nameof(beginField2Value), "beginField2Value参数不能为空");
-        if (endField2Value == null)
-            throw new ArgumentNullException(nameof(endField2Value), "endField2Value参数不能为空");
-
         this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
         return this;
     }
     public virtual IUpdate<TEntity> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
     {
-        if (field1Value == null)
-            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
-        if (field2Value == null)
-            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
-        if (beginField3Value == null)
-            throw new ArgumentNullException(nameof(beginField3Value), "beginField3Value参数不能为空");
-        if (endField3Value == null)
-            throw new ArgumentNullException(nameof(endField3Value), "endField3Value参数不能为空");
-
         this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
@@ -740,83 +685,36 @@ public class UpdateJoin<TEntity, T1> : Updated<TEntity>, IUpdateJoin<TEntity, T1
     #region Sharding
     public virtual IUpdateJoin<TEntity, T1> UseTable(params string[] tableNames)
     {
-        if (tableNames == null || tableNames.Length <= 0)
-            throw new ArgumentNullException(nameof(tableNames), "tableNames参数不能为空");
-
         this.Visitor.UseTable(false, tableNames);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1> UseTable(Func<string, bool> tableNamePredicate)
     {
-        if (tableNamePredicate == null)
-            throw new ArgumentNullException(nameof(tableNamePredicate), "tableNamePredicate参数不能为空");
-
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
-    public virtual IUpdateJoin<TEntity, T1> UseTableBy(object fieldValue)
+    public virtual IUpdateJoin<TEntity, T1> UseTableBy(params object[] fieldValues)
     {
-        if (fieldValue == null)
-            throw new ArgumentNullException(nameof(fieldValue), "fieldValue参数不能为空");
-
-        this.Visitor.UseTableBy(false, fieldValue);
+        this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
-    public virtual IUpdateJoin<TEntity, T1> UseTableBy(object field1Value, object field2Value)
+    public virtual IUpdateJoin<TEntity, T1> UseTableBy<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
     {
-        if (field1Value == null)
-            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
-        if (field2Value == null)
-            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
-
-        this.Visitor.UseTableBy(false, field1Value, field2Value);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1> UseTableBy(object field1Value, object field2Value, object field3Value)
-    {
-        if (field1Value == null)
-            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
-        if (field2Value == null)
-            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
-        if (field3Value == null)
-            throw new ArgumentNullException(nameof(field3Value), "field3Value参数不能为空");
-
-        this.Visitor.UseTableBy(false, field1Value, field2Value, field3Value);
+        this.Visitor.UseTableBy(tableNameGetter);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        if (beginFieldValue == null)
-            throw new ArgumentNullException(nameof(beginFieldValue), "beginFieldValue参数不能为空");
-        if (endFieldValue == null)
-            throw new ArgumentNullException(nameof(endFieldValue), "endFieldValue参数不能为空");
-
         this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        if (field1Value == null)
-            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
-        if (beginField2Value == null)
-            throw new ArgumentNullException(nameof(beginField2Value), "beginField2Value参数不能为空");
-        if (endField2Value == null)
-            throw new ArgumentNullException(nameof(endField2Value), "endField2Value参数不能为空");
-
         this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
     {
-        if (field1Value == null)
-            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
-        if (field2Value == null)
-            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
-        if (beginField3Value == null)
-            throw new ArgumentNullException(nameof(beginField3Value), "beginField3Value参数不能为空");
-        if (endField3Value == null)
-            throw new ArgumentNullException(nameof(endField3Value), "endField3Value参数不能为空");
-
         this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
@@ -977,83 +875,36 @@ public class UpdateJoin<TEntity, T1, T2> : Updated<TEntity>, IUpdateJoin<TEntity
     #region Sharding
     public virtual IUpdateJoin<TEntity, T1, T2> UseTable(params string[] tableNames)
     {
-        if (tableNames == null || tableNames.Length <= 0)
-            throw new ArgumentNullException(nameof(tableNames), "tableNames参数不能为空");
-
         this.Visitor.UseTable(false, tableNames);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2> UseTable(Func<string, bool> tableNamePredicate)
     {
-        if (tableNamePredicate == null)
-            throw new ArgumentNullException(nameof(tableNamePredicate), "tableNamePredicate参数不能为空");
-
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
-    public virtual IUpdateJoin<TEntity, T1, T2> UseTableBy(object fieldValue)
+    public virtual IUpdateJoin<TEntity, T1, T2> UseTableBy(params object[] fieldValues)
     {
-        if (fieldValue == null)
-            throw new ArgumentNullException(nameof(fieldValue), "fieldValue参数不能为空");
-
-        this.Visitor.UseTableBy(false, fieldValue);
+        this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
-    public virtual IUpdateJoin<TEntity, T1, T2> UseTableBy(object field1Value, object field2Value)
+    public virtual IUpdateJoin<TEntity, T1, T2> UseTableBy<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
     {
-        if (field1Value == null)
-            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
-        if (field2Value == null)
-            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
-
-        this.Visitor.UseTableBy(false, field1Value, field2Value);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1, T2> UseTableBy(object field1Value, object field2Value, object field3Value)
-    {
-        if (field1Value == null)
-            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
-        if (field2Value == null)
-            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
-        if (field3Value == null)
-            throw new ArgumentNullException(nameof(field3Value), "field3Value参数不能为空");
-
-        this.Visitor.UseTableBy(false, field1Value, field2Value, field3Value);
+        this.Visitor.UseTableBy(tableNameGetter);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        if (beginFieldValue == null)
-            throw new ArgumentNullException(nameof(beginFieldValue), "beginFieldValue参数不能为空");
-        if (endFieldValue == null)
-            throw new ArgumentNullException(nameof(endFieldValue), "endFieldValue参数不能为空");
-
         this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        if (field1Value == null)
-            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
-        if (beginField2Value == null)
-            throw new ArgumentNullException(nameof(beginField2Value), "beginField2Value参数不能为空");
-        if (endField2Value == null)
-            throw new ArgumentNullException(nameof(endField2Value), "endField2Value参数不能为空");
-
         this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
     {
-        if (field1Value == null)
-            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
-        if (field2Value == null)
-            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
-        if (beginField3Value == null)
-            throw new ArgumentNullException(nameof(beginField3Value), "beginField3Value参数不能为空");
-        if (endField3Value == null)
-            throw new ArgumentNullException(nameof(endField3Value), "endField3Value参数不能为空");
-
         this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
@@ -1214,83 +1065,36 @@ public class UpdateJoin<TEntity, T1, T2, T3> : Updated<TEntity>, IUpdateJoin<TEn
     #region Sharding
     public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTable(params string[] tableNames)
     {
-        if (tableNames == null || tableNames.Length <= 0)
-            throw new ArgumentNullException(nameof(tableNames), "tableNames参数不能为空");
-
         this.Visitor.UseTable(false, tableNames);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTable(Func<string, bool> tableNamePredicate)
     {
-        if (tableNamePredicate == null)
-            throw new ArgumentNullException(nameof(tableNamePredicate), "tableNamePredicate参数不能为空");
-
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
-    public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTableBy(object fieldValue)
+    public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTableBy(params object[] fieldValues)
     {
-        if (fieldValue == null)
-            throw new ArgumentNullException(nameof(fieldValue), "fieldValue参数不能为空");
-
-        this.Visitor.UseTableBy(false, fieldValue);
+        this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
-    public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTableBy(object field1Value, object field2Value)
+    public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTableBy<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
     {
-        if (field1Value == null)
-            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
-        if (field2Value == null)
-            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
-
-        this.Visitor.UseTableBy(false, field1Value, field2Value);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTableBy(object field1Value, object field2Value, object field3Value)
-    {
-        if (field1Value == null)
-            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
-        if (field2Value == null)
-            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
-        if (field3Value == null)
-            throw new ArgumentNullException(nameof(field3Value), "field3Value参数不能为空");
-
-        this.Visitor.UseTableBy(false, field1Value, field2Value, field3Value);
+        this.Visitor.UseTableBy(tableNameGetter);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        if (beginFieldValue == null)
-            throw new ArgumentNullException(nameof(beginFieldValue), "beginFieldValue参数不能为空");
-        if (endFieldValue == null)
-            throw new ArgumentNullException(nameof(endFieldValue), "endFieldValue参数不能为空");
-
         this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        if (field1Value == null)
-            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
-        if (beginField2Value == null)
-            throw new ArgumentNullException(nameof(beginField2Value), "beginField2Value参数不能为空");
-        if (endField2Value == null)
-            throw new ArgumentNullException(nameof(endField2Value), "endField2Value参数不能为空");
-
         this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
     {
-        if (field1Value == null)
-            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
-        if (field2Value == null)
-            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
-        if (beginField3Value == null)
-            throw new ArgumentNullException(nameof(beginField3Value), "beginField3Value参数不能为空");
-        if (endField3Value == null)
-            throw new ArgumentNullException(nameof(endField3Value), "endField3Value参数不能为空");
-
         this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
@@ -1451,83 +1255,36 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4> : Updated<TEntity>, IUpdateJoin
     #region Sharding
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTable(params string[] tableNames)
     {
-        if (tableNames == null || tableNames.Length <= 0)
-            throw new ArgumentNullException(nameof(tableNames), "tableNames参数不能为空");
-
         this.Visitor.UseTable(false, tableNames);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTable(Func<string, bool> tableNamePredicate)
     {
-        if (tableNamePredicate == null)
-            throw new ArgumentNullException(nameof(tableNamePredicate), "tableNamePredicate参数不能为空");
-
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
-    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTableBy(object fieldValue)
+    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTableBy(params object[] fieldValues)
     {
-        if (fieldValue == null)
-            throw new ArgumentNullException(nameof(fieldValue), "fieldValue参数不能为空");
-
-        this.Visitor.UseTableBy(false, fieldValue);
+        this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
-    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTableBy(object field1Value, object field2Value)
+    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTableBy<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
     {
-        if (field1Value == null)
-            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
-        if (field2Value == null)
-            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
-
-        this.Visitor.UseTableBy(false, field1Value, field2Value);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTableBy(object field1Value, object field2Value, object field3Value)
-    {
-        if (field1Value == null)
-            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
-        if (field2Value == null)
-            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
-        if (field3Value == null)
-            throw new ArgumentNullException(nameof(field3Value), "field3Value参数不能为空");
-
-        this.Visitor.UseTableBy(false, field1Value, field2Value, field3Value);
+        this.Visitor.UseTableBy(tableNameGetter);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        if (beginFieldValue == null)
-            throw new ArgumentNullException(nameof(beginFieldValue), "beginFieldValue参数不能为空");
-        if (endFieldValue == null)
-            throw new ArgumentNullException(nameof(endFieldValue), "endFieldValue参数不能为空");
-
         this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        if (field1Value == null)
-            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
-        if (beginField2Value == null)
-            throw new ArgumentNullException(nameof(beginField2Value), "beginField2Value参数不能为空");
-        if (endField2Value == null)
-            throw new ArgumentNullException(nameof(endField2Value), "endField2Value参数不能为空");
-
         this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
     {
-        if (field1Value == null)
-            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
-        if (field2Value == null)
-            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
-        if (beginField3Value == null)
-            throw new ArgumentNullException(nameof(beginField3Value), "beginField3Value参数不能为空");
-        if (endField3Value == null)
-            throw new ArgumentNullException(nameof(endField3Value), "endField3Value参数不能为空");
-
         this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }
@@ -1688,83 +1445,36 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : Updated<TEntity>, IUpdate
     #region Sharding
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTable(params string[] tableNames)
     {
-        if (tableNames == null || tableNames.Length <= 0)
-            throw new ArgumentNullException(nameof(tableNames), "tableNames参数不能为空");
-
         this.Visitor.UseTable(false, tableNames);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTable(Func<string, bool> tableNamePredicate)
     {
-        if (tableNamePredicate == null)
-            throw new ArgumentNullException(nameof(tableNamePredicate), "tableNamePredicate参数不能为空");
-
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
-    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableBy(object fieldValue)
+    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableBy(params object[] fieldValues)
     {
-        if (fieldValue == null)
-            throw new ArgumentNullException(nameof(fieldValue), "fieldValue参数不能为空");
-
-        this.Visitor.UseTableBy(false, fieldValue);
+        this.Visitor.UseTableBy(false, fieldValues);
         return this;
     }
-    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableBy(object field1Value, object field2Value)
+    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableBy<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
     {
-        if (field1Value == null)
-            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
-        if (field2Value == null)
-            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
-
-        this.Visitor.UseTableBy(false, field1Value, field2Value);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableBy(object field1Value, object field2Value, object field3Value)
-    {
-        if (field1Value == null)
-            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
-        if (field2Value == null)
-            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
-        if (field3Value == null)
-            throw new ArgumentNullException(nameof(field3Value), "field3Value参数不能为空");
-
-        this.Visitor.UseTableBy(false, field1Value, field2Value, field3Value);
+        this.Visitor.UseTableBy(tableNameGetter);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableByRange(object beginFieldValue, object endFieldValue)
     {
-        if (beginFieldValue == null)
-            throw new ArgumentNullException(nameof(beginFieldValue), "beginFieldValue参数不能为空");
-        if (endFieldValue == null)
-            throw new ArgumentNullException(nameof(endFieldValue), "endFieldValue参数不能为空");
-
         this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
     {
-        if (field1Value == null)
-            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
-        if (beginField2Value == null)
-            throw new ArgumentNullException(nameof(beginField2Value), "beginField2Value参数不能为空");
-        if (endField2Value == null)
-            throw new ArgumentNullException(nameof(endField2Value), "endField2Value参数不能为空");
-
         this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
     {
-        if (field1Value == null)
-            throw new ArgumentNullException(nameof(field1Value), "field1Value参数不能为空");
-        if (field2Value == null)
-            throw new ArgumentNullException(nameof(field2Value), "field2Value参数不能为空");
-        if (beginField3Value == null)
-            throw new ArgumentNullException(nameof(beginField3Value), "beginField3Value参数不能为空");
-        if (endField3Value == null)
-            throw new ArgumentNullException(nameof(endField3Value), "endField3Value参数不能为空");
-
         this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
         return this;
     }

@@ -1,0 +1,324 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="Microsoft.VisualStudio.TextTemplating"#>
+<#@ output extension=".cs" #>
+using System;
+using System.Linq.Expressions;
+
+namespace Trolley.SqlServer;
+
+public class SqlServerFromCommand<T> : FromCommand<T>, ISqlServerFromCommand<T>
+{
+    #region Constructor
+    public SqlServerFromCommand(DbContext dbContext, IQueryVisitor visitor)
+        : base(dbContext, visitor) { }
+    #endregion
+
+    #region Sharding
+    public new ISqlServerFromCommand<T> UseTable(params string[] tableNames)
+        => base.UseTable(tableNames) as ISqlServerFromCommand<T>;
+    public new ISqlServerFromCommand<T> UseTable(Func<string, bool> tableNamePredicate)
+        => base.UseTable(tableNamePredicate) as ISqlServerFromCommand<T>;
+    public new ISqlServerFromCommand<T> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as ISqlServerFromCommand<T>;
+    public new ISqlServerFromCommand<T> UseTableByRange(object beginFieldValue, object endFieldValue)
+        => base.UseTableBy(beginFieldValue, endFieldValue) as ISqlServerFromCommand<T>;
+    public new ISqlServerFromCommand<T> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
+        => base.UseTableByRange(field1Value, beginField2Value, endField2Value) as ISqlServerFromCommand<T>;
+    public new ISqlServerFromCommand<T> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+        => base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value) as ISqlServerFromCommand<T>;
+    #endregion
+
+    #region UseTableSchema
+    public new ISqlServerFromCommand<T> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as ISqlServerFromCommand<T>;
+    #endregion
+
+    #region Union/UnionAll
+    public new ISqlServerFromCommand<T> Union(IQuery<T> subQuery)
+    {
+        base.UnionInternal(subQuery);
+        return this;
+    }
+    public new ISqlServerFromCommand<T> Union(Func<IFromQuery, IQuery<T>> subQuery)
+    {
+        base.UnionInternal(subQuery);
+        return this;
+    }
+    public new ISqlServerFromCommand<T> UnionAll(IQuery<T> subQuery)
+    {
+        base.UnionAllInternal(subQuery);
+        return this;
+    }
+    public new ISqlServerFromCommand<T> UnionAll(Func<IFromQuery, IQuery<T>> subQuery)
+    {
+        base.UnionAllInternal(subQuery);
+        return this;
+    }
+    #endregion
+
+    #region Join   
+    public new ISqlServerFromCommand<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
+        => base.InnerJoin(joinOn) as ISqlServerFromCommand<T, TOther>;
+    public new ISqlServerFromCommand<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
+        => base.LeftJoin(joinOn) as ISqlServerFromCommand<T, TOther>;
+    public new ISqlServerFromCommand<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
+        => base.RightJoin(joinOn) as ISqlServerFromCommand<T, TOther>;
+    public new ISqlServerFromCommand<T, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+        => base.InnerJoin(joinOn) as ISqlServerFromCommand<T, TOther>;
+    public new ISqlServerFromCommand<T, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+        => base.LeftJoin(joinOn) as ISqlServerFromCommand<T, TOther>;
+    public new ISqlServerFromCommand<T, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+        => base.RightJoin(joinOn) as ISqlServerFromCommand<T, TOther>;
+    public new ISqlServerFromCommand<T, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+        => base.InnerJoin(joinOn) as ISqlServerFromCommand<T, TOther>;
+    public new ISqlServerFromCommand<T, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+        => base.LeftJoin(joinOn) as ISqlServerFromCommand<T, TOther>;
+    public new ISqlServerFromCommand<T, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+        => base.RightJoin(joinOn) as ISqlServerFromCommand<T, TOther>;
+    #endregion
+
+    #region Where/And
+    public new ISqlServerFromCommand<T> Where(Expression<Func<T, bool>> predicate)
+    {
+        base.WhereInternal(predicate);
+        return this;
+    }
+    public new ISqlServerFromCommand<T> Where(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
+    {
+        base.WhereInternal(condition, ifPredicate, elsePredicate);
+        return this;
+    }
+    public new ISqlServerFromCommand<T> And(Expression<Func<T, bool>> predicate)
+    {
+        base.AndInternal(predicate);
+        return this;
+    }
+    public new ISqlServerFromCommand<T> And(bool condition, Expression<Func<T, bool>> ifPredicate = null, Expression<Func<T, bool>> elsePredicate = null)
+    {
+        base.AndInternal(condition, ifPredicate, elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region GroupBy
+    public new ISqlServerGroupingCommand<T, TGrouping> GroupBy<TGrouping>(Expression<Func<T, TGrouping>> groupingExpr)
+        => base.GroupBy(groupingExpr) as ISqlServerGroupingCommand<T, TGrouping>;
+    #endregion
+
+    #region OrderBy
+    public new ISqlServerFromCommand<T> OrderBy<TFields>(Expression<Func<T, TFields>> fieldsExpr)
+         => this.OrderBy(true, fieldsExpr);
+    public new ISqlServerFromCommand<T> OrderBy<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr)
+    {
+        base.OrderByInternal(condition, fieldsExpr);
+        return this;
+    }
+    public new ISqlServerFromCommand<T> OrderByDescending<TFields>(Expression<Func<T, TFields>> fieldsExpr)
+        => this.OrderByDescending(true, fieldsExpr);
+    public new ISqlServerFromCommand<T> OrderByDescending<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr)
+    {
+        base.OrderByDescendingInternal(condition, fieldsExpr);
+        return this;
+    }
+    #endregion
+
+    #region Select
+    public new ISqlServerFromCommand<TTarget> Select<TTarget>(string fields = "*")
+        => base.Select<TTarget>(fields) as ISqlServerFromCommand<TTarget>;
+    public new ISqlServerFromCommand<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr)
+        => base.Select(fieldsExpr) as ISqlServerFromCommand<TTarget>;
+    public new ISqlServerFromCommand<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr)
+        => base.SelectAggregate(fieldsExpr) as ISqlServerFromCommand<TTarget>;
+    #endregion
+
+    #region Distinct
+    public new ISqlServerFromCommand<T> Distinct()
+    {
+        this.Visitor.Distinct();
+        return this;
+    }
+    #endregion
+
+    #region Skip/Take
+    public new ISqlServerFromCommand<T> Skip(int offset)
+    {
+        this.Visitor.Skip(offset);
+        return this;
+    }
+    public new ISqlServerFromCommand<T> Take(int limit)
+    {
+        this.Visitor.Take(limit);
+        return this;
+    }
+    #endregion
+
+    #region Output
+    public ISqlServerBulkCreated<T, TResult> Output<TResult>(string fieldNames)
+    {
+        var visitor = this.NewCreateVisitor();
+        var dialectVisitor = this.Visitor as SqlServerQueryVisitor;
+        dialectVisitor.OutputSql = visitor.VisitOutputFields(fieldNames);
+        var sql = this.Visitor.BuildCommandSql(out _);
+        visitor.FromSql = this.Visitor.BuildCommandSql(out _);
+        return new SqlServerBulkCreated<T, TResult>(this.DbContext, visitor);
+    }
+    public ISqlServerBulkCreated<T, TResult> Output<TResult>(Expression<Func<T, TResult>> fieldsSelector)
+    {
+        var visitor = this.NewCreateVisitor();
+        var dialectVisitor = this.Visitor as SqlServerQueryVisitor;
+        dialectVisitor.OutputSql = visitor.VisitOutputExpression(fieldsSelector);
+        visitor.FromSql = this.Visitor.BuildCommandSql(out _);
+        return new SqlServerBulkCreated<T, TResult>(this.DbContext, visitor);
+    }
+    #endregion
+
+    protected virtual SqlServerCreateVisitor NewCreateVisitor()
+    {
+        var createVisiter = new SqlServerCreateVisitor(this.DbContext, this.Visitor.TableAsStart);
+        createVisiter.Tables = this.Visitor.Tables;
+        createVisiter.IsMultiple = this.Visitor.IsMultiple;
+        createVisiter.CommandIndex = this.Visitor.CommandIndex;
+        createVisiter.RefQueries = this.Visitor.RefQueries;
+        createVisiter.ShardingTables = this.Visitor.ShardingTables;
+        createVisiter.DbParameters = this.Visitor.DbParameters;
+        return createVisiter;
+    }
+}
+<#
+    var count = 6;
+    var tables = "T1";
+    var currentTable = "T1";
+    for (int i = 2; i <= count; i++)
+    {
+        tables += $", T{i}";
+        currentTable = $"T{i}";
+#>
+public class SqlServerFromCommand<<#=tables#>> : FromCommand<<#=tables#>>, ISqlServerFromCommand<<#=tables#>>
+{
+    #region Constructor
+    public SqlServerFromCommand(DbContext dbContext, IQueryVisitor visitor)
+        : base(dbContext, visitor) { }
+    #endregion
+
+    #region Sharding
+    public new ISqlServerFromCommand<<#=tables#>> UseTable(params string[] tableNames)
+        => base.UseTable(tableNames) as ISqlServerFromCommand<<#=tables#>>;
+    public new ISqlServerFromCommand<<#=tables#>> UseTable(Func<string, bool> tableNamePredicate)
+        => base.UseTable(tableNamePredicate) as ISqlServerFromCommand<<#=tables#>>;
+    public new ISqlServerFromCommand<<#=tables#>> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as ISqlServerFromCommand<<#=tables#>>;
+    public new ISqlServerFromCommand<<#=tables#>> UseTableByRange(object beginFieldValue, object endFieldValue)
+        => base.UseTableBy(beginFieldValue, endFieldValue) as ISqlServerFromCommand<<#=tables#>>;
+    public new ISqlServerFromCommand<<#=tables#>> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
+        => base.UseTableByRange(field1Value, beginField2Value, endField2Value) as ISqlServerFromCommand<<#=tables#>>;
+    public new ISqlServerFromCommand<<#=tables#>> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+        => base.UseTableByRange(field1Value, field2Value, beginField3Value, endField3Value) as ISqlServerFromCommand<<#=tables#>>;
+    #endregion
+
+    #region UseTableSchema
+    public new ISqlServerFromCommand<<#=tables#>> UseTableSchema(string tableSchema)
+        => base.UseTableSchema(tableSchema) as ISqlServerFromCommand<<#=tables#>>;
+    #endregion
+
+    #region Join
+    public new ISqlServerFromCommand<<#=tables#>> InnerJoin(Expression<Func<<#=tables#>, bool>> joinOn)
+        => base.InnerJoin(joinOn) as ISqlServerFromCommand<<#=tables#>>;
+    public new ISqlServerFromCommand<<#=tables#>> LeftJoin(Expression<Func<<#=tables#>, bool>> joinOn)
+        => base.LeftJoin(joinOn) as ISqlServerFromCommand<<#=tables#>>;
+    public new ISqlServerFromCommand<<#=tables#>> RightJoin(Expression<Func<<#=tables#>, bool>> joinOn)
+        => base.RightJoin(joinOn) as ISqlServerFromCommand<<#=tables#>>;
+<#
+        if( i < count)
+        {
+#>
+    public new ISqlServerFromCommand<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+        => base.InnerJoin(joinOn) as ISqlServerFromCommand<<#=tables#>, TOther>;
+    public new ISqlServerFromCommand<<#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+        => base.LeftJoin(joinOn) as ISqlServerFromCommand<<#=tables#>, TOther>;
+    public new ISqlServerFromCommand<<#=tables#>, TOther> RightJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+        => base.RightJoin(joinOn) as ISqlServerFromCommand<<#=tables#>, TOther>;
+    public new ISqlServerFromCommand<<#=tables#>, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+        => base.InnerJoin(subQuery, joinOn) as ISqlServerFromCommand<<#=tables#>, TOther>;
+    public new ISqlServerFromCommand<<#=tables#>, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+        => base.LeftJoin(subQuery, joinOn) as ISqlServerFromCommand<<#=tables#>, TOther>;
+    public new ISqlServerFromCommand<<#=tables#>, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+        => base.RightJoin(subQuery, joinOn) as ISqlServerFromCommand<<#=tables#>, TOther>;
+    public new ISqlServerFromCommand<<#=tables#>, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+        => base.InnerJoin(subQuery, joinOn) as ISqlServerFromCommand<<#=tables#>, TOther>;
+    public new ISqlServerFromCommand<<#=tables#>, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+        => base.LeftJoin(subQuery, joinOn) as ISqlServerFromCommand<<#=tables#>, TOther>;
+    public new ISqlServerFromCommand<<#=tables#>, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+        => base.RightJoin(subQuery, joinOn) as ISqlServerFromCommand<<#=tables#>, TOther>;
+<#      }#>
+    #endregion
+
+    #region Where/And
+    public new ISqlServerFromCommand<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate)
+    {
+        base.WhereInternal(predicate);
+        return this;
+    }
+    public new ISqlServerFromCommand<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
+    {
+        base.WhereInternal(condition, ifPredicate, elsePredicate);
+        return this;
+    }
+    public new ISqlServerFromCommand<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate)
+    {
+        base.AndInternal(predicate);
+        return this;
+    }
+    public new ISqlServerFromCommand<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate = null, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
+    {
+        base.AndInternal(condition, ifPredicate, elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region GroupBy
+    public new ISqlServerGroupingCommand<<#=tables#>, TGrouping> GroupBy<TGrouping>(Expression<Func<<#=tables#>, TGrouping>> groupingExpr)
+        => base.GroupBy(groupingExpr) as ISqlServerGroupingCommand<<#=tables#>, TGrouping>;
+    #endregion
+
+    #region OrderBy
+    public new ISqlServerFromCommand<<#=tables#>> OrderBy<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr)
+        => this.OrderBy(true, fieldsExpr);
+    public new ISqlServerFromCommand<<#=tables#>> OrderBy<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr)
+    {
+        base.OrderByInternal(condition, fieldsExpr);
+        return this;
+    }
+    public new ISqlServerFromCommand<<#=tables#>> OrderByDescending<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr)
+        => this.OrderByDescending(true, fieldsExpr);
+    public new ISqlServerFromCommand<<#=tables#>> OrderByDescending<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr)
+    {
+        base.OrderByDescendingInternal(condition, fieldsExpr);
+        return this;
+    }
+    #endregion
+
+    #region Select
+    public new ISqlServerFromCommand<TTarget> Select<TTarget>(string fields = "*")
+        => base.Select<TTarget>(fields) as ISqlServerFromCommand<TTarget>;
+    public new ISqlServerFromCommand<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr)
+        => base.Select(fieldsExpr) as ISqlServerFromCommand<TTarget>;
+    #endregion
+
+    #region Skip/Take
+    public new ISqlServerFromCommand<<#=tables#>> Skip(int offset)
+    {
+        this.Visitor.Skip(offset);
+        return this;
+    }
+    public new ISqlServerFromCommand<<#=tables#>> Take(int limit)
+    {
+        this.Visitor.Take(limit);
+        return this;
+    }
+    #endregion
+}
+<#  }#>
