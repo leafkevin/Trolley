@@ -3,7 +3,7 @@ using System.Linq.Expressions;
 
 namespace Trolley;
 
-class MemberVisitor : ExpressionVisitor
+public class MemberVisitor : ExpressionVisitor
 {
     public List<MemberExpression> Members { get; private set; } = new();
 
@@ -14,7 +14,7 @@ class MemberVisitor : ExpressionVisitor
         return base.VisitMember(node);
     }
 }
-class ReplaceParameterVisitor : ExpressionVisitor
+public class ReplaceParameterVisitor : ExpressionVisitor
 {
     public List<ParameterExpression> NewParameters { get; private set; } = new();
     public List<MemberExpression> OrgMembers { get; private set; } = new();

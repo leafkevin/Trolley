@@ -626,21 +626,73 @@ public class SqlVisitor : ISqlVisitor
     {
         var memberExpr = sqlSegment.Expression as MemberExpression;
         MemberAccessSqlFormatter formatter = null;
+        var memberInfo = memberExpr.Member;
+
+        if (sqlSegment.IsDeferredFields && this.IsSelect)
+        {
+            //延迟属性访问，两种场景：
+            //主动延迟方法调用：如，把返回的枚举列转成描述，参数就是枚举列，返回值是对应的描述
+            string fields = null;
+            List<SqlFieldSegment> readerFields = null;
+            var visitor = new MemberVisitor();
+            visitor.Visit(memberExpr);
+            //$"{f.OrderNo} : {f.TotalAmount.ToString("C")}"
+            //f.TotalAmount.ToString("C")
+            //"TotalAmount: " + (f.Price * f.Quantity).ToString("C")
+            //this.DeferredInvoke(f.Price, f.Quantity)
+            if (visitor.Members.Count > 0)
+            {
+                readerFields = new List<SqlFieldSegment>();
+                var builder = new StringBuilder();
+                foreach (var argsExpr in visitor.Members)
+                {
+                    var argumentSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = argsExpr });
+                    if (argumentSegment.HasField)
+                    {
+                        sqlSegment.HasField = true;
+                        var fieldName = argumentSegment.Body;
+                        readerFields.Add(new SqlFieldSegment
+                        {
+                            SegmentType = argsExpr.Type,
+                            TargetMember = argsExpr.Member,
+                            NativeDbType = argumentSegment.NativeDbType,
+                            TypeHandler = argumentSegment.TypeHandler
+                        });
+                        if (builder.Length > 0)
+                            builder.Append(',');
+                        builder.Append(fieldName);
+                    }
+                }
+                if (readerFields.Count > 0)
+                    fields = builder.ToString();
+            }
+
+            if (readerFields == null)
+                fields = "NULL";
+            sqlSegment.IsDeferredFields = true;
+            sqlSegment.FieldType = SqlFieldType.DeferredFields;
+            sqlSegment.Body = fields;
+            sqlSegment.DeferredExpression = memberExpr;
+            sqlSegment.Fields = readerFields;
+            sqlSegment.IsMethodCall = true;
+            return sqlSegment;
+        }
+
         if (memberExpr.Expression != null)
         {
             //Where(f=>... && !f.OrderId.HasValue && ...)
             //Where(f=>... f.OrderId.Value==10 && ...)
             //Select(f=>... ,f.OrderId.HasValue  ...)
             //Select(f=>... ,f.OrderId.Value==10  ...)
-            if (Nullable.GetUnderlyingType(memberExpr.Member.DeclaringType) != null)
+            if (Nullable.GetUnderlyingType(memberInfo.DeclaringType) != null)
             {
-                if (memberExpr.Member.Name == nameof(Nullable<bool>.HasValue))
+                if (memberInfo.Name == nameof(Nullable<bool>.HasValue))
                 {
                     sqlSegment.Push(new DeferredExpr { OperationType = OperationType.Equal, Value = SqlFieldSegment.Null });
                     sqlSegment.Push(new DeferredExpr { OperationType = OperationType.Not });
                     return this.Visit(sqlSegment.Next(memberExpr.Expression));
                 }
-                else if (memberExpr.Member.Name == nameof(Nullable<bool>.Value))
+                else if (memberInfo.Name == nameof(Nullable<bool>.Value))
                     return this.Visit(sqlSegment.Next(memberExpr.Expression));
                 else throw new ArgumentException($"不支持的MemberAccess操作，表达式'{memberExpr}'返回值不是boolean类型");
             }
@@ -679,14 +731,14 @@ public class SqlVisitor : ISqlVisitor
                             : tableSegment.Fields.Find(f => f.TargetMember.Name == parentMemberExpr.Member.Name);
                         var fromReaderFields = parenetReaderField.Fields;
                         readerField = fromReaderFields.Count == 1 ? fromReaderFields.First()
-                            : fromReaderFields.Find(f => f.TargetMember.Name == memberExpr.Member.Name);
-                        fieldName = this.OrmProvider.GetFieldName(memberExpr.Member.Name);
+                            : fromReaderFields.Find(f => f.TargetMember.Name == memberInfo.Name);
+                        fieldName = this.OrmProvider.GetFieldName(memberInfo.Name);
                         if (this.IsNeedTableAlias) fieldName = tableSegment.AliasName + "." + fieldName;
                     }
                     else
                     {
                         readerField = tableSegment.Fields.Count == 1 ? tableSegment.Fields.First()
-                          : tableSegment.Fields.Find(f => f.TargetMember.Name == memberExpr.Member.Name);
+                          : tableSegment.Fields.Find(f => f.TargetMember.Name == memberInfo.Name);
                         fieldName = readerField.Body;
                     }
                     sqlSegment.FromMember = readerField.TargetMember;
@@ -699,11 +751,11 @@ public class SqlVisitor : ISqlVisitor
                 }
                 else
                 {
-                    var memberMapper = tableSegment.Mapper.GetMemberMap(memberExpr.Member.Name);
+                    var memberMapper = tableSegment.Mapper.GetMemberMap(memberInfo.Name);
                     if (memberMapper.IsIgnore)
                         throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberMapper.MemberName}是忽略成员无法访问");
                     if (memberMapper.MemberType.IsEntityType(out _) && !memberMapper.IsNavigation && memberMapper.TypeHandler == null)
-                        throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberExpr.Member.Name}不是值类型，未配置为导航属性也没有配置TypeHandler");
+                        throw new Exception($"类{tableSegment.EntityType.FullName}的成员{memberInfo.Name}不是值类型，未配置为导航属性也没有配置TypeHandler");
                     sqlSegment.FromMember = memberMapper.Member;
                     sqlSegment.SegmentType = memberMapper.MemberType;
                     if (memberMapper.UnderlyingType.IsEnum)
@@ -720,7 +772,7 @@ public class SqlVisitor : ISqlVisitor
             }
         }
 
-        if (memberExpr.Member.DeclaringType == typeof(DBNull))
+        if (memberInfo.DeclaringType == typeof(DBNull))
             return SqlFieldSegment.Null;
 
         //各种静态成员访问，如：DateTime.Now,int.MaxValue,string.Empty

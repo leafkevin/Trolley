@@ -643,6 +643,56 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         var memberExpr = sqlSegment.Expression as MemberExpression;
         var memberInfo = memberExpr.Member;
 
+        if (sqlSegment.IsDeferredFields && this.IsSelect)
+        {
+            //延迟属性访问，两种场景：
+            //主动延迟方法调用：如，把返回的枚举列转成描述，参数就是枚举列，返回值是对应的描述
+            string fields = null;
+            List<SqlFieldSegment> readerFields = null;
+            var visitor = new MemberVisitor();
+            visitor.Visit(memberExpr);
+            //$"{f.OrderNo} : {f.TotalAmount.ToString("C")}"
+            //f.TotalAmount.ToString("C")
+            //"TotalAmount: " + (f.Price * f.Quantity).ToString("C")
+            //this.DeferredInvoke(f.Price, f.Quantity)
+            if (visitor.Members.Count > 0)
+            {
+                readerFields = new List<SqlFieldSegment>();
+                var builder = new StringBuilder();
+                foreach (var argsExpr in visitor.Members)
+                {
+                    var argumentSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = argsExpr });
+                    if (argumentSegment.HasField)
+                    {
+                        sqlSegment.HasField = true;
+                        var fieldName = argumentSegment.Body;
+                        readerFields.Add(new SqlFieldSegment
+                        {
+                            SegmentType = argsExpr.Type,
+                            TargetMember = argsExpr.Member,
+                            NativeDbType = argumentSegment.NativeDbType,
+                            TypeHandler = argumentSegment.TypeHandler
+                        });
+                        if (builder.Length > 0)
+                            builder.Append(',');
+                        builder.Append(fieldName);
+                    }
+                }
+                if (readerFields.Count > 0)
+                    fields = builder.ToString();
+            }
+
+            if (readerFields == null)
+                fields = "NULL";
+            sqlSegment.IsDeferredFields = true;
+            sqlSegment.FieldType = SqlFieldType.DeferredFields;
+            sqlSegment.Body = fields;
+            sqlSegment.DeferredExpression = memberExpr;
+            sqlSegment.Fields = readerFields;
+            sqlSegment.IsMethodCall = true;
+            return sqlSegment;
+        }
+
         MemberAccessSqlFormatter formatter = null;
         if (memberExpr.Expression != null)
         {
