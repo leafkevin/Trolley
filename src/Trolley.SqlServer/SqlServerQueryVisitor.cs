@@ -96,18 +96,21 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
                 foreach (var groupByField in this.GroupByFields)
                 {
                     var memberInfo = groupByField.TargetMember ?? groupByField.FromMember;
-                    if (this.ReaderFields.Exists(f => f.FromMember == memberInfo))
+                    if (this.ReaderFields.Exists(f => f.IsGroupByField && f.TargetMember.Name == memberInfo.Name || f.IsGroupingField))
                         continue;
                     this.ReaderFields.Add(groupByField);
                 }
             }
             if (!string.IsNullOrEmpty(this.OrderBySql))
             {
-                //当有多分表时，有排序，Select字段中，没有完全的分组字段，则需要补全所有分组字段
+                //当有多分表时，有排序，Select字段中，没有完全的排序字段，则需要补全所有排序字段
+                var hasGrouping = this.ReaderFields.Exists(f => f.IsGroupingField);
                 foreach (var orderByField in this.OrderByFields)
                 {
                     var memberInfo = orderByField.Field.TargetMember ?? orderByField.Field.FromMember;
                     if (this.ReaderFields.Exists(f => f.TargetMember.Name == memberInfo.Name || f.FromMember == memberInfo))
+                        continue;
+                    if (hasGrouping && this.GroupByFields.Exists(f => f.TargetMember.Name == memberInfo.Name || f.FromMember == memberInfo))
                         continue;
                     this.ReaderFields.Add(orderByField.Field);
                 }
@@ -286,18 +289,21 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
                 foreach (var groupByField in this.GroupByFields)
                 {
                     var memberInfo = groupByField.TargetMember ?? groupByField.FromMember;
-                    if (this.ReaderFields.Exists(f => f.FromMember == memberInfo))
+                    if (this.ReaderFields.Exists(f => f.IsGroupByField && f.TargetMember.Name == memberInfo.Name || f.IsGroupingField))
                         continue;
                     this.ReaderFields.Add(groupByField);
                 }
             }
             if (!string.IsNullOrEmpty(this.OrderBySql))
             {
-                //当有多分表时，有排序，Select字段中，没有完全的分组字段，则需要补全所有分组字段
+                //当有多分表时，有排序，Select字段中，没有完全的排序字段，则需要补全所有排序字段
+                var hasGrouping = this.ReaderFields.Exists(f => f.IsGroupingField);
                 foreach (var orderByField in this.OrderByFields)
                 {
                     var memberInfo = orderByField.Field.TargetMember ?? orderByField.Field.FromMember;
                     if (this.ReaderFields.Exists(f => f.TargetMember.Name == memberInfo.Name || f.FromMember == memberInfo))
+                        continue;
+                    if (hasGrouping && this.GroupByFields.Exists(f => f.TargetMember.Name == memberInfo.Name || f.FromMember == memberInfo))
                         continue;
                     this.ReaderFields.Add(orderByField.Field);
                 }
@@ -489,9 +495,7 @@ public class SqlServerQueryVisitor : QueryVisitor, IQueryVisitor
                         continue;
                     body = this.GetQuotedValue(readerField);
                     builder.Append(body);
-                    //生成SQL的时候，才加上AS别名
-                    if (this.IsNeedAlias(readerField, isOnlyField, isSecondUnionWrap))
-                        builder.Append($" AS {this.OrmProvider.GetFieldName(readerField.TargetMember.Name)}");
+                    //延迟方法调用字段，不需要加别名
                     break;
                 default:
                     body = this.GetQuotedValue(readerField);

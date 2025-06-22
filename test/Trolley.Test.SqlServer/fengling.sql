@@ -1,5 +1,4 @@
-USE [fengling]
-GO
+
 DROP TABLE IF EXISTS [dbo].[sys_brand];
 CREATE TABLE [dbo].[sys_brand](
 	[Id] [int] NOT NULL,
@@ -79,6 +78,26 @@ CREATE TABLE [dbo].[sys_order_104_202405](
 	[UpdatedAt] [datetime] NULL DEFAULT NULL,
 	[UpdatedBy] [int] NULL DEFAULT NULL,
  	CONSTRAINT [pk_sys_order_104_202405] PRIMARY KEY CLUSTERED([Id] ASC)
+);
+GO
+DROP TABLE IF EXISTS [dbo].[sys_order_104_202406];
+CREATE TABLE [dbo].[sys_order_104_202406](
+	[Id] [nvarchar](50) NOT NULL,
+	[TenantId] [nvarchar](50) NOT NULL,
+	[OrderNo] [nvarchar](50) NULL DEFAULT NULL,	
+	[ProductCount] [int] NULL DEFAULT NULL,
+	[TotalAmount] [float] NULL DEFAULT NULL,
+	[BuyerId] [int] NULL DEFAULT NULL,
+	[BuyerSource] [nvarchar](50) NULL DEFAULT NULL,
+	[SellerId] [int] NULL DEFAULT NULL,
+	[Products] [ntext] NULL DEFAULT NULL,
+	[Disputes] [ntext] NULL DEFAULT NULL,
+	[IsEnabled] [bit] NULL DEFAULT NULL,
+	[CreatedAt] [datetime] NULL DEFAULT NULL,
+	[CreatedBy] [int] NULL DEFAULT NULL,
+	[UpdatedAt] [datetime] NULL DEFAULT NULL,
+	[UpdatedBy] [int] NULL DEFAULT NULL,
+ 	CONSTRAINT [pk_sys_order_104_202406] PRIMARY KEY CLUSTERED([Id] ASC)
 );
 GO
 DROP TABLE IF EXISTS [dbo].[sys_order_105_202405];
@@ -269,8 +288,6 @@ CREATE TABLE [dbo].[sys_update_entity](
 GO
 
 
-USE [fengling]
-GO
 
 CREATE SCHEMA [myschema]
 GO
@@ -354,6 +371,25 @@ CREATE TABLE [myschema].[sys_order_104_202405](
 	[UpdatedAt] [datetime] NULL DEFAULT NULL,
 	[UpdatedBy] [int] NULL DEFAULT NULL,
  	CONSTRAINT [pk_sys_order_104_202405] PRIMARY KEY CLUSTERED([Id] ASC)
+);
+DROP TABLE IF EXISTS [myschema].[sys_order_104_202406];
+CREATE TABLE [myschema].[sys_order_104_202406](
+	[Id] [nvarchar](50) NOT NULL,
+	[TenantId] [nvarchar](50) NOT NULL,
+	[OrderNo] [nvarchar](50) NULL DEFAULT NULL,	
+	[ProductCount] [int] NULL DEFAULT NULL,
+	[TotalAmount] [float] NULL DEFAULT NULL,
+	[BuyerId] [int] NULL DEFAULT NULL,
+	[BuyerSource] [nvarchar](50) NULL DEFAULT NULL,
+	[SellerId] [int] NULL DEFAULT NULL,
+	[Products] [ntext] NULL DEFAULT NULL,
+	[Disputes] [ntext] NULL DEFAULT NULL,
+	[IsEnabled] [bit] NULL DEFAULT NULL,
+	[CreatedAt] [datetime] NULL DEFAULT NULL,
+	[CreatedBy] [int] NULL DEFAULT NULL,
+	[UpdatedAt] [datetime] NULL DEFAULT NULL,
+	[UpdatedBy] [int] NULL DEFAULT NULL,
+ 	CONSTRAINT [pk_sys_order_104_202406] PRIMARY KEY CLUSTERED([Id] ASC)
 );
 GO
 DROP TABLE IF EXISTS [myschema].[sys_order_105_202405];
@@ -556,3 +592,43 @@ SET @pOut='OK';
 UPDATE sys_user SET [Name]='UpdatedName',[Age]=18 WHERE Id=@pId;
 END
 GO
+
+
+TRUNCATE TABLE [dbo].[sys_order_detail];
+INSERT INTO [dbo].[sys_order_detail] ([Id], [TenantId], [OrderId], [ProductId], [Price], [Quantity], [Amount], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES ('1', '1', '1', 1, 299.00, 1, 299.00, 1, '2025-06-22 10:58:02', 1, '2025-06-22 10:58:02', 1);
+INSERT INTO [dbo].[sys_order_detail] ([Id], [TenantId], [OrderId], [ProductId], [Price], [Quantity], [Amount], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES ('2', '1', '1', 2, 159.00, 1, 159.00, 1, '2025-06-22 10:58:02', 1, '2025-06-22 10:58:02', 1);
+INSERT INTO [dbo].[sys_order_detail] ([Id], [TenantId], [OrderId], [ProductId], [Price], [Quantity], [Amount], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES ('3', '2', '1', 3, 69.00, 1, 69.00, 1, '2025-06-22 10:58:02', 1, '2025-06-22 10:58:02', 1);
+INSERT INTO [dbo].[sys_order_detail] ([Id], [TenantId], [OrderId], [ProductId], [Price], [Quantity], [Amount], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES ('4', '1', '2', 1, 299.00, 1, 299.00, 1, '2025-06-22 10:58:02', 1, '2025-06-22 10:58:02', 1);
+INSERT INTO [dbo].[sys_order_detail] ([Id], [TenantId], [OrderId], [ProductId], [Price], [Quantity], [Amount], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES ('5', '2', '2', 3, 69.00, 1, 69.00, 1, '2025-06-22 10:58:02', 1, '2025-06-22 10:58:02', 1);
+INSERT INTO [dbo].[sys_order_detail] ([Id], [TenantId], [OrderId], [ProductId], [Price], [Quantity], [Amount], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES ('6', '3', '3', 2, 199.00, 1, 199.00, 1, '2025-06-22 10:58:02', 1, '2025-06-22 10:58:02', 1);
+INSERT INTO [dbo].[sys_order_detail] ([Id], [TenantId], [OrderId], [ProductId], [Price], [Quantity], [Amount], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES ('7', '1', '3', 1, 550.00, 3, 1650.00, 1, '2025-06-22 10:57:39', 1, '2025-06-22 10:57:39', 1);
+
+TRUNCATE TABLE [dbo].[sys_menu];
+INSERT INTO [dbo].[sys_menu] ([Id], [Name], [ParentId], [PageId], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES (1, '系统管理', 0, 0, 1, '2025-06-22 11:27:48', 1, '2025-06-22 11:27:48', 1);
+INSERT INTO [dbo].[sys_menu] ([Id], [Name], [ParentId], [PageId], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES (2, '用户管理', 1, 1, 1, '2025-06-22 11:27:48', 1, '2025-06-22 11:27:48', 1);
+INSERT INTO [dbo].[sys_menu] ([Id], [Name], [ParentId], [PageId], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES (3, '角色管理', 1, 2, 1, '2025-06-22 11:27:48', 1, '2025-06-22 11:27:48', 1);
+
+TRUNCATE TABLE [sys_page];
+INSERT INTO [dbo].[sys_page] ([Id], [Url], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES (1, '/user/index', 1, '2025-06-22 11:27:48', 1, '2025-06-22 11:27:48', 1);
+INSERT INTO [dbo].[sys_page] ([Id], [Url], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES (2, '/role/index', 1, '2025-06-22 11:27:48', 1, '2025-06-22 11:27:48', 1);
+
+
+
+TRUNCATE TABLE [myschema].[sys_order_detail];
+INSERT INTO [myschema].[sys_order_detail] ([Id], [TenantId], [OrderId], [ProductId], [Price], [Quantity], [Amount], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES ('1', '1', '1', 1, 299.00, 1, 299.00, 1, '2025-06-22 10:58:02', 1, '2025-06-22 10:58:02', 1);
+INSERT INTO [myschema].[sys_order_detail] ([Id], [TenantId], [OrderId], [ProductId], [Price], [Quantity], [Amount], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES ('2', '1', '1', 2, 159.00, 1, 159.00, 1, '2025-06-22 10:58:02', 1, '2025-06-22 10:58:02', 1);
+INSERT INTO [myschema].[sys_order_detail] ([Id], [TenantId], [OrderId], [ProductId], [Price], [Quantity], [Amount], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES ('3', '2', '1', 3, 69.00, 1, 69.00, 1, '2025-06-22 10:58:02', 1, '2025-06-22 10:58:02', 1);
+INSERT INTO [myschema].[sys_order_detail] ([Id], [TenantId], [OrderId], [ProductId], [Price], [Quantity], [Amount], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES ('4', '1', '2', 1, 299.00, 1, 299.00, 1, '2025-06-22 10:58:02', 1, '2025-06-22 10:58:02', 1);
+INSERT INTO [myschema].[sys_order_detail] ([Id], [TenantId], [OrderId], [ProductId], [Price], [Quantity], [Amount], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES ('5', '2', '2', 3, 69.00, 1, 69.00, 1, '2025-06-22 10:58:02', 1, '2025-06-22 10:58:02', 1);
+INSERT INTO [myschema].[sys_order_detail] ([Id], [TenantId], [OrderId], [ProductId], [Price], [Quantity], [Amount], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES ('6', '3', '3', 2, 199.00, 1, 199.00, 1, '2025-06-22 10:58:02', 1, '2025-06-22 10:58:02', 1);
+INSERT INTO [myschema].[sys_order_detail] ([Id], [TenantId], [OrderId], [ProductId], [Price], [Quantity], [Amount], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES ('7', '1', '3', 1, 550.00, 3, 1650.00, 1, '2025-06-22 10:57:39', 1, '2025-06-22 10:57:39', 1);
+
+TRUNCATE TABLE [myschema].[sys_menu];
+INSERT INTO [myschema].[sys_menu] ([Id], [Name], [ParentId], [PageId], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES (1, '系统管理', 0, 0, 1, '2025-06-22 11:27:48', 1, '2025-06-22 11:27:48', 1);
+INSERT INTO [myschema].[sys_menu] ([Id], [Name], [ParentId], [PageId], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES (2, '用户管理', 1, 1, 1, '2025-06-22 11:27:48', 1, '2025-06-22 11:27:48', 1);
+INSERT INTO [myschema].[sys_menu] ([Id], [Name], [ParentId], [PageId], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES (3, '角色管理', 1, 2, 1, '2025-06-22 11:27:48', 1, '2025-06-22 11:27:48', 1);
+
+TRUNCATE TABLE [myschema].[sys_page];
+INSERT INTO [myschema].[sys_page] ([Id], [Url], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES (1, '/user/index', 1, '2025-06-22 11:27:48', 1, '2025-06-22 11:27:48', 1);
+INSERT INTO [myschema].[sys_page] ([Id], [Url], [IsEnabled], [CreatedAt], [CreatedBy], [UpdatedAt], [UpdatedBy]) VALUES (2, '/role/index', 1, '2025-06-22 11:27:48', 1, '2025-06-22 11:27:48', 1);
+

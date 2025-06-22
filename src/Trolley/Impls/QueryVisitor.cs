@@ -344,11 +344,14 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             }
             if (!string.IsNullOrEmpty(this.OrderBySql))
             {
-                //当有多分表时，有排序，Select字段中，没有完全的分组字段，则需要补全所有分组字段
+                //当有多分表时，有排序，Select字段中，没有完全的排序字段，则需要补全所有排序字段
+                var hasGrouping = this.ReaderFields.Exists(f => f.IsGroupingField);
                 foreach (var orderByField in this.OrderByFields)
                 {
                     var memberInfo = orderByField.Field.TargetMember ?? orderByField.Field.FromMember;
                     if (this.ReaderFields.Exists(f => f.TargetMember.Name == memberInfo.Name || f.FromMember == memberInfo))
+                        continue;
+                    if (hasGrouping && this.GroupByFields.Exists(f => f.TargetMember.Name == memberInfo.Name || f.FromMember == memberInfo))
                         continue;
                     this.ReaderFields.Add(orderByField.Field);
                 }

@@ -197,7 +197,7 @@ public class ExpressionUnitTest : UnitTestBase
         Assert.Equal(dict["1"], (string)dbParameters[0].Value);
         Assert.Equal(strCollection[0], (string)dbParameters[1].Value);
         Assert.Equal(strArray[2], (string)dbParameters[2].Value);
-        Assert.True((string)dbParameters[3].Value == strCollection[2]);
+        Assert.Equal(strCollection[2], (string)dbParameters[3].Value);
         Assert.Equal(dict["2"], (string)dbParameters[4].Value);
         Assert.Equal(dict["3"], (string)dbParameters[5].Value);
 

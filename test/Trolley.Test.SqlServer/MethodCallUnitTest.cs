@@ -700,18 +700,18 @@ public class MethodCallUnitTest : UnitTestBase
     [Fact]
     public async Task Method_Property_Deferred()
     {
-        this.Initialize(1);
+        this.Initialize(3);
         var repository = this.dbFactory.Create();
         //测试值类型缓存是否正确
-        var result1 = await repository.From<UpdateEntity1>()
+        var result1 = await repository.From<UpdateEntity3>()
             .Where(f => f.Id == 1)
             .Select(f => f.DateTimeField)
             .FirstAsync();
-        var result2 = await repository.From<UpdateEntity1>()
+        var result2 = await repository.From<UpdateEntity3>()
             .Where(f => f.Id == 1)
             .Select(f => new DateTimeOffset(DateTime.SpecifyKind(f.DateTimeField, DateTimeKind.Local)).UtcDateTime.Deferred())
             .FirstAsync();
-        var sql = repository.From<UpdateEntity1>()
+        var sql = repository.From<UpdateEntity3>()
             .Where(f => f.Id == 1)
             .Select(f => new
             {
@@ -719,8 +719,8 @@ public class MethodCallUnitTest : UnitTestBase
                 Timestamp = f.DateTimeOffsetField.ToUnixTimeMilliseconds()
             })
             .ToSql(out _);
-        Assert.Equal("SELECT a.`DateTimeField`,a.`DateTimeOffsetField` FROM `sys_update_entity` a WHERE a.`Id`=1", sql);
-        var result = await repository.From<UpdateEntity1>()
+        Assert.Equal("SELECT a.[DateTimeField],a.[DateTimeOffsetField] FROM [sys_update_entity] a WHERE a.[Id]=1", sql);
+        var result = await repository.From<UpdateEntity3>()
             .Where(f => f.Id == 1)
             .Select(f => new
             {

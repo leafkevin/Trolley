@@ -1266,7 +1266,7 @@ public class UnitTest6 : UnitTestBase
                 Buyer = y
             })
             .ToSql(out _);
-        Assert.Equal("SELECT a.name FROM sys.objects a,sys.schemas b WHERE a.schema_id=b.schema_id AND a.type='U' AND b.name='dbo' AND (a.name LIKE 'sys_order%' OR a.name LIKE 'sys_user%');SELECT a.[Id],a.[TenantId],a.[OrderNo],a.[ProductCount],a.[TotalAmount],a.[BuyerId],a.[BuyerSource],a.[SellerId],a.[Products],a.[Disputes],a.[IsEnabled],a.[CreatedAt],a.[CreatedBy],a.[UpdatedAt],a.[UpdatedBy],b.[Id],b.[TenantId],b.[Name],b.[Gender],b.[Age],b.[CompanyId],b.[GuidField],b.[SomeTimes],b.[SourceType],b.[IsEnabled],b.[CreatedAt],b.[CreatedBy],b.[UpdatedAt],b.[UpdatedBy] FROM [sys_order_104_202405] a INNER JOIN [sys_user_104] b ON a.[BuyerId]=b.[Id] WHERE a.[ProductCount]>@p0 UNION ALL SELECT a.[Id],a.[TenantId],a.[OrderNo],a.[ProductCount],a.[TotalAmount],a.[BuyerId],a.[BuyerSource],a.[SellerId],a.[Products],a.[Disputes],a.[IsEnabled],a.[CreatedAt],a.[CreatedBy],a.[UpdatedAt],a.[UpdatedBy],b.[Id],b.[TenantId],b.[Name],b.[Gender],b.[Age],b.[CompanyId],b.[GuidField],b.[SomeTimes],b.[SourceType],b.[IsEnabled],b.[CreatedAt],b.[CreatedBy],b.[UpdatedAt],b.[UpdatedBy] FROM [sys_order_105_202405] a INNER JOIN [sys_user_105] b ON a.[BuyerId]=b.[Id] WHERE a.[ProductCount]>@p0", sql);
+        Assert.Equal("SELECT a.name FROM sys.objects a,sys.schemas b WHERE a.schema_id=b.schema_id AND a.type='U' AND b.name='dbo' AND (a.name LIKE 'sys_order%' OR a.name LIKE 'sys_user%');SELECT a.[Id],a.[TenantId],a.[OrderNo],a.[ProductCount],a.[TotalAmount],a.[BuyerId],a.[BuyerSource],a.[SellerId],a.[Products],a.[Disputes],a.[IsEnabled],a.[CreatedAt],a.[CreatedBy],a.[UpdatedAt],a.[UpdatedBy],b.[Id],b.[TenantId],b.[Name],b.[Gender],b.[Age],b.[CompanyId],b.[GuidField],b.[SomeTimes],b.[SourceType],b.[IsEnabled],b.[CreatedAt],b.[CreatedBy],b.[UpdatedAt],b.[UpdatedBy] FROM [sys_order_104_202405] a INNER JOIN [sys_user_104] b ON a.[BuyerId]=b.[Id] WHERE a.[ProductCount]>@p0 UNION ALL SELECT a.[Id],a.[TenantId],a.[OrderNo],a.[ProductCount],a.[TotalAmount],a.[BuyerId],a.[BuyerSource],a.[SellerId],a.[Products],a.[Disputes],a.[IsEnabled],a.[CreatedAt],a.[CreatedBy],a.[UpdatedAt],a.[UpdatedBy],b.[Id],b.[TenantId],b.[Name],b.[Gender],b.[Age],b.[CompanyId],b.[GuidField],b.[SomeTimes],b.[SourceType],b.[IsEnabled],b.[CreatedAt],b.[CreatedBy],b.[UpdatedAt],b.[UpdatedBy] FROM [sys_order_104_202406] a INNER JOIN [sys_user_104] b ON a.[BuyerId]=b.[Id] WHERE a.[ProductCount]>@p0 UNION ALL SELECT a.[Id],a.[TenantId],a.[OrderNo],a.[ProductCount],a.[TotalAmount],a.[BuyerId],a.[BuyerSource],a.[SellerId],a.[Products],a.[Disputes],a.[IsEnabled],a.[CreatedAt],a.[CreatedBy],a.[UpdatedAt],a.[UpdatedBy],b.[Id],b.[TenantId],b.[Name],b.[Gender],b.[Age],b.[CompanyId],b.[GuidField],b.[SomeTimes],b.[SourceType],b.[IsEnabled],b.[CreatedAt],b.[CreatedBy],b.[UpdatedAt],b.[UpdatedBy] FROM [sys_order_105_202405] a INNER JOIN [sys_user_105] b ON a.[BuyerId]=b.[Id] WHERE a.[ProductCount]>@p0", sql);
 
         var result = repository.From<Order>()
             .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
@@ -1333,7 +1333,7 @@ public class UnitTest6 : UnitTestBase
         var sql = repository.From<Order>()
             .UseTableBy("104", DateTime.Parse("2024-05-24"))
             .Where(f => repository.From<User>('b')
-                .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                .UseTableBy("104")
                 .Where(t => t.Id == f.BuyerId && t.Age < 25)
                 .Exists())
             .ToSql(out _);
@@ -1342,7 +1342,7 @@ public class UnitTest6 : UnitTestBase
         var result = repository.From<Order>()
             .UseTableBy("104", DateTime.Parse("2024-05-24"))
             .Where(f => repository.From<User>('b')
-                .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                .UseTableBy("104")
                 .Where(t => t.Id == f.BuyerId && t.Age < 25)
                 .Exists())
             .ToList();
@@ -1360,7 +1360,7 @@ public class UnitTest6 : UnitTestBase
         var sql = repository.From<Order>()
             .UseTableBy("104", DateTime.Parse("2024-05-24"))
             .Where(f => repository.From<User>('b')
-                .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                .UseTableBy("104")
                 .InnerJoin<OrderDetail>((x, y) => f.Id == y.OrderId)
                 .UseTableBy("104", DateTime.Parse("2024-05-24"))
                 .Where((x, y) => x.Id == f.BuyerId && x.Age <= 25 && y.Price > 100)
@@ -1371,7 +1371,7 @@ public class UnitTest6 : UnitTestBase
         sql = repository.From<Order>()
             .UseTableBy("104", DateTime.Parse("2024-05-24"))
             .Where(f => repository.From<User>('b')
-                .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                .UseTableBy("104")
                 .InnerJoin<OrderDetail>((x, y) => f.Id == y.OrderId)
                 .UseTableBy("104", DateTime.Parse("2024-05-24"))
                 .Where((x, y) => x.Id == f.BuyerId && x.Age <= 25 && y.Price > 100)
@@ -1382,7 +1382,7 @@ public class UnitTest6 : UnitTestBase
         var result = repository.From<Order>()
             .UseTableBy("104", DateTime.Parse("2024-05-24"))
             .Where(f => repository.From<User>('b')
-                .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                .UseTableBy("104")
                 .InnerJoin<OrderDetail>((x, y) => f.Id == y.OrderId)
                 .UseTableBy("104", DateTime.Parse("2024-05-24"))
                 .Where((x, y) => x.Id == f.BuyerId && x.Age <= 25 && y.Price > 100)
@@ -1583,7 +1583,7 @@ public class UnitTest6 : UnitTestBase
             .Where(x => x.Id == "ON_1001")
             .Output(x => x.Inserted(f => new { f.Id, f.TotalAmount }))
             .ToSql(out _);
-        Assert.Equal("SELECT a.name FROM sys.objects a,sys.schemas b WHERE a.schema_id=b.schema_id AND A.type='U' AND b.name='dbo' AND (a.name LIKE 'sys_order%');UPDATE [sys_order_104_202405] SET [TotalAmount]=@p0,[Products]=@p1,[Disputes]=@p2 OUTPUT INSERTED.[Id],INSERTED.[TotalAmount] WHERE [Id]=N'ON_1001';UPDATE [sys_order_105_202405] SET [TotalAmount]=@p0,[Products]=@p1,[Disputes]=@p2 OUTPUT INSERTED.[Id],INSERTED.[TotalAmount] WHERE [Id]=N'ON_1001'", sql1);
+        Assert.Equal("SELECT a.name FROM sys.objects a,sys.schemas b WHERE a.schema_id=b.schema_id AND A.type='U' AND b.name='dbo' AND (a.name LIKE 'sys_order%');UPDATE [sys_order_104_202405] SET [TotalAmount]=@p0,[Products]=@p1,[Disputes]=@p2 OUTPUT INSERTED.[Id],INSERTED.[TotalAmount] WHERE [Id]=N'ON_1001';UPDATE [sys_order_104_202406] SET [TotalAmount]=@p0,[Products]=@p1,[Disputes]=@p2 OUTPUT INSERTED.[Id],INSERTED.[TotalAmount] WHERE [Id]=N'ON_1001';UPDATE [sys_order_105_202405] SET [TotalAmount]=@p0,[Products]=@p1,[Disputes]=@p2 OUTPUT INSERTED.[Id],INSERTED.[TotalAmount] WHERE [Id]=N'ON_1001'", sql1);
 
         await repository.BeginTransactionAsync();
         var result1 = await repository.Update<Order>()
@@ -1638,7 +1638,7 @@ public class UnitTest6 : UnitTestBase
             .Where(x => x.Id == "ON_1001")
             .Output<Order>("*")
             .ToSql(out _);
-        Assert.Equal("SELECT a.name FROM sys.objects a,sys.schemas b WHERE a.schema_id=b.schema_id AND A.type='U' AND b.name='dbo' AND (a.name LIKE 'sys_order%');UPDATE [sys_order_104_202405] SET [TotalAmount]=@p0,[Products]=@p1,[Disputes]=@p2 OUTPUT INSERTED.* WHERE [Id]=N'ON_1001';UPDATE [sys_order_105_202405] SET [TotalAmount]=@p0,[Products]=@p1,[Disputes]=@p2 OUTPUT INSERTED.* WHERE [Id]=N'ON_1001'", sql2);
+        Assert.Equal("SELECT a.name FROM sys.objects a,sys.schemas b WHERE a.schema_id=b.schema_id AND A.type='U' AND b.name='dbo' AND (a.name LIKE 'sys_order%');UPDATE [sys_order_104_202405] SET [TotalAmount]=@p0,[Products]=@p1,[Disputes]=@p2 OUTPUT INSERTED.* WHERE [Id]=N'ON_1001';UPDATE [sys_order_104_202406] SET [TotalAmount]=@p0,[Products]=@p1,[Disputes]=@p2 OUTPUT INSERTED.* WHERE [Id]=N'ON_1001';UPDATE [sys_order_105_202405] SET [TotalAmount]=@p0,[Products]=@p1,[Disputes]=@p2 OUTPUT INSERTED.* WHERE [Id]=N'ON_1001'", sql2);
 
         await repository.BeginTransactionAsync();
         parameter = await repository.From<Order>()
@@ -1849,7 +1849,7 @@ public class UnitTest6 : UnitTestBase
             })
             .OrderByDescending(f => f.Id)
             .ToSql(out _);
-        Assert.Equal("SELECT a.name FROM sys.objects a,sys.schemas b WHERE a.schema_id=b.schema_id AND a.type='U' AND b.name='dbo' AND (a.name LIKE 'sys_order%');SELECT a.[Id],a.[TenantId],a.[OrderNo],a.[TotalAmount] FROM [sys_order_104_202405] a ORDER BY a.[Id] DESC", sql);
+        Assert.Equal("SELECT a.name FROM sys.objects a,sys.schemas b WHERE a.schema_id=b.schema_id AND a.type='U' AND b.name='dbo' AND (a.name LIKE 'sys_order%');SELECT * FROM (SELECT a.[Id],a.[TenantId],a.[OrderNo],a.[TotalAmount] FROM [sys_order_104_202405] a UNION ALL SELECT a.[Id],a.[TenantId],a.[OrderNo],a.[TotalAmount] FROM [sys_order_104_202406] a) a ORDER BY [Id] DESC", sql);
         var orders = repository.From<Order>()
             .UseTableByRange("104", beginTime, endTime)
             .Select(f => new
@@ -1879,7 +1879,7 @@ public class UnitTest6 : UnitTestBase
            })
            .OrderByDescending(f => f.Id)
            .ToSql(out _);
-        Assert.Equal("SELECT a.name FROM sys.objects a,sys.schemas b WHERE a.schema_id=b.schema_id AND a.type='U' AND b.name='dbo' AND (a.name LIKE 'sys_order%' OR a.name LIKE 'sys_user%');SELECT a.[Id],a.[TenantId],b.[Name] AS [BuyerName],a.[TotalAmount] FROM [sys_order_104_202405] a INNER JOIN [sys_user_104] b ON a.[BuyerId]=b.[Id] ORDER BY a.[Id] DESC", sql);
+        Assert.Equal("SELECT a.name FROM sys.objects a,sys.schemas b WHERE a.schema_id=b.schema_id AND a.type='U' AND b.name='dbo' AND (a.name LIKE 'sys_order%' OR a.name LIKE 'sys_user%');SELECT * FROM (SELECT a.[Id],a.[TenantId],b.[Name] AS [BuyerName],a.[TotalAmount] FROM [sys_order_104_202405] a INNER JOIN [sys_user_104] b ON a.[BuyerId]=b.[Id] UNION ALL SELECT a.[Id],a.[TenantId],b.[Name] AS [BuyerName],a.[TotalAmount] FROM [sys_order_104_202406] a INNER JOIN [sys_user_104] b ON a.[BuyerId]=b.[Id]) a ORDER BY [Id] DESC", sql);
         var orderInfos = repository.From<Order>()
             .UseTableByRange("104", beginTime, endTime)
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
