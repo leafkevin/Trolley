@@ -153,7 +153,7 @@ public class EntityMap
             if (this.KeyMembers.Count == 1 && this.KeyMembers[0].IsAutoIncrement)
                 this.IsAutoIncrementKey = true;
         }
-        //按照数据库的字段顺序排序，保证Returning *时，返回的字段顺序与接收实体字段顺序一致
+        //按照数据库的字段顺序排序，保证返回实体时，返回的字段顺序与接收实体字段顺序一致
         this.memberMappers.Sort((x, y) => x.Position.CompareTo(y.Position));
         this.isBuild = true;
     }

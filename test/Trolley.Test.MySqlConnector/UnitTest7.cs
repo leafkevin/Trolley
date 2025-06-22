@@ -136,7 +136,7 @@ public class UnitTest7 : UnitTestBase
             .From<Page, Menu>()
                 .Where((a, b) => a.Id == b.PageId)
                 .Select((x, y) => new { y.Id, y.ParentId, x.Url })
-            .UnionAll(x => x.From<Menu>()
+            .Union(x => x.From<Menu>()
                 .InnerJoin<Page>((a, b) => a.PageId == b.Id)
                 .Select((x, y) => new { x.Id, x.ParentId, y.Url }))
             .AsCteTable("myCteTable2");
@@ -153,10 +153,18 @@ SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a INNER JOIN `myCteTable1` b
 ),
 `myCteTable2`(`Id`,`ParentId`,`Url`) AS 
 (
-SELECT b.`Id`,b.`ParentId`,a.`Url` FROM `sys_page` a,`sys_menu` b WHERE a.`Id`=b.`PageId` UNION ALL
+SELECT b.`Id`,b.`ParentId`,a.`Url` FROM `sys_page` a,`sys_menu` b WHERE a.`Id`=b.`PageId` UNION
 SELECT a.`Id`,a.`ParentId`,b.`Url` FROM `sys_menu` a INNER JOIN `sys_page` b ON a.`PageId`=b.`Id`
 )
 SELECT b.`Id`,a.`Name`,b.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myCteTable2` b ON a.`Id`=b.`Id`", sql);
+
+        var result1 = repository
+            .From(myCteTable1)
+            .InnerJoin(myCteTable2, (a, b) => a.Id == b.Id)
+            .Select((a, b) => new { b.Id, a.Name, b.ParentId, b.Url })
+            .ToList();
+        Assert.NotNull(result1);
+        Assert.True(result1.Count > 0);
 
         var menuList = repository
             .From<Menu>()
@@ -166,14 +174,6 @@ SELECT b.`Id`,a.`Name`,b.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
                 .InnerJoin(y, (a, b) => a.ParentId == b.Id)
                 .Select((a, b) => new { a.Id, a.Name, a.ParentId }))
             .AsCteTable("MenuList");
-
-        var result1 = repository
-            .From(myCteTable2)
-            .InnerJoin(myCteTable1, (a, b) => a.Id == b.Id)
-            .Select((a, b) => new { a.Id, b.Name, a.ParentId, a.Url })
-            .ToList();
-        Assert.NotNull(result1);
-        Assert.True(result1.Count > 0);
 
         int pageId = 1;
         sql = repository

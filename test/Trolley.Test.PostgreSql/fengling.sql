@@ -76,17 +76,17 @@ CREATE TABLE "public"."sys_order"
     "TenantId" VARCHAR(50) NULL,
     "OrderNo" VARCHAR(50) NULL,
     "ProductCount" INTEGER NULL,
-    "TotalAmount" DECIMAL(18,2) NULL,
+    "TotalAmount" float8 NULL,
     "BuyerId" INTEGER NULL,
     "BuyerSource" VARCHAR(50) NULL,
     "SellerId" INTEGER NULL,
     "Products" JSONB NULL,
     "Disputes" JSONB NULL,
     "IsEnabled" BOOLEAN NULL,
-    "CreatedBy" VARCHAR(50) NOT NULL,
-    "CreatedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "UpdatedBy" VARCHAR(50) NOT NULL,
-    "UpdatedAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "CreatedAt" timestamp(6) NULL DEFAULT NULL,
+    "CreatedBy" int4 NULL DEFAULT NULL,  
+    "UpdatedAt" timestamp(6) NULL DEFAULT NULL,
+    "UpdatedBy" int4 NULL DEFAULT NULL,
     CONSTRAINT "pk_sys_order" PRIMARY KEY("Id")
 );
 COMMENT ON TABLE "public"."sys_order" IS  '订单表';
@@ -101,10 +101,10 @@ COMMENT ON COLUMN "public"."sys_order"."SellerId" IS '卖家ID';
 COMMENT ON COLUMN "public"."sys_order"."Products" IS '产品明细';
 COMMENT ON COLUMN "public"."sys_order"."Disputes" IS '争议';
 COMMENT ON COLUMN "public"."sys_order"."IsEnabled" IS '是否启用';
-COMMENT ON COLUMN "public"."sys_order"."CreatedBy" IS '创建人';
 COMMENT ON COLUMN "public"."sys_order"."CreatedAt" IS '创建日期';
-COMMENT ON COLUMN "public"."sys_order"."UpdatedBy" IS '最后更新人';
+COMMENT ON COLUMN "public"."sys_order"."CreatedBy" IS '创建人';
 COMMENT ON COLUMN "public"."sys_order"."UpdatedAt" IS '最后更新日期';
+COMMENT ON COLUMN "public"."sys_order"."UpdatedBy" IS '最后更新人';
 ----------------TABLE [sys_order] END----------------
 
 -- ----------------------------
@@ -128,6 +128,28 @@ CREATE TABLE "public"."sys_order_104_202405"  (
   "UpdatedAt" timestamp(6) NULL DEFAULT NULL,
   "UpdatedBy" int4 NULL DEFAULT NULL,
   CONSTRAINT "pk_sys_order_104_202405" PRIMARY KEY("Id")
+);
+-- ----------------------------
+-- Table structure for sys_order
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."sys_order_104_202406";
+CREATE TABLE "public"."sys_order_104_202406"  (
+  "Id" varchar(50) NOT NULL,
+  "TenantId" varchar(50) NOT NULL,
+  "OrderNo" varchar(50)  NULL DEFAULT NULL,
+  "ProductCount" int4 NULL DEFAULT NULL,
+  "TotalAmount" float8 NULL DEFAULT NULL,
+  "BuyerId" int4 NULL DEFAULT NULL,
+  "BuyerSource" varchar(50) NULL DEFAULT NULL,
+  "SellerId" int4 NULL DEFAULT NULL,  
+  "Products" jsonb NULL DEFAULT NULL,
+  "Disputes" jsonb NULL DEFAULT NULL,
+  "IsEnabled" bool NULL DEFAULT NULL,
+  "CreatedAt" timestamp(6) NULL DEFAULT NULL,
+  "CreatedBy" int4 NULL DEFAULT NULL,  
+  "UpdatedAt" timestamp(6) NULL DEFAULT NULL,
+  "UpdatedBy" int4 NULL DEFAULT NULL,
+  CONSTRAINT "pk_sys_order_104_202406" PRIMARY KEY("Id")
 );
 -- ----------------------------
 -- Table structure for sys_order
@@ -443,6 +465,28 @@ CREATE TABLE "myschema"."sys_order_104_202405"  (
 -- ----------------------------
 -- Table structure for sys_order
 -- ----------------------------
+DROP TABLE IF EXISTS "myschema"."sys_order_104_202406";
+CREATE TABLE "myschema"."sys_order_104_202406"  (
+  "Id" varchar(50) NOT NULL,
+  "TenantId" varchar(50) NOT NULL,
+  "OrderNo" varchar(50)  NULL DEFAULT NULL,
+  "ProductCount" int4 NULL DEFAULT NULL,
+  "TotalAmount" float8 NULL DEFAULT NULL,
+  "BuyerId" int4 NULL DEFAULT NULL,
+  "BuyerSource" varchar(50) NULL DEFAULT NULL,
+  "SellerId" int4 NULL DEFAULT NULL,  
+  "Products" jsonb NULL DEFAULT NULL,
+  "Disputes" jsonb NULL DEFAULT NULL,
+  "IsEnabled" bool NULL DEFAULT NULL,
+  "CreatedAt" timestamp(6) NULL DEFAULT NULL,
+  "CreatedBy" int4 NULL DEFAULT NULL,  
+  "UpdatedAt" timestamp(6) NULL DEFAULT NULL,
+  "UpdatedBy" int4 NULL DEFAULT NULL,
+  CONSTRAINT "pk_sys_order_104_202406" PRIMARY KEY("Id")
+);
+-- ----------------------------
+-- Table structure for sys_order
+-- ----------------------------
 DROP TABLE IF EXISTS "myschema"."sys_order_105_202405";
 CREATE TABLE "myschema"."sys_order_105_202405"  (
   "Id" varchar(50) NOT NULL,
@@ -555,6 +599,8 @@ CREATE TABLE "myschema"."sys_product" (
 -- ----------------------------
 -- Table structure for sys_user
 -- ----------------------------
+DROP FUNCTION IF EXISTS "myschema"."get_user";
+
 DROP TABLE IF EXISTS "myschema"."sys_user";
 CREATE TABLE "myschema"."sys_user" (
   "Id" int4 NOT NULL,
@@ -664,3 +710,23 @@ BEGIN
 END;
 $BODY$
 LANGUAGE plpgsql
+
+
+
+TRUNCATE TABLE "sys_order_detail";
+INSERT INTO "sys_order_detail" ("Id", "TenantId", "OrderId", "ProductId", "Price", "Quantity", "Amount", "IsEnabled", "CreatedAt", "CreatedBy", "UpdatedAt", "UpdatedBy") VALUES ('1', '1', '1', 1, 299.00, 1, 299.00, 't', '2025-06-22 10:58:02', 1, '2025-06-22 10:58:02', 1);
+INSERT INTO "sys_order_detail" ("Id", "TenantId", "OrderId", "ProductId", "Price", "Quantity", "Amount", "IsEnabled", "CreatedAt", "CreatedBy", "UpdatedAt", "UpdatedBy") VALUES ('2', '1', '1', 2, 159.00, 1, 159.00, 't', '2025-06-22 10:58:02', 1, '2025-06-22 10:58:02', 1);
+INSERT INTO "sys_order_detail" ("Id", "TenantId", "OrderId", "ProductId", "Price", "Quantity", "Amount", "IsEnabled", "CreatedAt", "CreatedBy", "UpdatedAt", "UpdatedBy") VALUES ('3', '2', '1', 3, 69.00, 1, 69.00, 't', '2025-06-22 10:58:02', 1, '2025-06-22 10:58:02', 1);
+INSERT INTO "sys_order_detail" ("Id", "TenantId", "OrderId", "ProductId", "Price", "Quantity", "Amount", "IsEnabled", "CreatedAt", "CreatedBy", "UpdatedAt", "UpdatedBy") VALUES ('4', '1', '2', 1, 299.00, 1, 299.00, 't', '2025-06-22 10:58:02', 1, '2025-06-22 10:58:02', 1);
+INSERT INTO "sys_order_detail" ("Id", "TenantId", "OrderId", "ProductId", "Price", "Quantity", "Amount", "IsEnabled", "CreatedAt", "CreatedBy", "UpdatedAt", "UpdatedBy") VALUES ('5', '2', '2', 3, 69.00, 1, 69.00, 't', '2025-06-22 10:58:02', 1, '2025-06-22 10:58:02', 1);
+INSERT INTO "sys_order_detail" ("Id", "TenantId", "OrderId", "ProductId", "Price", "Quantity", "Amount", "IsEnabled", "CreatedAt", "CreatedBy", "UpdatedAt", "UpdatedBy") VALUES ('6', '3', '3', 2, 199.00, 1, 199.00, 't', '2025-06-22 10:58:02', 1, '2025-06-22 10:58:02', 1);
+INSERT INTO "sys_order_detail" ("Id", "TenantId", "OrderId", "ProductId", "Price", "Quantity", "Amount", "IsEnabled", "CreatedAt", "CreatedBy", "UpdatedAt", "UpdatedBy") VALUES ('7', '1', '3', 1, 550.00, 3, 1650.00, 't', '2025-06-22 10:57:39', 1, '2025-06-22 10:57:39', 1);
+
+TRUNCATE TABLE "sys_menu";
+INSERT INTO "sys_menu" ("Id", "Name", "ParentId", "PageId", "IsEnabled", "CreatedAt", "CreatedBy", "UpdatedAt", "UpdatedBy") VALUES (1, '系统管理', 0, 0, 't', '2025-06-22 11:27:48', 1, '2025-06-22 11:27:48', 1);
+INSERT INTO "sys_menu" ("Id", "Name", "ParentId", "PageId", "IsEnabled", "CreatedAt", "CreatedBy", "UpdatedAt", "UpdatedBy") VALUES (2, '用户管理', 1, 1, 't', '2025-06-22 11:27:48', 1, '2025-06-22 11:27:48', 1);
+INSERT INTO "sys_menu" ("Id", "Name", "ParentId", "PageId", "IsEnabled", "CreatedAt", "CreatedBy", "UpdatedAt", "UpdatedBy") VALUES (3, '角色管理', 1, 2, 't', '2025-06-22 11:27:48', 1, '2025-06-22 11:27:48', 1);
+
+TRUNCATE TABLE "sys_page";
+INSERT INTO "sys_page" ("Id", "Url", "IsEnabled", "CreatedAt", "CreatedBy", "UpdatedAt", "UpdatedBy") VALUES (1, '/user/index', 't', '2025-06-22 11:27:48', 1, '2025-06-22 11:27:48', 1);
+INSERT INTO "sys_page" ("Id", "Url", "IsEnabled", "CreatedAt", "CreatedBy", "UpdatedAt", "UpdatedBy") VALUES (2, '/role/index', 't', '2025-06-22 11:27:48', 1, '2025-06-22 11:27:48', 1);

@@ -105,18 +105,21 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                 foreach (var groupByField in this.GroupByFields)
                 {
                     var memberInfo = groupByField.TargetMember ?? groupByField.FromMember;
-                    if (this.ReaderFields.Exists(f => f.FromMember == memberInfo))
+                    if (this.ReaderFields.Exists(f => f.IsGroupByField && f.TargetMember.Name == memberInfo.Name || f.IsGroupingField))
                         continue;
                     this.ReaderFields.Add(groupByField);
                 }
             }
             if (!string.IsNullOrEmpty(this.OrderBySql))
             {
-                //当有多分表时，有排序，Select字段中，没有完全的分组字段，则需要补全所有分组字段
+                //当有多分表时，有排序，Select字段中，没有完全的排序字段，则需要补全所有排序字段
+                var hasGrouping = this.ReaderFields.Exists(f => f.IsGroupingField);
                 foreach (var orderByField in this.OrderByFields)
                 {
                     var memberInfo = orderByField.Field.TargetMember ?? orderByField.Field.FromMember;
                     if (this.ReaderFields.Exists(f => f.TargetMember.Name == memberInfo.Name || f.FromMember == memberInfo))
+                        continue;
+                    if (hasGrouping && this.GroupByFields.Exists(f => f.TargetMember.Name == memberInfo.Name || f.FromMember == memberInfo))
                         continue;
                     this.ReaderFields.Add(orderByField.Field);
                 }
@@ -139,9 +142,11 @@ public class PostgreSqlQueryVisitor : QueryVisitor
             whereSql = $" WHERE {this.WhereSql}";
             builder.Append(whereSql);
         }
+        //有多分表还有Group By操作，每个分表语句中做Group By操作，Union All语句后，还要再做Group By操作
         if (!string.IsNullOrEmpty(this.GroupBySql))
             builder.Append($" GROUP BY {this.GroupBySql}");
-        if (!string.IsNullOrEmpty(this.HavingSql))
+        //有多分表还有Group By+Having操作，每个分表语句中只做Group By操作，不做Having操作，在Union All语句后，再做Group By+Having操作
+        if (!this.IsManyShardingTables && !string.IsNullOrEmpty(this.HavingSql))
             builder.Append($" HAVING {this.HavingSql}");
 
         string orderBy = null;
@@ -302,7 +307,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                 foreach (var groupByField in this.GroupByFields)
                 {
                     var memberInfo = groupByField.TargetMember ?? groupByField.FromMember;
-                    if (this.ReaderFields.Exists(f => f.FromMember == memberInfo))
+                    if (this.ReaderFields.Exists(f => f.IsGroupByField && f.TargetMember.Name == memberInfo.Name || f.IsGroupingField))
                         continue;
                     this.ReaderFields.Add(groupByField);
                 }
@@ -740,6 +745,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                     sqlSegment.Fields = groupFields;
                 }
                 else sqlSegment = this.GroupByFields[0].Clone();
+                sqlSegment.IsGroupingField = true;
                 return sqlSegment;
             }
             else if (this.IsDistinctOnMember(memberExpr))
@@ -767,6 +773,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                 //此时是Grouping对象字段的引用，最外面可能会更改成员名称，要复制一份，防止更改Grouping对象中的字段
                 var readerField = this.GroupByFields.Find(f => f.TargetMember.Name == memberInfo.Name);
                 sqlSegment = readerField.Clone();
+                sqlSegment.IsGroupingField = true;
                 return sqlSegment;
             }
             else if (this.IsDistinctOnMember(memberExpr.Expression as MemberExpression))
@@ -908,6 +915,10 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                         //IncludeMany表时，fromSegment.AliasName为null
                         if (this.IsNeedTableAlias && !string.IsNullOrEmpty(fromSegment.AliasName))
                             fieldName = fromSegment.AliasName + "." + fieldName;
+
+                        //设置是否是分组字段，以便后面分表添加分组字段处理
+                        if (this.IsSelect && this.GroupByFields != null && this.GroupByFields.Count > 0)
+                            sqlSegment.IsGroupByField = this.GroupByFields.Exists(f => f.FromMember == memberMapper.Member);
                         sqlSegment.Body = fieldName;
                     }
                     else

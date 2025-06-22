@@ -8498,7 +8498,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
                 Buyer = y
             })
             .ToSql(out _);
-        Assert.Equal("SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND b.nspname='public' AND (a.relname LIKE 'sys_order%' OR a.relname LIKE 'sys_user%');SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\",b.\"Id\",b.\"TenantId\",b.\"Name\",b.\"Gender\",b.\"Age\",b.\"CompanyId\",b.\"GuidField\",b.\"SomeTimes\",b.\"SourceType\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\" FROM \"sys_order_104_202405\" a INNER JOIN \"sys_user_104\" b ON a.\"BuyerId\"=b.\"Id\" WHERE a.\"ProductCount\">@p0 UNION ALL SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\",b.\"Id\",b.\"TenantId\",b.\"Name\",b.\"Gender\",b.\"Age\",b.\"CompanyId\",b.\"GuidField\",b.\"SomeTimes\",b.\"SourceType\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\" FROM \"sys_order_105_202405\" a INNER JOIN \"sys_user_105\" b ON a.\"BuyerId\"=b.\"Id\" WHERE a.\"ProductCount\">@p0", sql);
+        Assert.Equal("SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND b.nspname='public' AND (a.relname LIKE 'sys_order%' OR a.relname LIKE 'sys_user%');SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\",b.\"Id\",b.\"TenantId\",b.\"Name\",b.\"Gender\",b.\"Age\",b.\"CompanyId\",b.\"GuidField\",b.\"SomeTimes\",b.\"SourceType\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\" FROM \"sys_order_104_202405\" a INNER JOIN \"sys_user_104\" b ON a.\"BuyerId\"=b.\"Id\" WHERE a.\"ProductCount\">@p0 UNION ALL SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\",b.\"Id\",b.\"TenantId\",b.\"Name\",b.\"Gender\",b.\"Age\",b.\"CompanyId\",b.\"GuidField\",b.\"SomeTimes\",b.\"SourceType\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\" FROM \"sys_order_104_202406\" a INNER JOIN \"sys_user_104\" b ON a.\"BuyerId\"=b.\"Id\" WHERE a.\"ProductCount\">@p0 UNION ALL SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"ProductCount\",a.\"TotalAmount\",a.\"BuyerId\",a.\"BuyerSource\",a.\"SellerId\",a.\"Products\",a.\"Disputes\",a.\"IsEnabled\",a.\"CreatedAt\",a.\"CreatedBy\",a.\"UpdatedAt\",a.\"UpdatedBy\",b.\"Id\",b.\"TenantId\",b.\"Name\",b.\"Gender\",b.\"Age\",b.\"CompanyId\",b.\"GuidField\",b.\"SomeTimes\",b.\"SourceType\",b.\"IsEnabled\",b.\"CreatedAt\",b.\"CreatedBy\",b.\"UpdatedAt\",b.\"UpdatedBy\" FROM \"sys_order_105_202405\" a INNER JOIN \"sys_user_105\" b ON a.\"BuyerId\"=b.\"Id\" WHERE a.\"ProductCount\">@p0", sql);
 
         var result = repository.From<Order>()
             .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
@@ -8566,7 +8566,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
         var sql = repository.From<Order>()
             .UseTableBy("104", DateTime.Parse("2024-05-24"))
             .Where(f => repository.From<User>('b')
-                .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                .UseTableBy("104")
                 .Where(t => t.Id == f.BuyerId && t.Age < 25)
                 .Exists())
             .ToSql(out _);
@@ -8575,7 +8575,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
         var result = repository.From<Order>()
             .UseTableBy("104", DateTime.Parse("2024-05-24"))
             .Where(f => repository.From<User>('b')
-                .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                .UseTableBy("104")
                 .Where(t => t.Id == f.BuyerId && t.Age < 25)
                 .Exists())
             .ToList();
@@ -8593,7 +8593,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
         var sql = repository.From<Order>()
             .UseTableBy("104", DateTime.Parse("2024-05-24"))
             .Where(f => repository.From<User>('b')
-                .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                .UseTableBy("104")
                 .InnerJoin<OrderDetail>((x, y) => f.Id == y.OrderId)
                 .UseTableBy("104", DateTime.Parse("2024-05-24"))
                 .Where((x, y) => x.Id == f.BuyerId && x.Age <= 25 && y.Price > 100)
@@ -8604,7 +8604,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
         sql = repository.From<Order>()
             .UseTableBy("104", DateTime.Parse("2024-05-24"))
             .Where(f => repository.From<User>('b')
-                .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                .UseTableBy("104")
                 .InnerJoin<OrderDetail>((x, y) => f.Id == y.OrderId)
                 .UseTableBy("104", DateTime.Parse("2024-05-24"))
                 .Where((x, y) => x.Id == f.BuyerId && x.Age <= 25 && y.Price > 100)
@@ -8615,7 +8615,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
         var result = repository.From<Order>()
             .UseTableBy("104", DateTime.Parse("2024-05-24"))
             .Where(f => repository.From<User>('b')
-                .UseTableBy("104", DateTime.Parse("2024-05-24"))
+                .UseTableBy("104")
                 .InnerJoin<OrderDetail>((x, y) => f.Id == y.OrderId)
                 .UseTableBy("104", DateTime.Parse("2024-05-24"))
                 .Where((x, y) => x.Id == f.BuyerId && x.Age <= 25 && y.Price > 100)
@@ -8853,7 +8853,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
             })
             .OrderByDescending(f => f.Id)
             .ToSql(out _);
-        Assert.Equal("SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND b.nspname='public' AND (a.relname LIKE 'sys_order%');SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"TotalAmount\" FROM \"sys_order_104_202405\" a ORDER BY a.\"Id\" DESC", sql);
+        Assert.Equal("SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND b.nspname='public' AND (a.relname LIKE 'sys_order%');SELECT * FROM (SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"TotalAmount\" FROM \"sys_order_104_202405\" a UNION ALL SELECT a.\"Id\",a.\"TenantId\",a.\"OrderNo\",a.\"TotalAmount\" FROM \"sys_order_104_202406\" a) a ORDER BY \"Id\" DESC", sql);
         var orders = repository.From<Order>()
             .UseTableByRange("104", beginTime, endTime)
             .Select(f => new
@@ -8883,7 +8883,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
            })
            .OrderByDescending(f => f.Id)
            .ToSql(out _);
-        Assert.Equal("SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND b.nspname='public' AND (a.relname LIKE 'sys_order%' OR a.relname LIKE 'sys_user%');SELECT a.\"Id\",a.\"TenantId\",b.\"Name\" AS \"BuyerName\",a.\"TotalAmount\" FROM \"sys_order_104_202405\" a INNER JOIN \"sys_user_104\" b ON a.\"BuyerId\"=b.\"Id\" ORDER BY a.\"Id\" DESC", sql);
+        Assert.Equal("SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND b.nspname='public' AND (a.relname LIKE 'sys_order%' OR a.relname LIKE 'sys_user%');SELECT * FROM (SELECT a.\"Id\",a.\"TenantId\",b.\"Name\" AS \"BuyerName\",a.\"TotalAmount\" FROM \"sys_order_104_202405\" a INNER JOIN \"sys_user_104\" b ON a.\"BuyerId\"=b.\"Id\" UNION ALL SELECT a.\"Id\",a.\"TenantId\",b.\"Name\" AS \"BuyerName\",a.\"TotalAmount\" FROM \"sys_order_104_202406\" a INNER JOIN \"sys_user_104\" b ON a.\"BuyerId\"=b.\"Id\") a ORDER BY \"Id\" DESC", sql);
         var orderInfos = repository.From<Order>()
             .UseTableByRange("104", beginTime, endTime)
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)

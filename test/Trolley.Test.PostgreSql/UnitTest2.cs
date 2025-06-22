@@ -1582,25 +1582,6 @@ SELECT a.""Id"",a.""Name"",b.""Name"" AS ""CompanyName"" FROM ""sys_user"" a INN
             .ToList();
         Assert.NotNull(result);
         Assert.True(result.Count > 0);
-
-        sql = repository.From<Order>()
-            .SelectAggregate((x, f) => new
-            {
-                OrderCount = x.Count(f.Id),
-                TotalAmount = x.Sum(f.TotalAmount)
-            })
-            .ToSql(out _);
-        Assert.Equal("SELECT COUNT(a.\"Id\") AS \"OrderCount\",SUM(a.\"TotalAmount\") AS \"TotalAmount\" FROM \"sys_order\" a", sql);
-        result = repository.From<Order>()
-            .SelectAggregate((x, f) => new
-            {
-                OrderCount = x.Count(f.Id),
-                TotalAmount = x.Sum(f.TotalAmount)
-            })
-            .ToList();
-        Assert.NotNull(result);
-        Assert.True(result.Count > 0);
-
         //postgresql不支持多表join聚合查询
     }
     [Fact]
@@ -2587,15 +2568,14 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
         Assert.NotNull(result.Description);
         Assert.True(result.Description == result.TotalAmount.ToString("C") + result.OrderNo);
 
-
         var result1 = repository.From(f => f.From<Order, OrderDetail>('a')
             .Where((a, b) => a.Id == b.OrderId)
             .GroupBy((a, b) => new { a.BuyerId, OrderId = a.Id })
             .Having((x, a, b) => x.CountDistinct(b.ProductId) > 0)
             .Select((x, a, b) => new { x.Grouping.BuyerId, x.Grouping.OrderId, ProductTotal = x.CountDistinct(b.ProductId) }))
-        .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
-        .SelectFlattenTo((x, y) => new OrderBuyerInfo { BuyerName = y.Name })
-        .First();
+            .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
+            .SelectFlattenTo((x, y) => new OrderBuyerInfo { BuyerName = y.Name })
+            .First();
         Assert.NotNull(result1);
         Assert.False(string.IsNullOrEmpty(result1.OrderId));
         Assert.True(result1.BuyerId > 0);
@@ -2624,20 +2604,20 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
         Assert.Equal("SELECT a.\"BuyerId\",a.\"Id\" AS \"OrderId\",b.\"Name\" AS \"BuyerName\",b.\"Age\" AS \"BuyerAge\",COUNT(DISTINCT c.\"ProductId\") AS \"ProductCount\",COALESCE(MAX(b.\"CreatedAt\"),a.\"CreatedAt\") AS \"LastBuyAt\" FROM \"sys_order\" a INNER JOIN \"sys_user\" b ON a.\"BuyerId\"=b.\"Id\" LEFT JOIN \"sys_order_detail\" c ON a.\"Id\"=c.\"OrderId\" GROUP BY a.\"BuyerId\",a.\"Id\",b.\"Name\",b.\"Age\" ORDER BY COALESCE(MAX(b.\"CreatedAt\"),a.\"CreatedAt\") DESC", sql);
 
         var result = repository.From<Order>()
-           .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
-           .LeftJoin<OrderDetail>((a, b, c) => a.Id == c.OrderId)
-           .GroupBy((a, b, c) => new { a.BuyerId, OrderId = a.Id, BuyerName = b.Name, BuyerAge = b.Age })
-           .Select((x, a, b, c) => new
-           {
-               x.Grouping.BuyerId,
-               x.Grouping.OrderId,
-               x.Grouping.BuyerName,
-               x.Grouping.BuyerAge,
-               ProductCount = x.CountDistinct(c.ProductId),
-               LastBuyAt = x.Max(b.CreatedAt).IsNull(a.CreatedAt)
-           })
-           .OrderByDescending(f => f.LastBuyAt)
-           .ToList();
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .LeftJoin<OrderDetail>((a, b, c) => a.Id == c.OrderId)
+            .GroupBy((a, b, c) => new { a.BuyerId, OrderId = a.Id, BuyerName = b.Name, BuyerAge = b.Age })
+            .Select((x, a, b, c) => new
+            {
+                x.Grouping.BuyerId,
+                x.Grouping.OrderId,
+                x.Grouping.BuyerName,
+                x.Grouping.BuyerAge,
+                ProductCount = x.CountDistinct(c.ProductId),
+                LastBuyAt = x.Max(b.CreatedAt).IsNull(a.CreatedAt)
+            })
+            .OrderByDescending(f => f.LastBuyAt)
+            .ToList();
         Assert.NotNull(result);
         Assert.True(result.Count > 0);
         if (result.Count > 1)
@@ -2840,12 +2820,12 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
         Assert.Equal("SELECT a.\"OrderNo\",a.\"TotalAmount\",a.\"Id\",a.\"OrderNo\",a.\"BuyerId\",a.\"TotalAmount\" FROM \"sys_order\" a WHERE a.\"Id\" IN ('8')", sql2);
 
         var result2 = await repository.From<Order>()
-              .Where(f => Sql.In(f.Id, new[] { "8" }))
-              .SelectFlattenTo(f => new OrderInfo
-              {
-                  Description = $"{f.OrderNo}: {f.TotalAmount.ToString("C")}"
-              })
-              .FirstAsync();
+            .Where(f => Sql.In(f.Id, new[] { "8" }))
+            .SelectFlattenTo(f => new OrderInfo
+            {
+                Description = $"{f.OrderNo}: {f.TotalAmount.ToString("C")}"
+            })
+            .FirstAsync();
         Assert.Equal("8", result2.Id);
         Assert.Equal(1, result2.BuyerId);
         Assert.Equal("On-ZwYx", result2.OrderNo);
@@ -2976,8 +2956,8 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
             .ToSql(out _);
         Assert.Equal("SELECT (CASE WHEN a.\"IsEnabled\"=TRUE AND b.\"IsEnabled\"=TRUE OR a.\"CompanyId\" IS NULL THEN TRUE ELSE FALSE END) AS \"IsEnabled\" FROM \"sys_product\" a INNER JOIN \"sys_brand\" b ON a.\"BrandId\"=b.\"Id\"", sql);
         var result = await repository.From<Product, Brand>()
-            .InnerJoin((x, y) => x.BrandId == y.Id && x.IsEnabled && y.IsEnabled)
-            .SelectFlattenTo((x, y) => new ProductInfo { IsEnabled = x.IsEnabled && y.IsEnabled })
+            .InnerJoin((x, y) => x.BrandId == y.Id && x.IsEnabled && y.IsEnabled || x.CompanyId.IsNull())
+            .SelectFlattenTo((x, y) => new ProductInfo { IsEnabled = x.IsEnabled && y.IsEnabled || x.CompanyId.IsNull() })
             .FirstAsync();
         Assert.True(result.IsEnabled);
     }

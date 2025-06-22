@@ -147,11 +147,14 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             }
             if (!string.IsNullOrEmpty(this.OrderBySql))
             {
-                //当有多分表时，有排序，Select字段中，没有完全的分组字段，则需要补全所有分组字段
+                //当有多分表时，有排序，Select字段中，没有完全的排序字段，则需要补全所有排序字段
+                var hasGrouping = this.ReaderFields.Exists(f => f.IsGroupingField);
                 foreach (var orderByField in this.OrderByFields)
                 {
                     var memberInfo = orderByField.Field.TargetMember ?? orderByField.Field.FromMember;
                     if (this.ReaderFields.Exists(f => f.TargetMember.Name == memberInfo.Name || f.FromMember == memberInfo))
+                        continue;
+                    if (hasGrouping && this.GroupByFields.Exists(f => f.TargetMember.Name == memberInfo.Name || f.FromMember == memberInfo))
                         continue;
                     this.ReaderFields.Add(orderByField.Field);
                 }
@@ -333,7 +336,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 //当有多分表时，有分组，Select字段中，没有完全的分组字段，则需要补全所有分组字段
                 foreach (var groupByField in this.GroupByFields)
                 {
-                    if (this.ReaderFields.Exists(f => f.FromMember == groupByField.FromMember))
+                    var memberInfo = groupByField.TargetMember ?? groupByField.FromMember;
+                    if (this.ReaderFields.Exists(f => f.IsGroupByField && f.TargetMember.Name == memberInfo.Name || f.IsGroupingField))
                         continue;
                     this.ReaderFields.Add(groupByField);
                 }
@@ -419,43 +423,52 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var builder = new StringBuilder();
         if (this.GroupByFields != null)
         {
-            int index = 0;
-            foreach (var groupByField in this.GroupByFields)
+            for (int i = 0; i < this.GroupByFields.Count; i++)
             {
+                var groupByField = this.GroupByFields[i];
                 var fieldName = this.OrmProvider.GetFieldName(groupByField.TargetMember.Name);
-                if (index > 0) builder.Append(',');
+                if (i > 0) builder.Append(',');
                 builder.Append(fieldName);
-                index++;
             }
-            groupBy = " GROUP BY " + builder.ToString();
+            groupBy = "GROUP BY " + builder.ToString();
 
             builder.Clear();
             for (int i = 0; i < this.ReaderFields.Count; i++)
             {
                 var readerField = this.ReaderFields[i];
-                var fieldName = this.OrmProvider.GetFieldName(readerField.TargetMember.Name);
+                string fieldName = null;
+                if (readerField.IsGroupingField)
+                {
+                    for (int j = 0; j < readerField.Fields.Count; j++)
+                    {
+                        var childReaderField = readerField.Fields[j];
+                        fieldName = this.OrmProvider.GetFieldName(childReaderField.TargetMember.Name);
+                        if (j > 0) builder.Append(',');
+                        builder.Append(fieldName);
+                    }
+                    continue;
+                }
+                fieldName = this.OrmProvider.GetFieldName(readerField.TargetMember.Name);
                 if (readerField.IsAggField)
                     fieldName = $"{readerField.ShardingAggFunc}({fieldName}) AS {fieldName}";
                 if (i > 0) builder.Append(',');
                 builder.Append(fieldName);
-                index++;
             }
             selectSql = builder.ToString();
         }
         if (this.OrderByFields != null)
         {
-            int index = 0;
             builder.Clear();
-            foreach (var orderByField in this.OrderByFields)
+            for (int i = 0; i < this.OrderByFields.Count; i++)
             {
+                var orderByField = this.OrderByFields[i];
                 var fieldName = this.OrmProvider.GetFieldName(orderByField.Field.TargetMember.Name);
-                if (index > 0) builder.Append(',');
+                if (i > 0) builder.Append(',');
                 builder.Append(fieldName);
                 if (!string.IsNullOrEmpty(orderByField.OrderSuffix))
                     builder.Append(orderByField.OrderSuffix);
-                index++;
             }
-            orderBy = " ORDER BY " + builder.ToString();
+            orderBy = "ORDER BY " + builder.ToString();
         }
 
         builder.Clear();

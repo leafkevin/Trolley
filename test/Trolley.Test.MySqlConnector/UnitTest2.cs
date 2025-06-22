@@ -2576,7 +2576,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
             .SelectFlattenTo((x, y) => new OrderBuyerInfo { BuyerName = y.Name })
             .First();
-        Assert.NotNull(result);
+        Assert.NotNull(result1);
         Assert.False(string.IsNullOrEmpty(result1.OrderId));
         Assert.True(result1.BuyerId > 0);
         Assert.Null(result1.OrderNo);

@@ -1616,7 +1616,7 @@ public class UnitTest6 : UnitTestBase
             })
             .OrderByDescending(f => f.Id)
             .ToSql(out _);
-        Assert.Equal("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_SCHEMA='fengling' AND (TABLE_NAME LIKE 'sys_order%');SELECT * FROM (SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`TotalAmount` FROM `sys_order_104_202405` a UNION ALL SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`TotalAmount` FROM `sys_order_104_202406` a) a  ORDER BY `Id` DESC", sql);
+        Assert.Equal("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_SCHEMA='fengling' AND (TABLE_NAME LIKE 'sys_order%');SELECT * FROM (SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`TotalAmount` FROM `sys_order_104_202406` a UNION ALL SELECT a.`Id`,a.`TenantId`,a.`OrderNo`,a.`TotalAmount` FROM `sys_order_104_202405` a) a ORDER BY `Id` DESC", sql);
         var orders = repository.From<Order>()
             .UseTableByRange("104", beginTime, endTime)
             .Select(f => new
@@ -1646,7 +1646,7 @@ public class UnitTest6 : UnitTestBase
            })
            .OrderByDescending(f => f.Id)
            .ToSql(out _);
-        Assert.Equal("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_SCHEMA='fengling' AND (TABLE_NAME LIKE 'sys_order%' OR TABLE_NAME LIKE 'sys_user%');SELECT * FROM (SELECT a.`Id`,a.`TenantId`,b.`Name` AS `BuyerName`,a.`TotalAmount` FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` UNION ALL SELECT a.`Id`,a.`TenantId`,b.`Name` AS `BuyerName`,a.`TotalAmount` FROM `sys_order_104_202406` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id`) a  ORDER BY `Id` DESC", sql);
+        Assert.Equal("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_SCHEMA='fengling' AND (TABLE_NAME LIKE 'sys_order%' OR TABLE_NAME LIKE 'sys_user%');SELECT * FROM (SELECT a.`Id`,a.`TenantId`,b.`Name` AS `BuyerName`,a.`TotalAmount` FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` UNION ALL SELECT a.`Id`,a.`TenantId`,b.`Name` AS `BuyerName`,a.`TotalAmount` FROM `sys_order_104_202406` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id`) a ORDER BY `Id` DESC", sql);
         var orderInfos = repository.From<Order>()
             .UseTableByRange("104", beginTime, endTime)
             .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
@@ -1726,55 +1726,95 @@ public class UnitTest6 : UnitTestBase
     [Fact]
     public async Task ManySharding_GroupBy()
     {
-        //await this.InitSharding();
+        await this.InitSharding();
         var repository = this.dbFactory.Create();
         var tenantId = "104";
         var beginTime = DateTime.Parse("2024-04-05");
         var endTime = DateTime.Parse("2024-06-05");
-        var result = await repository.From<Order>()
-            .UseTableByRange(tenantId, beginTime, endTime)
+        //var sql1 = repository.From<Order>()
+        //    .UseTableByRange(tenantId, beginTime, endTime)
+        //    .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+        //    .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
+        //        => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+        //    .GroupBy((a, b) => new { a.BuyerId, a.CreatedAt.Year })
+        //    .Select((x, a, b) => new { a.BuyerId, a.CreatedAt.Year, Count = x.Count(a.Id) })
+        //    .ToSql(out _);
+        //Assert.Equal("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_SCHEMA='fengling' AND (TABLE_NAME LIKE 'sys_order%' OR TABLE_NAME LIKE 'sys_user%');SELECT `BuyerId`,`Year`,SUM(`Count`) AS `Count` FROM (SELECT a.`BuyerId`,YEAR(a.`CreatedAt`) AS `Year`,COUNT(a.`Id`) AS `Count` FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` GROUP BY a.`BuyerId`,YEAR(a.`CreatedAt`) UNION ALL SELECT a.`BuyerId`,YEAR(a.`CreatedAt`) AS `Year`,COUNT(a.`Id`) AS `Count` FROM `sys_order_104_202406` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` GROUP BY a.`BuyerId`,YEAR(a.`CreatedAt`)) a GROUP BY `BuyerId`,`Year`", sql1);
+
+        //var result1 = await repository.From<Order>()
+        //    .UseTableByRange(tenantId, beginTime, endTime)
+        //    .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+        //    .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
+        //        => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+        //    .GroupBy((a, b) => new { a.BuyerId, a.CreatedAt.Year })
+        //    .Select((x, a, b) => new { a.BuyerId, a.CreatedAt.Year, Count = x.Count(a.Id) })
+        //    .ToListAsync();
+        //Assert.NotEmpty(result1);
+
+        //var sql2 = repository.From<Order>()
+        //    .UseTable("sys_order_104_202405", "sys_order_105_202405")
+        //    .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+        //    .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
+        //        => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+        //    .GroupBy((a, b) => new { a.BuyerId, a.CreatedAt.Year })
+        //    .Select((x, a, b) => new { a.BuyerId, a.CreatedAt.Year, Count = x.Count(a.Id) })
+        //    .OrderBy(f => f.Year)
+        //    .ToSql(out _);
+        //Assert.Equal("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_SCHEMA='fengling' AND (TABLE_NAME LIKE 'sys_user%');SELECT `BuyerId`,`Year`,SUM(`Count`) AS `Count` FROM (SELECT a.`BuyerId`,YEAR(a.`CreatedAt`) AS `Year`,COUNT(a.`Id`) AS `Count` FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` GROUP BY a.`BuyerId`,YEAR(a.`CreatedAt`) UNION ALL SELECT a.`BuyerId`,YEAR(a.`CreatedAt`) AS `Year`,COUNT(a.`Id`) AS `Count` FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` GROUP BY a.`BuyerId`,YEAR(a.`CreatedAt`)) a GROUP BY `BuyerId`,`Year` ORDER BY `Year`", sql2);
+
+        //var result2 = await repository.From<Order>()
+        //    .UseTable("sys_order_104_202405", "sys_order_105_202405")
+        //    .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+        //    .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
+        //        => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+        //    .GroupBy((a, b) => new { a.BuyerId, a.CreatedAt.Year })
+        //    .Select((x, a, b) => new { a.BuyerId, a.CreatedAt.Year, Count = x.Count(a.Id) })
+        //    .OrderBy(f => f.Year)
+        //    .ToListAsync();
+        //Assert.NotEmpty(result2);
+
+        var sql3 = repository.From<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
             .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
                 => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
-            .GroupBy((a, b) => new { a.BuyerId, a.CreatedAt.Year })
-            .Select((x, a, b) => new { a.BuyerId, a.CreatedAt.Year, Count = x.Count(a.Id) })
+            .GroupBy((a, b) => new { a.BuyerId, BuyerName = b.Name, a.CreatedAt.Year })
+            .Having((x, a, b) => x.Count("*") > 1)
+            .Select((x, a, b) => new { x.Grouping, Count = x.Count(a.Id) })
+            .OrderBy(f => f.Grouping.Year)
+            .ToSql(out _);
+        Assert.Equal("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_SCHEMA='fengling' AND (TABLE_NAME LIKE 'sys_user%');SELECT `BuyerId`,`BuyerName`,`Year`,SUM(`Count`) AS `Count` FROM (SELECT a.`BuyerId`,b.`Name` AS `BuyerName`,YEAR(a.`CreatedAt`) AS `Year`,COUNT(a.`Id`) AS `Count` FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` GROUP BY a.`BuyerId`,b.`Name`,YEAR(a.`CreatedAt`) UNION ALL SELECT a.`BuyerId`,b.`Name` AS `BuyerName`,YEAR(a.`CreatedAt`) AS `Year`,COUNT(a.`Id`) AS `Count` FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` GROUP BY a.`BuyerId`,b.`Name`,YEAR(a.`CreatedAt`)) a GROUP BY `BuyerId`,`BuyerName`,`Year` ORDER BY `Year`", sql3);
+
+        var result3 = await repository.From<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
+                => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+            .GroupBy((a, b) => new { a.BuyerId, BuyerName = b.Name, a.CreatedAt.Year })
+            .Having((x, a, b) => x.Count("*") > 1)
+            .Select((x, a, b) => new { x.Grouping, Count = x.Count(a.Id) })
+            .OrderBy(f => f.Grouping.Year)
             .ToListAsync();
-        if (result != null)
-            Assert.NotEmpty(result);
-
-        var result1 = await repository.From<Order>()
-           .UseTable("sys_order_104_202405", "sys_order_105_202405")
-           .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
-           .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
-               => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
-           .GroupBy((a, b) => new { a.BuyerId, a.CreatedAt.Year })
-           .Select((x, a, b) => new { a.BuyerId, a.CreatedAt.Year, Count = x.Count(a.Id) })
-           .OrderBy(f => f.Year)
-           .ToListAsync();
-        if (result1 != null)
-            Assert.NotEmpty(result1);
-
-        var result2 = await repository.From<Order>()
-          .UseTable("sys_order_104_202405", "sys_order_105_202405")
-          //.InnerJoin<User>((a, b) => a.BuyerId == b.Id)
-          //.UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
-          //    => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
-          .GroupBy(a => new { a.BuyerId, a.CreatedAt.Year })
-          .Having((x, a) => x.Count("*") > 1)
-          .Select((x, a) => new { a.BuyerId, a.CreatedAt.Year, Count = x.Count(a.Id) })
-          .OrderBy(f => f.Year)
-          .ToListAsync();
-        if (result2 != null)
-            Assert.NotEmpty(result2);
+        Assert.NotEmpty(result3);
     }
     [Fact]
     public async Task ManySharding_Paging()
     {
-        //await this.InitSharding();
+        await this.InitSharding();
         var repository = this.dbFactory.Create();
         var tenantId = "104";
         var beginTime = DateTime.Parse("2024-04-05");
         var endTime = DateTime.Parse("2024-06-05");
+        var sql1 = repository.From<Order>()
+            .UseTableByRange(tenantId, beginTime, endTime)
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
+                => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+            .Select((a, b) => new { a.Id, a.BuyerId, a.TotalAmount, a.CreatedAt })
+            .Page(1, 10)
+            .ToSql(out _);
+        Assert.Equal("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_SCHEMA='fengling' AND (TABLE_NAME LIKE 'sys_order%' OR TABLE_NAME LIKE 'sys_user%');SELECT * FROM (SELECT a.`Id`,a.`BuyerId`,a.`TotalAmount`,a.`CreatedAt` FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` UNION ALL SELECT a.`Id`,a.`BuyerId`,a.`TotalAmount`,a.`CreatedAt` FROM `sys_order_104_202406` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id`) b LIMIT 10", sql1);
+
         var result = await repository.From<Order>()
             .UseTableByRange(tenantId, beginTime, endTime)
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
@@ -1783,10 +1823,19 @@ public class UnitTest6 : UnitTestBase
             .Select((a, b) => new { a.Id, a.BuyerId, a.TotalAmount, a.CreatedAt })
             .Page(1, 10)
             .ToPageListAsync();
-        if (result != null)
-        {
-            Assert.Equal(10, result.Count);
-        }
+        Assert.Equal(10, result.Count);
+
+        var sql2 = repository.From<Order>()
+            .UseTableByRange(tenantId, beginTime, endTime)
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
+                => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+            .Select((a, b) => new { a.Id, a.BuyerId, a.TotalAmount, a.CreatedAt })
+            .Page(3, 10)
+            .OrderBy(f => f.BuyerId).OrderByDescending(f => f.CreatedAt)
+            .ToSql(out _);
+        Assert.Equal("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_SCHEMA='fengling' AND (TABLE_NAME LIKE 'sys_order%' OR TABLE_NAME LIKE 'sys_user%');SELECT * FROM (SELECT a.`Id`,a.`BuyerId`,a.`TotalAmount`,a.`CreatedAt` FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` UNION ALL SELECT a.`Id`,a.`BuyerId`,a.`TotalAmount`,a.`CreatedAt` FROM `sys_order_104_202406` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id`) b ORDER BY `BuyerId`,`CreatedAt` DESC LIMIT 10 OFFSET 20", sql2);
+
         result = await repository.From<Order>()
             .UseTableByRange(tenantId, beginTime, endTime)
             .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
@@ -1796,10 +1845,7 @@ public class UnitTest6 : UnitTestBase
             .Page(3, 10)
             .OrderBy(f => f.BuyerId).OrderByDescending(f => f.CreatedAt)
             .ToPageListAsync();
-        if (result != null)
-        {
-            Assert.Equal(10, result.Count);
-        }
+        Assert.Equal(10, result.Count);
     }
     [Fact]
     public async Task ManySharding_Aggregate()
@@ -2035,24 +2081,21 @@ public class UnitTest6 : UnitTestBase
         var tenantId = "104";
         var now = DateTime.Now;
         var repository = this.dbFactory.Create();
-        var tableNames = repository.GetShardingTableNames<OrderDetail>(f => f.Contains(tenantId));
-        tableNames = await repository.From<OrderDetail>()
-            .UseTableSchema("fengling")
-            .GetShardingTableNamesAsync(f => f.Contains(tenantId));
-        //var tableName2 = repository.GetShardingTableNameBy<OrderDetail>(tenantId, now.AddMonths(1));
-        //var tableNames = new List<string> { tableName1, tableName2 };
-        //var existedTableNames = repository.GetShardingTableNames<OrderDetail>(f => tableNames.Contains(f));
-        //string sql = null;
-        //if (existedTableNames.Count > 0)
-        //{
-        //    sql = "DROP TABLE " + string.Join(";DROP TABLE ", existedTableNames);
-        //    await repository.ExecuteAsync(sql);
-        //}
-        //repository.CreateShardingTable<OrderDetail>(tableName1);
-        //await repository.CreateShardingTableAsync<OrderDetail>(tableName2);
-        //sql = $"DROP TABLE {tableName1};DROP TABLE {tableName2}";
-        //await repository.ExecuteAsync(sql);
-        //repository.CreateShardingTableBy<OrderDetail>(tenantId, now);
+        var tableName1 = repository.GetShardingTableNameBy<OrderDetail>(tenantId, now);
+        var tableName2 = repository.GetShardingTableNameBy<OrderDetail>(tenantId, now.AddMonths(1));
+        var tableNames = new List<string> { tableName1, tableName2 };
+        var existedTableNames = repository.GetShardingTableNames<OrderDetail>(f => tableNames.Contains(f));
+        string sql = null;
+        if (existedTableNames.Count > 0)
+        {
+            sql = "DROP TABLE " + string.Join(";DROP TABLE ", existedTableNames);
+            await repository.ExecuteAsync(sql);
+        }
+        repository.CreateShardingTable<OrderDetail>(tableName1);
+        await repository.CreateShardingTableAsync<OrderDetail>(tableName2);
+        sql = $"DROP TABLE {tableName1};DROP TABLE {tableName2}";
+        await repository.ExecuteAsync(sql);
+        repository.CreateShardingTableBy<OrderDetail>(tenantId, now);
         await repository.CreateShardingTableByAsync<OrderDetail>(tenantId, now.AddMonths(1));
     }
 }

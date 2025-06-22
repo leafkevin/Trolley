@@ -251,9 +251,9 @@ public class Query<T> : QueryBase, IQuery<T>
     #endregion
 
     #region UseMaster
-    public virtual IQuery<T> UseMaster(bool isUseMaster = true)
+    public virtual IQuery<T> UseMaster()
     {
-        this.Visitor.UseMaster(isUseMaster);
+        this.Visitor.UseMaster();
         return this;
     }
     #endregion

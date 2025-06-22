@@ -20,7 +20,7 @@ public interface IMultipleQuery : IDisposable
     /// </summary>
     /// <param name="isUseMaster">使用主库为true，默认值为true</param>
     /// <returns>返回查询对象</returns>
-    IMultipleQuery UseMaster(bool isUseMaster = true);
+    IMultipleQuery UseMaster();
     #endregion
 
     #region GetShardingTableNames

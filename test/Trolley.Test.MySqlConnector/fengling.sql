@@ -14,6 +14,10 @@
  Date: 29/04/2023 22:53:19
 */
 
+CREATE DATABASE `fengling` CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
+CREATE DATABASE `fengling1` CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
+CREATE DATABASE `fengling2` CHARACTER SET 'utf8mb4' COLLATE 'utf8mb4_unicode_ci';
+
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
@@ -109,6 +113,28 @@ CREATE TABLE `sys_order_104_202405`  (
   CONSTRAINT `pk_sys_order_104_202405` PRIMARY KEY (`Id`)
 );
 -- ----------------------------
+-- Table structure for sys_order_104_202406
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_order_104_202406`;
+CREATE TABLE `sys_order_104_202406`  (
+  `Id` varchar(50) NOT NULL,
+  `TenantId` varchar(50) NOT NULL,
+  `OrderNo` varchar(50) NULL DEFAULT NULL,
+  `ProductCount` int NULL DEFAULT NULL,
+  `TotalAmount` double NULL DEFAULT NULL,
+  `BuyerId` int NULL DEFAULT NULL,
+  `BuyerSource` varchar(50) NULL DEFAULT NULL,
+  `SellerId` int NULL DEFAULT NULL,
+  `Products` JSON NULL DEFAULT NULL,
+  `Disputes` JSON NULL DEFAULT NULL,
+  `IsEnabled` tinyint(1) NULL DEFAULT NULL,
+  `CreatedAt` datetime NULL DEFAULT NULL,
+  `CreatedBy` int NULL DEFAULT NULL,
+  `UpdatedAt` datetime NULL DEFAULT NULL,
+  `UpdatedBy` int NULL DEFAULT NULL,
+  CONSTRAINT `pk_sys_order_104_202406` PRIMARY KEY (`Id`)
+);
+-- ----------------------------
 -- Table structure for sys_order_105_202405
 -- ----------------------------
 DROP TABLE IF EXISTS `sys_order_105_202405`;
@@ -147,7 +173,7 @@ CREATE TABLE `sys_order_detail`  (
   `CreatedBy` int NULL DEFAULT NULL,
   `UpdatedAt` datetime NULL DEFAULT NULL,
   `UpdatedBy` int NULL DEFAULT NULL,
-  CONSTRAINT `pk_sys_sys_order_detail` PRIMARY KEY (`Id`)
+  CONSTRAINT `pk_sys_order_detail` PRIMARY KEY (`Id`)
 );
 -- ----------------------------
 -- Table structure for sys_order_detail_104_202405
@@ -166,7 +192,7 @@ CREATE TABLE `sys_order_detail_104_202405`  (
   `CreatedBy` int NULL DEFAULT NULL,
   `UpdatedAt` datetime NULL DEFAULT NULL,
   `UpdatedBy` int NULL DEFAULT NULL,
-  CONSTRAINT `pk_sys_sys_order_detail_104_202405` PRIMARY KEY (`Id`)
+  CONSTRAINT `pk_sys_order_detail_104_202405` PRIMARY KEY (`Id`)
 );
 -- ----------------------------
 -- Table structure for sys_order_detail_105_202405
@@ -334,3 +360,41 @@ BEGIN
 END;
 $$
 DELIMITER;
+
+
+
+TRUNCATE TABLE `fengling1`.`sys_order_detail`;
+INSERT INTO `fengling1`.`sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('1', '1', '1', 1, 299.00, 1, 299.00, 1, '2025-06-22 10:58:02', 1, '2025-06-22 10:58:02', 1);
+INSERT INTO `fengling1`.`sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('2', '1', '1', 2, 159.00, 1, 159.00, 1, '2025-06-22 10:58:02', 1, '2025-06-22 10:58:02', 1);
+INSERT INTO `fengling1`.`sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('3', '2', '1', 3, 69.00, 1, 69.00, 1, '2025-06-22 10:58:02', 1, '2025-06-22 10:58:02', 1);
+INSERT INTO `fengling1`.`sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('4', '1', '2', 1, 299.00, 1, 299.00, 1, '2025-06-22 10:58:02', 1, '2025-06-22 10:58:02', 1);
+INSERT INTO `fengling1`.`sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('5', '2', '2', 3, 69.00, 1, 69.00, 1, '2025-06-22 10:58:02', 1, '2025-06-22 10:58:02', 1);
+INSERT INTO `fengling1`.`sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('6', '3', '3', 2, 199.00, 1, 199.00, 1, '2025-06-22 10:58:02', 1, '2025-06-22 10:58:02', 1);
+INSERT INTO `fengling1`.`sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('7', '1', '3', 1, 550.00, 3, 1650.00, 1, '2025-06-22 10:57:39', 1, '2025-06-22 10:57:39', 1);
+
+TRUNCATE TABLE `fengling1`.`sys_menu`;
+INSERT INTO `fengling1`.`sys_menu` (`Id`, `Name`, `ParentId`, `PageId`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES (1, '系统管理', 0, 0, 1, '2025-06-22 11:27:48', 1, '2025-06-22 11:27:48', 1);
+INSERT INTO `fengling1`.`sys_menu` (`Id`, `Name`, `ParentId`, `PageId`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES (2, '用户管理', 1, 1, 1, '2025-06-22 11:27:48', 1, '2025-06-22 11:27:48', 1);
+INSERT INTO `fengling1`.`sys_menu` (`Id`, `Name`, `ParentId`, `PageId`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES (3, '角色管理', 1, 2, 1, '2025-06-22 11:27:48', 1, '2025-06-22 11:27:48', 1);
+
+TRUNCATE TABLE `fengling1`.`sys_page`;
+INSERT INTO `fengling1`.`sys_page` (`Id`, `Url`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES (1, '/user/index', 1, '2025-06-22 11:27:48', 1, '2025-06-22 11:27:48', 1);
+INSERT INTO `fengling1`.`sys_page` (`Id`, `Url`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES (2, '/role/index', 1, '2025-06-22 11:27:48', 1, '2025-06-22 11:27:48', 1);
+
+TRUNCATE TABLE `fengling2`.`sys_order_detail`;
+INSERT INTO `fengling2`.`sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('1', '1', '1', 1, 299.00, 1, 299.00, 1, '2025-06-22 10:58:02', 1, '2025-06-22 10:58:02', 1);
+INSERT INTO `fengling2`.`sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('2', '1', '1', 2, 159.00, 1, 159.00, 1, '2025-06-22 10:58:02', 1, '2025-06-22 10:58:02', 1);
+INSERT INTO `fengling2`.`sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('3', '2', '1', 3, 69.00, 1, 69.00, 1, '2025-06-22 10:58:02', 1, '2025-06-22 10:58:02', 1);
+INSERT INTO `fengling2`.`sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('4', '1', '2', 1, 299.00, 1, 299.00, 1, '2025-06-22 10:58:02', 1, '2025-06-22 10:58:02', 1);
+INSERT INTO `fengling2`.`sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('5', '2', '2', 3, 69.00, 1, 69.00, 1, '2025-06-22 10:58:02', 1, '2025-06-22 10:58:02', 1);
+INSERT INTO `fengling2`.`sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('6', '3', '3', 2, 199.00, 1, 199.00, 1, '2025-06-22 10:58:02', 1, '2025-06-22 10:58:02', 1);
+INSERT INTO `fengling2`.`sys_order_detail` (`Id`, `TenantId`, `OrderId`, `ProductId`, `Price`, `Quantity`, `Amount`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES ('7', '1', '3', 1, 550.00, 3, 1650.00, 1, '2025-06-22 10:57:39', 1, '2025-06-22 10:57:39', 1);
+
+TRUNCATE TABLE `fengling2`.`sys_menu`;
+INSERT INTO `fengling2`.`sys_menu` (`Id`, `Name`, `ParentId`, `PageId`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES (1, '系统管理', 0, 0, 1, '2025-06-22 11:27:48', 1, '2025-06-22 11:27:48', 1);
+INSERT INTO `fengling2`.`sys_menu` (`Id`, `Name`, `ParentId`, `PageId`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES (2, '用户管理', 1, 1, 1, '2025-06-22 11:27:48', 1, '2025-06-22 11:27:48', 1);
+INSERT INTO `fengling2`.`sys_menu` (`Id`, `Name`, `ParentId`, `PageId`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES (3, '角色管理', 1, 2, 1, '2025-06-22 11:27:48', 1, '2025-06-22 11:27:48', 1);
+
+TRUNCATE TABLE `fengling2`.`sys_page`;
+INSERT INTO `fengling2`.`sys_page` (`Id`, `Url`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES (1, '/user/index', 1, '2025-06-22 11:27:48', 1, '2025-06-22 11:27:48', 1);
+INSERT INTO `fengling2`.`sys_page` (`Id`, `Url`, `IsEnabled`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`) VALUES (2, '/role/index', 1, '2025-06-22 11:27:48', 1, '2025-06-22 11:27:48', 1);

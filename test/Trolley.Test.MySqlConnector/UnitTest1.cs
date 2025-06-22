@@ -1801,7 +1801,7 @@ public class UnitTest1 : UnitTestBase
         await repository.CommitAsync();
         Assert.Equal(1, result1.Id);
         Assert.Equal("1", result1.TenantId);
-        Assert.Equal($"{Gender.Male}-{25}-{"leafkevin".ToUpper()}", result1.Info);
+        Assert.Equal($"{Gender.Male}-25-{"leafkevin".ToUpper()}", result1.Info);
 
         var sql2 = repository.Create<User>()
             .WithBy(new

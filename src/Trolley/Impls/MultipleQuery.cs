@@ -32,9 +32,9 @@ public class MultipleQuery : IMultipleQuery
     #endregion   
 
     #region UseMaster
-    public IMultipleQuery UseMaster(bool isUseMaster = true)
+    public IMultipleQuery UseMaster()
     {
-        this.IsUserMaster = isUseMaster;
+        this.IsUserMaster = true;
         return this;
     }
     #endregion

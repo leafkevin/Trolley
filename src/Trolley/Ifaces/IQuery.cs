@@ -208,9 +208,8 @@ public interface IQuery<T> : IQueryBase
     /// <summary>
     /// 强制使用主库查询
     /// </summary>
-    /// <param name="isUseMaster">是否使用主库，true使用主库</param>
     /// <returns></returns>
-    IQuery<T> UseMaster(bool isUseMaster = true);
+    IQuery<T> UseMaster();
     #endregion
 
     #region Union/UnionAll
