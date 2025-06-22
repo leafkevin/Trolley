@@ -74,7 +74,7 @@ public class UnitTest5 : UnitTestBase
         this.Initialize(1);
         var repository = this.dbFactory.Create();
         using var reader = await repository.QueryMultipleAsync(f => f
-            .Get<User>(new { Id = 1 })
+            .GetById<User>(new { Id = 1 })
             .Exists<Order>(f => f.BuyerId.IsNull())
             .From<Order>()
                 .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
@@ -124,7 +124,8 @@ public class UnitTest5 : UnitTestBase
         var repository = this.dbFactory.Create();
         using var reader = await repository.QueryMultipleAsync(f => f
             .UseMaster()
-            .Get<User>(new { Id = 1 })
+            .GetById<User>(new { Id = 1 })
+            .GetByIds<User>(new int[] { 1, 2, 3 })
             .Exists<Order>(f => f.BuyerId.IsNull())
             .From<Order>()
                 .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
@@ -146,6 +147,7 @@ public class UnitTest5 : UnitTestBase
                 .First());
         var sql = reader.ToSql(out var dbParameters);
         var userInfo = await reader.ReadFirstAsync<User>();
+        var userInfos = await reader.ReadAsync<User>();
         var isExists = await reader.ReadFirstAsync<bool>();
         var orderInfo = await reader.ReadFirstAsync<dynamic>();
         var userInfo2 = await reader.ReadFirstAsync<User>();
@@ -153,6 +155,8 @@ public class UnitTest5 : UnitTestBase
         var groupedOrderInfo = await reader.ReadFirstAsync<dynamic>();
         Assert.NotNull(userInfo);
         Assert.Equal(1, userInfo.Id);
+        Assert.NotEmpty(userInfos);
+        Assert.True(userInfos.Count > 1);
         Assert.Equal("1", orderInfo.Id);
         Assert.Equal("1", groupedOrderInfo.Id);
         Assert.Equal("1", groupedOrderInfo.Grouping.OrderId);

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
@@ -231,21 +232,38 @@ public interface IMultipleQuery : IDisposable
     IMultipleQuery Query<TEntity>(object whereObj);
     #endregion
 
-    #region Get
+    #region GetById
     /// <summary>
     /// 根据主键信息查询表TEntity中数据，记录不存在时返回TEntity类型的默认值，用法：
     /// <code>
-    /// f.Get&lt;User&gt;(1) //或是
-    /// f.Get&lt;User&gt;(new { Id = 1 }) //或是
+    /// f.GetById&lt;User&gt;(1) //或是
+    /// f.GetById&lt;User&gt;(new { Id = 1 }) //或是
     /// var userInfo = new UserInfo { Id = 1, Name = "xxx" ... };
-    /// f.Get&lt;User&gt;(userInfo) //三种写法是等效的
+    /// f.GetById&lt;User&gt;(userInfo) //三种写法是等效的
     /// SQL: SELECT ... FROM `sys_user` WHERE `Id`=@Id
     /// </code>
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="whereObj">主键值或是包含主键的匿名对象或是已有对象，如：1，2或new { Id = 1}或是已有对象userInfo(包含主键栏位Id) </param>
     /// <returns>返回查询对象</returns>
-    IMultipleQuery Get<TEntity>(object whereObj);
+    IMultipleQuery GetById<TEntity>(object whereObj);
+    #endregion
+
+    #region GetByIds
+    /// <summary>
+    /// 根据多个主键信息查询表TEntity中数据，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，不支持分表，用法：
+    /// <code>
+    /// repository.GetByIds&lt;User&gt;(new []{1 ,2, 3}) //或是
+    /// repository.GetByIds&lt;User&gt;(new []{{ Id = 1 }, { Id = 2 }, { Id = 3 }}) //或是
+    /// var userInfo = new UserInfo { Id = 1, Name = "xxx" ... };
+    /// repository.GetByIds&lt;User&gt;(new List&lt;UserInfo&gt;{userInfo}) //三种写法是等效的
+    /// SQL: SELECT ... FROM `sys_user` a WHERE a.`Id` in (@Id0,@Id1,@Id2)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TEntity">实体类型</typeparam>
+    /// <param name="whereKeys">主键值或是包含主键的匿名对象或是已有对象，如：1，2或new { Id = 1}或是已有对象userInfo(包含主键栏位Id) </param>
+    /// <returns>返回查询对象</returns>
+    IMultipleQuery GetByIds<TEntity>(IEnumerable whereKeys);
     #endregion
 
     #region Exists
@@ -266,7 +284,7 @@ public interface IMultipleQuery : IDisposable
     /// <typeparam name="TEntity">实体对象类型</typeparam>
     /// <param name="predicate">where条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultipleQuery Exists<TEntity>(Expression<Func<TEntity, bool>> predicate = null);
+    IMultipleQuery Exists<TEntity>(Expression<Func<TEntity, bool>> predicate);
     #endregion
 
     #region AddReader/BuildSql

@@ -192,19 +192,51 @@ public class MultipleQuery : IMultipleQuery
     }
     #endregion
 
-    #region Get
-    public IMultipleQuery Get<TEntity>(object whereObj)
+    #region GetById
+    public IMultipleQuery GetById<TEntity>(object whereObj)
     {
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
 
-        var targetType = typeof(TEntity);
+        var entityType = typeof(TEntity);
         var whereObjType = whereObj.GetType();
         bool isBulk = whereObj is IEnumerable && whereObj is not string && whereObj is not IDictionary<string, object>;
-        var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.DbContext, targetType, whereObjType, whereObj, true, isBulk);
+        var commandInitializer = RepositoryHelper.BuildQueryWhereObjByKeySqlParameters(this.DbContext, entityType, whereObj, true, isBulk);
         var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string, string>;
         var sql = typedCommandInitializer.Invoke(this.Command.Parameters, this.DbContext, whereObj, $"_m{this.ReaderAfters.Count}");
-        this.AddReader(targetType, sql, false);
+        this.AddReader(entityType, sql, false);
+        return this;
+    }
+    #endregion
+
+    #region GetByIds
+    public IMultipleQuery GetByIds<TEntity>(IEnumerable whereObjs)
+    {
+        if (whereObjs == null)
+            throw new ArgumentNullException(nameof(whereObjs));
+        var entityType = typeof(TEntity);
+        bool isEmpty = true;
+        foreach (var whereObj in whereObjs)
+        {
+            isEmpty = false;
+            break;
+        }
+        if (isEmpty) throw new Exception("多主键ID查询，whereObjs参数至少要有一条数据");
+
+        (var isInExpr, var headSql, var commandInitializer) = ((bool, string, object))RepositoryHelper.BuildQueryWhereObjByKeySqlParameters(this.DbContext, entityType, whereObjs, true, true);
+        var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
+        int index = 0;
+        var builder = new StringBuilder(headSql);
+        var jointMark = isInExpr ? "," : " OR ";
+        foreach (var whereObj in whereObjs)
+        {
+            if (index > 0) builder.Append(jointMark);
+            typedCommandInitializer.Invoke(this.Command.Parameters, builder, this.DbContext, whereObj, $"_m{this.ReaderAfters.Count}{index}");
+            index++;
+        }
+        if (isInExpr) builder.Append(')');
+        var sql = builder.ToString();
+        this.AddReader(entityType, sql, false);
         return this;
     }
     #endregion

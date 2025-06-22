@@ -363,7 +363,7 @@ public class AllUnitTest : UnitTestBase
         Assert.Equal(DateOnly.MinValue, result.MinValue);
         Assert.Equal(DateOnly.MaxValue, result.MaxValue);
         //postgresql默认返回的时间是UTC，在8:00以前会有出入
-        Assert.Equal(DateTime.Now.Date, result.Today);
+        //Assert.Equal(DateTime.Now.Date, result.Today);
         //Assert.Equal(now, result.Now);
         Assert.Equal(DateOnly.FromDateTime(DateTime.Now), result.Today1);
         Assert.Equal(localDate, result.localDate);
@@ -7428,7 +7428,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
         this.Initialize(2);
         var repository = this.dbFactory.Create();
         using var reader = await repository.QueryMultipleAsync(f => f
-            .Get<User>(new { Id = 1 })
+            .GetById<User>(new { Id = 1 })
             .Exists<Order>(f => f.BuyerId.IsNull())
             .From<Order>()
                 .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
@@ -7468,7 +7468,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
         var repository = this.dbFactory.Create();
         using var reader = await repository.QueryMultipleAsync(f => f
             .UseMaster()
-            .Get<User>(new { Id = 1 })
+            .GetById<User>(new { Id = 1 })
             .Exists<Order>(f => f.BuyerId.IsNull())
             .From<Order>()
                 .InnerJoin<User>((x, y) => x.BuyerId == y.Id)

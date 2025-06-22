@@ -248,10 +248,10 @@ public interface IRepository
     /// <summary>
     /// 根据主键信息查询表TEntity中数据，记录不存在时返回TEntity类型的默认值，不支持分表，用法：
     /// <code>
-    /// repository.Get&lt;User&gt;(1) //或是
-    /// repository.Get&lt;User&gt;(new { Id = 1 }) //或是
+    /// repository.GetById&lt;User&gt;(1) //或是
+    /// repository.GetById&lt;User&gt;(new { Id = 1 }) //或是
     /// var userInfo = new UserInfo { Id = 1, Name = "xxx" ... };
-    /// repository.Get&lt;User&gt;(userInfo) //三种写法是等效的
+    /// repository.GetById&lt;User&gt;(userInfo) //三种写法是等效的
     /// SQL: SELECT ... FROM `sys_user` a WHERE a.`Id`=@Id
     /// </code>
     /// </summary>
@@ -262,10 +262,10 @@ public interface IRepository
     /// <summary>
     /// 根据主键信息查询表TEntity中数据，记录不存在时返回TEntity类型的默认值，不支持分表，用法：
     /// <code>
-    /// await repository.GetAsync&lt;User&gt;(1) //或是
-    /// await repository.GetAsync&lt;User&gt;(new { Id = 1 }) //或是
+    /// await repository.GetByIdAsync&lt;User&gt;(1) //或是
+    /// await repository.GetByIdAsync&lt;User&gt;(new { Id = 1 }) //或是
     /// var userInfo = new UserInfo { Id = 1, Name = "xxx" ...};
-    /// await repository.GetAsync&lt;User&gt;(userInfo) //三种写法是等效的
+    /// await repository.GetByIdAsync&lt;User&gt;(userInfo) //三种写法是等效的
     /// SQL: SELECT ... FROM `sys_user` a WHERE a.`Id`=@Id
     /// </code>
     /// </summary>

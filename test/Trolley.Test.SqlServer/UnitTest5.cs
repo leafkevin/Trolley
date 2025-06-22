@@ -65,61 +65,14 @@ public class UnitTest5 : UnitTestBase
         this.dbFactory = serviceProvider.GetService<IOrmDbFactory>();
     }
     [Fact]
-    public async Task MultipleQuery()
-    {
-        this.Initialize(3);
-        var repository = this.dbFactory.Create();
-        using var reader = await repository.QueryMultipleAsync(f => f
-            .Get<User>(new { Id = 1 })
-            .Exists<Order>(f => f.BuyerId.IsNull())
-            .From<Order>()
-                .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
-                .Where((x, y) => x.Id == "1")
-                .Select((x, y) => new { x.Id, x.OrderNo, x.BuyerId, BuyerName = y.Name, x.TotalAmount })
-                .First()
-            .QueryFirst<User>(new { Id = 2 })
-            .From<Product>()
-                .Include(f => f.Brand)
-                .Where(f => f.ProductNo.Contains("PN-00"))
-                .ToList()
-            .From<Order>()
-                .Include(t => t.Details)
-                .Where(t => new[] { "1", "2", "3" }.Contains(t.Id))
-                .ToList()
-            .From(f => f.From<Order, OrderDetail>('a')
-                    .Where((a, b) => a.Id == b.OrderId && a.Id == "1")
-                    .GroupBy((a, b) => new { a.BuyerId, OrderId = a.Id })
-                    .Having((x, a, b) => x.CountDistinct(b.ProductId) > 0)
-                    .Select((x, a, b) => new { a.Id, x.Grouping, ProductTotal = x.CountDistinct(b.ProductId), BuyerId1 = x.Grouping.BuyerId }))
-                .InnerJoin<User>((x, y) => x.Grouping.BuyerId == y.Id)
-                .Select((x, y) => new { x.Id, x.Grouping, x.Grouping.BuyerId, x.ProductTotal, BuyerName = y.Name, BuyerId2 = x.BuyerId1 })
-                .First()
-             .From<Brand>()
-                .Include(f => f.Products)
-                .ToList());
-        var sql = reader.ToSql(out var dbParameters);
-        var userInfo = await reader.ReadFirstAsync<User>();
-        var isExists = await reader.ReadFirstAsync<bool>();
-        var orderInfo = await reader.ReadFirstAsync<dynamic>();
-        var userInfo2 = await reader.ReadFirstAsync<User>();
-        var products = await reader.ReadAsync<Product>();
-        var orders = await reader.ReadAsync<Order>();
-        var groupedOrderInfo = await reader.ReadFirstAsync<dynamic>();
-        var brands = await reader.ReadAsync<Brand>();
-        Assert.NotNull(userInfo);
-        Assert.Equal(1, userInfo.Id);
-        Assert.Equal("1", orderInfo.Id);
-        Assert.Equal("1", groupedOrderInfo.Id);
-        Assert.Equal("1", groupedOrderInfo.Grouping.OrderId);
-    }
-    [Fact]
     public async Task MultipleQuery_UseMaster()
     {
         this.Initialize(3);
         var repository = this.dbFactory.Create();
         using var reader = await repository.QueryMultipleAsync(f => f
             .UseMaster()
-            .Get<User>(new { Id = 1 })
+            .GetById<User>(new { Id = 1 })
+            .GetByIds<User>(new int[] { 1, 2, 3 })
             .Exists<Order>(f => f.BuyerId.IsNull())
             .From<Order>()
                 .InnerJoin<User>((x, y) => x.BuyerId == y.Id)
@@ -141,6 +94,7 @@ public class UnitTest5 : UnitTestBase
                 .First());
         var sql = reader.ToSql(out var dbParameters);
         var userInfo = await reader.ReadFirstAsync<User>();
+        var userInfos = await reader.ReadAsync<User>();
         var isExists = await reader.ReadFirstAsync<bool>();
         var orderInfo = await reader.ReadFirstAsync<dynamic>();
         var userInfo2 = await reader.ReadFirstAsync<User>();
@@ -148,6 +102,8 @@ public class UnitTest5 : UnitTestBase
         var groupedOrderInfo = await reader.ReadFirstAsync<dynamic>();
         Assert.NotNull(userInfo);
         Assert.Equal(1, userInfo.Id);
+        Assert.NotEmpty(userInfos);
+        Assert.True(userInfos.Count > 1);
         Assert.Equal("1", orderInfo.Id);
         Assert.Equal("1", groupedOrderInfo.Id);
         Assert.Equal("1", groupedOrderInfo.Grouping.OrderId);
