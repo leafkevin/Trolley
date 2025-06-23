@@ -1957,6 +1957,80 @@ public class UnitTest6 : UnitTestBase
         }
     }
     [Fact]
+    public async Task ManySharding_GroupBy()
+    {
+        await this.InitSharding();
+        var repository = this.dbFactory.Create();
+        var tenantId = "104";
+        var beginTime = DateTime.Parse("2024-04-05");
+        var endTime = DateTime.Parse("2024-06-05");
+        var sql1 = repository.From<Order>()
+            .UseTableByRange(tenantId, beginTime, endTime)
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
+                => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+            .GroupBy((a, b) => new { a.BuyerId, a.CreatedAt.Year })
+            .Select((x, a, b) => new { a.BuyerId, a.CreatedAt.Year, Count = x.Count(a.Id) })
+            .ToSql(out _);
+        Assert.Equal("SELECT a.name FROM sys.objects a,sys.schemas b WHERE a.schema_id=b.schema_id AND a.type='U' AND b.name='dbo' AND (a.name LIKE 'sys_order%' OR a.name LIKE 'sys_user%');SELECT [BuyerId],[Year],SUM([Count]) AS [Count] FROM (SELECT a.[BuyerId],DATEPART(YEAR,a.[CreatedAt]) AS [Year],COUNT(a.[Id]) AS [Count] FROM [sys_order_104_202405] a INNER JOIN [sys_user_104] b ON a.[BuyerId]=b.[Id] GROUP BY a.[BuyerId],DATEPART(YEAR,a.[CreatedAt]) UNION ALL SELECT a.[BuyerId],DATEPART(YEAR,a.[CreatedAt]) AS [Year],COUNT(a.[Id]) AS [Count] FROM [sys_order_104_202406] a INNER JOIN [sys_user_104] b ON a.[BuyerId]=b.[Id] GROUP BY a.[BuyerId],DATEPART(YEAR,a.[CreatedAt])) a GROUP BY [BuyerId],[Year]", sql1);
+
+        var result1 = await repository.From<Order>()
+            .UseTableByRange(tenantId, beginTime, endTime)
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
+                => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+            .GroupBy((a, b) => new { a.BuyerId, a.CreatedAt.Year })
+            .Select((x, a, b) => new { a.BuyerId, a.CreatedAt.Year, Count = x.Count(a.Id) })
+            .ToListAsync();
+        Assert.NotEmpty(result1);
+
+        var sql2 = repository.From<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
+                => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+            .GroupBy((a, b) => new { a.BuyerId, a.CreatedAt.Year })
+            .OrderBy((x, a, b) => a.CreatedAt.Year)
+            .Select((x, a, b) => new { a.BuyerId, a.CreatedAt.Year, Count = x.Count(a.Id) })
+            .ToSql(out _);
+        Assert.Equal("SELECT a.name FROM sys.objects a,sys.schemas b WHERE a.schema_id=b.schema_id AND a.type='U' AND b.name='dbo' AND (a.name LIKE 'sys_user%');SELECT [BuyerId],[Year],SUM([Count]) AS [Count] FROM (SELECT a.[BuyerId],DATEPART(YEAR,a.[CreatedAt]) AS [Year],COUNT(a.[Id]) AS [Count] FROM [sys_order_104_202405] a INNER JOIN [sys_user_104] b ON a.[BuyerId]=b.[Id] GROUP BY a.[BuyerId],DATEPART(YEAR,a.[CreatedAt]) UNION ALL SELECT a.[BuyerId],DATEPART(YEAR,a.[CreatedAt]) AS [Year],COUNT(a.[Id]) AS [Count] FROM [sys_order_105_202405] a INNER JOIN [sys_user_105] b ON a.[BuyerId]=b.[Id] GROUP BY a.[BuyerId],DATEPART(YEAR,a.[CreatedAt])) a GROUP BY [BuyerId],[Year] ORDER BY [Year]", sql2);
+
+        var result2 = await repository.From<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
+                => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+            .GroupBy((a, b) => new { a.BuyerId, a.CreatedAt.Year })
+            .OrderBy((x, a, b) => a.CreatedAt.Year)
+            .Select((x, a, b) => new { a.BuyerId, a.CreatedAt.Year, Count = x.Count(a.Id) })
+            .ToListAsync();
+        Assert.NotEmpty(result2);
+
+        var sql3 = repository.From<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
+                => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+            .GroupBy((a, b) => new { a.BuyerId, BuyerName = b.Name, a.CreatedAt.Year })
+            .Having((x, a, b) => x.Count("*") > 1)
+            .OrderBy((x, a, b) => x.Grouping.Year)
+            .Select((x, a, b) => new { x.Grouping, Count = x.Count(a.Id) })
+            .ToSql(out _);
+        Assert.Equal("SELECT a.name FROM sys.objects a,sys.schemas b WHERE a.schema_id=b.schema_id AND a.type='U' AND b.name='dbo' AND (a.name LIKE 'sys_user%');SELECT [BuyerId],[BuyerName],[Year],SUM([Count]) AS [Count] FROM (SELECT a.[BuyerId],b.[Name] AS [BuyerName],DATEPART(YEAR,a.[CreatedAt]) AS [Year],COUNT(a.[Id]) AS [Count] FROM [sys_order_104_202405] a INNER JOIN [sys_user_104] b ON a.[BuyerId]=b.[Id] GROUP BY a.[BuyerId],b.[Name],DATEPART(YEAR,a.[CreatedAt]) HAVING COUNT(*)>1 UNION ALL SELECT a.[BuyerId],b.[Name] AS [BuyerName],DATEPART(YEAR,a.[CreatedAt]) AS [Year],COUNT(a.[Id]) AS [Count] FROM [sys_order_105_202405] a INNER JOIN [sys_user_105] b ON a.[BuyerId]=b.[Id] GROUP BY a.[BuyerId],b.[Name],DATEPART(YEAR,a.[CreatedAt]) HAVING COUNT(*)>1) a GROUP BY [BuyerId],[BuyerName],[Year] ORDER BY [Year]", sql3);
+
+        var result3 = await repository.From<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
+                => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+            .GroupBy((a, b) => new { a.BuyerId, BuyerName = b.Name, a.CreatedAt.Year })
+            .Having((x, a, b) => x.Count("*") > 1)
+            .OrderBy((x, a, b) => x.Grouping.Year)
+            .Select((x, a, b) => new { x.Grouping, Count = x.Count(a.Id) })
+            .ToListAsync();
+        Assert.NotEmpty(result3);
+    }
+    [Fact]
     public async Task ManySharding_Paging()
     {
         //await this.InitSharding();

@@ -424,12 +424,31 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         string orderBy = null;
         string selectSql = "*";
         var builder = new StringBuilder();
+        Func<SqlFieldSegment, string> FieldNameFetcher = readerField =>
+        {
+            string fieldName = null;
+            if (readerField.IsNeedAlias || readerField.IsConstant || readerField.IsVariable
+                || readerField.HasParameter || readerField.IsExpression || readerField.IsMethodCall
+                || (readerField.TargetMember != null && readerField.FromMember != null
+                && readerField.TargetMember.Name != readerField.FromMember.Name))
+            {
+                fieldName = readerField.TargetMember.Name;
+                fieldName = this.OrmProvider.GetFieldName(fieldName);
+            }
+            else
+            {
+                fieldName = readerField.Body;
+                var startIndex = fieldName.IndexOf('.');
+                if (startIndex > 0)
+                    fieldName = fieldName.Substring(startIndex + 1);
+            }
+            return fieldName;
+        };
         if (this.GroupByFields != null)
         {
             for (int i = 0; i < this.GroupByFields.Count; i++)
             {
-                var groupByField = this.GroupByFields[i];
-                var fieldName = this.OrmProvider.GetFieldName(groupByField.TargetMember.Name);
+                var fieldName = FieldNameFetcher(this.GroupByFields[i]);
                 if (i > 0) builder.Append(',');
                 builder.Append(fieldName);
             }
@@ -444,14 +463,13 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 {
                     for (int j = 0; j < readerField.Fields.Count; j++)
                     {
-                        var childReaderField = readerField.Fields[j];
-                        fieldName = this.OrmProvider.GetFieldName(childReaderField.TargetMember.Name);
+                        fieldName = FieldNameFetcher(readerField.Fields[j]);
                         if (j > 0) builder.Append(',');
                         builder.Append(fieldName);
                     }
                     continue;
                 }
-                fieldName = this.OrmProvider.GetFieldName(readerField.TargetMember.Name);
+                fieldName = FieldNameFetcher(readerField);
                 if (readerField.IsAggField)
                     fieldName = $"{readerField.ShardingAggFunc}({fieldName}) AS {fieldName}";
                 if (i > 0) builder.Append(',');
@@ -465,7 +483,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             for (int i = 0; i < this.OrderByFields.Count; i++)
             {
                 var orderByField = this.OrderByFields[i];
-                var fieldName = this.OrmProvider.GetFieldName(orderByField.Field.TargetMember.Name);
+                var fieldName = FieldNameFetcher(orderByField.Field);
                 if (i > 0) builder.Append(',');
                 builder.Append(fieldName);
                 if (!string.IsNullOrEmpty(orderByField.OrderSuffix))
@@ -1230,7 +1248,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             {
                 if (i > 0) builder.Append(',');
                 var readerField = this.GroupByFields[i];
-                var fieldName = readerField.IsNeedAlias ? this.OrmProvider.GetFieldName(readerField.TargetMember.Name) : readerField.Body;
+                //order by 尽力取源字段值，不管是字段还是表达式，还是函数调用
+                var fieldName = readerField.Body ?? readerField.Value.ToString();
                 builder.Append(fieldName);
                 var orderField = new OrderByField { Field = this.GroupByFields[i] };
                 this.OrderByFields.Add(orderField);
@@ -1258,7 +1277,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                             {
                                 if (i > 0) builder.Append(',');
                                 var readerField = this.GroupByFields[i];
-                                var fieldName = readerField.IsNeedAlias ? this.OrmProvider.GetFieldName(readerField.TargetMember.Name) : readerField.Body;
+                                //order by 尽力取源字段值，不管是字段还是表达式，还是函数调用
+                                var fieldName = readerField.Body ?? readerField.Value.ToString();
                                 builder.Append(fieldName);
                                 var orderField = new OrderByField { Field = this.GroupByFields[i] };
                                 this.OrderByFields.Add(orderField);
@@ -1274,6 +1294,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                             var memberInfo = newExpr.Members[index];
                             var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = argumentExpr });
                             if (index > 0) builder.Append(',');
+                            //order by 尽力取源字段值，不管是字段还是表达式，还是函数调用
                             builder.Append(sqlSegment.Body ?? sqlSegment.Value.ToString());
                             var orderField = new OrderByField { Field = sqlSegment };
                             this.OrderByFields.Add(orderField);
@@ -1293,7 +1314,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                         for (int i = 0; i < this.GroupByFields.Count; i++)
                         {
                             if (i > 0) builder.Append(',');
-                            builder.Append(this.GroupByFields[i].Body);
+                            //order by 尽力取源字段值，不管是字段还是表达式，还是函数调用
+                            builder.Append(this.GroupByFields[i].Body ?? this.GroupByFields[i].Value.ToString());
                             var orderField = new OrderByField { Field = this.GroupByFields[i] };
                             this.OrderByFields.Add(orderField);
                             if (orderType == "DESC")
@@ -1306,7 +1328,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     else if (this.IsGroupingMember(memberExpr.Expression as MemberExpression))
                     {
                         var readerField = this.GroupByFields.Find(f => f.TargetMember.Name == memberExpr.Member.Name);
-                        var fieldName = readerField.IsNeedAlias ? this.OrmProvider.GetFieldName(readerField.TargetMember.Name) : readerField.Body;
+                        //order by 尽力取源字段值，不管是字段还是表达式，还是函数调用
+                        var fieldName = readerField.Body ?? readerField.Value.ToString();
                         builder.Append(fieldName);
                         var orderField = new OrderByField { Field = readerField };
                         this.OrderByFields.Add(orderField);
@@ -1319,8 +1342,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                     else
                     {
                         var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = memberExpr });
-                        var fieldName = sqlSegment.IsNeedAlias ? this.OrmProvider.GetFieldName(sqlSegment.TargetMember.Name)
-                            : sqlSegment.Body ?? sqlSegment.Value.ToString();
+                        //order by 尽力取源字段值，不管是字段还是表达式，还是函数调用
+                        var fieldName = sqlSegment.Body ?? sqlSegment.Value.ToString();
                         builder.Append(fieldName);
                         var orderField = new OrderByField { Field = sqlSegment };
                         this.OrderByFields.Add(orderField);
@@ -1334,6 +1357,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 default:
                     {
                         var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = expr });
+                        //order by 尽力取源字段值，不管是字段还是表达式，还是函数调用
                         var fieldName = sqlSegment.Body ?? sqlSegment.Value.ToString();
                         builder.Append(fieldName);
                         if (orderType == "DESC")
@@ -1613,6 +1637,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 //Where(f=>... && f.Order.OrderNo.Length==10 && ...)
                 var targetSegment = sqlSegment.Next(memberExpr.Expression);
                 sqlSegment = formatter.Invoke(this, targetSegment);
+                sqlSegment.TargetMember = memberExpr.Member;
                 return sqlSegment;
             }
 
@@ -1838,6 +1863,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         {
             sqlSegment = formatter.Invoke(this, sqlSegment);
             sqlSegment.SegmentType = memberExpr.Type;
+            sqlSegment.TargetMember = memberExpr.Member;
+            sqlSegment.IsNeedAlias = true;
             return sqlSegment;
         }
 

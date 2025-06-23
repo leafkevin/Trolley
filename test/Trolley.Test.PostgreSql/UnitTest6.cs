@@ -1959,47 +1959,47 @@ public class UnitTest6 : UnitTestBase
         var tenantId = "104";
         var beginTime = DateTime.Parse("2024-04-05");
         var endTime = DateTime.Parse("2024-06-05");
-        //var sql1 = repository.From<Order>()
-        //    .UseTableByRange(tenantId, beginTime, endTime)
-        //    .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
-        //    .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
-        //        => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
-        //    .GroupBy((a, b) => new { a.BuyerId, a.CreatedAt.Year })
-        //    .Select((x, a, b) => new { a.BuyerId, a.CreatedAt.Year, Count = x.Count(a.Id) })
-        //    .ToSql(out _);
-        //Assert.Equal("SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND b.nspname='public' AND (a.relname LIKE 'sys_order%' OR a.relname LIKE 'sys_user%');SELECT \"BuyerId\",\"Year\",SUM(\"Count\") AS \"Count\" FROM (SELECT a.\"BuyerId\",(EXTRACT(YEAR FROM a.\"CreatedAt\")::INT4) AS \"Year\",COUNT(a.\"Id\") AS \"Count\" FROM \"sys_order_104_202405\" a INNER JOIN \"sys_user_104\" b ON a.\"BuyerId\"=b.\"Id\" GROUP BY a.\"BuyerId\",EXTRACT(YEAR FROM a.\"CreatedAt\")::INT4 UNION ALL SELECT a.\"BuyerId\",(EXTRACT(YEAR FROM a.\"CreatedAt\")::INT4) AS \"Year\",COUNT(a.\"Id\") AS \"Count\" FROM \"sys_order_104_202406\" a INNER JOIN \"sys_user_104\" b ON a.\"BuyerId\"=b.\"Id\" GROUP BY a.\"BuyerId\",EXTRACT(YEAR FROM a.\"CreatedAt\")::INT4) a GROUP BY \"BuyerId\",\"Year\"", sql1);
+        var sql1 = repository.From<Order>()
+            .UseTableByRange(tenantId, beginTime, endTime)
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
+                => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+            .GroupBy((a, b) => new { a.BuyerId, a.CreatedAt.Year })
+            .Select((x, a, b) => new { a.BuyerId, a.CreatedAt.Year, Count = x.Count(a.Id) })
+            .ToSql(out _);
+        Assert.Equal("SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND b.nspname='public' AND (a.relname LIKE 'sys_order%' OR a.relname LIKE 'sys_user%');SELECT \"BuyerId\",\"Year\",SUM(\"Count\") AS \"Count\" FROM (SELECT a.\"BuyerId\",(EXTRACT(YEAR FROM a.\"CreatedAt\")::INT4) AS \"Year\",COUNT(a.\"Id\") AS \"Count\" FROM \"sys_order_104_202405\" a INNER JOIN \"sys_user_104\" b ON a.\"BuyerId\"=b.\"Id\" GROUP BY a.\"BuyerId\",EXTRACT(YEAR FROM a.\"CreatedAt\")::INT4 UNION ALL SELECT a.\"BuyerId\",(EXTRACT(YEAR FROM a.\"CreatedAt\")::INT4) AS \"Year\",COUNT(a.\"Id\") AS \"Count\" FROM \"sys_order_104_202406\" a INNER JOIN \"sys_user_104\" b ON a.\"BuyerId\"=b.\"Id\" GROUP BY a.\"BuyerId\",EXTRACT(YEAR FROM a.\"CreatedAt\")::INT4) a GROUP BY \"BuyerId\",\"Year\"", sql1);
 
-        //var result1 = await repository.From<Order>()
-        //    .UseTableByRange(tenantId, beginTime, endTime)
-        //    .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
-        //    .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
-        //        => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
-        //    .GroupBy((a, b) => new { a.BuyerId, a.CreatedAt.Year })
-        //    .Select((x, a, b) => new { a.BuyerId, a.CreatedAt.Year, Count = x.Count(a.Id) })
-        //    .ToListAsync();
-        //Assert.NotEmpty(result1);
+        var result1 = await repository.From<Order>()
+            .UseTableByRange(tenantId, beginTime, endTime)
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
+                => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+            .GroupBy((a, b) => new { a.BuyerId, a.CreatedAt.Year })
+            .Select((x, a, b) => new { a.BuyerId, a.CreatedAt.Year, Count = x.Count(a.Id) })
+            .ToListAsync();
+        Assert.NotEmpty(result1);
 
-        //var sql2 = repository.From<Order>()
-        //    .UseTable("sys_order_104_202405", "sys_order_105_202405")
-        //    .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
-        //    .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
-        //        => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
-        //    .GroupBy((a, b) => new { a.BuyerId, a.CreatedAt.Year })
-        //    .Select((x, a, b) => new { a.BuyerId, a.CreatedAt.Year, Count = x.Count(a.Id) })
-        //    .OrderBy(f => f.Year)
-        //    .ToSql(out _);
-        //Assert.Equal("SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND b.nspname='public' AND (a.relname LIKE 'sys_user%');SELECT \"BuyerId\",\"Year\",SUM(\"Count\") AS \"Count\" FROM (SELECT a.\"BuyerId\",(EXTRACT(YEAR FROM a.\"CreatedAt\")::INT4) AS \"Year\",COUNT(a.\"Id\") AS \"Count\" FROM \"sys_order_104_202405\" a INNER JOIN \"sys_user_104\" b ON a.\"BuyerId\"=b.\"Id\" GROUP BY a.\"BuyerId\",EXTRACT(YEAR FROM a.\"CreatedAt\")::INT4 UNION ALL SELECT a.\"BuyerId\",(EXTRACT(YEAR FROM a.\"CreatedAt\")::INT4) AS \"Year\",COUNT(a.\"Id\") AS \"Count\" FROM \"sys_order_105_202405\" a INNER JOIN \"sys_user_105\" b ON a.\"BuyerId\"=b.\"Id\" GROUP BY a.\"BuyerId\",EXTRACT(YEAR FROM a.\"CreatedAt\")::INT4) a GROUP BY \"BuyerId\",\"Year\" ORDER BY \"Year\"", sql2);
+        var sql2 = repository.From<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
+                => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+            .GroupBy((a, b) => new { a.BuyerId, a.CreatedAt.Year })
+            .OrderBy((x, a, b) => a.CreatedAt.Year)
+            .Select((x, a, b) => new { a.BuyerId, a.CreatedAt.Year, Count = x.Count(a.Id) })
+            .ToSql(out _);
+        Assert.Equal("SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND b.nspname='public' AND (a.relname LIKE 'sys_user%');SELECT \"BuyerId\",\"Year\",SUM(\"Count\") AS \"Count\" FROM (SELECT a.\"BuyerId\",(EXTRACT(YEAR FROM a.\"CreatedAt\")::INT4) AS \"Year\",COUNT(a.\"Id\") AS \"Count\" FROM \"sys_order_104_202405\" a INNER JOIN \"sys_user_104\" b ON a.\"BuyerId\"=b.\"Id\" GROUP BY a.\"BuyerId\",EXTRACT(YEAR FROM a.\"CreatedAt\")::INT4 UNION ALL SELECT a.\"BuyerId\",(EXTRACT(YEAR FROM a.\"CreatedAt\")::INT4) AS \"Year\",COUNT(a.\"Id\") AS \"Count\" FROM \"sys_order_105_202405\" a INNER JOIN \"sys_user_105\" b ON a.\"BuyerId\"=b.\"Id\" GROUP BY a.\"BuyerId\",EXTRACT(YEAR FROM a.\"CreatedAt\")::INT4) a GROUP BY \"BuyerId\",\"Year\" ORDER BY \"Year\"", sql2);
 
-        //var result2 = await repository.From<Order>()
-        //    .UseTable("sys_order_104_202405", "sys_order_105_202405")
-        //    .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
-        //    .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
-        //        => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
-        //    .GroupBy((a, b) => new { a.BuyerId, a.CreatedAt.Year })
-        //    .Select((x, a, b) => new { a.BuyerId, a.CreatedAt.Year, Count = x.Count(a.Id) })
-        //    .OrderBy(f => f.Year)
-        //    .ToListAsync();
-        //Assert.NotEmpty(result2);
+        var result2 = await repository.From<Order>()
+            .UseTable("sys_order_104_202405", "sys_order_105_202405")
+            .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
+            .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
+                => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+            .GroupBy((a, b) => new { a.BuyerId, a.CreatedAt.Year })
+            .OrderBy((x, a, b) => a.CreatedAt.Year)
+            .Select((x, a, b) => new { a.BuyerId, a.CreatedAt.Year, Count = x.Count(a.Id) })
+            .ToListAsync();
+        Assert.NotEmpty(result2);
 
         var sql3 = repository.From<Order>()
             .UseTable("sys_order_104_202405", "sys_order_105_202405")
@@ -2008,8 +2008,9 @@ public class UnitTest6 : UnitTestBase
                 => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
             .GroupBy((a, b) => new { a.BuyerId, BuyerName = b.Name, a.CreatedAt.Year })
             .Having((x, a, b) => x.Count("*") > 1)
+            .OrderBy((x, a, b) => x.Grouping.Year)
             .Select((x, a, b) => new { x.Grouping, Count = x.Count(a.Id) })
-            .OrderBy(f => f.Grouping.Year)
+
             .ToSql(out _);
         Assert.Equal("SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND b.nspname='public' AND (a.relname LIKE 'sys_user%');SELECT \"BuyerId\",\"BuyerName\",\"Year\",SUM(\"Count\") AS \"Count\" FROM (SELECT a.\"BuyerId\",b.\"Name\" AS \"BuyerName\",EXTRACT(YEAR FROM a.\"CreatedAt\")::INT4 AS \"Year\",COUNT(a.\"Id\") AS \"Count\" FROM \"sys_order_104_202405\" a INNER JOIN \"sys_user_104\" b ON a.\"BuyerId\"=b.\"Id\" GROUP BY a.\"BuyerId\",b.\"Name\",EXTRACT(YEAR FROM a.\"CreatedAt\")::INT4 UNION ALL SELECT a.\"BuyerId\",b.\"Name\" AS \"BuyerName\",EXTRACT(YEAR FROM a.\"CreatedAt\")::INT4 AS \"Year\",COUNT(a.\"Id\") AS \"Count\" FROM \"sys_order_105_202405\" a INNER JOIN \"sys_user_105\" b ON a.\"BuyerId\"=b.\"Id\" GROUP BY a.\"BuyerId\",b.\"Name\",EXTRACT(YEAR FROM a.\"CreatedAt\")::INT4) a GROUP BY \"BuyerId\",\"BuyerName\",\"Year\" ORDER BY \"Year\"", sql3);
 
@@ -2020,8 +2021,8 @@ public class UnitTest6 : UnitTestBase
                 => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
             .GroupBy((a, b) => new { a.BuyerId, BuyerName = b.Name, a.CreatedAt.Year })
             .Having((x, a, b) => x.Count("*") > 1)
+            .OrderBy((x, a, b) => x.Grouping.Year)
             .Select((x, a, b) => new { x.Grouping, Count = x.Count(a.Id) })
-            .OrderBy(f => f.Grouping.Year)
             .ToListAsync();
         Assert.NotEmpty(result3);
     }

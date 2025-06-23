@@ -487,7 +487,9 @@ public class PostgreSqlQueryVisitor : QueryVisitor
             for (int i = 0; i < this.GroupByFields.Count; i++)
             {
                 if (i > 0) builder.Append(',');
-                builder.Append(this.GroupByFields[i].Body);
+                //order by 尽力取源字段值，不管是字段还是表达式，还是函数调用
+                var fieldName = this.GroupByFields[i].Body ?? this.GroupByFields[i].Value.ToString();
+                builder.Append(fieldName);
                 var orderField = new OrderByField { Field = this.GroupByFields[i] };
                 this.OrderByFields.Add(orderField);
                 if (orderType == "DESC")
@@ -502,7 +504,9 @@ public class PostgreSqlQueryVisitor : QueryVisitor
             for (int i = 0; i < this.DistinctOnFields.Count; i++)
             {
                 if (i > 0) builder.Append(',');
-                builder.Append(this.DistinctOnFields[i].Body);
+                //order by 尽力取源字段值，不管是字段还是表达式，还是函数调用
+                var fieldName = this.DistinctOnFields[i].Body ?? this.DistinctOnFields[i].Value.ToString();
+                builder.Append(fieldName);
                 var orderField = new OrderByField { Field = this.DistinctOnFields[i] };
                 this.OrderByFields.Add(orderField);
                 if (orderType == "DESC")
@@ -528,7 +532,9 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                             for (int i = 0; i < this.GroupByFields.Count; i++)
                             {
                                 if (i > 0) builder.Append(',');
-                                builder.Append(this.GroupByFields[i].Body);
+                                //order by 尽力取源字段值，不管是字段还是表达式，还是函数调用
+                                var fieldName = this.GroupByFields[i].Body ?? this.GroupByFields[i].Value.ToString();
+                                builder.Append(fieldName);
                                 var orderField = new OrderByField { Field = this.GroupByFields[i] };
                                 this.OrderByFields.Add(orderField);
                                 if (orderType == "DESC")
@@ -543,7 +549,9 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                             for (int i = 0; i < this.DistinctOnFields.Count; i++)
                             {
                                 if (i > 0) builder.Append(',');
-                                builder.Append(this.DistinctOnFields[i].Body);
+                                //order by 尽力取源字段值，不管是字段还是表达式，还是函数调用
+                                var fieldName = this.DistinctOnFields[i].Body ?? this.DistinctOnFields[i].Value.ToString();
+                                builder.Append(fieldName);
                                 var orderField = new OrderByField { Field = this.DistinctOnFields[i] };
                                 this.OrderByFields.Add(orderField);
                                 if (orderType == "DESC")
@@ -558,6 +566,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                             var memberInfo = newExpr.Members[index];
                             var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = argumentExpr });
                             if (index > 0) builder.Append(',');
+                            //order by 尽力取源字段值，不管是字段还是表达式，还是函数调用
                             builder.Append(sqlSegment.Body ?? sqlSegment.Value.ToString());
                             var orderField = new OrderByField { Field = sqlSegment };
                             this.OrderByFields.Add(orderField);
@@ -577,7 +586,9 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                         for (int i = 0; i < this.GroupByFields.Count; i++)
                         {
                             if (i > 0) builder.Append(',');
-                            builder.Append(this.GroupByFields[i].Body);
+                            //order by 尽力取源字段值，不管是字段还是表达式，还是函数调用
+                            var fieldName = this.GroupByFields[i].Body ?? this.GroupByFields[i].Value.ToString();
+                            builder.Append(fieldName);
                             var orderField = new OrderByField { Field = this.GroupByFields[i] };
                             this.OrderByFields.Add(orderField);
                             if (orderType == "DESC")
@@ -590,7 +601,8 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                     else if (this.IsGroupingMember(memberExpr.Expression as MemberExpression))
                     {
                         var readerField = this.GroupByFields.Find(f => f.TargetMember.Name == memberExpr.Member.Name);
-                        builder.Append(readerField.Body);
+                        //order by 尽力取源字段值，不管是字段还是表达式，还是函数调用
+                        builder.Append(readerField.Body ?? readerField.Value.ToString());
                         var orderField = new OrderByField { Field = readerField };
                         this.OrderByFields.Add(orderField);
                         if (orderType == "DESC")
@@ -604,7 +616,9 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                         for (int i = 0; i < this.DistinctOnFields.Count; i++)
                         {
                             if (i > 0) builder.Append(',');
-                            builder.Append(this.DistinctOnFields[i].Body);
+                            //order by 尽力取源字段值，不管是字段还是表达式，还是函数调用
+                            var fieldName = this.DistinctOnFields[i].Body ?? this.DistinctOnFields[i].Value.ToString();
+                            builder.Append(fieldName);
                             var orderField = new OrderByField { Field = this.DistinctOnFields[i] };
                             this.OrderByFields.Add(orderField);
                             if (orderType == "DESC")
@@ -617,7 +631,9 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                     else if (this.IsDistinctOnMember(memberExpr.Expression as MemberExpression))
                     {
                         var readerField = this.DistinctOnFields.Find(f => f.TargetMember.Name == memberExpr.Member.Name);
-                        builder.Append(readerField.Body);
+                        //order by 尽力取源字段值，不管是字段还是表达式，还是函数调用
+                        var fieldName = readerField.Body ?? readerField.Value.ToString();
+                        builder.Append(fieldName);
                         var orderField = new OrderByField { Field = readerField };
                         this.OrderByFields.Add(orderField);
                         if (orderType == "DESC")
@@ -629,6 +645,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                     else
                     {
                         var sqlSegment = this.VisitAndDeferred(new SqlFieldSegment { Expression = memberExpr });
+                        //order by 尽力取源字段值，不管是字段还是表达式，还是函数调用
                         builder.Append(sqlSegment.Body ?? sqlSegment.Value.ToString());
                         var orderField = new OrderByField { Field = sqlSegment };
                         this.OrderByFields.Add(orderField);
@@ -728,6 +745,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
                 //Where(f=>... && f.Order.OrderNo.Length==10 && ...)
                 var targetSegment = sqlSegment.Next(memberExpr.Expression);
                 sqlSegment = formatter.Invoke(this, targetSegment);
+                sqlSegment.TargetMember = memberExpr.Member;
                 return sqlSegment;
             }
 
@@ -977,6 +995,8 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         {
             sqlSegment = formatter.Invoke(this, sqlSegment);
             sqlSegment.SegmentType = memberExpr.Type;
+            sqlSegment.TargetMember = memberExpr.Member;
+            sqlSegment.IsNeedAlias = true;
             return sqlSegment;
         }
 

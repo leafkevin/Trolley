@@ -1226,7 +1226,8 @@ public class SqlVisitor : ISqlVisitor
                 if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
                 {
                     sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
-                    sqlSegment.Change($"COUNT({sqlSegment.Body})", false, true);
+                    //COUNT有时候是常量*,1等
+                    sqlSegment.Change($"COUNT({sqlSegment.Body ?? sqlSegment.Value.ToString()})", false, true);
                 }
                 else sqlSegment.Change("COUNT(1)", false, true);
                 sqlSegment.IsAggField = true;
