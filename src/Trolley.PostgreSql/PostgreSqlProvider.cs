@@ -2467,8 +2467,8 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
                 if (memberMapper.TypeHandler == null && !memberMapper.IsIgnore)
                 {
                     //允许自定义TypeHandlerType设置，默认设置，刨除内置的支持类型
-                    if ((memberMapper.UnderlyingType.IsClass && memberMapper.UnderlyingType != typeof(string) || memberMapper.UnderlyingType.IsEntityType(out _))
-                        && this.MapDefaultType(memberMapper.NativeDbType) == typeof(string) && !selfTypes.Contains(memberMapper.UnderlyingType))
+                    if (memberMapper.UnderlyingType.IsClass && memberMapper.UnderlyingType != typeof(string) && memberMapper.UnderlyingType.IsEntityType(out _)
+                        && "json,jsonb".Contains(memberMapper.DbColumnType.ToLower()) && !selfTypes.Contains(memberMapper.UnderlyingType))
                         memberMapper.TypeHandlerType = typeof(JsonTypeHandler);
 
                     //object类型
