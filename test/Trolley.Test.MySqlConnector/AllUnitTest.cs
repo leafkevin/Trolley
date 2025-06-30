@@ -27,11 +27,12 @@ public class AllUnitTest : UnitTestBase
             var connectionString1 = "Server=localhost;Database=fengling1;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
             var connectionString2 = "Server=localhost;Database=fengling2;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
             var builder = new OrmDbFactoryBuilder()
-                .Register(OrmProviderType.MySql, "fengling", connectionString, true)
-                .Register(OrmProviderType.MySql, "fengling1", connectionString1)
-                .Register(OrmProviderType.MySql, "fengling2", connectionString2)
+                .Register(OrmProviderType.MySql, "fengling", f => f.UseMaster(connectionString)
+                    .UseSlave(connectionString1, connectionString2), true)
+                .Register(OrmProviderType.MySql, "fengling1", f => f.UseConnectionString(connectionString1))
+                .Register(OrmProviderType.MySql, "fengling2", f => f.UseConnectionString(connectionString2))
                 .Configure<ModelConfiguration>(OrmProviderType.MySql)
-                .UseDatabaseSharding(() =>
+                .UseDatabaseSharding("fengling", () =>
                 {
                     //可以硬编码分库，也可以使用redis，映射表 ...，其他方式等
                     var scopeFactory = f.GetRequiredService<IServiceScopeFactory>();

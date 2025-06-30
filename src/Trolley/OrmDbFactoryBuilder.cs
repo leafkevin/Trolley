@@ -6,16 +6,11 @@ public sealed class OrmDbFactoryBuilder
 {
     private readonly IOrmDbFactory dbFactory = new OrmDbFactory();
 
-    public OrmDbFactoryBuilder Register(OrmProviderType ormProviderType, string dbKey, string connectionString, bool isDefault = false)
-    {
-        this.dbFactory.Register(ormProviderType, dbKey, connectionString, isDefault);
-        return this;
-    }
-    public OrmDbFactoryBuilder Register(OrmProviderType ormProviderType, string dbKey, string connectionString, Action<OrmDatabaseBuilder> databaseInitializer)
+    public OrmDbFactoryBuilder Register(OrmProviderType ormProviderType, string dbKey, Action<OrmDatabaseBuilder> databaseInitializer, bool isDefaultDatabase = false)
     {
         if (databaseInitializer == null)
             throw new ArgumentNullException(nameof(databaseInitializer));
-        var database = this.dbFactory.Register(ormProviderType, dbKey, connectionString);
+        var database = this.dbFactory.Register(ormProviderType, dbKey, isDefaultDatabase);
         var builder = new OrmDatabaseBuilder(this.dbFactory, database);
         databaseInitializer.Invoke(builder);
         return this;
@@ -30,7 +25,7 @@ public sealed class OrmDbFactoryBuilder
         this.dbFactory.Configure(ormProviderType, configuration);
         return this;
     }
-    public OrmDbFactoryBuilder UseDatabaseSharding(Func<string> dbKeySelector)
+    public OrmDbFactoryBuilder UseDatabaseSharding(string dbKey, Func<string> dbKeySelector)
     {
         this.dbFactory.UseDatabaseSharding(dbKeySelector);
         return this;
@@ -117,10 +112,56 @@ public sealed class OrmDatabaseBuilder
         this.database = database;
         this.dbKey = database.DbKey;
     }
+    /// <summary>
+    /// 设置单库连接串，不使用主从库模式，直接使用此数据库进行所有操作
+    /// </summary>
+    /// <param name="connectionString"></param>
+    /// <returns></returns>
+    public OrmDatabaseBuilder UseConnectionString(string connectionString)
+    {
+        database.MasterConnectionStrings ??= new();
+        database.MasterConnectionStrings.Add(connectionString);
+        return this;
+    }
+    /// <summary>
+    /// 设置主库连接串，可多个主库连接串，多个主库时，未设置连接串选择器，则默认使用轮询方式选择连接串
+    /// </summary>
+    /// <param name="connectionStrings"></param>
+    /// <returns></returns>
+    public OrmDatabaseBuilder UseMaster(params string[] connectionStrings)
+    {
+        database.MasterConnectionStrings ??= new();
+        database.MasterConnectionStrings.AddRange(connectionStrings);
+        return this;
+    }
+    /// <summary>
+    /// 设置主库连接串同时设置连接串选择器，多个主库时使用connectionStringSelector委托选择连接串，委托connectionStringSelector也可作为主库的分库规则，如：主库有2个数据库，分别为tenant1_master和tenant2_master，保存不同租户的数据，可使用此委托可获取不同租户的数据，进行写操作
+    /// </summary>
+    /// <param name="connectionStrings"></param>
+    /// <param name="connectionStringSelector"></param>
+    /// <returns></returns>
+    public OrmDatabaseBuilder UseMaster(string[] connectionStrings, Func<string> connectionStringSelector)
+    {
+        database.MasterConnectionStrings ??= new();
+        database.MasterConnectionStrings.AddRange(connectionStrings);
+        if (connectionStringSelector == null)
+            throw new ArgumentNullException(nameof(connectionStringSelector));
+        database.UseMasterSelector(connectionStringSelector);
+        return this;
+    }
     public OrmDatabaseBuilder UseSlave(params string[] connectionStrings)
     {
         database.SlaveConnectionStrings ??= new();
         database.SlaveConnectionStrings.AddRange(connectionStrings);
+        return this;
+    }
+    public OrmDatabaseBuilder UseSlave(string[] connectionStrings, Func<string> connectionStringSelector)
+    {
+        database.SlaveConnectionStrings ??= new();
+        database.SlaveConnectionStrings.AddRange(connectionStrings);
+        if (connectionStringSelector == null)
+            throw new ArgumentNullException(nameof(connectionStringSelector));
+        database.UseSlaveSelector(connectionStringSelector);
         return this;
     }
     public OrmDatabaseBuilder Configure<TModelConfiguration>() where TModelConfiguration : class, IModelConfiguration, new()

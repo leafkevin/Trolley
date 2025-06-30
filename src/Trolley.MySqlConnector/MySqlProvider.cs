@@ -397,14 +397,15 @@ public partial class MySqlProvider : BaseOrmProvider
                 }
                 if (memberMapper.TypeHandler == null && !memberMapper.IsIgnore)
                 {
-                    //允许自定义TypeHandlerType设置，默认设置
-                    if (memberMapper.UnderlyingType.IsClass && memberMapper.UnderlyingType != typeof(string)
-                        && memberMapper.UnderlyingType.IsEntityType(out _) && memberMapper.DbColumnType.ToLower() == "json")
-                        memberMapper.TypeHandlerType = typeof(JsonTypeHandler);
-
                     //object类型
                     if (memberMapper.MemberType == typeof(object) && this.MapDefaultType(memberMapper) == typeof(string))
                         memberMapper.TypeHandlerType = typeof(ToStringTypeHandler);
+
+                    //允许自定义TypeHandlerType设置，默认设置
+                    if ((memberMapper.UnderlyingType.IsClass && memberMapper.UnderlyingType != typeof(string)
+                        || memberMapper.UnderlyingType.IsEntityType(out _))
+                        && this.MapDefaultType(memberMapper.NativeDbType) == typeof(string))
+                        memberMapper.TypeHandlerType = typeof(JsonTypeHandler);
 
                     if (memberMapper.TypeHandlerType != null)
                         memberMapper.TypeHandler = this.GetTypeHandler(memberMapper.TypeHandlerType);

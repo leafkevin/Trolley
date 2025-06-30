@@ -39,7 +39,7 @@ public sealed class DbContext
         else
         {
             isNeedClose = true;
-            connection = this.CreateConnection(this.Database.ConnectionString);
+            connection = this.CreateConnection(this.Database.UseMaster());
         }
         var dbCommand = this.OrmProvider.CreateCommand();
         command = connection.CreateCommand(dbCommand);
@@ -62,7 +62,7 @@ public sealed class DbContext
         else
         {
             isNeedClose = true;
-            var connectionString = isUseMaster ? this.Database.ConnectionString : this.Database.UseSlave();
+            var connectionString = isUseMaster ? this.Database.UseMaster() : this.Database.UseSlave();
             connection = this.CreateConnection(connectionString);
         }
         dbCommand ??= this.OrmProvider.CreateCommand();
@@ -660,7 +660,7 @@ public sealed class DbContext
     {
         if (this.Transaction != null)
             throw new Exception("上一个事务还没有完成，无法开启新事务");
-        this.Connection ??= this.CreateConnection(this.Database.ConnectionString);
+        this.Connection ??= this.CreateConnection(this.Database.UseMaster());
         this.Connection.Open();
         this.Transaction = this.Connection.BeginTransaction();
     }
@@ -668,7 +668,7 @@ public sealed class DbContext
     {
         if (this.Transaction != null)
             throw new Exception("上一个事务还没有完成，无法开启新事务");
-        this.Connection ??= this.CreateConnection(this.Database.ConnectionString);
+        this.Connection ??= this.CreateConnection(this.Database.UseMaster());
         await this.Connection.OpenAsync(cancellationToken);
         this.Transaction = await this.Connection.BeginTransactionAsync(cancellationToken);
     }

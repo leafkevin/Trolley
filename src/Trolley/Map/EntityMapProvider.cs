@@ -26,7 +26,7 @@ public class EntityMapProvider : IEntityMapProvider
     public void UseFieldMapHandler(IFieldMapHandler fieldMapHandler) => this.fieldMapHandler = fieldMapHandler;
     public void Build(TheaDatabase database)
     {
-        database.OrmProvider.MapTables(database.ConnectionString, this);
+        database.OrmProvider.MapTables(database.UseMaster(), this);
         foreach (var entityMapper in this.EntityMaps)
             entityMapper.Build(database.OrmProvider);
     }
