@@ -106,7 +106,10 @@ public class TheaDatabase
         // 如果已经设置了从库选择器，则不再设置默认的轮询方式选择器
         if (this.slaveSelector != null) return;
         if (this.SlaveConnectionStrings == null || this.SlaveConnectionStrings.Count == 0)
+        {
             this.slaveSelector = () => this.UseMaster();
+            return;
+        }
         if (this.SlaveConnectionStrings.Count == 1)
             this.slaveSelector = () => this.SlaveConnectionStrings[0];
         else

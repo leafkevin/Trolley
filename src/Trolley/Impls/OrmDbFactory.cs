@@ -43,6 +43,7 @@ public sealed class OrmDbFactory : IOrmDbFactory
             OrmProvider = ormProvider,
             IsDefault = isDefault
         })) throw new Exception($"dbKey:{database.DbKey}数据库已经存在！");
+        if (isDefault) this.defaultDatabase = database;
         return database;
     }
 
