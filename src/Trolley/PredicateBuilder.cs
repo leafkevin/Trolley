@@ -25,7 +25,11 @@ public class PredicateBuilder
 public class PredicateBuilder<T>
 {
     private Expression<Func<T, bool>> expression;
-    public PredicateBuilder<T> Where(Expression<Func<T, bool>> predicate) => this.Merge(Expression.AndAlso, predicate);
+    public PredicateBuilder<T> Where(Expression<Func<T, bool>> predicate)
+    {
+        this.expression = predicate;
+        return this;
+    }
     public PredicateBuilder<T> And(Expression<Func<T, bool>> predicate) => this.Merge(Expression.AndAlso, predicate);
     public PredicateBuilder<T> And(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
         => this.Merge(condition, Expression.AndAlso, ifPredicate, elsePredicate);
@@ -56,6 +60,7 @@ public class PredicateBuilder<T>
         return this;
     }
     public Expression<Func<T, bool>> Build() => this.expression;
+    public void Clear() => this.expression = null;
     private PredicateBuilder<T> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<T, bool>> predicate)
     {
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));
@@ -112,6 +117,7 @@ public class PredicateBuilder<T1, T2>
         return this;
     }
     public Expression<Func<T1, T2, bool>> Build() => this.expression;
+    public void Clear() => this.expression = null;
     private PredicateBuilder<T1, T2> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<T1, T2, bool>> predicate)
     {
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));
@@ -168,6 +174,7 @@ public class PredicateBuilder<T1, T2, T3>
         return this;
     }
     public Expression<Func<T1, T2, T3, bool>> Build() => this.expression;
+    public void Clear() => this.expression = null;
     private PredicateBuilder<T1, T2, T3> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<T1, T2, T3, bool>> predicate)
     {
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));
@@ -224,6 +231,7 @@ public class PredicateBuilder<T1, T2, T3, T4>
         return this;
     }
     public Expression<Func<T1, T2, T3, T4, bool>> Build() => this.expression;
+    public void Clear() => this.expression = null;
     private PredicateBuilder<T1, T2, T3, T4> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<T1, T2, T3, T4, bool>> predicate)
     {
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));
@@ -280,6 +288,7 @@ public class PredicateBuilder<T1, T2, T3, T4, T5>
         return this;
     }
     public Expression<Func<T1, T2, T3, T4, T5, bool>> Build() => this.expression;
+    public void Clear() => this.expression = null;
     private PredicateBuilder<T1, T2, T3, T4, T5> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
     {
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));
@@ -336,6 +345,7 @@ public class PredicateBuilder<T1, T2, T3, T4, T5, T6>
         return this;
     }
     public Expression<Func<T1, T2, T3, T4, T5, T6, bool>> Build() => this.expression;
+    public void Clear() => this.expression = null;
     private PredicateBuilder<T1, T2, T3, T4, T5, T6> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate)
     {
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));
@@ -392,6 +402,7 @@ public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7>
         return this;
     }
     public Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> Build() => this.expression;
+    public void Clear() => this.expression = null;
     private PredicateBuilder<T1, T2, T3, T4, T5, T6, T7> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> predicate)
     {
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));
@@ -448,6 +459,7 @@ public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8>
         return this;
     }
     public Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> Build() => this.expression;
+    public void Clear() => this.expression = null;
     private PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate)
     {
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));
@@ -504,6 +516,7 @@ public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9>
         return this;
     }
     public Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> Build() => this.expression;
+    public void Clear() => this.expression = null;
     private PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate)
     {
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));
@@ -560,6 +573,7 @@ public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
         return this;
     }
     public Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> Build() => this.expression;
+    public void Clear() => this.expression = null;
     private PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate)
     {
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));
@@ -616,6 +630,7 @@ public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>
         return this;
     }
     public Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> Build() => this.expression;
+    public void Clear() => this.expression = null;
     private PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate)
     {
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));
@@ -672,6 +687,7 @@ public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>
         return this;
     }
     public Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> Build() => this.expression;
+    public void Clear() => this.expression = null;
     private PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate)
     {
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));
@@ -728,6 +744,7 @@ public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12,
         return this;
     }
     public Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> Build() => this.expression;
+    public void Clear() => this.expression = null;
     private PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate)
     {
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));
@@ -784,6 +801,7 @@ public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12,
         return this;
     }
     public Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> Build() => this.expression;
+    public void Clear() => this.expression = null;
     private PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate)
     {
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));
@@ -840,6 +858,7 @@ public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12,
         return this;
     }
     public Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> Build() => this.expression;
+    public void Clear() => this.expression = null;
     private PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> predicate)
     {
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));
@@ -896,6 +915,7 @@ public class PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12,
         return this;
     }
     public Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> Build() => this.expression;
+    public void Clear() => this.expression = null;
     private PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> predicate)
     {
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));

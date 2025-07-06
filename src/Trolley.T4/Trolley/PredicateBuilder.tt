@@ -61,6 +61,7 @@ public class PredicateBuilder<T>
         return this;
     }
     public Expression<Func<T, bool>> Build() => this.expression;
+    public void Clear() => this.expression = null;
     private PredicateBuilder<T> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<T, bool>> predicate)
     {
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));
@@ -123,6 +124,7 @@ public class PredicateBuilder<<#=tables#>>
         return this;
     }
     public Expression<Func<<#=tables#>, bool>> Build() => this.expression;
+    public void Clear() => this.expression = null;
     private PredicateBuilder<<#=tables#>> Merge(Func<Expression, Expression, Expression> mergeOp, Expression<Func<<#=tables#>, bool>> predicate)
     {
         if (predicate == null) throw new ArgumentNullException(nameof(predicate));
