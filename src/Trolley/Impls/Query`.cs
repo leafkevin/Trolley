@@ -152,7 +152,7 @@ public class Query<T1, T2> : QueryBase, IQuery<T1, T2>
     }
     #endregion
 
-    #region Where/And
+    #region Where
     public virtual IQuery<T1, T2> Where(Expression<Func<T1, T2, bool>> predicate)
     {
         base.WhereInternal(predicate);
@@ -163,6 +163,9 @@ public class Query<T1, T2> : QueryBase, IQuery<T1, T2>
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    #endregion
+
+    #region And
     public virtual IQuery<T1, T2> And(Expression<Func<T1, T2, bool>> predicate)
     {
         base.AndInternal(predicate);
@@ -171,6 +174,19 @@ public class Query<T1, T2> : QueryBase, IQuery<T1, T2>
     public virtual IQuery<T1, T2> And(bool condition, Expression<Func<T1, T2, bool>> ifPredicate, Expression<Func<T1, T2, bool>> elsePredicate = null)
     {
         base.AndInternal(condition, ifPredicate, elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region Or
+    public virtual IQuery<T1, T2> Or(Expression<Func<T1, T2, bool>> predicate)
+    {
+        base.OrInternal(predicate);
+        return this;
+    }
+    public virtual IQuery<T1, T2> Or(bool condition, Expression<Func<T1, T2, bool>> ifPredicate, Expression<Func<T1, T2, bool>> elsePredicate = null)
+    {
+        base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
     #endregion
@@ -399,7 +415,7 @@ public class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
     }
     #endregion
 
-    #region Where/And
+    #region Where
     public virtual IQuery<T1, T2, T3> Where(Expression<Func<T1, T2, T3, bool>> predicate)
     {
         base.WhereInternal(predicate);
@@ -410,6 +426,9 @@ public class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    #endregion
+
+    #region And
     public virtual IQuery<T1, T2, T3> And(Expression<Func<T1, T2, T3, bool>> predicate)
     {
         base.AndInternal(predicate);
@@ -418,6 +437,19 @@ public class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
     public virtual IQuery<T1, T2, T3> And(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate, Expression<Func<T1, T2, T3, bool>> elsePredicate = null)
     {
         base.AndInternal(condition, ifPredicate, elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region Or
+    public virtual IQuery<T1, T2, T3> Or(Expression<Func<T1, T2, T3, bool>> predicate)
+    {
+        base.OrInternal(predicate);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3> Or(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate, Expression<Func<T1, T2, T3, bool>> elsePredicate = null)
+    {
+        base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
     #endregion
@@ -646,7 +678,7 @@ public class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
     }
     #endregion
 
-    #region Where/And
+    #region Where
     public virtual IQuery<T1, T2, T3, T4> Where(Expression<Func<T1, T2, T3, T4, bool>> predicate)
     {
         base.WhereInternal(predicate);
@@ -657,6 +689,9 @@ public class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    #endregion
+
+    #region And
     public virtual IQuery<T1, T2, T3, T4> And(Expression<Func<T1, T2, T3, T4, bool>> predicate)
     {
         base.AndInternal(predicate);
@@ -665,6 +700,19 @@ public class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
     public virtual IQuery<T1, T2, T3, T4> And(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null)
     {
         base.AndInternal(condition, ifPredicate, elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region Or
+    public virtual IQuery<T1, T2, T3, T4> Or(Expression<Func<T1, T2, T3, T4, bool>> predicate)
+    {
+        base.OrInternal(predicate);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4> Or(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null)
+    {
+        base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
     #endregion
@@ -893,7 +941,7 @@ public class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
     }
     #endregion
 
-    #region Where/And
+    #region Where
     public virtual IQuery<T1, T2, T3, T4, T5> Where(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
     {
         base.WhereInternal(predicate);
@@ -904,6 +952,9 @@ public class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    #endregion
+
+    #region And
     public virtual IQuery<T1, T2, T3, T4, T5> And(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
     {
         base.AndInternal(predicate);
@@ -912,6 +963,19 @@ public class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
     public virtual IQuery<T1, T2, T3, T4, T5> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null)
     {
         base.AndInternal(condition, ifPredicate, elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region Or
+    public virtual IQuery<T1, T2, T3, T4, T5> Or(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
+    {
+        base.OrInternal(predicate);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null)
+    {
+        base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
     #endregion
@@ -1140,7 +1204,7 @@ public class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T
     }
     #endregion
 
-    #region Where/And
+    #region Where
     public virtual IQuery<T1, T2, T3, T4, T5, T6> Where(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate)
     {
         base.WhereInternal(predicate);
@@ -1151,6 +1215,9 @@ public class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    #endregion
+
+    #region And
     public virtual IQuery<T1, T2, T3, T4, T5, T6> And(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate)
     {
         base.AndInternal(predicate);
@@ -1159,6 +1226,19 @@ public class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T
     public virtual IQuery<T1, T2, T3, T4, T5, T6> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> elsePredicate = null)
     {
         base.AndInternal(condition, ifPredicate, elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region Or
+    public virtual IQuery<T1, T2, T3, T4, T5, T6> Or(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate)
+    {
+        base.OrInternal(predicate);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> elsePredicate = null)
+    {
+        base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
     #endregion
@@ -1387,7 +1467,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T
     }
     #endregion
 
-    #region Where/And
+    #region Where
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> predicate)
     {
         base.WhereInternal(predicate);
@@ -1398,6 +1478,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    #endregion
+
+    #region And
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> predicate)
     {
         base.AndInternal(predicate);
@@ -1406,6 +1489,19 @@ public class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> elsePredicate = null)
     {
         base.AndInternal(condition, ifPredicate, elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region Or
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> predicate)
+    {
+        base.OrInternal(predicate);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> elsePredicate = null)
+    {
+        base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
     #endregion
@@ -1634,7 +1730,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T
     }
     #endregion
 
-    #region Where/And
+    #region Where
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate)
     {
         base.WhereInternal(predicate);
@@ -1645,6 +1741,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    #endregion
+
+    #region And
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate)
     {
         base.AndInternal(predicate);
@@ -1653,6 +1752,19 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> elsePredicate = null)
     {
         base.AndInternal(condition, ifPredicate, elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region Or
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate)
+    {
+        base.OrInternal(predicate);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> elsePredicate = null)
+    {
+        base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
     #endregion
@@ -1881,7 +1993,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T
     }
     #endregion
 
-    #region Where/And
+    #region Where
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate)
     {
         base.WhereInternal(predicate);
@@ -1892,6 +2004,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    #endregion
+
+    #region And
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate)
     {
         base.AndInternal(predicate);
@@ -1900,6 +2015,19 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> elsePredicate = null)
     {
         base.AndInternal(condition, ifPredicate, elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region Or
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate)
+    {
+        base.OrInternal(predicate);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> elsePredicate = null)
+    {
+        base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
     #endregion
@@ -2128,7 +2256,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<
     }
     #endregion
 
-    #region Where/And
+    #region Where
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate)
     {
         base.WhereInternal(predicate);
@@ -2139,6 +2267,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    #endregion
+
+    #region And
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate)
     {
         base.AndInternal(predicate);
@@ -2147,6 +2278,19 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> elsePredicate = null)
     {
         base.AndInternal(condition, ifPredicate, elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region Or
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate)
+    {
+        base.OrInternal(predicate);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> elsePredicate = null)
+    {
+        base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
     #endregion
@@ -2375,7 +2519,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQ
     }
     #endregion
 
-    #region Where/And
+    #region Where
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate)
     {
         base.WhereInternal(predicate);
@@ -2386,6 +2530,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQ
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    #endregion
+
+    #region And
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate)
     {
         base.AndInternal(predicate);
@@ -2394,6 +2541,19 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQ
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> elsePredicate = null)
     {
         base.AndInternal(condition, ifPredicate, elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region Or
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate)
+    {
+        base.OrInternal(predicate);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> elsePredicate = null)
+    {
+        base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
     #endregion
@@ -2622,7 +2782,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBas
     }
     #endregion
 
-    #region Where/And
+    #region Where
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate)
     {
         base.WhereInternal(predicate);
@@ -2633,6 +2793,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBas
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    #endregion
+
+    #region And
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate)
     {
         base.AndInternal(predicate);
@@ -2641,6 +2804,19 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBas
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> elsePredicate = null)
     {
         base.AndInternal(condition, ifPredicate, elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region Or
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate)
+    {
+        base.OrInternal(predicate);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> elsePredicate = null)
+    {
+        base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
     #endregion
@@ -2869,7 +3045,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Que
     }
     #endregion
 
-    #region Where/And
+    #region Where
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate)
     {
         base.WhereInternal(predicate);
@@ -2880,6 +3056,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Que
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    #endregion
+
+    #region And
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate)
     {
         base.AndInternal(predicate);
@@ -2888,6 +3067,19 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Que
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> elsePredicate = null)
     {
         base.AndInternal(condition, ifPredicate, elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region Or
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate)
+    {
+        base.OrInternal(predicate);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> elsePredicate = null)
+    {
+        base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
     #endregion
@@ -3116,7 +3308,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> 
     }
     #endregion
 
-    #region Where/And
+    #region Where
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate)
     {
         base.WhereInternal(predicate);
@@ -3127,6 +3319,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> 
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    #endregion
+
+    #region And
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate)
     {
         base.AndInternal(predicate);
@@ -3135,6 +3330,19 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> 
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> elsePredicate = null)
     {
         base.AndInternal(condition, ifPredicate, elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region Or
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate)
+    {
+        base.OrInternal(predicate);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> elsePredicate = null)
+    {
+        base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
     #endregion
@@ -3363,7 +3571,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
     }
     #endregion
 
-    #region Where/And
+    #region Where
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> predicate)
     {
         base.WhereInternal(predicate);
@@ -3374,6 +3582,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    #endregion
+
+    #region And
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> predicate)
     {
         base.AndInternal(predicate);
@@ -3382,6 +3593,19 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> elsePredicate = null)
     {
         base.AndInternal(condition, ifPredicate, elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region Or
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> predicate)
+    {
+        base.OrInternal(predicate);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> elsePredicate = null)
+    {
+        base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
     #endregion
@@ -3552,7 +3776,7 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
     }
     #endregion
 
-    #region Where/And
+    #region Where
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> predicate)
     {
         base.WhereInternal(predicate);
@@ -3563,6 +3787,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    #endregion
+
+    #region And
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> predicate)
     {
         base.AndInternal(predicate);
@@ -3571,6 +3798,19 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> elsePredicate = null)
     {
         base.AndInternal(condition, ifPredicate, elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region Or
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> predicate)
+    {
+        base.OrInternal(predicate);
+        return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> elsePredicate = null)
+    {
+        base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
     #endregion

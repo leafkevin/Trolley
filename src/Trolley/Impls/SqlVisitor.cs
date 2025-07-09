@@ -1472,7 +1472,7 @@ public class SqlVisitor : ISqlVisitor
     }
     public virtual string VisitConditionExpr(Expression conditionExpr, out OperationType operationType)
     {
-        operationType = OperationType.And;
+        operationType = OperationType.None;
         SqlFieldSegment sqlSegment = null;
         if (conditionExpr.NodeType == ExpressionType.AndAlso || conditionExpr.NodeType == ExpressionType.OrElse)
         {

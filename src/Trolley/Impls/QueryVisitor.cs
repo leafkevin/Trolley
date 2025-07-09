@@ -1172,15 +1172,44 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var lambdaExpr = whereExpr as LambdaExpression;
         this.ClearUnionSql();
         this.InitTableAlias(lambdaExpr);
-        if (this.LastWhereOperationType == OperationType.Or)
-            this.WhereSql = $"({this.WhereSql})";
         var conditionSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
-        if (operationType == OperationType.Or)
-            conditionSql = $"({conditionSql})";
-        this.LastWhereOperationType = OperationType.And;
-        if (!string.IsNullOrEmpty(this.WhereSql))
+        if (string.IsNullOrEmpty(this.WhereSql))
+        {
+            this.WhereSql = conditionSql;
+            this.LastWhereOperationType = operationType;
+        }
+        else
+        {
+            if (this.LastWhereOperationType == OperationType.Or)
+                this.WhereSql = $"({this.WhereSql})";
+            if (operationType == OperationType.Or)
+                conditionSql = $"({conditionSql})";
             this.WhereSql += " AND " + conditionSql;
-        else this.WhereSql = conditionSql;
+            this.LastWhereOperationType = OperationType.And;
+        }
+        this.IsWhere = false;
+    }
+    public virtual void Or(Expression whereExpr)
+    {
+        this.IsWhere = true;
+        var lambdaExpr = whereExpr as LambdaExpression;
+        this.ClearUnionSql();
+        this.InitTableAlias(lambdaExpr);
+        var conditionSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
+        if (string.IsNullOrEmpty(this.WhereSql))
+        {
+            this.WhereSql = conditionSql;
+            this.LastWhereOperationType = operationType;
+        }
+        else
+        {
+            if (this.LastWhereOperationType == OperationType.And)
+                this.WhereSql = $"({this.WhereSql})";
+            if (operationType == OperationType.And)
+                conditionSql = $"({conditionSql})";
+            this.WhereSql += " OR " + conditionSql;
+            this.LastWhereOperationType = OperationType.Or;
+        }
         this.IsWhere = false;
     }
     public virtual void GroupBy(Expression expr)

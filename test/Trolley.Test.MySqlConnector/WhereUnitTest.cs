@@ -188,12 +188,13 @@ public class WhereUnitTest : UnitTestBase
         var repository = this.dbFactory.Create();
         var sql = repository.From<Order, User>()
             .Where((a, b) => a.BuyerId == b.Id)
-            .And(true, (a, b) => a.SellerId.IsNull() || !a.ProductCount.HasValue)
+            .And(true, (a, b) => a.SellerId.IsNull() || !a.ProductCount.HasValue)            
             .And(true, (a, b) => a.Products != null)
+            .Or((a, b) => b.Age < 20)
             .And(true, (a, b) => a.Products == null || a.Disputes == null)
             .Select((a, b) => "*")
             .ToSql(out _);
-        Assert.Equal("SELECT * FROM `sys_order` a,`sys_user` b WHERE a.`BuyerId`=b.`Id` AND (a.`SellerId` IS NULL OR a.`ProductCount` IS NULL) AND a.`Products` IS NOT NULL AND (a.`Products` IS NULL OR a.`Disputes` IS NULL)", sql);
+        Assert.Equal("SELECT * FROM `sys_order` a,`sys_user` b WHERE ((a.`BuyerId`=b.`Id` AND (a.`SellerId` IS NULL OR a.`ProductCount` IS NULL) AND a.`Products` IS NOT NULL) OR b.`Age`<20) AND (a.`Products` IS NULL OR a.`Disputes` IS NULL)", sql);
 
         var filterExpr = PredicateBuilder.Create<Order, User>()
             .Where((x, y) => x.BuyerId <= 10 && x.ProductCount > 5 && y.SourceType == UserSourceType.Douyin)
@@ -207,7 +208,7 @@ public class WhereUnitTest : UnitTestBase
             .And(filterExpr != null, filterExpr)
             .And(true, (a, b) => a.Products == null || a.Disputes == null)
             .Select((a, b) => "*")
-        .ToSql(out _);
+            .ToSql(out _);
         Assert.Equal("SELECT * FROM `sys_order` a,`sys_user` b WHERE (a.`BuyerId`=b.`Id` OR b.`SourceType`='Douyin') AND (a.`BuyerSource`='Taobao' OR (a.`SellerId` IS NULL AND a.`ProductCount` IS NULL) OR a.`ProductCount`>1 OR (a.`TotalAmount`>500 AND a.`BuyerSource`='Website')) AND ((a.`BuyerId`<=10 AND a.`ProductCount`>5 AND b.`SourceType`='Douyin') OR (a.`BuyerId`>10 AND a.`ProductCount`<=5 AND b.`SourceType`='Website') OR a.`BuyerSource`='Taobao') AND a.`IsEnabled`=1 AND a.`BuyerId`=b.`Id` AND (a.`Products` IS NULL OR a.`Disputes` IS NULL)", sql);
     }
     [Fact]

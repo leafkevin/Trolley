@@ -19,13 +19,14 @@ public class UnitTest7 : UnitTestBase
         {
             var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
             var builder = new OrmDbFactoryBuilder()
-                .Register(OrmProviderType.MySql, "fengling", connectionString, f =>
+                .Register(OrmProviderType.MySql, "fengling", f =>
                 {
                     //两个读库
                     var connectionString1 = "Server=localhost;Database=fengling1;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
                     var connectionString2 = "Server=localhost;Database=fengling2;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
-                    f.UseSlave(connectionString1, connectionString2)
-                    .AsDefaultDatabase();
+                    f.UseConnectionString(connectionString)
+                        .UseSlave(connectionString1, connectionString2)
+                        .AsDefaultDatabase();
                 })
                 .Configure<ModelConfiguration>(OrmProviderType.MySql)
                 .UseInterceptors(df =>

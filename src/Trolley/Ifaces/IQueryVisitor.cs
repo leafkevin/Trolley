@@ -88,6 +88,7 @@ public interface IQueryVisitor : IDisposable
     Task SetIncludeValuesAsync(Type targetType, object target, ITheaDataReader reader, bool isSingle, CancellationToken cancellationToken);
     void Where(Expression whereExpr);
     void And(Expression whereExpr);
+    void Or(Expression whereExpr);
     void GroupBy(Expression expr);
     void OrderBy(string orderType, Expression expr);
     void Having(Expression havingExpr);

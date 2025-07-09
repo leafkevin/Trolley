@@ -180,7 +180,7 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
     }
     #endregion
 
-    #region Where/And
+    #region Where
     public virtual IQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate)
     {
         base.WhereInternal(predicate);
@@ -191,6 +191,9 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    #endregion
+
+    #region And
     public virtual IQuery<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate)
     {
         base.AndInternal(predicate);
@@ -199,6 +202,19 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
     public virtual IQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
     {
         base.AndInternal(condition, ifPredicate, elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region Or
+    public virtual IQuery<<#=tables#>> Or(Expression<Func<<#=tables#>, bool>> predicate)
+    {
+        base.OrInternal(predicate);
+        return this;
+    }
+    public virtual IQuery<<#=tables#>> Or(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
+    {
+        base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
     #endregion

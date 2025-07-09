@@ -191,7 +191,7 @@ public class QueryInternal
     }
     #endregion
 
-    #region WhereInternal/AndInternal
+    #region Where
     protected void WhereInternal(Expression predicate)
     {
         if (predicate == null)
@@ -209,6 +209,9 @@ public class QueryInternal
         }
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
     }
+    #endregion
+
+    #region And
     protected void AndInternal(Expression predicate)
     {
         if (predicate == null)
@@ -225,6 +228,26 @@ public class QueryInternal
             this.Visitor.And(ifPredicate);
         }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
+    }
+    #endregion
+
+    #region Or
+    protected void OrInternal(Expression predicate)
+    {
+        if (predicate == null)
+            throw new ArgumentNullException(nameof(predicate));
+
+        this.Visitor.Or(predicate);
+    }
+    protected void OrInternal(bool condition, Expression ifPredicate, Expression elsePredicate = null)
+    {
+        if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
+            this.Visitor.Or(ifPredicate);
+        }
+        else if (elsePredicate != null) this.Visitor.Or(elsePredicate);
     }
     #endregion
 
