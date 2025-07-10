@@ -15,6 +15,7 @@ public sealed class OrmDbFactoryBuilder
         databaseInitializer.Invoke(builder);
         return this;
     }
+   
     public OrmDbFactoryBuilder Configure(string dbKey, IModelConfiguration configuration)
     {
         this.dbFactory.Configure(dbKey, configuration);
@@ -25,11 +26,28 @@ public sealed class OrmDbFactoryBuilder
         this.dbFactory.Configure(ormProviderType, configuration);
         return this;
     }
-    public OrmDbFactoryBuilder UseDatabaseSharding(string dbKey, Func<string> dbKeySelector)
+
+    public OrmDbFactoryBuilder UseConnectionStringSelector(string dbKey, Func<string> connectionStringSelector)
     {
-        this.dbFactory.UseDatabaseSharding(dbKeySelector);
+        this.dbFactory.AddConnectionStringSelector(dbKey, connectionStringSelector);
         return this;
     }
+    public OrmDbFactoryBuilder UseConnectionStringSelector(string dbKey, Func<object, string> connectionStringSelector)
+    {
+        this.dbFactory.AddConnectionStringSelector(dbKey, connectionStringSelector);
+        return this;
+    }
+    public OrmDbFactoryBuilder UseConnectionStringSelector(OrmProviderType ormProviderType, Func<string> connectionStringSelector)
+    {
+        this.dbFactory.AddConnectionStringSelector(ormProviderType, connectionStringSelector);
+        return this;
+    }
+    public OrmDbFactoryBuilder UseConnectionStringSelector(OrmProviderType ormProviderType, Func<object, string> connectionStringSelector)
+    {
+        this.dbFactory.AddConnectionStringSelector(ormProviderType, connectionStringSelector);
+        return this;
+    }
+
     public OrmDbFactoryBuilder UseTableSharding(string dbKey, Action<TableShardingBuilder> shardingInitializer)
     {
         if (shardingInitializer == null)
@@ -149,6 +167,21 @@ public sealed class OrmDatabaseBuilder
         database.UseMasterSelector(connectionStringSelector);
         return this;
     }
+    /// <summary>
+    /// 设置主库连接串同时设置连接串选择器，多个主库时通过指定参数的connectionStringSelector委托选择连接串，这个参数在调用CreateRepository方法时指定，使用此场景通常是多主库并且多租户，如：主库有4个数据库，分别为tenant1_master1、tenant1_master2、other_tenant_master1、other_tenant_master2，调用CreateRepository("default", tenant1)时，将选择tenant1中的某一个主库，调用CreateRepository("default", tenant2)时，将选择other_tenant中的某一个主库，进行写操作
+    /// </summary>
+    /// <param name="connectionStrings"></param>
+    /// <param name="connectionStringSelector"></param>
+    /// <returns></returns>
+    public OrmDatabaseBuilder UseMaster(string[] connectionStrings, Func<object, string> connectionStringSelector)
+    {
+        database.MasterConnectionStrings ??= new();
+        database.MasterConnectionStrings.AddRange(connectionStrings);
+        if (connectionStringSelector == null)
+            throw new ArgumentNullException(nameof(connectionStringSelector));
+        database.UseMasterSelector(connectionStringSelector);
+        return this;
+    }
     public OrmDatabaseBuilder UseSlave(params string[] connectionStrings)
     {
         database.SlaveConnectionStrings ??= new();
@@ -156,6 +189,15 @@ public sealed class OrmDatabaseBuilder
         return this;
     }
     public OrmDatabaseBuilder UseSlave(string[] connectionStrings, Func<string> connectionStringSelector)
+    {
+        database.SlaveConnectionStrings ??= new();
+        database.SlaveConnectionStrings.AddRange(connectionStrings);
+        if (connectionStringSelector == null)
+            throw new ArgumentNullException(nameof(connectionStringSelector));
+        database.UseSlaveSelector(connectionStringSelector);
+        return this;
+    }
+    public OrmDatabaseBuilder UseSlave(string[] connectionStrings, Func<object, string> connectionStringSelector)
     {
         database.SlaveConnectionStrings ??= new();
         database.SlaveConnectionStrings.AddRange(connectionStrings);

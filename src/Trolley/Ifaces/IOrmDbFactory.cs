@@ -10,7 +10,11 @@ public interface IOrmDbFactory
     OrmDbFactoryOptions Options { get; }
 
     void UseDefaultDatabase(string dbKey);
-    void UseDatabaseSharding(Func<string> dbKeySelector);
+    bool TryGetConnectionStringSelector(string dbKey, out Delegate connectionStringSelector);
+    void AddConnectionStringSelector(string dbKey, Delegate connectionStringSelector);
+    bool TryGetConnectionStringSelector(OrmProviderType ormProviderType, out Delegate connectionStringSelector);
+    void AddConnectionStringSelector(OrmProviderType ormProviderType, Delegate connectionStringSelector);
+
     bool TryGetTableShardingProvider(string dbKey, out ITableShardingProvider tableShardingProvider);
     void AddTableShardingProvider(string dbKey, ITableShardingProvider tableShardingProvider);
     bool TryGetTableShardingProvider(OrmProviderType ormProviderType, out ITableShardingProvider tableShardingProvider);

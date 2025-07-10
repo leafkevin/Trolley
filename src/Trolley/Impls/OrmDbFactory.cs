@@ -11,13 +11,16 @@ public sealed class OrmDbFactory : IOrmDbFactory
     private readonly ConcurrentDictionary<string, IEntityMapProvider> mapProviders = new();
     private readonly ConcurrentDictionary<OrmProviderType, IEntityMapProvider> globalMapProviders = new();
 
+    private readonly ConcurrentDictionary<string, Delegate> connectionStringSelectors = new();
+    private readonly ConcurrentDictionary<OrmProviderType, Delegate> globalConnectionStringSelectors = new();
     private readonly ConcurrentDictionary<string, ITableShardingProvider> tableShardingProviders = new();
     private readonly ConcurrentDictionary<OrmProviderType, ITableShardingProvider> globalTableShardingProviders = new();
+
+    private ConcurrentDictionary<string, object> complexConnectionStringSelectors;
     private ConcurrentDictionary<string, IEntityMapProvider> complexMapProviders;
     private ConcurrentDictionary<string, ITableShardingProvider> complexTableShardingProviders;
 
     private OrmDbFactoryOptions options = new();
-    private Func<string> dbKeySelector;
     private TheaDatabase defaultDatabase;
 
     public ICollection<TheaDatabase> Databases => this.databases.Values;
@@ -76,8 +79,16 @@ public sealed class OrmDbFactory : IOrmDbFactory
     /// </code>
     /// </summary>
     /// <param name="dbKeySelector">dbKey获取委托</param>
-    public void UseDatabaseSharding(Func<string> dbKeySelector)
-        => this.dbKeySelector = dbKeySelector ?? throw new ArgumentNullException(nameof(dbKeySelector));
+
+
+    public bool TryGetConnectionStringSelector(string dbKey, out Delegate connectionStringSelector)
+        => this.connectionStringSelectors.TryGetValue(dbKey, out connectionStringSelector);
+    public void AddConnectionStringSelector(string dbKey, Delegate connectionStringSelector)
+        => this.connectionStringSelectors.TryAdd(dbKey, connectionStringSelector);
+    public bool TryGetConnectionStringSelector(OrmProviderType ormProviderType, out Delegate connectionStringSelector)
+        => this.globalConnectionStringSelectors.TryGetValue(ormProviderType, out connectionStringSelector);
+    public void AddConnectionStringSelector(OrmProviderType ormProviderType, Delegate connectionStringSelector)
+        => this.globalConnectionStringSelectors.TryAdd(ormProviderType, connectionStringSelector);
 
     public bool TryGetTableShardingProvider(string dbKey, out ITableShardingProvider tableShardingProvider)
         => this.tableShardingProviders.TryGetValue(dbKey, out tableShardingProvider);
@@ -152,63 +163,27 @@ public sealed class OrmDbFactory : IOrmDbFactory
     public IRepository CreateRepository(string dbKey = null)
     {
         //如果有指定dbKey，就是使用指定的dbKey创建IRepository对象
-        //如果没有指定dbKey，再判断是否有指定分库规则，有指定就调用分库规则获取dbKey
         //如果也没有指定分库规则，就使用配置的默认dbKey
-        var localDbKey = dbKey ?? this.dbKeySelector?.Invoke() ?? this.defaultDatabase?.DbKey;
+        var localDbKey = dbKey ?? this.defaultDatabase?.DbKey;
         if (string.IsNullOrEmpty(localDbKey))
-            throw new ArgumentNullException(nameof(dbKey), "请配置dbKey，既没有设置分库规则来获取dbKey，也没有设置默认的dbKey");
+            throw new ArgumentNullException(nameof(dbKey), "dbKey不能为null，未配置dbKey，也没有配置默认数据库");
 
         var database = this.GetDatabase(localDbKey);
         if (!this.complexMapProviders.TryGetValue(localDbKey, out var mapProvider))
             throw new Exception($"没有注册dbKey：{localDbKey}的IEntityMapProvider对象，也没有注册OrmProviderType：{database.OrmProviderType}的IEntityMapProvider对象");
         this.complexTableShardingProviders.TryGetValue(localDbKey, out var tableShardingProvider);
 
-        //只是为了获取默认TableSchema
-
-        var connection = database.OrmProvider.CreateConnection(localDbKey, database.UseMaster());
-        var defaultSchema = database.OrmProvider.DefaultTableSchema ?? connection.Database;
-        connection.Dispose();
-        var dbContext = new DbContext
+        return database.OrmProvider.CreateRepository(new DbContext
         {
             DbKey = localDbKey,
             Database = database,
-            DefaultTableSchema = defaultSchema,
+            //mysql默认Schema是数据库名，暂时此处为null,pgsql的默认Schema是public，sqlserver的默认Schema是dbo
+            DefaultTableSchema = database.OrmProvider.DefaultTableSchema,
             OrmProvider = database.OrmProvider,
             MapProvider = mapProvider,
             ShardingProvider = tableShardingProvider,
             Options = this.options
-        };
-        return database.OrmProvider.CreateRepository(dbContext);
-    }
-    public IRepository CreateRepository(string dbKey, object shardingBy)
-    {
-        //如果有指定dbKey，就是使用指定的dbKey创建IRepository对象
-        //如果没有指定dbKey，再判断是否有指定分库规则，有指定就调用分库规则获取dbKey
-        //如果也没有指定分库规则，就使用配置的默认dbKey
-        var localDbKey = dbKey ?? this.dbKeySelector?.Invoke() ?? this.defaultDatabase?.DbKey;
-        if (string.IsNullOrEmpty(localDbKey))
-            throw new ArgumentNullException(nameof(dbKey), "请配置dbKey，既没有设置分库规则来获取dbKey，也没有设置默认的dbKey");
-
-        var database = this.GetDatabase(localDbKey);
-        if (!this.complexMapProviders.TryGetValue(localDbKey, out var mapProvider))
-            throw new Exception($"没有注册dbKey：{localDbKey}的IEntityMapProvider对象，也没有注册OrmProviderType：{database.OrmProviderType}的IEntityMapProvider对象");
-        this.complexTableShardingProviders.TryGetValue(localDbKey, out var tableShardingProvider);
-
-        //只是为了获取默认TableSchema      
-        var connection = database.OrmProvider.CreateConnection(localDbKey, database.UseMaster());
-        var defaultSchema = database.OrmProvider.DefaultTableSchema ?? connection.Database;
-        connection.Dispose();
-        var dbContext = new DbContext
-        {
-            DbKey = localDbKey,
-            Database = database,
-            DefaultTableSchema = defaultSchema,
-            OrmProvider = database.OrmProvider,
-            MapProvider = mapProvider,
-            ShardingProvider = tableShardingProvider,
-            Options = this.options
-        };
-        return database.OrmProvider.CreateRepository(dbContext);
+        });
     }
     public IRepository CreateRepository(DbContext dbContext)
     {
@@ -297,9 +272,9 @@ public sealed class OrmDbFactory : IOrmDbFactory
             foreach (var database in this.databases.Values)
             {
                 var ormProviderType = database.OrmProviderType;
-                this.TryGetTableShardingProvider(database.DbKey, out var tbleShardingProvider);
-                this.TryGetTableShardingProvider(ormProviderType, out var globalTbleShardingProvider);
-                var complexTableShardingProvider = new ComplexTableShardingProvider(tbleShardingProvider, globalTbleShardingProvider);
+                this.TryGetTableShardingProvider(database.DbKey, out var tableShardingProvider);
+                this.TryGetTableShardingProvider(ormProviderType, out var globalTableShardingProvider);
+                var complexTableShardingProvider = new ComplexTableShardingProvider(tableShardingProvider, globalTableShardingProvider);
                 this.complexTableShardingProviders.TryAdd(database.DbKey, complexTableShardingProvider);
             }
         }

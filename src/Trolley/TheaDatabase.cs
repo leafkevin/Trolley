@@ -6,12 +6,8 @@ namespace Trolley;
 
 public class TheaDatabase
 {
-    private int masterRoundRobin = 0;
-    private int slaveRoundRobin = 0;
-    private readonly object masterLocker = new object();
-    private readonly object slaveLocker = new object();
-    private object masterSelector;
-    private object slaveSelector;
+    private Delegate masterSelector;
+    private Delegate slaveSelector;
     public string DbKey { get; internal set; }
     /// <summary>
     /// 主库连接串，可以多个，多个主库连接串时，使用轮询方式选择主库连接串
@@ -24,18 +20,10 @@ public class TheaDatabase
     public bool IsDefault { get; internal set; }
     public OrmProviderType OrmProviderType { get; internal set; }
     public IOrmProvider OrmProvider { get; internal set; }
-    /// <summary>
-    /// 设置主库连接串选择器，可自主设置选择主库规则，未设置则默认采用轮询方式，也可作为主库的分库规则，如：主库有2个数据库，分别为tenant1_master和tenant2_master，保存不同租户的数据，可使用此规则获取不同租户的数据，进行写操作
-    /// </summary>
-    /// <param name="connectionStringSelector"></param>
-    public void UseMasterSelector(Func<string> connectionStringSelector)
+    public void UseMasterSelector(Delegate connectionStringSelector)
         => this.masterSelector = connectionStringSelector;
-    /// <summary>
-    /// 设置从库连接串选择器，可自主设置选择从库规则，未设置则默认采用轮询方式，也可作为从库的分库规则，如：从库有2个数据库，分别为tenant1_slave和tenant2_slave，保存不同租户的数据，可使用此规则获取不同租户的数据，进行读操作
-    /// </summary>
-    /// <param name="connectionStringSelector"></param>
-    public void UseSlaveSelector(Func<string> connectionStringSelector)
-        => this.masterSelector = connectionStringSelector;
+    public void UseSlaveSelector(Delegate connectionStringSelector)
+        => this.slaveSelector = connectionStringSelector;
     /// <summary>
     /// 获取主库连接串
     /// </summary>
@@ -45,15 +33,10 @@ public class TheaDatabase
         var connectionStringSelector = this.masterSelector as Func<string>;
         return connectionStringSelector.Invoke();
     }
-    /// <summary>
-    /// 手动指定参数值获取主库连接串
-    /// </summary>
-    /// <param name="shardingBy">设置依赖的参数值</param>
-    /// <returns>返回主库连接串</returns>
-    public string UseMasterBy(object shardingBy)
+    public string UseMasterBy(object shardingParameter)
     {
         var connectionStringSelector = this.masterSelector as Func<object, string>;
-        return connectionStringSelector.Invoke(shardingBy);
+        return connectionStringSelector.Invoke(shardingParameter);
     }
     /// <summary>
     /// 获取从库连接串
@@ -64,15 +47,10 @@ public class TheaDatabase
         var connectionStringSelector = this.slaveSelector as Func<string>;
         return connectionStringSelector.Invoke();
     }
-    /// <summary>
-    /// 手动指定参数值获取从库连接串，也可以作为从库的分库规则，如：.UseSlaveBy(tenant1) .UseSlaveBy("tenant2")，指定不同的租户ID，获取不同租户的数据，进行读操作
-    /// </summary>
-    /// <param name="shardingBy"></param>
-    /// <returns></returns>
-    public string UseSlaveBy(object shardingBy)
+    public string UseSlaveBy(object shardingParameter)
     {
         var connectionStringSelector = this.slaveSelector as Func<object, string>;
-        return connectionStringSelector.Invoke(shardingBy);
+        return connectionStringSelector.Invoke(shardingParameter);
     }
     public void Build()
     {
