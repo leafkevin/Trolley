@@ -9,19 +9,9 @@ namespace Trolley;
 public interface IMultipleQuery : IDisposable
 {
     #region Properties
-    bool IsUserMaster { get; }
     DbContext DbContext { get; }
     IDbCommand Command { get; }
     List<ReaderAfter> ReaderAfters { get; }
-    #endregion
-
-    #region UseMaster
-    /// <summary>
-    /// 使用主库查询
-    /// </summary>
-    /// <param name="isUseMaster">使用主库为true，默认值为true</param>
-    /// <returns>返回查询对象</returns>
-    IMultipleQuery UseMaster();
     #endregion
 
     #region GetShardingTableNames

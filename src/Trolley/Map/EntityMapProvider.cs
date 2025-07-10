@@ -31,8 +31,11 @@ public class EntityMapProvider : IEntityMapProvider
     public void Build(TheaDatabase database)
     {
         //获取数据库元数据，如果全部实体映射都已经存在，则不需要重新映射
-        if (database.OrmProvider.MapTables(database.UseMaster(), this))
-            return;
+        foreach (var connectionString in database.MasterConnectionStrings)
+        {
+            if (database.OrmProvider.MapTables(connectionString, this))
+                break;
+        }
         //映射实体每个字段
         foreach (var entityMapper in this.EntityMaps)
             entityMapper.Build(database.OrmProvider);

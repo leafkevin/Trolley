@@ -187,30 +187,12 @@ public sealed class OrmDatabaseBuilder
         return this;
     }
     /// <summary>
-    /// 设置主库连接串同时设置连接串选择器，多个主库时使用connectionStringSelector委托选择连接串，委托connectionStringSelector也可作为主库的分库规则，如：主库有2个数据库，分别为tenant1_master和tenant2_master，保存不同租户的数据，可使用此委托可获取不同租户的数据，进行写操作
+    /// 设置主库连接串选择器，多个主库时通过指定参数的connectionStringSelector委托选择连接串，这个参数在调用CreateRepository方法时指定，使用此场景通常是多主库并且多租户，如：主库有4个数据库，分别为tenant1_master1、tenant1_master2、other_tenant_master1、other_tenant_master2，调用CreateRepository("default", tenant1)时，将选择tenant1中的某一个主库，调用CreateRepository("default", tenant2)时，将选择other_tenant中的某一个主库，进行写操作
     /// </summary>
-    /// <param name="connectionStrings"></param>
     /// <param name="connectionStringSelector"></param>
     /// <returns></returns>
-    public OrmDatabaseBuilder UseMaster(string[] connectionStrings, Func<string> connectionStringSelector)
+    public OrmDatabaseBuilder UseMasterConnectionStringSelector(Delegate connectionStringSelector)
     {
-        database.MasterConnectionStrings ??= new();
-        database.MasterConnectionStrings.AddRange(connectionStrings);
-        if (connectionStringSelector == null)
-            throw new ArgumentNullException(nameof(connectionStringSelector));
-        database.UseMasterSelector(connectionStringSelector);
-        return this;
-    }
-    /// <summary>
-    /// 设置主库连接串同时设置连接串选择器，多个主库时通过指定参数的connectionStringSelector委托选择连接串，这个参数在调用CreateRepository方法时指定，使用此场景通常是多主库并且多租户，如：主库有4个数据库，分别为tenant1_master1、tenant1_master2、other_tenant_master1、other_tenant_master2，调用CreateRepository("default", tenant1)时，将选择tenant1中的某一个主库，调用CreateRepository("default", tenant2)时，将选择other_tenant中的某一个主库，进行写操作
-    /// </summary>
-    /// <param name="connectionStrings"></param>
-    /// <param name="connectionStringSelector"></param>
-    /// <returns></returns>
-    public OrmDatabaseBuilder UseMaster(string[] connectionStrings, Func<object, string> connectionStringSelector)
-    {
-        database.MasterConnectionStrings ??= new();
-        database.MasterConnectionStrings.AddRange(connectionStrings);
         if (connectionStringSelector == null)
             throw new ArgumentNullException(nameof(connectionStringSelector));
         database.UseMasterSelector(connectionStringSelector);
@@ -222,21 +204,11 @@ public sealed class OrmDatabaseBuilder
         database.SlaveConnectionStrings.AddRange(connectionStrings);
         return this;
     }
-    public OrmDatabaseBuilder UseSlave(string[] connectionStrings, Func<string> connectionStringSelector)
+    public OrmDatabaseBuilder UseSlaveConnectionStringSelector(Delegate connectionStringSelector)
     {
-        database.SlaveConnectionStrings ??= new();
-        database.SlaveConnectionStrings.AddRange(connectionStrings);
         if (connectionStringSelector == null)
             throw new ArgumentNullException(nameof(connectionStringSelector));
-        database.UseSlaveSelector(connectionStringSelector);
-        return this;
-    }
-    public OrmDatabaseBuilder UseSlave(string[] connectionStrings, Func<object, string> connectionStringSelector)
-    {
-        database.SlaveConnectionStrings ??= new();
-        database.SlaveConnectionStrings.AddRange(connectionStrings);
-        if (connectionStringSelector == null)
-            throw new ArgumentNullException(nameof(connectionStringSelector));
+
         database.UseSlaveSelector(connectionStringSelector);
         return this;
     }

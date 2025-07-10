@@ -99,6 +99,12 @@ public interface IRepository
     /// <param name="fieldValues">依赖字段值</param>
     /// <returns></returns>
     IRepository UseMasterBy(params object[] fieldValues);
+    /// <summary>
+    /// 指定从库查询数据，根据字段值确定从库，适用于类似多租户、多租户多从库等带有水平分库模式场景，需要提供依赖字段值，最多支持3个字段值，如：租户Id、租户Id+时间等分库，同一个租户库也可以有多个从库
+    /// </summary>
+    /// <param name="fieldValues"></param>
+    /// <returns></returns>
+    IRepository UseSlaveBy(params object[] fieldValues);
     #endregion
 
     #region From

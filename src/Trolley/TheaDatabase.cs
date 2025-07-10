@@ -56,6 +56,8 @@ public class TheaDatabase
     public string UseSlave()
     {
         var connectionStringSelector = this.slaveSelector as Func<string>;
+        if (connectionStringSelector == null)
+            throw new InvalidOperationException("从库连接串选择器未设置或参数类型不正确，无法转换为Func<string>类型");
         return connectionStringSelector.Invoke();
     }
     public string UseSlaveBy(params object[] fieldValues)

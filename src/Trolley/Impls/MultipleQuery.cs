@@ -14,7 +14,6 @@ public class MultipleQuery : IMultipleQuery
     #endregion
 
     #region Properties
-    public bool IsUserMaster { get; private set; }
     public DbContext DbContext { get; protected set; }
     public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
     public IEntityMapProvider MapProvider => this.DbContext.MapProvider;
@@ -28,14 +27,6 @@ public class MultipleQuery : IMultipleQuery
         this.DbContext = dbContext;
         this.ReaderAfters = new();
         this.Command = this.OrmProvider.CreateCommand();
-    }
-    #endregion   
-
-    #region UseMaster
-    public IMultipleQuery UseMaster()
-    {
-        this.IsUserMaster = true;
-        return this;
     }
     #endregion
 

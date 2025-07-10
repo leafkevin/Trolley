@@ -45,7 +45,8 @@ public sealed class DbContext
         else
         {
             isNeedClose = true;
-            connection = this.CreateConnection(this.Database.UseMaster());
+            var connString = this.ConnectionString ?? this.Database.UseMaster();
+            connection = this.CreateConnection(connString);
         }
         var dbCommand = this.OrmProvider.CreateCommand();
         command = connection.CreateCommand(dbCommand);
@@ -56,9 +57,7 @@ public sealed class DbContext
         command.OnExecuted = this.DbInterceptors.OnCommandExecuted;
         return (isNeedClose, connection, command);
     }
-    public (bool, ITheaConnection, ITheaCommand) UseSlaveCommand(bool isUseMaster)
-        => this.UseSlaveCommand(isUseMaster, null);
-    public (bool, ITheaConnection, ITheaCommand) UseSlaveCommand(bool isUseMaster, IDbCommand dbCommand)
+    public (bool, ITheaConnection, ITheaCommand) UseSlaveCommand(IDbCommand dbCommand = null)
     {
         bool isNeedClose = false;
         ITheaConnection connection;
@@ -68,8 +67,8 @@ public sealed class DbContext
         else
         {
             isNeedClose = true;
-            var connectionString = isUseMaster ? this.Database.UseMaster() : this.Database.UseSlave();
-            connection = this.CreateConnection(connectionString);
+            var connString = this.ConnectionString ?? this.Database.UseSlave();
+            connection = this.CreateConnection(connString);
         }
         dbCommand ??= this.OrmProvider.CreateCommand();
         command = connection.CreateCommand(dbCommand);
@@ -112,7 +111,7 @@ public sealed class DbContext
                 throw new NotSupportedException("不支持的参数类型，Query方法的parameters参数，支持实体类型参数，命名、匿名对象或是字典对象");
         }
 
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(false);
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
         if (parameters != null)
         {
             var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.OrmProvider, rawSql, parameters);
@@ -145,7 +144,7 @@ public sealed class DbContext
                 throw new NotSupportedException("不支持的参数类型，QueryAsync方法的parameters参数，支持实体类型参数，命名、匿名对象或是字典对象");
         }
 
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(false);
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
         if (parameters != null)
         {
             var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.OrmProvider, rawSql, parameters);
@@ -178,7 +177,7 @@ public sealed class DbContext
         bool isBulk = whereObj is IEnumerable && whereObj is not string && whereObj is not IDictionary<string, object>;
 
         var entityType = typeof(TEntity);
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(false);
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
         if (isBulk)
         {
             (var isInExpr, var headSql, var commandInitializer) = ((bool, string, object))RepositoryHelper.BuildQueryWhereObjSqlParameters(this, entityType, whereObjType, whereObj, false, isBulk);
@@ -223,7 +222,7 @@ public sealed class DbContext
         bool isBulk = whereObj is IEnumerable && whereObj is not string && whereObj is not IDictionary<string, object>;
 
         var entityType = typeof(TEntity);
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(false);
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
 
         if (isBulk)
         {
@@ -265,7 +264,7 @@ public sealed class DbContext
             throw new ArgumentNullException(nameof(whereKeys));
         var entityType = typeof(TEntity);
         bool isBulk = whereKeys is IEnumerable && whereKeys is not string && whereKeys is not IDictionary<string, object>;
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(false);
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
 
         if (isBulk)
         {
@@ -307,7 +306,7 @@ public sealed class DbContext
             throw new ArgumentNullException(nameof(whereKeys));
         bool isBulk = whereKeys is IEnumerable && whereKeys is not string && whereKeys is not IDictionary<string, object>;
         var entityType = typeof(TEntity);
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(false);
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
 
         if (isBulk)
         {
@@ -345,7 +344,7 @@ public sealed class DbContext
     }
     public TResult QueryScalar<TResult>(IQueryVisitor visitor)
     {
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.IsUseMaster);
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
         (var isSuccess, var sql, _) = this.BuildSql(visitor, " UNION ALL ");
         if (!isSuccess) return default;
 
@@ -366,7 +365,7 @@ public sealed class DbContext
     }
     public async Task<TResult> QueryScalarAsync<TResult>(IQueryVisitor visitor, CancellationToken cancellationToken = default)
     {
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.IsUseMaster);
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
         (var isSuccess, var sql, var readerFields) = await this.BuildSqlAsync(visitor, " UNION ALL ", cancellationToken);
         if (!isSuccess) return default;
 
@@ -388,7 +387,7 @@ public sealed class DbContext
     public TResult QueryFrom<TEntity, TResult>(IQueryVisitor visitor, bool isSingle, Func<Type, ITheaDataReader, List<SqlFieldSegment>, TResult> readerInitializer)
     {
         var entityType = typeof(TEntity);
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.IsUseMaster);
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
         Expression<Func<TEntity, TEntity>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
         (var isSuccess, var sql, var readerFields) = this.BuildSql(visitor, " UNION ALL ");
@@ -420,7 +419,7 @@ public sealed class DbContext
     public async Task<TResult> QueryFromAsync<TEntity, TResult>(IQueryVisitor visitor, bool isSingle, Func<Type, ITheaDataReader, List<SqlFieldSegment>, CancellationToken, Task<TResult>> readerInitializer, CancellationToken cancellationToken = default)
     {
         var entityType = typeof(TEntity);
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.IsUseMaster);
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
 
         Expression<Func<TEntity, TEntity>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
@@ -456,7 +455,7 @@ public sealed class DbContext
     public IPagedList<TResult> QueryPage<TResult>(IQueryVisitor visitor)
     {
         var result = new PagedList<TResult> { Data = new List<TResult>() };
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.IsUseMaster);
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
         Expression<Func<TResult, TResult>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
         visitor.IsNeedPaging = true;
@@ -498,7 +497,7 @@ public sealed class DbContext
     public async Task<IPagedList<TResult>> QueryPageAsync<TResult>(IQueryVisitor visitor, CancellationToken cancellationToken = default)
     {
         var result = new PagedList<TResult> { Data = new List<TResult>() };
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.IsUseMaster);
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
 
         Expression<Func<TResult, TResult>> defaultExpr = f => f;
         visitor.SelectDefault(defaultExpr);
@@ -775,7 +774,7 @@ public sealed class DbContext
     public bool FetchShardingTables(SqlVisitor visitor)
     {
         var fetchSql = visitor.BuildTableShardingsSql();
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.IsUseMaster);
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
         command.CommandText = fetchSql;
         connection.Open();
         using var reader = command.ExecuteReader(CommandSqlType.Select, CommandBehavior.SequentialAccess);
@@ -794,7 +793,7 @@ public sealed class DbContext
     public async Task<bool> FetchShardingTablesAsync(SqlVisitor visitor, CancellationToken cancellationToken = default)
     {
         var fetchSql = visitor.BuildTableShardingsSql();
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand(visitor.IsUseMaster);
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
         command.CommandText = fetchSql;
         command.Parameters.Clear();
         await connection.OpenAsync(cancellationToken);

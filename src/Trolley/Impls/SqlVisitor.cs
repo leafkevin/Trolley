@@ -279,7 +279,6 @@ public class SqlVisitor : ISqlVisitor
         var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
         tableSegment.TableSchema = tableSchema;
     }
-    public void UseMaster() => this.IsUseMaster = true;
     public virtual string BuildTableShardingsSql() => null;
     public bool SetShardingTables(List<string> shardingTables)
     {

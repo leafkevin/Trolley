@@ -35,6 +35,11 @@ public class Repository : IRepository
         this.DbContext.ConnectionString = this.DbContext.Database.UseMasterBy(fieldValues);
         return this;
     }
+    public IRepository UseSlaveBy(params object[] fieldValues)
+    {
+        this.DbContext.ConnectionString = this.DbContext.Database.UseSlaveBy(fieldValues);
+        return this;
+    }
     #endregion
 
     #region ShardingTable
@@ -209,7 +214,7 @@ public class Repository : IRepository
                 throw new NotSupportedException("不支持的参数类型，QueryFirst方法的parameters参数，支持实体类型参数，命名、匿名对象或是字典对象");
         }
 
-        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand();
         if (parameters != null)
         {
             var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.OrmProvider, rawSql, parameters);
@@ -238,7 +243,7 @@ public class Repository : IRepository
                 throw new NotSupportedException("不支持的参数类型，QueryFirstAsync方法的parameters参数，支持实体类型参数，命名、匿名对象或是字典对象");
         }
 
-        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand();
         if (parameters != null)
         {
             var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.OrmProvider, rawSql, parameters);
@@ -267,7 +272,7 @@ public class Repository : IRepository
                 throw new NotSupportedException("不支持的参数类型，QueryFirst方法的parameters参数，支持实体类型参数，命名、匿名对象或是字典对象");
         }
 
-        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand();
         command.CommandText = rawSql;
         command.CommandType = commandType;
         if (parameters != null)
@@ -293,7 +298,7 @@ public class Repository : IRepository
                 throw new NotSupportedException("不支持的参数类型，QueryFirstAsync方法的parameters参数，支持实体类型参数，命名、匿名对象或是字典对象");
         }
 
-        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand();
         command.CommandText = rawSql;
         command.CommandType = commandType;
         if (parameters != null)
@@ -323,7 +328,7 @@ public class Repository : IRepository
         }
 
         var entityType = typeof(TEntity);
-        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand();
         if (parameters != null)
         {
             var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.OrmProvider, rawSql, parameters);
@@ -358,7 +363,7 @@ public class Repository : IRepository
         }
 
         var entityType = typeof(TEntity);
-        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand();
         if (parameters != null)
         {
             var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.OrmProvider, rawSql, parameters);
@@ -387,7 +392,7 @@ public class Repository : IRepository
             throw new ArgumentNullException(nameof(rawSql));
 
         var entityType = typeof(TEntity);
-        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand();
         command.CommandText = rawSql;
         command.CommandType = commandType;
         if (parameters != null)
@@ -412,7 +417,7 @@ public class Repository : IRepository
             throw new ArgumentNullException(nameof(rawSql));
 
         var entityType = typeof(TEntity);
-        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand();
         command.CommandText = rawSql;
         command.CommandType = commandType;
         if (parameters != null)
@@ -464,7 +469,7 @@ public class Repository : IRepository
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
 
-        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand();
         command.CommandText = rawSql;
         command.CommandType = commandType;
         if (parameters != null)
@@ -488,7 +493,7 @@ public class Repository : IRepository
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
 
-        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand();
         command.CommandText = rawSql;
         command.CommandType = commandType;
         if (parameters != null)
@@ -812,7 +817,7 @@ public class Repository : IRepository
         bool isBulk = whereObj is IEnumerable && whereObj is not string && whereObj is not IDictionary<string, object>;
         var whereObjType = whereObj.GetType();
 
-        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand();
         if (isBulk)
         {
             (var isInExpr, var headSql, var commandInitializer) = ((bool, string, object))RepositoryHelper.BuildExistsSqlParameters(this.DbContext, entityType, whereObjType, whereObj, false, isBulk);
@@ -855,7 +860,7 @@ public class Repository : IRepository
         bool isBulk = whereObj is IEnumerable && whereObj is not string && whereObj is not IDictionary<string, object>;
         var whereObjType = whereObj.GetType();
 
-        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(false);
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand();
         if (isBulk)
         {
             (var isInExpr, var headSql, var commandInitializer) = ((bool, string, object))RepositoryHelper.BuildExistsSqlParameters(this.DbContext, entityType, whereObjType, whereObj, false, isBulk);
@@ -983,7 +988,7 @@ public class Repository : IRepository
 
         using var multiQuery = this.OrmProvider.NewMultipleQuery(this.DbContext);
         subQueries.Invoke(multiQuery);
-        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(multiQuery.IsUserMaster, multiQuery.Command);
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(multiQuery.Command);
         multiQuery.Command.Connection = connection.BaseConnection;
         command.CommandText = multiQuery.BuildSql(out var readerAfters);
         connection.Open();
@@ -998,7 +1003,7 @@ public class Repository : IRepository
 
         using var multiQuery = this.OrmProvider.NewMultipleQuery(this.DbContext);
         subQueries.Invoke(multiQuery);
-        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(multiQuery.IsUserMaster, multiQuery.Command);
+        (var isNeedClose, var connection, var command) = this.DbContext.UseSlaveCommand(multiQuery.Command);
         multiQuery.Command.Connection = connection.BaseConnection;
         command.CommandText = multiQuery.BuildSql(out var readerAfters);
         await connection.OpenAsync(cancellationToken);
