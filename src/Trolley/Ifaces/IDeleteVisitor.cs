@@ -33,9 +33,10 @@ public interface IDeleteVisitor : IDisposable
     void UseTableByRange(bool isIncludeMany, object fieldValue1, object fieldValue2, object beginField3Value, object endField3Value);
     void UseTableSchema(bool isIncludeMany, string tableSchema);
 
-    IDeleteVisitor WhereWith(object wherKeys);
-    IDeleteVisitor Where(Expression whereExpr);
-    IDeleteVisitor And(Expression whereExpr);
+    void WhereWith(object wherKeys);
+    void Where(Expression whereExpr);
+    void And(Expression whereExpr);
+    void Or(Expression whereExpr);
 
     string GetTableName(TableSegment tableSegment);
     string BuildTableShardingsSql();

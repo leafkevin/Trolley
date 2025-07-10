@@ -37,14 +37,14 @@ public class Update<TEntity> : IUpdate<TEntity>
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
+    public virtual IUpdate<TEntity> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
+    {
+        this.Visitor.UseTable(tableNameGetter);
+        return this;
+    }
     public virtual IUpdate<TEntity> UseTableBy(params object[] fieldValues)
     {
         this.Visitor.UseTableBy(false, fieldValues);
-        return this;
-    }
-    public virtual IUpdate<TEntity> UseTableBy<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
-    {
-        this.Visitor.UseTableBy(tableNameGetter);
         return this;
     }
     public virtual IUpdate<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue)
@@ -503,7 +503,7 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
     }
     #endregion
 
-    #region Where/And
+    #region Where
     public virtual IUpdated<TEntity> Where<TWhereObj>(TWhereObj whereObj)
     {
         if (whereObj == null)
@@ -524,6 +524,9 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
+    #endregion
+
+    #region And
     public virtual IContinuedUpdate<TEntity> And(Expression<Func<TEntity, bool>> predicate)
         => this.And(true, predicate);
     public virtual IContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
@@ -535,6 +538,22 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
             this.Visitor.And(ifPredicate);
         }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region Or
+    public virtual IContinuedUpdate<TEntity> Or(Expression<Func<TEntity, bool>> predicate)
+        => this.Or(true, predicate);
+    public virtual IContinuedUpdate<TEntity> Or(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
+    {
+        if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
+            this.Visitor.Or(ifPredicate);
+        }
+        else if (elsePredicate != null) this.Visitor.Or(elsePredicate);
         return this;
     }
     #endregion
@@ -635,7 +654,7 @@ public class BulkContinuedUpdate<TEntity> : Updated<TEntity>, IBulkContinuedUpda
     }
     #endregion
 
-    #region Where/And
+    #region Where
     public virtual IUpdated<TEntity> Where<TWhereObj>(TWhereObj whereObj)
     {
         if (whereObj == null)
@@ -656,6 +675,9 @@ public class BulkContinuedUpdate<TEntity> : Updated<TEntity>, IBulkContinuedUpda
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
+    #endregion
+
+    #region And
     public virtual IBulkContinuedUpdate<TEntity> And(Expression<Func<TEntity, bool>> predicate)
         => this.And(true, predicate);
     public virtual IBulkContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
@@ -667,6 +689,22 @@ public class BulkContinuedUpdate<TEntity> : Updated<TEntity>, IBulkContinuedUpda
             this.Visitor.And(ifPredicate);
         }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region Or
+    public virtual IBulkContinuedUpdate<TEntity> Or(Expression<Func<TEntity, bool>> predicate)
+        => this.Or(true, predicate);
+    public virtual IBulkContinuedUpdate<TEntity> Or(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
+    {
+        if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
+            this.Visitor.Or(ifPredicate);
+        }
+        else if (elsePredicate != null) this.Visitor.Or(elsePredicate);
         return this;
     }
     #endregion
@@ -693,14 +731,20 @@ public class UpdateJoin<TEntity, T1> : Updated<TEntity>, IUpdateJoin<TEntity, T1
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
+    public virtual IUpdateJoin<TEntity, T1> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
+    {
+        this.Visitor.UseTable(tableNameGetter);
+        return this;
+    }
+    public virtual IUpdateJoin<TEntity, T1> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+    {
+        var masterEntityType = typeof(TMasterSharding);
+        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
+        return this;
+    }
     public virtual IUpdateJoin<TEntity, T1> UseTableBy(params object[] fieldValues)
     {
         this.Visitor.UseTableBy(false, fieldValues);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1> UseTableBy<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
-    {
-        this.Visitor.UseTableBy(tableNameGetter);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1> UseTableByRange(object beginFieldValue, object endFieldValue)
@@ -832,9 +876,9 @@ public class UpdateJoin<TEntity, T1> : Updated<TEntity>, IUpdateJoin<TEntity, T1
     }
     #endregion
 
-    #region Where/And
-    public virtual IUpdateJoin<TEntity, T1> Where(Expression<Func<TEntity, T1, bool>> wherePredicate)
-        => this.Where(true, wherePredicate);
+    #region Where
+    public virtual IUpdateJoin<TEntity, T1> Where(Expression<Func<TEntity, T1, bool>> predicate)
+        => this.Where(true, predicate);
     public virtual IUpdateJoin<TEntity, T1> Where(bool condition, Expression<Func<TEntity, T1, bool>> ifPredicate, Expression<Func<TEntity, T1, bool>> elsePredicate = null)
     {
         if (condition)
@@ -846,8 +890,11 @@ public class UpdateJoin<TEntity, T1> : Updated<TEntity>, IUpdateJoin<TEntity, T1
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
-    public virtual IUpdateJoin<TEntity, T1> And(Expression<Func<TEntity, T1, bool>> andPredicate)
-        => this.And(true, andPredicate);
+    #endregion
+
+    #region And
+    public virtual IUpdateJoin<TEntity, T1> And(Expression<Func<TEntity, T1, bool>> predicate)
+        => this.And(true, predicate);
     public virtual IUpdateJoin<TEntity, T1> And(bool condition, Expression<Func<TEntity, T1, bool>> ifPredicate, Expression<Func<TEntity, T1, bool>> elsePredicate = null)
     {
         if (condition)
@@ -857,6 +904,22 @@ public class UpdateJoin<TEntity, T1> : Updated<TEntity>, IUpdateJoin<TEntity, T1
             this.Visitor.And(ifPredicate);
         }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region Or
+    public virtual IUpdateJoin<TEntity, T1> Or(Expression<Func<TEntity, T1, bool>> predicate)
+        => this.Or(true, predicate);
+    public virtual IUpdateJoin<TEntity, T1> Or(bool condition, Expression<Func<TEntity, T1, bool>> ifPredicate, Expression<Func<TEntity, T1, bool>> elsePredicate = null)
+    {
+        if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
+            this.Visitor.Or(ifPredicate);
+        }
+        else if (elsePredicate != null) this.Visitor.Or(elsePredicate);
         return this;
     }
     #endregion
@@ -883,14 +946,20 @@ public class UpdateJoin<TEntity, T1, T2> : Updated<TEntity>, IUpdateJoin<TEntity
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
+    public virtual IUpdateJoin<TEntity, T1, T2> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
+    {
+        this.Visitor.UseTable(tableNameGetter);
+        return this;
+    }
+    public virtual IUpdateJoin<TEntity, T1, T2> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+    {
+        var masterEntityType = typeof(TMasterSharding);
+        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
+        return this;
+    }
     public virtual IUpdateJoin<TEntity, T1, T2> UseTableBy(params object[] fieldValues)
     {
         this.Visitor.UseTableBy(false, fieldValues);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1, T2> UseTableBy<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
-    {
-        this.Visitor.UseTableBy(tableNameGetter);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2> UseTableByRange(object beginFieldValue, object endFieldValue)
@@ -1022,9 +1091,9 @@ public class UpdateJoin<TEntity, T1, T2> : Updated<TEntity>, IUpdateJoin<TEntity
     }
     #endregion
 
-    #region Where/And
-    public virtual IUpdateJoin<TEntity, T1, T2> Where(Expression<Func<TEntity, T1, T2, bool>> wherePredicate)
-        => this.Where(true, wherePredicate);
+    #region Where
+    public virtual IUpdateJoin<TEntity, T1, T2> Where(Expression<Func<TEntity, T1, T2, bool>> predicate)
+        => this.Where(true, predicate);
     public virtual IUpdateJoin<TEntity, T1, T2> Where(bool condition, Expression<Func<TEntity, T1, T2, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, bool>> elsePredicate = null)
     {
         if (condition)
@@ -1036,8 +1105,11 @@ public class UpdateJoin<TEntity, T1, T2> : Updated<TEntity>, IUpdateJoin<TEntity
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
-    public virtual IUpdateJoin<TEntity, T1, T2> And(Expression<Func<TEntity, T1, T2, bool>> andPredicate)
-        => this.And(true, andPredicate);
+    #endregion
+
+    #region And
+    public virtual IUpdateJoin<TEntity, T1, T2> And(Expression<Func<TEntity, T1, T2, bool>> predicate)
+        => this.And(true, predicate);
     public virtual IUpdateJoin<TEntity, T1, T2> And(bool condition, Expression<Func<TEntity, T1, T2, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, bool>> elsePredicate = null)
     {
         if (condition)
@@ -1047,6 +1119,22 @@ public class UpdateJoin<TEntity, T1, T2> : Updated<TEntity>, IUpdateJoin<TEntity
             this.Visitor.And(ifPredicate);
         }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region Or
+    public virtual IUpdateJoin<TEntity, T1, T2> Or(Expression<Func<TEntity, T1, T2, bool>> predicate)
+        => this.Or(true, predicate);
+    public virtual IUpdateJoin<TEntity, T1, T2> Or(bool condition, Expression<Func<TEntity, T1, T2, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, bool>> elsePredicate = null)
+    {
+        if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
+            this.Visitor.Or(ifPredicate);
+        }
+        else if (elsePredicate != null) this.Visitor.Or(elsePredicate);
         return this;
     }
     #endregion
@@ -1073,14 +1161,20 @@ public class UpdateJoin<TEntity, T1, T2, T3> : Updated<TEntity>, IUpdateJoin<TEn
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
+    public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
+    {
+        this.Visitor.UseTable(tableNameGetter);
+        return this;
+    }
+    public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+    {
+        var masterEntityType = typeof(TMasterSharding);
+        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
+        return this;
+    }
     public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTableBy(params object[] fieldValues)
     {
         this.Visitor.UseTableBy(false, fieldValues);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTableBy<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
-    {
-        this.Visitor.UseTableBy(tableNameGetter);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3> UseTableByRange(object beginFieldValue, object endFieldValue)
@@ -1212,9 +1306,9 @@ public class UpdateJoin<TEntity, T1, T2, T3> : Updated<TEntity>, IUpdateJoin<TEn
     }
     #endregion
 
-    #region Where/And
-    public virtual IUpdateJoin<TEntity, T1, T2, T3> Where(Expression<Func<TEntity, T1, T2, T3, bool>> wherePredicate)
-        => this.Where(true, wherePredicate);
+    #region Where
+    public virtual IUpdateJoin<TEntity, T1, T2, T3> Where(Expression<Func<TEntity, T1, T2, T3, bool>> predicate)
+        => this.Where(true, predicate);
     public virtual IUpdateJoin<TEntity, T1, T2, T3> Where(bool condition, Expression<Func<TEntity, T1, T2, T3, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, T3, bool>> elsePredicate = null)
     {
         if (condition)
@@ -1226,8 +1320,11 @@ public class UpdateJoin<TEntity, T1, T2, T3> : Updated<TEntity>, IUpdateJoin<TEn
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
-    public virtual IUpdateJoin<TEntity, T1, T2, T3> And(Expression<Func<TEntity, T1, T2, T3, bool>> andPredicate)
-        => this.And(true, andPredicate);
+    #endregion
+
+    #region And
+    public virtual IUpdateJoin<TEntity, T1, T2, T3> And(Expression<Func<TEntity, T1, T2, T3, bool>> predicate)
+        => this.And(true, predicate);
     public virtual IUpdateJoin<TEntity, T1, T2, T3> And(bool condition, Expression<Func<TEntity, T1, T2, T3, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, T3, bool>> elsePredicate = null)
     {
         if (condition)
@@ -1237,6 +1334,22 @@ public class UpdateJoin<TEntity, T1, T2, T3> : Updated<TEntity>, IUpdateJoin<TEn
             this.Visitor.And(ifPredicate);
         }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region Or
+    public virtual IUpdateJoin<TEntity, T1, T2, T3> Or(Expression<Func<TEntity, T1, T2, T3, bool>> predicate)
+        => this.Or(true, predicate);
+    public virtual IUpdateJoin<TEntity, T1, T2, T3> Or(bool condition, Expression<Func<TEntity, T1, T2, T3, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, T3, bool>> elsePredicate = null)
+    {
+        if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
+            this.Visitor.Or(ifPredicate);
+        }
+        else if (elsePredicate != null) this.Visitor.Or(elsePredicate);
         return this;
     }
     #endregion
@@ -1263,14 +1376,20 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4> : Updated<TEntity>, IUpdateJoin
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
+    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
+    {
+        this.Visitor.UseTable(tableNameGetter);
+        return this;
+    }
+    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+    {
+        var masterEntityType = typeof(TMasterSharding);
+        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
+        return this;
+    }
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTableBy(params object[] fieldValues)
     {
         this.Visitor.UseTableBy(false, fieldValues);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTableBy<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
-    {
-        this.Visitor.UseTableBy(tableNameGetter);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> UseTableByRange(object beginFieldValue, object endFieldValue)
@@ -1402,9 +1521,9 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4> : Updated<TEntity>, IUpdateJoin
     }
     #endregion
 
-    #region Where/And
-    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> Where(Expression<Func<TEntity, T1, T2, T3, T4, bool>> wherePredicate)
-        => this.Where(true, wherePredicate);
+    #region Where
+    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> Where(Expression<Func<TEntity, T1, T2, T3, T4, bool>> predicate)
+        => this.Where(true, predicate);
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> Where(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, T3, T4, bool>> elsePredicate = null)
     {
         if (condition)
@@ -1416,8 +1535,11 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4> : Updated<TEntity>, IUpdateJoin
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
-    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> And(Expression<Func<TEntity, T1, T2, T3, T4, bool>> andPredicate)
-        => this.And(true, andPredicate);
+    #endregion
+
+    #region And
+    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> And(Expression<Func<TEntity, T1, T2, T3, T4, bool>> predicate)
+        => this.And(true, predicate);
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> And(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, T3, T4, bool>> elsePredicate = null)
     {
         if (condition)
@@ -1427,6 +1549,22 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4> : Updated<TEntity>, IUpdateJoin
             this.Visitor.And(ifPredicate);
         }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region Or
+    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> Or(Expression<Func<TEntity, T1, T2, T3, T4, bool>> predicate)
+        => this.Or(true, predicate);
+    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4> Or(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, T3, T4, bool>> elsePredicate = null)
+    {
+        if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
+            this.Visitor.Or(ifPredicate);
+        }
+        else if (elsePredicate != null) this.Visitor.Or(elsePredicate);
         return this;
     }
     #endregion
@@ -1453,14 +1591,20 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : Updated<TEntity>, IUpdate
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
+    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
+    {
+        this.Visitor.UseTable(tableNameGetter);
+        return this;
+    }
+    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+    {
+        var masterEntityType = typeof(TMasterSharding);
+        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
+        return this;
+    }
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableBy(params object[] fieldValues)
     {
         this.Visitor.UseTableBy(false, fieldValues);
-        return this;
-    }
-    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableBy<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
-    {
-        this.Visitor.UseTableBy(tableNameGetter);
         return this;
     }
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> UseTableByRange(object beginFieldValue, object endFieldValue)
@@ -1573,9 +1717,9 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : Updated<TEntity>, IUpdate
     }
     #endregion
 
-    #region Where/And
-    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Where(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> wherePredicate)
-        => this.Where(true, wherePredicate);
+    #region Where
+    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Where(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate)
+        => this.Where(true, predicate);
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Where(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> elsePredicate = null)
     {
         if (condition)
@@ -1587,8 +1731,11 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : Updated<TEntity>, IUpdate
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
-    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> And(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> andPredicate)
-        => this.And(true, andPredicate);
+    #endregion
+
+    #region And
+    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> And(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate)
+        => this.And(true, predicate);
     public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> And(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> elsePredicate = null)
     {
         if (condition)
@@ -1598,6 +1745,22 @@ public class UpdateJoin<TEntity, T1, T2, T3, T4, T5> : Updated<TEntity>, IUpdate
             this.Visitor.And(ifPredicate);
         }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region Or
+    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Or(Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> predicate)
+        => this.Or(true, predicate);
+    public virtual IUpdateJoin<TEntity, T1, T2, T3, T4, T5> Or(bool condition, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> ifPredicate, Expression<Func<TEntity, T1, T2, T3, T4, T5, bool>> elsePredicate = null)
+    {
+        if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
+            this.Visitor.Or(ifPredicate);
+        }
+        else if (elsePredicate != null) this.Visitor.Or(elsePredicate);
         return this;
     }
     #endregion

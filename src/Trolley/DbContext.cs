@@ -12,20 +12,26 @@ namespace Trolley;
 public sealed class DbContext
 {
     #region Properties
-    public string DbKey { get; set; }
+    public string DbKey { get; internal set; }
+    public string ConnectionString { get; internal set; }
+    public TheaDatabase Database { get; internal set; }
+    public string DefaultTableSchema { get; internal set; }
+    public IOrmProvider OrmProvider { get; internal set; }
+    public IEntityMapProvider MapProvider { get; internal set; }
+    public ITableShardingProvider ShardingProvider { get; internal set; }
+    public DbInterceptors DbInterceptors { get; internal set; }
+
     public ITheaConnection Connection { get; set; }
-    public TheaDatabase Database { get; set; }
-    public string DefaultTableSchema { get; set; }
-    public IOrmProvider OrmProvider { get; set; }
-    public IEntityMapProvider MapProvider { get; set; }
-    public ITableShardingProvider ShardingProvider { get; set; }
-    public object BulkShardingRule { get; set; }
     public ITheaTransaction Transaction { get; set; }
-    public bool IsConstantParameterized => this.Options.IsConstantParameterized;
-    public int CommandTimeout => this.Options.CommandTimeout;
-    public Type DefaultEnumMapDbType => this.Options.DefaultEnumMapDbType;
-    public DbInterceptors DbInterceptors => this.Options.DbInterceptors;
-    public OrmDbFactoryOptions Options { get; set; }
+
+    public bool IsConstantParameterized { get; set; }
+    public string UserParameterPrefix { get; set; }
+    public int CommandTimeout { get; set; }
+    public Type DefaultEnumMapDbType { get; set; }
+    public DateTimeKind DefaultDateTimeKind { get; set; }
+    public Delegate CommandShardingTableGetter { get; set; }
+    public ITypeHandler JsonTypeHandler { get; set; }
+    public ITypeHandler ToStringTypeHandler { get; set; }
     #endregion
 
     #region UseMasterCommand/UseSlaveCommand

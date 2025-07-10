@@ -32,18 +32,18 @@ public interface IUpdate<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdate<TEntity> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
+    /// 手动设置分表名获取委托，只适用于批量更新场景，通常是根据某1个或多个字段值来确定分表名，执行时会根据实体字段的值自动更新对应的分表中
+    /// </summary>
+    /// <typeparam name="TUpdateObj">更新的实体类型</typeparam>
+    /// <param name="tableNameGetter">分表名获取委托</param>
+    /// <exception cref="ArgumentNullException"></exception>
+    IUpdate<TEntity> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter);
+    /// <summary>
     /// 根据字段值，手动指定TEntity表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值</param>
     /// <returns>返回更新对象</returns>
     IUpdate<TEntity> UseTableBy(params object[] fieldValues);
-    /// <summary>
-    /// 手动设置分表名获取委托，通常是根据某1个或多个字段值来确定分表名，执行时会根据实体字段的值自动更新对应的分表中，单条和批量更新均可使用，常用于批量操作。
-    /// </summary>
-    /// <typeparam name="TUpdateObj">更新的实体类型</typeparam>
-    /// <param name="tableNameGetter">分表名获取委托</param>
-    /// <exception cref="ArgumentNullException"></exception>
-    IUpdate<TEntity> UseTableBy<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter);
     /// <summary>
     /// 根据1个字段范围值，手动指定TEntity表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)，//时间分表，最近一周的订单
     /// </summary>
@@ -465,7 +465,7 @@ public interface IContinuedUpdate<TEntity> : IUpdated<TEntity>
     IContinuedUpdate<TEntity> OnlyFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector);
     #endregion
 
-    #region Where/And
+    #region Where
     /// <summary>
     /// 使用whereObj对象生成Where条件，whereObj对象内所有与当前实体表TEntity名称相同的栏位都将参与where条件过滤，whereObj对象可以是匿名对象、命名对象或是字典，推荐使用匿名对象，不能为null
     /// </summary>
@@ -488,14 +488,17 @@ public interface IContinuedUpdate<TEntity> : IUpdated<TEntity>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
     /// <returns>返回更新对象</returns>
     IContinuedUpdate<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null);
+    #endregion
+
+    #region And
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
     IContinuedUpdate<TEntity> And(Expression<Func<TEntity, bool>> predicate);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成And条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成And条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
@@ -503,6 +506,24 @@ public interface IContinuedUpdate<TEntity> : IUpdated<TEntity>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回更新对象</returns>
     IContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate = null, Expression<Func<TEntity, bool>> elsePredicate = null);
+    #endregion
+
+    #region Or
+    /// <summary>
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回更新对象</returns>
+    IContinuedUpdate<TEntity> Or(Expression<Func<TEntity, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Or条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Or条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回更新对象</returns>
+    IContinuedUpdate<TEntity> Or(bool condition, Expression<Func<TEntity, bool>> ifPredicate = null, Expression<Func<TEntity, bool>> elsePredicate = null);
     #endregion
 }
 /// <summary>
@@ -625,7 +646,7 @@ public interface IBulkContinuedUpdate<TEntity> : IUpdated<TEntity>
     IBulkContinuedUpdate<TEntity> OnlyFields<TFields>(Expression<Func<TEntity, TFields>> fieldsSelector);
     #endregion
 
-    #region Where/And
+    #region Where
     /// <summary>
     /// 使用whereObj对象生成Where条件，whereObj对象内所有与当前实体表TEntity名称相同的栏位都将参与where条件过滤，whereObj对象可以是匿名对象、命名对象或是字典，推荐使用匿名对象，不能为null
     /// </summary>
@@ -648,14 +669,17 @@ public interface IBulkContinuedUpdate<TEntity> : IUpdated<TEntity>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
     /// <returns>返回更新对象</returns>
     IBulkContinuedUpdate<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null);
+    #endregion
+
+    #region And
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回更新对象</returns>
     IBulkContinuedUpdate<TEntity> And(Expression<Func<TEntity, bool>> predicate);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成And条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成And条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
@@ -663,5 +687,23 @@ public interface IBulkContinuedUpdate<TEntity> : IUpdated<TEntity>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回更新对象</returns>
     IBulkContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate = null, Expression<Func<TEntity, bool>> elsePredicate = null);
+    #endregion
+
+    #region Or
+    /// <summary>
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回更新对象</returns>
+    IBulkContinuedUpdate<TEntity> Or(Expression<Func<TEntity, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Or条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Or条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回更新对象</returns>
+    IBulkContinuedUpdate<TEntity> Or(bool condition, Expression<Func<TEntity, bool>> ifPredicate = null, Expression<Func<TEntity, bool>> elsePredicate = null);
     #endregion
 }

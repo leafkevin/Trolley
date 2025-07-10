@@ -44,14 +44,14 @@ public class Update<TEntity> : IUpdate<TEntity>
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
+    public virtual IUpdate<TEntity> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
+    {
+        this.Visitor.UseTable(tableNameGetter);
+        return this;
+    }
     public virtual IUpdate<TEntity> UseTableBy(params object[] fieldValues)
     {
         this.Visitor.UseTableBy(false, fieldValues);
-        return this;
-    }
-    public virtual IUpdate<TEntity> UseTableBy<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
-    {
-        this.Visitor.UseTableBy(tableNameGetter);
         return this;
     }
     public virtual IUpdate<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue)
@@ -98,7 +98,7 @@ public class Update<TEntity> : IUpdate<TEntity>
     public virtual IContinuedUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
         => this.Set(true, fieldSelector, fieldValue);
     public virtual IContinuedUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
-    {        
+    {
         if (condition)
         {
             if (fieldSelector == null)
@@ -115,7 +115,7 @@ public class Update<TEntity> : IUpdate<TEntity>
     public virtual IContinuedUpdate<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsAssignment)
         => this.Set(true, fieldsAssignment);
     public virtual IContinuedUpdate<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment)
-    {        
+    {
         if (condition)
         {
             if (fieldsAssignment == null)
@@ -133,7 +133,7 @@ public class Update<TEntity> : IUpdate<TEntity>
     public virtual IContinuedUpdate<TEntity> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
         => this.SetFrom(true, fieldSelector, valueSelector);
     public virtual IContinuedUpdate<TEntity> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
-    {        
+    {
         if (condition)
         {
             if (fieldSelector == null)
@@ -157,7 +157,7 @@ public class Update<TEntity> : IUpdate<TEntity>
                 throw new ArgumentNullException(nameof(fieldsAssignment));
             if (fieldsAssignment.Body.NodeType != ExpressionType.New && fieldsAssignment.Body.NodeType != ExpressionType.MemberInit)
                 throw new NotSupportedException($"不支持的表达式{nameof(fieldsAssignment)},只支持New或MemberInit类型表达式");
-                    
+
             this.Visitor.SetFrom(fieldsAssignment);
         }
         return this.OrmProvider.NewContinuedUpdate<TEntity>(this.DbContext, this.Visitor);
@@ -402,7 +402,7 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
     public virtual IContinuedUpdate<TEntity> Set<TField>(Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
         => this.Set(true, fieldSelector, fieldValue);
     public virtual IContinuedUpdate<TEntity> Set<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, TField fieldValue)
-    {        
+    {
         if (condition)
         {
             if (fieldSelector == null)
@@ -419,7 +419,7 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
     public virtual IContinuedUpdate<TEntity> Set<TFields>(Expression<Func<TEntity, TFields>> fieldsAssignment)
        => this.Set(true, fieldsAssignment);
     public virtual IContinuedUpdate<TEntity> Set<TFields>(bool condition, Expression<Func<TEntity, TFields>> fieldsAssignment)
-    {        
+    {
         if (condition)
         {
             if (fieldsAssignment == null)
@@ -437,7 +437,7 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
     public virtual IContinuedUpdate<TEntity> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
         => this.SetFrom(true, fieldSelector, valueSelector);
     public virtual IContinuedUpdate<TEntity> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
-    {        
+    {
         if (condition)
         {
             if (fieldSelector == null)
@@ -454,7 +454,7 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
     public virtual IContinuedUpdate<TEntity> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
         => this.SetFrom(true, fieldsAssignment);
     public virtual IContinuedUpdate<TEntity> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
-    {        
+    {
         if (condition)
         {
             if (fieldsAssignment == null)
@@ -510,7 +510,7 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
     }
     #endregion
 
-    #region Where/And
+    #region Where
     public virtual IUpdated<TEntity> Where<TWhereObj>(TWhereObj whereObj)
     {
         if (whereObj == null)
@@ -531,6 +531,9 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
+    #endregion
+
+    #region And
     public virtual IContinuedUpdate<TEntity> And(Expression<Func<TEntity, bool>> predicate)
         => this.And(true, predicate);
     public virtual IContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
@@ -542,6 +545,22 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
             this.Visitor.And(ifPredicate);
         }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region Or
+    public virtual IContinuedUpdate<TEntity> Or(Expression<Func<TEntity, bool>> predicate)
+        => this.Or(true, predicate);
+    public virtual IContinuedUpdate<TEntity> Or(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
+    {
+        if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
+            this.Visitor.Or(ifPredicate);
+        }
+        else if (elsePredicate != null) this.Visitor.Or(elsePredicate);
         return this;
     }
     #endregion
@@ -642,7 +661,7 @@ public class BulkContinuedUpdate<TEntity> : Updated<TEntity>, IBulkContinuedUpda
     }
     #endregion
 
-    #region Where/And
+    #region Where
     public virtual IUpdated<TEntity> Where<TWhereObj>(TWhereObj whereObj)
     {
         if (whereObj == null)
@@ -663,6 +682,9 @@ public class BulkContinuedUpdate<TEntity> : Updated<TEntity>, IBulkContinuedUpda
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
+    #endregion
+
+    #region And
     public virtual IBulkContinuedUpdate<TEntity> And(Expression<Func<TEntity, bool>> predicate)
         => this.And(true, predicate);
     public virtual IBulkContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
@@ -674,6 +696,22 @@ public class BulkContinuedUpdate<TEntity> : Updated<TEntity>, IBulkContinuedUpda
             this.Visitor.And(ifPredicate);
         }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region Or
+    public virtual IBulkContinuedUpdate<TEntity> Or(Expression<Func<TEntity, bool>> predicate)
+        => this.Or(true, predicate);
+    public virtual IBulkContinuedUpdate<TEntity> Or(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
+    {
+        if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
+            this.Visitor.Or(ifPredicate);
+        }
+        else if (elsePredicate != null) this.Visitor.Or(elsePredicate);
         return this;
     }
     #endregion
@@ -708,14 +746,20 @@ public class UpdateJoin<<#=tables#>> : Updated<TEntity>, IUpdateJoin<<#=tables#>
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
+    public virtual IUpdateJoin<<#=tables#>> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
+    {
+        this.Visitor.UseTable(tableNameGetter);
+        return this;
+    }
+    public virtual IUpdateJoin<<#=tables#>> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+    {
+        var masterEntityType = typeof(TMasterSharding);
+        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
+        return this;
+    }
     public virtual IUpdateJoin<<#=tables#>> UseTableBy(params object[] fieldValues)
     {
         this.Visitor.UseTableBy(false, fieldValues);
-        return this;
-    }    
-    public virtual IUpdateJoin<<#=tables#>> UseTableBy<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
-    {
-        this.Visitor.UseTableBy(tableNameGetter);
         return this;
     }
     public virtual IUpdateJoin<<#=tables#>> UseTableByRange(object beginFieldValue, object endFieldValue)
@@ -771,7 +815,7 @@ public class UpdateJoin<<#=tables#>> : Updated<TEntity>, IUpdateJoin<<#=tables#>
     public virtual IUpdateJoin<<#=tables#>> Set<TUpdateObj>(TUpdateObj updateObj)
         => this.Set(true, updateObj);
     public virtual IUpdateJoin<<#=tables#>> Set<TUpdateObj>(bool condition, TUpdateObj updateObj)
-    {        
+    {
         if (condition)
         {
             if (updateObj == null)
@@ -803,7 +847,7 @@ public class UpdateJoin<<#=tables#>> : Updated<TEntity>, IUpdateJoin<<#=tables#>
     public virtual IUpdateJoin<<#=tables#>> Set<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsAssignment)
         => this.Set(true, fieldsAssignment);
     public virtual IUpdateJoin<<#=tables#>> Set<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsAssignment)
-    {        
+    {
         if (condition)
         {
             if (fieldsAssignment == null)
@@ -821,7 +865,7 @@ public class UpdateJoin<<#=tables#>> : Updated<TEntity>, IUpdateJoin<<#=tables#>
     public virtual IUpdateJoin<<#=tables#>> SetFrom<TField>(Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
         => this.SetFrom(true, fieldSelector, valueSelector);
     public virtual IUpdateJoin<<#=tables#>> SetFrom<TField>(bool condition, Expression<Func<TEntity, TField>> fieldSelector, Expression<Func<IFromQuery, TEntity, IQuery<TField>>> valueSelector)
-    {        
+    {
         if (condition)
         {
             if (fieldSelector == null)
@@ -838,7 +882,7 @@ public class UpdateJoin<<#=tables#>> : Updated<TEntity>, IUpdateJoin<<#=tables#>
     public virtual IUpdateJoin<<#=tables#>> SetFrom<TFields>(Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
         => this.SetFrom(true, fieldsAssignment);
     public virtual IUpdateJoin<<#=tables#>> SetFrom<TFields>(bool condition, Expression<Func<IFromQuery, TEntity, TFields>> fieldsAssignment)
-    {        
+    {
         if (condition)
         {
             if (fieldsAssignment == null)
@@ -852,9 +896,9 @@ public class UpdateJoin<<#=tables#>> : Updated<TEntity>, IUpdateJoin<<#=tables#>
     }
     #endregion
 
-    #region Where/And
-    public virtual IUpdateJoin<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> wherePredicate)
-        => this.Where(true, wherePredicate);
+    #region Where
+    public virtual IUpdateJoin<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate)
+        => this.Where(true, predicate);
     public virtual IUpdateJoin<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
     {
         if (condition)
@@ -866,8 +910,11 @@ public class UpdateJoin<<#=tables#>> : Updated<TEntity>, IUpdateJoin<<#=tables#>
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
-    public virtual IUpdateJoin<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> andPredicate)
-        => this.And(true, andPredicate);
+    #endregion
+
+    #region And
+    public virtual IUpdateJoin<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate)
+        => this.And(true, predicate);
     public virtual IUpdateJoin<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
     {
         if (condition)
@@ -877,6 +924,22 @@ public class UpdateJoin<<#=tables#>> : Updated<TEntity>, IUpdateJoin<<#=tables#>
             this.Visitor.And(ifPredicate);
         }
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region Or
+    public virtual IUpdateJoin<<#=tables#>> Or(Expression<Func<<#=tables#>, bool>> predicate)
+        => this.Or(true, predicate);
+    public virtual IUpdateJoin<<#=tables#>> Or(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
+    {
+        if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
+            this.Visitor.Or(ifPredicate);
+        }
+        else if (elsePredicate != null) this.Visitor.Or(elsePredicate);
         return this;
     }
     #endregion

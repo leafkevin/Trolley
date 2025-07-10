@@ -126,6 +126,9 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
                     case "And":
                         this.VisitAnd(deferredSegment.Value as Expression);
                         break;
+                    case "Or":
+                        this.VisitOr(deferredSegment.Value as Expression);
+                        break;
                 }
             }
 
@@ -175,7 +178,7 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
         if (sqlBuilder.Length > 0) sqlBuilder.Append(';');
         sqlBuilder.Append(this.BuildCommand(command, out _));
     }
-    public virtual IDeleteVisitor WhereWith(object wherKeys)
+    public virtual void WhereWith(object wherKeys)
     {
         this.IsWhereKeys = true;
         this.HasWhere = true;
@@ -184,9 +187,8 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
             Type = "WhereWith",
             Value = wherKeys
         });
-        return this;
     }
-    public virtual IDeleteVisitor Where(Expression whereExpr)
+    public virtual void Where(Expression whereExpr)
     {
         this.HasWhere = true;
         this.deferredSegments.Add(new CommandSegment
@@ -194,18 +196,23 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
             Type = "Where",
             Value = whereExpr
         });
-        return this;
     }
-    public virtual IDeleteVisitor And(Expression whereExpr)
+    public virtual void And(Expression whereExpr)
     {
         this.deferredSegments.Add(new CommandSegment
         {
             Type = "And",
             Value = whereExpr
         });
-        return this;
     }
-
+    public virtual void Or(Expression whereExpr)
+    {
+        this.deferredSegments.Add(new CommandSegment
+        {
+            Type = "Or",
+            Value = whereExpr
+        });
+    }
     public override SqlFieldSegment VisitMemberAccess(SqlFieldSegment sqlSegment)
     {
         var memberExpr = sqlSegment.Expression as MemberExpression;
@@ -340,6 +347,11 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
     }
     public virtual void VisitWhere(Expression whereExpr)
     {
+        if (!string.IsNullOrEmpty(this.WhereSql))
+        {
+            this.VisitAnd(whereExpr);
+            return;
+        }
         this.IsWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
         this.LastWhereOperationType = OperationType.None;
@@ -351,15 +363,42 @@ public class DeleteVisitor : SqlVisitor, IDeleteVisitor
     {
         this.IsWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
-        if (this.LastWhereOperationType == OperationType.Or)
-            this.WhereSql = $"({this.WhereSql})";
         var conditionSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
-        if (operationType == OperationType.Or)
-            conditionSql = $"({conditionSql})";
-        this.LastWhereOperationType = OperationType.And;
-        if (!string.IsNullOrEmpty(this.WhereSql))
+        if (string.IsNullOrEmpty(this.WhereSql))
+        {
+            this.WhereSql = conditionSql;
+            this.LastWhereOperationType = operationType;
+        }
+        else
+        {
+            if (this.LastWhereOperationType == OperationType.Or)
+                this.WhereSql = $"({this.WhereSql})";
+            if (operationType == OperationType.Or)
+                conditionSql = $"({conditionSql})";
             this.WhereSql += " AND " + conditionSql;
-        else this.WhereSql = conditionSql;
+            this.LastWhereOperationType = OperationType.And;
+        }
+        this.IsWhere = false;
+    }
+    public virtual void VisitOr(Expression whereExpr)
+    {
+        this.IsWhere = true;
+        var lambdaExpr = whereExpr as LambdaExpression;
+        var conditionSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
+        if (string.IsNullOrEmpty(this.WhereSql))
+        {
+            this.WhereSql = conditionSql;
+            this.LastWhereOperationType = operationType;
+        }
+        else
+        {
+            if (this.LastWhereOperationType == OperationType.And)
+                this.WhereSql = $"({this.WhereSql})";
+            if (operationType == OperationType.And)
+                conditionSql = $"({conditionSql})";
+            this.WhereSql += " OR " + conditionSql;
+            this.LastWhereOperationType = OperationType.Or;
+        }
         this.IsWhere = false;
     }
     public void AddMemberElement(SqlFieldSegment sqlSegment, MemberMap memberMapper, StringBuilder builder)

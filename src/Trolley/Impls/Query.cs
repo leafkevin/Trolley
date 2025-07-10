@@ -250,14 +250,6 @@ public class Query<T> : QueryBase, IQuery<T>
     }
     #endregion
 
-    #region UseMaster
-    public virtual IQuery<T> UseMaster()
-    {
-        this.Visitor.UseMaster();
-        return this;
-    }
-    #endregion
-
     #region GetShardingTableNames
     public virtual List<string> GetShardingTableNames(Func<string, bool> tableNameSelector) => null;
     public virtual Task<List<string>> GetShardingTableNamesAsync(Func<string, bool> tableNameSelector, CancellationToken cancellationToken = default)

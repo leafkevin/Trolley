@@ -449,7 +449,7 @@ public class MySqlCreateVisitor : CreateVisitor
             else
             {
                 var targetType = this.OrmProvider.MapDefaultType(memberMapper);
-                var valueGetter = this.OrmProvider.GetParameterValueGetter(dbFieldValue.GetType(), targetType, false, this.Options);
+                var valueGetter = this.OrmProvider.GetParameterValueGetter(dbFieldValue.GetType(), targetType, false, this.DbContext);
                 dbFieldValue = valueGetter.Invoke(dbFieldValue);
             }
 
@@ -484,7 +484,7 @@ public class MySqlCreateVisitor : CreateVisitor
             else
             {
                 var targetType = this.OrmProvider.MapDefaultType(memberMapper);
-                var valueGetter = this.OrmProvider.GetParameterValueGetter(fieldValue.GetType(), targetType, false, this.Options);
+                var valueGetter = this.OrmProvider.GetParameterValueGetter(fieldValue.GetType(), targetType, false, this.DbContext);
                 fieldValue = valueGetter.Invoke(fieldValue);
             }
             this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));

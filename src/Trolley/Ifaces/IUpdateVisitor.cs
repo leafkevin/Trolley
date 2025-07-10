@@ -28,9 +28,9 @@ public interface IUpdateVisitor : IDisposable
 
     void UseTable(bool isIncludeMany, params string[] tableNames);
     void UseTable(bool isIncludeMany, Func<string, bool> tableNamePredicate);
+    void UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter);
     void UseTableMap(bool isIncludeMany, Type masterEntityType, Func<string, string, string, string> tableNameGetter);
-    void UseTableBy(bool isIncludeMany, params object[] fieldValues);
-    void UseTableBy<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter);
+    void UseTableBy(bool isIncludeMany, params object[] fieldValues);    
     void UseTableByRange(bool isIncludeMany, object beginFieldValue, object endFieldValue);
     void UseTableByRange(bool isIncludeMany, object field1Value, object beginField2Value, object endField2Value);
     void UseTableByRange(bool isIncludeMany, object field1Value, object field2Value, object beginField3Value, object endField3Value);
@@ -52,6 +52,7 @@ public interface IUpdateVisitor : IDisposable
     void WhereWith(object whereObj);
     void Where(Expression whereExpr);
     void And(Expression whereExpr);
+    void Or(Expression whereExpr);
     DataTable ToDataTable(Type updateObjType, IEnumerable entities, List<(MemberMap, Func<object, object>)> memberMappers, string tableName = null);
     List<(MemberMap, Func<object, object>)> GetRefMemberMappers(Type entityType, EntityMap refEntityMapper, bool isUpdate = false);
     string BuildTableShardingsSql();

@@ -290,7 +290,7 @@ public static class Extensions
         if (fieldType == targetType)
             return (TValue)reader.GetValue(0);
 
-        var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(targetType, fieldType, dbContext.Options);
+        var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(targetType, fieldType, dbContext);
         return (TValue)valueGetter.Invoke(reader.GetValue(0));
     }
     public static Func<ITheaDataReader, object> GetReaderDeserializer(this ITheaDataReader reader, Type entityType, DbContext dbContext)
@@ -302,7 +302,7 @@ public static class Extensions
                 return reader => reader.GetValue(0);
             else
             {
-                var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(entityType, fieldType, dbContext.Options);
+                var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(entityType, fieldType, dbContext);
                 return reader => valueGetter.Invoke(reader.GetValue(0));
             }
         }
@@ -359,7 +359,7 @@ public static class Extensions
                     return reader => typeHandler.Parse(dbContext.OrmProvider, readerFields[0].SegmentType, reader.GetValue(0));
                 else
                 {
-                    var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(entityType, fieldType, dbContext.Options);
+                    var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(entityType, fieldType, dbContext);
                     return reader => valueGetter.Invoke(reader.GetValue(0));
                 }
             }

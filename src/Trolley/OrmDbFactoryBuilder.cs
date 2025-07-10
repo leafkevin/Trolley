@@ -15,7 +15,7 @@ public sealed class OrmDbFactoryBuilder
         databaseInitializer.Invoke(builder);
         return this;
     }
-   
+
     public OrmDbFactoryBuilder Configure(string dbKey, IModelConfiguration configuration)
     {
         this.dbFactory.Configure(dbKey, configuration);
@@ -27,22 +27,56 @@ public sealed class OrmDbFactoryBuilder
         return this;
     }
 
+    /// <summary>
+    /// 设置dbKey的数据库连接串选择器，通常是数据一致的多个数据库，非主从库模式，也非类似租户等水平分库模式，通常设置为轮询方式或者是随机方式选择连接串
+    /// </summary>
+    /// <param name="dbKey"></param>
+    /// <param name="connectionStringSelector"></param>
+    /// <returns></returns>
     public OrmDbFactoryBuilder UseConnectionStringSelector(string dbKey, Func<string> connectionStringSelector)
     {
         this.dbFactory.AddConnectionStringSelector(dbKey, connectionStringSelector);
         return this;
     }
-    public OrmDbFactoryBuilder UseConnectionStringSelector(string dbKey, Func<object, string> connectionStringSelector)
-    {
-        this.dbFactory.AddConnectionStringSelector(dbKey, connectionStringSelector);
-        return this;
-    }
+    /// <summary>
+    /// 设置所有类型为ormProviderType的数据库的连接串选择器，此方法适用于数据一致的多个数据库，非主从库模式，也非类似租户等水平分库模式，通常设置为轮询方式或者是随机方式选择连接串
+    /// </summary>
+    /// <param name="ormProviderType"></param>
+    /// <param name="connectionStringSelector"></param>
+    /// <returns></returns>
     public OrmDbFactoryBuilder UseConnectionStringSelector(OrmProviderType ormProviderType, Func<string> connectionStringSelector)
     {
         this.dbFactory.AddConnectionStringSelector(ormProviderType, connectionStringSelector);
         return this;
     }
-    public OrmDbFactoryBuilder UseConnectionStringSelector(OrmProviderType ormProviderType, Func<object, string> connectionStringSelector)
+    /// <summary>
+    /// 设置dbKey的数据库主库连接串选择器，此方法适用于主从库模式，并且主库有多个，也可以类似多租户等水平分库模式，也可以是多主库且又类似多租户等水平分库模式则默认使用轮询方式选择连接串
+    /// </summary>
+    /// <param name="dbKey"></param>
+    /// <param name="connectionStringSelector"></param>
+    /// <returns></returns>
+    public OrmDbFactoryBuilder UseMasterConnectionStringSelector(string dbKey, Func<object, string> connectionStringSelector)
+    {
+        this.dbFactory.AddConnectionStringSelector(dbKey, connectionStringSelector);
+        return this;
+    }
+    /// <summary>
+    /// 设置所有类型为ormProviderType的数据库主库连接串选择器，此方法适用于主从库模式，并且主库有多个时，未设置连接串选择器，则默认使用轮询方式选择连接串
+    /// </summary>
+    /// <param name="ormProviderType"></param>
+    /// <param name="connectionStringSelector"></param>
+    /// <returns></returns>
+    public OrmDbFactoryBuilder UseMasterConnectionStringSelector(OrmProviderType ormProviderType, Func<object, string> connectionStringSelector)
+    {
+        this.dbFactory.AddConnectionStringSelector(ormProviderType, connectionStringSelector);
+        return this;
+    }
+    public OrmDbFactoryBuilder UseSlaveConnectionStringSelector(string dbKey, Func<object, string> connectionStringSelector)
+    {
+        this.dbFactory.AddConnectionStringSelector(dbKey, connectionStringSelector);
+        return this;
+    }
+    public OrmDbFactoryBuilder UseSlaveConnectionStringSelector(OrmProviderType ormProviderType, Func<object, string> connectionStringSelector)
     {
         this.dbFactory.AddConnectionStringSelector(ormProviderType, connectionStringSelector);
         return this;

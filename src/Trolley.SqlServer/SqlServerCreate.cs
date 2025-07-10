@@ -23,7 +23,7 @@ public class SqlServerCreate<TEntity> : Create<TEntity>, ISqlServerCreate<TEntit
     public new ISqlServerCreate<TEntity> UseTableBy(params object[] fieldValues)
         => base.UseTableBy(fieldValues) as ISqlServerCreate<TEntity>;
     public new ISqlServerCreate<TEntity> UseTableBy<TInsertObj>(Func<string, TInsertObj, string> tableNameGetter)
-        => base.UseTableBy(tableNameGetter) as ISqlServerCreate<TEntity>;
+        => base.UseTable(tableNameGetter) as ISqlServerCreate<TEntity>;
     #endregion
 
     #region UseTableSchema

@@ -9,9 +9,9 @@ public class OrmDbFactoryOptions
     /// </summary>
     public int CommandTimeout { get; set; } = 30;
     /// <summary>
-    /// 表达式中使用变量默认的参数名前缀，默认值是p
+    /// 表达式中使用变量默认的参数名前缀，默认值是p，如：@p1,@p2等
     /// </summary>
-    public string ParameterPrefix { get; set; } = "p";
+    public string UserParameterPrefix { get; set; } = "p";
     /// <summary>
     /// 表达式解析中，常量是否参数化。如果设置为true，所有常量也将都会参数化，所有变量都会做参数化处理。
     /// </summary>

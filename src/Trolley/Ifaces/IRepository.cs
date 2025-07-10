@@ -87,6 +87,20 @@ public interface IRepository
     Task CreateShardingTableByAsync<TEntity>(object field1Value, object field2Value = null, string tableSchema = null, string fromTableSchema = null, CancellationToken cancellationToken = default);
     #endregion
 
+    #region ShardingDatabase
+    /// <summary>
+    /// 强制使用主库查询数据
+    /// </summary>
+    /// <returns></returns>
+    IRepository UseMaster();
+    /// <summary>
+    /// 强制使用主库查询数据，根据字段值确定主库，适用于类似多租户、多租户多主库等带有水平分库模式场景，需要提供依赖字段值，最多支持3个字段值，如：租户Id、租户Id+时间等分库，同一个租户库也可以有多个主库
+    /// </summary>
+    /// <param name="fieldValues">依赖字段值</param>
+    /// <returns></returns>
+    IRepository UseMasterBy(params object[] fieldValues);
+    #endregion
+
     #region From
     /// <summary>
     /// 从表T中查询数据，用法：
@@ -741,5 +755,9 @@ public interface IRepository
     Task CommitAsync(CancellationToken cancellationToken = default);
     void Rollback();
     Task RollbackAsync(CancellationToken cancellationToken = default);
+    #endregion
+
+    #region Other
+    IRepository WithTimeout(int seconds);
     #endregion
 }

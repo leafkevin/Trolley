@@ -23,7 +23,7 @@ public class PostgreSqlCreate<TEntity> : Create<TEntity>, IPostgreSqlCreate<TEnt
     public new IPostgreSqlCreate<TEntity> UseTableBy(params object[] fieldValues)
         => base.UseTableBy(fieldValues) as IPostgreSqlCreate<TEntity>;
     public new IPostgreSqlCreate<TEntity> UseTableBy<TInsertObj>(Func<string, TInsertObj, string> tableNameGetter)
-        => base.UseTableBy(tableNameGetter) as IPostgreSqlCreate<TEntity>;
+        => base.UseTable(tableNameGetter) as IPostgreSqlCreate<TEntity>;
     #endregion
 
     #region UseTableSchema

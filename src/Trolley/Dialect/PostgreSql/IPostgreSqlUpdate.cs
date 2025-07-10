@@ -21,18 +21,18 @@ public interface IPostgreSqlUpdate<TEntity> : IUpdate<TEntity>
     /// <returns>返回更新对象</returns>
     new IPostgreSqlUpdate<TEntity> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 根据字段值，手动指定TEntity表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
-    /// </summary>
-    /// <param name="fieldValues">字段值</param>
-    /// <returns>返回更新对象</returns>
-    new IPostgreSqlUpdate<TEntity> UseTableBy(params object[] fieldValues);
-    /// <summary>
     /// 手动设置分表名获取委托，通常是根据某1个或多个字段值来确定分表名，执行时会根据实体字段的值自动更新对应的分表中，单条和批量更新均可使用，常用于批量操作。
     /// </summary>
     /// <typeparam name="TUpdateObj">更新的实体类型</typeparam>
     /// <param name="tableNameGetter">分表名获取委托</param>
     /// <exception cref="ArgumentNullException"></exception>
-    new IPostgreSqlUpdate<TEntity> UseTableBy<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter);
+    new IPostgreSqlUpdate<TEntity> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter);
+    /// <summary>
+    /// 根据字段值，手动指定TEntity表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
+    /// </summary>
+    /// <param name="fieldValues">字段值</param>
+    /// <returns>返回更新对象</returns>
+    new IPostgreSqlUpdate<TEntity> UseTableBy(params object[] fieldValues);
     /// <summary>
     /// 根据1个字段范围值，手动指定TEntity表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)，//时间分表，最近一周的订单
     /// </summary>

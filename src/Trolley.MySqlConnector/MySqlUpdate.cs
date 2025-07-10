@@ -23,10 +23,10 @@ public class MySqlUpdate<TEntity> : Update<TEntity>, IMySqlUpdate<TEntity>
         => base.UseTable(tableNames) as IMySqlUpdate<TEntity>;
     public new IMySqlUpdate<TEntity> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IMySqlUpdate<TEntity>;
+    public new IMySqlUpdate<TEntity> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
+        => base.UseTable(tableNameGetter) as IMySqlUpdate<TEntity>;
     public new IMySqlUpdate<TEntity> UseTableBy(params object[] fieldValues)
         => base.UseTableBy(fieldValues) as IMySqlUpdate<TEntity>;
-    public new IMySqlUpdate<TEntity> UseTableBy<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
-        => base.UseTableBy(tableNameGetter) as IMySqlUpdate<TEntity>;
     public new IMySqlUpdate<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue)
         => base.UseTableByRange(beginFieldValue, endFieldValue) as IMySqlUpdate<TEntity>;
     public new IMySqlUpdate<TEntity> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)

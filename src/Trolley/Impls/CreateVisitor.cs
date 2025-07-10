@@ -340,7 +340,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         else
         {
             var targetType = this.OrmProvider.MapDefaultType(memberMapper);
-            var valueGetter = this.OrmProvider.GetParameterValueGetter(fieldValue.GetType(), targetType, false, this.Options);
+            var valueGetter = this.OrmProvider.GetParameterValueGetter(fieldValue.GetType(), targetType, false, this.DbContext);
             fieldValue = valueGetter.Invoke(fieldValue);
         }
         if (this.FieldsBuilder.Length > 0)
@@ -443,36 +443,16 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
             break;
         }
         var origTableName = this.Tables[0].Mapper.TableName;
-        if (tableShardingInfo.DependOnMembers.Count > 1)
-        {
-            var fieldValueGetters = new List<Func<object, object>>();
-            var memberInfo1s = insertObjType.GetMember(tableShardingInfo.DependOnMembers[0]);
-            if (memberInfo1s.Length > 0)
-                fieldValueGetters.Add(f => FasterEvaluator.EvaluateAndCache(f, memberInfo1s[0]));
-            else
-            {
-                var fieldValue = GetShardingFieldValue(tableShardingInfo.DependOnMembers[0], 1);
-                fieldValueGetters.Add(f => fieldValue);
-            }
-            var memberInfo2s = insertObjType.GetMember(tableShardingInfo.DependOnMembers[1]);
-            if (memberInfo2s.Length > 0)
-                fieldValueGetters.Add(f => FasterEvaluator.EvaluateAndCache(f, memberInfo2s[0]));
-            else
-            {
-                var fieldValue = GetShardingFieldValue(tableShardingInfo.DependOnMembers[1], 1);
-                fieldValueGetters.Add(f => fieldValue);
-            }
-            var shardingRule = tableShardingInfo.Rule as Func<string, object, object, string>;
-            Func<object, string> tableNameGetter = f =>
-            {
-                var fieldValue1 = fieldValueGetters[0].Invoke(f);
-                var fieldValue2 = fieldValueGetters[1].Invoke(f);
-                return shardingRule.Invoke(origTableName, fieldValue1, fieldValue2);
-            };
 
+        //优先使用本次设置的分表名获取委托来获取分表名
+        if (this.DbContext.CommandShardingTableGetter != null)
+        {
+            var tableNameGetter = this.DbContext.CommandShardingTableGetter;
             foreach (var insertObj in insertObjs)
             {
-                var tableName = tableNameGetter.Invoke(insertObj);
+                var tableName = tableNameGetter.DynamicInvoke(insertObj) as string;
+                if (string.IsNullOrEmpty(tableName))
+                    throw new InvalidOperationException($"手动设置的分表名获取委托无法获取分表名，原表名：{origTableName}，当前参数：{this.DbContext.JsonTypeHandler.ToFieldValue(this.OrmProvider, insertObj)}");
                 if (!result.TryGetValue(tableName, out var myParameters))
                     result.Add(tableName, myParameters = new List<object>());
                 myParameters.Add(insertObj);
@@ -480,16 +460,33 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         }
         else
         {
-            var shardingRule = tableShardingInfo.Rule as Func<string, object, string>;
-            var memberInfos = insertObjType.GetMember(tableShardingInfo.DependOnMembers[0]);
-            Func<object, string> tableNameGetter = f =>
+            //使用分表规则获取分表名，根据依赖的字段值执行分表规则委托获取分表名
+            if (tableShardingInfo.DependOnMembers == null || tableShardingInfo.DependOnMembers.Count == 0)
+                throw new InvalidOperationException($"分表规则未指定依赖的成员，无法确定分表，原表名：{origTableName}");
+
+            Func<string, Func<object, object>> fieldValueGetter = fieldName =>
             {
-                var fieldValue = FasterEvaluator.EvaluateAndCache(f, memberInfos[0]);
-                return shardingRule.Invoke(origTableName, fieldValue);
+                var memberInfos = insertObjType.GetMember(fieldName);
+                if (memberInfos.Length > 0)
+                    return f => FasterEvaluator.EvaluateAndCache(f, memberInfos[0]);
+                return f => this.GetShardingFieldValue(tableShardingInfo.DependOnMembers[0], 1);
             };
+            var fieldValueGetters = new List<Func<object, object>>();
+            foreach (var fieldName in tableShardingInfo.DependOnMembers)
+                fieldValueGetters.Add(fieldValueGetter.Invoke(fieldName));
+            Func<object, string> tableNameGetter = insertObj =>
+            {
+                var fieldValus = new List<object>();
+                foreach (var fieldValueGetter in fieldValueGetters)
+                    fieldValus.Add(fieldValueGetter.Invoke(insertObj));
+                return tableShardingInfo.Rule.DynamicInvoke(fieldValus.ToArray()) as string;
+            };
+
             foreach (var insertObj in insertObjs)
             {
                 var tableName = tableNameGetter.Invoke(insertObj);
+                if (string.IsNullOrEmpty(tableName))
+                    throw new InvalidOperationException($"分表规则无法获取分表名，原表名：{origTableName}，当前参数：{this.DbContext.JsonTypeHandler.ToFieldValue(this.OrmProvider, insertObj)}");
                 if (!result.TryGetValue(tableName, out var myParameters))
                     result.Add(tableName, myParameters = new List<object>());
                 myParameters.Add(insertObj);
@@ -541,7 +538,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                     break;
             }
         }
-        throw new Exception($"缺少分表规则依赖的成员{memberName}，无法确定分表");
+        throw new InvalidOperationException($"缺少分表规则依赖的成员{memberName}，无法确定分表");
     }
     private bool TryGetMemberValue(Type insertObjType, object insertObj, string memberName, out object memberValue)
     {

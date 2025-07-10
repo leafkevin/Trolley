@@ -64,8 +64,7 @@ public interface IQueryVisitor : IDisposable
     void UseTableByRange(bool isIncludeMany, object beginFieldValue, object endFieldValue);
     void UseTableByRange(bool isIncludeMany, object field1Value, object beginField2Value, object endField2Value);
     void UseTableByRange(bool isIncludeMany, object field1Value, object field2Value, object beginField3Value, object endField3Value);
-    void UseTableSchema(bool isIncludeMany, string tableSchema);
-    void UseMaster();
+    void UseTableSchema(bool isIncludeMany, string tableSchema); 
 
     void From(char tableAsStart = 'a', params Type[] entityTypes);
     void From(Type targetType, IQuery subQueryObj);

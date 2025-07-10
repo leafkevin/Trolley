@@ -72,7 +72,7 @@ public static class RepositoryHelper
             var ormProvider = dbContext.OrmProvider;
             //数据库类型
             var targetType = ormProvider.MapDefaultType(memberMapper);
-            var valueGetter = ormProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, dbContext.Options);
+            var valueGetter = ormProvider.GetParameterValueGetter(fieldValueType, targetType, !memberMapper.IsRequired, dbContext);
             if (fieldValueExpr.Type != typeof(object))
                 parameterValueExpr = Expression.Convert(parameterValueExpr, typeof(object));
             parameterValueExpr = Expression.Invoke(Expression.Constant(valueGetter), parameterValueExpr);
@@ -84,7 +84,7 @@ public static class RepositoryHelper
         var dbParameterExpr = Expression.Call(ormProviderExpr, createParameterMethodInfo, parameterNameExpr, nativeDbTypeExpr, parameterValueExpr);
         blockBodies.Add(Expression.Call(dbParametersExpr, addMethodInfo, dbParameterExpr));
     }
-    public static void AddValueParameter(DbContext dbContext, Expression dbParametersExpr, Expression ormProviderExpr,
+    public static void AddValueParameter(DbContext dbContext, Expression dbContextExpr, Expression dbParametersExpr, Expression ormProviderExpr,
         Expression parameterNameExpr, Expression fieldValueExpr, Expression memberMapperExpr, List<Expression> blockBodies)
     {
         var typeHandlerExpr = Expression.Property(memberMapperExpr, nameof(MemberMap.TypeHandler));
@@ -98,9 +98,8 @@ public static class RepositoryHelper
         var targetTypeExpr = Expression.Call(ormProviderExpr, methodInfo, memberMapperExpr);
         methodInfo = typeof(IOrmProvider).GetMethod(nameof(IOrmProvider.GetParameterValueGetter));
 
-        var optionsExpr = Expression.Constant(dbContext.Options);
         var fieldValueTypeExpr = Expression.Call(fieldValueExpr, typeof(object).GetMethod(nameof(object.GetType)));
-        var valueGetterExpr = Expression.Call(ormProviderExpr, methodInfo, fieldValueTypeExpr, targetTypeExpr, Expression.Constant(false), optionsExpr);
+        var valueGetterExpr = Expression.Call(ormProviderExpr, methodInfo, fieldValueTypeExpr, targetTypeExpr, Expression.Constant(false), dbContextExpr);
         var valueGetterValueExpr = Expression.Invoke(valueGetterExpr, boxedFieldValueExpr);
 
         //dbParameters.Add(ormProvider.CreateParameter(parameterName, memberMapper.NativeDbType, dbFieldValue);
@@ -356,7 +355,7 @@ public static class RepositoryHelper
             if (commandType > 1 && sqlType != 2)
             {
                 loopBodies.Add(Expression.Assign(itemValueExpr, Expression.Property(currentExpr, nameof(KeyValuePair<string, object>.Value))));
-                AddValueParameter(dbContext, dbParametersExpr, ormProviderExpr, myParameterNameExpr, itemValueExpr, memberMapperExpr, loopBodies);
+                AddValueParameter(dbContext, dbContextExpr, dbParametersExpr, ormProviderExpr, myParameterNameExpr, itemValueExpr, memberMapperExpr, loopBodies);
             }
 
             //index++;
@@ -449,7 +448,7 @@ public static class RepositoryHelper
                     if (isDictionary)
                     {
                         var fieldValueExpr = Expression.Field(valueTupleExpr, "Item2");
-                        AddValueParameter(dbContext, dbParametersExpr, ormProviderExpr, myParameterNameExpr, fieldValueExpr, memberMapperExpr, blockBodies);
+                        AddValueParameter(dbContext, dbContextExpr, dbParametersExpr, ormProviderExpr, myParameterNameExpr, fieldValueExpr, memberMapperExpr, blockBodies);
                     }
                     else
                     {
@@ -689,7 +688,7 @@ public static class RepositoryHelper
             if (sqlType != 2)
             {
                 loopBodies.Add(Expression.Assign(itemValueExpr, Expression.Property(currentExpr, nameof(KeyValuePair<string, object>.Value))));
-                AddValueParameter(dbContext, dbParametersExpr, ormProviderExpr, myParameterNameExpr, itemValueExpr, memberMapperExpr, loopBodies);
+                AddValueParameter(dbContext, dbContextExpr, dbParametersExpr, ormProviderExpr, myParameterNameExpr, itemValueExpr, memberMapperExpr, loopBodies);
             }
 
             //index++;
@@ -759,7 +758,7 @@ public static class RepositoryHelper
                         methodInfo = typeof(EntityMap).GetMethod(nameof(EntityMap.GetMemberMap));
                         blockBodies.Add(Expression.Assign(memberMapperExpr, Expression.Call(entityMapperExpr, methodInfo, memberNameExpr)));
                         var fieldValueExpr = Expression.Field(valueTupleExpr, "Item2");
-                        AddValueParameter(dbContext, dbParametersExpr, ormProviderExpr, myParameterNameExpr, fieldValueExpr, memberMapperExpr, blockBodies);
+                        AddValueParameter(dbContext, dbContextExpr, dbParametersExpr, ormProviderExpr, myParameterNameExpr, fieldValueExpr, memberMapperExpr, blockBodies);
                     }
                     else
                     {
@@ -1415,7 +1414,7 @@ public static class RepositoryHelper
 
                 loopBodies.Add(Expression.Call(updateFieldsExpr, addMethodInfo, contentExpr));
                 loopBodies.Add(Expression.Assign(itemValueExpr, Expression.Property(currentExpr, nameof(KeyValuePair<string, object>.Value))));
-                AddValueParameter(dbContext, dbParametersExpr, ormProviderExpr, myParameterNameExpr, itemValueExpr, memberMapperExpr, loopBodies);
+                AddValueParameter(dbContext, dbContextExpr, dbParametersExpr, ormProviderExpr, myParameterNameExpr, itemValueExpr, memberMapperExpr, loopBodies);
 
                 //index++;
                 loopBodies.Add(Expression.AddAssign(indexExpr, Expression.Constant(1)));
@@ -2031,7 +2030,7 @@ public static class RepositoryHelper
         }
         else
         {
-            var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(targetType, fieldType, dbContext.Options);
+            var valueGetter = dbContext.OrmProvider.GetReaderValueGetter(targetType, fieldType, dbContext);
             targetValueExpr = Expression.Invoke(Expression.Constant(valueGetter), readerValueExpr);
         }
         blockBodies.Add(Expression.Assign(readerValueExpr, targetValueExpr));

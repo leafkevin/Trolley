@@ -16,7 +16,7 @@ public class TableShardingInfo
     /// <summary>
     /// 分表规则，可用于查询、单条插入、单条更新、删除等操作，可设置依赖字段，也可以设置不依赖字段
     /// </summary>
-    public object Rule { get; set; }
+    public Delegate Rule { get; set; }
     /// <summary>
     /// 分表名称验证正则表达式，用于筛选分表名称
     /// </summary>

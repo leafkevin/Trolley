@@ -1,19 +1,15 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
-using System.Threading;
 
 namespace Trolley;
 
 public class UpdateVisitor : SqlVisitor, IUpdateVisitor
 {
-    private static ConcurrentDictionary<int, object> fieldSqlSetterCache = new();
-    private static ConcurrentDictionary<int, object> multiFieldSqlSetterCache = new();
     protected List<CommandSegment> deferredSegments = new();
 
     public List<string> OnlyFieldNames { get; set; }
@@ -127,6 +123,9 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                                 break;
                             case "And":
                                 this.VisitAnd(deferredSegment.Value as Expression);
+                                break;
+                            case "Or":
+                                this.VisitOr(deferredSegment.Value as Expression);
                                 break;
                         }
                     }
@@ -438,6 +437,14 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             Value = whereExpr
         });
     }
+    public virtual void Or(Expression whereExpr)
+    {
+        this.deferredSegments.Add(new CommandSegment
+        {
+            Type = "Or",
+            Value = whereExpr
+        });
+    }
     public override SqlFieldSegment VisitNew(SqlFieldSegment sqlSegment)
     {
         if (sqlSegment.Expression.IsParameter(out _))
@@ -620,7 +627,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         var sql = this.VisitFromQuery(valueSelector as LambdaExpression);
         this.UpdateFields.Add(this.OrmProvider.GetFieldName(memberMapper.FieldName) + $"=({sql})");
     }
-    protected virtual void VisitWhereWith(object whereObj)
+    public virtual void VisitWhereWith(object whereObj)
     {
         var entityType = this.Tables[0].EntityType;
         var whereObjType = whereObj.GetType();
@@ -636,7 +643,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             this.WhereSql = typedWhereSqlParameters.Invoke(this.DbParameters, this.DbContext, whereObj);
         }
     }
-    protected virtual void VisitWhere(Expression whereExpr)
+    public virtual void VisitWhere(Expression whereExpr)
     {
         if (!string.IsNullOrEmpty(this.WhereSql))
         {
@@ -651,20 +658,48 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         this.LastWhereOperationType = operationType;
         this.IsWhere = false;
     }
-    protected virtual void VisitAnd(Expression whereExpr)
+    public virtual void VisitAnd(Expression whereExpr)
     {
         this.IsWhere = true;
         var lambdaExpr = whereExpr as LambdaExpression;
         this.InitTableAlias(lambdaExpr);
-        if (this.LastWhereOperationType == OperationType.Or)
-            this.WhereSql = $"({this.WhereSql})";
         var conditionSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
-        if (operationType == OperationType.Or)
-            conditionSql = $"({conditionSql})";
-        this.LastWhereOperationType = OperationType.And;
-        if (!string.IsNullOrEmpty(this.WhereSql))
+        if (string.IsNullOrEmpty(this.WhereSql))
+        {
+            this.WhereSql = conditionSql;
+            this.LastWhereOperationType = operationType;
+        }
+        else
+        {
+            if (this.LastWhereOperationType == OperationType.Or)
+                this.WhereSql = $"({this.WhereSql})";
+            if (operationType == OperationType.Or)
+                conditionSql = $"({conditionSql})";
             this.WhereSql += " AND " + conditionSql;
-        else this.WhereSql = conditionSql;
+            this.LastWhereOperationType = OperationType.And;
+        }
+        this.IsWhere = false;
+    }
+    public virtual void VisitOr(Expression whereExpr)
+    {
+        this.IsWhere = true;
+        var lambdaExpr = whereExpr as LambdaExpression;
+        this.InitTableAlias(lambdaExpr);
+        var conditionSql = this.VisitConditionExpr(lambdaExpr.Body, out var operationType);
+        if (string.IsNullOrEmpty(this.WhereSql))
+        {
+            this.WhereSql = conditionSql;
+            this.LastWhereOperationType = operationType;
+        }
+        else
+        {
+            if (this.LastWhereOperationType == OperationType.And)
+                this.WhereSql = $"({this.WhereSql})";
+            if (operationType == OperationType.And)
+                conditionSql = $"({conditionSql})";
+            this.WhereSql += " OR " + conditionSql;
+            this.LastWhereOperationType = OperationType.Or;
+        }
         this.IsWhere = false;
     }
     public virtual void VisitFields(Expression fieldsSelector, Action<MemberMap> fieldsAction)
@@ -729,7 +764,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         else
         {
             var targetType = this.OrmProvider.MapDefaultType(memberMapper);
-            var valueGetter = this.OrmProvider.GetParameterValueGetter(memberValue.GetType(), targetType, false, this.Options);
+            var valueGetter = this.OrmProvider.GetParameterValueGetter(memberValue.GetType(), targetType, false, this.DbContext);
             fieldValue = valueGetter.Invoke(fieldValue);
         }
         this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));
@@ -752,7 +787,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             else
             {
                 var targetType = this.OrmProvider.MapDefaultType(memberMapper);
-                var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, false, this.Options);
+                var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, false, this.DbContext);
                 fieldValue = valueGetter.Invoke(fieldValue);
             }
             this.DbParameters.Add(this.OrmProvider.CreateParameter(parameterName, memberMapper.NativeDbType, fieldValue));

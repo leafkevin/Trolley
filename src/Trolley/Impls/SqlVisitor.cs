@@ -20,15 +20,14 @@ public class SqlVisitor : ISqlVisitor
     public IEntityMapProvider MapProvider => this.DbContext.MapProvider;
     public ITableShardingProvider ShardingProvider => this.DbContext.ShardingProvider;
     public string DefaultTableSchema => this.DbContext.DefaultTableSchema;
-    public bool IsConstantParameterized => this.Options.IsConstantParameterized;
-    public string ParameterPrefix => this.Options.ParameterPrefix;
+    public bool IsConstantParameterized => this.DbContext.IsConstantParameterized;
+    public string ParameterPrefix => this.DbContext.UserParameterPrefix;
     public IDataParameterCollection DbParameters { get; set; }
     public IDataParameterCollection NextDbParameters { get; set; }
     public char TableAsStart { get; set; }
     public bool IsMultiple { get; set; }
     public int CommandIndex { get; set; }
     public bool IsUseMaster { get; set; }
-    public OrmDbFactoryOptions Options => this.DbContext.Options;
 
     /// <summary>
     /// 所有表都是扁平化的，主表、1:1关系Include子表，也在这里
@@ -262,16 +261,16 @@ public class SqlVisitor : ISqlVisitor
         this.IsNeedFormatShardingTables = true;
     }
     /// <summary>
-    /// 设置插入或批量更新时的分表名获取委托，通常是根据某1个或多个字段值来确定分表，执行会根据实体字段的值自动插入、更新到对应分表中。
+    /// 设置插入或更新时的分表名获取委托，根据某1个或多个字段值来确定分表，执行会根据实体字段的值自动插入、更新到对应分表中，单条、批量操作都适用，常用于批量操作中。
     /// </summary>
-    /// <typeparam name="TParameter"></typeparam>
+    /// <typeparam name="TParameter">插入参数类型</typeparam>
     /// <param name="tableNameGetter"></param>
     /// <exception cref="ArgumentNullException"></exception>
-    public void UseTableBy<TParameter>(Func<string, TParameter, string> tableNameGetter)
+    public void UseTable<TParameter>(Func<string, TParameter, string> tableNameGetter)
     {
         if (tableNameGetter == null)
             throw new ArgumentNullException(nameof(tableNameGetter), "tableNameGetter参数不能为空");
-        this.DbContext.BulkShardingRule = tableNameGetter;
+        this.DbContext.CommandShardingTableGetter = tableNameGetter;
     }
     public void UseTableSchema(bool isIncludeMany, string tableSchema)
     {
@@ -1902,7 +1901,7 @@ public class SqlVisitor : ISqlVisitor
                         var targetType = this.OrmProvider.MapDefaultType(sqlSegment.NativeDbType);
                         if (sqlSegment.SegmentType != targetType)
                         {
-                            var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, false, this.Options);
+                            var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, false, this.DbContext);
                             dbFieldValue = valueGetter.Invoke(dbFieldValue);
                             sqlSegment.SegmentType = targetType;
                         }
@@ -1950,7 +1949,7 @@ public class SqlVisitor : ISqlVisitor
                     targetType = this.OrmProvider.MapDefaultType(sqlSegment.NativeDbType);
                     if (sqlSegment.SegmentType != targetType)
                     {
-                        var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, false, this.Options);
+                        var valueGetter = this.OrmProvider.GetParameterValueGetter(sqlSegment.SegmentType, targetType, false, this.DbContext);
                         dbFieldValue = valueGetter.Invoke(dbFieldValue);
                     }
                 }
@@ -2020,7 +2019,7 @@ public class SqlVisitor : ISqlVisitor
                         var targetType = this.OrmProvider.MapDefaultType(nativeDbType);
                         if (segmentType != targetType)
                         {
-                            var valueGetter = this.OrmProvider.GetParameterValueGetter(segmentType, targetType, false, this.Options);
+                            var valueGetter = this.OrmProvider.GetParameterValueGetter(segmentType, targetType, false, this.DbContext);
                             dbFieldValue = valueGetter.Invoke(dbFieldValue);
                         }
                         dbParameters.Add(this.OrmProvider.CreateParameter(parameterName, nativeDbType, dbFieldValue));
@@ -2053,7 +2052,7 @@ public class SqlVisitor : ISqlVisitor
                     targetType = this.OrmProvider.MapDefaultType(nativeDbType);
                     if (segmentType != targetType)
                     {
-                        var valueGetter = this.OrmProvider.GetParameterValueGetter(segmentType, targetType, false, this.Options);
+                        var valueGetter = this.OrmProvider.GetParameterValueGetter(segmentType, targetType, false, this.DbContext);
                         dbFieldValue = valueGetter.Invoke(dbFieldValue);
                     }
                 }
@@ -2320,7 +2319,7 @@ public class SqlVisitor : ISqlVisitor
                 else
                 {
                     Func<object, object> typedValueGetter = null;
-                    typedValueGetter = this.OrmProvider.GetParameterValueGetter(memberInfo.GetMemberType(), targetType, true, this.Options);
+                    typedValueGetter = this.OrmProvider.GetParameterValueGetter(memberInfo.GetMemberType(), targetType, true, this.DbContext);
                     valueGetter = value =>
                     {
                         var fieldValue = memberInfo.Evaluate(value);

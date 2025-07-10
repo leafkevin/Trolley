@@ -204,15 +204,6 @@ public interface IQuery<T> : IQueryBase
     Task<List<string>> GetShardingTableNamesAsync(Func<string, bool> tableNameSelector, CancellationToken cancellationToken = default);
     #endregion
 
-    #region UseMaster
-    /// <summary>
-    /// 强制使用主库查询
-    /// </summary>
-    /// <param name="isUseMaster">是否使用主库，true使用主库</param>
-    /// <returns></returns>
-    IQuery<T> UseMaster();
-    #endregion
-
     #region Union/UnionAll
     /// <summary>
     /// Union操作，去掉重复记录，用法：

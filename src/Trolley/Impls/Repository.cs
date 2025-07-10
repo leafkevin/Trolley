@@ -24,6 +24,19 @@ public class Repository : IRepository
     public Repository(DbContext dbContext) => this.DbContext = dbContext;
     #endregion
 
+    #region ShardingDatabase
+    public IRepository UseMaster()
+    {
+        this.DbContext.ConnectionString = this.DbContext.Database.UseMaster();
+        return this;
+    }
+    public IRepository UseMasterBy(params object[] fieldValues)
+    {
+        this.DbContext.ConnectionString = this.DbContext.Database.UseMasterBy(fieldValues);
+        return this;
+    }
+    #endregion
+
     #region ShardingTable
     public virtual List<string> GetShardingTableNames<TEntity>(Func<string, bool> tableNameSelector, string tableSchema = null) => null;
     public virtual Task<List<string>> GetShardingTableNamesAsync<TEntity>(Func<string, bool> tableNameSelector, string tableSchema = null, CancellationToken cancellationToken = default) => null;
@@ -45,6 +58,14 @@ public class Repository : IRepository
         var entityMapper = this.MapProvider.GetEntityMap(typeof(TEntity));
         var tableName = this.DbContext.GetShardingTableBy(entityMapper, field1Value, field2Value);
         await this.CreateShardingTableAsync<TEntity>(tableName, tableSchema, fromTableSchema, cancellationToken);
+    }
+    #endregion  
+
+    #region WithOptions
+    public IRepository WithTimeout(int seconds)
+    {
+        this.DbContext.CommandTimeout = seconds;
+        return this;
     }
     #endregion
 
@@ -1094,7 +1115,7 @@ public class Repository : IRepository
     }
     #endregion
 
-    #region Others
+    #region Others 
     public virtual void Close() => this.DbContext.Connection.Close();
     public virtual async Task CloseAsync() => await this.DbContext.Connection.CloseAsync();
     public virtual void BeginTransaction() => this.DbContext.BeginTransaction();

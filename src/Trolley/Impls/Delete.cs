@@ -188,4 +188,20 @@ public class ContinuedDelete<TEntity> : Deleted<TEntity>, IContinuedDelete<TEnti
         return this;
     }
     #endregion
+
+    #region Or
+    public virtual IContinuedDelete<TEntity> Or(Expression<Func<TEntity, bool>> predicate)
+        => this.Or(true, predicate);
+    public virtual IContinuedDelete<TEntity> Or(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
+    {
+        if (condition)
+        {
+            if (ifPredicate == null)
+                throw new ArgumentNullException(nameof(ifPredicate));
+            this.Visitor.Or(ifPredicate);
+        }
+        else if (elsePredicate != null) this.Visitor.Or(elsePredicate);
+        return this;
+    }
+    #endregion
 }

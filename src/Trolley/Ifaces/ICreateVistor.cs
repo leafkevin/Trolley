@@ -24,8 +24,8 @@ public interface ICreateVisitor : IDisposable
     string BuildSql(out List<SqlFieldSegment> readerFields);
 
     void UseTable(bool isIncludeMany, params string[] tableNames);
-    void UseTableBy(bool isIncludeMany, params object[] fieldValues);
-    void UseTableBy<TInsertObj>(Func<string, TInsertObj, string> tableNameGetter);
+    void UseTable<TInsertObj>(Func<string, TInsertObj, string> tableNameGetter);
+    void UseTableBy(bool isIncludeMany, params object[] fieldValues);  
     void UseTableSchema(bool isIncludeMany, string tableSchema);
 
     void WithBy(object insertObj);

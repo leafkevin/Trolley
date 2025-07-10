@@ -26,7 +26,7 @@ public class SqlServerUpdate<TEntity> : Update<TEntity>, ISqlServerUpdate<TEntit
     public new ISqlServerUpdate<TEntity> UseTableBy(params object[] fieldValues)
         => base.UseTableBy(fieldValues) as ISqlServerUpdate<TEntity>;
     public new ISqlServerUpdate<TEntity> UseTableBy<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
-        => base.UseTableBy(tableNameGetter) as ISqlServerUpdate<TEntity>;
+        => base.UseTable(tableNameGetter) as ISqlServerUpdate<TEntity>;
     public new ISqlServerUpdate<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue)
         => base.UseTableByRange(beginFieldValue, endFieldValue) as ISqlServerUpdate<TEntity>;
     public new ISqlServerUpdate<TEntity> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)

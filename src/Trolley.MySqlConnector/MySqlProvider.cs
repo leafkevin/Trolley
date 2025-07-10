@@ -257,11 +257,11 @@ public partial class MySqlProvider : BaseOrmProvider
             default: return MySqlDbType.String;
         }
     }
-    public override void MapTables(string connectionString, IEntityMapProvider mapProvider)
+    public override bool MapTables(string connectionString, IEntityMapProvider mapProvider)
     {
         var tableNames = mapProvider.EntityMaps.Where(f => !f.IsMapped).Select(f => f.TableName).ToList();
         if (tableNames == null || tableNames.Count == 0)
-            return;
+            return true;
         var sql = @"SELECT a.TABLE_SCHEMA,a.TABLE_NAME,a.COLUMN_NAME,a.DATA_TYPE,a.COLUMN_TYPE,a.CHARACTER_MAXIMUM_LENGTH,a.NUMERIC_SCALE,a.NUMERIC_PRECISION,a.COLUMN_COMMENT,a.COLUMN_DEFAULT,
 		a.COLUMN_KEY='PRI',INSTR(IFNULL(a.EXTRA,''),'auto_increment'),a.IS_NULLABLE='YES',a.ORDINAL_POSITION FROM INFORMATION_SCHEMA.COLUMNS a WHERE {0} ORDER BY a.TABLE_SCHEMA,a.TABLE_NAME,a.ORDINAL_POSITION";
 
@@ -429,6 +429,7 @@ public partial class MySqlProvider : BaseOrmProvider
             else entityMapper.TableName = tableName;
             entityMapper.IsMapped = true;
         }
+        return mapProvider.EntityMaps.Count(f => !f.IsMapped) > 0;
     }
     public override bool TryGetMyMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)
     {

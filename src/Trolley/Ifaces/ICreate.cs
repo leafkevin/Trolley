@@ -27,18 +27,18 @@ public interface ICreate<TEntity>
     /// <returns>返回插入对象</returns>
     ICreate<TEntity> UseTable(string tableName);
     /// <summary>
+    /// 手动设置TEntity表分表名获取委托，只适用于批量插入场景，通常是根据某1个或多个字段值来确定分表名，执行时会根据实体字段的值自动插入对应的分表中
+    /// </summary>
+    /// <typeparam name="TInsertObj">插入的实体类型</typeparam>
+    /// <param name="tableNameGetter">分表名获取委托</param>
+    /// <exception cref="ArgumentNullException"></exception>
+    ICreate<TEntity> UseTable<TInsertObj>(Func<string, TInsertObj, string> tableNameGetter);
+    /// <summary>
     /// 根据字段值，手动指定TEntity表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值</param>
     /// <returns>返回插入对象</returns>
     ICreate<TEntity> UseTableBy(params object[] fieldValues);
-    /// <summary>
-    /// 手动设置TEntity表分表名获取委托，通常是根据某1个或多个字段值来确定分表名，执行时会根据实体字段的值自动插入对应的分表中，单条和批量插入均可使用，常用于批量操作。
-    /// </summary>
-    /// <typeparam name="TInsertObj">插入的实体类型</typeparam>
-    /// <param name="tableNameGetter">分表名获取委托</param>
-    /// <exception cref="ArgumentNullException"></exception>
-    ICreate<TEntity> UseTableBy<TInsertObj>(Func<string, TInsertObj, string> tableNameGetter);
     #endregion
 
     #region UseTableSchema

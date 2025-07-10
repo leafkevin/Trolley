@@ -20,10 +20,10 @@ public class MySqlCreate<TEntity> : Create<TEntity>, IMySqlCreate<TEntity>
     #region Sharding
     public new IMySqlCreate<TEntity> UseTable(string tableName)
         => base.UseTable(tableName) as IMySqlCreate<TEntity>;
+    public new IMySqlCreate<TEntity> UseTable<TInsertObj>(Func<string, TInsertObj, string> tableNameGetter)
+        => base.UseTable(tableNameGetter) as IMySqlCreate<TEntity>;
     public new IMySqlCreate<TEntity> UseTableBy(params object[] fieldValues)
         => base.UseTableBy(fieldValues) as IMySqlCreate<TEntity>;
-    public new IMySqlCreate<TEntity> UseTableBy<TInsertObj>(Func<string, TInsertObj, string> tableNameGetter)
-        => base.UseTableBy(tableNameGetter) as IMySqlCreate<TEntity>;
     #endregion
 
     #region UseTableSchema
