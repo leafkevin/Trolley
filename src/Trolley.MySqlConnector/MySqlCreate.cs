@@ -28,7 +28,7 @@ public class MySqlCreate<TEntity> : Create<TEntity>, IMySqlCreate<TEntity>
 
     #region UseTableSchema
     public new IMySqlCreate<TEntity> UseTableSchema(string tableSchema)
-        => base.UseTableBy(tableSchema) as IMySqlCreate<TEntity>;
+        => base.UseTableSchema(tableSchema) as IMySqlCreate<TEntity>;
     #endregion
 
     #region IgnoreInto

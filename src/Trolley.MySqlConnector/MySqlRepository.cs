@@ -46,7 +46,7 @@ public class MySqlRepository : Repository, IMySqlRepository
         if (!this.MapProvider.TryGetEntityMap(entityType, out var entityMapper))
             throw new Exception($"未找到{entityType.FullName}实体映射");
 
-        fromTableSchema ??= this.DbContext.DefaultTableSchema;
+        fromTableSchema ??= this.dialectProvider.GetDefaultSchemaName(this.DbContext);
         var orgTableName = entityMapper.TableName;
         var shardingPart = tableName.Substring(orgTableName.Length);
         using var reader = this.QueryMultiple(f =>
@@ -118,9 +118,13 @@ information_schema.referential_constraints b on a.table_schema=b.constraint_sche
             builder.Append($"({this.OrmProvider.GetFieldName(indexInfo.RefColumnName)}) ON DELETE {indexInfo.DeleteRule} ON UPDATE {indexInfo.UpdateRule}");
         }
         builder.AppendLine();
-        builder.Append($") ENGINE={collationInfo.Engine} CHARACTER SET={collationInfo.CharacterSetName} COLLATE={collationInfo.CollationName}");
-        if (!string.IsNullOrEmpty(collationInfo.TableComment))
-            builder.Append($" COMMENT '{collationInfo.TableComment}'");
+        builder.Append(')');
+        if (collationInfo != null)
+        {
+            builder.Append($" ENGINE={collationInfo.Engine} CHARACTER SET={collationInfo.CharacterSetName} COLLATE={collationInfo.CollationName}");
+            if (!string.IsNullOrEmpty(collationInfo.TableComment))
+                builder.Append($" COMMENT '{collationInfo.TableComment}'");
+        }
         this.Execute(builder.ToString());
     }
     public override async Task CreateShardingTableAsync<TEntity>(string tableName, string tableSchema = null, string fromTableSchema = null, CancellationToken cancellationToken = default)
@@ -129,7 +133,7 @@ information_schema.referential_constraints b on a.table_schema=b.constraint_sche
         if (!this.MapProvider.TryGetEntityMap(entityType, out var entityMapper))
             throw new Exception($"未找到{entityType.FullName}实体映射");
 
-        fromTableSchema ??= this.DbContext.DefaultTableSchema;
+        fromTableSchema ??= this.dialectProvider.GetDefaultSchemaName(this.DbContext);
         var orgTableName = entityMapper.TableName;
         var shardingPart = tableName.Substring(orgTableName.Length);
         using var reader = await this.QueryMultipleAsync(f =>
@@ -201,9 +205,13 @@ information_schema.referential_constraints b on a.table_schema=b.constraint_sche
             builder.Append($"({this.OrmProvider.GetFieldName(indexInfo.RefColumnName)}) ON DELETE {indexInfo.DeleteRule} ON UPDATE {indexInfo.UpdateRule}");
         }
         builder.AppendLine();
-        builder.Append($") ENGINE={collationInfo.Engine} CHARACTER SET={collationInfo.CharacterSetName} COLLATE={collationInfo.CollationName}");
-        if (!string.IsNullOrEmpty(collationInfo.TableComment))
-            builder.Append($" COMMENT '{collationInfo.TableComment}'");
+        builder.Append(')');
+        if (collationInfo != null)
+        {
+            builder.Append($" ENGINE={collationInfo.Engine} CHARACTER SET={collationInfo.CharacterSetName} COLLATE={collationInfo.CollationName}");
+            if (!string.IsNullOrEmpty(collationInfo.TableComment))
+                builder.Append($" COMMENT '{collationInfo.TableComment}'");
+        }
         await this.ExecuteAsync(builder.ToString(), null, CommandType.Text, cancellationToken);
     }
     #endregion

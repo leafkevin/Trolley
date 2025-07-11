@@ -1,23 +1,34 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace Trolley.MySqlConnector;
 
 public class MySqlUpdateVisitor : UpdateVisitor, IUpdateVisitor
 {
+    private MySqlProvider dialectProvider => this.OrmProvider as MySqlProvider;
     public MySqlUpdateVisitor(DbContext dbContext, char tableAsStart = 'a')
         : base(dbContext, tableAsStart) { }
 
+    public override void UseTableSchema(bool isIncludeMany, string tableSchema)
+    {
+        var defaultSchemaName = this.dialectProvider.GetDefaultSchemaName(this.DbContext);
+        if (tableSchema == defaultSchemaName) return;
+
+        var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
+        tableSegment.TableSchema = tableSchema;
+    }
     public override string BuildTableShardingsSql()
     {
         var builder = new StringBuilder($"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND ");
         var schemaBuilders = new Dictionary<string, StringBuilder>();
+        var defaultSchemaName = this.dialectProvider.GetDefaultSchemaName(this.DbContext);
         foreach (var tableSegment in this.ShardingTables)
         {
             if (tableSegment.ShardingType > ShardingTableType.MultiTable)
             {
-                var tableSchema = tableSegment.TableSchema ?? this.DefaultTableSchema;
+                var tableSchema = tableSegment.TableSchema ?? defaultSchemaName;
                 if (!schemaBuilders.TryGetValue(tableSchema, out var tableBuilder))
                     schemaBuilders.Add(tableSchema, tableBuilder = new StringBuilder());
 

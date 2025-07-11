@@ -21,7 +21,7 @@ public class SqlVisitor : ISqlVisitor
     public ITableShardingProvider ShardingProvider => this.DbContext.ShardingProvider;
     public string DefaultTableSchema => this.DbContext.DefaultTableSchema;
     public bool IsConstantParameterized => this.DbContext.IsConstantParameterized;
-    public string ParameterPrefix => this.DbContext.UserParameterPrefix;
+    public string UserParameterPrefix => this.DbContext.UserParameterPrefix;
     public IDataParameterCollection DbParameters { get; set; }
     public IDataParameterCollection NextDbParameters { get; set; }
     public char TableAsStart { get; set; }
@@ -272,7 +272,7 @@ public class SqlVisitor : ISqlVisitor
             throw new ArgumentNullException(nameof(tableNameGetter), "tableNameGetter参数不能为空");
         this.DbContext.CommandShardingTableGetter = tableNameGetter;
     }
-    public void UseTableSchema(bool isIncludeMany, string tableSchema)
+    public virtual void UseTableSchema(bool isIncludeMany, string tableSchema)
     {
         if (tableSchema == this.DefaultTableSchema) return;
 
@@ -1869,7 +1869,7 @@ public class SqlVisitor : ISqlVisitor
                 this.NextDbParameters ??= new TheaDbParameterCollection();
                 dbParameters = this.NextDbParameters;
             }
-            var parameterName = sqlSegment.ParameterName ?? this.OrmProvider.ParameterPrefix + this.ParameterPrefix + dbParameters.Count.ToString();
+            var parameterName = sqlSegment.ParameterName ?? this.OrmProvider.ParameterPrefix + this.UserParameterPrefix + dbParameters.Count.ToString();
             if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
 
             if (sqlSegment.Value == null || sqlSegment.Value == DBNull.Value)
@@ -1986,7 +1986,7 @@ public class SqlVisitor : ISqlVisitor
                 this.NextDbParameters ??= new TheaDbParameterCollection();
                 dbParameters = this.NextDbParameters;
             }
-            var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + dbParameters.Count.ToString();
+            var parameterName = this.OrmProvider.ParameterPrefix + this.UserParameterPrefix + dbParameters.Count.ToString();
             if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
 
             if (elementValue == null || elementValue == DBNull.Value)

@@ -32,19 +32,6 @@ public class AllUnitTest : UnitTestBase
                 .Register(OrmProviderType.MySql, "fengling1", f => f.UseConnectionString(connectionString1))
                 .Register(OrmProviderType.MySql, "fengling2", f => f.UseConnectionString(connectionString2))
                 .Configure<ModelConfiguration>(OrmProviderType.MySql)
-                .UseDatabaseSharding("fengling", () =>
-                {
-                    //可以硬编码分库，也可以使用redis，映射表 ...，其他方式等
-                    var scopeFactory = f.GetRequiredService<IServiceScopeFactory>();
-                    var serviceScope = scopeFactory.CreateScope();
-                    var passport = serviceScope.ServiceProvider.GetService<IPassport>();
-                    return passport.TenantId switch
-                    {
-                        "200" => "fengling1",
-                        "300" => "fengling2",
-                        _ => "fengling"
-                    };
-                })
                 .UseTableSharding<TableShardingConfiguration>(OrmProviderType.MySql)
                 .UseInterceptors(df =>
                 {

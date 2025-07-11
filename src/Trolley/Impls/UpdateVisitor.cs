@@ -780,7 +780,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
         if (sqlSegment.IsConstant || sqlSegment.IsVariable)
         {
             var fieldValue = sqlSegment.Value;
-            var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.DbParameters.Count.ToString();
+            var parameterName = this.OrmProvider.ParameterPrefix + this.UserParameterPrefix + this.DbParameters.Count.ToString();
             if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
             if (memberMapper.TypeHandler != null)
                 fieldValue = memberMapper.TypeHandler.ToFieldValue(this.OrmProvider, fieldValue);

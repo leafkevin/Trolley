@@ -10,6 +10,7 @@ namespace Trolley.MySqlConnector;
 
 public class MySqlCreateVisitor : CreateVisitor
 {
+    private MySqlProvider dialectProvider => this.OrmProvider as MySqlProvider;
     public bool IsUseIgnoreInto { get; set; }
     public StringBuilder UpdateBuilder { get; set; }
     public bool IsUseSetAlias { get; set; }
@@ -97,6 +98,14 @@ public class MySqlCreateVisitor : CreateVisitor
             tailSql = this.OrmProvider.GetIdentitySql(null);
         }
         return $"{this.FromSql}{tailSql}";
+    }
+    public override void UseTableSchema(bool isIncludeMany, string tableSchema)
+    {
+        var defaultSchemaName = this.dialectProvider.GetDefaultSchemaName(this.DbContext);
+        if (tableSchema == defaultSchemaName) return;
+
+        var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
+        tableSegment.TableSchema = tableSchema;
     }
     public override (string, Dictionary<string, List<object>>, IEnumerable, int, Action<IDataParameterCollection, StringBuilder, string>,
         Action<IDataParameterCollection, StringBuilder, DbContext, object, string>, string, List<SqlFieldSegment>) BuildWithBulk(ITheaCommand command)
@@ -440,7 +449,7 @@ public class MySqlCreateVisitor : CreateVisitor
             this.UpdateBuilder.Append($"{fieldName}=NULL");
         else if (sqlSegment.IsConstant || sqlSegment.IsVariable)
         {
-            var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.DbParameters.Count.ToString();
+            var parameterName = this.OrmProvider.ParameterPrefix + this.UserParameterPrefix + this.DbParameters.Count.ToString();
             if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
 
             var dbFieldValue = sqlSegment.Value;

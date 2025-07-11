@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 
@@ -9,6 +10,7 @@ namespace Trolley.MySqlConnector;
 
 public class MySqlDeleteVisitor : DeleteVisitor
 {
+    private MySqlProvider dialectProvider => this.OrmProvider as MySqlProvider;
     public string OutputSql { get; set; }
 
     public MySqlDeleteVisitor(DbContext dbContext, char tableAsStart = 'a')
@@ -172,15 +174,24 @@ public class MySqlDeleteVisitor : DeleteVisitor
         }
         return sql;
     }
+    public override void UseTableSchema(bool isIncludeMany, string tableSchema)
+    {
+        var defaultSchemaName = this.dialectProvider.GetDefaultSchemaName(this.DbContext);
+        if (tableSchema == defaultSchemaName) return;
+
+        var tableSegment = isIncludeMany ? this.IncludeTables.Last() : this.Tables.Last();
+        tableSegment.TableSchema = tableSchema;
+    }
     public override string BuildTableShardingsSql()
     {
         var builder = new StringBuilder($"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND ");
         var schemaBuilders = new Dictionary<string, StringBuilder>();
+        var defaultSchemaName = this.dialectProvider.GetDefaultSchemaName(this.DbContext);
         foreach (var tableSegment in this.ShardingTables)
         {
             if (tableSegment.ShardingType > ShardingTableType.MultiTable)
             {
-                var tableSchema = tableSegment.TableSchema ?? this.DefaultTableSchema;
+                var tableSchema = tableSegment.TableSchema ?? defaultSchemaName;
                 if (!schemaBuilders.TryGetValue(tableSchema, out var tableBuilder))
                     schemaBuilders.Add(tableSchema, tableBuilder = new StringBuilder());
 

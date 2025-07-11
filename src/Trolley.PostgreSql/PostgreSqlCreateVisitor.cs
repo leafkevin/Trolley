@@ -468,7 +468,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
             this.UpdateBuilder.Append($"{fieldName}=NULL");
         else if (sqlSegment.IsConstant || sqlSegment.IsVariable)
         {
-            var parameterName = this.OrmProvider.ParameterPrefix + this.ParameterPrefix + this.DbParameters.Count.ToString();
+            var parameterName = this.OrmProvider.ParameterPrefix + this.UserParameterPrefix + this.DbParameters.Count.ToString();
             if (this.IsMultiple) parameterName += $"_m{this.CommandIndex}";
 
             var dbFieldValue = sqlSegment.Value;

@@ -28,7 +28,7 @@ public class SqlServerCreate<TEntity> : Create<TEntity>, ISqlServerCreate<TEntit
 
     #region UseTableSchema
     public new ISqlServerCreate<TEntity> UseTableSchema(string tableSchema)
-        => base.UseTableBy(tableSchema) as ISqlServerCreate<TEntity>;
+        => base.UseTableSchema(tableSchema) as ISqlServerCreate<TEntity>;
     #endregion
 
     #region WithLock

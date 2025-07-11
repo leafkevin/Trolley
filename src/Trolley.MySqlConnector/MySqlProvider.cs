@@ -170,8 +170,6 @@ public partial class MySqlProvider : BaseOrmProvider
         if (tableName.Contains('.'))
         {
             var tableNames = tableName.Split('.');
-            if (tableNames[0] == this.DefaultTableSchema)
-                return "`" + tableNames[1] + "`";
             return $"`{tableNames[0]}`.`{tableNames[1]}`";
         }
         return "`" + tableName + "`";
@@ -423,13 +421,21 @@ public partial class MySqlProvider : BaseOrmProvider
                 }
             }
 
-            //非默认TableSchema表名就不变更了
-            if (tableSchema != this.DefaultTableSchema)
-                entityMapper.TableSchema = tableSchema;
-            else entityMapper.TableName = tableName;
+            //不更新TableSchema
+            entityMapper.TableName = tableName;
             entityMapper.IsMapped = true;
         }
         return mapProvider.EntityMaps.Count(f => !f.IsMapped) > 0;
+    }
+    public virtual string GetSchemaName(string connectionString)
+    {
+        using var connection = new MySqlConnection(connectionString);
+        return connection.Database;
+    }
+    public virtual string GetDefaultSchemaName(DbContext dbContext)
+    {
+        var connectionString = dbContext.Database.MasterConnectionStrings.First();
+        return this.GetSchemaName(connectionString);
     }
     public override bool TryGetMyMethodCallSqlFormatter(MethodCallExpression methodCallExpr, out MethodCallSqlFormatter formatter)
     {
@@ -487,7 +493,8 @@ public partial class MySqlProvider : BaseOrmProvider
     {
         var entityMapper = dbContext.MapProvider.GetEntityMap(typeof(TEntity));
         var orgTableName = entityMapper.TableName;
-        tableSchema ??= dbContext.DefaultTableSchema;
+        if (string.IsNullOrEmpty(tableSchema))
+            tableSchema = this.GetSchemaName(dbContext.Database.MasterConnectionStrings.First());
         var sql = $"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_NAME LIKE '{orgTableName}_%' AND TABLE_SCHEMA='{tableSchema}'";
         var tableNames = dbContext.Query<string>(sql);
         if (tableNameSelector != null)
@@ -498,7 +505,8 @@ public partial class MySqlProvider : BaseOrmProvider
     {
         var entityMapper = dbContext.MapProvider.GetEntityMap(typeof(TEntity));
         var orgTableName = entityMapper.TableName;
-        tableSchema ??= dbContext.DefaultTableSchema;
+        if (string.IsNullOrEmpty(tableSchema))
+            tableSchema = this.GetSchemaName(dbContext.Database.MasterConnectionStrings.First());
         var sql = $"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_NAME LIKE '{orgTableName}_%' AND TABLE_SCHEMA='{tableSchema}'";
         var tableNames = await dbContext.QueryAsync<string>(sql, cancellationToken: cancellationToken);
         if (tableNameSelector != null)

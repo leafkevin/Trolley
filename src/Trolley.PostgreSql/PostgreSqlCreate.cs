@@ -28,7 +28,7 @@ public class PostgreSqlCreate<TEntity> : Create<TEntity>, IPostgreSqlCreate<TEnt
 
     #region UseTableSchema
     public new IPostgreSqlCreate<TEntity> UseTableSchema(string tableSchema)
-        => base.UseTableBy(tableSchema) as IPostgreSqlCreate<TEntity>;
+        => base.UseTableSchema(tableSchema) as IPostgreSqlCreate<TEntity>;
     #endregion
 
     #region WithBy

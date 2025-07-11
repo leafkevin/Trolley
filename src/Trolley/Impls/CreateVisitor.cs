@@ -476,7 +476,7 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
                 fieldValueGetters.Add(fieldValueGetter.Invoke(fieldName));
             Func<object, string> tableNameGetter = insertObj =>
             {
-                var fieldValus = new List<object>();
+                var fieldValus = new List<object> { origTableName };
                 foreach (var fieldValueGetter in fieldValueGetters)
                     fieldValus.Add(fieldValueGetter.Invoke(insertObj));
                 return tableShardingInfo.Rule.DynamicInvoke(fieldValus.ToArray()) as string;
