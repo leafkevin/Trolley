@@ -23,10 +23,10 @@ public class PostgreSqlUpdate<TEntity> : Update<TEntity>, IPostgreSqlUpdate<TEnt
         => base.UseTable(tableNames) as IPostgreSqlUpdate<TEntity>;
     public new IPostgreSqlUpdate<TEntity> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IPostgreSqlUpdate<TEntity>;
-    public new IPostgreSqlUpdate<TEntity> UseTableBy(params object[] fieldValues)
-        => base.UseTableBy(fieldValues) as IPostgreSqlUpdate<TEntity>;
-    public new IPostgreSqlUpdate<TEntity> UseTableBy<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
+    public new IPostgreSqlUpdate<TEntity> UseTable<TUpdateObj>(Func<string, TUpdateObj, string> tableNameGetter)
         => base.UseTable(tableNameGetter) as IPostgreSqlUpdate<TEntity>;
+    public new IPostgreSqlUpdate<TEntity> UseTableBy(params object[] fieldValues)
+        => base.UseTableBy(fieldValues) as IPostgreSqlUpdate<TEntity>;    
     public new IPostgreSqlUpdate<TEntity> UseTableByRange(object beginFieldValue, object endFieldValue)
         => base.UseTableByRange(beginFieldValue, endFieldValue) as IPostgreSqlUpdate<TEntity>;
     public new IPostgreSqlUpdate<TEntity> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)

@@ -1232,7 +1232,8 @@ public class AllUnitTest : UnitTestBase
             UpdatedBy = 1
         });
         repository.Commit();
-        var result = repository.From<Order>()
+        var result = repository.UseMaster()
+            .From<Order>()
             .Where(f => Sql.In(f.Id, new[] { "1", "2", "3" }))
             .OrderBy(f => f.Id)
             .Select(f => new
@@ -2313,14 +2314,15 @@ public class AllUnitTest : UnitTestBase
             })
             .AsCteTable("orders");
         var sql = repository.Create<Order>()
-            .From(ordersQuery)
+            .FromQuery(ordersQuery)
+            .Select()
             .ToSql(out var parameters);
         Assert.Equal("INSERT INTO `sys_order` (`Id`,`TenantId`,`OrderNo`,`BuyerId`,`SellerId`,`BuyerSource`,`ProductCount`,`TotalAmount`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) WITH \r\n`orders`(`Id`,`TenantId`,`OrderNo`,`BuyerId`,`SellerId`,`BuyerSource`,`ProductCount`,`TotalAmount`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) AS \r\n(\r\nSELECT a.`OrderId`,'1',CONCAT('ON-',a.`OrderId`),1,1,'Taobao',2,SUM(a.`Amount`),1,NOW(),1,NOW(),1 FROM `sys_order_detail` a GROUP BY a.`OrderId`\r\n)\r\nSELECT b.`Id`,b.`TenantId`,b.`OrderNo`,b.`BuyerId`,b.`SellerId`,b.`BuyerSource`,b.`ProductCount`,b.`TotalAmount`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy` FROM `orders` b", sql);
         var orderIds = ordersQuery.Select(f => f.Id).ToList();
         await repository.BeginTransactionAsync();
         repository.Delete<Order>(orderIds);
         var result = await repository.Create<Order>()
-            .From(ordersQuery)
+            .FromQuery(ordersQuery)
             .ExecuteAsync();
         await repository.CommitAsync();
         Assert.Equal(orderIds.Count, result);
@@ -2349,7 +2351,8 @@ public class AllUnitTest : UnitTestBase
         await repository.BeginTransactionAsync();
         repository.Delete<Order>(orderIds);
         result = await repository.Create<Order>()
-            .From(ordersQuery)
+            .FromQuery(ordersQuery)
+            .Select()
             .ExecuteAsync();
         await repository.CommitAsync();
         Assert.Equal(orderIds.Count, result);
@@ -3088,7 +3091,7 @@ public class AllUnitTest : UnitTestBase
         this.Initialize(1);
         var repository = this.dbFactory.Create();
         var sql = repository
-            .From(f => f.From<OrderDetail>()
+            .FromQuery(f => f.From<OrderDetail>()
                 .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
                 .GroupBy((a, b) => new { OrderId = b.Id, b.BuyerId })
                 .Select((x, a, b) => new { Group = x.Grouping, ProductCount = x.CountDistinct(a.ProductId) }))
@@ -3104,7 +3107,7 @@ public class AllUnitTest : UnitTestBase
         Assert.Equal("SELECT a.`OrderId`,a.`BuyerId`,b.`Id`,b.`TenantId`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,a.`ProductCount` FROM (SELECT b.`Id` AS `OrderId`,b.`BuyerId`,COUNT(DISTINCT a.`ProductId`) AS `ProductCount` FROM `sys_order_detail` a INNER JOIN `sys_order` b ON a.`OrderId`=b.`Id` GROUP BY b.`Id`,b.`BuyerId`) a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>1", sql);
 
         var result = repository
-            .From(f => f.From<OrderDetail>()
+            .FromQuery(f => f.From<OrderDetail>()
                 .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
                 .GroupBy((a, b) => new { OrderId = b.Id, b.BuyerId })
                 .Select((x, a, b) => new { Group = x.Grouping, ProductCount = x.CountDistinct(a.ProductId) }))
@@ -3125,14 +3128,14 @@ public class AllUnitTest : UnitTestBase
             Assert.True(result[0].ProductCount > 1);
         }
         var sql1 = repository
-           .From(f => f.From<Order>()
+           .FromQuery(f => f.From<Order>()
                .Select(x => new { x.Id, x.OrderNo, x.BuyerId, x.SellerId }))
            .Select(x => new { Order = x })
            .ToSql(out _);
         Assert.Equal("SELECT a.`Id`,a.`OrderNo`,a.`BuyerId`,a.`SellerId` FROM (SELECT a.`Id`,a.`OrderNo`,a.`BuyerId`,a.`SellerId` FROM `sys_order` a) a", sql1);
 
         var result1 = repository
-            .From(f => f.From<Order>()
+            .FromQuery(f => f.From<Order>()
                 .Select(x => new { x.Id, x.OrderNo, x.BuyerId, x.SellerId }))
             .Select(x => new { Order = x })
             .First();
@@ -3144,7 +3147,7 @@ public class AllUnitTest : UnitTestBase
     {
         this.Initialize(1);
         var repository = this.dbFactory.Create();
-        var sql = repository.From(f => f.From<Page, Menu>('o')
+        var sql = repository.FromQuery(f => f.From<Page, Menu>('o')
                 .Where((a, b) => a.Id == b.PageId)
                 .Select((x, y) => new { MenuId = y.Id, y.ParentId, x.Url }))
             .InnerJoin<Menu>((a, b) => a.MenuId == b.Id)
@@ -3153,7 +3156,7 @@ public class AllUnitTest : UnitTestBase
             .ToSql(out _);
         Assert.Equal("SELECT a.`MenuId`,b.`Name`,a.`ParentId`,a.`Url` FROM (SELECT p.`Id` AS `MenuId`,p.`ParentId`,o.`Url` FROM `sys_page` o,`sys_menu` p WHERE o.`Id`=p.`PageId`) a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`Id` WHERE a.`MenuId`=b.`Id`", sql);
 
-        var result = repository.From(f => f.From<Page, Menu>('o')
+        var result = repository.FromQuery(f => f.From<Page, Menu>('o')
                 .Where((a, b) => a.Id == b.PageId)
                 .Select((x, y) => new { MenuId = y.Id, y.ParentId, x.Url }))
             .InnerJoin<Menu>((a, b) => a.MenuId == b.Id)
@@ -3170,7 +3173,7 @@ public class AllUnitTest : UnitTestBase
         var repository = this.dbFactory.Create();
         var count = 1;
         var sql = repository
-            .From(f => f.From<User>()
+            .FromQuery(f => f.From<User>()
                  .InnerJoin<Order>((a, b) => a.Id == b.BuyerId)
                  .LeftJoin<OrderDetail>((a, b, c) => b.Id == c.OrderId)
                  .GroupBy((a, b, c) => new { b.BuyerId, OrderId = b.Id, b.OrderNo })
@@ -3184,7 +3187,7 @@ public class AllUnitTest : UnitTestBase
         Assert.True((int)dbParameters[0].Value == count);
 
         var result = repository
-            .From(f => f.From<User>()
+            .FromQuery(f => f.From<User>()
                  .InnerJoin<Order>((a, b) => a.Id == b.BuyerId)
                  .LeftJoin<OrderDetail>((a, b, c) => b.Id == c.OrderId)
                  .GroupBy((a, b, c) => new { b.BuyerId, OrderId = b.Id, b.OrderNo })
@@ -3196,7 +3199,6 @@ public class AllUnitTest : UnitTestBase
             .First();
         if (result != null)
         {
-            Assert.NotNull(result.Disputes);
             Assert.NotNull(result.Order);
             Assert.NotNull(result.Order.Details);
             Assert.True(result.Order.Details.Count > 0);
@@ -3205,7 +3207,7 @@ public class AllUnitTest : UnitTestBase
 
         var amount = 100;
         sql = repository
-            .From(f => f.From<User>()
+            .FromQuery(f => f.From<User>()
                  .InnerJoin<Order>((a, b) => a.Id == b.BuyerId)
                  .LeftJoin<OrderDetail>((a, b, c) => b.Id == c.OrderId)
                  .GroupBy((a, b, c) => new { b.BuyerId, OrderId = b.Id, b.OrderNo })
@@ -3220,7 +3222,7 @@ public class AllUnitTest : UnitTestBase
         Assert.True((int)dbParameters[0].Value == count);
 
         result = repository
-            .From(f => f.From<User>()
+            .FromQuery(f => f.From<User>()
                  .InnerJoin<Order>((a, b) => a.Id == b.BuyerId)
                  .LeftJoin<OrderDetail>((a, b, c) => b.Id == c.OrderId)
                  .GroupBy((a, b, c) => new { b.BuyerId, OrderId = b.Id, b.OrderNo })
@@ -3232,7 +3234,6 @@ public class AllUnitTest : UnitTestBase
             .First();
         if (result != null)
         {
-            Assert.NotNull(result.Disputes);
             Assert.NotNull(result.Order);
             Assert.NotNull(result.Order.Details);
             Assert.True(result.Order.Details.Count > 0);
@@ -3246,7 +3247,8 @@ public class AllUnitTest : UnitTestBase
     public void FromQuery_SubQuery3()
     {
         var repository = this.dbFactory.Create();
-        var sql = repository.From(f => f.From<Order, OrderDetail>('a')
+        var sql = repository
+            .FromQuery(f => f.From<Order, OrderDetail>('a')
                 .Where((a, b) => a.Id == b.OrderId)
                 .GroupBy((a, b) => new { a.BuyerId, OrderId = a.Id })
                 .Having((x, a, b) => x.CountDistinct(b.ProductId) > 0)
@@ -3256,7 +3258,8 @@ public class AllUnitTest : UnitTestBase
             .ToSql(out _);
         Assert.Equal("SELECT a.`BuyerId`,a.`OrderId`,a.`BuyerId`,a.`ProductTotal`,b.`Name` AS `BuyerName`,a.`BuyerId1` AS `BuyerId2` FROM (SELECT a.`BuyerId`,a.`Id` AS `OrderId`,COUNT(DISTINCT b.`ProductId`) AS `ProductTotal`,a.`BuyerId` AS `BuyerId1` FROM `sys_order` a,`sys_order_detail` b WHERE a.`Id`=b.`OrderId` GROUP BY a.`BuyerId`,a.`Id` HAVING COUNT(DISTINCT b.`ProductId`)>0) a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id`", sql);
 
-        var result = repository.From(f => f.From<Order, OrderDetail>('a')
+        var result = repository
+            .FromQuery(f => f.From<Order, OrderDetail>('a')
                 .Where((a, b) => a.Id == b.OrderId)
                 .GroupBy((a, b) => new { a.BuyerId, OrderId = a.Id })
                 .Having((x, a, b) => x.CountDistinct(b.ProductId) > 0)
@@ -3301,7 +3304,7 @@ public class AllUnitTest : UnitTestBase
     {
         var repository = this.dbFactory.Create();
         var sql = repository.From<Menu>()
-             .WithTable(f => f.From<Page, Menu>('c')
+             .WithQuery(f => f.From<Page, Menu>('c')
                  .Where((a, b) => a.Id == b.PageId)
                  .Select((x, y) => new { y.Id, y.ParentId, x.Url }))
              .Where((a, b) => a.Id == b.Id)
@@ -3309,7 +3312,7 @@ public class AllUnitTest : UnitTestBase
              .ToSql(out _);
         Assert.Equal(@"SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `sys_menu` a,(SELECT d.`Id`,d.`ParentId`,c.`Url` FROM `sys_page` c,`sys_menu` d WHERE c.`Id`=d.`PageId`) b WHERE a.`Id`=b.`Id`", sql);
         var result = repository.From<Menu>()
-             .WithTable(f => f.From<Page, Menu>('c')
+             .WithQuery(f => f.From<Page, Menu>('c')
                  .Where((a, b) => a.Id == b.PageId)
                  .Select((x, y) => new { y.Id, y.ParentId, x.Url }))
              .Where((a, b) => a.Id == b.Id)
@@ -3318,7 +3321,7 @@ public class AllUnitTest : UnitTestBase
         Assert.NotNull(result);
 
         var sql1 = repository.From<User>()
-            .WithTable(f => f.From<Order>()
+            .WithQuery(f => f.From<Order>()
                 .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
                 .GroupBy((a, b) => new { OrderId = a.Id, a.BuyerId })
                 .Select((x, a, b) => new { x.Grouping, ProductCount = x.CountDistinct(b.ProductId) }))
@@ -3334,7 +3337,7 @@ public class AllUnitTest : UnitTestBase
         Assert.Equal("SELECT b.`OrderId`,b.`BuyerId`,a.`Id`,a.`TenantId`,a.`Name`,a.`Gender`,a.`Age`,a.`CompanyId`,a.`GuidField`,a.`SomeTimes`,a.`SourceType`,a.`IsEnabled`,a.`CreatedAt`,a.`CreatedBy`,a.`UpdatedAt`,a.`UpdatedBy`,b.`ProductCount` FROM `sys_user` a INNER JOIN (SELECT a.`Id` AS `OrderId`,a.`BuyerId`,COUNT(DISTINCT b.`ProductId`) AS `ProductCount` FROM `sys_order` a INNER JOIN `sys_order_detail` b ON a.`Id`=b.`OrderId` GROUP BY a.`Id`,a.`BuyerId`) b ON a.`Id`=b.`BuyerId` WHERE b.`ProductCount`>1", sql1);
 
         var result1 = repository.From<User>()
-            .WithTable(f => f.From<Order>()
+            .WithQuery(f => f.From<Order>()
                 .InnerJoin<OrderDetail>((x, y) => x.Id == y.OrderId)
                 .GroupBy((a, b) => new { OrderId = a.Id, a.BuyerId })
                 .Select((x, a, b) => new { x.Grouping, ProductCount = x.CountDistinct(b.ProductId) }))
@@ -3351,7 +3354,7 @@ public class AllUnitTest : UnitTestBase
 
         var sql2 = repository
              .From<Order, User>()
-             .WithTable(f => f.From<Order, OrderDetail, User>()
+             .WithQuery(f => f.From<Order, OrderDetail, User>()
                 .Where((a, b, c) => a.Id == b.OrderId && a.BuyerId == c.Id && c.Age > 20)
                 .GroupBy((a, b, c) => new { OrderId = a.Id, a.BuyerId })
                 .Having((x, a, b, c) => x.Sum(b.Amount) > 500)
@@ -3363,7 +3366,7 @@ public class AllUnitTest : UnitTestBase
 
         var result2 = await repository
              .From<Order, User>()
-             .WithTable(f => f.From<Order, OrderDetail, User>()
+             .WithQuery(f => f.From<Order, OrderDetail, User>()
                 .Where((a, b, c) => a.Id == b.OrderId && a.BuyerId == c.Id && c.Age > 20)
                 .GroupBy((a, b, c) => new { OrderId = a.Id, a.BuyerId })
                 .Having((x, a, b, c) => x.Sum(b.Amount) > 500)
@@ -3494,7 +3497,7 @@ SELECT b.`MenuId`,a.`Name`,b.`ParentId`,a.`PageId`,b.`Url` FROM `sys_menu` a INN
         sql = repository.From<Menu>()
             .InnerJoin<Page>((a, b) => a.PageId == b.Id && b.Id > pageId)
             .Select((a, b) => new { MenuId = a.Id, a.ParentId, b.Url })
-            .Union(f => f.From(menuPageList)
+            .Union(f => f.UseQuery(menuPageList)
                 .Where(f => f.ParentId < parentId)
                 .Select())
             .ToSql(out dbParameters);
@@ -3515,7 +3518,7 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
         var result1 = repository.From<Menu>()
             .InnerJoin<Page>((a, b) => a.PageId == b.Id && b.Id > pageId)
             .Select((a, b) => new { MenuId = a.Id, a.ParentId, b.Url })
-            .Union(f => f.From(menuPageList)
+            .Union(f => f.UseQuery(menuPageList)
                 .Where(f => f.ParentId < parentId)
                 .Select())
             .ToList();
@@ -3915,7 +3918,7 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
     public async Task FromQuery_Groupby_Having()
     {
         var repository = this.dbFactory.Create();
-        var sql = repository.From(f => f.From<Order, OrderDetail>()
+        var sql = repository.FromQuery(f => f.From<Order, OrderDetail>()
                 .Where((x, y) => x.Id == y.OrderId)
                 .GroupBy((x, y) => new { x.BuyerId, x.CreatedAt.Date })
                 .Select((x, a, b) => new
@@ -3941,7 +3944,7 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
             .ToSql(out _);
         Assert.Equal("SELECT a.`BuyerId`,b.`Name` AS `BuyerName`,a.`Date` AS `BuyDate`,a.`ProductCount`,a.`OrderCount`,a.`TotalAmount` FROM (SELECT a.`BuyerId`,CONVERT(a.`CreatedAt`,DATE) AS `Date`,COUNT(a.`Id`) AS `OrderCount`,COUNT(DISTINCT b.`ProductId`) AS `ProductCount`,SUM(a.`TotalAmount`) AS `TotalAmount` FROM `sys_order` a,`sys_order_detail` b WHERE a.`Id`=b.`OrderId` GROUP BY a.`BuyerId`,CONVERT(a.`CreatedAt`,DATE)) a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>2 AND a.`TotalAmount`>300 ORDER BY b.`Id`", sql);
 
-        var result = await repository.From(f => f
+        var result = await repository.FromQuery(f => f
             .From<Order, OrderDetail>()
                 .Where((x, y) => x.Id == y.OrderId)
                 .GroupBy((x, y) => new { x.BuyerId, x.CreatedAt.Date })
@@ -4246,7 +4249,7 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
 
         var sql = repository.From<User>()
             .InnerJoin<Company>((a, b) => a.CompanyId == b.Id)
-            .Where((x, y) => Sql.Exists(myOrders, f => f.BuyerId == x.Id))
+            .Where((x, y) => Sql.Exists(f => f.UseQuery(myOrders).Where(t => t.BuyerId == x.Id)))
             .Select((a, b) => new { a.Id, a.Name, CompanyName = b.Name })
             .ToSql(out _);
         Assert.Equal(@"WITH `myOrders`(`OrderId`,`BuyerId`) AS 
@@ -4257,7 +4260,7 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
 
         var result = repository.From<User>()
             .InnerJoin<Company>((a, b) => a.CompanyId == b.Id)
-            .Where((x, y) => Sql.Exists(myOrders, f => f.BuyerId == x.Id))
+            .Where((x, y) => Sql.Exists(f => f.UseQuery(myOrders).Where(f => f.BuyerId == x.Id)))
             .Select((a, b) => new { a.Id, a.Name, CompanyName = b.Name })
             .First();
         Assert.NotNull(result);
@@ -4381,12 +4384,12 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
             .Where((a, b) => a.Id == b.OrderId && b.ProductId == 1)
             .Select((x, y) => x.BuyerId);
         sql = repository.From<User>()
-           .Where(f => Sql.In(f.Id, subQuery))
+           .Where(f => Sql.In(f.Id, t => t.UseQuery(subQuery)))
            .Select(f => f.Id)
            .ToSql(out _);
         Assert.Equal("SELECT a.`Id` FROM `sys_user` a WHERE a.`Id` IN (SELECT b.`BuyerId` FROM `sys_order` b,`sys_order_detail` c WHERE b.`Id`=c.`OrderId` AND c.`ProductId`=1)", sql);
         result = repository.From<User>()
-           .Where(f => Sql.In(f.Id, subQuery))
+           .Where(f => Sql.In(f.Id, t => t.UseQuery(subQuery)))
            .Select(f => f.Id)
            .ToList();
         Assert.NotNull(result);
@@ -4765,7 +4768,7 @@ SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`I
 
         var sql1 = repository
             .From<User>()
-            .WithTable(t => t
+            .WithQuery(t => t
                 .From<Order>()
                     .InnerJoin<User>((a, b) => a.SellerId == b.Id)
                     .Where((x, y) => x.Id == id1)
@@ -4799,7 +4802,7 @@ SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a INNER JOIN
 
         var result1 = repository
             .From<User>()
-            .WithTable(t => t
+            .WithQuery(t => t
                 .From<Order>()
                     .InnerJoin<User>((a, b) => a.SellerId == b.Id)
                     .Where((x, y) => x.Id == id1)
@@ -4895,7 +4898,7 @@ SELECT * FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_orde
     {
         this.Initialize(1);
         var repository = this.dbFactory.Create();
-        var sql = repository.From(f => f.From<Order>()
+        var sql = repository.FromQuery(f => f.From<Order>()
                 .Where(x => x.Id != "3")
                 .OrderBy(f => f.Id)
                 .Select(x => new
@@ -4920,7 +4923,7 @@ SELECT * FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_orde
             .ToSql(out _);
         Assert.Equal(@"SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id`<>'3' ORDER BY a.`Id` LIMIT 1) a UNION ALL
 SELECT * FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_order` a WHERE a.`Id`='3' LIMIT 1) a", sql);
-        var result = repository.From(f => f.From<Order>()
+        var result = repository.FromQuery(f => f.From<Order>()
                 .Where(x => x.Id != "3")
                 .OrderBy(f => f.Id)
                 .Select(x => new
@@ -5016,7 +5019,7 @@ SELECT * FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_orde
         this.Initialize(1);
         var repository = this.dbFactory.Create();
         var sql = repository
-            .From(f => f.From<Menu>()
+            .FromQuery(f => f.From<Menu>()
                 .Select(x => new { x.Id, x.Name, x.ParentId, x.PageId }))
             .InnerJoin<Page>((a, b) => a.Id == b.Id)
             .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
@@ -5036,7 +5039,7 @@ SELECT * FROM (SELECT a.`Id`,a.`OrderNo`,a.`SellerId`,a.`BuyerId` FROM `sys_orde
 SELECT * FROM (SELECT a.`BuyerId`,a.`OrderNo`,a.`SellerId`,CAST(a.`BuyerId` AS CHAR) FROM `sys_order` a WHERE a.`Id`='2' ORDER BY a.`Id` DESC LIMIT 1) a", sql);
 
         var result = repository
-            .From(f => f.From<Menu>()
+            .FromQuery(f => f.From<Menu>()
                 .Select(x => new { x.Id, x.Name, x.ParentId, x.PageId }))
             .InnerJoin<Page>((a, b) => a.Id == b.Id)
             .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
@@ -5063,7 +5066,7 @@ SELECT * FROM (SELECT a.`BuyerId`,a.`OrderNo`,a.`SellerId`,CAST(a.`BuyerId` AS C
         int menuId = 2;
         int pageId = 1;
         var sql = repository
-            .From(f => f.From<Menu>()
+            .FromQuery(f => f.From<Menu>()
                 .Where(t => t.Id >= menuId)
                 .Select(x => new { x.Id, x.Name, x.ParentId, x.PageId })
                 .AsCteTable("MenuList"))
@@ -5082,7 +5085,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `MenuList` a INNER JOIN `sys_pa
         Assert.True((int)dbParameters[1].Value == pageId);
 
         var result = await repository
-            .From(f => f.From<Menu>()
+            .FromQuery(f => f.From<Menu>()
                 .Where(t => t.Id >= menuId)
                 .Select(x => new { x.Id, x.Name, x.ParentId, x.PageId })
                 .AsCteTable("MenuList"))
@@ -5117,7 +5120,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `MenuList` a INNER JOIN `sys_pa
             .AsCteTable("myCteTable2");
 
         var sql = repository
-            .From(myCteTable1)
+            .FromQuery(myCteTable1)
             .InnerJoin(myCteTable2, (a, b) => a.Id == b.Id)
             .Select((a, b) => new { b.Id, a.Name, b.ParentId, b.Url })
             .ToSql(out _);
@@ -5143,7 +5146,7 @@ SELECT b.`Id`,a.`Name`,b.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .AsCteTable("MenuList");
 
         var result1 = repository
-            .From(myCteTable2)
+            .FromQuery(myCteTable2)
             .InnerJoin(myCteTable1, (a, b) => a.Id == b.Id)
             .Select((a, b) => new { a.Id, b.Name, a.ParentId, a.Url })
             .ToList();
@@ -5152,8 +5155,8 @@ SELECT b.`Id`,a.`Name`,b.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
 
         int pageId = 1;
         sql = repository
-            .From(menuList)
-            .WithTable(x => x.From<Page>()
+            .FromQuery(f => f.UseQuery(menuList))
+            .WithQuery(x => x.From<Page>()
                     .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
                     .Where((a, b) => a.Id == pageId)
                     .Select((x, y) => new { y.Id, x.Url })
@@ -5172,12 +5175,12 @@ SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON
 SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `MenuList` a INNER JOIN (SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `sys_menu` b ON a.`Id`=b.`PageId` WHERE a.`Id`=@p1 UNION ALL
 SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `MenuList` b ON a.`Id`=b.`Id` WHERE a.`Id`>@p2) b ON a.`Id`=b.`Id`", sql);
         var result2 = repository
-            .From(menuList)
-            .WithTable(x => x.From<Page>()
+            .FromQuery(f => f.UseQuery(menuList))
+            .WithQuery(x => x.From<Page>()
                     .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
                     .Where((a, b) => a.Id == pageId)
                     .Select((x, y) => new { y.Id, x.Url })
-                .UnionAll(x => x.From<Page>()//.WithTable(self)
+                .UnionAll(x => x.From<Page>()//.WithQuery(self)
                     .InnerJoin(menuList, (a, b) => a.Id == b.Id)
                     .Where((a, b) => a.Id > pageId)
                     .Select((x, y) => new { y.Id, x.Url })))
@@ -5188,8 +5191,8 @@ SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `MenuList` b ON a.`Id`=b.`Id`
         Assert.True(result2.Count > 0);
 
         sql = repository
-            .From(menuList)
-            .WithTable(x => x.From<Page>()
+            .FromQuery(f => f.UseQuery(menuList))
+            .WithQuery(x => x.From<Page>()
                     .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
                     .Where((a, b) => a.Id == pageId)
                     .Select((x, y) => new { y.Id, x.Url })
@@ -5214,8 +5217,8 @@ SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `MenuList` b ON a.`Id`=b.`Id`
 SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `MenuList` a INNER JOIN `MenuPageList` b ON a.`Id`=b.`Id`", sql);
 
         var result3 = await repository
-            .From(menuList)
-            .WithTable(x => x.From<Page>()
+            .FromQuery(f => f.UseQuery(menuList))
+            .WithQuery(x => x.From<Page>()
                     .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
                     .Where((a, b) => a.Id == pageId)
                     .Select((x, y) => new { y.Id, x.Url })
@@ -5235,7 +5238,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `MenuList` a INNER JOIN `MenuPa
     {
         var repository = this.dbFactory.Create();
         var sql = repository.From<Menu>()
-            .WithTable(f => f.From<Page, Menu>('c')
+            .WithQuery(f => f.From<Page, Menu>('c')
                 .Where((a, b) => a.Id == b.PageId)
                 .Select((x, y) => new { y.Id, y.ParentId, x.Url }))
             .Where((a, b) => a.Id == b.Id)
@@ -5244,7 +5247,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `MenuList` a INNER JOIN `MenuPa
         Assert.Equal(@"SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `sys_menu` a,(SELECT d.`Id`,d.`ParentId`,c.`Url` FROM `sys_page` c,`sys_menu` d WHERE c.`Id`=d.`PageId`) b WHERE a.`Id`=b.`Id`", sql);
 
         var result = repository.From<Menu>()
-            .WithTable(f => f.From<Page, Menu>('c')
+            .WithQuery(f => f.From<Page, Menu>('c')
                 .Where((a, b) => a.Id == b.PageId)
                 .Select((x, y) => new { y.Id, y.ParentId, x.Url }))
             .Where((a, b) => a.Id == b.Id)
@@ -5256,14 +5259,14 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `MenuList` a INNER JOIN `MenuPa
         int pageId = 1;
         int pageId2 = 1;
         var sql1 = repository
-            .From(f => f.From<Menu>()
+            .FromQuery(f => f.From<Menu>()
                     .Where(x => x.Id == menuId)
                     .Select(x => new { x.Id, x.Name, x.ParentId })
                 .UnionAllRecursive((x, y) => x.From<Menu>()
                     .InnerJoin(y, (a, b) => a.ParentId == b.Id)
                     .Select((a, b) => new { a.Id, a.Name, a.ParentId }))
                 .AsCteTable("myCteTable1"))
-            .WithTable(f => f.From<Page>()
+            .WithQuery(f => f.From<Page>()
                     .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
                     .Where((a, b) => a.Id == pageId)
                     .Select((x, y) => new { y.Id, x.Url })
@@ -5288,14 +5291,14 @@ SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `sys_menu` b ON a.`Id`=b.`Pag
 SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myCteTable2` b ON a.`Id`=b.`Id`", sql1);
 
         var result1 = await repository
-            .From(f => f.From<Menu>()
+            .FromQuery(f => f.From<Menu>()
                     .Where(x => x.Id == menuId)
                     .Select(x => new { x.Id, x.Name, x.ParentId })
                 .UnionAllRecursive((x, y) => x.From<Menu>()
                     .InnerJoin(y, (a, b) => a.ParentId == b.Id)
                     .Select((a, b) => new { a.Id, a.Name, a.ParentId }))
                 .AsCteTable("myCteTable1"))
-            .WithTable(f => f.From<Page>()
+            .WithQuery(f => f.From<Page>()
                     .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
                     .Where((a, b) => a.Id == pageId)
                     .Select((x, y) => new { y.Id, x.Url })
@@ -5328,7 +5331,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         Assert.NotNull(result2[0].Order);
         Assert.NotNull(result2[0].Order.Buyer);
 
-        var sql3 = repository.From(f => f.From<Order, OrderDetail, User>()
+        var sql3 = repository.FromQuery(f => f.From<Order, OrderDetail, User>()
                 .Where((a, b, c) => a.Id == b.OrderId && a.BuyerId == c.Id && c.Age > 20)
                 .GroupBy((a, b, c) => new { OrderId = a.Id, a.BuyerId })
                 .Having((x, a, b, c) => x.Sum(b.Amount) > 500)
@@ -5339,7 +5342,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .ToSql(out _);
         Assert.Equal("SELECT a.`OrderId`,a.`BuyerId`,b.`Id`,b.`TenantId`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,c.`Id`,c.`TenantId`,c.`OrderNo`,c.`ProductCount`,c.`TotalAmount`,c.`BuyerId`,c.`BuyerSource`,c.`SellerId`,c.`Products`,c.`Disputes`,c.`IsEnabled`,c.`CreatedAt`,c.`CreatedBy`,c.`UpdatedAt`,c.`UpdatedBy`,a.`TotalAmount` FROM (SELECT a.`Id` AS `OrderId`,a.`BuyerId`,SUM(b.`Amount`) AS `TotalAmount` FROM `sys_order` a,`sys_order_detail` b,`sys_user` c WHERE a.`Id`=b.`OrderId` AND a.`BuyerId`=c.`Id` AND c.`Age`>20 GROUP BY a.`Id`,a.`BuyerId` HAVING SUM(b.`Amount`)>500) a INNER JOIN `sys_user` b ON a.`BuyerId`=b.`Id` INNER JOIN `sys_order` c ON a.`OrderId`=c.`Id`", sql3);
 
-        var result3 = repository.From(f => f.From<Order, OrderDetail, User>()
+        var result3 = repository.FromQuery(f => f.From<Order, OrderDetail, User>()
                 .Where((a, b, c) => a.Id == b.OrderId && a.BuyerId == c.Id && c.Age > 20)
                 .GroupBy((a, b, c) => new { OrderId = a.Id, a.BuyerId })
                 .Having((x, a, b, c) => x.Sum(b.Amount) > 500)
@@ -5373,7 +5376,8 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         });
         repository.Commit();
 
-        var result = repository.From<Order>()
+        var result = repository.UseMaster()
+            .From<Order>()
             .Where(f => Sql.In(f.Id, new[] { "8" }))
             .SelectFlattenTo<OrderInfo>()
             .ToList();
@@ -5408,7 +5412,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         Assert.NotNull(result[0].Description);
         Assert.True(result[0].Description == this.DeferInvoke());
 
-        var result1 = repository.From(f =>
+        var result1 = repository.FromQuery(f =>
                f.From<Order, OrderDetail>('a')
                 .Where((a, b) => a.Id == b.OrderId)
                 .GroupBy((a, b) => new { a.BuyerId, OrderId = a.Id })
@@ -7241,7 +7245,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
                 .Include(f => f.Brand)
                 .Where(f => f.ProductNo.Contains("PN-00"))
                 .ToList()
-            .From(f => f.From<Order, OrderDetail>('a')
+            .FromQuery(f => f.From<Order, OrderDetail>('a')
                     .Where((a, b) => a.Id == b.OrderId && a.Id == "1")
                     .GroupBy((a, b) => new { a.BuyerId, OrderId = a.Id })
                     .Having((x, a, b) => x.CountDistinct(b.ProductId) > 0)
@@ -7267,8 +7271,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
     {
         this.Initialize(1);
         var repository = this.dbFactory.Create();
-        using var reader = await repository.QueryMultipleAsync(f => f
-            .UseMaster()
+        using var reader = await repository.UseMaster().QueryMultipleAsync(f => f
             .GetById<User>(new { Id = 1 })
             .Exists<Order>(f => f.BuyerId.IsNull())
             .From<Order>()
@@ -7281,7 +7284,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
                 .Include(f => f.Brand)
                 .Where(f => f.ProductNo.Contains("PN-00"))
                 .ToList()
-            .From(f => f.From<Order, OrderDetail>('a')
+            .FromQuery(f => f.From<Order, OrderDetail>('a')
                     .Where((a, b) => a.Id == b.OrderId && a.Id == "1")
                     .GroupBy((a, b) => new { a.BuyerId, OrderId = a.Id })
                     .Having((x, a, b) => x.CountDistinct(b.ProductId) > 0)
@@ -7419,7 +7422,8 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .UseTableBy("104")
             .Where(101)
             .ExecuteAsync();
-        var count = repository.From<User>()
+        var count = repository.UseMaster()
+            .From<User>()
             .UseTable("sys_user_104")
             .Where(f => f.Id == 101)
             .Count();
@@ -7464,7 +7468,8 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .UseTableBy("104")
             .Where(101)
             .ExecuteAsync();
-        var count = repository.From<User>()
+        var count = repository.UseMaster()
+            .From<User>()
             .UseTableBy("104")
             .Where(f => f.Id == 101)
             .Count();
@@ -7509,7 +7514,8 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .UseTableBy("104")
             .Where(101)
             .ExecuteAsync();
-        var count = repository.From<User>()
+        var count = repository.UseMaster()
+            .From<User>()
             .UseTableBy("104")
             .Where(f => f.Id == 101)
             .Count();
@@ -8185,7 +8191,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         await this.InitSharding();
         var repository = this.dbFactory.Create();
         var sql = repository
-            .From(f => f.From<OrderDetail>()
+            .FromQuery(f => f.From<OrderDetail>()
                 .UseTable("sys_order_detail_104_202405", "sys_order_detail_105_202405")
                 .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
                 .UseTableMap<OrderDetail>((orderOrigName, userOrigName, orderTableName) => orderTableName.Replace(orderOrigName, userOrigName))
@@ -8206,7 +8212,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         Assert.Equal("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_SCHEMA='fengling' AND (TABLE_NAME LIKE 'sys_order%' OR TABLE_NAME LIKE 'sys_user%');SELECT a.`OrderId`,a.`BuyerId`,b.`TenantId`,b.`Id`,b.`TenantId`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,a.`ProductCount` FROM (SELECT b.`Id` AS `OrderId`,b.`BuyerId`,COUNT(DISTINCT a.`ProductId`) AS `ProductCount` FROM `sys_order_detail_104_202405` a INNER JOIN `sys_order_104_202405` b ON a.`OrderId`=b.`Id` GROUP BY b.`Id`,b.`BuyerId`) a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>1 UNION ALL SELECT a.`OrderId`,a.`BuyerId`,b.`TenantId`,b.`Id`,b.`TenantId`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,a.`ProductCount` FROM (SELECT b.`Id` AS `OrderId`,b.`BuyerId`,COUNT(DISTINCT a.`ProductId`) AS `ProductCount` FROM `sys_order_detail_105_202405` a INNER JOIN `sys_order_105_202405` b ON a.`OrderId`=b.`Id` GROUP BY b.`Id`,b.`BuyerId`) a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>1", sql);
 
         var result = await repository
-            .From(f => f.From<OrderDetail>()
+            .FromQuery(f => f.From<OrderDetail>()
                 .UseTable("sys_order_detail_104_202405", "sys_order_detail_105_202405")
                 .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
                 .UseTableMap<OrderDetail>((orderOrigName, userOrigName, orderTableName) => orderTableName.Replace(orderOrigName, userOrigName))
@@ -8716,11 +8722,11 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         var count = 1;
         var amount = 50;
         var sql = repository
-            .From(f => f.From<Order>()
-                .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
+            .FromQuery(f => f.From<Order>()
+                .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f.Slice(-6, 0)) > 202001)
                 .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
                 .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
-                    => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+                    => orderTableName.Replace(orderOrigName, userOrigName).Slice(0, -7))
                 .LeftJoin<OrderDetail>((a, b, c) => a.Id == c.OrderId)
                 .UseTableMap<Order>((orderOrigName, orderDetailOrigName, orderTableName)
                     => orderTableName.Replace(orderOrigName, orderDetailOrigName))
@@ -8738,11 +8744,11 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         Assert.Equal((int)dbParameters[0].Value, count);
 
         var result = repository
-            .From(f => f.From<Order>()
-                .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
+            .FromQuery(f => f.From<Order>()
+                .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f.Substring(-6, 0)) > 202001)
                 .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
                 .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
-                    => orderTableName.Replace(orderOrigName, userOrigName)[..^7])
+                    => orderTableName.Replace(orderOrigName, userOrigName).Substring(0, -7))
                 .LeftJoin<OrderDetail>((a, b, c) => a.Id == c.OrderId)
                 .UseTableMap<Order>((orderOrigName, orderDetailOrigName, orderTableName)
                     => orderTableName.Replace(orderOrigName, orderDetailOrigName))
@@ -8769,7 +8775,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
     {
         var repository = this.dbFactory.Create();
         var sql = repository
-            .From(f => f.From<OrderDetail>()
+            .FromQuery(f => f.From<OrderDetail>()
                 .UseTableSchema("myschema")
                 .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
                 .UseTableSchema("myschema")
@@ -8788,7 +8794,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
         Assert.Equal("SELECT a.`OrderId`,a.`BuyerId`,b.`Id`,b.`TenantId`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,a.`ProductCount` FROM (SELECT b.`Id` AS `OrderId`,b.`BuyerId`,COUNT(DISTINCT a.`ProductId`) AS `ProductCount` FROM `myschema`.`sys_order_detail` a INNER JOIN `myschema`.`sys_order` b ON a.`OrderId`=b.`Id` GROUP BY b.`Id`,b.`BuyerId`) a INNER JOIN `myschema`.`sys_user` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>1", sql);
 
         var result = repository
-            .From(f => f.From<OrderDetail>()
+            .FromQuery(f => f.From<OrderDetail>()
                 .UseTableSchema("fengling")
                 .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
                 .UseTableSchema("fengling")

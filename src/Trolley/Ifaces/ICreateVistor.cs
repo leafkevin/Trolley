@@ -18,14 +18,14 @@ public interface ICreateVisitor : IDisposable
 
     string BuildCommand(ITheaCommand command, bool isReturnIdentity, out List<SqlFieldSegment> readerFields);
     MultipleCommand CreateMultipleCommand();
-    IQueryVisitor CreateQueryVisitor();
+    IQueryVisitor CreateQueryVisitor(char? tableAsStart = null);
     void BuildMultiCommand(ITheaCommand command, StringBuilder sqlBuilder, MultipleCommand multiCommand, int commandIndex);
     void Initialize(Type entityType, bool isMultiple = false, bool isFirst = true);
     string BuildSql(out List<SqlFieldSegment> readerFields);
 
     void UseTable(bool isIncludeMany, params string[] tableNames);
     void UseTable<TInsertObj>(Func<string, TInsertObj, string> tableNameGetter);
-    void UseTableBy(bool isIncludeMany, params object[] fieldValues);  
+    void UseTableBy(bool isIncludeMany, params object[] fieldValues);
     void UseTableSchema(bool isIncludeMany, string tableSchema);
 
     void WithBy(object insertObj);

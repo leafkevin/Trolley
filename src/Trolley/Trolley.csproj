@@ -24,6 +24,14 @@
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 	</PropertyGroup>
 	<ItemGroup>
+	  <Compile Remove="Dialect\PostgreSql\**" />
+	  <Compile Remove="Dialect\SqlServer\**" />
+	  <EmbeddedResource Remove="Dialect\PostgreSql\**" />
+	  <EmbeddedResource Remove="Dialect\SqlServer\**" />
+	  <None Remove="Dialect\PostgreSql\**" />
+	  <None Remove="Dialect\SqlServer\**" />
+	</ItemGroup>
+	<ItemGroup>
 		<None Include="README.md" Pack="true" PackagePath="\" />
 		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0">
 			<PrivateAssets>all</PrivateAssets>

@@ -25,23 +25,11 @@ public class UnitTest6 : UnitTestBase
             var connectionString1 = "Host=localhost;Database=fengling1;Username=postgres;Password=123456;SearchPath=public";
             var connectionString2 = "Host=localhost;Database=fengling2;Username=postgres;Password=123456;SearchPath=public";
             var builder = new OrmDbFactoryBuilder()
-                .Register(OrmProviderType.PostgreSql, "fengling", connectionString, true)
-                .Register(OrmProviderType.PostgreSql, "fengling1", connectionString1)
-                .Register(OrmProviderType.PostgreSql, "fengling2", connectionString2)
+                .Register(OrmProviderType.PostgreSql, "fengling", f => f.UseMaster(connectionString)
+                    .UseSlave(connectionString1, connectionString2), true)
+                .Register(OrmProviderType.PostgreSql, "fengling1", f => f.UseConnectionString(connectionString1))
+                .Register(OrmProviderType.PostgreSql, "fengling2", f => f.UseConnectionString(connectionString2))
                 .Configure<ModelConfiguration>(OrmProviderType.PostgreSql)
-                .UseDatabaseSharding(() =>
-                {
-                    //可以硬编码分库，也可以使用redis，映射表 ...，其他方式等
-                    var scopeFactory = f.GetRequiredService<IServiceScopeFactory>();
-                    var serviceScope = scopeFactory.CreateScope();
-                    var passport = serviceScope.ServiceProvider.GetService<IPassport>();
-                    return passport.TenantId switch
-                    {
-                        "200" => "fengling1",
-                        "300" => "fengling2",
-                        _ => "fengling"
-                    };
-                })
                 .UseTableSharding<TableShardingConfiguration>(OrmProviderType.PostgreSql)
                 .UseInterceptors(df =>
                 {

@@ -1146,7 +1146,7 @@ public class UnitTest6 : UnitTestBase
         await this.InitSharding();
         var repository = this.dbFactory.Create();
         var sql = repository
-            .From(f => f.From<OrderDetail>()
+            .FromQuery(f => f.From<OrderDetail>()
                 .UseTable("sys_order_detail_104_202405", "sys_order_detail_105_202405")
                 .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
                 .UseTableMap<OrderDetail>((orderOrigName, userOrigName, orderTableName) => orderTableName.Replace(orderOrigName, userOrigName))
@@ -1170,7 +1170,7 @@ public class UnitTest6 : UnitTestBase
         Assert.Equal("SELECT a.name FROM sys.objects a,sys.schemas b WHERE a.schema_id=b.schema_id AND a.type='U' AND b.name='dbo' AND (a.name LIKE 'sys_order%' OR a.name LIKE 'sys_user%');SELECT a.[OrderId],a.[BuyerId],b.[TenantId],b.[Id],b.[TenantId],b.[Name],b.[Gender],b.[Age],b.[CompanyId],b.[GuidField],b.[SomeTimes],b.[SourceType],b.[IsEnabled],b.[CreatedAt],b.[CreatedBy],b.[UpdatedAt],b.[UpdatedBy],a.[ProductCount] FROM (SELECT b.[Id] AS [OrderId],b.[BuyerId],COUNT(DISTINCT a.[ProductId]) AS [ProductCount] FROM [sys_order_detail_104_202405] a INNER JOIN [sys_order_104_202405] b ON a.[OrderId]=b.[Id] GROUP BY b.[Id],b.[BuyerId]) a INNER JOIN [sys_user_104] b ON a.[BuyerId]=b.[Id] WHERE a.[ProductCount]>1 UNION ALL SELECT a.[OrderId],a.[BuyerId],b.[TenantId],b.[Id],b.[TenantId],b.[Name],b.[Gender],b.[Age],b.[CompanyId],b.[GuidField],b.[SomeTimes],b.[SourceType],b.[IsEnabled],b.[CreatedAt],b.[CreatedBy],b.[UpdatedAt],b.[UpdatedBy],a.[ProductCount] FROM (SELECT b.[Id] AS [OrderId],b.[BuyerId],COUNT(DISTINCT a.[ProductId]) AS [ProductCount] FROM [sys_order_detail_105_202405] a INNER JOIN [sys_order_105_202405] b ON a.[OrderId]=b.[Id] GROUP BY b.[Id],b.[BuyerId]) a INNER JOIN [sys_user_105] b ON a.[BuyerId]=b.[Id] WHERE a.[ProductCount]>1", sql);
 
         var result = await repository
-            .From(f => f.From<OrderDetail>()
+            .FromQuery(f => f.From<OrderDetail>()
                 .UseTable("sys_order_detail_104_202405", "sys_order_detail_105_202405")
                 .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
                 .UseTableMap<OrderDetail>((orderOrigName, userOrigName, orderTableName) => orderTableName.Replace(orderOrigName, userOrigName))
@@ -1908,7 +1908,7 @@ public class UnitTest6 : UnitTestBase
         var count = 1;
         var amount = 50;
         var sql = repository
-            .From(f => f.From<Order>()
+            .FromQuery(f => f.From<Order>()
                 .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
                 .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
                 .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
@@ -1930,7 +1930,7 @@ public class UnitTest6 : UnitTestBase
         Assert.Equal((int)dbParameters[0].Value, count);
 
         var result = repository
-            .From(f => f.From<Order>()
+            .FromQuery(f => f.From<Order>()
                 .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f[^6..]) > 202001)
                 .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
                 .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)

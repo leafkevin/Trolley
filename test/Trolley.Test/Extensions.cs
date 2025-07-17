@@ -77,5 +77,16 @@ public static class Extensions
             builder.Append($"{dbParameter.ParameterName}:{{SqlDbType={dbParameter.SqlDbType}, Value={dbParameter.Value}}};  ");
         }
         return builder.ToString();
-    } 
+    }
+    public static string Slice(this string strValue, int index, int endIndex)
+    {
+        if (string.IsNullOrEmpty(strValue))
+            return string.Empty;
+        if (index < 0) index = strValue.Length + index - 1;
+        if (endIndex > 0)
+            return strValue.Substring(index, endIndex - index);
+        else if (endIndex == 0)
+            return strValue.Substring(index);
+        return strValue.Substring(index, strValue.Length + endIndex - index - 1);
+    }
 }

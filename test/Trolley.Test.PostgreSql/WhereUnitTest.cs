@@ -18,8 +18,9 @@ public class WhereUnitTest : UnitTestBase
         var services = new ServiceCollection();
         services.AddSingleton(f =>
         {
+            var connectionString = "Host=localhost;Database=fengling;Username=postgres;Password=123456;SearchPath=public";
             var builder = new OrmDbFactoryBuilder()
-                .Register(OrmProviderType.PostgreSql, "fengling", "Host=localhost;Database=fengling;Username=postgres;Password=123456;SearchPath=public", true)
+                .Register(OrmProviderType.PostgreSql, "fengling", f => f.UseConnectionString(connectionString), true)
                 .Configure<ModelConfiguration>(OrmProviderType.PostgreSql)
                 .UseInterceptors(df =>
                 {
@@ -188,10 +189,11 @@ public class WhereUnitTest : UnitTestBase
             .Where((a, b) => a.BuyerId == b.Id)
             .And(true, (a, b) => a.SellerId.IsNull() || !a.ProductCount.HasValue)
             .And(true, (a, b) => a.Products != null)
+            .Or((a, b) => b.Age < 20)
             .And(true, (a, b) => a.Products == null || a.Disputes == null)
             .Select((a, b) => "*")
             .ToSql(out _);
-        Assert.Equal("SELECT * FROM \"sys_order\" a,\"sys_user\" b WHERE a.\"BuyerId\"=b.\"Id\" AND (a.\"SellerId\" IS NULL OR a.\"ProductCount\" IS NULL) AND a.\"Products\" IS NOT NULL AND (a.\"Products\" IS NULL OR a.\"Disputes\" IS NULL)", sql);
+        Assert.Equal("SELECT * FROM \"sys_order\" a,\"sys_user\" b WHERE ((a.\"BuyerId\"=b.\"Id\" AND (a.\"SellerId\" IS NULL OR a.\"ProductCount\" IS NULL) AND a.\"Products\" IS NOT NULL) OR b.\"Age\"<20) AND (a.\"Products\" IS NULL OR a.\"Disputes\" IS NULL)", sql);
 
         var filterExpr = PredicateBuilder.Create<Order, User>()
             .Where((x, y) => x.BuyerId <= 10 && x.ProductCount > 5 && y.SourceType == UserSourceType.Douyin)

@@ -22,16 +22,6 @@ public interface IMultiQueryBase : IQuery
     /// <returns>返回查询对象</returns>
     IMultipleQuery LongCount();
     #endregion
-
-    #region Select
-    /// <summary>
-    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型</typeparam>
-    /// <param name="fields">原始字段字符串，默认值*</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<TTarget> Select<TTarget>(string fields = "*");
-    #endregion
 }
 /// <summary>
 /// 查询对象
@@ -41,13 +31,13 @@ public interface IMultiQuery<T> : IMultiQueryBase
 {
     #region Sharding
     /// <summary>
-    /// 使用固定表名确定T表一个或多个分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个T表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定T表一个或多个分表执行查询，完整的表名，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定T表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
@@ -77,29 +67,37 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
+    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T> UseTableBy(object field1Value, object field2Value = null);
+    IMultiQuery<T> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据单个字段值范围确定T表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个字段范围值，手动指定T表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
-    /// <param name="beginFieldValue">字段起始值</param>
-    /// <param name="endFieldValue">字段结束值</param>
+    /// <param name="beginFieldValue">字段范围起始值</param>
+    /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围确定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
-    /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="fieldValue1">第一个值</param>
-    /// <param name="fieldValue2">第二个值</param>
-    /// <param name="fieldValue3">第三个值</param>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="beginField2Value">字段2范围起始值</param>
+    /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    IMultiQuery<T> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <summary>
+    /// 根据2个固定字段值和1个字段范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// </summary>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="field2Value">字段2值</param>
+    /// <param name="beginField3Value">字段3范围起始值</param>
+    /// <param name="endField3Value">字段3范围结束值</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -153,10 +151,10 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// SELECT ... FROM `sys_order` WHERE `Id`&gt;1
     /// </code>
     /// </summary>
-    /// <param name="subQuery">子查询，需要有Select语句，如：
+    /// <param name="subQueryExpr">子查询，需要有Select语句，如：
     /// <code>f.From&lt;Order&gt;() ... .Select(x =&gt; new { ... })</code>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T> Union(Func<IFromQuery, IQuery<T>> subQuery);
+    IMultiQuery<T> Union(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
     /// <summary>
     /// Union All操作，所有记录不去掉重复，用法：
     /// <code>
@@ -188,26 +186,88 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// SELECT ... FROM `sys_order` WHERE `Id`&gt;1
     /// </code>
     /// </summary>
-    /// <param name="subQuery">子查询，需要有Select语句，如：
+    /// <param name="subQueryExpr">子查询，需要有Select语句，如：
     /// <code>f.From&lt;Order&gt;() ... .Select(x =&gt; new { ... })</code>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T> UnionAll(Func<IFromQuery, IQuery<T>> subQuery);
+    IMultiQuery<T> UnionAll(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
+    /// <summary>
+    /// 递归CTE子查询中的Union操作，表达式subQueryExpr中的第二参数是自身引用，用法：
+    /// <code>
+    /// f.From&lt;Menu&gt;() ...
+    ///         .Select(x =&gt; new { ... })
+    ///     .UnionRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
+    ///         .Select((a, b) =&gt; new { ... }))) ...
+    /// SQL:
+    /// WITH RECURSIVE `myCteTable`(`Id`,`Name`,`ParentId`,`PageId`) AS 
+    /// (
+    /// SELECT ... FROM `sys_menu` a WHERE a.`Id`=1 UNION
+    /// SELECT ... FROM `sys_menu` a INNER JOIN `myCteTable` b ON a.`ParentId`=b.`Id` ...
+    /// ) ...
+    /// </code>
+    /// </summary>
+    /// <param name="subQueryExpr">子查询，需要有Select语句，如：
+    /// <code>f.From&lt;Menu&gt;().Where(x =&gt; ... ).Select(x =&gt; new { ... })</code>
+    /// </param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T> UnionRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr);
+    /// <summary>
+    /// 递归CTE子查询中的UnionAll操作，表达式subQueryExpr中的第二参数是自身引用，用法：
+    /// <code>
+    /// f.From&lt;Menu&gt;() ...
+    ///         .Select(x =&gt; new { ... })
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
+    ///         .Select((a, b) =&gt; new { ... }))) ...
+    /// SQL:
+    /// WITH RECURSIVE `myCteTable`(`Id`,`Name`,`ParentId`,`PageId`) AS 
+    /// (
+    /// SELECT ... FROM `sys_menu` a WHERE a.`Id`=1 UNION ALL
+    /// SELECT ... FROM `sys_menu` a INNER JOIN `myCteTable` b ON a.`ParentId`=b.`Id` ...
+    /// ) ...
+    /// </summary>
+    /// <param name="subQueryExpr">子查询，需要有Select语句，如：
+    /// <code>f.From&lt;Menu&gt;() .Where(x =&gt; ... ) .Select(x =&gt; new { ... })</code>
+    /// </param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T> UnionAllRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr);
     #endregion
 
     #region WithTable
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做关联查询，用法：
     /// <code>
-    /// f.From&lt;Menu&gt;()
-    ///     .WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )
-    ///     ...
-    /// SQL: ... FROM `sys_menu` a,(SELECT ... FROM `sys_page` c,`sys_menu` d ...) b ...
+    /// f.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">实体表类型</typeparam>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T, TOther> WithTable<TOther>();
+    #endregion
+
+    #region WithQuery
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
+    /// <code>
+    /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
+    /// f.From&lt;Menu&gt;().WithQuery(subQuery)
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    IMultiQuery<T, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
+    /// <code>
+    /// f.From&lt;Menu&gt;()
+    ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -242,7 +302,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     IMultiIncludableQuery<T, TElment> IncludeMany<TElment>(Expression<Func<T, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
     #endregion
 
-    #region Join
+    #region InnerJoin
     /// <summary>
     /// 添加TOther表，与现有表T做INNER JOIN关联，用法:
     /// <code>
@@ -255,49 +315,20 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加TOther表，与现有表T做LEFT JOIN关联，用法:
+    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// f.From&lt;User&gt;()
-    ///     .LeftJoin&lt;Order&gt;((x, y) =&gt; x.Id == y.BuyerId)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加TOther表，与现有表T做RIGHT JOIN关联，用法:
-    /// <code>
-    /// f.From&lt;User&gt;()
-    ///     .RightJoin&lt;Order&gt;((x, y) =&gt; x.Id == y.BuyerId)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，子查询subQuery也可以是CTE子句，用法:
-    /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .InnerJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
+    /// f.From&lt;Menu&gt;()
+    ///         .Where(x =&gt; x.Id == 1)
+    ///         .Select(x =&gt; new { x.Id, x.Name, x.ParentId })
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
+    ///         .Select((a, b) =&gt; new { a.Id, a.Name, a.ParentId }))) ...
     /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
+    /// WITH RECURSIVE MyCte1(Id,Name,ParentId) AS
     /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
+    ///     SELECT `Id`,`Name`,`ParentId` FROM `sys_menu` WHERE `Id`=1 UNION ALL
+    ///     SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a INNER JOIN MyCte1 b ON a.`ParentId`=b.`Id`
+    /// ) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -306,27 +337,41 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，子查询subQuery也可以是CTE子句，用法:
+    /// 添加subQueryExpr子查询，并与现有表T做INNER JOIN关联，用法:
     /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .LeftJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a LEFT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
+    /// f.InnerJoin(f =&gt; f.From&lt;OrderDetail&gt;()
+    ///     ...
+    ///     .Select((x, y) =&gt; new { ... }), (a, b) =&gt; a.Id == b.OrderId) ...
+    /// SQL：
+    /// ... a INNER JOIN (SELECT ... FROM `sys_order_detail` ...) b ON a.`Id`=b.`OrderId` ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
+    /// <param name="subQueryExpr">子查询对象</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn);
+    #endregion
+
+    #region LeftJoin
+    /// <summary>
+    /// 添加TOther表，与现有表T做LEFT JOIN关联，用法:
+    /// <code>
+    /// repository.From&lt;User&gt;()
+    ///     .LeftJoin&lt;Order&gt;((x, y) =&gt; x.Id == y.BuyerId)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// <code>
+    /// var subQuery = repository.From&lt;Menu&gt;()
+    ///     .Where(x =&gt; x.Id == 1).Select(x =&gt; new { x.Id, x.Name, x.ParentId });
+    /// ... .LeftJoin(subQuery, (a, b) =&gt; a.ParentId == b.Id)
+    /// SQL: ...LEFT JOIN (SELECT `Id`,`Name`,`ParentId` FROM `sys_menu` WHERE `Id`=1) b ON a.`ParentId`=b.`Id` ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -335,27 +380,39 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询subQuery，并与现有表T做RIGHT JOIN关联，子查询subQuery也可以是CTE子句，用法:
+    /// 添加subQueryExpr子查询，并与现有表T做LEFT JOIN关联，用法:
     /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .RightJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a RIGHT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
+    /// .LeftJoin(f =&gt; f.From&lt;OrderDetail&gt;()
+    ///     ...
+    ///     .Select((x, y) =&gt; ...), (a, b, c) =&gt; b.Id == c.OrderId)
+    /// SQL：... LEFT JOIN (SELECT ... FROM `sys_order_detail` a ...) c ON b.`Id`=c.`OrderId` ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
+    /// <param name="subQueryExpr">子查询对象</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn);
+    #endregion
+
+    #region RightJoin
+    /// <summary>
+    /// 添加TOther表，与现有表T做RIGHT JOIN关联，用法:
+    /// <code>
+    /// .From&lt;User&gt;().RightJoin&lt;Order&gt;((x, y) =&gt; x.Id == y.BuyerId)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// <code>
+    /// var subQuery = repository.From&lt;Menu&gt;()
+    ///     .Where(x =&gt; x.Id == 1).Select(x =&gt; new { x.Id, x.Name, x.ParentId });
+    /// ... .RightJoin(subQuery, (a, b) =&gt; a.ParentId == b.Id)
+    /// SQL: ...RIGHT JOIN (SELECT `Id`,`Name`,`ParentId` FROM `sys_menu` WHERE `Id`=1) b ON a.`ParentId`=b.`Id` ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -364,68 +421,21 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询作为临时表，并与现有表T做INNER JOIN关联，用法:
+    /// 添加subQueryExpr子查询，并与现有表T做RIGHT JOIN关联，用法:
     /// <code>
-    /// f.From&lt;User&gt;()
-    ///     .InnerJoin&lt;Order&gt;((x, y) =&gt; ...)
-    ///     .InnerJoin(f =&gt; f.From&lt;OrderDetail&gt;()
-    ///         ...
-    ///         .Select((x, y) =&gt; new { ... }), (a, b, c) =&gt; b.Id == c.OrderId)
-    ///     ...
-    /// SQL：
-    /// ... FROM `sys_user` a INNER JOIN `sys_order` b ON ... INNER JOIN (SELECT ... FROM `sys_order_detail` a ...) c ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
-    /// <param name="subQuery">子查询对象</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加子查询作为临时表，并与现有表T做LEFT JOIN关联，用法:
-    /// <code>
-    /// ... ...
-    /// .LeftJoin(f =&gt; f.From&lt;OrderDetail&gt;()
-    ///     ...
-    ///     .Select((x, y) =&gt; new
-    ///     {
-    ///         ...
-    ///     }), (a, b, c) =&gt; b.Id == c.OrderId)
-    ///     ...
-    /// SQL：
-    /// ... LEFT JOIN (SELECT ... FROM `sys_order_detail` a ...) c ON b.`Id`=c.`OrderId` ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
-    /// <param name="subQuery">子查询对象</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加子查询作为临时表，并与现有表T做RIGHT JOIN关联，用法:
-    /// <code>
-    /// ... ...
-    /// .RightJoin(f =&gt; f.From&lt;OrderDetail&gt;()
-    ///     .GroupBy(x =&gt; x.OrderId)
-    ///     .Select((x, y) =&gt; new
-    ///     {
-    ///        ...
-    ///     }), (a, b, c) =&gt; b.Id == c.OrderId)
-    /// ... ...
-    /// </code>
-    /// 生成的SQL：
-    /// <code>
-    /// ... ... RIGHT JOIN (SELECT a.`OrderId`,COUNT(DISTINCT a.`ProductId`) AS ProductCount FROM `sys_order_detail` a GROUP BY a.`OrderId`) ... ...
+    /// .RightJoin(f =&gt; f.From&lt;OrderDetail&gt;() ...
+    ///     .Select( ... ), (a, b, c) =&gt; b.Id == c.OrderId)
+    /// SQL：... RIGHT JOIN (SELECT ... FROM ...) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的<paramref name="TOther"/>类型是一个匿名类</typeparam>
-    /// <param name="subQuery">子查询对象</param>
+    /// <param name="subQueryExpr">子查询对象</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn);
+    IMultiQuery<T, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn);
     #endregion
 
-    #region Where/And
+    #region Where
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -441,14 +451,17 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T> Where(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null);
+    #endregion
+
+    #region And
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T> And(Expression<Func<T, bool>> predicate);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成And条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成And条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
@@ -456,6 +469,24 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T> And(bool condition, Expression<Func<T, bool>> ifPredicate = null, Expression<Func<T, bool>> elsePredicate = null);
+    #endregion
+
+    #region Or
+    /// <summary>
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T> Or(Expression<Func<T, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Or条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Or条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T> Or(bool condition, Expression<Func<T, bool>> ifPredicate = null, Expression<Func<T, bool>> elsePredicate = null);
     #endregion
 
     #region GroupBy
@@ -722,29 +753,37 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
+    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2> UseTableBy(object field1Value, object field2Value = null);
+    IMultiQuery<T1, T2> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据单个字段值范围确定T表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个字段范围值，手动指定T表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
-    /// <param name="beginFieldValue">字段起始值</param>
-    /// <param name="endFieldValue">字段结束值</param>
+    /// <param name="beginFieldValue">字段范围起始值</param>
+    /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围确定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
-    /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="fieldValue1">第一个值</param>
-    /// <param name="fieldValue2">第二个值</param>
-    /// <param name="fieldValue3">第三个值</param>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="beginField2Value">字段2范围起始值</param>
+    /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    IMultiQuery<T1, T2> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <summary>
+    /// 根据2个固定字段值和1个字段范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// </summary>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="field2Value">字段2值</param>
+    /// <param name="beginField3Value">字段3范围起始值</param>
+    /// <param name="endField3Value">字段3范围结束值</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -758,19 +797,39 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
 
     #region WithTable
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做关联查询，用法：
     /// <code>
-    /// repository
-    ///     .From&lt;Menu&gt;()
-    ///     .WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )
-    ///     ...
-    /// SQL: ... FROM `sys_menu` a,(SELECT ... FROM `sys_page` c,`sys_menu` d ...) b ...
+    /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, TOther> WithTable<TOther>();
+    #endregion
+
+    #region WithQuery
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
+    /// <code>
+    /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
+    /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    IMultiQuery<T1, T2, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
+    /// <code>
+    /// repository.From&lt;Menu&gt;()
+    ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -805,7 +864,7 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     IMultiIncludableQuery<T1, T2, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
     #endregion
 
-    #region Join
+    #region InnerJoin
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
     /// <code>.InnerJoin((a, b) =&gt; ...)</code>
@@ -814,65 +873,22 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2> InnerJoin(Expression<Func<T1, T2, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.LeftJoin((a, b) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2> LeftJoin(Expression<Func<T1, T2, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.RightJoin((a, b) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2> RightJoin(Expression<Func<T1, T2, bool>> joinOn);
-    /// <summary>
     /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
-    /// <code>.InnerJoin&lt;TOther&gt;((a, b) =&gt; ...)</code>
+    /// <code>
+    /// .InnerJoin&lt;TOther&gt;((a, b) =&gt; ...)
+    /// </code>
     /// </summary>
     /// <typeparam name="TOther">表TOther实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
-    /// <code>.LeftJoin&lt;TOther&gt;((a, b) =&gt; ...)</code>
-    /// </summary>
-    /// <typeparam name="TOther">表实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
-    /// <code>.RightJoin&lt;TOther&gt;((a, b) =&gt; ...)</code>
-    /// </summary>
-    /// <typeparam name="TOther">表TOther实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, TOther> RightJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，子查询subQuery也可以是CTE子句，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .InnerJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -881,65 +897,7 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，子查询subQuery也可以是CTE子句，用法:
-    /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .LeftJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a LEFT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
-    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加子查询subQuery，并与现有表T做RIGHT JOIN关联，子查询subQuery也可以是CTE子句，用法:
-    /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .RightJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a RIGHT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
-    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做INNER JOIN关联，与.WithTable(...).InnerJoin(...)等效，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
     /// <code>
     /// .InnerJoin((a, b) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b) =&gt; ...) ...
@@ -948,12 +906,46 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, TOther, bool>> joinOn);
+    #endregion
+
+    #region LeftJoin
     /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做LEFT JOIN关联，与.WithTable(...).LeftJoin(...)等效，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.LeftJoin((a, b) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2> LeftJoin(Expression<Func<T1, T2, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin&lt;TOther&gt;((a, b) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// <code>
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .LeftJoin(self, (a, b) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
+    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
     /// <code>
     /// .LeftJoin((a, b) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b) =&gt; ...) ...
@@ -962,12 +954,46 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, TOther, bool>> joinOn);
+    #endregion
+
+    #region RightJoin
     /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做RIGHT JOIN关联，与.WithTable(...).RightJoin(...)等效，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.RightJoin((a, b) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2> RightJoin(Expression<Func<T1, T2, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// <code>
+    /// .RightJoin&lt;TOther&gt;((a, b) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表TOther实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, TOther> RightJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// <code>
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .RightJoin(self, (a, b) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
+    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
     /// <code>
     /// .RightJoin((a, b) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b) =&gt; ...) ...
@@ -976,13 +1002,13 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, TOther, bool>> joinOn);
     #endregion
 
-    #region Where/And
+    #region Where
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -998,14 +1024,17 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2> Where(bool condition, Expression<Func<T1, T2, bool>> ifPredicate, Expression<Func<T1, T2, bool>> elsePredicate = null);
+    #endregion
+
+    #region And
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2> And(Expression<Func<T1, T2, bool>> predicate);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成And条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成And条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
@@ -1013,6 +1042,24 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2> And(bool condition, Expression<Func<T1, T2, bool>> ifPredicate = null, Expression<Func<T1, T2, bool>> elsePredicate = null);
+    #endregion
+
+    #region Or
+    /// <summary>
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2> Or(Expression<Func<T1, T2, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Or条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Or条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2> Or(bool condition, Expression<Func<T1, T2, bool>> ifPredicate = null, Expression<Func<T1, T2, bool>> elsePredicate = null);
     #endregion
 
     #region GroupBy
@@ -1092,22 +1139,6 @@ public interface IMultiQuery<T1, T2> : IMultiQueryBase
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, TTarget>> specialMemberSelector = null);
-    /// <summary>
-    /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
-    /// <code>
-    /// .SelectAggregate((x, a, b) =&gt; new
-    /// {
-    ///     OrderCount = x.Count(a.Id),
-    ///     TotalAmount = x.Sum(a.TotalAmount)
-    /// })
-    /// </code>
-    /// 生成的SQL:
-    /// <code>SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` ... </code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型，通常是一个匿名类</typeparam>
-    /// <param name="fieldsExpr">字段选择表达式，单个或多个聚合字段的匿名对象</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, TTarget>> fieldsExpr);
     #endregion
 
     #region Count
@@ -1226,29 +1257,37 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
+    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3> UseTableBy(object field1Value, object field2Value = null);
+    IMultiQuery<T1, T2, T3> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据单个字段值范围确定T表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个字段范围值，手动指定T表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
-    /// <param name="beginFieldValue">字段起始值</param>
-    /// <param name="endFieldValue">字段结束值</param>
+    /// <param name="beginFieldValue">字段范围起始值</param>
+    /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围确定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
-    /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="fieldValue1">第一个值</param>
-    /// <param name="fieldValue2">第二个值</param>
-    /// <param name="fieldValue3">第三个值</param>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="beginField2Value">字段2范围起始值</param>
+    /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    IMultiQuery<T1, T2, T3> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <summary>
+    /// 根据2个固定字段值和1个字段范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// </summary>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="field2Value">字段2值</param>
+    /// <param name="beginField3Value">字段3范围起始值</param>
+    /// <param name="endField3Value">字段3范围结束值</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -1262,19 +1301,39 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
 
     #region WithTable
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做关联查询，用法：
     /// <code>
-    /// repository
-    ///     .From&lt;Menu&gt;()
-    ///     .WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )
-    ///     ...
-    /// SQL: ... FROM `sys_menu` a,(SELECT ... FROM `sys_page` c,`sys_menu` d ...) b ...
+    /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, TOther> WithTable<TOther>();
+    #endregion
+
+    #region WithQuery
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
+    /// <code>
+    /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
+    /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    IMultiQuery<T1, T2, T3, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
+    /// <code>
+    /// repository.From&lt;Menu&gt;()
+    ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -1309,7 +1368,7 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     IMultiIncludableQuery<T1, T2, T3, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
     #endregion
 
-    #region Join
+    #region InnerJoin
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
     /// <code>.InnerJoin((a, b, c) =&gt; ...)</code>
@@ -1318,65 +1377,22 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3> InnerJoin(Expression<Func<T1, T2, T3, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.LeftJoin((a, b, c) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3> LeftJoin(Expression<Func<T1, T2, T3, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.RightJoin((a, b, c) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3> RightJoin(Expression<Func<T1, T2, T3, bool>> joinOn);
-    /// <summary>
     /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
-    /// <code>.InnerJoin&lt;TOther&gt;((a, b, c) =&gt; ...)</code>
+    /// <code>
+    /// .InnerJoin&lt;TOther&gt;((a, b, c) =&gt; ...)
+    /// </code>
     /// </summary>
     /// <typeparam name="TOther">表TOther实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
-    /// <code>.LeftJoin&lt;TOther&gt;((a, b, c) =&gt; ...)</code>
-    /// </summary>
-    /// <typeparam name="TOther">表实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
-    /// <code>.RightJoin&lt;TOther&gt;((a, b, c) =&gt; ...)</code>
-    /// </summary>
-    /// <typeparam name="TOther">表TOther实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，子查询subQuery也可以是CTE子句，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .InnerJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b, c) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -1385,65 +1401,7 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，子查询subQuery也可以是CTE子句，用法:
-    /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .LeftJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a LEFT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
-    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加子查询subQuery，并与现有表T做RIGHT JOIN关联，子查询subQuery也可以是CTE子句，用法:
-    /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .RightJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a RIGHT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
-    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做INNER JOIN关联，与.WithTable(...).InnerJoin(...)等效，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
     /// <code>
     /// .InnerJoin((a, b, c) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c) =&gt; ...) ...
@@ -1452,12 +1410,46 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
+    #endregion
+
+    #region LeftJoin
     /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做LEFT JOIN关联，与.WithTable(...).LeftJoin(...)等效，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.LeftJoin((a, b, c) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3> LeftJoin(Expression<Func<T1, T2, T3, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin&lt;TOther&gt;((a, b, c) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// <code>
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .LeftJoin(self, (a, b, c) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
+    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
     /// <code>
     /// .LeftJoin((a, b, c) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c) =&gt; ...) ...
@@ -1466,12 +1458,46 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
+    #endregion
+
+    #region RightJoin
     /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做RIGHT JOIN关联，与.WithTable(...).RightJoin(...)等效，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.RightJoin((a, b, c) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3> RightJoin(Expression<Func<T1, T2, T3, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// <code>
+    /// .RightJoin&lt;TOther&gt;((a, b, c) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表TOther实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// <code>
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .RightJoin(self, (a, b, c) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
+    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
     /// <code>
     /// .RightJoin((a, b, c) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c) =&gt; ...) ...
@@ -1480,13 +1506,13 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
     #endregion
 
-    #region Where/And
+    #region Where
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -1502,14 +1528,17 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3> Where(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate, Expression<Func<T1, T2, T3, bool>> elsePredicate = null);
+    #endregion
+
+    #region And
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3> And(Expression<Func<T1, T2, T3, bool>> predicate);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成And条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成And条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
@@ -1517,6 +1546,24 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3> And(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, bool>> elsePredicate = null);
+    #endregion
+
+    #region Or
+    /// <summary>
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3> Or(Expression<Func<T1, T2, T3, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Or条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Or条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3> Or(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, bool>> elsePredicate = null);
     #endregion
 
     #region GroupBy
@@ -1596,22 +1643,6 @@ public interface IMultiQuery<T1, T2, T3> : IMultiQueryBase
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, TTarget>> specialMemberSelector = null);
-    /// <summary>
-    /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
-    /// <code>
-    /// .SelectAggregate((x, a, b, c) =&gt; new
-    /// {
-    ///     OrderCount = x.Count(a.Id),
-    ///     TotalAmount = x.Sum(a.TotalAmount)
-    /// })
-    /// </code>
-    /// 生成的SQL:
-    /// <code>SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` ... </code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型，通常是一个匿名类</typeparam>
-    /// <param name="fieldsExpr">字段选择表达式，单个或多个聚合字段的匿名对象</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, TTarget>> fieldsExpr);
     #endregion
 
     #region Count
@@ -1731,29 +1762,37 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
+    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4> UseTableBy(object field1Value, object field2Value = null);
+    IMultiQuery<T1, T2, T3, T4> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据单个字段值范围确定T表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个字段范围值，手动指定T表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
-    /// <param name="beginFieldValue">字段起始值</param>
-    /// <param name="endFieldValue">字段结束值</param>
+    /// <param name="beginFieldValue">字段范围起始值</param>
+    /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围确定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
-    /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="fieldValue1">第一个值</param>
-    /// <param name="fieldValue2">第二个值</param>
-    /// <param name="fieldValue3">第三个值</param>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="beginField2Value">字段2范围起始值</param>
+    /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    IMultiQuery<T1, T2, T3, T4> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <summary>
+    /// 根据2个固定字段值和1个字段范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// </summary>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="field2Value">字段2值</param>
+    /// <param name="beginField3Value">字段3范围起始值</param>
+    /// <param name="endField3Value">字段3范围结束值</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -1767,19 +1806,39 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
 
     #region WithTable
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做关联查询，用法：
     /// <code>
-    /// repository
-    ///     .From&lt;Menu&gt;()
-    ///     .WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )
-    ///     ...
-    /// SQL: ... FROM `sys_menu` a,(SELECT ... FROM `sys_page` c,`sys_menu` d ...) b ...
+    /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, TOther> WithTable<TOther>();
+    #endregion
+
+    #region WithQuery
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
+    /// <code>
+    /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
+    /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    IMultiQuery<T1, T2, T3, T4, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
+    /// <code>
+    /// repository.From&lt;Menu&gt;()
+    ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -1814,7 +1873,7 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     IMultiIncludableQuery<T1, T2, T3, T4, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
     #endregion
 
-    #region Join
+    #region InnerJoin
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
     /// <code>.InnerJoin((a, b, c, d) =&gt; ...)</code>
@@ -1823,65 +1882,22 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4> InnerJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.LeftJoin((a, b, c, d) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4> LeftJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.RightJoin((a, b, c, d) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4> RightJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn);
-    /// <summary>
     /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
-    /// <code>.InnerJoin&lt;TOther&gt;((a, b, c, d) =&gt; ...)</code>
+    /// <code>
+    /// .InnerJoin&lt;TOther&gt;((a, b, c, d) =&gt; ...)
+    /// </code>
     /// </summary>
     /// <typeparam name="TOther">表TOther实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
-    /// <code>.LeftJoin&lt;TOther&gt;((a, b, c, d) =&gt; ...)</code>
-    /// </summary>
-    /// <typeparam name="TOther">表实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
-    /// <code>.RightJoin&lt;TOther&gt;((a, b, c, d) =&gt; ...)</code>
-    /// </summary>
-    /// <typeparam name="TOther">表TOther实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，子查询subQuery也可以是CTE子句，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .InnerJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b, c, d) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -1890,65 +1906,7 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，子查询subQuery也可以是CTE子句，用法:
-    /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .LeftJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a LEFT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
-    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加子查询subQuery，并与现有表T做RIGHT JOIN关联，子查询subQuery也可以是CTE子句，用法:
-    /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .RightJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a RIGHT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
-    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做INNER JOIN关联，与.WithTable(...).InnerJoin(...)等效，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
     /// <code>
     /// .InnerJoin((a, b, c, d) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d) =&gt; ...) ...
@@ -1957,12 +1915,46 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
+    #endregion
+
+    #region LeftJoin
     /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做LEFT JOIN关联，与.WithTable(...).LeftJoin(...)等效，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.LeftJoin((a, b, c, d) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4> LeftJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin&lt;TOther&gt;((a, b, c, d) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// <code>
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .LeftJoin(self, (a, b, c, d) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
+    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
     /// <code>
     /// .LeftJoin((a, b, c, d) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d) =&gt; ...) ...
@@ -1971,12 +1963,46 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
+    #endregion
+
+    #region RightJoin
     /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做RIGHT JOIN关联，与.WithTable(...).RightJoin(...)等效，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.RightJoin((a, b, c, d) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4> RightJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// <code>
+    /// .RightJoin&lt;TOther&gt;((a, b, c, d) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表TOther实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// <code>
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .RightJoin(self, (a, b, c, d) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
+    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
     /// <code>
     /// .RightJoin((a, b, c, d) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d) =&gt; ...) ...
@@ -1985,13 +2011,13 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
     #endregion
 
-    #region Where/And
+    #region Where
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -2007,14 +2033,17 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4> Where(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null);
+    #endregion
+
+    #region And
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4> And(Expression<Func<T1, T2, T3, T4, bool>> predicate);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成And条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成And条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
@@ -2022,6 +2051,24 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4> And(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null);
+    #endregion
+
+    #region Or
+    /// <summary>
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4> Or(Expression<Func<T1, T2, T3, T4, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Or条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Or条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4> Or(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null);
     #endregion
 
     #region GroupBy
@@ -2101,22 +2148,6 @@ public interface IMultiQuery<T1, T2, T3, T4> : IMultiQueryBase
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, TTarget>> specialMemberSelector = null);
-    /// <summary>
-    /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
-    /// <code>
-    /// .SelectAggregate((x, a, b, c, d) =&gt; new
-    /// {
-    ///     OrderCount = x.Count(a.Id),
-    ///     TotalAmount = x.Sum(a.TotalAmount)
-    /// })
-    /// </code>
-    /// 生成的SQL:
-    /// <code>SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` ... </code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型，通常是一个匿名类</typeparam>
-    /// <param name="fieldsExpr">字段选择表达式，单个或多个聚合字段的匿名对象</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, TTarget>> fieldsExpr);
     #endregion
 
     #region Count
@@ -2237,29 +2268,37 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
+    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5> UseTableBy(object field1Value, object field2Value = null);
+    IMultiQuery<T1, T2, T3, T4, T5> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据单个字段值范围确定T表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个字段范围值，手动指定T表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
-    /// <param name="beginFieldValue">字段起始值</param>
-    /// <param name="endFieldValue">字段结束值</param>
+    /// <param name="beginFieldValue">字段范围起始值</param>
+    /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围确定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
-    /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="fieldValue1">第一个值</param>
-    /// <param name="fieldValue2">第二个值</param>
-    /// <param name="fieldValue3">第三个值</param>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="beginField2Value">字段2范围起始值</param>
+    /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    IMultiQuery<T1, T2, T3, T4, T5> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <summary>
+    /// 根据2个固定字段值和1个字段范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// </summary>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="field2Value">字段2值</param>
+    /// <param name="beginField3Value">字段3范围起始值</param>
+    /// <param name="endField3Value">字段3范围结束值</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -2273,19 +2312,39 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
 
     #region WithTable
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做关联查询，用法：
     /// <code>
-    /// repository
-    ///     .From&lt;Menu&gt;()
-    ///     .WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )
-    ///     ...
-    /// SQL: ... FROM `sys_menu` a,(SELECT ... FROM `sys_page` c,`sys_menu` d ...) b ...
+    /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, TOther> WithTable<TOther>();
+    #endregion
+
+    #region WithQuery
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
+    /// <code>
+    /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
+    /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    IMultiQuery<T1, T2, T3, T4, T5, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
+    /// <code>
+    /// repository.From&lt;Menu&gt;()
+    ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -2320,7 +2379,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     IMultiIncludableQuery<T1, T2, T3, T4, T5, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
     #endregion
 
-    #region Join
+    #region InnerJoin
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
     /// <code>.InnerJoin((a, b, c, d, e) =&gt; ...)</code>
@@ -2329,65 +2388,22 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.LeftJoin((a, b, c, d, e) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.RightJoin((a, b, c, d, e) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5> RightJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn);
-    /// <summary>
     /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
-    /// <code>.InnerJoin&lt;TOther&gt;((a, b, c, d, e) =&gt; ...)</code>
+    /// <code>
+    /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e) =&gt; ...)
+    /// </code>
     /// </summary>
     /// <typeparam name="TOther">表TOther实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
-    /// <code>.LeftJoin&lt;TOther&gt;((a, b, c, d, e) =&gt; ...)</code>
-    /// </summary>
-    /// <typeparam name="TOther">表实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
-    /// <code>.RightJoin&lt;TOther&gt;((a, b, c, d, e) =&gt; ...)</code>
-    /// </summary>
-    /// <typeparam name="TOther">表TOther实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，子查询subQuery也可以是CTE子句，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .InnerJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b, c, d, e) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -2396,65 +2412,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，子查询subQuery也可以是CTE子句，用法:
-    /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .LeftJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a LEFT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
-    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加子查询subQuery，并与现有表T做RIGHT JOIN关联，子查询subQuery也可以是CTE子句，用法:
-    /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .RightJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a RIGHT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
-    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做INNER JOIN关联，与.WithTable(...).InnerJoin(...)等效，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
     /// <code>
     /// .InnerJoin((a, b, c, d, e) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e) =&gt; ...) ...
@@ -2463,12 +2421,46 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
+    #endregion
+
+    #region LeftJoin
     /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做LEFT JOIN关联，与.WithTable(...).LeftJoin(...)等效，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.LeftJoin((a, b, c, d, e) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// <code>
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .LeftJoin(self, (a, b, c, d, e) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
+    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
     /// <code>
     /// .LeftJoin((a, b, c, d, e) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e) =&gt; ...) ...
@@ -2477,12 +2469,46 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
+    #endregion
+
+    #region RightJoin
     /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做RIGHT JOIN关联，与.WithTable(...).RightJoin(...)等效，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.RightJoin((a, b, c, d, e) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5> RightJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// <code>
+    /// .RightJoin&lt;TOther&gt;((a, b, c, d, e) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表TOther实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// <code>
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .RightJoin(self, (a, b, c, d, e) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
+    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
     /// <code>
     /// .RightJoin((a, b, c, d, e) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e) =&gt; ...) ...
@@ -2491,13 +2517,13 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
     #endregion
 
-    #region Where/And
+    #region Where
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -2513,14 +2539,17 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null);
+    #endregion
+
+    #region And
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5> And(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成And条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成And条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
@@ -2528,6 +2557,24 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null);
+    #endregion
+
+    #region Or
+    /// <summary>
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5> Or(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Or条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Or条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null);
     #endregion
 
     #region GroupBy
@@ -2607,22 +2654,6 @@ public interface IMultiQuery<T1, T2, T3, T4, T5> : IMultiQueryBase
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, TTarget>> specialMemberSelector = null);
-    /// <summary>
-    /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
-    /// <code>
-    /// .SelectAggregate((x, a, b, c, d, e) =&gt; new
-    /// {
-    ///     OrderCount = x.Count(a.Id),
-    ///     TotalAmount = x.Sum(a.TotalAmount)
-    /// })
-    /// </code>
-    /// 生成的SQL:
-    /// <code>SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` ... </code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型，通常是一个匿名类</typeparam>
-    /// <param name="fieldsExpr">字段选择表达式，单个或多个聚合字段的匿名对象</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, TTarget>> fieldsExpr);
     #endregion
 
     #region Count
@@ -2744,29 +2775,37 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
+    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6> UseTableBy(object field1Value, object field2Value = null);
+    IMultiQuery<T1, T2, T3, T4, T5, T6> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据单个字段值范围确定T表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个字段范围值，手动指定T表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
-    /// <param name="beginFieldValue">字段起始值</param>
-    /// <param name="endFieldValue">字段结束值</param>
+    /// <param name="beginFieldValue">字段范围起始值</param>
+    /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围确定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
-    /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="fieldValue1">第一个值</param>
-    /// <param name="fieldValue2">第二个值</param>
-    /// <param name="fieldValue3">第三个值</param>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="beginField2Value">字段2范围起始值</param>
+    /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    IMultiQuery<T1, T2, T3, T4, T5, T6> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <summary>
+    /// 根据2个固定字段值和1个字段范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// </summary>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="field2Value">字段2值</param>
+    /// <param name="beginField3Value">字段3范围起始值</param>
+    /// <param name="endField3Value">字段3范围结束值</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -2780,19 +2819,39 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
 
     #region WithTable
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做关联查询，用法：
     /// <code>
-    /// repository
-    ///     .From&lt;Menu&gt;()
-    ///     .WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )
-    ///     ...
-    /// SQL: ... FROM `sys_menu` a,(SELECT ... FROM `sys_page` c,`sys_menu` d ...) b ...
+    /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> WithTable<TOther>();
+    #endregion
+
+    #region WithQuery
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
+    /// <code>
+    /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
+    /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
+    /// <code>
+    /// repository.From&lt;Menu&gt;()
+    ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -2827,7 +2886,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
     #endregion
 
-    #region Join
+    #region InnerJoin
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
     /// <code>.InnerJoin((a, b, c, d, e, f) =&gt; ...)</code>
@@ -2836,65 +2895,22 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.LeftJoin((a, b, c, d, e, f) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.RightJoin((a, b, c, d, e, f) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> joinOn);
-    /// <summary>
     /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
-    /// <code>.InnerJoin&lt;TOther&gt;((a, b, c, d, e, f) =&gt; ...)</code>
+    /// <code>
+    /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f) =&gt; ...)
+    /// </code>
     /// </summary>
     /// <typeparam name="TOther">表TOther实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
-    /// <code>.LeftJoin&lt;TOther&gt;((a, b, c, d, e, f) =&gt; ...)</code>
-    /// </summary>
-    /// <typeparam name="TOther">表实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
-    /// <code>.RightJoin&lt;TOther&gt;((a, b, c, d, e, f) =&gt; ...)</code>
-    /// </summary>
-    /// <typeparam name="TOther">表TOther实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，子查询subQuery也可以是CTE子句，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .InnerJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b, c, d, e, f) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -2903,65 +2919,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，子查询subQuery也可以是CTE子句，用法:
-    /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .LeftJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a LEFT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
-    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加子查询subQuery，并与现有表T做RIGHT JOIN关联，子查询subQuery也可以是CTE子句，用法:
-    /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .RightJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a RIGHT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
-    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做INNER JOIN关联，与.WithTable(...).InnerJoin(...)等效，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
     /// <code>
     /// .InnerJoin((a, b, c, d, e, f) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f) =&gt; ...) ...
@@ -2970,12 +2928,46 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
+    #endregion
+
+    #region LeftJoin
     /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做LEFT JOIN关联，与.WithTable(...).LeftJoin(...)等效，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.LeftJoin((a, b, c, d, e, f) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// <code>
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .LeftJoin(self, (a, b, c, d, e, f) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
+    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
     /// <code>
     /// .LeftJoin((a, b, c, d, e, f) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f) =&gt; ...) ...
@@ -2984,12 +2976,46 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
+    #endregion
+
+    #region RightJoin
     /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做RIGHT JOIN关联，与.WithTable(...).RightJoin(...)等效，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.RightJoin((a, b, c, d, e, f) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// <code>
+    /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表TOther实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// <code>
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .RightJoin(self, (a, b, c, d, e, f) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
+    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
     /// <code>
     /// .RightJoin((a, b, c, d, e, f) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f) =&gt; ...) ...
@@ -2998,13 +3024,13 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
     #endregion
 
-    #region Where/And
+    #region Where
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -3020,14 +3046,17 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> elsePredicate = null);
+    #endregion
+
+    #region And
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6> And(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成And条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成And条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
@@ -3035,6 +3064,24 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> elsePredicate = null);
+    #endregion
+
+    #region Or
+    /// <summary>
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6> Or(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Or条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Or条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> elsePredicate = null);
     #endregion
 
     #region GroupBy
@@ -3114,22 +3161,6 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6> : IMultiQueryBase
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, TTarget>> specialMemberSelector = null);
-    /// <summary>
-    /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
-    /// <code>
-    /// .SelectAggregate((x, a, b, c, d, e, f) =&gt; new
-    /// {
-    ///     OrderCount = x.Count(a.Id),
-    ///     TotalAmount = x.Sum(a.TotalAmount)
-    /// })
-    /// </code>
-    /// 生成的SQL:
-    /// <code>SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` ... </code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型，通常是一个匿名类</typeparam>
-    /// <param name="fieldsExpr">字段选择表达式，单个或多个聚合字段的匿名对象</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr);
     #endregion
 
     #region Count
@@ -3252,29 +3283,37 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
+    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7> UseTableBy(object field1Value, object field2Value = null);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据单个字段值范围确定T表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个字段范围值，手动指定T表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
-    /// <param name="beginFieldValue">字段起始值</param>
-    /// <param name="endFieldValue">字段结束值</param>
+    /// <param name="beginFieldValue">字段范围起始值</param>
+    /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围确定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
-    /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="fieldValue1">第一个值</param>
-    /// <param name="fieldValue2">第二个值</param>
-    /// <param name="fieldValue3">第三个值</param>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="beginField2Value">字段2范围起始值</param>
+    /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <summary>
+    /// 根据2个固定字段值和1个字段范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// </summary>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="field2Value">字段2值</param>
+    /// <param name="beginField3Value">字段3范围起始值</param>
+    /// <param name="endField3Value">字段3范围结束值</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -3288,19 +3327,39 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
 
     #region WithTable
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做关联查询，用法：
     /// <code>
-    /// repository
-    ///     .From&lt;Menu&gt;()
-    ///     .WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )
-    ///     ...
-    /// SQL: ... FROM `sys_menu` a,(SELECT ... FROM `sys_page` c,`sys_menu` d ...) b ...
+    /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> WithTable<TOther>();
+    #endregion
+
+    #region WithQuery
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
+    /// <code>
+    /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
+    /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
+    /// <code>
+    /// repository.From&lt;Menu&gt;()
+    ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -3335,7 +3394,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
     IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
     #endregion
 
-    #region Join
+    #region InnerJoin
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
     /// <code>.InnerJoin((a, b, c, d, e, f, g) =&gt; ...)</code>
@@ -3344,65 +3403,22 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.LeftJoin((a, b, c, d, e, f, g) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.RightJoin((a, b, c, d, e, f, g) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> joinOn);
-    /// <summary>
     /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
-    /// <code>.InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g) =&gt; ...)</code>
+    /// <code>
+    /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g) =&gt; ...)
+    /// </code>
     /// </summary>
     /// <typeparam name="TOther">表TOther实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
-    /// <code>.LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g) =&gt; ...)</code>
-    /// </summary>
-    /// <typeparam name="TOther">表实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
-    /// <code>.RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g) =&gt; ...)</code>
-    /// </summary>
-    /// <typeparam name="TOther">表TOther实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，子查询subQuery也可以是CTE子句，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .InnerJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b, c, d, e, f, g) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -3411,65 +3427,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，子查询subQuery也可以是CTE子句，用法:
-    /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .LeftJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a LEFT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
-    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加子查询subQuery，并与现有表T做RIGHT JOIN关联，子查询subQuery也可以是CTE子句，用法:
-    /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .RightJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a RIGHT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
-    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做INNER JOIN关联，与.WithTable(...).InnerJoin(...)等效，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
     /// <code>
     /// .InnerJoin((a, b, c, d, e, f, g) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g) =&gt; ...) ...
@@ -3478,12 +3436,46 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
+    #endregion
+
+    #region LeftJoin
     /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做LEFT JOIN关联，与.WithTable(...).LeftJoin(...)等效，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.LeftJoin((a, b, c, d, e, f, g) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// <code>
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .LeftJoin(self, (a, b, c, d, e, f, g) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
+    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
     /// <code>
     /// .LeftJoin((a, b, c, d, e, f, g) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g) =&gt; ...) ...
@@ -3492,12 +3484,46 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
+    #endregion
+
+    #region RightJoin
     /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做RIGHT JOIN关联，与.WithTable(...).RightJoin(...)等效，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.RightJoin((a, b, c, d, e, f, g) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// <code>
+    /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表TOther实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// <code>
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .RightJoin(self, (a, b, c, d, e, f, g) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
+    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
     /// <code>
     /// .RightJoin((a, b, c, d, e, f, g) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g) =&gt; ...) ...
@@ -3506,13 +3532,13 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
     #endregion
 
-    #region Where/And
+    #region Where
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -3528,14 +3554,17 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> elsePredicate = null);
+    #endregion
+
+    #region And
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> predicate);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成And条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成And条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
@@ -3543,6 +3572,24 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> elsePredicate = null);
+    #endregion
+
+    #region Or
+    /// <summary>
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Or条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Or条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> elsePredicate = null);
     #endregion
 
     #region GroupBy
@@ -3622,22 +3669,6 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7> : IMultiQueryBase
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TTarget>> specialMemberSelector = null);
-    /// <summary>
-    /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
-    /// <code>
-    /// .SelectAggregate((x, a, b, c, d, e, f, g) =&gt; new
-    /// {
-    ///     OrderCount = x.Count(a.Id),
-    ///     TotalAmount = x.Sum(a.TotalAmount)
-    /// })
-    /// </code>
-    /// 生成的SQL:
-    /// <code>SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` ... </code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型，通常是一个匿名类</typeparam>
-    /// <param name="fieldsExpr">字段选择表达式，单个或多个聚合字段的匿名对象</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, TTarget>> fieldsExpr);
     #endregion
 
     #region Count
@@ -3761,29 +3792,37 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
+    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableBy(object field1Value, object field2Value = null);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据单个字段值范围确定T表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个字段范围值，手动指定T表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
-    /// <param name="beginFieldValue">字段起始值</param>
-    /// <param name="endFieldValue">字段结束值</param>
+    /// <param name="beginFieldValue">字段范围起始值</param>
+    /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围确定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
-    /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="fieldValue1">第一个值</param>
-    /// <param name="fieldValue2">第二个值</param>
-    /// <param name="fieldValue3">第三个值</param>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="beginField2Value">字段2范围起始值</param>
+    /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <summary>
+    /// 根据2个固定字段值和1个字段范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// </summary>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="field2Value">字段2值</param>
+    /// <param name="beginField3Value">字段3范围起始值</param>
+    /// <param name="endField3Value">字段3范围结束值</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -3797,19 +3836,39 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
 
     #region WithTable
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做关联查询，用法：
     /// <code>
-    /// repository
-    ///     .From&lt;Menu&gt;()
-    ///     .WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )
-    ///     ...
-    /// SQL: ... FROM `sys_menu` a,(SELECT ... FROM `sys_page` c,`sys_menu` d ...) b ...
+    /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithTable<TOther>();
+    #endregion
+
+    #region WithQuery
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
+    /// <code>
+    /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
+    /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
+    /// <code>
+    /// repository.From&lt;Menu&gt;()
+    ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -3844,7 +3903,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
     #endregion
 
-    #region Join
+    #region InnerJoin
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
     /// <code>.InnerJoin((a, b, c, d, e, f, g, h) =&gt; ...)</code>
@@ -3853,65 +3912,22 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.LeftJoin((a, b, c, d, e, f, g, h) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.RightJoin((a, b, c, d, e, f, g, h) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> joinOn);
-    /// <summary>
     /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
-    /// <code>.InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h) =&gt; ...)</code>
+    /// <code>
+    /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h) =&gt; ...)
+    /// </code>
     /// </summary>
     /// <typeparam name="TOther">表TOther实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
-    /// <code>.LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h) =&gt; ...)</code>
-    /// </summary>
-    /// <typeparam name="TOther">表实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
-    /// <code>.RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h) =&gt; ...)</code>
-    /// </summary>
-    /// <typeparam name="TOther">表TOther实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，子查询subQuery也可以是CTE子句，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .InnerJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b, c, d, e, f, g, h) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -3920,65 +3936,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，子查询subQuery也可以是CTE子句，用法:
-    /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .LeftJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a LEFT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
-    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加子查询subQuery，并与现有表T做RIGHT JOIN关联，子查询subQuery也可以是CTE子句，用法:
-    /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .RightJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a RIGHT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
-    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做INNER JOIN关联，与.WithTable(...).InnerJoin(...)等效，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
     /// <code>
     /// .InnerJoin((a, b, c, d, e, f, g, h) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h) =&gt; ...) ...
@@ -3987,12 +3945,46 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
+    #endregion
+
+    #region LeftJoin
     /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做LEFT JOIN关联，与.WithTable(...).LeftJoin(...)等效，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.LeftJoin((a, b, c, d, e, f, g, h) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// <code>
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .LeftJoin(self, (a, b, c, d, e, f, g, h) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
+    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
     /// <code>
     /// .LeftJoin((a, b, c, d, e, f, g, h) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h) =&gt; ...) ...
@@ -4001,12 +3993,46 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
+    #endregion
+
+    #region RightJoin
     /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做RIGHT JOIN关联，与.WithTable(...).RightJoin(...)等效，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.RightJoin((a, b, c, d, e, f, g, h) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// <code>
+    /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表TOther实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// <code>
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .RightJoin(self, (a, b, c, d, e, f, g, h) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
+    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
     /// <code>
     /// .RightJoin((a, b, c, d, e, f, g, h) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h) =&gt; ...) ...
@@ -4015,13 +4041,13 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
     #endregion
 
-    #region Where/And
+    #region Where
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -4037,14 +4063,17 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> elsePredicate = null);
+    #endregion
+
+    #region And
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成And条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成And条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
@@ -4052,6 +4081,24 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> elsePredicate = null);
+    #endregion
+
+    #region Or
+    /// <summary>
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Or条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Or条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> elsePredicate = null);
     #endregion
 
     #region GroupBy
@@ -4131,22 +4178,6 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IMultiQueryBase
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TTarget>> specialMemberSelector = null);
-    /// <summary>
-    /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
-    /// <code>
-    /// .SelectAggregate((x, a, b, c, d, e, f, g, h) =&gt; new
-    /// {
-    ///     OrderCount = x.Count(a.Id),
-    ///     TotalAmount = x.Sum(a.TotalAmount)
-    /// })
-    /// </code>
-    /// 生成的SQL:
-    /// <code>SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` ... </code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型，通常是一个匿名类</typeparam>
-    /// <param name="fieldsExpr">字段选择表达式，单个或多个聚合字段的匿名对象</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, TTarget>> fieldsExpr);
     #endregion
 
     #region Count
@@ -4271,29 +4302,37 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
+    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableBy(object field1Value, object field2Value = null);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据单个字段值范围确定T表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个字段范围值，手动指定T表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
-    /// <param name="beginFieldValue">字段起始值</param>
-    /// <param name="endFieldValue">字段结束值</param>
+    /// <param name="beginFieldValue">字段范围起始值</param>
+    /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围确定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
-    /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="fieldValue1">第一个值</param>
-    /// <param name="fieldValue2">第二个值</param>
-    /// <param name="fieldValue3">第三个值</param>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="beginField2Value">字段2范围起始值</param>
+    /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <summary>
+    /// 根据2个固定字段值和1个字段范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// </summary>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="field2Value">字段2值</param>
+    /// <param name="beginField3Value">字段3范围起始值</param>
+    /// <param name="endField3Value">字段3范围结束值</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -4307,19 +4346,39 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
 
     #region WithTable
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做关联查询，用法：
     /// <code>
-    /// repository
-    ///     .From&lt;Menu&gt;()
-    ///     .WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )
-    ///     ...
-    /// SQL: ... FROM `sys_menu` a,(SELECT ... FROM `sys_page` c,`sys_menu` d ...) b ...
+    /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> WithTable<TOther>();
+    #endregion
+
+    #region WithQuery
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
+    /// <code>
+    /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
+    /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
+    /// <code>
+    /// repository.From&lt;Menu&gt;()
+    ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -4354,7 +4413,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
     IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
     #endregion
 
-    #region Join
+    #region InnerJoin
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
     /// <code>.InnerJoin((a, b, c, d, e, f, g, h, i) =&gt; ...)</code>
@@ -4363,65 +4422,22 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.RightJoin((a, b, c, d, e, f, g, h, i) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> joinOn);
-    /// <summary>
     /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
-    /// <code>.InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i) =&gt; ...)</code>
+    /// <code>
+    /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i) =&gt; ...)
+    /// </code>
     /// </summary>
     /// <typeparam name="TOther">表TOther实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
-    /// <code>.LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i) =&gt; ...)</code>
-    /// </summary>
-    /// <typeparam name="TOther">表实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
-    /// <code>.RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i) =&gt; ...)</code>
-    /// </summary>
-    /// <typeparam name="TOther">表TOther实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，子查询subQuery也可以是CTE子句，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .InnerJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b, c, d, e, f, g, h, i) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -4430,65 +4446,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，子查询subQuery也可以是CTE子句，用法:
-    /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .LeftJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a LEFT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
-    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加子查询subQuery，并与现有表T做RIGHT JOIN关联，子查询subQuery也可以是CTE子句，用法:
-    /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .RightJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a RIGHT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
-    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做INNER JOIN关联，与.WithTable(...).InnerJoin(...)等效，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
     /// <code>
     /// .InnerJoin((a, b, c, d, e, f, g, h, i) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i) =&gt; ...) ...
@@ -4497,12 +4455,46 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
+    #endregion
+
+    #region LeftJoin
     /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做LEFT JOIN关联，与.WithTable(...).LeftJoin(...)等效，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// <code>
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .LeftJoin(self, (a, b, c, d, e, f, g, h, i) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
+    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
     /// <code>
     /// .LeftJoin((a, b, c, d, e, f, g, h, i) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i) =&gt; ...) ...
@@ -4511,12 +4503,46 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
+    #endregion
+
+    #region RightJoin
     /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做RIGHT JOIN关联，与.WithTable(...).RightJoin(...)等效，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.RightJoin((a, b, c, d, e, f, g, h, i) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// <code>
+    /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表TOther实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// <code>
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .RightJoin(self, (a, b, c, d, e, f, g, h, i) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
+    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
     /// <code>
     /// .RightJoin((a, b, c, d, e, f, g, h, i) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i) =&gt; ...) ...
@@ -4525,13 +4551,13 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
     #endregion
 
-    #region Where/And
+    #region Where
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -4547,14 +4573,17 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> elsePredicate = null);
+    #endregion
+
+    #region And
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成And条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成And条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
@@ -4562,6 +4591,24 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> elsePredicate = null);
+    #endregion
+
+    #region Or
+    /// <summary>
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Or条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Or条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> elsePredicate = null);
     #endregion
 
     #region GroupBy
@@ -4641,22 +4688,6 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IMultiQueryBa
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TTarget>> specialMemberSelector = null);
-    /// <summary>
-    /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
-    /// <code>
-    /// .SelectAggregate((x, a, b, c, d, e, f, g, h, i) =&gt; new
-    /// {
-    ///     OrderCount = x.Count(a.Id),
-    ///     TotalAmount = x.Sum(a.TotalAmount)
-    /// })
-    /// </code>
-    /// 生成的SQL:
-    /// <code>SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` ... </code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型，通常是一个匿名类</typeparam>
-    /// <param name="fieldsExpr">字段选择表达式，单个或多个聚合字段的匿名对象</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, TTarget>> fieldsExpr);
     #endregion
 
     #region Count
@@ -4782,29 +4813,37 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
+    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableBy(object field1Value, object field2Value = null);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据单个字段值范围确定T表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个字段范围值，手动指定T表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
-    /// <param name="beginFieldValue">字段起始值</param>
-    /// <param name="endFieldValue">字段结束值</param>
+    /// <param name="beginFieldValue">字段范围起始值</param>
+    /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围确定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
-    /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="fieldValue1">第一个值</param>
-    /// <param name="fieldValue2">第二个值</param>
-    /// <param name="fieldValue3">第三个值</param>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="beginField2Value">字段2范围起始值</param>
+    /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <summary>
+    /// 根据2个固定字段值和1个字段范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// </summary>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="field2Value">字段2值</param>
+    /// <param name="beginField3Value">字段3范围起始值</param>
+    /// <param name="endField3Value">字段3范围结束值</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -4818,19 +4857,39 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
 
     #region WithTable
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做关联查询，用法：
     /// <code>
-    /// repository
-    ///     .From&lt;Menu&gt;()
-    ///     .WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )
-    ///     ...
-    /// SQL: ... FROM `sys_menu` a,(SELECT ... FROM `sys_page` c,`sys_menu` d ...) b ...
+    /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithTable<TOther>();
+    #endregion
+
+    #region WithQuery
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
+    /// <code>
+    /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
+    /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
+    /// <code>
+    /// repository.From&lt;Menu&gt;()
+    ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -4865,7 +4924,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
     IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
     #endregion
 
-    #region Join
+    #region InnerJoin
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
     /// <code>.InnerJoin((a, b, c, d, e, f, g, h, i, j) =&gt; ...)</code>
@@ -4874,65 +4933,22 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.RightJoin((a, b, c, d, e, f, g, h, i, j) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> joinOn);
-    /// <summary>
     /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
-    /// <code>.InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j) =&gt; ...)</code>
+    /// <code>
+    /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j) =&gt; ...)
+    /// </code>
     /// </summary>
     /// <typeparam name="TOther">表TOther实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
-    /// <code>.LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j) =&gt; ...)</code>
-    /// </summary>
-    /// <typeparam name="TOther">表实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
-    /// <code>.RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j) =&gt; ...)</code>
-    /// </summary>
-    /// <typeparam name="TOther">表TOther实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，子查询subQuery也可以是CTE子句，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .InnerJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b, c, d, e, f, g, h, i, j) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -4941,65 +4957,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，子查询subQuery也可以是CTE子句，用法:
-    /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .LeftJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a LEFT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
-    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加子查询subQuery，并与现有表T做RIGHT JOIN关联，子查询subQuery也可以是CTE子句，用法:
-    /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .RightJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a RIGHT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
-    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做INNER JOIN关联，与.WithTable(...).InnerJoin(...)等效，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
     /// <code>
     /// .InnerJoin((a, b, c, d, e, f, g, h, i, j) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j) =&gt; ...) ...
@@ -5008,12 +4966,46 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
+    #endregion
+
+    #region LeftJoin
     /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做LEFT JOIN关联，与.WithTable(...).LeftJoin(...)等效，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// <code>
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .LeftJoin(self, (a, b, c, d, e, f, g, h, i, j) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
+    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
     /// <code>
     /// .LeftJoin((a, b, c, d, e, f, g, h, i, j) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j) =&gt; ...) ...
@@ -5022,12 +5014,46 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
+    #endregion
+
+    #region RightJoin
     /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做RIGHT JOIN关联，与.WithTable(...).RightJoin(...)等效，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.RightJoin((a, b, c, d, e, f, g, h, i, j) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// <code>
+    /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表TOther实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// <code>
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .RightJoin(self, (a, b, c, d, e, f, g, h, i, j) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
+    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
     /// <code>
     /// .RightJoin((a, b, c, d, e, f, g, h, i, j) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j) =&gt; ...) ...
@@ -5036,13 +5062,13 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
     #endregion
 
-    #region Where/And
+    #region Where
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -5058,14 +5084,17 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> elsePredicate = null);
+    #endregion
+
+    #region And
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成And条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成And条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
@@ -5073,6 +5102,24 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> elsePredicate = null);
+    #endregion
+
+    #region Or
+    /// <summary>
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Or条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Or条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> elsePredicate = null);
     #endregion
 
     #region GroupBy
@@ -5152,22 +5199,6 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IMultiQu
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TTarget>> specialMemberSelector = null);
-    /// <summary>
-    /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
-    /// <code>
-    /// .SelectAggregate((x, a, b, c, d, e, f, g, h, i, j) =&gt; new
-    /// {
-    ///     OrderCount = x.Count(a.Id),
-    ///     TotalAmount = x.Sum(a.TotalAmount)
-    /// })
-    /// </code>
-    /// 生成的SQL:
-    /// <code>SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` ... </code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型，通常是一个匿名类</typeparam>
-    /// <param name="fieldsExpr">字段选择表达式，单个或多个聚合字段的匿名对象</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TTarget>> fieldsExpr);
     #endregion
 
     #region Count
@@ -5294,29 +5325,37 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
+    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableBy(object field1Value, object field2Value = null);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据单个字段值范围确定T表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个字段范围值，手动指定T表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
-    /// <param name="beginFieldValue">字段起始值</param>
-    /// <param name="endFieldValue">字段结束值</param>
+    /// <param name="beginFieldValue">字段范围起始值</param>
+    /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围确定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
-    /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="fieldValue1">第一个值</param>
-    /// <param name="fieldValue2">第二个值</param>
-    /// <param name="fieldValue3">第三个值</param>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="beginField2Value">字段2范围起始值</param>
+    /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <summary>
+    /// 根据2个固定字段值和1个字段范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// </summary>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="field2Value">字段2值</param>
+    /// <param name="beginField3Value">字段3范围起始值</param>
+    /// <param name="endField3Value">字段3范围结束值</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -5330,19 +5369,39 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
 
     #region WithTable
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做关联查询，用法：
     /// <code>
-    /// repository
-    ///     .From&lt;Menu&gt;()
-    ///     .WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )
-    ///     ...
-    /// SQL: ... FROM `sys_menu` a,(SELECT ... FROM `sys_page` c,`sys_menu` d ...) b ...
+    /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> WithTable<TOther>();
+    #endregion
+
+    #region WithQuery
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
+    /// <code>
+    /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
+    /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
+    /// <code>
+    /// repository.From&lt;Menu&gt;()
+    ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -5377,7 +5436,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
     IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
     #endregion
 
-    #region Join
+    #region InnerJoin
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
     /// <code>.InnerJoin((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)</code>
@@ -5386,65 +5445,22 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.RightJoin((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> joinOn);
-    /// <summary>
     /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
-    /// <code>.InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)</code>
+    /// <code>
+    /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)
+    /// </code>
     /// </summary>
     /// <typeparam name="TOther">表TOther实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
-    /// <code>.LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)</code>
-    /// </summary>
-    /// <typeparam name="TOther">表实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
-    /// <code>.RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)</code>
-    /// </summary>
-    /// <typeparam name="TOther">表TOther实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，子查询subQuery也可以是CTE子句，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .InnerJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b, c, d, e, f, g, h, i, j, k) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -5453,65 +5469,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，子查询subQuery也可以是CTE子句，用法:
-    /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .LeftJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a LEFT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
-    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加子查询subQuery，并与现有表T做RIGHT JOIN关联，子查询subQuery也可以是CTE子句，用法:
-    /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .RightJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a RIGHT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
-    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做INNER JOIN关联，与.WithTable(...).InnerJoin(...)等效，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
     /// <code>
     /// .InnerJoin((a, b, c, d, e, f, g, h, i, j, k) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k) =&gt; ...) ...
@@ -5520,12 +5478,46 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
+    #endregion
+
+    #region LeftJoin
     /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做LEFT JOIN关联，与.WithTable(...).LeftJoin(...)等效，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// <code>
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .LeftJoin(self, (a, b, c, d, e, f, g, h, i, j, k) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
+    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
     /// <code>
     /// .LeftJoin((a, b, c, d, e, f, g, h, i, j, k) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k) =&gt; ...) ...
@@ -5534,12 +5526,46 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
+    #endregion
+
+    #region RightJoin
     /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做RIGHT JOIN关联，与.WithTable(...).RightJoin(...)等效，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.RightJoin((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// <code>
+    /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表TOther实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// <code>
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .RightJoin(self, (a, b, c, d, e, f, g, h, i, j, k) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
+    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
     /// <code>
     /// .RightJoin((a, b, c, d, e, f, g, h, i, j, k) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k) =&gt; ...) ...
@@ -5548,13 +5574,13 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
     #endregion
 
-    #region Where/And
+    #region Where
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -5570,14 +5596,17 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> elsePredicate = null);
+    #endregion
+
+    #region And
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成And条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成And条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
@@ -5585,6 +5614,24 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> elsePredicate = null);
+    #endregion
+
+    #region Or
+    /// <summary>
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Or条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Or条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> elsePredicate = null);
     #endregion
 
     #region GroupBy
@@ -5664,22 +5711,6 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IMu
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TTarget>> specialMemberSelector = null);
-    /// <summary>
-    /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
-    /// <code>
-    /// .SelectAggregate((x, a, b, c, d, e, f, g, h, i, j, k) =&gt; new
-    /// {
-    ///     OrderCount = x.Count(a.Id),
-    ///     TotalAmount = x.Sum(a.TotalAmount)
-    /// })
-    /// </code>
-    /// 生成的SQL:
-    /// <code>SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` ... </code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型，通常是一个匿名类</typeparam>
-    /// <param name="fieldsExpr">字段选择表达式，单个或多个聚合字段的匿名对象</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TTarget>> fieldsExpr);
     #endregion
 
     #region Count
@@ -5807,29 +5838,37 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
+    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableBy(object field1Value, object field2Value = null);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据单个字段值范围确定T表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个字段范围值，手动指定T表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
-    /// <param name="beginFieldValue">字段起始值</param>
-    /// <param name="endFieldValue">字段结束值</param>
+    /// <param name="beginFieldValue">字段范围起始值</param>
+    /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围确定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
-    /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="fieldValue1">第一个值</param>
-    /// <param name="fieldValue2">第二个值</param>
-    /// <param name="fieldValue3">第三个值</param>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="beginField2Value">字段2范围起始值</param>
+    /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <summary>
+    /// 根据2个固定字段值和1个字段范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// </summary>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="field2Value">字段2值</param>
+    /// <param name="beginField3Value">字段3范围起始值</param>
+    /// <param name="endField3Value">字段3范围结束值</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -5843,19 +5882,39 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
 
     #region WithTable
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做关联查询，用法：
     /// <code>
-    /// repository
-    ///     .From&lt;Menu&gt;()
-    ///     .WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )
-    ///     ...
-    /// SQL: ... FROM `sys_menu` a,(SELECT ... FROM `sys_page` c,`sys_menu` d ...) b ...
+    /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithTable<TOther>();
+    #endregion
+
+    #region WithQuery
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
+    /// <code>
+    /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
+    /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
+    /// <code>
+    /// repository.From&lt;Menu&gt;()
+    ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -5890,7 +5949,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
     #endregion
 
-    #region Join
+    #region InnerJoin
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
     /// <code>.InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)</code>
@@ -5899,65 +5958,22 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.RightJoin((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> joinOn);
-    /// <summary>
     /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
-    /// <code>.InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)</code>
+    /// <code>
+    /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)
+    /// </code>
     /// </summary>
     /// <typeparam name="TOther">表TOther实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
-    /// <code>.LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)</code>
-    /// </summary>
-    /// <typeparam name="TOther">表实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
-    /// <code>.RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)</code>
-    /// </summary>
-    /// <typeparam name="TOther">表TOther实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，子查询subQuery也可以是CTE子句，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .InnerJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b, c, d, e, f, g, h, i, j, k, l) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -5966,65 +5982,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，子查询subQuery也可以是CTE子句，用法:
-    /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .LeftJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a LEFT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
-    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加子查询subQuery，并与现有表T做RIGHT JOIN关联，子查询subQuery也可以是CTE子句，用法:
-    /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .RightJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a RIGHT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
-    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做INNER JOIN关联，与.WithTable(...).InnerJoin(...)等效，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
     /// <code>
     /// .InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...) ...
@@ -6033,12 +5991,46 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
+    #endregion
+
+    #region LeftJoin
     /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做LEFT JOIN关联，与.WithTable(...).LeftJoin(...)等效，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// <code>
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .LeftJoin(self, (a, b, c, d, e, f, g, h, i, j, k, l) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
+    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
     /// <code>
     /// .LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...) ...
@@ -6047,12 +6039,46 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
+    #endregion
+
+    #region RightJoin
     /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做RIGHT JOIN关联，与.WithTable(...).RightJoin(...)等效，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.RightJoin((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// <code>
+    /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表TOther实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// <code>
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .RightJoin(self, (a, b, c, d, e, f, g, h, i, j, k, l) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
+    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
     /// <code>
     /// .RightJoin((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...) ...
@@ -6061,13 +6087,13 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
     #endregion
 
-    #region Where/And
+    #region Where
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -6083,14 +6109,17 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> elsePredicate = null);
+    #endregion
+
+    #region And
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成And条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成And条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
@@ -6098,6 +6127,24 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> elsePredicate = null);
+    #endregion
+
+    #region Or
+    /// <summary>
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Or条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Or条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> elsePredicate = null);
     #endregion
 
     #region GroupBy
@@ -6177,22 +6224,6 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TTarget>> specialMemberSelector = null);
-    /// <summary>
-    /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
-    /// <code>
-    /// .SelectAggregate((x, a, b, c, d, e, f, g, h, i, j, k, l) =&gt; new
-    /// {
-    ///     OrderCount = x.Count(a.Id),
-    ///     TotalAmount = x.Sum(a.TotalAmount)
-    /// })
-    /// </code>
-    /// 生成的SQL:
-    /// <code>SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` ... </code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型，通常是一个匿名类</typeparam>
-    /// <param name="fieldsExpr">字段选择表达式，单个或多个聚合字段的匿名对象</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TTarget>> fieldsExpr);
     #endregion
 
     #region Count
@@ -6321,29 +6352,37 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
+    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableBy(object field1Value, object field2Value = null);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据单个字段值范围确定T表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个字段范围值，手动指定T表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
-    /// <param name="beginFieldValue">字段起始值</param>
-    /// <param name="endFieldValue">字段结束值</param>
+    /// <param name="beginFieldValue">字段范围起始值</param>
+    /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围确定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
-    /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="fieldValue1">第一个值</param>
-    /// <param name="fieldValue2">第二个值</param>
-    /// <param name="fieldValue3">第三个值</param>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="beginField2Value">字段2范围起始值</param>
+    /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <summary>
+    /// 根据2个固定字段值和1个字段范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// </summary>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="field2Value">字段2值</param>
+    /// <param name="beginField3Value">字段3范围起始值</param>
+    /// <param name="endField3Value">字段3范围结束值</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -6357,19 +6396,39 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region WithTable
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做关联查询，用法：
     /// <code>
-    /// repository
-    ///     .From&lt;Menu&gt;()
-    ///     .WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )
-    ///     ...
-    /// SQL: ... FROM `sys_menu` a,(SELECT ... FROM `sys_page` c,`sys_menu` d ...) b ...
+    /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> WithTable<TOther>();
+    #endregion
+
+    #region WithQuery
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
+    /// <code>
+    /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
+    /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
+    /// <code>
+    /// repository.From&lt;Menu&gt;()
+    ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -6404,7 +6463,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
     #endregion
 
-    #region Join
+    #region InnerJoin
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
     /// <code>.InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)</code>
@@ -6413,65 +6472,22 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.RightJoin((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> joinOn);
-    /// <summary>
     /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
-    /// <code>.InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)</code>
+    /// <code>
+    /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)
+    /// </code>
     /// </summary>
     /// <typeparam name="TOther">表TOther实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
-    /// <code>.LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)</code>
-    /// </summary>
-    /// <typeparam name="TOther">表实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
-    /// <code>.RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)</code>
-    /// </summary>
-    /// <typeparam name="TOther">表TOther实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，子查询subQuery也可以是CTE子句，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .InnerJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -6480,65 +6496,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，子查询subQuery也可以是CTE子句，用法:
-    /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .LeftJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a LEFT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
-    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加子查询subQuery，并与现有表T做RIGHT JOIN关联，子查询subQuery也可以是CTE子句，用法:
-    /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .RightJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a RIGHT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
-    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做INNER JOIN关联，与.WithTable(...).InnerJoin(...)等效，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
     /// <code>
     /// .InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...) ...
@@ -6547,12 +6505,46 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
+    #endregion
+
+    #region LeftJoin
     /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做LEFT JOIN关联，与.WithTable(...).LeftJoin(...)等效，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// <code>
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .LeftJoin(self, (a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
+    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
     /// <code>
     /// .LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...) ...
@@ -6561,12 +6553,46 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
+    #endregion
+
+    #region RightJoin
     /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做RIGHT JOIN关联，与.WithTable(...).RightJoin(...)等效，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.RightJoin((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// <code>
+    /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表TOther实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// <code>
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .RightJoin(self, (a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
+    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
     /// <code>
     /// .RightJoin((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...) ...
@@ -6575,13 +6601,13 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
     #endregion
 
-    #region Where/And
+    #region Where
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -6597,14 +6623,17 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> elsePredicate = null);
+    #endregion
+
+    #region And
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成And条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成And条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
@@ -6612,6 +6641,24 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> elsePredicate = null);
+    #endregion
+
+    #region Or
+    /// <summary>
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Or条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Or条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> elsePredicate = null);
     #endregion
 
     #region GroupBy
@@ -6691,22 +6738,6 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TTarget>> specialMemberSelector = null);
-    /// <summary>
-    /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
-    /// <code>
-    /// .SelectAggregate((x, a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; new
-    /// {
-    ///     OrderCount = x.Count(a.Id),
-    ///     TotalAmount = x.Sum(a.TotalAmount)
-    /// })
-    /// </code>
-    /// 生成的SQL:
-    /// <code>SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` ... </code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型，通常是一个匿名类</typeparam>
-    /// <param name="fieldsExpr">字段选择表达式，单个或多个聚合字段的匿名对象</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TTarget>> fieldsExpr);
     #endregion
 
     #region Count
@@ -6836,29 +6867,37 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
+    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableBy(object field1Value, object field2Value = null);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据单个字段值范围确定T表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个字段范围值，手动指定T表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
-    /// <param name="beginFieldValue">字段起始值</param>
-    /// <param name="endFieldValue">字段结束值</param>
+    /// <param name="beginFieldValue">字段范围起始值</param>
+    /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围确定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
-    /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="fieldValue1">第一个值</param>
-    /// <param name="fieldValue2">第二个值</param>
-    /// <param name="fieldValue3">第三个值</param>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="beginField2Value">字段2范围起始值</param>
+    /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <summary>
+    /// 根据2个固定字段值和1个字段范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// </summary>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="field2Value">字段2值</param>
+    /// <param name="beginField3Value">字段3范围起始值</param>
+    /// <param name="endField3Value">字段3范围结束值</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -6872,19 +6911,39 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region WithTable
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做关联查询，用法：
     /// <code>
-    /// repository
-    ///     .From&lt;Menu&gt;()
-    ///     .WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )
-    ///     ...
-    /// SQL: ... FROM `sys_menu` a,(SELECT ... FROM `sys_page` c,`sys_menu` d ...) b ...
+    /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithTable<TOther>();
+    #endregion
+
+    #region WithQuery
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
+    /// <code>
+    /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
+    /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
+    /// <code>
+    /// repository.From&lt;Menu&gt;()
+    ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -6919,7 +6978,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
     #endregion
 
-    #region Join
+    #region InnerJoin
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
     /// <code>.InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)</code>
@@ -6928,65 +6987,22 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.RightJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> joinOn);
-    /// <summary>
     /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
-    /// <code>.InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)</code>
+    /// <code>
+    /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)
+    /// </code>
     /// </summary>
     /// <typeparam name="TOther">表TOther实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
-    /// <code>.LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)</code>
-    /// </summary>
-    /// <typeparam name="TOther">表实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
-    /// <code>.RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)</code>
-    /// </summary>
-    /// <typeparam name="TOther">表TOther实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，子查询subQuery也可以是CTE子句，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .InnerJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -6995,65 +7011,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，子查询subQuery也可以是CTE子句，用法:
-    /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .LeftJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a LEFT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
-    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加子查询subQuery，并与现有表T做RIGHT JOIN关联，子查询subQuery也可以是CTE子句，用法:
-    /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .RightJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a RIGHT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
-    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做INNER JOIN关联，与.WithTable(...).InnerJoin(...)等效，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
     /// <code>
     /// .InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...) ...
@@ -7062,12 +7020,46 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
+    #endregion
+
+    #region LeftJoin
     /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做LEFT JOIN关联，与.WithTable(...).LeftJoin(...)等效，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// <code>
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .LeftJoin(self, (a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
+    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
     /// <code>
     /// .LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...) ...
@@ -7076,12 +7068,46 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
+    #endregion
+
+    #region RightJoin
     /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做RIGHT JOIN关联，与.WithTable(...).RightJoin(...)等效，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.RightJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// <code>
+    /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表TOther实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// <code>
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .RightJoin(self, (a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
+    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
     /// <code>
     /// .RightJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...) ...
@@ -7090,13 +7116,13 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
     #endregion
 
-    #region Where/And
+    #region Where
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -7112,14 +7138,17 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> elsePredicate = null);
+    #endregion
+
+    #region And
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成And条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成And条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
@@ -7127,6 +7156,24 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> elsePredicate = null);
+    #endregion
+
+    #region Or
+    /// <summary>
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Or条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Or条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> elsePredicate = null);
     #endregion
 
     #region GroupBy
@@ -7206,22 +7253,6 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TTarget>> specialMemberSelector = null);
-    /// <summary>
-    /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
-    /// <code>
-    /// .SelectAggregate((x, a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; new
-    /// {
-    ///     OrderCount = x.Count(a.Id),
-    ///     TotalAmount = x.Sum(a.TotalAmount)
-    /// })
-    /// </code>
-    /// 生成的SQL:
-    /// <code>SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` ... </code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型，通常是一个匿名类</typeparam>
-    /// <param name="fieldsExpr">字段选择表达式，单个或多个聚合字段的匿名对象</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TTarget>> fieldsExpr);
     #endregion
 
     #region Count
@@ -7352,29 +7383,37 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
+    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableBy(object field1Value, object field2Value = null);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据单个字段值范围确定T表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个字段范围值，手动指定T表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
-    /// <param name="beginFieldValue">字段起始值</param>
-    /// <param name="endFieldValue">字段结束值</param>
+    /// <param name="beginFieldValue">字段范围起始值</param>
+    /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围确定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
-    /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="fieldValue1">第一个值</param>
-    /// <param name="fieldValue2">第二个值</param>
-    /// <param name="fieldValue3">第三个值</param>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="beginField2Value">字段2范围起始值</param>
+    /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <summary>
+    /// 根据2个固定字段值和1个字段范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// </summary>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="field2Value">字段2值</param>
+    /// <param name="beginField3Value">字段3范围起始值</param>
+    /// <param name="endField3Value">字段3范围结束值</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -7388,19 +7427,39 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
 
     #region WithTable
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做关联查询，用法：
     /// <code>
-    /// repository
-    ///     .From&lt;Menu&gt;()
-    ///     .WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )
-    ///     ...
-    /// SQL: ... FROM `sys_menu` a,(SELECT ... FROM `sys_page` c,`sys_menu` d ...) b ...
+    /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> WithTable<TOther>();
+    #endregion
+
+    #region WithQuery
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
+    /// <code>
+    /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
+    /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
+    /// <code>
+    /// repository.From&lt;Menu&gt;()
+    ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -7435,7 +7494,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
     #endregion
 
-    #region Join
+    #region InnerJoin
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
     /// <code>.InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)</code>
@@ -7444,65 +7503,22 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.RightJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn);
-    /// <summary>
     /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
-    /// <code>.InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)</code>
+    /// <code>
+    /// .InnerJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)
+    /// </code>
     /// </summary>
     /// <typeparam name="TOther">表TOther实体类型</typeparam>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
-    /// <code>.LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)</code>
-    /// </summary>
-    /// <typeparam name="TOther">表实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
-    /// <code>.RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)</code>
-    /// </summary>
-    /// <typeparam name="TOther">表TOther实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，子查询subQuery也可以是CTE子句，用法:
+    /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .InnerJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .InnerJoin(self, (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
@@ -7511,65 +7527,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，子查询subQuery也可以是CTE子句，用法:
-    /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .LeftJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a LEFT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
-    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加子查询subQuery，并与现有表T做RIGHT JOIN关联，子查询subQuery也可以是CTE子句，用法:
-    /// <code>
-    /// var cteQuery = repository.From&lt;RoleMenu&gt;()
-    ///     .InnerJoin&lt;Menu&gt;((a, b) =&gt; a.MenuId == b.ParentId)
-    ///     .Where((a, b) =&gt; a.RoleId == roleId)
-    ///     .Select((a, b) =&gt; new { b.MenuId, b.ParentId })
-    ///     .UnionAllRecursive((f, self) =&gt; f.From&lt;Menu&gt;()
-    ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.MenuId)
-    ///         .Select((a, b) =&gt; new { a.MenuId, a.ParentId }))
-    ///      .AsCteTable("MenuList");
-    /// var menuItems = await repository.From&lt;Menu&gt;()
-    ///     .RightJoin(cteQuery, (a, b) =&gt; a.MenuId == b.MenuId)
-    ///     .Select((a, b) =&gt; new { a.MenuId, a.MenuName, a.ParentId, a.MenuType, a.Icon })
-    ///     .ToListAsync();
-    /// SQL:
-    /// WITH RECURSIVE `MenuList`(`MenuId`,`ParentId`) AS 
-    /// (
-    /// SELECT b.`MenuId`,b.`ParentId` FROM `sys_role_menu` a INNER JOIN `sys_menu` b ON a.`MenuId`=b.`ParentId` WHERE a.`RoleId`='1' UNION ALL
-    /// SELECT a.`MenuId`, a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON a.`ParentId`=b.`MenuId`
-    /// )
-    /// SELECT a.`MenuId`, a.`MenuName`, a.`ParentId`, a.`MenuType`, a.`Icon` FROM `sys_menu` a RIGHT JOIN `MenuList` b ON a.`MenuId`=b.`MenuId`;
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
-    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做INNER JOIN关联，与.WithTable(...).InnerJoin(...)等效，用法:
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
     /// <code>
     /// .InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...) ...
@@ -7578,12 +7536,46 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
+    #endregion
+
+    #region LeftJoin
     /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做LEFT JOIN关联，与.WithTable(...).LeftJoin(...)等效，用法:
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// <code>
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .LeftJoin(self, (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
+    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
     /// <code>
     /// .LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...) ...
@@ -7592,12 +7584,46 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
+    #endregion
+
+    #region RightJoin
     /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做RIGHT JOIN关联，与.WithTable(...).RightJoin(...)等效，用法:
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.RightJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// <code>
+    /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表TOther实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// <code>
+    /// repository.FromQuery(...
+    ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
+    ///         .RightJoin(self, (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; a.ParentId == b.Id)
+    ///         .Select(...)) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
+    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
     /// <code>
     /// .RightJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...) ...
@@ -7606,13 +7632,13 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
     #endregion
 
-    #region Where/And
+    #region Where
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -7628,14 +7654,17 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> elsePredicate = null);
+    #endregion
+
+    #region And
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> predicate);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成And条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成And条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
@@ -7643,6 +7672,24 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> elsePredicate = null);
+    #endregion
+
+    #region Or
+    /// <summary>
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Or条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Or条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> elsePredicate = null);
     #endregion
 
     #region GroupBy
@@ -7722,22 +7769,6 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <param name="specialMemberSelector">特殊成员赋值表达式，通常是重名字段或是不存在的字段赋值</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> specialMemberSelector = null);
-    /// <summary>
-    /// 选择指定聚合字段返回实体，单个或多个聚合字段的匿名对象，用法：
-    /// <code>
-    /// .SelectAggregate((x, a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; new
-    /// {
-    ///     OrderCount = x.Count(a.Id),
-    ///     TotalAmount = x.Sum(a.TotalAmount)
-    /// })
-    /// </code>
-    /// 生成的SQL:
-    /// <code>SELECT COUNT(`Id`) AS `OrderCount`,SUM(`TotalAmount`) AS `TotalAmount` ... </code>
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型，通常是一个匿名类</typeparam>
-    /// <param name="fieldsExpr">字段选择表达式，单个或多个聚合字段的匿名对象</param>
-    /// <returns>返回查询对象</returns>
-    IMultiQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> fieldsExpr);
     #endregion
 
     #region Count
@@ -7869,29 +7900,37 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
-    /// 根据字段值确定T表分表名，最多支持2个字段，字段值的顺序与配置的字段顺序保持一致，可多次调用
+    /// 根据字段值，手动指定T表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
-    /// <param name="field1Value">字段1值</param>
-    /// <param name="field2Value">字段2值</param>
+    /// <param name="fieldValues">字段值</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableBy(object field1Value, object field2Value = null);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableBy(params object[] fieldValues);
     /// <summary>
-    /// 根据单个字段值范围确定T表分表名执行查询，通常是日期规则分表使用，如：repository.From&lt;Order&gt;().UseTableByRange(DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个字段范围值，手动指定T表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
-    /// <param name="beginFieldValue">字段起始值</param>
-    /// <param name="endFieldValue">字段结束值</param>
+    /// <param name="beginFieldValue">字段范围起始值</param>
+    /// <param name="endFieldValue">字段范围结束值</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围确定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
-    /// 如：配置时 .UseSharding(s =&gt;s.UseTableMap&lt;Order&gt;(t =&gt; t.DependOn(d =&gt; d.TenantId).DependOn(d =&gt; d.CreatedAt).UseRule((dbKey, origName, tenantId, dateTime) =&gt; $"{origName}_{tenantId}_{dateTime:yyyMM}")
-    /// .UseRangeRule((dbKey, origName, tenantId, beginTime, endTime) =&gt;{ ...}))，此处使用 repository.From&lt;Order&gt;().UseTableByRange("tenant001", DateTime.Parse("2020-01-01"), DateTime.Now)
+    /// 根据1个固定字段值和1个字段值范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
-    /// <param name="fieldValue1">第一个值</param>
-    /// <param name="fieldValue2">第二个值</param>
-    /// <param name="fieldValue3">第三个值</param>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="beginField2Value">字段2范围起始值</param>
+    /// <param name="endField2Value">字段2范围结束值</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableByRange(object fieldValue1, object fieldValue2, object fieldValue3);
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
+    /// <summary>
+    /// 根据2个固定字段值和1个字段范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
+    /// </summary>
+    /// <param name="field1Value">字段1值</param>
+    /// <param name="field2Value">字段2值</param>
+    /// <param name="beginField3Value">字段3范围起始值</param>
+    /// <param name="endField3Value">字段3范围结束值</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
     #region UseTableSchema
@@ -7935,7 +7974,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     IMultiIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
     #endregion
 
-    #region Join
+    #region InnerJoin
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
     /// <code>.InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) =&gt; ...)</code>
@@ -7943,6 +7982,9 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> joinOn);
+    #endregion
+
+    #region LeftJoin
     /// <summary>
     /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
     /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) =&gt; ...)</code>
@@ -7950,6 +7992,9 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> joinOn);
+    #endregion
+
+    #region RightJoin
     /// <summary>
     /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
     /// <code>.RightJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) =&gt; ...)</code>
@@ -7959,7 +8004,7 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> joinOn);
     #endregion
 
-    #region Where/And
+    #region Where
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -7975,14 +8020,17 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> elsePredicate = null);
+    #endregion
+
+    #region And
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> predicate);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成And条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成And条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
@@ -7990,6 +8038,24 @@ public interface IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> elsePredicate = null);
+    #endregion
+
+    #region Or
+    /// <summary>
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Or条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Or条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> elsePredicate = null);
     #endregion
 
     #region GroupBy

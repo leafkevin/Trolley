@@ -413,18 +413,6 @@ public class MySqlCreateVisitor : CreateVisitor
         }
         return this.Evaluate(sqlSegment);
     }
-    public override IQueryVisitor CreateQueryVisitor()
-    {
-        var queryVisiter = new MySqlQueryVisitor(this.DbContext, this.TableAsStart, this.DbParameters)
-        {
-            IsMultiple = this.IsMultiple,
-            CommandIndex = this.CommandIndex,
-            RefQueries = this.RefQueries,
-            ShardingTables = this.ShardingTables,
-            IsUseIgnoreInto = this.IsUseIgnoreInto
-        };
-        return queryVisiter;
-    }
     public void InitTableAlias(LambdaExpression lambdaExpr)
     {
         this.TableAliases.Clear();

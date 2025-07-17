@@ -30,7 +30,7 @@ public enum SqlFieldType : byte
     RawSql
 }
 [DebuggerDisplay("FieldType: {FieldType,nq} Body: {Body,nq} Value: {Value,nq} Expression: {Expression,nq}")]
-public class SqlFieldSegment
+public class SqlFieldSegment : ICloneable
 {
     public static readonly SqlFieldSegment True = new SqlFieldSegment { IsConstant = true, Value = true, Body = "True" };
     public static readonly SqlFieldSegment Null = new SqlFieldSegment { Value = "NULL", Body = "NULL" };
@@ -345,6 +345,8 @@ public class SqlFieldSegment
             Path = this.Path
         };
     }
+    object ICloneable.Clone() => this.Clone();
+
     [DebuggerBrowsable(DebuggerBrowsableState.Never)]
     private string DebugDisplayText => $"Body: {this.Body} Value: {this.Value.ToString()} Expression: {this.Expression}";
 }

@@ -137,17 +137,17 @@ public class Repository : IRepository
     }
     #endregion
 
-    #region From SubQuery
-    public virtual IQuery<T> From<T>(IQuery<T> subQuery)
+    #region FromQuery
+    public virtual IQuery<T> FromQuery<T>(IQuery<T> subQuery)
     {
         var visitor = this.CreateQueryVisitor();
-        visitor.From(typeof(T), subQuery);
+        visitor.UseQuery(typeof(T), subQuery);
         return this.OrmProvider.NewQuery<T>(this.DbContext, visitor);
     }
-    public virtual IQuery<T> From<T>(Func<IFromQuery, IQuery<T>> subQuery)
+    public virtual IQuery<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
     {
         var visitor = this.CreateQueryVisitor();
-        visitor.From(typeof(T), this.DbContext, subQuery);
+        visitor.UseNewQuery(typeof(T), subQueryExpr);
         return this.OrmProvider.NewQuery<T>(this.DbContext, visitor);
     }
     #endregion

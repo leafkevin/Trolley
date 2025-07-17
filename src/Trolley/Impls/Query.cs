@@ -154,7 +154,7 @@ public class QueryBase : QueryInternal, IQueryBase
     {
         if (this.Visitor.IsNeedFetchShardingTables)
             this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
-        var sql = this.Visitor.BuildCommandSql(out var dbDataParameters);
+        var sql = this.Visitor.BuildSql(true, out var dbDataParameters);
         if (this.Visitor.IsNeedFetchShardingTables)
         {
             var builder = new StringBuilder(this.Visitor.BuildTableShardingsSql());
@@ -185,12 +185,6 @@ public class QueryBase : QueryInternal, IQueryBase
 }
 public class Query<T> : QueryBase, IQuery<T>
 {
-    #region Fields
-    private int? offset;
-    private int pageNumber;
-    private int pageSize;
-    #endregion
-
     #region Properties
     /// <summary>
     /// 表名或是子查询表SQL，CTE表场景时，在AsCteTable方法调用前，一个临时表名
@@ -262,9 +256,9 @@ public class Query<T> : QueryBase, IQuery<T>
         base.UnionInternal(subQuery);
         return this;
     }
-    public virtual IQuery<T> Union(Func<IFromQuery, IQuery<T>> subQuery)
+    public virtual IQuery<T> Union(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
     {
-        base.UnionInternal(subQuery);
+        base.UnionInternal(subQueryExpr);
         return this;
     }
     public virtual IQuery<T> UnionAll(IQuery<T> subQuery)
@@ -272,125 +266,94 @@ public class Query<T> : QueryBase, IQuery<T>
         base.UnionAllInternal(subQuery);
         return this;
     }
-    public virtual IQuery<T> UnionAll(Func<IFromQuery, IQuery<T>> subQuery)
+    public virtual IQuery<T> UnionAll(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
     {
-        base.UnionAllInternal(subQuery);
+        base.UnionAllInternal(subQueryExpr);
         return this;
     }
-    public virtual IQuery<T> UnionRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQuery)
+    public virtual IQuery<T> UnionRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr)
     {
-        base.UnionRecursiveInternal(subQuery);
+        base.UnionRecursiveInternal(subQueryExpr);
         return this;
     }
-    public virtual IQuery<T> UnionAllRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQuery)
+    public virtual IQuery<T> UnionAllRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr)
     {
-        base.UnionAllRecursiveInternal(subQuery);
+        base.UnionAllRecursiveInternal(subQueryExpr);
         return this;
     }
     #endregion
 
     #region WithTable
-    public virtual IQuery<T, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
+    public virtual IQuery<T, TOther> WithTable<TOther>()
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
-
-        this.Visitor.From(typeof(TOther), subQuery);
-        return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
-    }
-    public virtual IQuery<T, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
-    {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
-
-        this.Visitor.From(typeof(TOther), this.DbContext, subQuery);
+        this.Visitor.AddTable(typeof(TOther));
         return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
 
-    #region Join
+    #region WithQuery
+    public virtual IQuery<T, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
+    {
+        base.WithQueryInternal(subQuery);
+        return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
+    }
+    public virtual IQuery<T, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    {
+        base.WithQueryInternal(subQueryExpr);
+        return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
+    }
+    #endregion
+
+    #region InnerJoin
     public virtual IQuery<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
     {
-        if (joinOn == null)
-            throw new ArgumentNullException(nameof(joinOn));
-
-        this.Visitor.Join("INNER JOIN", typeof(TOther), joinOn);
-        return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
-    }
-    public virtual IQuery<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
-    {
-        if (joinOn == null)
-            throw new ArgumentNullException(nameof(joinOn));
-
-        this.Visitor.Join("LEFT JOIN", typeof(TOther), joinOn);
-        return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
-    }
-    public virtual IQuery<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
-    {
-        if (joinOn == null)
-            throw new ArgumentNullException(nameof(joinOn));
-
-        this.Visitor.Join("RIGHT JOIN", typeof(TOther), joinOn);
+        base.InnerJoinInternal(typeof(TOther), joinOn);
         return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<T, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
-        if (joinOn == null)
-            throw new ArgumentNullException(nameof(joinOn));
+        base.InnerJoinInternal(subQuery, joinOn);
+        return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
+    }
+    public virtual IQuery<T, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
+    {
+        base.InnerJoinInternal(subQueryExpr, joinOn);
+        return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
+    }
+    #endregion
 
-        this.Visitor.Join("INNER JOIN", typeof(TOther), subQuery, joinOn);
+    #region LeftJoin
+    public virtual IQuery<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
+    {
+        base.LeftJoinInternal(typeof(TOther), joinOn);
         return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<T, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
-        if (joinOn == null)
-            throw new ArgumentNullException(nameof(joinOn));
+        base.LeftJoinInternal(subQuery, joinOn);
+        return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
+    }
+    public virtual IQuery<T, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
+    {
+        base.LeftJoinInternal(subQueryExpr, joinOn);
+        return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
+    }
+    #endregion
 
-        this.Visitor.Join("LEFT JOIN", typeof(TOther), subQuery, joinOn);
+    #region LeftJoin
+    public virtual IQuery<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
+    {
+        base.RightJoinInternal(typeof(TOther), joinOn);
         return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<T, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
-        if (joinOn == null)
-            throw new ArgumentNullException(nameof(joinOn));
-
-        this.Visitor.Join("RIGHT JOIN", typeof(TOther), subQuery, joinOn);
+        base.RightJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+    public virtual IQuery<T, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
-        if (joinOn == null)
-            throw new ArgumentNullException(nameof(joinOn));
-
-        this.Visitor.Join("INNER JOIN", typeof(TOther), this.DbContext, subQuery, joinOn);
-        return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
-    }
-    public virtual IQuery<T, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn)
-    {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
-        if (joinOn == null)
-            throw new ArgumentNullException(nameof(joinOn));
-
-        this.Visitor.Join("LEFT JOIN", typeof(TOther), this.DbContext, subQuery, joinOn);
-        return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
-    }
-    public virtual IQuery<T, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn)
-    {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
-        if (joinOn == null)
-            throw new ArgumentNullException(nameof(joinOn));
-
-        this.Visitor.Join("RIGHT JOIN", typeof(TOther), this.DbContext, subQuery, joinOn);
+        base.RightJoinInternal(subQueryExpr, joinOn);
         return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -472,6 +435,24 @@ public class Query<T> : QueryBase, IQuery<T>
     }
     #endregion
 
+    #region Skip/Take/Page
+    public virtual IQuery<T> Skip(int offset)
+    {
+        base.SkipInternal(offset);
+        return this;
+    }
+    public virtual IQuery<T> Take(int limit)
+    {
+        base.TakeInternal(limit);
+        return this;
+    }
+    public virtual IQuery<T> Page(int pageNumber, int pageSize)
+    {
+        base.PageInternal(pageNumber, pageSize);
+        return this;
+    }
+    #endregion
+
     #region Select
     public virtual IQuery<T> Select()
     {
@@ -502,39 +483,7 @@ public class Query<T> : QueryBase, IQuery<T>
         this.Visitor.Distinct();
         return this;
     }
-    #endregion
-
-    #region Skip/Take/Page
-    public virtual IQuery<T> Skip(int offset)
-    {
-        this.offset = offset;
-        if (this.pageSize > 0)
-        {
-            this.pageNumber = (int)Math.Ceiling((double)offset / this.pageSize) + 1;
-            this.Visitor.Page(this.pageNumber, this.pageSize);
-        }
-        else this.Visitor.Skip(offset);
-        return this;
-    }
-    public virtual IQuery<T> Take(int limit)
-    {
-        this.pageSize = limit;
-        if (this.offset.HasValue)
-        {
-            this.pageNumber = (int)Math.Ceiling((double)offset / this.pageSize) + 1;
-            this.Visitor.Page(this.pageNumber, this.pageSize);
-        }
-        else this.Visitor.Take(limit);
-        return this;
-    }
-    public virtual IQuery<T> Page(int pageNumber, int pageSize)
-    {
-        this.pageNumber = pageNumber;
-        this.pageSize = pageSize;
-        this.Visitor.Page(pageNumber, pageSize);
-        return this;
-    }
-    #endregion
+    #endregion    
 
     #region Count
     public virtual int Count<TField>(Expression<Func<T, TField>> fieldExpr)

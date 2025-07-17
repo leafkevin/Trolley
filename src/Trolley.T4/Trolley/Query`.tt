@@ -83,33 +83,32 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
         {
 #>
     #region WithTable
-    public virtual IQuery<<#=tables#>, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
+    public virtual IQuery<<#=tables#>, TOther> WithTable<TOther>()
     {
-        base.WithTableInternal<TOther>(subQuery);
-        return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
-    }
-    public virtual IQuery<<#=tables#>, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
-    {
-        base.WithTableInternal<TOther>(subQuery);
+        this.Visitor.AddTable(typeof(TOther));
         return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
 
+    #region WithQuery
+    public virtual IQuery<<#=tables#>, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
+    {
+        base.WithQueryInternal(subQuery);
+        return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
+    }
+    public virtual IQuery<<#=tables#>, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    {
+        base.WithQueryInternal(subQueryExpr);
+        return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
+    }
+
+    #endregion
 <#      }#>
-    #region Join
+
+    #region InnerJoin
     public virtual IQuery<<#=tables#>> InnerJoin(Expression<Func<<#=tables#>, bool>> joinOn)
     {
         base.InnerJoinInternal(joinOn);
-        return this;
-    }
-    public virtual IQuery<<#=tables#>> LeftJoin(Expression<Func<<#=tables#>, bool>> joinOn)
-    {
-        base.LeftJoinInternal(joinOn);
-        return this;
-    }
-    public virtual IQuery<<#=tables#>> RightJoin(Expression<Func<<#=tables#>, bool>> joinOn)
-    {
-        base.RightJoinInternal(joinOn);
         return this;
     }
 <#
@@ -121,19 +120,32 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
         base.InnerJoinInternal(typeof(TOther), joinOn);
         return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<<#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
-    {
-        base.LeftJoinInternal(typeof(TOther), joinOn);
-        return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
-    }
-    public virtual IQuery<<#=tables#>, TOther> RightJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
-    {
-        base.RightJoinInternal(typeof(TOther), joinOn);
-        return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
-    }
     public virtual IQuery<<#=tables#>, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
         base.InnerJoinInternal(subQuery, joinOn);
+        return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
+    }
+    public virtual IQuery<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+    {
+        base.InnerJoinInternal(subQueryExpr, joinOn);
+        return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
+    }
+<#      }#>
+    #endregion
+
+    #region LeftJoin
+    public virtual IQuery<<#=tables#>> LeftJoin(Expression<Func<<#=tables#>, bool>> joinOn)
+    {
+        base.LeftJoinInternal(joinOn);
+        return this;
+    }
+<#
+        if(i < count)
+        {
+#>
+    public virtual IQuery<<#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+    {
+        base.LeftJoinInternal(typeof(TOther), joinOn);
         return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
     public virtual IQuery<<#=tables#>, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
@@ -141,24 +153,37 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
         base.LeftJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
+    public virtual IQuery<<#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+    {
+        base.LeftJoinInternal(subQueryExpr, joinOn);
+        return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
+    }
+<#      }#>
+    #endregion
+
+    #region RightJoin
+    public virtual IQuery<<#=tables#>> RightJoin(Expression<Func<<#=tables#>, bool>> joinOn)
+    {
+        base.RightJoinInternal(joinOn);
+        return this;
+    }
+<#
+        if(i < count)
+        {
+#>
+    public virtual IQuery<<#=tables#>, TOther> RightJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+    {
+        base.RightJoinInternal(typeof(TOther), joinOn);
+        return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
+    }
     public virtual IQuery<<#=tables#>, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
         base.RightJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<<#=tables#>, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+    public virtual IQuery<<#=tables#>, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
-        base.InnerJoinInternal(subQuery, joinOn);
-        return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
-    }
-    public virtual IQuery<<#=tables#>, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
-    {
-        base.LeftJoinInternal(subQuery, joinOn);
-        return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
-    }
-    public virtual IQuery<<#=tables#>, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
-    {
-        base.RightJoinInternal(subQuery, joinOn);
+        base.RightJoinInternal(subQueryExpr, joinOn);
         return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
 <#      }#>
@@ -167,9 +192,6 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
     #region Include
     public virtual IIncludableQuery<<#=tables#>, TMember> Include<TMember>(Expression<Func<<#=tables#>, TMember>> memberSelector)
     {
-        if (memberSelector == null)
-            throw new ArgumentNullException(nameof(memberSelector));
-
         var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
         return this.OrmProvider.NewIncludableQuery<<#=tables#>, TMember>(this.DbContext, this.Visitor, isIncludeMany);
     }
@@ -242,6 +264,24 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
     public virtual IQuery<<#=tables#>> OrderByDescending<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr)
     {
         base.OrderByDescendingInternal(condition, fieldsExpr);
+        return this;
+    }
+    #endregion
+
+    #region Skip/Take/Page
+    public virtual IQuery<<#=tables#>> Skip(int offset)
+    {
+        base.SkipInternal(offset);
+        return this;
+    }
+    public virtual IQuery<<#=tables#>> Take(int limit)
+    {
+        base.TakeInternal(limit);
+        return this;
+    }
+    public virtual IQuery<<#=tables#>> Page(int pageNumber, int pageSize)
+    {
+        base.PageInternal(pageNumber, pageSize);
         return this;
     }
     #endregion

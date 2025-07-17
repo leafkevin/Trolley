@@ -19,8 +19,9 @@ public class UnitTest5 : UnitTestBase
         var services = new ServiceCollection();
         services.AddSingleton(f =>
         {
+            var connectionString = "Host=localhost;Database=fengling;Username=postgres;Password=123456;SearchPath=public";
             var builder = new OrmDbFactoryBuilder()
-                .Register(OrmProviderType.PostgreSql, "fengling", "Host=localhost;Database=fengling;Username=postgres;Password=123456;SearchPath=public", true)
+                .Register(OrmProviderType.PostgreSql, "fengling", f => f.UseConnectionString(connectionString), true)
                 .Configure<ModelConfiguration>(OrmProviderType.PostgreSql)
                 .UseInterceptors(df =>
                 {
@@ -86,7 +87,7 @@ public class UnitTest5 : UnitTestBase
                 .Include(t => t.Details)
                 .Where(t => new[] { "1", "2", "3" }.Contains(t.Id))
                 .ToList()
-            .From(f => f.From<Order, OrderDetail>('a')
+            .FromQuery(f => f.From<Order, OrderDetail>('a')
                     .Where((a, b) => a.Id == b.OrderId && a.Id == "1")
                     .GroupBy((a, b) => new { a.BuyerId, OrderId = a.Id })
                     .Having((x, a, b) => x.CountDistinct(b.ProductId) > 0)
@@ -116,9 +117,8 @@ public class UnitTest5 : UnitTestBase
     public async Task MultipleQuery_UseMaster()
     {
         this.Initialize(2);
-        var repository = this.dbFactory.Create();
+        var repository = this.dbFactory.Create().UseMaster();
         using var reader = await repository.QueryMultipleAsync(f => f
-            .UseMaster()
             .GetById<User>(new { Id = 1 })
             .GetByIds<User>(new int[] { 1, 2, 3 })
             .Exists<Order>(f => f.BuyerId.IsNull())
@@ -132,7 +132,7 @@ public class UnitTest5 : UnitTestBase
                 .Include(f => f.Brand)
                 .Where(f => f.ProductNo.Contains("PN-00"))
                 .ToList()
-            .From(f => f.From<Order, OrderDetail>('a')
+            .FromQuery(f => f.From<Order, OrderDetail>('a')
                     .Where((a, b) => a.Id == b.OrderId && a.Id == "1")
                     .GroupBy((a, b) => new { a.BuyerId, OrderId = a.Id })
                     .Having((x, a, b) => x.CountDistinct(b.ProductId) > 0)

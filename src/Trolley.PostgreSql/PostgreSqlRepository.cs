@@ -42,11 +42,9 @@ public class PostgreSqlRepository : Repository, IPostgreSqlRepository
         => base.From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(tableAsStart) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>;
     #endregion
 
-    #region From SubQuery
-    public new IPostgreSqlQuery<T> From<T>(IQuery<T> subQuery)
-        => base.From<T>(subQuery) as IPostgreSqlQuery<T>;
-    public new IPostgreSqlQuery<T> From<T>(Func<IFromQuery, IQuery<T>> subQuery)
-        => base.From<T>(subQuery) as IPostgreSqlQuery<T>;
+    #region From SubQuery  
+    public new IPostgreSqlQuery<T> FromQuery<T>(Func<IFromQuery, IQuery<T>> subQuery)
+        => base.FromQuery(subQuery) as IPostgreSqlQuery<T>;
     #endregion
 
     #region Create

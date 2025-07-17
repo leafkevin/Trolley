@@ -5,6 +5,12 @@ namespace Trolley;
 
 public class QueryInternal
 {
+    #region Fields
+    protected int? offset;
+    protected int pageNumber;
+    protected int pageSize;
+    #endregion
+
     #region Properties
     public DbContext DbContext { get; set; }
     public IQueryVisitor Visitor { get; set; }
@@ -19,12 +25,12 @@ public class QueryInternal
 
         this.Visitor.Union(" UNION", typeof(T), subQuery);
     }
-    protected void UnionInternal<T>(Func<IFromQuery, IQuery<T>> subQuery)
+    protected void UnionInternal<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
+        if (subQueryExpr == null)
+            throw new ArgumentNullException(nameof(subQueryExpr));
 
-        this.Visitor.Union(" UNION", typeof(T), this.DbContext, subQuery);
+        this.Visitor.Union(" UNION", typeof(T), subQueryExpr);
     }
     protected void UnionAllInternal<T>(IQuery<T> subQuery)
     {
@@ -33,49 +39,49 @@ public class QueryInternal
 
         this.Visitor.Union(" UNION ALL", typeof(T), subQuery);
     }
-    protected void UnionAllInternal<T>(Func<IFromQuery, IQuery<T>> subQuery)
+    protected void UnionAllInternal<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
+        if (subQueryExpr == null)
+            throw new ArgumentNullException(nameof(subQueryExpr));
 
-        this.Visitor.Union(" UNION ALL", typeof(T), this.DbContext, subQuery);
+        this.Visitor.Union(" UNION ALL", typeof(T), subQueryExpr);
     }
-    protected void UnionRecursiveInternal<T>(Func<IFromQuery, IQuery<T>, IQuery<T>> subQuery)
+    protected void UnionRecursiveInternal<T>(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> selfSubQueryExpr)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
+        if (selfSubQueryExpr == null)
+            throw new ArgumentNullException(nameof(selfSubQueryExpr));
 
         var cteQuery = new CteQuery<T>(this.DbContext, this.Visitor);
-        this.Visitor.UnionRecursive(" UNION", this.DbContext, cteQuery, subQuery);
+        this.Visitor.UnionRecursive(" UNION", cteQuery, selfSubQueryExpr);
     }
-    protected void UnionAllRecursiveInternal<T>(Func<IFromQuery, IQuery<T>, IQuery<T>> subQuery)
+    protected void UnionAllRecursiveInternal<T>(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> selfSubQueryExpr)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
+        if (selfSubQueryExpr == null)
+            throw new ArgumentNullException(nameof(selfSubQueryExpr));
 
         var cteQuery = new CteQuery<T>(this.DbContext, this.Visitor);
-        this.Visitor.UnionRecursive(" UNION ALL", this.DbContext, cteQuery, subQuery);
+        this.Visitor.UnionRecursive(" UNION ALL", cteQuery, selfSubQueryExpr);
     }
     #endregion
 
-    #region WithTable
-    protected void WithTableInternal<TOther>(IQuery<TOther> subQuery)
+    #region WithQuery
+    protected void WithQueryInternal<TOther>(IQuery<TOther> subQuery)
     {
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        this.Visitor.From(typeof(TOther), subQuery);
+        this.Visitor.UseQuery(typeof(TOther), subQuery);
     }
-    protected void WithTableInternal<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery)
+    protected void WithQueryInternal<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
+        if (subQueryExpr == null)
+            throw new ArgumentNullException(nameof(subQueryExpr));
 
-        this.Visitor.From(typeof(TOther), this.DbContext, subQuery);
+        this.Visitor.UseNewQuery(typeof(TOther), subQueryExpr);
     }
     #endregion
 
-    #region Join
+    #region InnerJoin
     protected void InnerJoinInternal(Expression joinOn)
     {
         if (joinOn == null)
@@ -83,40 +89,12 @@ public class QueryInternal
 
         this.Visitor.Join("INNER JOIN", joinOn);
     }
-    protected void LeftJoinInternal(Expression joinOn)
-    {
-        if (joinOn == null)
-            throw new ArgumentNullException(nameof(joinOn));
-
-        this.Visitor.Join("LEFT JOIN", joinOn);
-    }
-    protected void RightJoinInternal(Expression joinOn)
-    {
-        if (joinOn == null)
-            throw new ArgumentNullException(nameof(joinOn));
-
-        this.Visitor.Join("RIGHT JOIN", joinOn);
-    }
     protected void InnerJoinInternal(Type newEntityType, Expression joinOn)
     {
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("INNER JOIN", newEntityType, joinOn);
-    }
-    protected void LeftJoinInternal(Type newEntityType, Expression joinOn)
-    {
-        if (joinOn == null)
-            throw new ArgumentNullException(nameof(joinOn));
-
-        this.Visitor.Join("LEFT JOIN", newEntityType, joinOn);
-    }
-    protected void RightJoinInternal(Type newEntityType, Expression joinOn)
-    {
-        if (joinOn == null)
-            throw new ArgumentNullException(nameof(joinOn));
-
-        this.Visitor.Join("RIGHT JOIN", newEntityType, joinOn);
     }
     protected void InnerJoinInternal<TOther>(IQuery<TOther> subQuery, Expression joinOn)
     {
@@ -127,6 +105,32 @@ public class QueryInternal
 
         this.Visitor.Join("INNER JOIN", typeof(TOther), subQuery, joinOn);
     }
+    protected void InnerJoinInternal<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression joinOn)
+    {
+        if (subQueryExpr == null)
+            throw new ArgumentNullException(nameof(subQueryExpr));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.Visitor.Join("INNER JOIN", typeof(TOther), subQueryExpr, joinOn);
+    }
+    #endregion
+
+    #region LeftJoin
+    protected void LeftJoinInternal(Expression joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.Visitor.Join("LEFT JOIN", joinOn);
+    }
+    protected void LeftJoinInternal(Type newEntityType, Expression joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.Visitor.Join("LEFT JOIN", newEntityType, joinOn);
+    }
     protected void LeftJoinInternal<TOther>(IQuery<TOther> subQuery, Expression joinOn)
     {
         if (subQuery == null)
@@ -135,6 +139,32 @@ public class QueryInternal
             throw new ArgumentNullException(nameof(joinOn));
 
         this.Visitor.Join("LEFT JOIN", typeof(TOther), subQuery, joinOn);
+    }
+    protected void LeftJoinInternal<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression joinOn)
+    {
+        if (subQueryExpr == null)
+            throw new ArgumentNullException(nameof(subQueryExpr));
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.Visitor.Join("LEFT JOIN", typeof(TOther), subQueryExpr, joinOn);
+    }
+    #endregion
+
+    #region RightJoin
+    protected void RightJoinInternal(Expression joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.Visitor.Join("RIGHT JOIN", joinOn);
+    }
+    protected void RightJoinInternal(Type newEntityType, Expression joinOn)
+    {
+        if (joinOn == null)
+            throw new ArgumentNullException(nameof(joinOn));
+
+        this.Visitor.Join("RIGHT JOIN", newEntityType, joinOn);
     }
     protected void RightJoinInternal<TOther>(IQuery<TOther> subQuery, Expression joinOn)
     {
@@ -145,32 +175,14 @@ public class QueryInternal
 
         this.Visitor.Join("RIGHT JOIN", typeof(TOther), subQuery, joinOn);
     }
-    protected void InnerJoinInternal<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression joinOn)
+    protected void RightJoinInternal<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression joinOn)
     {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
+        if (subQueryExpr == null)
+            throw new ArgumentNullException(nameof(subQueryExpr));
         if (joinOn == null)
             throw new ArgumentNullException(nameof(joinOn));
 
-        this.Visitor.Join("INNER JOIN", typeof(TOther), this.DbContext, subQuery, joinOn);
-    }
-    protected void LeftJoinInternal<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression joinOn)
-    {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
-        if (joinOn == null)
-            throw new ArgumentNullException(nameof(joinOn));
-
-        this.Visitor.Join("LEFT JOIN", typeof(TOther), this.DbContext, subQuery, joinOn);
-    }
-    protected void RightJoinInternal<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression joinOn)
-    {
-        if (subQuery == null)
-            throw new ArgumentNullException(nameof(subQuery));
-        if (joinOn == null)
-            throw new ArgumentNullException(nameof(joinOn));
-
-        this.Visitor.Join("RIGHT JOIN", typeof(TOther), this.DbContext, subQuery, joinOn);
+        this.Visitor.Join("RIGHT JOIN", typeof(TOther), subQueryExpr, joinOn);
     }
     #endregion
 
@@ -284,6 +296,35 @@ public class QueryInternal
         if (predicate == null)
             throw new ArgumentNullException(nameof(predicate));
         this.Visitor.Having(predicate);
+    }
+    #endregion
+
+    #region Skip/Take/Page
+    protected void SkipInternal(int offset)
+    {
+        this.offset = offset;
+        if (this.pageSize > 0)
+        {
+            this.pageNumber = (int)Math.Ceiling((double)offset / this.pageSize) + 1;
+            this.Visitor.Page(this.pageNumber, this.pageSize);
+        }
+        else this.Visitor.Skip(offset);
+    }
+    protected void TakeInternal(int limit)
+    {
+        this.pageSize = limit;
+        if (this.offset.HasValue)
+        {
+            this.pageNumber = (int)Math.Ceiling((double)offset / this.pageSize) + 1;
+            this.Visitor.Page(this.pageNumber, this.pageSize);
+        }
+        else this.Visitor.Take(limit);
+    }
+    protected void PageInternal(int pageNumber, int pageSize)
+    {
+        this.pageNumber = pageNumber;
+        this.pageSize = pageSize;
+        this.Visitor.Page(pageNumber, pageSize);
     }
     #endregion
 

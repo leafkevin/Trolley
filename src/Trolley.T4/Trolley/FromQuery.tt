@@ -26,21 +26,15 @@ public class FromQuery : IFromQuery
         this.visitor = visitor;
         this.ormProvider = dbContext.OrmProvider;
     }
-    public FromQuery(IOrmProvider ormProvider, IEntityMapProvider mapProvider, IQueryVisitor visitor, bool isParameterized)
-    {
-        this.ormProvider = ormProvider;
-        this.dbContext = new DbContext
-        {
-            OrmProvider = ormProvider,
-            MapProvider = mapProvider,
-            IsParameterized = isParameterized
-        };
-        this.visitor = visitor;
-    }
     #endregion
 
     #region From
-    public IQuery<T> From<T>(char tableAsStart = 'a')
+    public IQuery<T> From<T>()
+    {
+        this.visitor.AddTable(typeof(T));
+        return this.ormProvider.NewQuery<T>(this.dbContext, this.visitor);
+    }
+    public IQuery<T> From<T>(char tableAsStart)
     {
         this.visitor.From(tableAsStart, typeof(T));
         return this.ormProvider.NewQuery<T>(this.dbContext, this.visitor);
@@ -54,7 +48,12 @@ public class FromQuery : IFromQuery
         tables += $", T{i}";
         typeOfTables += $", typeof(T{i})";
 #>
-    public IQuery<<#=tables#>> From<<#=tables#>>(char tableAsStart = 'a')
+    public IQuery<<#=tables#>> From<<#=tables#>>()
+    {
+        this.visitor.AddTable(<#=typeOfTables#>);
+        return this.ormProvider.NewQuery<<#=tables#>>(this.dbContext, this.visitor);
+    }
+    public IQuery<<#=tables#>> From<<#=tables#>>(char tableAsStart)
     {
         this.visitor.From(tableAsStart, <#=typeOfTables#>);
         return this.ormProvider.NewQuery<<#=tables#>>(this.dbContext, this.visitor);
@@ -62,10 +61,10 @@ public class FromQuery : IFromQuery
 <#  }#>
     #endregion
 
-    #region From SubQuery
-    public virtual IQuery<T> From<T>(IQuery<T> subQuery)
+    #region UseQuery
+    public virtual IQuery<T> UseQuery<T>(IQuery<T> subQuery)
     {
-        this.visitor.From(typeof(T), subQuery);
+        this.visitor.UseQuery(typeof(T), subQuery);
         return this.ormProvider.NewQuery<T>(this.dbContext, this.visitor);
     }
     #endregion
@@ -74,7 +73,7 @@ public class FromQuery : IFromQuery
     public string ToSql(out List<IDbDataParameter> dbParameters)
     {
         dbParameters = this.visitor.DbParameters.Cast<IDbDataParameter>().ToList();
-        return this.visitor.BuildSql(out _);
+        return this.visitor.BuildSql(true, out _);
     }
     #endregion
 }

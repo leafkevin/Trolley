@@ -18,16 +18,11 @@ public class UnitTest7 : UnitTestBase
         services.AddSingleton(f =>
         {
             var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
+            var connectionString1 = "Server=localhost;Database=fengling1;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
+            var connectionString2 = "Server=localhost;Database=fengling2;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
             var builder = new OrmDbFactoryBuilder()
-                .Register(OrmProviderType.MySql, "fengling", f =>
-                {
-                    //两个读库
-                    var connectionString1 = "Server=localhost;Database=fengling1;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
-                    var connectionString2 = "Server=localhost;Database=fengling2;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
-                    f.UseConnectionString(connectionString)
-                        .UseSlave(connectionString1, connectionString2)
-                        .AsDefaultDatabase();
-                })
+                .Register(OrmProviderType.MySql, "fengling", f => f.UseConnectionString(connectionString)
+                    .UseSlave(connectionString1, connectionString2).AsDefaultDatabase())
                 .Configure<ModelConfiguration>(OrmProviderType.MySql)
                 .UseInterceptors(df =>
                 {
@@ -76,7 +71,7 @@ public class UnitTest7 : UnitTestBase
     {
         var repository = this.dbFactory.Create();
         var sql = repository
-            .From(f => f.From<OrderDetail>()
+            .FromQuery(f => f.From<OrderDetail>()
                 .UseTableSchema("myschema")
                 .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
                 .UseTableSchema("myschema")
@@ -95,7 +90,7 @@ public class UnitTest7 : UnitTestBase
         Assert.Equal("SELECT a.`OrderId`,a.`BuyerId`,b.`Id`,b.`TenantId`,b.`Name`,b.`Gender`,b.`Age`,b.`CompanyId`,b.`GuidField`,b.`SomeTimes`,b.`SourceType`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy`,a.`ProductCount` FROM (SELECT b.`Id` AS `OrderId`,b.`BuyerId`,COUNT(DISTINCT a.`ProductId`) AS `ProductCount` FROM `myschema`.`sys_order_detail` a INNER JOIN `myschema`.`sys_order` b ON a.`OrderId`=b.`Id` GROUP BY b.`Id`,b.`BuyerId`) a INNER JOIN `myschema`.`sys_user` b ON a.`BuyerId`=b.`Id` WHERE a.`ProductCount`>1", sql);
 
         var result = repository
-            .From(f => f.From<OrderDetail>()
+            .FromQuery(f => f.From<OrderDetail>()
                 .UseTableSchema("fengling")
                 .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
                 .UseTableSchema("fengling")
@@ -143,7 +138,7 @@ public class UnitTest7 : UnitTestBase
             .AsCteTable("myCteTable2");
 
         var sql = repository
-            .From(myCteTable1)
+            .FromQuery(myCteTable1)
             .InnerJoin(myCteTable2, (a, b) => a.Id == b.Id)
             .Select((a, b) => new { b.Id, a.Name, b.ParentId, b.Url })
             .ToSql(out _);
@@ -160,7 +155,7 @@ SELECT a.`Id`,a.`ParentId`,b.`Url` FROM `sys_menu` a INNER JOIN `sys_page` b ON 
 SELECT b.`Id`,a.`Name`,b.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myCteTable2` b ON a.`Id`=b.`Id`", sql);
 
         var result1 = repository
-            .From(myCteTable1)
+            .FromQuery(myCteTable1)
             .InnerJoin(myCteTable2, (a, b) => a.Id == b.Id)
             .Select((a, b) => new { b.Id, a.Name, b.ParentId, b.Url })
             .ToList();
@@ -178,8 +173,8 @@ SELECT b.`Id`,a.`Name`,b.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
 
         int pageId = 1;
         sql = repository
-            .From(menuList)
-            .WithTable(x => x.From<Page>()
+            .FromQuery(f => f.UseQuery(menuList))
+            .WithQuery(x => x.From<Page>()
                     .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
                     .Where((a, b) => a.Id == pageId)
                     .Select((x, y) => new { y.Id, x.Url })
@@ -198,8 +193,8 @@ SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON
 SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `MenuList` a INNER JOIN (SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `sys_menu` b ON a.`Id`=b.`PageId` WHERE a.`Id`=@p1 UNION ALL
 SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `MenuList` b ON a.`Id`=b.`Id` WHERE a.`Id`>@p2) b ON a.`Id`=b.`Id`", sql);
         var result2 = repository
-            .From(menuList)
-            .WithTable(x => x.From<Page>()
+            .FromQuery(f => f.UseQuery(menuList))
+            .WithQuery(x => x.From<Page>()
                     .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
                     .Where((a, b) => a.Id == pageId)
                     .Select((x, y) => new { y.Id, x.Url })
@@ -214,8 +209,8 @@ SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `MenuList` b ON a.`Id`=b.`Id`
         Assert.True(result2.Count > 0);
 
         sql = repository
-            .From(menuList)
-            .WithTable(x => x.From<Page>()
+            .FromQuery(f => f.UseQuery(menuList))
+            .WithQuery(x => x.From<Page>()
                     .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
                     .Where((a, b) => a.Id == pageId)
                     .Select((x, y) => new { y.Id, x.Url })
@@ -240,8 +235,8 @@ SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `MenuList` b ON a.`Id`=b.`Id`
 SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `MenuList` a INNER JOIN `MenuPageList` b ON a.`Id`=b.`Id`", sql);
 
         var result3 = await repository
-            .From(menuList)
-            .WithTable(x => x.From<Page>()
+            .FromQuery(f => f.UseQuery(menuList))
+            .WithQuery(x => x.From<Page>()
                     .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
                     .Where((a, b) => a.Id == pageId)
                     .Select((x, y) => new { y.Id, x.Url })

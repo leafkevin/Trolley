@@ -949,14 +949,26 @@ public class UnitTest1 : UnitTestBase
             })
             .AsCteTable("orders");
         var sql = repository.Create<Order>()
-            .From(ordersQuery)
+            .FromQuery(ordersQuery)
             .ToSql(out var parameters);
         Assert.Equal("INSERT INTO `sys_order` (`Id`,`TenantId`,`OrderNo`,`BuyerId`,`SellerId`,`BuyerSource`,`ProductCount`,`TotalAmount`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) WITH \r\n`orders`(`Id`,`TenantId`,`OrderNo`,`BuyerId`,`SellerId`,`BuyerSource`,`ProductCount`,`TotalAmount`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) AS \r\n(\r\nSELECT a.`OrderId`,'1',CONCAT('ON-',a.`OrderId`),1,1,'Taobao',2,SUM(a.`Amount`),1,NOW(),1,NOW(),1 FROM `sys_order_detail` a GROUP BY a.`OrderId`\r\n)\r\nSELECT b.`Id`,b.`TenantId`,b.`OrderNo`,b.`BuyerId`,b.`SellerId`,b.`BuyerSource`,b.`ProductCount`,b.`TotalAmount`,b.`IsEnabled`,b.`CreatedAt`,b.`CreatedBy`,b.`UpdatedAt`,b.`UpdatedBy` FROM `orders` b", sql);
         var orderIds = ordersQuery.Select(f => f.Id).ToList();
         await repository.BeginTransactionAsync();
         repository.Delete<Order>(orderIds);
         var result = await repository.Create<Order>()
-            .From(ordersQuery)
+            .FromQuery(ordersQuery)
+            .ExecuteAsync();
+        await repository.CommitAsync();
+        Assert.Equal(orderIds.Count, result);
+
+        sql = repository.Create<Order>()
+            .FromQuery(f=>f.UseQuery(ordersQuery))
+            .ToSql(out parameters);
+        Assert.Equal("INSERT INTO `sys_order` (`Id`,`TenantId`,`OrderNo`,`BuyerId`,`SellerId`,`BuyerSource`,`ProductCount`,`TotalAmount`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) SELECT b.`OrderId`,'1',CONCAT('ON-',b.`OrderId`),1,1,'Taobao',2,SUM(b.`Amount`),1,NOW(),1,NOW(),1 FROM `sys_order_detail` b GROUP BY b.`OrderId`", sql);
+        await repository.BeginTransactionAsync();
+        repository.Delete<Order>(orderIds);
+        result = await repository.Create<Order>()
+            .FromQuery(f => f.UseQuery(ordersQuery))
             .ExecuteAsync();
         await repository.CommitAsync();
         Assert.Equal(orderIds.Count, result);
@@ -985,7 +997,24 @@ public class UnitTest1 : UnitTestBase
         await repository.BeginTransactionAsync();
         repository.Delete<Order>(orderIds);
         result = await repository.Create<Order>()
-            .From(ordersQuery)
+            .From<OrderDetail>()
+            .GroupBy(f => f.OrderId)
+            .Select((x, f) => new
+            {
+                Id = f.OrderId,
+                TenantId = "1",
+                OrderNo = $"ON-{f.OrderId}",
+                BuyerId = 1,
+                SellerId = 1,
+                BuyerSource = UserSourceType.Taobao.ToString(),
+                ProductCount = 2,
+                TotalAmount = x.Sum(f.Amount),
+                IsEnabled = true,
+                CreatedAt = DateTime.Now,
+                CreatedBy = 1,
+                UpdatedAt = DateTime.Now,
+                UpdatedBy = 1
+            })
             .ExecuteAsync();
         await repository.CommitAsync();
         Assert.Equal(orderIds.Count, result);

@@ -422,6 +422,7 @@ public static class Extensions
     }
     public static void CopyTo(this IQuery subQuery, SqlVisitor visitor)
     {
+        //TODO:状态类属性也需要拷贝
         if (subQuery == null || visitor.Equals(subQuery.Visitor)) return;
         if (!visitor.RefQueries.Contains(subQuery))
             visitor.RefQueries.Add(subQuery);

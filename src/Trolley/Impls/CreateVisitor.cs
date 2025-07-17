@@ -540,6 +540,12 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
         }
         throw new InvalidOperationException($"缺少分表规则依赖的成员{memberName}，无法确定分表");
     }
+    public override IQueryVisitor CreateQueryVisitor(char? tableAsStart = null)
+    {
+        var queryVisitor = base.CreateQueryVisitor(tableAsStart);
+        queryVisitor.Tables = this.Tables;
+        return queryVisitor;
+    }
     private bool TryGetMemberValue(Type insertObjType, object insertObj, string memberName, out object memberValue)
     {
         if (insertObj is IDictionary<string, object> dict)

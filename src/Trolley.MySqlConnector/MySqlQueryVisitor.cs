@@ -16,7 +16,7 @@ public class MySqlQueryVisitor : QueryVisitor
     public MySqlQueryVisitor(DbContext dbContext, char tableAsStart, IDataParameterCollection dbParameters = null)
         : base(dbContext, tableAsStart, dbParameters) { }
 
-    public override string BuildCommandSql(out IDataParameterCollection dbParameters)
+    public override string BuildCommandSql(bool isBuildCteSql, out IDataParameterCollection dbParameters)
     {
         var builder = new StringBuilder();
         var entityMapper = this.Tables[0].Mapper;
@@ -41,7 +41,7 @@ public class MySqlQueryVisitor : QueryVisitor
         }
         builder.Append(") ");
         //有CTE表
-        if (this.IsUseCteTable && this.RefQueries != null && this.RefQueries.Count > 0)
+        if (isBuildCteSql && this.RefQueries != null && this.RefQueries.Count > 0)
         {
             var fieldsSql = builder.ToString();
             builder.Clear();

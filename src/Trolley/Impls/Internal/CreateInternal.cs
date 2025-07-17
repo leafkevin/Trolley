@@ -60,7 +60,6 @@ public class CreateInternal
     protected virtual IQueryVisitor FromInternal(params Type[] entitiyTypes)
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
-        queryVisitor.AddTable(this.Visitor.Tables[0]);
         queryVisitor.From('a', entitiyTypes);
         queryVisitor.IsFromCommand = true;
         return queryVisitor;

@@ -97,11 +97,17 @@ public class MultipleQuery : IMultipleQuery
     }
     #endregion
 
-    #region From SubQuery
-    public IMultiQuery<T> From<T>(Func<IFromQuery, IQuery<T>> subQuery, char tableAsStart = 'a')
+    #region FromQuery
+    public virtual IMultiQuery<T> FromQuery<T>(IQuery<T> subQuery)
     {
-        var visitor = this.CreateQueryVisitor(tableAsStart);
-        visitor.From(typeof(T), this.DbContext, subQuery);
+        var visitor = this.CreateQueryVisitor();
+        visitor.UseQuery(typeof(T), subQuery);
+        return this.OrmProvider.NewMultiQuery<T>(this, visitor);
+    }
+    public virtual IMultiQuery<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
+    {
+        var visitor = this.CreateQueryVisitor();
+        visitor.UseNewQuery(typeof(T), subQueryExpr);
         return this.OrmProvider.NewMultiQuery<T>(this, visitor);
     }
     #endregion
@@ -292,6 +298,6 @@ public class MultipleQuery : IMultipleQuery
     }
     #endregion
 
-    private IQueryVisitor CreateQueryVisitor(char tableAsStart)
+    private IQueryVisitor CreateQueryVisitor(char tableAsStart = 'a')
         => this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart, this.Command.Parameters);
 }

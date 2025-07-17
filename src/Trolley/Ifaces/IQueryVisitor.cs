@@ -8,18 +8,24 @@ using System.Threading.Tasks;
 
 namespace Trolley;
 
-public interface IQueryVisitor : IDisposable
+public interface IQueryVisitor : ICloneable, IDisposable
 {
     string DbKey { get; }
     bool IsMultiple { get; set; }
     int CommandIndex { get; set; }
     string WhereSql { get; }
     List<TableSegment> Tables { get; set; }
+    List<TableSegment> IncludeTables { get; set; }
     Dictionary<string, TableSegment> TableAliases { get; }
     /// <summary>
     /// 在解析子查询中，会用到父查询中的所有表，父查询中所有表别名引用
     /// </summary>
     Dictionary<string, TableSegment> RefTableAliases { get; set; }
+    /// <summary>
+    /// 在解析f => f.From/FromQuery时，使用的Visitor对象，与当前Visitor对象可能不同，当引用了现有子查询或是CTE表时，与当前Visitor对象不同
+    /// 如果是从 f => f.From/FromQuery方法开始时，SelfVisitor就是当前Visitor对象
+    /// </summary>
+    IQueryVisitor SelfVisitor { get; set; }
     /// <summary>
     /// 在SQL查询中，引用到子查询或是CTE表对象，防止重复添加参数，同时也为了解析CTE表引用SQL
     /// </summary>
@@ -31,7 +37,8 @@ public interface IQueryVisitor : IDisposable
     /// IncludeMany表，第二次执行时的参数列表，通常是Filter中使用的参数
     /// </summary>
     IDataParameterCollection NextDbParameters { get; set; }
-    List<SqlFieldSegment> ReaderFields { get; }
+    List<SqlFieldSegment> ReaderFields { get; set; }
+
     bool IsSecondUnion { get; set; }
     bool IsUseCteTable { get; set; }
     char TableAsStart { get; set; }
@@ -49,8 +56,8 @@ public interface IQueryVisitor : IDisposable
     bool IsNeedPaging { get; set; }
     bool IsNeedFullFieldsPagingCount { get; set; }
 
-    string BuildSql(out List<SqlFieldSegment> readerFields);
-    string BuildCommandSql(out IDataParameterCollection dbParameters);
+    string BuildSql(bool isBuildCteSql, out List<SqlFieldSegment> readerFields);
+    string BuildCommandSql(bool isBuildCteSql, out IDataParameterCollection dbParameters);
     string BuildShardingSql(string formatSql);
     string BuildCteTableSql(string tableName, out List<SqlFieldSegment> readerFields, out bool isRecursive);
 
@@ -66,17 +73,20 @@ public interface IQueryVisitor : IDisposable
     void UseTableSchema(bool isIncludeMany, string tableSchema);
 
     void From(char tableAsStart = 'a', params Type[] entityTypes);
-    void From(Type targetType, IQuery subQueryObj);
-    void From(Type targetType, DbContext dbContext, Delegate subQueryGetter);
+    void AddTable(params Type[] entityTypes);
+    TableSegment AddTable(TableSegment tableSegment);
+    TableSegment AddJoinTable(Type entityType, string joinType = null, TableType tableType = TableType.Entity, string body = null, List<SqlFieldSegment> readerFields = null);
+    TableSegment UseQuery(Type targetType, IQuery subQuery, bool isUseQueryFields = false);
+    TableSegment UseNewQuery(Type targetType, Expression subQueryExpr, bool isUseQueryFields = false);
 
     void Union(string union, Type targetType, IQuery subQuery);
-    void Union(string union, Type targetType, DbContext dbContext, Delegate subQueryGetter);
-    void UnionRecursive(string union, DbContext dbContext, ICteQuery subQueryObj, Delegate selfSubQueryGetter);
+    void Union(string union, Type targetType, Expression subQueryExpr);
+    void UnionRecursive(string union, ICteQuery subQueryObj, Expression selfSubQueryExpr);
 
     void Join(string joinType, Expression joinOn);
     void Join(string joinType, Type newEntityType, Expression joinOn);
     void Join(string joinType, Type newEntityType, IQuery subQuery, Expression joinOn);
-    void Join(string joinType, Type newEntityType, DbContext dbContext, Delegate subQueryGetter, Expression joinOn);
+    void Join(string joinType, Type newEntityType, Expression subQueryExpr, Expression joinOn);
 
     bool Include(Expression memberSelector, Expression filter = null);
     bool ThenInclude(Expression memberSelector, Expression filter = null);
@@ -102,8 +112,10 @@ public interface IQueryVisitor : IDisposable
     void Take(int limit);
 
     void AddSelectElement(Expression elementExpr, MemberInfo memberInfo, List<SqlFieldSegment> readerFields);
-    TableSegment AddTable(TableSegment tableSegment);
-    TableSegment AddTable(Type entityType, string joinType = "", TableType tableType = TableType.Entity, string body = null, List<SqlFieldSegment> readerFields = null);
+    //void CopyFromRefQueryVisitor(IQueryVisitor visitor);
+    bool CopyFromNewQueryVisitor(IQueryVisitor visitor);
+
     TableSegment InitTableAlias(LambdaExpression lambdaExpr);
     void Clear(bool isClearReaderFields = false);
+    void CloneTo(IQueryVisitor visitor);
 }

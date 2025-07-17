@@ -28,23 +28,11 @@ public class AllUnitTest : UnitTestBase
             var connectionString1 = "Host=localhost;Database=fengling1;Username=postgres;Password=123456;SearchPath=public";
             var connectionString2 = "Host=localhost;Database=fengling2;Username=postgres;Password=123456;SearchPath=public";
             var builder = new OrmDbFactoryBuilder()
-                .Register(OrmProviderType.PostgreSql, "fengling", connectionString, true)
-                .Register(OrmProviderType.PostgreSql, "fengling1", connectionString1)
-                .Register(OrmProviderType.PostgreSql, "fengling2", connectionString2)
+                 .Register(OrmProviderType.PostgreSql, "fengling", f => f.UseMaster(connectionString)
+                    .UseSlave(connectionString1, connectionString2), true)
+                .Register(OrmProviderType.PostgreSql, "fengling1", f => f.UseConnectionString(connectionString1))
+                .Register(OrmProviderType.PostgreSql, "fengling2", f => f.UseConnectionString(connectionString2))
                 .Configure<ModelConfiguration>(OrmProviderType.PostgreSql)
-                .UseDatabaseSharding(() =>
-                {
-                    //可以硬编码分库，也可以使用redis，映射表 ...，其他方式等
-                    var scopeFactory = f.GetRequiredService<IServiceScopeFactory>();
-                    var serviceScope = scopeFactory.CreateScope();
-                    var passport = serviceScope.ServiceProvider.GetService<IPassport>();
-                    return passport.TenantId switch
-                    {
-                        "200" => "fengling1",
-                        "300" => "fengling2",
-                        _ => "fengling"
-                    };
-                })
                 .UseTableSharding<TableShardingConfiguration>(OrmProviderType.PostgreSql)
                 .UseInterceptors(df =>
                 {
@@ -3549,7 +3537,7 @@ SELECT b.""MenuId"",a.""Name"",b.""ParentId"",a.""PageId"",b.""Url"" FROM ""sys_
         sql = repository.From<Menu>()
             .InnerJoin<Page>((a, b) => a.PageId == b.Id && b.Id > pageId)
             .Select((a, b) => new { MenuId = a.Id, a.ParentId, b.Url })
-            .Union(f => f.From(menuPageList)
+            .Union(f => f.UseQuery(menuPageList)
                 .Where(f => f.ParentId < parentId)
                 .Select())
             .ToSql(out dbParameters);
@@ -3570,7 +3558,7 @@ SELECT a.""MenuId"",a.""ParentId"",a.""Url"" FROM ""menuPageList"" a WHERE a.""P
         var result1 = repository.From<Menu>()
             .InnerJoin<Page>((a, b) => a.PageId == b.Id && b.Id > pageId)
             .Select((a, b) => new { MenuId = a.Id, a.ParentId, b.Url })
-            .Union(f => f.From(menuPageList)
+            .Union(f => f.UseQuery(menuPageList)
                 .Where(f => f.ParentId < parentId)
                 .Select())
             .ToList();
@@ -7440,7 +7428,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
                 .Include(f => f.Brand)
                 .Where(f => f.ProductNo.Contains("PN-00"))
                 .ToList()
-            .From(f => f.From<Order, OrderDetail>('a')
+            .FromQuery(f => f.From<Order, OrderDetail>('a')
                     .Where((a, b) => a.Id == b.OrderId && a.Id == "1")
                     .GroupBy((a, b) => new { a.BuyerId, OrderId = a.Id })
                     .Having((x, a, b) => x.CountDistinct(b.ProductId) > 0)
@@ -7465,9 +7453,8 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
     public async Task MultipleQuery_UseMaster()
     {
         this.Initialize(2);
-        var repository = this.dbFactory.Create();
+        var repository = this.dbFactory.Create().UseMaster();
         using var reader = await repository.QueryMultipleAsync(f => f
-            .UseMaster()
             .GetById<User>(new { Id = 1 })
             .Exists<Order>(f => f.BuyerId.IsNull())
             .From<Order>()
@@ -7480,7 +7467,7 @@ SELECT a.""Id"",a.""Name"",a.""ParentId"",b.""Url"" FROM ""myCteTable1"" a INNER
                 .Include(f => f.Brand)
                 .Where(f => f.ProductNo.Contains("PN-00"))
                 .ToList()
-            .From(f => f.From<Order, OrderDetail>('a')
+            .FromQuery(f => f.From<Order, OrderDetail>('a')
                     .Where((a, b) => a.Id == b.OrderId && a.Id == "1")
                     .GroupBy((a, b) => new { a.BuyerId, OrderId = a.Id })
                     .Having((x, a, b) => x.CountDistinct(b.ProductId) > 0)

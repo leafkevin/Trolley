@@ -230,14 +230,14 @@ public interface IRepository
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(char tableAsStart = 'a');
     #endregion
 
-    #region From SubQuery
+    #region FromQuery
     /// <summary>
     /// 从SQL子查询中查询数据，用法：
     /// <code>
     /// var subQuery = repository.From&lt;Page, Menu&gt;('o')
     ///     .Where((a, b) =&gt; a.Id == b.PageId)
     ///     .Select((x, y) =&gt; new { y.Id, y.ParentId, x.Url });
-    /// repository.From(subQuery) ...
+    /// repository.FromQuery(subQuery) ...
     /// SQL:
     /// ... FROM (SELECT p.`Id`,p.`ParentId`,o.`Url` FROM `sys_page` o,`sys_menu` p WHERE o.`Id`=p.`PageId`) ...
     /// </code>
@@ -245,23 +245,20 @@ public interface IRepository
     /// <typeparam name="T">表T实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> From<T>(IQuery<T> subQuery);
+    IQuery<T> FromQuery<T>(IQuery<T> subQuery);
     /// <summary>
     /// 从SQL子查询中查询数据，用法：
     /// <code>
-    /// repository
-    ///     .From(f =&gt; f.From&lt;Page, Menu&gt;('o')
-    ///         .Where((a, b) =&gt; a.Id == b.PageId)
-    ///         .Select((x, y) =&gt; new { y.Id, y.ParentId, x.Url }))
-    ///     ...
-    /// SQL:
-    /// ... FROM (SELECT p.`Id`,p.`ParentId`,o.`Url` FROM `sys_page` o,`sys_menu` p WHERE o.`Id`=p.`PageId`) ...
+    /// repository.FromQuery(f =&gt; f.From&lt;Page, Menu&gt;('o').Where(...)...)
+    /// var subQuery = repository.From&lt;Page, Menu&gt;('o').Where(...)...
+    /// repository.FromQuery(f =&gt; f.UseQuery(subQuery)) ...    
+    /// SQL: ... FROM (SELECT ... FROM `sys_page` o,`sys_menu` p WHERE ...) ...
     /// </code>
     /// </summary>
     /// <typeparam name="T">表T实体类型</typeparam>
-    /// <param name="subQuery">子查询</param>
+    /// <param name="subQueryExpr">子查询</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> From<T>(Func<IFromQuery, IQuery<T>> subQuery);
+    IQuery<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
     #endregion
 
     #region GetById

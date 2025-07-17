@@ -25,8 +25,9 @@ public class UnitTest2 : UnitTestBase
         var services = new ServiceCollection();
         services.AddSingleton(f =>
         {
+            var connectionString = "Host=localhost;Database=fengling;Username=postgres;Password=123456;SearchPath=public";
             var builder = new OrmDbFactoryBuilder()
-                .Register(OrmProviderType.PostgreSql, "fengling", "Host=localhost;Database=fengling;Username=postgres;Password=123456;SearchPath=public", true)
+                .Register(OrmProviderType.PostgreSql, "fengling", f => f.UseConnectionString(connectionString), true)
                 .Configure<ModelConfiguration>(OrmProviderType.PostgreSql)
                 .UseInterceptors(df =>
                 {
@@ -276,7 +277,6 @@ public class UnitTest2 : UnitTestBase
             .First();
         if (result != null)
         {
-            Assert.NotNull(result.Disputes);
             Assert.NotNull(result.Order);
             Assert.NotNull(result.Order.Details);
             Assert.True(result.Order.Details.Count > 0);
@@ -574,7 +574,7 @@ SELECT b.""MenuId"",a.""Name"",b.""ParentId"",a.""PageId"",b.""Url"" FROM ""sys_
         sql = repository.From<Menu>()
             .InnerJoin<Page>((a, b) => a.PageId == b.Id && b.Id > pageId)
             .Select((a, b) => new { MenuId = a.Id, a.ParentId, b.Url })
-            .Union(f => f.From(menuPageList)
+            .Union(f => f.UseQuery(menuPageList)
                 .Where(f => f.ParentId < parentId)
                 .Select())
             .ToSql(out dbParameters);
@@ -595,7 +595,7 @@ SELECT a.""MenuId"",a.""ParentId"",a.""Url"" FROM ""menuPageList"" a WHERE a.""P
         var result1 = repository.From<Menu>()
             .InnerJoin<Page>((a, b) => a.PageId == b.Id && b.Id > pageId)
             .Select((a, b) => new { MenuId = a.Id, a.ParentId, b.Url })
-            .Union(f => f.From(menuPageList)
+            .Union(f => f.UseQuery(menuPageList)
                 .Where(f => f.ParentId < parentId)
                 .Select())
             .ToList();

@@ -425,7 +425,7 @@ public partial class MySqlProvider : BaseOrmProvider
             entityMapper.TableName = tableName;
             entityMapper.IsMapped = true;
         }
-        return mapProvider.EntityMaps.Count(f => !f.IsMapped) > 0;
+        return mapProvider.EntityMaps.Count(f => !f.IsMapped) == 0;
     }
     public virtual string GetSchemaName(string connectionString)
     {

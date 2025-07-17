@@ -133,7 +133,7 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// <param name="subQuery">子查询，需要有Select语句，如：
     /// <code>f.From&lt;Order&gt;() ... .Select(x =&gt; new { ... })</code>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T> Union(Func<IFromQuery, IQuery<T>> subQuery);
+    new IPostgreSqlQuery<T> Union(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
     /// <summary>
     /// Union All操作，所有记录不去掉重复，用法：
     /// <code>
@@ -166,11 +166,11 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// <param name="subQuery">子查询，需要有Select语句，如：
     /// <code>f.From&lt;Order&gt;() ... .Select(x =&gt; new { ... })</code>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T> UnionAll(Func<IFromQuery, IQuery<T>> subQuery);
+    new IPostgreSqlQuery<T> UnionAll(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
     /// <summary>
     /// 递归CTE子查询中的Union操作，表达式subQuery中的第二参数是自身引用，用法：
     /// <code>
-    /// f.FromWith(f =&gt; f.From&lt;Menu&gt;() ...
+    /// f.FromQuery(f =&gt; f.From&lt;Menu&gt;() ...
     ///         .Select(x =&gt; new { ... })
     ///     .UnionRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
@@ -191,7 +191,7 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// <summary>
     /// 递归CTE子查询中的UnionAll操作，表达式subQuery中的第二参数是自身引用，用法：
     /// <code>
-    /// f.FromWith(f =&gt; f.From&lt;Menu&gt;() ...
+    /// f.FromQuery(f =&gt; f.From&lt;Menu&gt;() ...
     ///         .Select(x =&gt; new { ... })
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
@@ -236,7 +236,7 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    new IPostgreSqlQuery<T, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -307,7 +307,7 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
     /// repository
-    ///     .FromWith(f =&gt; f.From&lt;Menu&gt;()
+    ///     .FromQuery(f =&gt; f.From&lt;Menu&gt;()
     ///             .Where(x =&gt; x.Id == 1)
     ///             .Select(x =&gt; new { x.Id, x.Name, x.ParentId })
     ///         .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -330,7 +330,7 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
     /// repository
-    ///     .FromWith(f =&gt; f.From&lt;Menu&gt;()
+    ///     .FromQuery(f =&gt; f.From&lt;Menu&gt;()
     ///             .Where(x =&gt; x.Id == 1)
     ///             .Select(x =&gt; new { x.Id, x.Name, x.ParentId })
     ///         .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -353,7 +353,7 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
     /// repository
-    ///     .FromWith(f =&gt; f.From&lt;Menu&gt;()
+    ///     .FromQuery(f =&gt; f.From&lt;Menu&gt;()
     ///             .Where(x =&gt; x.Id == 1)
     ///             .Select(x =&gt; new { x.Id, x.Name, x.ParentId })
     ///         .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
@@ -373,7 +373,7 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询作为临时表，并与现有表T做INNER JOIN关联，用法:
+    /// 添加subQuery子查询，并与现有表T做INNER JOIN关联，用法:
     /// <code>
     /// await repository.From&lt;User&gt;()
     ///     .InnerJoin&lt;Order&gt;((x, y) =&gt; ...)
@@ -389,9 +389,9 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// <param name="subQuery">子查询对象</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn);
+    new IPostgreSqlQuery<T, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询作为临时表，并与现有表T做LEFT JOIN关联，用法:
+    /// 添加subQuery子查询，并与现有表T做LEFT JOIN关联，用法:
     /// <code>
     /// ... ...
     /// .LeftJoin(f =&gt; f.From&lt;OrderDetail&gt;()
@@ -409,9 +409,9 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// <param name="subQuery">子查询对象</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn);
+    new IPostgreSqlQuery<T, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询作为临时表，并与现有表T做RIGHT JOIN关联，用法:
+    /// 添加subQuery子查询，并与现有表T做RIGHT JOIN关联，用法:
     /// <code>
     /// ... ...
     /// .RightJoin(f =&gt; f.From&lt;OrderDetail&gt;()
@@ -431,7 +431,7 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// <param name="subQuery">子查询对象</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn);
+    new IPostgreSqlQuery<T, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn);
     #endregion
 
     #region Where/And
@@ -749,7 +749,7 @@ public interface IPostgreSqlQuery<<#=tables#>> : IQuery<<#=tables#>>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<<#=tables#>, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    new IPostgreSqlQuery<<#=tables#>, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
 <#      }#>
@@ -848,7 +848,7 @@ public interface IPostgreSqlQuery<<#=tables#>> : IQuery<<#=tables#>>
     /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromWith(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (<#=tableAlias#>) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -862,7 +862,7 @@ public interface IPostgreSqlQuery<<#=tables#>> : IQuery<<#=tables#>>
     /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromWith(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .LeftJoin(self, (<#=tableAlias#>) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -876,7 +876,7 @@ public interface IPostgreSqlQuery<<#=tables#>> : IQuery<<#=tables#>>
     /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromWith(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .RightJoin(self, (<#=tableAlias#>) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -888,7 +888,7 @@ public interface IPostgreSqlQuery<<#=tables#>> : IQuery<<#=tables#>>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<<#=tables#>, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做INNER JOIN关联，与.WithTable(...).InnerJoin(...)等效，用法:
+    /// 添加subQuery子查询，并与现有表做INNER JOIN关联，用法:
     /// <code>
     /// .InnerJoin((<#=tableAlias#>) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (<#=tableAlias#>) =&gt; ...) ...
@@ -900,9 +900,9 @@ public interface IPostgreSqlQuery<<#=tables#>> : IQuery<<#=tables#>>
     /// <param name="subQuery">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<<#=tables#>, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
+    new IPostgreSqlQuery<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做LEFT JOIN关联，与.WithTable(...).LeftJoin(...)等效，用法:
+    /// 添加subQuery子查询，并与现有表做LEFT JOIN关联，用法:
     /// <code>
     /// .LeftJoin((<#=tableAlias#>) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (<#=tableAlias#>) =&gt; ...) ...
@@ -914,9 +914,9 @@ public interface IPostgreSqlQuery<<#=tables#>> : IQuery<<#=tables#>>
     /// <param name="subQuery">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<<#=tables#>, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
+    new IPostgreSqlQuery<<#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQuery子查询作为临时表，并与现有表做RIGHT JOIN关联，与.WithTable(...).RightJoin(...)等效，用法:
+    /// 添加subQuery子查询，并与现有表做RIGHT JOIN关联，用法:
     /// <code>
     /// .RightJoin((<#=tableAlias#>) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (<#=tableAlias#>) =&gt; ...) ...
@@ -928,7 +928,7 @@ public interface IPostgreSqlQuery<<#=tables#>> : IQuery<<#=tables#>>
     /// <param name="subQuery">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<<#=tables#>, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
+    new IPostgreSqlQuery<<#=tables#>, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
 <#      }#>
     #endregion
 

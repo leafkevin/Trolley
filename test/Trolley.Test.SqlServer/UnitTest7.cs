@@ -75,7 +75,7 @@ public class UnitTest7 : UnitTestBase
     {
         var repository = this.dbFactory.Create();
         var sql = repository
-            .From(f => f.From<OrderDetail>()
+            .FromQuery(f => f.From<OrderDetail>()
                 .UseTableSchema("myschema")
                 .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
                 .UseTableSchema("myschema")
@@ -94,7 +94,7 @@ public class UnitTest7 : UnitTestBase
         Assert.Equal("SELECT a.[OrderId],a.[BuyerId],b.[Id],b.[TenantId],b.[Name],b.[Gender],b.[Age],b.[CompanyId],b.[GuidField],b.[SomeTimes],b.[SourceType],b.[IsEnabled],b.[CreatedAt],b.[CreatedBy],b.[UpdatedAt],b.[UpdatedBy],a.[ProductCount] FROM (SELECT b.[Id] AS [OrderId],b.[BuyerId],COUNT(DISTINCT a.[ProductId]) AS [ProductCount] FROM [myschema].[sys_order_detail] a INNER JOIN [myschema].[sys_order] b ON a.[OrderId]=b.[Id] GROUP BY b.[Id],b.[BuyerId]) a INNER JOIN [myschema].[sys_user] b ON a.[BuyerId]=b.[Id] WHERE a.[ProductCount]>1", sql);
 
         var result = repository
-            .From(f => f.From<OrderDetail>()
+            .FromQuery(f => f.From<OrderDetail>()
                 .UseTableSchema("myschema")
                 .InnerJoin<Order>((x, y) => x.OrderId == y.Id)
                  .UseTableSchema("myschema")
@@ -142,7 +142,7 @@ public class UnitTest7 : UnitTestBase
             .AsCteTable("myCteTable2");
 
         var sql = repository
-            .From(myCteTable1)
+            .UseQuery(myCteTable1)
             .InnerJoin(myCteTable2, (a, b) => a.Id == b.Id)
             .Select((a, b) => new { b.Id, a.Name, b.ParentId, b.Url })
             .ToSql(out _);
@@ -169,7 +169,7 @@ SELECT b.[Id],a.[Name],b.[ParentId],b.[Url] FROM [myCteTable1] a INNER JOIN [myC
             .AsCteTable("MenuList");
 
         var result1 = repository
-            .From(myCteTable2)
+            .UseQuery(myCteTable2)
             .InnerJoin(myCteTable1, (a, b) => a.Id == b.Id)
             .Select((a, b) => new { a.Id, b.Name, a.ParentId, a.Url })
             .ToList();
@@ -178,7 +178,7 @@ SELECT b.[Id],a.[Name],b.[ParentId],b.[Url] FROM [myCteTable1] a INNER JOIN [myC
 
         int pageId = 1;
         sql = repository
-            .From(menuList)
+            .UseQuery(menuList)
             .WithTable(x => x.From<Page>()
                     .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
                     .Where((a, b) => a.Id == pageId)
@@ -199,7 +199,7 @@ SELECT a.[Id],a.[Name],a.[ParentId],b.[Url] FROM [MenuList] a INNER JOIN (SELECT
 SELECT b.[Id],a.[Url] FROM [sys_page] a INNER JOIN [MenuList] b ON a.[Id]=b.[Id] WHERE a.[Id]>@p2) b ON a.[Id]=b.[Id]", sql);
 
         var result2 = repository
-            .From(menuList)
+            .UseQuery(menuList)
             .WithTable(x => x.From<Page>()
                     .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
                     .Where((a, b) => a.Id == pageId)
@@ -215,7 +215,7 @@ SELECT b.[Id],a.[Url] FROM [sys_page] a INNER JOIN [MenuList] b ON a.[Id]=b.[Id]
         Assert.True(result2.Count > 0);
 
         sql = repository
-            .From(menuList)
+            .UseQuery(menuList)
             .WithTable(x => x.From<Page>()
                     .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
                     .Where((a, b) => a.Id == pageId)
@@ -240,7 +240,7 @@ SELECT b.[Id],a.[Url] FROM [sys_page] a INNER JOIN [MenuList] b ON a.[Id]=b.[Id]
 )
 SELECT a.[Id],a.[Name],a.[ParentId],b.[Url] FROM [MenuList] a INNER JOIN [MenuPageList] b ON a.[Id]=b.[Id]", sql);
         var result3 = await repository
-            .From(menuList)
+            .UseQuery(menuList)
             .WithTable(x => x.From<Page>()
                     .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
                     .Where((a, b) => a.Id == pageId)

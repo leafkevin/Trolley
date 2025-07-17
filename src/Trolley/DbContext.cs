@@ -723,7 +723,7 @@ public sealed class DbContext
         if (visitor.IsNeedFetchShardingTables)
             isSuccess = this.FetchShardingTables(visitor as SqlVisitor);
         if (!isSuccess) return (isSuccess, sql, null);
-        sql = visitor.BuildSql(out var readerFields);
+        sql = visitor.BuildSql(true, out var readerFields);
         if (visitor.IsNeedFormatShardingTables)
             sql = this.BuildShardingTablesSqlByFormat(visitor as SqlVisitor, sql, jointMark);
         if (visitor.IsNeedUnionShardingTables)
@@ -737,7 +737,7 @@ public sealed class DbContext
         if (visitor.IsNeedFetchShardingTables)
             isSuccess = await this.FetchShardingTablesAsync(visitor as SqlVisitor, cancellationToken);
         if (!isSuccess) return (isSuccess, sql, null);
-        sql = visitor.BuildSql(out var readerFields);
+        sql = visitor.BuildSql(true, out var readerFields);
         if (visitor.IsNeedFormatShardingTables)
             sql = this.BuildShardingTablesSqlByFormat(visitor as SqlVisitor, sql, jointMark);
         if (visitor.IsNeedUnionShardingTables)

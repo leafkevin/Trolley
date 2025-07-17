@@ -287,11 +287,11 @@ public partial class SqlServerProvider : BaseOrmProvider
             default: return SqlDbType.Variant;
         }
     }
-    public override void MapTables(string connectionString, IEntityMapProvider mapProvider)
+    public override bool MapTables(string connectionString, IEntityMapProvider mapProvider)
     {
         var tableNames = mapProvider.EntityMaps.Where(f => !f.IsMapped).Select(f => f.TableName).ToList();
         if (tableNames == null || tableNames.Count == 0)
-            return;
+            return true;
         var sql = @"select b.name,a.name,c.name,d.name,(d.name+case when d.name in ('char','varchar','nchar','nvarchar','binary','varbinary') then '('+ case when c.max_length = -1 then 'MAX' when d.name
 in ('nchar','nvarchar') then cast(c.max_length/2 as varchar) else cast(c.max_length as varchar) end+')' when d.name in ('numeric','decimal') then '('+cast(c.precision as varchar)+','+ cast(c.scale as varchar)
 +')' else '' end),case when d.name in ('nchar','nvarchar') then c.max_length/2 else c.max_length end,c.scale,c.precision,(select value from sys.extended_properties where major_id=c.object_id AND minor_id=c.column_id 
@@ -453,6 +453,7 @@ sys.index_columns ic,sys.indexes i where ic.object_id=i.object_id and ic.index_i
             else entityMapper.TableName = tableName;
             entityMapper.IsMapped = true;
         }
+        return mapProvider.EntityMaps.Count(f => !f.IsMapped) == 0;
     }
     public virtual List<string> GetShardingTableNames<TEntity>(DbContext dbContext, Func<string, bool> tableNameSelector = null, string tableSchema = null)
     {

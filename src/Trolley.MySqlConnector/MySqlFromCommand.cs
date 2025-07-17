@@ -36,9 +36,9 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
         base.UnionInternal(subQuery);
         return this;
     }
-    public new IMySqlFromCommand<T> Union(Func<IFromQuery, IQuery<T>> subQuery)
+    public new IMySqlFromCommand<T> Union(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
     {
-        base.UnionInternal(subQuery);
+        base.UnionInternal(subQueryExpr);
         return this;
     }
     public new IMySqlFromCommand<T> UnionAll(IQuery<T> subQuery)
@@ -46,35 +46,63 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
         base.UnionAllInternal(subQuery);
         return this;
     }
-    public new IMySqlFromCommand<T> UnionAll(Func<IFromQuery, IQuery<T>> subQuery)
+    public new IMySqlFromCommand<T> UnionAll(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
     {
-        base.UnionAllInternal(subQuery);
+        base.UnionAllInternal(subQueryExpr);
+        return this;
+    }
+    public new IMySqlFromCommand<T> UnionRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr)
+    {
+        base.UnionRecursiveInternal(subQueryExpr);
+        return this;
+    }
+    public new IMySqlFromCommand<T> UnionAllRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr)
+    {
+        base.UnionAllRecursiveInternal(subQueryExpr);
         return this;
     }
     #endregion
 
-    #region Join   
-    public new IMySqlFromCommand<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
-        => base.InnerJoin(joinOn) as IMySqlFromCommand<T, TOther>;
-    public new IMySqlFromCommand<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IMySqlFromCommand<T, TOther>;
-    public new IMySqlFromCommand<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
-        => base.RightJoin(joinOn) as IMySqlFromCommand<T, TOther>;
-    public new IMySqlFromCommand<T, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
-        => base.InnerJoin(joinOn) as IMySqlFromCommand<T, TOther>;
-    public new IMySqlFromCommand<T, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IMySqlFromCommand<T, TOther>;
-    public new IMySqlFromCommand<T, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
-        => base.RightJoin(joinOn) as IMySqlFromCommand<T, TOther>;
-    public new IMySqlFromCommand<T, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn)
-        => base.InnerJoin(joinOn) as IMySqlFromCommand<T, TOther>;
-    public new IMySqlFromCommand<T, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IMySqlFromCommand<T, TOther>;
-    public new IMySqlFromCommand<T, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn)
-        => base.RightJoin(joinOn) as IMySqlFromCommand<T, TOther>;
+    #region WithTable
+    public new IMySqlFromCommand<T, TOther> WithTable<TOther>()
+        => base.WithTable<TOther>() as IMySqlFromCommand<T, TOther>;
     #endregion
 
-    #region Where/And
+    #region WithQuery
+    public new IMySqlFromCommand<T, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
+        => base.WithQuery(subQuery) as IMySqlFromCommand<T, TOther>;
+    public new IMySqlFromCommand<T, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+        => base.WithQuery(subQueryExpr) as IMySqlFromCommand<T, TOther>;
+    #endregion
+
+    #region InnerJoin
+    public new IMySqlFromCommand<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
+        => base.InnerJoin(joinOn) as IMySqlFromCommand<T, TOther>;
+    public new IMySqlFromCommand<T, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+        => base.InnerJoin(subQuery, joinOn) as IMySqlFromCommand<T, TOther>;
+    public new IMySqlFromCommand<T, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
+        => base.InnerJoin(subQueryExpr, joinOn) as IMySqlFromCommand<T, TOther>;
+    #endregion
+
+    #region LeftJoin
+    public new IMySqlFromCommand<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IMySqlFromCommand<T, TOther>;
+    public new IMySqlFromCommand<T, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+        => base.LeftJoin(subQuery, joinOn) as IMySqlFromCommand<T, TOther>;
+    public new IMySqlFromCommand<T, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
+        => base.LeftJoin(subQueryExpr, joinOn) as IMySqlFromCommand<T, TOther>;
+    #endregion
+
+    #region RightJoin
+    public new IMySqlFromCommand<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
+        => base.RightJoin(joinOn) as IMySqlFromCommand<T, TOther>;
+    public new IMySqlFromCommand<T, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+        => base.RightJoin(subQuery, joinOn) as IMySqlFromCommand<T, TOther>;
+    public new IMySqlFromCommand<T, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
+        => base.RightJoin(subQueryExpr, joinOn) as IMySqlFromCommand<T, TOther>;
+    #endregion
+
+    #region Where
     public new IMySqlFromCommand<T> Where(Expression<Func<T, bool>> predicate)
     {
         base.WhereInternal(predicate);
@@ -85,14 +113,30 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    #endregion
+
+    #region And
     public new IMySqlFromCommand<T> And(Expression<Func<T, bool>> predicate)
     {
         base.AndInternal(predicate);
         return this;
     }
-    public new IMySqlFromCommand<T> And(bool condition, Expression<Func<T, bool>> ifPredicate = null, Expression<Func<T, bool>> elsePredicate = null)
+    public new IMySqlFromCommand<T> And(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
     {
         base.AndInternal(condition, ifPredicate, elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region Or
+    public new IMySqlFromCommand<T> Or(Expression<Func<T, bool>> predicate)
+    {
+        base.OrInternal(predicate);
+        return this;
+    }
+    public new IMySqlFromCommand<T> Or(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
+    {
+        base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
     #endregion
@@ -119,11 +163,22 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
     }
     #endregion
 
+    #region Skip/Take/Page
+    public new IMySqlFromCommand<T> Skip(int offset)
+        => base.Skip(offset) as IMySqlFromCommand<T>;
+    public new IMySqlFromCommand<T> Take(int limit)
+        => base.Take(limit) as IMySqlFromCommand<T>;
+    public new IMySqlFromCommand<T> Page(int pageNumber, int pageSize)
+        => base.Page(pageNumber, pageSize) as IMySqlFromCommand<T>;
+    #endregion
+
     #region Select
-    public new IMySqlFromCommand<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>(fields) as IMySqlFromCommand<TTarget>;
+    public new IMySqlFromCommand<T> Select(string fields = "*")
+        => base.Select(fields) as IMySqlFromCommand<T>;
     public new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr)
         => base.Select(fieldsExpr) as IMySqlFromCommand<TTarget>;
+    public new IMySqlFromCommand<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T, TTarget>> specialMemberSelector = null)
+        => base.SelectFlattenTo(specialMemberSelector) as IMySqlFromCommand<TTarget>;
     public new IMySqlFromCommand<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr)
         => base.SelectAggregate(fieldsExpr) as IMySqlFromCommand<TTarget>;
     #endregion
@@ -136,30 +191,17 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
     }
     #endregion
 
-    #region Skip/Take
-    public new IMySqlFromCommand<T> Skip(int offset)
-    {
-        this.Visitor.Skip(offset);
-        return this;
-    }
-    public new IMySqlFromCommand<T> Take(int limit)
-    {
-        this.Visitor.Take(limit);
-        return this;
-    }
-    #endregion
-
     #region OnDuplicateKeyUpdate
     public IMySqlFromContinuedCreate<T> OnDuplicateKeyUpdate<TUpdateFields>(TUpdateFields updateObj)
     {
-        var sql = this.Visitor.BuildCommandSql(out _);
+        var sql = this.Visitor.BuildCommandSql(true, out _);
         var visitor = this.NewCreateVisitor(sql);
         visitor.OnDuplicateKeyUpdate(updateObj);
         return new MySqlFromContinuedCreate<T>(this.DbContext, visitor);
     }
     public IMySqlFromContinuedCreate<T> OnDuplicateKeyUpdate<TUpdateFields>(Expression<Func<IMySqlCreateDuplicateKeyUpdate<T>, TUpdateFields>> fieldsAssignment)
     {
-        var sql = this.Visitor.BuildCommandSql(out _);
+        var sql = this.Visitor.BuildCommandSql(true, out _);
         var visitor = this.NewCreateVisitor(sql);
         visitor.OnDuplicateKeyUpdate(fieldsAssignment);
         return new MySqlFromContinuedCreate<T>(this.DbContext, visitor);
@@ -169,14 +211,14 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
     #region Returnning
     public IMySqlBulkCreated<T, TResult> Returning<TResult>(string fieldNames)
     {
-        var sql = this.Visitor.BuildCommandSql(out _);
+        var sql = this.Visitor.BuildCommandSql(true, out _);
         var visitor = this.NewCreateVisitor(sql);
         visitor.Returning(fieldNames);
         return new MySqlBulkCreated<T, TResult>(this.DbContext, visitor);
     }
     public IMySqlBulkCreated<T, TResult> Returning<TResult>(Expression<Func<T, TResult>> fieldsSelector)
     {
-        var sql = this.Visitor.BuildCommandSql(out _);
+        var sql = this.Visitor.BuildCommandSql(true, out _);
         var visitor = this.NewCreateVisitor(sql);
         visitor.Returning(fieldsSelector);
         return new MySqlBulkCreated<T, TResult>(this.DbContext, visitor);
@@ -222,35 +264,53 @@ public class MySqlFromCommand<T1, T2> : FromCommand<T1, T2>, IMySqlFromCommand<T
     public new IMySqlFromCommand<T1, T2> UseTableSchema(string tableSchema)
         => base.UseTableSchema(tableSchema) as IMySqlFromCommand<T1, T2>;
     #endregion
-
-    #region Join
-    public new IMySqlFromCommand<T1, T2> InnerJoin(Expression<Func<T1, T2, bool>> joinOn)
-        => base.InnerJoin(joinOn) as IMySqlFromCommand<T1, T2>;
-    public new IMySqlFromCommand<T1, T2> LeftJoin(Expression<Func<T1, T2, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IMySqlFromCommand<T1, T2>;
-    public new IMySqlFromCommand<T1, T2> RightJoin(Expression<Func<T1, T2, bool>> joinOn)
-        => base.RightJoin(joinOn) as IMySqlFromCommand<T1, T2>;
-    public new IMySqlFromCommand<T1, T2, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn)
-        => base.InnerJoin(joinOn) as IMySqlFromCommand<T1, T2, TOther>;
-    public new IMySqlFromCommand<T1, T2, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IMySqlFromCommand<T1, T2, TOther>;
-    public new IMySqlFromCommand<T1, T2, TOther> RightJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn)
-        => base.RightJoin(joinOn) as IMySqlFromCommand<T1, T2, TOther>;
-    public new IMySqlFromCommand<T1, T2, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn)
-        => base.InnerJoin(subQuery, joinOn) as IMySqlFromCommand<T1, T2, TOther>;
-    public new IMySqlFromCommand<T1, T2, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn)
-        => base.LeftJoin(subQuery, joinOn) as IMySqlFromCommand<T1, T2, TOther>;
-    public new IMySqlFromCommand<T1, T2, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn)
-        => base.RightJoin(subQuery, joinOn) as IMySqlFromCommand<T1, T2, TOther>;
-    public new IMySqlFromCommand<T1, T2, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn)
-        => base.InnerJoin(subQuery, joinOn) as IMySqlFromCommand<T1, T2, TOther>;
-    public new IMySqlFromCommand<T1, T2, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn)
-        => base.LeftJoin(subQuery, joinOn) as IMySqlFromCommand<T1, T2, TOther>;
-    public new IMySqlFromCommand<T1, T2, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn)
-        => base.RightJoin(subQuery, joinOn) as IMySqlFromCommand<T1, T2, TOther>;
+    #region WithTable
+    public new IMySqlFromCommand<T1, T2, TOther> WithTable<TOther>()
+        => base.WithTable<TOther>() as IMySqlFromCommand<T1, T2, TOther>;
     #endregion
 
-    #region Where/And
+    #region WithQuery
+    public new IMySqlFromCommand<T1, T2, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
+        => base.WithQuery(subQuery) as IMySqlFromCommand<T1, T2, TOther>;
+    public new IMySqlFromCommand<T1, T2, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+        => base.WithQuery(subQueryExpr) as IMySqlFromCommand<T1, T2, TOther>;
+
+    #endregion
+
+    #region InnerJoin
+    public new IMySqlFromCommand<T1, T2> InnerJoin(Expression<Func<T1, T2, bool>> joinOn)
+        => base.InnerJoin(joinOn) as IMySqlFromCommand<T1, T2>;
+    public new IMySqlFromCommand<T1, T2, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn)
+        => base.InnerJoin(joinOn) as IMySqlFromCommand<T1, T2, TOther>;
+    public new IMySqlFromCommand<T1, T2, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn)
+        => base.InnerJoin(subQuery, joinOn) as IMySqlFromCommand<T1, T2, TOther>;
+    public new IMySqlFromCommand<T1, T2, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, TOther, bool>> joinOn)
+        => base.InnerJoin(subQueryExpr, joinOn) as IMySqlFromCommand<T1, T2, TOther>;
+    #endregion
+
+    #region LeftJoin
+    public new IMySqlFromCommand<T1, T2> LeftJoin(Expression<Func<T1, T2, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IMySqlFromCommand<T1, T2>;
+    public new IMySqlFromCommand<T1, T2, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IMySqlFromCommand<T1, T2, TOther>;
+    public new IMySqlFromCommand<T1, T2, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn)
+        => base.LeftJoin(subQuery, joinOn) as IMySqlFromCommand<T1, T2, TOther>;
+    public new IMySqlFromCommand<T1, T2, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, TOther, bool>> joinOn)
+        => base.LeftJoin(subQueryExpr, joinOn) as IMySqlFromCommand<T1, T2, TOther>;
+    #endregion
+
+    #region RightJoin
+    public new IMySqlFromCommand<T1, T2> RightJoin(Expression<Func<T1, T2, bool>> joinOn)
+        => base.RightJoin(joinOn) as IMySqlFromCommand<T1, T2>;
+    public new IMySqlFromCommand<T1, T2, TOther> RightJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn)
+        => base.RightJoin(joinOn) as IMySqlFromCommand<T1, T2, TOther>;
+    public new IMySqlFromCommand<T1, T2, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn)
+        => base.RightJoin(subQuery, joinOn) as IMySqlFromCommand<T1, T2, TOther>;
+    public new IMySqlFromCommand<T1, T2, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, TOther, bool>> joinOn)
+        => base.RightJoin(subQueryExpr, joinOn) as IMySqlFromCommand<T1, T2, TOther>;
+    #endregion
+
+    #region Where
     public new IMySqlFromCommand<T1, T2> Where(Expression<Func<T1, T2, bool>> predicate)
     {
         base.WhereInternal(predicate);
@@ -261,6 +321,9 @@ public class MySqlFromCommand<T1, T2> : FromCommand<T1, T2>, IMySqlFromCommand<T
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    #endregion
+
+    #region And
     public new IMySqlFromCommand<T1, T2> And(Expression<Func<T1, T2, bool>> predicate)
     {
         base.AndInternal(predicate);
@@ -269,6 +332,19 @@ public class MySqlFromCommand<T1, T2> : FromCommand<T1, T2>, IMySqlFromCommand<T
     public new IMySqlFromCommand<T1, T2> And(bool condition, Expression<Func<T1, T2, bool>> ifPredicate = null, Expression<Func<T1, T2, bool>> elsePredicate = null)
     {
         base.AndInternal(condition, ifPredicate, elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region Or
+    public new IMySqlFromCommand<T1, T2> Or(Expression<Func<T1, T2, bool>> predicate)
+    {
+        base.OrInternal(predicate);
+        return this;
+    }
+    public new IMySqlFromCommand<T1, T2> Or(bool condition, Expression<Func<T1, T2, bool>> ifPredicate = null, Expression<Func<T1, T2, bool>> elsePredicate = null)
+    {
+        base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
     #endregion
@@ -295,24 +371,29 @@ public class MySqlFromCommand<T1, T2> : FromCommand<T1, T2>, IMySqlFromCommand<T
     }
     #endregion
 
-    #region Select
-    public new IMySqlFromCommand<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>(fields) as IMySqlFromCommand<TTarget>;
-    public new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, TTarget>> fieldsExpr)
-        => base.Select(fieldsExpr) as IMySqlFromCommand<TTarget>;
-    #endregion
-
-    #region Skip/Take
+    #region Skip/Take/Page
     public new IMySqlFromCommand<T1, T2> Skip(int offset)
     {
-        this.Visitor.Skip(offset);
+        base.SkipInternal(offset);
         return this;
     }
     public new IMySqlFromCommand<T1, T2> Take(int limit)
     {
-        this.Visitor.Take(limit);
+        base.TakeInternal(limit);
         return this;
     }
+    public new IMySqlFromCommand<T1, T2> Page(int pageNumber, int pageSize)
+    {
+        base.PageInternal(pageNumber, pageSize);
+        return this;
+    }
+    #endregion
+
+    #region Select
+    public new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, TTarget>> fieldsExpr)
+        => base.Select(fieldsExpr) as IMySqlFromCommand<TTarget>;
+    public new IMySqlFromCommand<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, TTarget>> specialMemberSelector = null)
+        => base.SelectFlattenTo(specialMemberSelector) as IMySqlFromCommand<TTarget>;
     #endregion
 }
 public class MySqlFromCommand<T1, T2, T3> : FromCommand<T1, T2, T3>, IMySqlFromCommand<T1, T2, T3>
@@ -341,35 +422,53 @@ public class MySqlFromCommand<T1, T2, T3> : FromCommand<T1, T2, T3>, IMySqlFromC
     public new IMySqlFromCommand<T1, T2, T3> UseTableSchema(string tableSchema)
         => base.UseTableSchema(tableSchema) as IMySqlFromCommand<T1, T2, T3>;
     #endregion
-
-    #region Join
-    public new IMySqlFromCommand<T1, T2, T3> InnerJoin(Expression<Func<T1, T2, T3, bool>> joinOn)
-        => base.InnerJoin(joinOn) as IMySqlFromCommand<T1, T2, T3>;
-    public new IMySqlFromCommand<T1, T2, T3> LeftJoin(Expression<Func<T1, T2, T3, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IMySqlFromCommand<T1, T2, T3>;
-    public new IMySqlFromCommand<T1, T2, T3> RightJoin(Expression<Func<T1, T2, T3, bool>> joinOn)
-        => base.RightJoin(joinOn) as IMySqlFromCommand<T1, T2, T3>;
-    public new IMySqlFromCommand<T1, T2, T3, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
-        => base.InnerJoin(joinOn) as IMySqlFromCommand<T1, T2, T3, TOther>;
-    public new IMySqlFromCommand<T1, T2, T3, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IMySqlFromCommand<T1, T2, T3, TOther>;
-    public new IMySqlFromCommand<T1, T2, T3, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
-        => base.RightJoin(joinOn) as IMySqlFromCommand<T1, T2, T3, TOther>;
-    public new IMySqlFromCommand<T1, T2, T3, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
-        => base.InnerJoin(subQuery, joinOn) as IMySqlFromCommand<T1, T2, T3, TOther>;
-    public new IMySqlFromCommand<T1, T2, T3, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
-        => base.LeftJoin(subQuery, joinOn) as IMySqlFromCommand<T1, T2, T3, TOther>;
-    public new IMySqlFromCommand<T1, T2, T3, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
-        => base.RightJoin(subQuery, joinOn) as IMySqlFromCommand<T1, T2, T3, TOther>;
-    public new IMySqlFromCommand<T1, T2, T3, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
-        => base.InnerJoin(subQuery, joinOn) as IMySqlFromCommand<T1, T2, T3, TOther>;
-    public new IMySqlFromCommand<T1, T2, T3, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
-        => base.LeftJoin(subQuery, joinOn) as IMySqlFromCommand<T1, T2, T3, TOther>;
-    public new IMySqlFromCommand<T1, T2, T3, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
-        => base.RightJoin(subQuery, joinOn) as IMySqlFromCommand<T1, T2, T3, TOther>;
+    #region WithTable
+    public new IMySqlFromCommand<T1, T2, T3, TOther> WithTable<TOther>()
+        => base.WithTable<TOther>() as IMySqlFromCommand<T1, T2, T3, TOther>;
     #endregion
 
-    #region Where/And
+    #region WithQuery
+    public new IMySqlFromCommand<T1, T2, T3, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
+        => base.WithQuery(subQuery) as IMySqlFromCommand<T1, T2, T3, TOther>;
+    public new IMySqlFromCommand<T1, T2, T3, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+        => base.WithQuery(subQueryExpr) as IMySqlFromCommand<T1, T2, T3, TOther>;
+
+    #endregion
+
+    #region InnerJoin
+    public new IMySqlFromCommand<T1, T2, T3> InnerJoin(Expression<Func<T1, T2, T3, bool>> joinOn)
+        => base.InnerJoin(joinOn) as IMySqlFromCommand<T1, T2, T3>;
+    public new IMySqlFromCommand<T1, T2, T3, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
+        => base.InnerJoin(joinOn) as IMySqlFromCommand<T1, T2, T3, TOther>;
+    public new IMySqlFromCommand<T1, T2, T3, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
+        => base.InnerJoin(subQuery, joinOn) as IMySqlFromCommand<T1, T2, T3, TOther>;
+    public new IMySqlFromCommand<T1, T2, T3, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
+        => base.InnerJoin(subQueryExpr, joinOn) as IMySqlFromCommand<T1, T2, T3, TOther>;
+    #endregion
+
+    #region LeftJoin
+    public new IMySqlFromCommand<T1, T2, T3> LeftJoin(Expression<Func<T1, T2, T3, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IMySqlFromCommand<T1, T2, T3>;
+    public new IMySqlFromCommand<T1, T2, T3, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IMySqlFromCommand<T1, T2, T3, TOther>;
+    public new IMySqlFromCommand<T1, T2, T3, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
+        => base.LeftJoin(subQuery, joinOn) as IMySqlFromCommand<T1, T2, T3, TOther>;
+    public new IMySqlFromCommand<T1, T2, T3, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
+        => base.LeftJoin(subQueryExpr, joinOn) as IMySqlFromCommand<T1, T2, T3, TOther>;
+    #endregion
+
+    #region RightJoin
+    public new IMySqlFromCommand<T1, T2, T3> RightJoin(Expression<Func<T1, T2, T3, bool>> joinOn)
+        => base.RightJoin(joinOn) as IMySqlFromCommand<T1, T2, T3>;
+    public new IMySqlFromCommand<T1, T2, T3, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
+        => base.RightJoin(joinOn) as IMySqlFromCommand<T1, T2, T3, TOther>;
+    public new IMySqlFromCommand<T1, T2, T3, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
+        => base.RightJoin(subQuery, joinOn) as IMySqlFromCommand<T1, T2, T3, TOther>;
+    public new IMySqlFromCommand<T1, T2, T3, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
+        => base.RightJoin(subQueryExpr, joinOn) as IMySqlFromCommand<T1, T2, T3, TOther>;
+    #endregion
+
+    #region Where
     public new IMySqlFromCommand<T1, T2, T3> Where(Expression<Func<T1, T2, T3, bool>> predicate)
     {
         base.WhereInternal(predicate);
@@ -380,6 +479,9 @@ public class MySqlFromCommand<T1, T2, T3> : FromCommand<T1, T2, T3>, IMySqlFromC
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    #endregion
+
+    #region And
     public new IMySqlFromCommand<T1, T2, T3> And(Expression<Func<T1, T2, T3, bool>> predicate)
     {
         base.AndInternal(predicate);
@@ -388,6 +490,19 @@ public class MySqlFromCommand<T1, T2, T3> : FromCommand<T1, T2, T3>, IMySqlFromC
     public new IMySqlFromCommand<T1, T2, T3> And(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, bool>> elsePredicate = null)
     {
         base.AndInternal(condition, ifPredicate, elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region Or
+    public new IMySqlFromCommand<T1, T2, T3> Or(Expression<Func<T1, T2, T3, bool>> predicate)
+    {
+        base.OrInternal(predicate);
+        return this;
+    }
+    public new IMySqlFromCommand<T1, T2, T3> Or(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, bool>> elsePredicate = null)
+    {
+        base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
     #endregion
@@ -414,24 +529,29 @@ public class MySqlFromCommand<T1, T2, T3> : FromCommand<T1, T2, T3>, IMySqlFromC
     }
     #endregion
 
-    #region Select
-    public new IMySqlFromCommand<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>(fields) as IMySqlFromCommand<TTarget>;
-    public new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, TTarget>> fieldsExpr)
-        => base.Select(fieldsExpr) as IMySqlFromCommand<TTarget>;
-    #endregion
-
-    #region Skip/Take
+    #region Skip/Take/Page
     public new IMySqlFromCommand<T1, T2, T3> Skip(int offset)
     {
-        this.Visitor.Skip(offset);
+        base.SkipInternal(offset);
         return this;
     }
     public new IMySqlFromCommand<T1, T2, T3> Take(int limit)
     {
-        this.Visitor.Take(limit);
+        base.TakeInternal(limit);
         return this;
     }
+    public new IMySqlFromCommand<T1, T2, T3> Page(int pageNumber, int pageSize)
+    {
+        base.PageInternal(pageNumber, pageSize);
+        return this;
+    }
+    #endregion
+
+    #region Select
+    public new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, TTarget>> fieldsExpr)
+        => base.Select(fieldsExpr) as IMySqlFromCommand<TTarget>;
+    public new IMySqlFromCommand<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, TTarget>> specialMemberSelector = null)
+        => base.SelectFlattenTo(specialMemberSelector) as IMySqlFromCommand<TTarget>;
     #endregion
 }
 public class MySqlFromCommand<T1, T2, T3, T4> : FromCommand<T1, T2, T3, T4>, IMySqlFromCommand<T1, T2, T3, T4>
@@ -460,35 +580,53 @@ public class MySqlFromCommand<T1, T2, T3, T4> : FromCommand<T1, T2, T3, T4>, IMy
     public new IMySqlFromCommand<T1, T2, T3, T4> UseTableSchema(string tableSchema)
         => base.UseTableSchema(tableSchema) as IMySqlFromCommand<T1, T2, T3, T4>;
     #endregion
-
-    #region Join
-    public new IMySqlFromCommand<T1, T2, T3, T4> InnerJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn)
-        => base.InnerJoin(joinOn) as IMySqlFromCommand<T1, T2, T3, T4>;
-    public new IMySqlFromCommand<T1, T2, T3, T4> LeftJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IMySqlFromCommand<T1, T2, T3, T4>;
-    public new IMySqlFromCommand<T1, T2, T3, T4> RightJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn)
-        => base.RightJoin(joinOn) as IMySqlFromCommand<T1, T2, T3, T4>;
-    public new IMySqlFromCommand<T1, T2, T3, T4, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
-        => base.InnerJoin(joinOn) as IMySqlFromCommand<T1, T2, T3, T4, TOther>;
-    public new IMySqlFromCommand<T1, T2, T3, T4, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IMySqlFromCommand<T1, T2, T3, T4, TOther>;
-    public new IMySqlFromCommand<T1, T2, T3, T4, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
-        => base.RightJoin(joinOn) as IMySqlFromCommand<T1, T2, T3, T4, TOther>;
-    public new IMySqlFromCommand<T1, T2, T3, T4, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
-        => base.InnerJoin(subQuery, joinOn) as IMySqlFromCommand<T1, T2, T3, T4, TOther>;
-    public new IMySqlFromCommand<T1, T2, T3, T4, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
-        => base.LeftJoin(subQuery, joinOn) as IMySqlFromCommand<T1, T2, T3, T4, TOther>;
-    public new IMySqlFromCommand<T1, T2, T3, T4, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
-        => base.RightJoin(subQuery, joinOn) as IMySqlFromCommand<T1, T2, T3, T4, TOther>;
-    public new IMySqlFromCommand<T1, T2, T3, T4, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
-        => base.InnerJoin(subQuery, joinOn) as IMySqlFromCommand<T1, T2, T3, T4, TOther>;
-    public new IMySqlFromCommand<T1, T2, T3, T4, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
-        => base.LeftJoin(subQuery, joinOn) as IMySqlFromCommand<T1, T2, T3, T4, TOther>;
-    public new IMySqlFromCommand<T1, T2, T3, T4, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
-        => base.RightJoin(subQuery, joinOn) as IMySqlFromCommand<T1, T2, T3, T4, TOther>;
+    #region WithTable
+    public new IMySqlFromCommand<T1, T2, T3, T4, TOther> WithTable<TOther>()
+        => base.WithTable<TOther>() as IMySqlFromCommand<T1, T2, T3, T4, TOther>;
     #endregion
 
-    #region Where/And
+    #region WithQuery
+    public new IMySqlFromCommand<T1, T2, T3, T4, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
+        => base.WithQuery(subQuery) as IMySqlFromCommand<T1, T2, T3, T4, TOther>;
+    public new IMySqlFromCommand<T1, T2, T3, T4, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+        => base.WithQuery(subQueryExpr) as IMySqlFromCommand<T1, T2, T3, T4, TOther>;
+
+    #endregion
+
+    #region InnerJoin
+    public new IMySqlFromCommand<T1, T2, T3, T4> InnerJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn)
+        => base.InnerJoin(joinOn) as IMySqlFromCommand<T1, T2, T3, T4>;
+    public new IMySqlFromCommand<T1, T2, T3, T4, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
+        => base.InnerJoin(joinOn) as IMySqlFromCommand<T1, T2, T3, T4, TOther>;
+    public new IMySqlFromCommand<T1, T2, T3, T4, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
+        => base.InnerJoin(subQuery, joinOn) as IMySqlFromCommand<T1, T2, T3, T4, TOther>;
+    public new IMySqlFromCommand<T1, T2, T3, T4, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
+        => base.InnerJoin(subQueryExpr, joinOn) as IMySqlFromCommand<T1, T2, T3, T4, TOther>;
+    #endregion
+
+    #region LeftJoin
+    public new IMySqlFromCommand<T1, T2, T3, T4> LeftJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IMySqlFromCommand<T1, T2, T3, T4>;
+    public new IMySqlFromCommand<T1, T2, T3, T4, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IMySqlFromCommand<T1, T2, T3, T4, TOther>;
+    public new IMySqlFromCommand<T1, T2, T3, T4, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
+        => base.LeftJoin(subQuery, joinOn) as IMySqlFromCommand<T1, T2, T3, T4, TOther>;
+    public new IMySqlFromCommand<T1, T2, T3, T4, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
+        => base.LeftJoin(subQueryExpr, joinOn) as IMySqlFromCommand<T1, T2, T3, T4, TOther>;
+    #endregion
+
+    #region RightJoin
+    public new IMySqlFromCommand<T1, T2, T3, T4> RightJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn)
+        => base.RightJoin(joinOn) as IMySqlFromCommand<T1, T2, T3, T4>;
+    public new IMySqlFromCommand<T1, T2, T3, T4, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
+        => base.RightJoin(joinOn) as IMySqlFromCommand<T1, T2, T3, T4, TOther>;
+    public new IMySqlFromCommand<T1, T2, T3, T4, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
+        => base.RightJoin(subQuery, joinOn) as IMySqlFromCommand<T1, T2, T3, T4, TOther>;
+    public new IMySqlFromCommand<T1, T2, T3, T4, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
+        => base.RightJoin(subQueryExpr, joinOn) as IMySqlFromCommand<T1, T2, T3, T4, TOther>;
+    #endregion
+
+    #region Where
     public new IMySqlFromCommand<T1, T2, T3, T4> Where(Expression<Func<T1, T2, T3, T4, bool>> predicate)
     {
         base.WhereInternal(predicate);
@@ -499,6 +637,9 @@ public class MySqlFromCommand<T1, T2, T3, T4> : FromCommand<T1, T2, T3, T4>, IMy
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    #endregion
+
+    #region And
     public new IMySqlFromCommand<T1, T2, T3, T4> And(Expression<Func<T1, T2, T3, T4, bool>> predicate)
     {
         base.AndInternal(predicate);
@@ -507,6 +648,19 @@ public class MySqlFromCommand<T1, T2, T3, T4> : FromCommand<T1, T2, T3, T4>, IMy
     public new IMySqlFromCommand<T1, T2, T3, T4> And(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null)
     {
         base.AndInternal(condition, ifPredicate, elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region Or
+    public new IMySqlFromCommand<T1, T2, T3, T4> Or(Expression<Func<T1, T2, T3, T4, bool>> predicate)
+    {
+        base.OrInternal(predicate);
+        return this;
+    }
+    public new IMySqlFromCommand<T1, T2, T3, T4> Or(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null)
+    {
+        base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
     #endregion
@@ -533,24 +687,29 @@ public class MySqlFromCommand<T1, T2, T3, T4> : FromCommand<T1, T2, T3, T4>, IMy
     }
     #endregion
 
-    #region Select
-    public new IMySqlFromCommand<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>(fields) as IMySqlFromCommand<TTarget>;
-    public new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, TTarget>> fieldsExpr)
-        => base.Select(fieldsExpr) as IMySqlFromCommand<TTarget>;
-    #endregion
-
-    #region Skip/Take
+    #region Skip/Take/Page
     public new IMySqlFromCommand<T1, T2, T3, T4> Skip(int offset)
     {
-        this.Visitor.Skip(offset);
+        base.SkipInternal(offset);
         return this;
     }
     public new IMySqlFromCommand<T1, T2, T3, T4> Take(int limit)
     {
-        this.Visitor.Take(limit);
+        base.TakeInternal(limit);
         return this;
     }
+    public new IMySqlFromCommand<T1, T2, T3, T4> Page(int pageNumber, int pageSize)
+    {
+        base.PageInternal(pageNumber, pageSize);
+        return this;
+    }
+    #endregion
+
+    #region Select
+    public new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, TTarget>> fieldsExpr)
+        => base.Select(fieldsExpr) as IMySqlFromCommand<TTarget>;
+    public new IMySqlFromCommand<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, TTarget>> specialMemberSelector = null)
+        => base.SelectFlattenTo(specialMemberSelector) as IMySqlFromCommand<TTarget>;
     #endregion
 }
 public class MySqlFromCommand<T1, T2, T3, T4, T5> : FromCommand<T1, T2, T3, T4, T5>, IMySqlFromCommand<T1, T2, T3, T4, T5>
@@ -579,35 +738,53 @@ public class MySqlFromCommand<T1, T2, T3, T4, T5> : FromCommand<T1, T2, T3, T4, 
     public new IMySqlFromCommand<T1, T2, T3, T4, T5> UseTableSchema(string tableSchema)
         => base.UseTableSchema(tableSchema) as IMySqlFromCommand<T1, T2, T3, T4, T5>;
     #endregion
-
-    #region Join
-    public new IMySqlFromCommand<T1, T2, T3, T4, T5> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn)
-        => base.InnerJoin(joinOn) as IMySqlFromCommand<T1, T2, T3, T4, T5>;
-    public new IMySqlFromCommand<T1, T2, T3, T4, T5> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IMySqlFromCommand<T1, T2, T3, T4, T5>;
-    public new IMySqlFromCommand<T1, T2, T3, T4, T5> RightJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn)
-        => base.RightJoin(joinOn) as IMySqlFromCommand<T1, T2, T3, T4, T5>;
-    public new IMySqlFromCommand<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
-        => base.InnerJoin(joinOn) as IMySqlFromCommand<T1, T2, T3, T4, T5, TOther>;
-    public new IMySqlFromCommand<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IMySqlFromCommand<T1, T2, T3, T4, T5, TOther>;
-    public new IMySqlFromCommand<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
-        => base.RightJoin(joinOn) as IMySqlFromCommand<T1, T2, T3, T4, T5, TOther>;
-    public new IMySqlFromCommand<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
-        => base.InnerJoin(subQuery, joinOn) as IMySqlFromCommand<T1, T2, T3, T4, T5, TOther>;
-    public new IMySqlFromCommand<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
-        => base.LeftJoin(subQuery, joinOn) as IMySqlFromCommand<T1, T2, T3, T4, T5, TOther>;
-    public new IMySqlFromCommand<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
-        => base.RightJoin(subQuery, joinOn) as IMySqlFromCommand<T1, T2, T3, T4, T5, TOther>;
-    public new IMySqlFromCommand<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
-        => base.InnerJoin(subQuery, joinOn) as IMySqlFromCommand<T1, T2, T3, T4, T5, TOther>;
-    public new IMySqlFromCommand<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
-        => base.LeftJoin(subQuery, joinOn) as IMySqlFromCommand<T1, T2, T3, T4, T5, TOther>;
-    public new IMySqlFromCommand<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
-        => base.RightJoin(subQuery, joinOn) as IMySqlFromCommand<T1, T2, T3, T4, T5, TOther>;
+    #region WithTable
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5, TOther> WithTable<TOther>()
+        => base.WithTable<TOther>() as IMySqlFromCommand<T1, T2, T3, T4, T5, TOther>;
     #endregion
 
-    #region Where/And
+    #region WithQuery
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
+        => base.WithQuery(subQuery) as IMySqlFromCommand<T1, T2, T3, T4, T5, TOther>;
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+        => base.WithQuery(subQueryExpr) as IMySqlFromCommand<T1, T2, T3, T4, T5, TOther>;
+
+    #endregion
+
+    #region InnerJoin
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn)
+        => base.InnerJoin(joinOn) as IMySqlFromCommand<T1, T2, T3, T4, T5>;
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
+        => base.InnerJoin(joinOn) as IMySqlFromCommand<T1, T2, T3, T4, T5, TOther>;
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
+        => base.InnerJoin(subQuery, joinOn) as IMySqlFromCommand<T1, T2, T3, T4, T5, TOther>;
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
+        => base.InnerJoin(subQueryExpr, joinOn) as IMySqlFromCommand<T1, T2, T3, T4, T5, TOther>;
+    #endregion
+
+    #region LeftJoin
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IMySqlFromCommand<T1, T2, T3, T4, T5>;
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IMySqlFromCommand<T1, T2, T3, T4, T5, TOther>;
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
+        => base.LeftJoin(subQuery, joinOn) as IMySqlFromCommand<T1, T2, T3, T4, T5, TOther>;
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
+        => base.LeftJoin(subQueryExpr, joinOn) as IMySqlFromCommand<T1, T2, T3, T4, T5, TOther>;
+    #endregion
+
+    #region RightJoin
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5> RightJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn)
+        => base.RightJoin(joinOn) as IMySqlFromCommand<T1, T2, T3, T4, T5>;
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
+        => base.RightJoin(joinOn) as IMySqlFromCommand<T1, T2, T3, T4, T5, TOther>;
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
+        => base.RightJoin(subQuery, joinOn) as IMySqlFromCommand<T1, T2, T3, T4, T5, TOther>;
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
+        => base.RightJoin(subQueryExpr, joinOn) as IMySqlFromCommand<T1, T2, T3, T4, T5, TOther>;
+    #endregion
+
+    #region Where
     public new IMySqlFromCommand<T1, T2, T3, T4, T5> Where(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
     {
         base.WhereInternal(predicate);
@@ -618,6 +795,9 @@ public class MySqlFromCommand<T1, T2, T3, T4, T5> : FromCommand<T1, T2, T3, T4, 
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    #endregion
+
+    #region And
     public new IMySqlFromCommand<T1, T2, T3, T4, T5> And(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
     {
         base.AndInternal(predicate);
@@ -626,6 +806,19 @@ public class MySqlFromCommand<T1, T2, T3, T4, T5> : FromCommand<T1, T2, T3, T4, 
     public new IMySqlFromCommand<T1, T2, T3, T4, T5> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null)
     {
         base.AndInternal(condition, ifPredicate, elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region Or
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5> Or(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
+    {
+        base.OrInternal(predicate);
+        return this;
+    }
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null)
+    {
+        base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
     #endregion
@@ -652,24 +845,29 @@ public class MySqlFromCommand<T1, T2, T3, T4, T5> : FromCommand<T1, T2, T3, T4, 
     }
     #endregion
 
-    #region Select
-    public new IMySqlFromCommand<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>(fields) as IMySqlFromCommand<TTarget>;
-    public new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, TTarget>> fieldsExpr)
-        => base.Select(fieldsExpr) as IMySqlFromCommand<TTarget>;
-    #endregion
-
-    #region Skip/Take
+    #region Skip/Take/Page
     public new IMySqlFromCommand<T1, T2, T3, T4, T5> Skip(int offset)
     {
-        this.Visitor.Skip(offset);
+        base.SkipInternal(offset);
         return this;
     }
     public new IMySqlFromCommand<T1, T2, T3, T4, T5> Take(int limit)
     {
-        this.Visitor.Take(limit);
+        base.TakeInternal(limit);
         return this;
     }
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5> Page(int pageNumber, int pageSize)
+    {
+        base.PageInternal(pageNumber, pageSize);
+        return this;
+    }
+    #endregion
+
+    #region Select
+    public new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, TTarget>> fieldsExpr)
+        => base.Select(fieldsExpr) as IMySqlFromCommand<TTarget>;
+    public new IMySqlFromCommand<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, TTarget>> specialMemberSelector = null)
+        => base.SelectFlattenTo(specialMemberSelector) as IMySqlFromCommand<TTarget>;
     #endregion
 }
 public class MySqlFromCommand<T1, T2, T3, T4, T5, T6> : FromCommand<T1, T2, T3, T4, T5, T6>, IMySqlFromCommand<T1, T2, T3, T4, T5, T6>
@@ -699,16 +897,22 @@ public class MySqlFromCommand<T1, T2, T3, T4, T5, T6> : FromCommand<T1, T2, T3, 
         => base.UseTableSchema(tableSchema) as IMySqlFromCommand<T1, T2, T3, T4, T5, T6>;
     #endregion
 
-    #region Join
+    #region InnerJoin
     public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> joinOn)
         => base.InnerJoin(joinOn) as IMySqlFromCommand<T1, T2, T3, T4, T5, T6>;
+    #endregion
+
+    #region LeftJoin
     public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> joinOn)
         => base.LeftJoin(joinOn) as IMySqlFromCommand<T1, T2, T3, T4, T5, T6>;
+    #endregion
+
+    #region RightJoin
     public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> joinOn)
         => base.RightJoin(joinOn) as IMySqlFromCommand<T1, T2, T3, T4, T5, T6>;
     #endregion
 
-    #region Where/And
+    #region Where
     public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> Where(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate)
     {
         base.WhereInternal(predicate);
@@ -719,6 +923,9 @@ public class MySqlFromCommand<T1, T2, T3, T4, T5, T6> : FromCommand<T1, T2, T3, 
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    #endregion
+
+    #region And
     public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> And(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate)
     {
         base.AndInternal(predicate);
@@ -727,6 +934,19 @@ public class MySqlFromCommand<T1, T2, T3, T4, T5, T6> : FromCommand<T1, T2, T3, 
     public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> elsePredicate = null)
     {
         base.AndInternal(condition, ifPredicate, elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region Or
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> Or(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate)
+    {
+        base.OrInternal(predicate);
+        return this;
+    }
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> elsePredicate = null)
+    {
+        base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
     #endregion
@@ -753,23 +973,28 @@ public class MySqlFromCommand<T1, T2, T3, T4, T5, T6> : FromCommand<T1, T2, T3, 
     }
     #endregion
 
-    #region Select
-    public new IMySqlFromCommand<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>(fields) as IMySqlFromCommand<TTarget>;
-    public new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr)
-        => base.Select(fieldsExpr) as IMySqlFromCommand<TTarget>;
-    #endregion
-
-    #region Skip/Take
+    #region Skip/Take/Page
     public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> Skip(int offset)
     {
-        this.Visitor.Skip(offset);
+        base.SkipInternal(offset);
         return this;
     }
     public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> Take(int limit)
     {
-        this.Visitor.Take(limit);
+        base.TakeInternal(limit);
         return this;
     }
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> Page(int pageNumber, int pageSize)
+    {
+        base.PageInternal(pageNumber, pageSize);
+        return this;
+    }
+    #endregion
+
+    #region Select
+    public new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr)
+        => base.Select(fieldsExpr) as IMySqlFromCommand<TTarget>;
+    public new IMySqlFromCommand<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T1, T2, T3, T4, T5, T6, TTarget>> specialMemberSelector = null)
+        => base.SelectFlattenTo(specialMemberSelector) as IMySqlFromCommand<TTarget>;
     #endregion
 }
