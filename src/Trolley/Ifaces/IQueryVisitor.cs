@@ -76,17 +76,17 @@ public interface IQueryVisitor : ICloneable, IDisposable
     void AddTable(params Type[] entityTypes);
     TableSegment AddTable(TableSegment tableSegment);
     TableSegment AddJoinTable(Type entityType, string joinType = null, TableType tableType = TableType.Entity, string body = null, List<SqlFieldSegment> readerFields = null);
-    TableSegment UseQuery(Type targetType, IQuery subQuery, bool isUseQueryFields = false);
-    TableSegment UseNewQuery(Type targetType, Expression subQueryExpr, bool isUseQueryFields = false);
+    TableSegment UseQuery(Type targetType, IQuery subQuery, bool isFirstTable, bool isCopyRefParameters, bool isUseQueryFields = false);
+    TableSegment UseNewQuery(Type targetType, Delegate subQueryGetter, bool isFirstTable, bool isUseQueryFields = false);
 
     void Union(string union, Type targetType, IQuery subQuery);
-    void Union(string union, Type targetType, Expression subQueryExpr);
-    void UnionRecursive(string union, ICteQuery subQueryObj, Expression selfSubQueryExpr);
+    void Union(string union, Type targetType, Delegate subQueryGetter);
+    void UnionRecursive(string union, ICteQuery subQueryObj, Delegate selfSubQueryGetter);
 
     void Join(string joinType, Expression joinOn);
     void Join(string joinType, Type newEntityType, Expression joinOn);
     void Join(string joinType, Type newEntityType, IQuery subQuery, Expression joinOn);
-    void Join(string joinType, Type newEntityType, Expression subQueryExpr, Expression joinOn);
+    void Join(string joinType, Type newEntityType, Delegate subQueryGetter, Expression joinOn);
 
     bool Include(Expression memberSelector, Expression filter = null);
     bool ThenInclude(Expression memberSelector, Expression filter = null);
@@ -112,8 +112,7 @@ public interface IQueryVisitor : ICloneable, IDisposable
     void Take(int limit);
 
     void AddSelectElement(Expression elementExpr, MemberInfo memberInfo, List<SqlFieldSegment> readerFields);
-    //void CopyFromRefQueryVisitor(IQueryVisitor visitor);
-    bool CopyFromNewQueryVisitor(IQueryVisitor visitor);
+    void CopyFromNewQueryVisitor(IQueryVisitor visitor);
 
     TableSegment InitTableAlias(LambdaExpression lambdaExpr);
     void Clear(bool isClearReaderFields = false);

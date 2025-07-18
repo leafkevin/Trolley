@@ -36,7 +36,7 @@ public class SqlServerFromCommand<T> : FromCommand<T>, ISqlServerFromCommand<T>
         base.UnionInternal(subQuery);
         return this;
     }
-    public new ISqlServerFromCommand<T> Union(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
+    public new ISqlServerFromCommand<T> Union(Func<IFromQuery, IQuery<T>> subQueryGetter)
     {
         base.UnionInternal(subQuery);
         return this;
@@ -46,7 +46,7 @@ public class SqlServerFromCommand<T> : FromCommand<T>, ISqlServerFromCommand<T>
         base.UnionAllInternal(subQuery);
         return this;
     }
-    public new ISqlServerFromCommand<T> UnionAll(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
+    public new ISqlServerFromCommand<T> UnionAll(Func<IFromQuery, IQuery<T>> subQueryGetter)
     {
         base.UnionAllInternal(subQuery);
         return this;
@@ -66,11 +66,11 @@ public class SqlServerFromCommand<T> : FromCommand<T>, ISqlServerFromCommand<T>
         => base.LeftJoin(joinOn) as ISqlServerFromCommand<T, TOther>;
     public new ISqlServerFromCommand<T, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
         => base.RightJoin(joinOn) as ISqlServerFromCommand<T, TOther>;
-    public new ISqlServerFromCommand<T, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
+    public new ISqlServerFromCommand<T, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T, TOther, bool>> joinOn)
         => base.InnerJoin(joinOn) as ISqlServerFromCommand<T, TOther>;
-    public new ISqlServerFromCommand<T, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
+    public new ISqlServerFromCommand<T, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T, TOther, bool>> joinOn)
         => base.LeftJoin(joinOn) as ISqlServerFromCommand<T, TOther>;
-    public new ISqlServerFromCommand<T, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
+    public new ISqlServerFromCommand<T, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T, TOther, bool>> joinOn)
         => base.RightJoin(joinOn) as ISqlServerFromCommand<T, TOther>;
     #endregion
 
@@ -227,11 +227,11 @@ public class SqlServerFromCommand<T1, T2> : FromCommand<T1, T2>, ISqlServerFromC
         => base.LeftJoin(subQuery, joinOn) as ISqlServerFromCommand<T1, T2, TOther>;
     public new ISqlServerFromCommand<T1, T2, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn)
         => base.RightJoin(subQuery, joinOn) as ISqlServerFromCommand<T1, T2, TOther>;
-    public new ISqlServerFromCommand<T1, T2, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, TOther, bool>> joinOn)
+    public new ISqlServerFromCommand<T1, T2, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, TOther, bool>> joinOn)
         => base.InnerJoin(subQuery, joinOn) as ISqlServerFromCommand<T1, T2, TOther>;
-    public new ISqlServerFromCommand<T1, T2, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, TOther, bool>> joinOn)
+    public new ISqlServerFromCommand<T1, T2, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, TOther, bool>> joinOn)
         => base.LeftJoin(subQuery, joinOn) as ISqlServerFromCommand<T1, T2, TOther>;
-    public new ISqlServerFromCommand<T1, T2, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, TOther, bool>> joinOn)
+    public new ISqlServerFromCommand<T1, T2, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, TOther, bool>> joinOn)
         => base.RightJoin(subQuery, joinOn) as ISqlServerFromCommand<T1, T2, TOther>;
     #endregion
 
@@ -346,11 +346,11 @@ public class SqlServerFromCommand<T1, T2, T3> : FromCommand<T1, T2, T3>, ISqlSer
         => base.LeftJoin(subQuery, joinOn) as ISqlServerFromCommand<T1, T2, T3, TOther>;
     public new ISqlServerFromCommand<T1, T2, T3, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
         => base.RightJoin(subQuery, joinOn) as ISqlServerFromCommand<T1, T2, T3, TOther>;
-    public new ISqlServerFromCommand<T1, T2, T3, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
+    public new ISqlServerFromCommand<T1, T2, T3, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
         => base.InnerJoin(subQuery, joinOn) as ISqlServerFromCommand<T1, T2, T3, TOther>;
-    public new ISqlServerFromCommand<T1, T2, T3, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
+    public new ISqlServerFromCommand<T1, T2, T3, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
         => base.LeftJoin(subQuery, joinOn) as ISqlServerFromCommand<T1, T2, T3, TOther>;
-    public new ISqlServerFromCommand<T1, T2, T3, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
+    public new ISqlServerFromCommand<T1, T2, T3, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
         => base.RightJoin(subQuery, joinOn) as ISqlServerFromCommand<T1, T2, T3, TOther>;
     #endregion
 
@@ -465,11 +465,11 @@ public class SqlServerFromCommand<T1, T2, T3, T4> : FromCommand<T1, T2, T3, T4>,
         => base.LeftJoin(subQuery, joinOn) as ISqlServerFromCommand<T1, T2, T3, T4, TOther>;
     public new ISqlServerFromCommand<T1, T2, T3, T4, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
         => base.RightJoin(subQuery, joinOn) as ISqlServerFromCommand<T1, T2, T3, T4, TOther>;
-    public new ISqlServerFromCommand<T1, T2, T3, T4, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
+    public new ISqlServerFromCommand<T1, T2, T3, T4, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
         => base.InnerJoin(subQuery, joinOn) as ISqlServerFromCommand<T1, T2, T3, T4, TOther>;
-    public new ISqlServerFromCommand<T1, T2, T3, T4, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
+    public new ISqlServerFromCommand<T1, T2, T3, T4, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
         => base.LeftJoin(subQuery, joinOn) as ISqlServerFromCommand<T1, T2, T3, T4, TOther>;
-    public new ISqlServerFromCommand<T1, T2, T3, T4, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
+    public new ISqlServerFromCommand<T1, T2, T3, T4, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
         => base.RightJoin(subQuery, joinOn) as ISqlServerFromCommand<T1, T2, T3, T4, TOther>;
     #endregion
 
@@ -584,11 +584,11 @@ public class SqlServerFromCommand<T1, T2, T3, T4, T5> : FromCommand<T1, T2, T3, 
         => base.LeftJoin(subQuery, joinOn) as ISqlServerFromCommand<T1, T2, T3, T4, T5, TOther>;
     public new ISqlServerFromCommand<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
         => base.RightJoin(subQuery, joinOn) as ISqlServerFromCommand<T1, T2, T3, T4, T5, TOther>;
-    public new ISqlServerFromCommand<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
+    public new ISqlServerFromCommand<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
         => base.InnerJoin(subQuery, joinOn) as ISqlServerFromCommand<T1, T2, T3, T4, T5, TOther>;
-    public new ISqlServerFromCommand<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
+    public new ISqlServerFromCommand<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
         => base.LeftJoin(subQuery, joinOn) as ISqlServerFromCommand<T1, T2, T3, T4, T5, TOther>;
-    public new ISqlServerFromCommand<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
+    public new ISqlServerFromCommand<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
         => base.RightJoin(subQuery, joinOn) as ISqlServerFromCommand<T1, T2, T3, T4, T5, TOther>;
     #endregion
 

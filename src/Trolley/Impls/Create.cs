@@ -101,14 +101,14 @@ public class Create<TEntity> : CreateInternal, ICreate<TEntity>
     public virtual IFromCommand<T> FromQuery<T>(IQuery<T> subQuery)
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
-        queryVisitor.UseQuery(typeof(T), subQuery, true);
+        queryVisitor.UseQuery(typeof(T), subQuery, false, true, true);
         queryVisitor.IsFromCommand = true;
         return this.OrmProvider.NewFromCommand<T>(this.DbContext, queryVisitor);
     }
-    public virtual IFromCommand<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
+    public virtual IFromCommand<T> FromQuery<T>(Func<IFromQuery, IQuery<T>> subQueryGetter)
     {
         var queryVisitor = this.Visitor.CreateQueryVisitor();
-        queryVisitor.UseNewQuery(typeof(T), subQueryExpr, true);
+        queryVisitor.UseNewQuery(typeof(T), subQueryGetter, false, true);
         queryVisitor.IsFromCommand = true;
         return this.OrmProvider.NewFromCommand<T>(this.DbContext, queryVisitor);
     }

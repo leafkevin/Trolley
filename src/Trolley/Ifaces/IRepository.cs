@@ -256,9 +256,9 @@ public interface IRepository
     /// </code>
     /// </summary>
     /// <typeparam name="T">表T实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryGetter">子查询</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
+    IQuery<T> FromQuery<T>(Func<IFromQuery, IQuery<T>> subQueryGetter);
     #endregion
 
     #region GetById

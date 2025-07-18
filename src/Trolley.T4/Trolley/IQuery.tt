@@ -245,7 +245,7 @@ public interface IQuery<T> : IQueryBase
     /// <param name="subQuery">子查询，需要有Select语句，如：
     /// <code>f.From&lt;Order&gt;() ... .Select(x =&gt; new { ... })</code>
     /// <returns>返回查询对象</returns>
-    IQuery<T> Union(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
+    IQuery<T> Union(Func<IFromQuery, IQuery<T>> subQueryGetter);
     /// <summary>
     /// Union All操作，所有记录不去掉重复，用法：
     /// <code>
@@ -278,9 +278,9 @@ public interface IQuery<T> : IQueryBase
     /// <param name="subQuery">子查询，需要有Select语句，如：
     /// <code>f.From&lt;Order&gt;() ... .Select(x =&gt; new { ... })</code>
     /// <returns>返回查询对象</returns>
-    IQuery<T> UnionAll(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
+    IQuery<T> UnionAll(Func<IFromQuery, IQuery<T>> subQueryGetter);
     /// <summary>
-    /// 递归CTE子查询中的Union操作，表达式subQueryExpr中的第二参数是自身引用，用法：
+    /// 递归CTE子查询中的Union操作，表达式subQueryGetter中的第二参数是自身引用，用法：
     /// <code>
     /// f.FromQuery(f =&gt; f.From&lt;Menu&gt;() ...
     ///         .Select(x =&gt; new { ... })
@@ -295,13 +295,13 @@ public interface IQuery<T> : IQueryBase
     /// ) ...
     /// </code>
     /// </summary>
-    /// <param name="subQueryExpr">子查询，需要有Select语句，如：
+    /// <param name="subQueryGetter">子查询，需要有Select语句，如：
     /// <code>f.From&lt;Menu&gt;().Where(x =&gt; ... ).Select(x =&gt; new { ... })</code>
     /// </param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> UnionRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr);
+    IQuery<T> UnionRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQueryGetter);
     /// <summary>
-    /// 递归CTE子查询中的UnionAll操作，表达式subQueryExpr中的第二参数是自身引用，用法：
+    /// 递归CTE子查询中的UnionAll操作，表达式subQueryGetter中的第二参数是自身引用，用法：
     /// <code>
     /// f.FromQuery(f =&gt; f.From&lt;Menu&gt;() ...
     ///         .Select(x =&gt; new { ... })
@@ -315,11 +315,11 @@ public interface IQuery<T> : IQueryBase
     /// SELECT ... FROM `sys_menu` a INNER JOIN `myCteTable` b ON a.`ParentId`=b.`Id` ...
     /// ) ...
     /// </summary>
-    /// <param name="subQueryExpr">子查询，需要有Select语句，如：
+    /// <param name="subQueryGetter">子查询，需要有Select语句，如：
     /// <code>f.From&lt;Menu&gt;() .Where(x =&gt; ... ) .Select(x =&gt; new { ... })</code>
     /// </param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> UnionAllRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr);
+    IQuery<T> UnionAllRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQueryGetter);
     #endregion
 
     #region WithTable
@@ -356,7 +356,7 @@ public interface IQuery<T> : IQueryBase
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
+    IQuery<T, TOther> WithQuery<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter);
     #endregion
 
     #region Include
@@ -441,7 +441,7 @@ public interface IQuery<T> : IQueryBase
     /// <param name="subQuery">子查询对象</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn);
+    IQuery<T, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T, TOther, bool>> joinOn);
     #endregion
 
     #region LeftJoin
@@ -483,7 +483,7 @@ public interface IQuery<T> : IQueryBase
     /// <param name="subQuery">子查询对象</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn);
+    IQuery<T, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T, TOther, bool>> joinOn);
     #endregion
 
     #region RightJoin
@@ -523,7 +523,7 @@ public interface IQuery<T> : IQueryBase
     /// <param name="subQuery">子查询对象</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IQuery<T, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn);
+    IQuery<T, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T, TOther, bool>> joinOn);
     #endregion
 
     #region Where
@@ -1055,9 +1055,9 @@ public interface IQuery<<#=tables#>> : IQueryBase
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryGetter">子查询</param>
     /// <returns>返回查询对象</returns>
-    IQuery<<#=tables#>, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
+    IQuery<<#=tables#>, TOther> WithQuery<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter);
     #endregion
 
 <#      }#>
@@ -1130,7 +1130,7 @@ public interface IQuery<<#=tables#>> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<<#=tables#>, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// 添加subQueryGetter子查询，并与现有表做INNER JOIN关联，用法:
     /// <code>
     /// .InnerJoin((<#=tableAlias#>) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (<#=tableAlias#>) =&gt; ...) ...
@@ -1139,10 +1139,10 @@ public interface IQuery<<#=tables#>> : IQueryBase
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询语句</param>
+    /// <param name="subQueryGetter">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IQuery<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
+    IQuery<<#=tables#>, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
 <#      }#>
     #endregion
 
@@ -1183,7 +1183,7 @@ public interface IQuery<<#=tables#>> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<<#=tables#>, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// 添加subQueryGetter子查询，并与现有表做LEFT JOIN关联，用法:
     /// <code>
     /// .LeftJoin((<#=tableAlias#>) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (<#=tableAlias#>) =&gt; ...) ...
@@ -1192,10 +1192,10 @@ public interface IQuery<<#=tables#>> : IQueryBase
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询语句</param>
+    /// <param name="subQueryGetter">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IQuery<<#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
+    IQuery<<#=tables#>, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
 <#      }#>
     #endregion
 
@@ -1236,7 +1236,7 @@ public interface IQuery<<#=tables#>> : IQueryBase
     /// <returns>返回查询对象</returns>
     IQuery<<#=tables#>, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
+    /// 添加subQueryGetter子查询，并与现有表做RIGHT JOIN关联，用法:
     /// <code>
     /// .RightJoin((<#=tableAlias#>) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (<#=tableAlias#>) =&gt; ...) ...
@@ -1245,10 +1245,10 @@ public interface IQuery<<#=tables#>> : IQueryBase
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询语句</param>
+    /// <param name="subQueryGetter">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IQuery<<#=tables#>, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
+    IQuery<<#=tables#>, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
 <#      }#>
     #endregion
 

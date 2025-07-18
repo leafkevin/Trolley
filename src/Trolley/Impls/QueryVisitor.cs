@@ -45,10 +45,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public int PageNumber { get; set; }
     public int PageSize { get; set; }
     public bool IsNeedPaging { get; set; }
-    /// <summary>
-    /// 设置子查询后，第一个查询操作，用于判断是否是子查询对象引用
-    /// </summary>
-    //private string firstFromQueryOperation;
 
 
     public QueryVisitor(DbContext dbContext) => this.DbContext = dbContext;
@@ -633,17 +629,19 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             IsMaster = true
         });
     }
-    public TableSegment UseQuery(Type targetType, IQuery subQueryObj, bool isUseQueryFields = false)
+    public TableSegment UseQuery(Type targetType, IQuery subQueryObj, bool isFirstTable, bool isCopyRefParameters, bool isUseQueryFields = false)
     {
         //需要把subQueryObj里面的有状态属性，拷贝到当前queryVisitor中来，
         //以免后面的操作会更改subQueryObj内容，subQueryObj在后面可能还会被引用，不能更改里面的内容
-        int tableIndex = this.TableAsStart + this.Tables.Count;
         TableSegment tableSegment = null;
-        var readerFields = new List<SqlFieldSegment>();
+        List<SqlFieldSegment> readerFields = null;
+        var isSelf = this.Equals(subQueryObj.Visitor);
         if (subQueryObj is ICteQuery cteQueryObj)
         {
             this.IsUseCteTable = true;
+            readerFields = new();
             cteQueryObj.ReaderFields.ForEach(f => readerFields.Add(f.Clone()));
+            if (isFirstTable) this.Clear();
             tableSegment = this.AddJoinTable(targetType, null, TableType.CteSelfRef, cteQueryObj.TableName, readerFields);
             //添加子查询对象引用
             if (!this.RefQueries.Contains(subQueryObj))
@@ -652,22 +650,41 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         else
         {
             var body = $"({subQueryObj.Visitor.BuildSql(false, out var myReaderFields)})";
-            myReaderFields.ForEach(f => readerFields.Add(f.Clone()));
+            if (isSelf) readerFields = myReaderFields;
+            else
+            {
+                readerFields = new();
+                myReaderFields.ForEach(f => readerFields.Add(f.Clone()));
+            }
+            if (isFirstTable) this.Clear();
             tableSegment = this.AddJoinTable(targetType, null, TableType.FromQuery, body, readerFields);
         }
-        this.CopyFromNewQueryVisitor(subQueryObj.Visitor);
         this.InitUseQueryReaderFields(tableSegment, readerFields);
-        if (isUseQueryFields) this.ReaderFields = readerFields;
+        if (!isSelf)
+        {
+            this.CopyFromNewQueryVisitor(subQueryObj.Visitor);
+            if (isUseQueryFields) this.ReaderFields = readerFields;
+        }
+        if (isCopyRefParameters) this.CopyFromRefQueryVisitor(subQueryObj.Visitor);
         return tableSegment;
     }
-    public TableSegment UseNewQuery(Type targetType, Expression subQueryExpr, bool isUseQueryFields = false)
+    public TableSegment UseNewQuery(Type targetType, Delegate subQueryGetter, bool isFirstTable, bool isUseQueryFields = false)
     {
-        //可能是CTE表，也可能是子查询，子查询中表别名从'a'开始
-        var fromQuery = new FromQuery(this.DbContext, this);
-        (var sql, var readerFields) = this.VisitFromQuery(subQueryExpr as LambdaExpression, fromQuery, isUseQueryFields);
+        //repository.FromQuery(f => ... ) 或是 repository.WithQuery(f => ... )，具体参数如下：
+        //f => f.From<Order>().Where(o=>o.Id==1) ... 或是 f => cteOrders 或是 f => myRefOrders等
+        //或是 f => myCteOrders.Where(o=>o.Id==1) ... 或是 f => myRefOrders.Where(o=>o.Id==1)等
+        //都是从引用现有子查询、CTE表、新建子查询生成一个子查询加入到当前Tables中，后续会有Join/Where...等操作，子查询中表别名从'a'开始
+        //必须新建一个QueryVisitor对象，不能使用已有表，后续的字段引用只存在于新表中
+        var queryVisiter = this.CreateQueryVisitor();
+        var fromQuery = new FromQuery(this.DbContext, queryVisiter);
+        //可能会引用现有表中的字段
+        queryVisiter.RefTableAliases = this.TableAliases;
+        var queryObj = subQueryGetter.DynamicInvoke(fromQuery) as IQuery;
+        var tableSegment = this.UseQuery(targetType, queryObj, isFirstTable, false, isUseQueryFields);
         if (this.IsRecursive && this.SelfRefQueryObj != null)
-            throw new Exception("调用UnionRecursive/UnionAllRecursive方法后，必须调用AsCteTable方法，生成CTE表");
-        return this.AddJoinTable(targetType, null, TableType.FromQuery, $"({sql})", readerFields);
+            throw new NotSupportedException("调用UnionRecursive/UnionAllRecursive方法后，必须调用AsCteTable方法，生成CTE表");
+        queryVisiter.RefTableAliases = null;
+        return tableSegment;
     }
     public virtual void Union(string union, Type targetType, IQuery subQuery)
     {
@@ -694,21 +711,15 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         //this.UnionSql = rawSql;
         //this.IsUnion = false;
     }
-    //public virtual void Union(string union, Type targetType, Expression selfSubQueryExpr)
-    //{
-    //    this.EnsureFromQueryStartFromUseQuery();
-    //    var visitor = this.CreateQueryVisitor();
-    //    var fromQuery = new FromQuery(this.DbContext, visitor);
-    //    visitor.IsFromQuery = true;
-    //    var subQuery = selfSubQueryExpr.DynamicInvoke(fromQuery) as IQuery;
-    //    this.Union(union, targetType, subQuery, true);
-    //}
-    public virtual void Union(string union, Type targetType, Expression subQueryExpr)
+    public virtual void Union(string union, Type targetType, Delegate subQueryGetter)
     {
         var visitor = this.CreateQueryVisitor();
         var fromQuery = new FromQuery(this.DbContext, visitor);
         visitor.IsSecondUnion = true;
-        (var sql, _) = this.VisitFromQuery(subQueryExpr as LambdaExpression, fromQuery);
+        subQueryGetter.DynamicInvoke(fromQuery);
+        var sql = visitor.BuildSql(false, out _);
+        if (visitor.IsRecursive && visitor.SelfRefQueryObj != null)
+            throw new NotSupportedException("调用UnionRecursive/UnionAllRecursive方法后，必须调用AsCteTable方法，生成CTE表");
         this.Union(union, targetType, sql);
     }
     private void Union(string union, Type targetType, string subQuerySql)
@@ -723,7 +734,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.UnionSql = rawSql;
         this.IsUnion = false;
     }
-    public virtual void UnionRecursive(string union, ICteQuery selfQueryObj, Expression selfSubQueryExpr)
+    public virtual void UnionRecursive(string union, ICteQuery selfQueryObj, Delegate subQueryGetter)
     {
         this.IsUnion = true;
         this.IsRecursive = true;
@@ -739,9 +750,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         var visitor = this.CreateQueryVisitor();
         var fromQuery = new FromQuery(this.DbContext, visitor);
-        //var subQuery = subQueryGetter.DynamicInvoke(fromQuery, selfQueryObj) as IQuery;
-        //visitor.IsSecondUnion = true;
-        //rawSql += union + Environment.NewLine + visitor.BuildSql(false, out _);
+        visitor.RefQueries.Add(selfQueryObj);
+        visitor.SelfRefQueryObj = selfQueryObj;
+        visitor.IsSecondUnion = true;
+        subQueryGetter.DynamicInvoke(fromQuery);
+        rawSql += union + Environment.NewLine + visitor.BuildSql(false, out _);
         //sql解析完毕，不再需要selfQueryObj对象了，在CteQueries中删除selfQueryObj对象，防止最后扁平化CteQueries时无限循环引用
         this.RefQueries.Remove(selfQueryObj);
         //this.CopyFromNewQueryVisitor(subQuery.Visitor);
@@ -754,9 +767,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual void Join(string joinType, Type newEntityType, Expression joinOn)
         => this.Join(joinType, joinOn, f => { this.From(this.TableAsStart, newEntityType); return this.InitTableAlias(f); });
     public virtual void Join(string joinType, Type newEntityType, IQuery subQuery, Expression joinOn)
-        => this.Join(joinType, joinOn, f => { this.UseQuery(newEntityType, subQuery); return this.InitTableAlias(f); });
-    public virtual void Join(string joinType, Type newEntityType, Expression subQueryExpr, Expression joinOn)
-        => this.Join(joinType, joinOn, f => { this.UseNewQuery(newEntityType, subQueryExpr); return this.InitTableAlias(f); });
+        => this.Join(joinType, joinOn, f => { this.UseQuery(newEntityType, subQuery, false, true, false); return this.InitTableAlias(f); });
+    public virtual void Join(string joinType, Type newEntityType, Delegate subQueryGetter, Expression joinOn)
+        => this.Join(joinType, joinOn, f => { this.UseNewQuery(newEntityType, subQueryGetter, false); return this.InitTableAlias(f); });
     public virtual void Join(string joinType, Expression joinOn, Func<LambdaExpression, TableSegment> joinTableSegmentGetter = null)
     {
         this.IsWhere = true;

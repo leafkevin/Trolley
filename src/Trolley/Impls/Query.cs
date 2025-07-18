@@ -256,9 +256,9 @@ public class Query<T> : QueryBase, IQuery<T>
         base.UnionInternal(subQuery);
         return this;
     }
-    public virtual IQuery<T> Union(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
+    public virtual IQuery<T> Union(Func<IFromQuery, IQuery<T>> subQueryGetter)
     {
-        base.UnionInternal(subQueryExpr);
+        base.UnionInternal(subQueryGetter);
         return this;
     }
     public virtual IQuery<T> UnionAll(IQuery<T> subQuery)
@@ -266,19 +266,19 @@ public class Query<T> : QueryBase, IQuery<T>
         base.UnionAllInternal(subQuery);
         return this;
     }
-    public virtual IQuery<T> UnionAll(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
+    public virtual IQuery<T> UnionAll(Func<IFromQuery, IQuery<T>> subQueryGetter)
     {
-        base.UnionAllInternal(subQueryExpr);
+        base.UnionAllInternal(subQueryGetter);
         return this;
     }
-    public virtual IQuery<T> UnionRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr)
+    public virtual IQuery<T> UnionRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQueryGetter)
     {
-        base.UnionRecursiveInternal(subQueryExpr);
+        base.UnionRecursiveInternal(subQueryGetter);
         return this;
     }
-    public virtual IQuery<T> UnionAllRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr)
+    public virtual IQuery<T> UnionAllRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQueryGetter)
     {
-        base.UnionAllRecursiveInternal(subQueryExpr);
+        base.UnionAllRecursiveInternal(subQueryGetter);
         return this;
     }
     #endregion
@@ -297,9 +297,9 @@ public class Query<T> : QueryBase, IQuery<T>
         base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public virtual IQuery<T, TOther> WithQuery<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter)
     {
-        base.WithQueryInternal(subQueryExpr);
+        base.WithQueryInternal(subQueryGetter);
         return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -315,9 +315,9 @@ public class Query<T> : QueryBase, IQuery<T>
         base.InnerJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
+    public virtual IQuery<T, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T, TOther, bool>> joinOn)
     {
-        base.InnerJoinInternal(subQueryExpr, joinOn);
+        base.InnerJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -333,9 +333,9 @@ public class Query<T> : QueryBase, IQuery<T>
         base.LeftJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
+    public virtual IQuery<T, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T, TOther, bool>> joinOn)
     {
-        base.LeftJoinInternal(subQueryExpr, joinOn);
+        base.LeftJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -351,9 +351,9 @@ public class Query<T> : QueryBase, IQuery<T>
         base.RightJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
+    public virtual IQuery<T, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T, TOther, bool>> joinOn)
     {
-        base.RightJoinInternal(subQueryExpr, joinOn);
+        base.RightJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T, TOther>(this.DbContext, this.Visitor);
     }
     #endregion

@@ -74,9 +74,9 @@ public class Query<T1, T2> : QueryBase, IQuery<T1, T2>
         base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewQuery<T1, T2, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public virtual IQuery<T1, T2, TOther> WithQuery<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter)
     {
-        base.WithQueryInternal(subQueryExpr);
+        base.WithQueryInternal(subQueryGetter);
         return this.OrmProvider.NewQuery<T1, T2, TOther>(this.DbContext, this.Visitor);
     }
 
@@ -98,9 +98,9 @@ public class Query<T1, T2> : QueryBase, IQuery<T1, T2>
         base.InnerJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, TOther, bool>> joinOn)
     {
-        base.InnerJoinInternal(subQueryExpr, joinOn);
+        base.InnerJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -121,9 +121,9 @@ public class Query<T1, T2> : QueryBase, IQuery<T1, T2>
         base.LeftJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, TOther, bool>> joinOn)
     {
-        base.LeftJoinInternal(subQueryExpr, joinOn);
+        base.LeftJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -144,9 +144,9 @@ public class Query<T1, T2> : QueryBase, IQuery<T1, T2>
         base.RightJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, TOther, bool>> joinOn)
     {
-        base.RightJoinInternal(subQueryExpr, joinOn);
+        base.RightJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -367,9 +367,9 @@ public class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
         base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewQuery<T1, T2, T3, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public virtual IQuery<T1, T2, T3, TOther> WithQuery<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter)
     {
-        base.WithQueryInternal(subQueryExpr);
+        base.WithQueryInternal(subQueryGetter);
         return this.OrmProvider.NewQuery<T1, T2, T3, TOther>(this.DbContext, this.Visitor);
     }
 
@@ -391,9 +391,9 @@ public class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
         base.InnerJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
     {
-        base.InnerJoinInternal(subQueryExpr, joinOn);
+        base.InnerJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -414,9 +414,9 @@ public class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
         base.LeftJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
     {
-        base.LeftJoinInternal(subQueryExpr, joinOn);
+        base.LeftJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -437,9 +437,9 @@ public class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
         base.RightJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
     {
-        base.RightJoinInternal(subQueryExpr, joinOn);
+        base.RightJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -660,9 +660,9 @@ public class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
         base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public virtual IQuery<T1, T2, T3, T4, TOther> WithQuery<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter)
     {
-        base.WithQueryInternal(subQueryExpr);
+        base.WithQueryInternal(subQueryGetter);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, TOther>(this.DbContext, this.Visitor);
     }
 
@@ -684,9 +684,9 @@ public class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
         base.InnerJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, T4, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
     {
-        base.InnerJoinInternal(subQueryExpr, joinOn);
+        base.InnerJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -707,9 +707,9 @@ public class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
         base.LeftJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, T4, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
     {
-        base.LeftJoinInternal(subQueryExpr, joinOn);
+        base.LeftJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -730,9 +730,9 @@ public class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
         base.RightJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, T4, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
     {
-        base.RightJoinInternal(subQueryExpr, joinOn);
+        base.RightJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -953,9 +953,9 @@ public class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
         base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public virtual IQuery<T1, T2, T3, T4, T5, TOther> WithQuery<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter)
     {
-        base.WithQueryInternal(subQueryExpr);
+        base.WithQueryInternal(subQueryGetter);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, TOther>(this.DbContext, this.Visitor);
     }
 
@@ -977,9 +977,9 @@ public class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
         base.InnerJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
     {
-        base.InnerJoinInternal(subQueryExpr, joinOn);
+        base.InnerJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -1000,9 +1000,9 @@ public class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
         base.LeftJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
     {
-        base.LeftJoinInternal(subQueryExpr, joinOn);
+        base.LeftJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -1023,9 +1023,9 @@ public class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
         base.RightJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
     {
-        base.RightJoinInternal(subQueryExpr, joinOn);
+        base.RightJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -1246,9 +1246,9 @@ public class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T
         base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, TOther> WithQuery<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter)
     {
-        base.WithQueryInternal(subQueryExpr);
+        base.WithQueryInternal(subQueryGetter);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, TOther>(this.DbContext, this.Visitor);
     }
 
@@ -1270,9 +1270,9 @@ public class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T
         base.InnerJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
     {
-        base.InnerJoinInternal(subQueryExpr, joinOn);
+        base.InnerJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -1293,9 +1293,9 @@ public class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T
         base.LeftJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
     {
-        base.LeftJoinInternal(subQueryExpr, joinOn);
+        base.LeftJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -1316,9 +1316,9 @@ public class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T
         base.RightJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
     {
-        base.RightJoinInternal(subQueryExpr, joinOn);
+        base.RightJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -1539,9 +1539,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T
         base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> WithQuery<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter)
     {
-        base.WithQueryInternal(subQueryExpr);
+        base.WithQueryInternal(subQueryGetter);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.DbContext, this.Visitor);
     }
 
@@ -1563,9 +1563,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T
         base.InnerJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
     {
-        base.InnerJoinInternal(subQueryExpr, joinOn);
+        base.InnerJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -1586,9 +1586,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T
         base.LeftJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
     {
-        base.LeftJoinInternal(subQueryExpr, joinOn);
+        base.LeftJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -1609,9 +1609,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T
         base.RightJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
     {
-        base.RightJoinInternal(subQueryExpr, joinOn);
+        base.RightJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -1832,9 +1832,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T
         base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithQuery<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter)
     {
-        base.WithQueryInternal(subQueryExpr);
+        base.WithQueryInternal(subQueryGetter);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.DbContext, this.Visitor);
     }
 
@@ -1856,9 +1856,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T
         base.InnerJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
     {
-        base.InnerJoinInternal(subQueryExpr, joinOn);
+        base.InnerJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -1879,9 +1879,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T
         base.LeftJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
     {
-        base.LeftJoinInternal(subQueryExpr, joinOn);
+        base.LeftJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -1902,9 +1902,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T
         base.RightJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
     {
-        base.RightJoinInternal(subQueryExpr, joinOn);
+        base.RightJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -2125,9 +2125,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T
         base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> WithQuery<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter)
     {
-        base.WithQueryInternal(subQueryExpr);
+        base.WithQueryInternal(subQueryGetter);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.DbContext, this.Visitor);
     }
 
@@ -2149,9 +2149,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T
         base.InnerJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
     {
-        base.InnerJoinInternal(subQueryExpr, joinOn);
+        base.InnerJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -2172,9 +2172,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T
         base.LeftJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
     {
-        base.LeftJoinInternal(subQueryExpr, joinOn);
+        base.LeftJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -2195,9 +2195,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T
         base.RightJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
     {
-        base.RightJoinInternal(subQueryExpr, joinOn);
+        base.RightJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -2418,9 +2418,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<
         base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithQuery<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter)
     {
-        base.WithQueryInternal(subQueryExpr);
+        base.WithQueryInternal(subQueryGetter);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.DbContext, this.Visitor);
     }
 
@@ -2442,9 +2442,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<
         base.InnerJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
     {
-        base.InnerJoinInternal(subQueryExpr, joinOn);
+        base.InnerJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -2465,9 +2465,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<
         base.LeftJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
     {
-        base.LeftJoinInternal(subQueryExpr, joinOn);
+        base.LeftJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -2488,9 +2488,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<
         base.RightJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
     {
-        base.RightJoinInternal(subQueryExpr, joinOn);
+        base.RightJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -2711,9 +2711,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQ
         base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> WithQuery<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter)
     {
-        base.WithQueryInternal(subQueryExpr);
+        base.WithQueryInternal(subQueryGetter);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.DbContext, this.Visitor);
     }
 
@@ -2735,9 +2735,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQ
         base.InnerJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
     {
-        base.InnerJoinInternal(subQueryExpr, joinOn);
+        base.InnerJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -2758,9 +2758,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQ
         base.LeftJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
     {
-        base.LeftJoinInternal(subQueryExpr, joinOn);
+        base.LeftJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -2781,9 +2781,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQ
         base.RightJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
     {
-        base.RightJoinInternal(subQueryExpr, joinOn);
+        base.RightJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -3004,9 +3004,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBas
         base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithQuery<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter)
     {
-        base.WithQueryInternal(subQueryExpr);
+        base.WithQueryInternal(subQueryGetter);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.DbContext, this.Visitor);
     }
 
@@ -3028,9 +3028,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBas
         base.InnerJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
     {
-        base.InnerJoinInternal(subQueryExpr, joinOn);
+        base.InnerJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -3051,9 +3051,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBas
         base.LeftJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
     {
-        base.LeftJoinInternal(subQueryExpr, joinOn);
+        base.LeftJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -3074,9 +3074,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBas
         base.RightJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
     {
-        base.RightJoinInternal(subQueryExpr, joinOn);
+        base.RightJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -3297,9 +3297,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Que
         base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> WithQuery<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter)
     {
-        base.WithQueryInternal(subQueryExpr);
+        base.WithQueryInternal(subQueryGetter);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.DbContext, this.Visitor);
     }
 
@@ -3321,9 +3321,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Que
         base.InnerJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
     {
-        base.InnerJoinInternal(subQueryExpr, joinOn);
+        base.InnerJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -3344,9 +3344,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Que
         base.LeftJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
     {
-        base.LeftJoinInternal(subQueryExpr, joinOn);
+        base.LeftJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -3367,9 +3367,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Que
         base.RightJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
     {
-        base.RightJoinInternal(subQueryExpr, joinOn);
+        base.RightJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -3590,9 +3590,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> 
         base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithQuery<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter)
     {
-        base.WithQueryInternal(subQueryExpr);
+        base.WithQueryInternal(subQueryGetter);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.DbContext, this.Visitor);
     }
 
@@ -3614,9 +3614,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> 
         base.InnerJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
     {
-        base.InnerJoinInternal(subQueryExpr, joinOn);
+        base.InnerJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -3637,9 +3637,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> 
         base.LeftJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
     {
-        base.LeftJoinInternal(subQueryExpr, joinOn);
+        base.LeftJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -3660,9 +3660,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> 
         base.RightJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
     {
-        base.RightJoinInternal(subQueryExpr, joinOn);
+        base.RightJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -3883,9 +3883,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
         base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> WithQuery<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter)
     {
-        base.WithQueryInternal(subQueryExpr);
+        base.WithQueryInternal(subQueryGetter);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.DbContext, this.Visitor);
     }
 
@@ -3907,9 +3907,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
         base.InnerJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
     {
-        base.InnerJoinInternal(subQueryExpr, joinOn);
+        base.InnerJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -3930,9 +3930,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
         base.LeftJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
     {
-        base.LeftJoinInternal(subQueryExpr, joinOn);
+        base.LeftJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.DbContext, this.Visitor);
     }
     #endregion
@@ -3953,9 +3953,9 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
         base.RightJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
     {
-        base.RightJoinInternal(subQueryExpr, joinOn);
+        base.RightJoinInternal(subQueryGetter, joinOn);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.DbContext, this.Visitor);
     }
     #endregion

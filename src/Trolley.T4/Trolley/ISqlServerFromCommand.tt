@@ -82,9 +82,9 @@ public interface ISqlServerFromCommand<T> : IFromCommand<T>, ISqlServerFromComma
 
     #region Union/UnionAll
     new ISqlServerFromCommand<T> Union(IQuery<T> subQuery);
-    new ISqlServerFromCommand<T> Union(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
+    new ISqlServerFromCommand<T> Union(Func<IFromQuery, IQuery<T>> subQueryGetter);
     new ISqlServerFromCommand<T> UnionAll(IQuery<T> subQuery);
-    new ISqlServerFromCommand<T> UnionAll(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
+    new ISqlServerFromCommand<T> UnionAll(Func<IFromQuery, IQuery<T>> subQueryGetter);
     #endregion
 
     #region Join
@@ -173,7 +173,7 @@ public interface ISqlServerFromCommand<T> : IFromCommand<T>, ISqlServerFromComma
     /// <param name="subQuery">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new ISqlServerFromCommand<T, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn);
+    new ISqlServerFromCommand<T, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
     /// 添加subQuery子查询，并与现有表做LEFT JOIN关联，用法:
     /// <code>
@@ -187,7 +187,7 @@ public interface ISqlServerFromCommand<T> : IFromCommand<T>, ISqlServerFromComma
     /// <param name="subQuery">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new ISqlServerFromCommand<T, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn);
+    new ISqlServerFromCommand<T, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
     /// 添加subQuery子查询，并与现有表做RIGHT JOIN关联，用法:
     /// <code>
@@ -201,7 +201,7 @@ public interface ISqlServerFromCommand<T> : IFromCommand<T>, ISqlServerFromComma
     /// <param name="subQuery">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new ISqlServerFromCommand<T, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn);
+    new ISqlServerFromCommand<T, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T, TOther, bool>> joinOn);
     #endregion
 
     #region Where/And
@@ -529,7 +529,7 @@ public interface ISqlServerFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>,
     /// <param name="subQuery">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new ISqlServerFromCommand<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
+    new ISqlServerFromCommand<<#=tables#>, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
     /// <summary>
     /// 添加subQuery子查询，并与现有表做LEFT JOIN关联，用法:
     /// <code>
@@ -543,7 +543,7 @@ public interface ISqlServerFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>,
     /// <param name="subQuery">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new ISqlServerFromCommand<<#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
+    new ISqlServerFromCommand<<#=tables#>, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
     /// <summary>
     /// 添加subQuery子查询，并与现有表做RIGHT JOIN关联，用法:
     /// <code>
@@ -557,7 +557,7 @@ public interface ISqlServerFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>,
     /// <param name="subQuery">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new ISqlServerFromCommand<<#=tables#>, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
+    new ISqlServerFromCommand<<#=tables#>, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
 <#      }#>
     #endregion
 

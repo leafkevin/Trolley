@@ -22,7 +22,7 @@ public class UnitTest2 : UnitTestBase
         var services = new ServiceCollection();
         services.AddSingleton(f =>
         {
-            var connectionString = "Server=192.168.31.67;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
+            var connectionString = "Server=localhost;Database=fengling;Uid=root;password=123456;charset=utf8mb4;AllowLoadLocalInfile=true";
             var builder = new OrmDbFactoryBuilder()
                 .Register(OrmProviderType.MySql, "fengling", f => f.UseConnectionString(connectionString), true)
                 .Configure<ModelConfiguration>(OrmProviderType.MySql)
@@ -609,40 +609,40 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
             Assert.True(item.ParentId < parentId);
         }
 
-        sql = repository.From<Menu>()
-            .InnerJoin<Page>((a, b) => a.PageId == b.Id && b.Id > pageId)
-            .Select((a, b) => new { MenuId = a.Id, a.ParentId, b.Url })
-            .Union(f => f.UseQuery(menuPageList)
-                .Where(t => t.ParentId < parentId)
-                .Select())
-            .ToSql(out dbParameters);
-        Assert.Equal(@"WITH `menuPageList`(`MenuId`,`ParentId`,`Url`) AS 
-(
-SELECT b.`Id`,b.`ParentId`,a.`Url` FROM `sys_page` a,`sys_menu` b WHERE a.`Id`=b.`PageId` AND b.`Id`>@MenuId
-)
-SELECT a.`Id` AS `MenuId`,a.`ParentId`,b.`Url` FROM `sys_menu` a INNER JOIN `sys_page` b ON a.`PageId`=b.`Id` AND b.`Id`>@p0 UNION
-SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<@p2", sql);
-        Assert.Equal(3, dbParameters.Count);
-        Assert.Equal("@p0", dbParameters[0].ParameterName);
-        Assert.Equal("@MenuId", dbParameters[1].ParameterName);
-        Assert.Equal("@p2", dbParameters[2].ParameterName);
-        Assert.True((int)dbParameters[0].Value == menuId);
-        Assert.True((int)dbParameters[1].Value == pageId);
-        Assert.True((int)dbParameters[2].Value == parentId);
+        //        sql = repository.From<Menu>()
+        //            .InnerJoin<Page>((a, b) => a.PageId == b.Id && b.Id > pageId)
+        //            .Select((a, b) => new { MenuId = a.Id, a.ParentId, b.Url })
+        //            .Union(f => f.UseQuery(menuPageList)
+        //                .Where(t => t.ParentId < parentId)
+        //                .Select())
+        //            .ToSql(out dbParameters);
+        //        Assert.Equal(@"WITH `menuPageList`(`MenuId`,`ParentId`,`Url`) AS 
+        //(
+        //SELECT b.`Id`,b.`ParentId`,a.`Url` FROM `sys_page` a,`sys_menu` b WHERE a.`Id`=b.`PageId` AND b.`Id`>@MenuId
+        //)
+        //SELECT a.`Id` AS `MenuId`,a.`ParentId`,b.`Url` FROM `sys_menu` a INNER JOIN `sys_page` b ON a.`PageId`=b.`Id` AND b.`Id`>@p0 UNION
+        //SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<@p2", sql);
+        //        Assert.Equal(3, dbParameters.Count);
+        //        Assert.Equal("@p0", dbParameters[0].ParameterName);
+        //        Assert.Equal("@MenuId", dbParameters[1].ParameterName);
+        //        Assert.Equal("@p2", dbParameters[2].ParameterName);
+        //        Assert.True((int)dbParameters[0].Value == menuId);
+        //        Assert.True((int)dbParameters[1].Value == pageId);
+        //        Assert.True((int)dbParameters[2].Value == parentId);
 
-        result1 = repository.From<Menu>()
-            .InnerJoin<Page>((a, b) => a.PageId == b.Id && b.Id > pageId)
-            .Select((a, b) => new { MenuId = a.Id, a.ParentId, b.Url })
-            .Union(f => f.UseQuery(menuPageList)
-                .Where(f => f.ParentId < parentId)
-                .Select())
-            .ToList();
-        Assert.True(result1.Count > 0);
-        foreach (var item in result1)
-        {
-            Assert.True(item.MenuId > menuId);
-            Assert.True(item.ParentId < parentId);
-        }
+        //        result1 = repository.From<Menu>()
+        //            .InnerJoin<Page>((a, b) => a.PageId == b.Id && b.Id > pageId)
+        //            .Select((a, b) => new { MenuId = a.Id, a.ParentId, b.Url })
+        //            .Union(f => f.UseQuery(menuPageList)
+        //                .Where(f => f.ParentId < parentId)
+        //                .Select())
+        //            .ToList();
+        //        Assert.True(result1.Count > 0);
+        //        foreach (var item in result1)
+        //        {
+        //            Assert.True(item.MenuId > menuId);
+        //            Assert.True(item.ParentId < parentId);
+        //        }
     }
     [Fact]
     public async Task FromQuery_Include()
@@ -1387,7 +1387,7 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
 
         var sql = repository.From<User>()
             .InnerJoin<Company>((a, b) => a.CompanyId == b.Id)
-            .Where((x, y) => Sql.Exists(f => f.UseQuery(myOrders).Where(f => f.BuyerId == x.Id)))
+            .Where((x, y) => Sql.Exists(f => myOrders.Where(f => f.BuyerId == x.Id)))
             .Select((a, b) => new { a.Id, a.Name, CompanyName = b.Name })
             .ToSql(out _);
         Assert.Equal(@"WITH `myOrders`(`OrderId`,`BuyerId`) AS 
@@ -1398,7 +1398,7 @@ SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `s
 
         var result = repository.From<User>()
             .InnerJoin<Company>((a, b) => a.CompanyId == b.Id)
-            .Where((x, y) => Sql.Exists(f => f.UseQuery(myOrders).Where(f => f.BuyerId == x.Id)))
+            .Where((x, y) => Sql.Exists(t => myOrders.Where(f => f.BuyerId == x.Id)))
             .Select((a, b) => new { a.Id, a.Name, CompanyName = b.Name })
             .First();
         Assert.NotNull(result);
@@ -2259,7 +2259,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `MenuList` a INNER JOIN `sys_pa
             .AsCteTable("myCteTable2");
 
         var sql = repository
-            .FromQuery(f => f.UseQuery(myCteTable1))
+            .FromQuery(f => myCteTable1)
             .InnerJoin(myCteTable2, (a, b) => a.Id == b.Id)
             .Select((a, b) => new { b.Id, a.Name, b.ParentId, b.Url })
             .ToSql(out _);
@@ -2285,7 +2285,7 @@ SELECT b.`Id`,a.`Name`,b.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
             .AsCteTable("MenuList");
 
         var result1 = repository
-            .FromQuery(f => f.UseQuery(myCteTable2))
+            .FromQuery(f => myCteTable2)
             .InnerJoin(myCteTable1, (a, b) => a.Id == b.Id)
             .Select((a, b) => new { a.Id, b.Name, a.ParentId, a.Url })
             .ToList();
@@ -2294,7 +2294,7 @@ SELECT b.`Id`,a.`Name`,b.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
 
         int pageId = 1;
         sql = repository
-            .FromQuery(f => f.UseQuery(menuList))
+            .FromQuery(f => menuList)
             .WithQuery(x => x.From<Page>()
                     .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
                     .Where((a, b) => a.Id == pageId)
@@ -2314,7 +2314,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON
 SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `MenuList` a INNER JOIN (SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `sys_menu` b ON a.`Id`=b.`PageId` WHERE a.`Id`=@p1 UNION ALL
 SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `MenuList` b ON a.`Id`=b.`Id` WHERE a.`Id`>@p2) b ON a.`Id`=b.`Id`", sql);
         var result2 = repository
-            .FromQuery(f => f.UseQuery(menuList))
+            .FromQuery(f => menuList)
             .WithQuery(x => x.From<Page>()
                     .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
                     .Where((a, b) => a.Id == pageId)

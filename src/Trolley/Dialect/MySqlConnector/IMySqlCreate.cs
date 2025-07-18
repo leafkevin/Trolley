@@ -166,8 +166,8 @@ public interface IMySqlCreate<TEntity> : ICreate<TEntity>
     /// </code>
     /// </summary>
     /// <typeparam name="T">子查询返回的实体类型</typeparam>
-    /// <param name="subQueryExpr">子查询</param>
+    /// <param name="subQueryGetter">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
+    new IMySqlFromCommand<T> FromQuery<T>(Func<IFromQuery, IQuery<T>> subQueryGetter);
     #endregion
 }

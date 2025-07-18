@@ -542,7 +542,14 @@ public class CreateVisitor : SqlVisitor, ICreateVisitor
     }
     public override IQueryVisitor CreateQueryVisitor(char? tableAsStart = null)
     {
-        var queryVisitor = base.CreateQueryVisitor(tableAsStart);
+        var queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart ?? this.TableAsStart, this.DbParameters);
+        queryVisitor.IsMultiple = this.IsMultiple;
+        queryVisitor.CommandIndex = this.CommandIndex;
+        queryVisitor.RefQueries = this.RefQueries;
+        queryVisitor.ShardingTables = this.ShardingTables;
+        queryVisitor.RefTableAliases = this.RefTableAliases;
+        queryVisitor.IncludeTables = this.IncludeTables;
+        queryVisitor.NextDbParameters = this.NextDbParameters;
         queryVisitor.Tables = this.Tables;
         return queryVisitor;
     }
