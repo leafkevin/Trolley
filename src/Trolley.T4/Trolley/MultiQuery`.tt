@@ -92,9 +92,9 @@ public class MultiQuery<<#=tables#>> : MultiQueryBase, IMultiQuery<<#=tables#>>
         base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewMultiQuery<<#=tables#>, TOther>(this.MultipleQuery, this.Visitor);
     }
-    public virtual IMultiQuery<<#=tables#>, TOther> WithQuery<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter)
+    public virtual IMultiQuery<<#=tables#>, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
     {
-        base.WithQueryInternal(subQueryGetter);
+        base.WithQueryInternal(subQueryExpr);
         return this.OrmProvider.NewMultiQuery<<#=tables#>, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
@@ -120,9 +120,9 @@ public class MultiQuery<<#=tables#>> : MultiQueryBase, IMultiQuery<<#=tables#>>
         base.InnerJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewMultiQuery<<#=tables#>, TOther>(this.MultipleQuery, this.Visitor);
     }
-    public virtual IMultiQuery<<#=tables#>, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+    public virtual IMultiQuery<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
-        base.InnerJoinInternal(subQueryGetter, joinOn);
+        base.InnerJoinInternal(subQueryExpr, joinOn);
         return this.OrmProvider.NewMultiQuery<<#=tables#>, TOther>(this.MultipleQuery, this.Visitor);
     }
 <#      }#>
@@ -148,9 +148,9 @@ public class MultiQuery<<#=tables#>> : MultiQueryBase, IMultiQuery<<#=tables#>>
         base.LeftJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewMultiQuery<<#=tables#>, TOther>(this.MultipleQuery, this.Visitor);
     }
-    public virtual IMultiQuery<<#=tables#>, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+    public virtual IMultiQuery<<#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
-        base.LeftJoinInternal(subQueryGetter, joinOn);
+        base.LeftJoinInternal(subQueryExpr, joinOn);
         return this.OrmProvider.NewMultiQuery<<#=tables#>, TOther>(this.MultipleQuery, this.Visitor);
     }
 <#      }#>
@@ -176,9 +176,9 @@ public class MultiQuery<<#=tables#>> : MultiQueryBase, IMultiQuery<<#=tables#>>
         base.RightJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewMultiQuery<<#=tables#>, TOther>(this.MultipleQuery, this.Visitor);
     }
-    public virtual IMultiQuery<<#=tables#>, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+    public virtual IMultiQuery<<#=tables#>, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
     {
-        base.RightJoinInternal(subQueryGetter, joinOn);
+        base.RightJoinInternal(subQueryExpr, joinOn);
         return this.OrmProvider.NewMultiQuery<<#=tables#>, TOther>(this.MultipleQuery, this.Visitor);
     }
 <#      }#>

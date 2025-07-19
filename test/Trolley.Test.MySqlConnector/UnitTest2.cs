@@ -577,7 +577,7 @@ SELECT b.`MenuId`,a.`Name`,b.`ParentId`,a.`PageId`,b.`Url` FROM `sys_menu` a INN
         sql = repository.From<Menu>()
             .InnerJoin<Page>((a, b) => a.PageId == b.Id && b.Id > pageId)
             .Select((a, b) => new { MenuId = a.Id, a.ParentId, b.Url })
-            .Union(f => menuPageList
+            .Union(menuPageList
                 .Where(t => t.ParentId < parentId)
                 .Select())
             .ToSql(out dbParameters);
@@ -2259,7 +2259,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `MenuList` a INNER JOIN `sys_pa
             .AsCteTable("myCteTable2");
 
         var sql = repository
-            .FromQuery(f => myCteTable1)
+            .FromQuery(f => f.Use(myCteTable1))
             .InnerJoin(myCteTable2, (a, b) => a.Id == b.Id)
             .Select((a, b) => new { b.Id, a.Name, b.ParentId, b.Url })
             .ToSql(out _);
@@ -2299,7 +2299,7 @@ SELECT b.`Id`,a.`Name`,b.`ParentId`,b.`Url` FROM `myCteTable1` a INNER JOIN `myC
                     .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
                     .Where((a, b) => a.Id == pageId)
                     .Select((x, y) => new { y.Id, x.Url })
-                .UnionAll(x => x.From<Page>()//.WithTable(self)
+                .UnionAll(x => x.From<Page>()//.WithQuery(self)
                     .InnerJoin(menuList, (a, b) => a.Id == b.Id)
                     .Where((a, b) => a.Id > pageId)
                     .Select((x, y) => new { y.Id, x.Url })))
@@ -2314,7 +2314,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON
 SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `MenuList` a INNER JOIN (SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `sys_menu` b ON a.`Id`=b.`PageId` WHERE a.`Id`=@p1 UNION ALL
 SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `MenuList` b ON a.`Id`=b.`Id` WHERE a.`Id`>@p2) b ON a.`Id`=b.`Id`", sql);
         var result2 = repository
-            .FromQuery(f => menuList)
+            .FromQuery( menuList)
             .WithQuery(x => x.From<Page>()
                     .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
                     .Where((a, b) => a.Id == pageId)

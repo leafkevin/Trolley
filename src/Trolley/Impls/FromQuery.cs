@@ -174,6 +174,14 @@ public class FromQuery : IFromQuery
     }
     #endregion
 
+    #region Use
+    public virtual IQuery<T> Use<T>(IQuery<T> subQuery)
+    {
+        this.visitor.UseQuery(typeof(T), subQuery, true, true, true);
+        return this.ormProvider.NewQuery<T>(this.dbContext, this.visitor);
+    }
+    #endregion
+
     #region ToSql
     public string ToSql(out List<IDbDataParameter> dbParameters)
     {

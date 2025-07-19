@@ -36,7 +36,7 @@ public class PostgreSqlFromCommand<T> : FromCommand<T>, IPostgreSqlFromCommand<T
         base.UnionInternal(subQuery);
         return this;
     }
-    public new IPostgreSqlFromCommand<T> Union(Func<IFromQuery, IQuery<T>> subQueryGetter)
+    public new IPostgreSqlFromCommand<T> Union(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
     {
         base.UnionInternal(subQuery);
         return this;
@@ -46,7 +46,7 @@ public class PostgreSqlFromCommand<T> : FromCommand<T>, IPostgreSqlFromCommand<T
         base.UnionAllInternal(subQuery);
         return this;
     }
-    public new IPostgreSqlFromCommand<T> UnionAll(Func<IFromQuery, IQuery<T>> subQueryGetter)
+    public new IPostgreSqlFromCommand<T> UnionAll(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
     {
         base.UnionAllInternal(subQuery);
         return this;
@@ -66,11 +66,11 @@ public class PostgreSqlFromCommand<T> : FromCommand<T>, IPostgreSqlFromCommand<T
         => base.LeftJoin(joinOn) as IPostgreSqlFromCommand<T, TOther>;
     public new IPostgreSqlFromCommand<T, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
         => base.RightJoin(joinOn) as IPostgreSqlFromCommand<T, TOther>;
-    public new IPostgreSqlFromCommand<T, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T, TOther, bool>> joinOn)
+    public new IPostgreSqlFromCommand<T, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlFromCommand<T, TOther>;
-    public new IPostgreSqlFromCommand<T, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T, TOther, bool>> joinOn)
+    public new IPostgreSqlFromCommand<T, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
         => base.LeftJoin(joinOn) as IPostgreSqlFromCommand<T, TOther>;
-    public new IPostgreSqlFromCommand<T, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T, TOther, bool>> joinOn)
+    public new IPostgreSqlFromCommand<T, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
         => base.RightJoin(joinOn) as IPostgreSqlFromCommand<T, TOther>;
     #endregion
 
@@ -237,11 +237,11 @@ public class PostgreSqlFromCommand<T1, T2> : FromCommand<T1, T2>, IPostgreSqlFro
         => base.LeftJoin(subQuery, joinOn) as IPostgreSqlFromCommand<T1, T2, TOther>;
     public new IPostgreSqlFromCommand<T1, T2, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn)
         => base.RightJoin(subQuery, joinOn) as IPostgreSqlFromCommand<T1, T2, TOther>;
-    public new IPostgreSqlFromCommand<T1, T2, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, TOther, bool>> joinOn)
+    public new IPostgreSqlFromCommand<T1, T2, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, TOther, bool>> joinOn)
         => base.InnerJoin(subQuery, joinOn) as IPostgreSqlFromCommand<T1, T2, TOther>;
-    public new IPostgreSqlFromCommand<T1, T2, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, TOther, bool>> joinOn)
+    public new IPostgreSqlFromCommand<T1, T2, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, TOther, bool>> joinOn)
         => base.LeftJoin(subQuery, joinOn) as IPostgreSqlFromCommand<T1, T2, TOther>;
-    public new IPostgreSqlFromCommand<T1, T2, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, TOther, bool>> joinOn)
+    public new IPostgreSqlFromCommand<T1, T2, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, TOther, bool>> joinOn)
         => base.RightJoin(subQuery, joinOn) as IPostgreSqlFromCommand<T1, T2, TOther>;
     #endregion
 
@@ -356,11 +356,11 @@ public class PostgreSqlFromCommand<T1, T2, T3> : FromCommand<T1, T2, T3>, IPostg
         => base.LeftJoin(subQuery, joinOn) as IPostgreSqlFromCommand<T1, T2, T3, TOther>;
     public new IPostgreSqlFromCommand<T1, T2, T3, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
         => base.RightJoin(subQuery, joinOn) as IPostgreSqlFromCommand<T1, T2, T3, TOther>;
-    public new IPostgreSqlFromCommand<T1, T2, T3, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
+    public new IPostgreSqlFromCommand<T1, T2, T3, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
         => base.InnerJoin(subQuery, joinOn) as IPostgreSqlFromCommand<T1, T2, T3, TOther>;
-    public new IPostgreSqlFromCommand<T1, T2, T3, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
+    public new IPostgreSqlFromCommand<T1, T2, T3, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
         => base.LeftJoin(subQuery, joinOn) as IPostgreSqlFromCommand<T1, T2, T3, TOther>;
-    public new IPostgreSqlFromCommand<T1, T2, T3, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
+    public new IPostgreSqlFromCommand<T1, T2, T3, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
         => base.RightJoin(subQuery, joinOn) as IPostgreSqlFromCommand<T1, T2, T3, TOther>;
     #endregion
 
@@ -475,11 +475,11 @@ public class PostgreSqlFromCommand<T1, T2, T3, T4> : FromCommand<T1, T2, T3, T4>
         => base.LeftJoin(subQuery, joinOn) as IPostgreSqlFromCommand<T1, T2, T3, T4, TOther>;
     public new IPostgreSqlFromCommand<T1, T2, T3, T4, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
         => base.RightJoin(subQuery, joinOn) as IPostgreSqlFromCommand<T1, T2, T3, T4, TOther>;
-    public new IPostgreSqlFromCommand<T1, T2, T3, T4, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
+    public new IPostgreSqlFromCommand<T1, T2, T3, T4, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
         => base.InnerJoin(subQuery, joinOn) as IPostgreSqlFromCommand<T1, T2, T3, T4, TOther>;
-    public new IPostgreSqlFromCommand<T1, T2, T3, T4, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
+    public new IPostgreSqlFromCommand<T1, T2, T3, T4, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
         => base.LeftJoin(subQuery, joinOn) as IPostgreSqlFromCommand<T1, T2, T3, T4, TOther>;
-    public new IPostgreSqlFromCommand<T1, T2, T3, T4, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
+    public new IPostgreSqlFromCommand<T1, T2, T3, T4, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
         => base.RightJoin(subQuery, joinOn) as IPostgreSqlFromCommand<T1, T2, T3, T4, TOther>;
     #endregion
 
@@ -594,11 +594,11 @@ public class PostgreSqlFromCommand<T1, T2, T3, T4, T5> : FromCommand<T1, T2, T3,
         => base.LeftJoin(subQuery, joinOn) as IPostgreSqlFromCommand<T1, T2, T3, T4, T5, TOther>;
     public new IPostgreSqlFromCommand<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
         => base.RightJoin(subQuery, joinOn) as IPostgreSqlFromCommand<T1, T2, T3, T4, T5, TOther>;
-    public new IPostgreSqlFromCommand<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
+    public new IPostgreSqlFromCommand<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
         => base.InnerJoin(subQuery, joinOn) as IPostgreSqlFromCommand<T1, T2, T3, T4, T5, TOther>;
-    public new IPostgreSqlFromCommand<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
+    public new IPostgreSqlFromCommand<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
         => base.LeftJoin(subQuery, joinOn) as IPostgreSqlFromCommand<T1, T2, T3, T4, T5, TOther>;
-    public new IPostgreSqlFromCommand<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
+    public new IPostgreSqlFromCommand<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
         => base.RightJoin(subQuery, joinOn) as IPostgreSqlFromCommand<T1, T2, T3, T4, T5, TOther>;
     #endregion
 

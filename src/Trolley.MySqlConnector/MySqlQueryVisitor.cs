@@ -25,6 +25,7 @@ public class MySqlQueryVisitor : QueryVisitor
         else builder.Append("INSERT INTO");
         builder.Append($" {this.GetTableName(this.Tables[0])} (");
         int index = 0;
+        //如果是FromQuery查询，ReaderFields通常是从查询中获取的字段
         if (this.ReaderFields == null && this.IsFromQuery)
             this.ReaderFields = this.Tables[1].Fields;
         foreach (var readerField in this.ReaderFields)

@@ -153,9 +153,9 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
         base.UnionInternal(subQuery);
         return this;
     }
-    public virtual IMultiQuery<T> Union(Func<IFromQuery, IQuery<T>> subQueryGetter)
+    public virtual IMultiQuery<T> Union(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
     {
-        base.UnionInternal(subQueryGetter);
+        base.UnionInternal(subQueryExpr);
         return this;
     }
     public virtual IMultiQuery<T> UnionAll(IQuery<T> subQuery)
@@ -163,19 +163,19 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
         base.UnionAllInternal(subQuery);
         return this;
     }
-    public virtual IMultiQuery<T> UnionAll(Func<IFromQuery, IQuery<T>> subQueryGetter)
+    public virtual IMultiQuery<T> UnionAll(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
     {
-        base.UnionAllInternal(subQueryGetter);
+        base.UnionAllInternal(subQueryExpr);
         return this;
     }
-    public virtual IMultiQuery<T> UnionRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQueryGetter)
+    public virtual IMultiQuery<T> UnionRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr)
     {
-        base.UnionRecursiveInternal(subQueryGetter);
+        base.UnionRecursiveInternal(subQueryExpr);
         return this;
     }
-    public virtual IMultiQuery<T> UnionAllRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQueryGetter)
+    public virtual IMultiQuery<T> UnionAllRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr)
     {
-        base.UnionAllRecursiveInternal(subQueryGetter);
+        base.UnionAllRecursiveInternal(subQueryExpr);
         return this;
     }
     #endregion
@@ -194,9 +194,9 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
         base.WithQueryInternal(subQuery);
         return this.OrmProvider.NewMultiQuery<T, TOther>(this.MultipleQuery, this.Visitor);
     }
-    public virtual IMultiQuery<T, TOther> WithQuery<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter)
+    public virtual IMultiQuery<T, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
     {
-        base.WithQueryInternal(subQueryGetter);
+        base.WithQueryInternal(subQueryExpr);
         return this.OrmProvider.NewMultiQuery<T, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
@@ -212,9 +212,9 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
         base.InnerJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewMultiQuery<T, TOther>(this.MultipleQuery, this.Visitor);
     }
-    public IMultiQuery<T, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T, TOther, bool>> joinOn)
+    public IMultiQuery<T, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
     {
-        base.InnerJoinInternal(subQueryGetter, joinOn);
+        base.InnerJoinInternal(subQueryExpr, joinOn);
         return this.OrmProvider.NewMultiQuery<T, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
@@ -230,9 +230,9 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
         base.LeftJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewMultiQuery<T, TOther>(this.MultipleQuery, this.Visitor);
     }
-    public IMultiQuery<T, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T, TOther, bool>> joinOn)
+    public IMultiQuery<T, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
     {
-        base.LeftJoinInternal(subQueryGetter, joinOn);
+        base.LeftJoinInternal(subQueryExpr, joinOn);
         return this.OrmProvider.NewMultiQuery<T, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
@@ -248,9 +248,9 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
         base.RightJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewMultiQuery<T, TOther>(this.MultipleQuery, this.Visitor);
     }
-    public IMultiQuery<T, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T, TOther, bool>> joinOn)
+    public IMultiQuery<T, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
     {
-        base.RightJoinInternal(subQueryGetter, joinOn);
+        base.RightJoinInternal(subQueryExpr, joinOn);
         return this.OrmProvider.NewMultiQuery<T, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion

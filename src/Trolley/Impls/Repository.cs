@@ -144,10 +144,10 @@ public class Repository : IRepository
         visitor.UseQuery(typeof(T), subQuery, true, true);
         return this.OrmProvider.NewQuery<T>(this.DbContext, visitor);
     }
-    public virtual IQuery<T> FromQuery<T>(Func<IFromQuery, IQuery<T>> subQueryGetter)
+    public virtual IQuery<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
     {
         var visitor = this.CreateQueryVisitor();
-        visitor.UseNewQuery(typeof(T), subQueryGetter, true);
+        visitor.UseNewQuery(typeof(T), subQueryExpr, true);
         return this.OrmProvider.NewQuery<T>(this.DbContext, visitor);
     }
     #endregion

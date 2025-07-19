@@ -82,9 +82,9 @@ public interface IPostgreSqlFromCommand<T> : IFromCommand<T>, IPostgreSqlFromCom
 
     #region Union/UnionAll
     new IPostgreSqlFromCommand<T> Union(IQuery<T> subQuery);
-    new IPostgreSqlFromCommand<T> Union(Func<IFromQuery, IQuery<T>> subQueryGetter);
+    new IPostgreSqlFromCommand<T> Union(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
     new IPostgreSqlFromCommand<T> UnionAll(IQuery<T> subQuery);
-    new IPostgreSqlFromCommand<T> UnionAll(Func<IFromQuery, IQuery<T>> subQueryGetter);
+    new IPostgreSqlFromCommand<T> UnionAll(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
     #endregion
 
     #region Join
@@ -173,7 +173,7 @@ public interface IPostgreSqlFromCommand<T> : IFromCommand<T>, IPostgreSqlFromCom
     /// <param name="subQuery">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlFromCommand<T, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T, TOther, bool>> joinOn);
+    new IPostgreSqlFromCommand<T, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
     /// 添加subQuery子查询，并与现有表做LEFT JOIN关联，用法:
     /// <code>
@@ -187,7 +187,7 @@ public interface IPostgreSqlFromCommand<T> : IFromCommand<T>, IPostgreSqlFromCom
     /// <param name="subQuery">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlFromCommand<T, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T, TOther, bool>> joinOn);
+    new IPostgreSqlFromCommand<T, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
     /// 添加subQuery子查询，并与现有表做RIGHT JOIN关联，用法:
     /// <code>
@@ -201,7 +201,7 @@ public interface IPostgreSqlFromCommand<T> : IFromCommand<T>, IPostgreSqlFromCom
     /// <param name="subQuery">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlFromCommand<T, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<T, TOther, bool>> joinOn);
+    new IPostgreSqlFromCommand<T, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn);
     #endregion
 
     #region Where/And
@@ -539,7 +539,7 @@ public interface IPostgreSqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
     /// <param name="subQuery">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlFromCommand<<#=tables#>, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
+    new IPostgreSqlFromCommand<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
     /// <summary>
     /// 添加subQuery子查询，并与现有表做LEFT JOIN关联，用法:
     /// <code>
@@ -553,7 +553,7 @@ public interface IPostgreSqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
     /// <param name="subQuery">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlFromCommand<<#=tables#>, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
+    new IPostgreSqlFromCommand<<#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
     /// <summary>
     /// 添加subQuery子查询，并与现有表做RIGHT JOIN关联，用法:
     /// <code>
@@ -567,7 +567,7 @@ public interface IPostgreSqlFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>
     /// <param name="subQuery">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlFromCommand<<#=tables#>, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQueryGetter, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
+    new IPostgreSqlFromCommand<<#=tables#>, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn);
 <#      }#>
     #endregion
 

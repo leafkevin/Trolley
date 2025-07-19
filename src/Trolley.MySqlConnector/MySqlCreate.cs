@@ -90,7 +90,7 @@ public class MySqlCreate<TEntity> : Create<TEntity>, IMySqlCreate<TEntity>
     #region FromQuery
     public new IMySqlFromCommand<T> FromQuery<T>(IQuery<T> subQuery)
         => base.FromQuery(subQuery) as IMySqlFromCommand<T>;
-    public new IMySqlFromCommand<T> FromQuery<T>(Func<IFromQuery, IQuery<T>> subQueryGetter)
-        => base.FromQuery(subQueryGetter) as IMySqlFromCommand<T>;
+    public new IMySqlFromCommand<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
+        => base.FromQuery(subQueryExpr) as IMySqlFromCommand<T>;
     #endregion
 }
