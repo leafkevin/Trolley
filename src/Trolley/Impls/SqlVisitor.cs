@@ -47,8 +47,6 @@ public class SqlVisitor : ISqlVisitor
     #endregion
 
     public bool IsNeedTableAlias { get; set; }
-    public bool IsUseCteTable { get; set; }
-
     public List<SqlFieldSegment> ReaderFields { get; set; }
 
     public string WhereSql { get; set; }
@@ -1652,7 +1650,6 @@ public class SqlVisitor : ISqlVisitor
             //WHERE语句中的IN/EXISTS子查询场景
             queryVisitor = this.CreateQueryVisitor();
             fromQuery = new FromQuery(this.DbContext, queryVisitor);
-            isUseFullFields = false;
         }
         if (this.IsWhere)
             queryVisitor.TableAsStart = (char)(this.TableAsStart + this.Tables.Count);
@@ -1662,7 +1659,8 @@ public class SqlVisitor : ISqlVisitor
             {
                 if (currentExpr.NodeType == ExpressionType.MemberAccess && typeof(IQuery).IsAssignableFrom(currentExpr.Type))
                 {
-                    var methodInfo = typeof(IFromQuery).GetMethod(nameof(IFromQuery.Use));
+                    var methodInfo = typeof(FromQuery).GetMethod(nameof(FromQuery.Use));
+                    methodInfo = methodInfo.MakeGenericMethod(currentExpr.Type.GenericTypeArguments[0]);
                     var useExpr = Expression.Call(Expression.Constant(fromQuery), methodInfo, currentExpr);
                     callStack.Push(useExpr);
                 }
@@ -1671,8 +1669,9 @@ public class SqlVisitor : ISqlVisitor
             callStack.Push(callExpr);
             currentExpr = callExpr.Object;
         }
-
+        string unionType = null;
         IQuery subQueryObj = null;
+        List<SqlFieldSegment> readerFields = null;
         while (callStack.TryPop(out var callExpr))
         {
             var methodInfo = callExpr.Method;
@@ -1682,7 +1681,7 @@ public class SqlVisitor : ISqlVisitor
             switch (methodInfo.Name)
             {
                 case "From":
-                    var tableAsStart = this.TableAsStart;
+                    var tableAsStart = queryVisitor.TableAsStart;
                     if (callExpr.Arguments.Count > 0)
                         tableAsStart = this.Evaluate<char>(callExpr.Arguments[0]);
                     queryVisitor.From(tableAsStart, genericArguments);
@@ -1706,10 +1705,22 @@ public class SqlVisitor : ISqlVisitor
                     break;
                 case "Union":
                 case "UnionAll":
-                    var unionParameters = this.Evaluate(callExpr.Arguments[0]);
-                    if (unionParameters is Expression subQueryExpr)
-                        queryVisitor.Union(" " + callExpr.Method.Name.ToUpper(), genericArguments[0], subQueryExpr);
-                    else queryVisitor.Union(" " + callExpr.Method.Name.ToUpper(), genericArguments[0], unionParameters as IQuery);
+                    entityType = callExpr.Object.Type.GenericTypeArguments[0];
+                    unionType = methodInfo.Name == "Union" ? " UNION" : " UNION ALL";
+                    if (typeof(IQuery).IsAssignableFrom(callExpr.Arguments[0].Type))
+                    {
+                        var queryObj = this.Evaluate(callExpr.Arguments[0]) as IQuery;
+                        queryVisitor.Union(unionType, entityType, queryObj);
+                    }
+                    else queryVisitor.Union(unionType, entityType, callExpr.Arguments[0]);
+                    break;
+                case "UnionRecursive":
+                case "UnionAllRecursive":
+                    entityType = callExpr.Object.Type.GenericTypeArguments[0];
+                    unionType = methodInfo.Name == "UnionRecursive" ? " UNION" : " UNION ALL";
+                    entityType = typeof(CteQuery<>).MakeGenericType(entityType);
+                    cteQueryObj = Activator.CreateInstance(entityType, this.DbContext, queryVisitor) as ICteQuery;
+                    queryVisitor.UnionRecursive(unionType, cteQueryObj, callExpr.Arguments[0]);
                     break;
                 case "InnerJoin":
                 case "LeftJoin":
@@ -1720,10 +1731,21 @@ public class SqlVisitor : ISqlVisitor
                         "RightJoin" => "RIGHT JOIN",
                         _ => "INNER JOIN"
                     };
-                    lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
+                    lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments.Last());
                     queryVisitor.RefTableAliases = this.TableAliases;
                     if (genericArguments.Length > 0)
-                        queryVisitor.Join(joinType, genericArguments[0], lambdaArgsExpr);
+                    {
+                        if (callExpr.Arguments.Count > 1)
+                        {
+                            if (typeof(IQuery).IsAssignableFrom(callExpr.Arguments[0].Type))
+                            {
+                                var queryObj = this.Evaluate(callExpr.Arguments[0]) as IQuery;
+                                queryVisitor.Join(joinType, genericArguments[0], queryObj, lambdaArgsExpr);
+                            }
+                            else queryVisitor.Join(joinType, genericArguments[0], callExpr.Arguments[0], lambdaArgsExpr);
+                        }
+                        else queryVisitor.Join(joinType, genericArguments[0], lambdaArgsExpr);
+                    }
                     else queryVisitor.Join(joinType, lambdaArgsExpr);
                     queryVisitor.RefTableAliases = null;
                     break;
@@ -1773,19 +1795,24 @@ public class SqlVisitor : ISqlVisitor
                     }
                     else
                     {
-                        if (methodInfo.DeclaringType.FullName.StartsWith("Trolley.IGroupingQueryBase"))
-                            queryVisitor.SelectGrouping();
+                        if (!isUseFullFields && this.IsWhere)
+                            queryVisitor.Select("*");
                         else
                         {
-                            //Expression<Func<T, T>> defaultExpr = f => f;
-                            //this.Visitor.Select(null, defaultExpr);
-                            var declaringTypeGenericArguments = methodInfo.DeclaringType.GetGenericArguments();
-                            var genericType = declaringTypeGenericArguments[0];
-                            var funcType = typeof(Func<,>).MakeGenericType(genericType, genericType);
-                            var parameterExpr = Expression.Parameter(genericType, "f");
-                            var predicateExpr = Expression.Lambda(funcType, parameterExpr, parameterExpr);
-                            lambdaArgsExpr = this.EnsureLambda(predicateExpr);
-                            queryVisitor.Select(null, lambdaArgsExpr);
+                            if (methodInfo.DeclaringType.FullName.StartsWith("Trolley.IGroupingQueryBase"))
+                                queryVisitor.SelectGrouping();
+                            else
+                            {
+                                //Expression<Func<T, T>> defaultExpr = f => f;
+                                //this.Visitor.Select(null, defaultExpr);
+                                var declaringTypeGenericArguments = methodInfo.DeclaringType.GetGenericArguments();
+                                var genericType = declaringTypeGenericArguments[0];
+                                var funcType = typeof(Func<,>).MakeGenericType(genericType, genericType);
+                                var parameterExpr = Expression.Parameter(genericType, "f");
+                                var predicateExpr = Expression.Lambda(funcType, parameterExpr, parameterExpr);
+                                lambdaArgsExpr = this.EnsureLambda(predicateExpr);
+                                queryVisitor.Select(null, lambdaArgsExpr);
+                            }
                         }
                     }
                     break;
@@ -1838,27 +1865,27 @@ public class SqlVisitor : ISqlVisitor
                     if (callExpr.Arguments.Count > 0)
                     {
                         lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
-                        queryVisitor.From(this.TableAsStart, genericArguments);
+                        queryVisitor.From(queryVisitor.TableAsStart, genericArguments);
                         queryVisitor.RefTableAliases = this.TableAliases;
                         queryVisitor.Where(lambdaArgsExpr);
                         queryVisitor.RefTableAliases = null;
+                        queryVisitor.Select("*");
                     }
                     //repository.From<Company>('b').Where(t => ...).Exists()
                     //此场景什么也不做
                     break;
-                default:
-                    throw new NotSupportedException("不支持的表达式解析");
+                case "AsCteTable":
+                    var cteTableName = this.Evaluate<string>(callExpr.Arguments[0]);
+                    entityType = callExpr.Type.GenericTypeArguments[0];
+                    queryVisitor.AsCteTable(entityType, cteTableName);
+                    break;
+                default: throw new NotSupportedException("不支持的表达式解析");
             }
-        }
-        if (!isUseFullFields)
-        {
-            queryVisitor.ReaderFields?.Clear();
-            queryVisitor.Select("*");
         }
         if (queryVisitor.ReaderFields == null || queryVisitor.ReaderFields.Count == 0)
             queryVisitor.Select("*");
 
-        var sql = queryVisitor.BuildSql(false, out var readerFields);
+        var sql = queryVisitor.BuildSql(false, out readerFields);
         return (sql, readerFields);
     }
     private string VisitUseQuery(Type targetType, IQuery subQueryObj, char tableAsStart)
@@ -1866,7 +1893,6 @@ public class SqlVisitor : ISqlVisitor
         IQueryVisitor queryVisitor = null;
         if (subQueryObj is ICteQuery cteQueryObj)
         {
-            this.IsUseCteTable = true;
             queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart, this.DbParameters);
             if (!this.RefQueries.Contains(cteQueryObj))
                 this.RefQueries.Add(cteQueryObj);

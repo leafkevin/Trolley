@@ -21,16 +21,16 @@ public interface IQueryVisitor : ICloneable, IDisposable
     /// 在解析子查询中，会用到父查询中的所有表，父查询中所有表别名引用
     /// </summary>
     Dictionary<string, TableSegment> RefTableAliases { get; set; }
-    /// <summary>
-    /// 在解析f => f.From/FromQuery时，使用的Visitor对象，与当前Visitor对象可能不同，当引用了现有子查询或是CTE表时，与当前Visitor对象不同
-    /// 如果是从 f => f.From/FromQuery方法开始时，SelfVisitor就是当前Visitor对象
-    /// </summary>
-    IQueryVisitor SelfVisitor { get; set; }
+    bool IsCteTable { get; set; }
+
     /// <summary>
     /// 在SQL查询中，引用到子查询或是CTE表对象，防止重复添加参数，同时也为了解析CTE表引用SQL
     /// </summary>
     List<IQuery> RefQueries { get; set; }
-    ICteQuery SelfRefQueryObj { get; set; }
+    /// <summary>
+    /// 当前子查询最后AsCteTable后生成的对象，或是CTE表构建的子查询中的自引用对象，此时IsRecursive=true
+    /// </summary>
+    ICteQuery CteQueryObj { get; set; }
     bool IsRecursive { get; set; }
     IDataParameterCollection DbParameters { get; set; }
     /// <summary>
@@ -40,7 +40,6 @@ public interface IQueryVisitor : ICloneable, IDisposable
     List<SqlFieldSegment> ReaderFields { get; set; }
 
     bool IsSecondUnion { get; set; }
-    bool IsUseCteTable { get; set; }
     char TableAsStart { get; set; }
     int PageNumber { get; set; }
     int PageSize { get; set; }
@@ -82,7 +81,7 @@ public interface IQueryVisitor : ICloneable, IDisposable
 
     void Union(string union, Type targetType, IQuery subQuery);
     void Union(string union, Type targetType, Expression subQueryExpr);
-    void UnionRecursive(string union, ICteQuery subQueryObj, Expression selfSubQueryExpr);
+    void UnionRecursive(string union, ICteQuery cteQueryObj, Expression selfSubQueryExpr);
 
     void Join(string joinType, Expression joinOn);
     void Join(string joinType, Type newEntityType, Expression joinOn);
@@ -111,7 +110,7 @@ public interface IQueryVisitor : ICloneable, IDisposable
     void Page(int pageNumber, int pageSize);
     void Skip(int skip);
     void Take(int limit);
-
+    void AsCteTable(Type targetType, string tableName);
     void AddSelectElement(Expression elementExpr, MemberInfo memberInfo, List<SqlFieldSegment> readerFields);
     void CopyShardingFromQueryVisitor(IQueryVisitor visitor);
 

@@ -595,26 +595,18 @@ public class Query<T> : QueryBase, IQuery<T>
     #region AsCteTable
     public virtual ICteQuery<T> AsCteTable(string tableName)
     {
-        //防止重复创建对象
-        if (this is ICteQuery<T> cteQueryObj)
-            return cteQueryObj;
-        ICteQuery<T> queryObj = null;
         if (this.Visitor.ShardingTables != null && this.Visitor.ShardingTables.Count > 0)
             throw new NotSupportedException("CTE暂时不支持多分表，只支持单个分表");
 
-        if (this.Visitor.SelfRefQueryObj != null)
+        if (this.Visitor.CteQueryObj == null)
         {
-            queryObj = this.Visitor.SelfRefQueryObj as CteQuery<T>;
-            queryObj.Body = this.Visitor.BuildCteTableSql(tableName, out _, out _);
+            this.Visitor.CteQueryObj = new CteQuery<T>(this.DbContext, this.Visitor);
+            this.Visitor.CteQueryObj.TableName = tableName;
+            this.Visitor.CteQueryObj.Body = this.Visitor.BuildCteTableSql(tableName, out var readerFields, out _);
+            this.Visitor.CteQueryObj.ReaderFields = readerFields;
         }
-        else
-        {
-            queryObj = new CteQuery<T>(this.DbContext, this.Visitor);
-            queryObj.Body = this.Visitor.BuildCteTableSql(tableName, out var readerFields, out _);
-            queryObj.TableName = tableName;
-            queryObj.ReaderFields = readerFields;
-        }
-        return queryObj;
+        else this.Visitor.CteQueryObj.Body = this.Visitor.BuildCteTableSql(tableName, out _, out _);
+        return this.Visitor.CteQueryObj as ICteQuery<T>;
     }
     #endregion    
 

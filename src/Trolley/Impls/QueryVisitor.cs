@@ -30,7 +30,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     protected bool IsSelectMember { get; set; }
     public bool IsFromCommand { get; set; }
     public bool IsNeedCommandTableAlias { get; set; }
-    public bool IsCteTable { get; set; }
+
     public bool IsUnion { get; set; }
     /// <summary>
     /// 第二个Union子句
@@ -39,9 +39,9 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public TableSegment LastIncludeSegment { get; set; }
     public List<SqlFieldSegment> GroupByFields { get; set; }
     public List<OrderByField> OrderByFields { get; set; }
-    public IQueryVisitor SelfVisitor { get; set; }
+    public bool IsCteTable { get; set; }
+    public ICteQuery CteQueryObj { get; set; }
     public bool IsRecursive { get; set; }
-    public ICteQuery SelfRefQueryObj { get; set; }
     public int PageNumber { get; set; }
     public int PageSize { get; set; }
     public bool IsNeedPaging { get; set; }
@@ -532,16 +532,15 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual string BuildCteTableSql(string tableName, out List<SqlFieldSegment> readerFields, out bool isRecursive)
     {
         isRecursive = this.IsRecursive;
-        if (this.SelfRefQueryObj != null)
+        this.IsCteTable = true;
+        if (this.CteQueryObj != null && isRecursive && !string.IsNullOrEmpty(this.UnionSql))
         {
-            var tempTableName = this.SelfRefQueryObj.TableName;
+            var tempTableName = this.CteQueryObj.TableName;
             this.UnionSql = this.UnionSql.Replace(tempTableName, tableName);
-            this.SelfRefQueryObj.TableName = tableName;
+            this.CteQueryObj.TableName = tableName;
         }
         tableName = this.OrmProvider.GetTableName(tableName);
-        this.IsCteTable = true;
         var rawSql = this.BuildSql(false, out readerFields);
-        this.IsCteTable = false;
         var builder = new StringBuilder($"{tableName}(");
         int index = 0;
         foreach (var readerField in readerFields)
@@ -568,8 +567,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         builder.AppendLine("(");
         builder.AppendLine(rawSql);
         builder.Append(')');
-        this.IsUseCteTable = true;
-        this.SelfRefQueryObj = null;
         var sql = builder.ToString();
         builder.Clear();
         return sql;
@@ -659,7 +656,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     }
     public TableSegment UseCteQuery(Type targetType, ICteQuery cteQueryObj)
     {
-        this.IsUseCteTable = true;
         var readerFields = new List<SqlFieldSegment>();
         cteQueryObj.ReaderFields.ForEach(f => readerFields.Add(f.Clone()));
         var tableSegment = this.AddJoinTable(targetType, null, TableType.CteSelfRef, cteQueryObj.TableName, readerFields);
@@ -681,10 +677,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var queryVisiter = isFirstTable ? this : this.CreateQueryVisitor();
         var fromQuery = new FromQuery(this.DbContext, queryVisiter);
         (var sql, var readerFields) = this.VisitFromQuery(subQueryExpr, fromQuery, true);
-        if (this.IsRecursive && this.SelfRefQueryObj != null)
-            throw new NotSupportedException("调用UnionRecursive/UnionAllRecursive方法后，必须调用AsCteTable方法，生成CTE表");
         if (isFirstTable) this.Clear();
-        var tableSegment = this.AddJoinTable(targetType, null, TableType.FromQuery, $"({sql})", readerFields);
+        TableSegment tableSegment = null;
+        if (queryVisiter.IsCteTable)
+            tableSegment = this.AddJoinTable(targetType, null, TableType.CteSelfRef, queryVisiter.CteQueryObj.TableName, readerFields);
+        else tableSegment = this.AddJoinTable(targetType, null, TableType.FromQuery, $"({sql})", readerFields);
         this.InitUseQueryReaderFields(tableSegment, readerFields);
         if (!isFirstTable) this.CopyShardingFromQueryVisitor(queryVisiter);
         return tableSegment;
@@ -720,7 +717,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var fromQuery = new FromQuery(this.DbContext, visitor);
         visitor.IsSecondUnion = true;
         (var sql, _) = this.VisitFromQuery(subQueryExpr, fromQuery, true);
-        if (visitor.IsRecursive && visitor.SelfRefQueryObj != null)
+        if (visitor.IsRecursive && visitor.CteQueryObj != null)
             throw new NotSupportedException("调用UnionRecursive/UnionAllRecursive方法后，必须调用AsCteTable方法，生成CTE表");
         this.Union(union, targetType, sql);
     }
@@ -748,12 +745,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         selfQueryObj.TableName = tempTableName;
         selfQueryObj.ReaderFields = readerFields;
         selfQueryObj.IsRecursive = true;
-        this.SelfRefQueryObj = selfQueryObj;
+        this.CteQueryObj = selfQueryObj;
 
         var visitor = this.CreateQueryVisitor();
         var fromQuery = new FromQuery(this.DbContext, visitor);
         visitor.RefQueries.Add(selfQueryObj);
-        visitor.SelfRefQueryObj = selfQueryObj;
+        visitor.CteQueryObj = selfQueryObj;
         visitor.IsSecondUnion = true;
         (var sql, _) = this.VisitFromQuery(selfSubQueryExpr, fromQuery, true);
         rawSql += union + Environment.NewLine + sql;
@@ -774,7 +771,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         => this.Join(joinType, joinOn, f => { this.UseNewQuery(newEntityType, subQueryExpr, false); return this.InitTableAlias(f); });
     public virtual void Join(string joinType, Expression joinOn, Func<LambdaExpression, TableSegment> joinTableSegmentGetter = null)
     {
-        this.IsWhere = true;
         var lambdaExpr = joinOn as LambdaExpression;
         if (!lambdaExpr.Body.GetParameters(out var parameters))
             throw new NotSupportedException("当前Join操作，没有表关联");
@@ -783,6 +779,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         var joinTableSegment = joinTableSegmentGetter.Invoke(lambdaExpr);
         joinTableSegment.JoinType = joinType;
+        this.IsWhere = true;
         joinTableSegment.OnExpr = this.VisitConditionExpr(lambdaExpr.Body, out _);
         this.IsWhere = false;
     }
@@ -1487,16 +1484,16 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (!string.IsNullOrEmpty(sqlFormat))
         {
             //单值操作，SELECT COUNT(1)/*等
-            if (this.ReaderFields == null)
-                this.ReaderFields = new List<SqlFieldSegment> { new SqlFieldSegment { Body = sqlFormat } };
+            this.ReaderFields ??= new();
             //单值操作，SELECT COUNT(DISTINCT b.Id),MAX(b.Amount),COUNT(1)等
-            else if (this.ReaderFields != null && this.ReaderFields.Count > 0
+            if (this.ReaderFields != null && this.ReaderFields.Count > 0
                 && !(this.IsNeedFormatShardingTables && this.AggFieldAlias == "AVG_VALUE"))
             {
                 //当有多分表并且是AVG场景时，UNION之后，再做AVG操作
                 var readerField = this.ReaderFields[0];
                 readerField.Body = string.Format(sqlFormat, readerField.Body);
             }
+            else this.ReaderFields.Add(new SqlFieldSegment { Body = sqlFormat });
         }
         this.IsSelect = false;
     }
@@ -1977,6 +1974,24 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         return this.Evaluate(sqlSegment);
     }
+    public virtual void AsCteTable(Type targetType, string tableName)
+    {
+        if (this.ShardingTables != null && this.ShardingTables.Count > 0)
+            throw new NotSupportedException("CTE暂时不支持多分表，只支持单个分表");
+
+        var sql = this.BuildCteTableSql(tableName, out var readerFields, out _);
+        if (this.CteQueryObj == null)
+        {
+            var cteQueryType = typeof(CteQuery<>).MakeGenericType(targetType);
+            this.CteQueryObj = Activator.CreateInstance(cteQueryType, this.DbContext, this) as ICteQuery;
+        }
+        this.CteQueryObj.Body = sql;
+        this.CteQueryObj.ReaderFields = readerFields;
+        this.CteQueryObj.TableName = tableName;
+        if (!this.RefQueries.Contains(this.CteQueryObj))
+            this.RefQueries.Add(this.CteQueryObj);
+        this.IsCteTable = true;
+    }
     public virtual void AddSelectElement(Expression elementExpr, MemberInfo memberInfo, List<SqlFieldSegment> readerFields)
     {
         var sqlSegment = new SqlFieldSegment { Expression = elementExpr };
@@ -2299,7 +2314,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         queryVisitor.ShardingTables = this.ShardingTables;
         queryVisitor.GroupByFields = this.GroupByFields;
         queryVisitor.OrderByFields = this.OrderByFields;
-        queryVisitor.SelfRefQueryObj = this.SelfRefQueryObj;
+        queryVisitor.CteQueryObj = this.CteQueryObj;
         queryVisitor.UnionSql = this.UnionSql;
         queryVisitor.GroupBySql = this.GroupBySql;
         queryVisitor.HavingSql = this.HavingSql;
@@ -2314,8 +2329,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         queryVisitor.OrderByFields = this.OrderByFields;
 
         queryVisitor.IsRecursive = this.IsRecursive;
-        queryVisitor.IsUseCteTable = this.IsUseCteTable;
-        queryVisitor.SelfRefQueryObj = this.SelfRefQueryObj;
+        queryVisitor.CteQueryObj = this.CteQueryObj;
         queryVisitor.PageNumber = this.PageNumber;
         queryVisitor.PageSize = this.PageSize;
         queryVisitor.IsNeedPaging = this.IsNeedPaging;
@@ -2359,7 +2373,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.LastIncludeSegment = null;
         this.GroupByFields = null;
         this.OrderByFields = null;
-        this.SelfRefQueryObj = null;
+        this.CteQueryObj = null;
 
         base.Dispose();
     }
