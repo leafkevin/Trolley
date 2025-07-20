@@ -177,7 +177,7 @@ public class FromQuery : IFromQuery
     #region Use
     public virtual IQuery<T> Use<T>(IQuery<T> subQuery)
     {
-        this.visitor.UseQuery(typeof(T), subQuery, true, true, true);
+        this.visitor.UseQuery(typeof(T), subQuery, true);
         return this.ormProvider.NewQuery<T>(this.dbContext, this.visitor);
     }
     #endregion

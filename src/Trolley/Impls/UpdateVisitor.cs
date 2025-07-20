@@ -568,7 +568,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                         && argumentParameters.Exists(f => f.Type == typeof(IFromQuery)))
                     {
                         var newLambdaExpr = Expression.Lambda(argumentExpr, lambdaExpr.Parameters.ToList());
-                        (var sql, _) = this.VisitFromQuery(newLambdaExpr);
+                        (var sql, _, _) = this.VisitFromQuery(newLambdaExpr);
                         this.UpdateFields.Add(this.OrmProvider.GetFieldName(memberMapper.FieldName) + $"=({sql})");
                     }
                     else
@@ -595,7 +595,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
                         && argumentParameters.Exists(f => f.Type == typeof(IFromQuery)))
                     {
                         var newLambdaExpr = Expression.Lambda(argumentExpr, lambdaExpr.Parameters.ToList());
-                        (var sql, _) = this.VisitFromQuery(newLambdaExpr);
+                        (var sql, _, _) = this.VisitFromQuery(newLambdaExpr);
                         this.UpdateFields.Add(this.OrmProvider.GetFieldName(memberMapper.FieldName) + $"=({sql})");
                     }
                     else
@@ -624,7 +624,7 @@ public class UpdateVisitor : SqlVisitor, IUpdateVisitor
             throw new NotSupportedException($"当前字段{memberMapper.FieldName}不允许更新，IsRowVersion：{memberMapper.IsRowVersion}");
 
         this.InitTableAlias(valueSelector as LambdaExpression);
-        (var sql, _) = this.VisitFromQuery(valueSelector as LambdaExpression);
+        (var sql, _, _) = this.VisitFromQuery(valueSelector as LambdaExpression);
         this.UpdateFields.Add(this.OrmProvider.GetFieldName(memberMapper.FieldName) + $"=({sql})");
     }
     public virtual void VisitWhereWith(object whereObj)

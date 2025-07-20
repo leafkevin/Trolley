@@ -141,7 +141,7 @@ public class Repository : IRepository
     public virtual IQuery<T> FromQuery<T>(IQuery<T> subQuery)
     {
         var visitor = this.CreateQueryVisitor();
-        visitor.UseQuery(typeof(T), subQuery, true, true);
+        visitor.UseQuery(typeof(T), subQuery, true);
         return this.OrmProvider.NewQuery<T>(this.DbContext, visitor);
     }
     public virtual IQuery<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)

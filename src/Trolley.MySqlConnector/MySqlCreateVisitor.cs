@@ -423,6 +423,9 @@ public class MySqlCreateVisitor : CreateVisitor
         queryVisitor.RefTableAliases = this.RefTableAliases;
         queryVisitor.IncludeTables = this.IncludeTables;
         queryVisitor.NextDbParameters = this.NextDbParameters;
+        queryVisitor.IsRecursive = this.IsRecursive;
+        queryVisitor.CteQueryObj = this.CteQueryObj;
+        queryVisitor.RefFrom = this;
         queryVisitor.Tables = this.Tables;
 
         queryVisitor.IsUseIgnoreInto = this.IsUseIgnoreInto;

@@ -48,7 +48,6 @@ public interface ISqlVisitor : IDisposable
     string VisitConditionExpr(Expression conditionExpr, out OperationType operationType);
     List<Expression> ConvertFormatToConcatList(Expression[] argsExprs);
     List<Expression> SplitConcatList(Expression[] argsExprs);
-    (string, List<SqlFieldSegment>) VisitFromQuery(Expression lambdaExpr, FromQuery fromQuery = null, bool isUseFullFields = false);
     DataTable ToDataTable(Type entityType, IEnumerable entities, List<(MemberMap, Func<object, object>)> memberMappers, string tableName = null);
     List<(MemberMap, Func<object, object>)> GetRefMemberMappers(Type entityType, EntityMap refEntityMapper, bool isUpdate = false);
     SqlFieldSegment BuildDeferredSqlSegment(MethodCallExpression methodCallExpr, SqlFieldSegment sqlSegment);

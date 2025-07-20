@@ -101,7 +101,7 @@ public class MultipleQuery : IMultipleQuery
     public virtual IMultiQuery<T> FromQuery<T>(IQuery<T> subQuery)
     {
         var visitor = this.CreateQueryVisitor();
-        visitor.UseQuery(typeof(T), subQuery, true, false, false);
+        visitor.UseQuery(typeof(T), subQuery, false);
         return this.OrmProvider.NewMultiQuery<T>(this, visitor);
     }
     public virtual IMultiQuery<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)

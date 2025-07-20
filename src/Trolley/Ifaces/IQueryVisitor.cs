@@ -22,7 +22,6 @@ public interface IQueryVisitor : ICloneable, IDisposable
     /// </summary>
     Dictionary<string, TableSegment> RefTableAliases { get; set; }
     bool IsCteTable { get; set; }
-
     /// <summary>
     /// 在SQL查询中，引用到子查询或是CTE表对象，防止重复添加参数，同时也为了解析CTE表引用SQL
     /// </summary>
@@ -32,12 +31,14 @@ public interface IQueryVisitor : ICloneable, IDisposable
     /// </summary>
     ICteQuery CteQueryObj { get; set; }
     bool IsRecursive { get; set; }
+    string UnionSql { get; set; }
     IDataParameterCollection DbParameters { get; set; }
     /// <summary>
     /// IncludeMany表，第二次执行时的参数列表，通常是Filter中使用的参数
     /// </summary>
     IDataParameterCollection NextDbParameters { get; set; }
     List<SqlFieldSegment> ReaderFields { get; set; }
+    object RefFrom { get; set; }
 
     bool IsSecondUnion { get; set; }
     char TableAsStart { get; set; }
@@ -58,7 +59,7 @@ public interface IQueryVisitor : ICloneable, IDisposable
     string BuildSql(bool isBuildCteSql, out List<SqlFieldSegment> readerFields);
     string BuildCommandSql(bool isBuildCteSql, out IDataParameterCollection dbParameters);
     string BuildShardingSql(string formatSql);
-    string BuildCteTableSql(string tableName, out List<SqlFieldSegment> readerFields, out bool isRecursive);
+    string BuildCteTableSql(string tableName, out List<SqlFieldSegment> readerFields);
 
     string BuildTableShardingsSql();
     bool SetShardingTables(List<string> shardingTables);
@@ -75,8 +76,7 @@ public interface IQueryVisitor : ICloneable, IDisposable
     void AddTable(params Type[] entityTypes);
     TableSegment AddTable(TableSegment tableSegment);
     TableSegment AddJoinTable(Type entityType, string joinType = null, TableType tableType = TableType.Entity, string body = null, List<SqlFieldSegment> readerFields = null);
-    TableSegment UseQuery(Type targetType, IQuery subQuery, bool isFirstTable, bool isCopyRefParameters, bool isUseQueryFields = false);
-    TableSegment UseCteQuery(Type targetType, ICteQuery cteQueryObj);
+    TableSegment UseQuery(Type targetType, IQuery subQuery, bool isCopyRefParameters);
     TableSegment UseNewQuery(Type targetType, Expression subQueryExpr, bool isFirstTable);
 
     void Union(string union, Type targetType, IQuery subQuery);

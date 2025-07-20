@@ -70,7 +70,7 @@ public class QueryInternal
         if (subQuery == null)
             throw new ArgumentNullException(nameof(subQuery));
 
-        this.Visitor.UseQuery(typeof(TOther), subQuery, true, false);
+        this.Visitor.UseQuery(typeof(TOther), subQuery, true);
     }
     protected void WithQueryInternal<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
     {
