@@ -175,6 +175,13 @@ public class Query<T1, T2> : QueryBase, IQuery<T1, T2>
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IQuery<T1, T2> AndPredicae(Action<PredicateBuilder<T1, T2>> predicate)
+    {
+        var builder = new PredicateBuilder<T1, T2>();
+        predicate.Invoke(builder);
+        base.WhereInternal(builder.Build());
+        return this;
+    }
     #endregion
 
     #region And

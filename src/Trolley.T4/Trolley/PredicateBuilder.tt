@@ -10,19 +10,6 @@ using System.Linq.Expressions;
 
 namespace Trolley;
 
-public class PredicateBuilder
-{
-    public static PredicateBuilder<T> Create<T>() => new PredicateBuilder<T>();
-<#
-    var count = 16;
-    var tables = "T1";
-    for (int i = 2; i <= count; i++)
-    {
-        tables += $", T{i}";
-#>
-    public static PredicateBuilder<<#=tables#>> Create<<#=tables#>>() => new PredicateBuilder<<#=tables#>>();
-<#  }#>
-}
 public class PredicateBuilder<T>
 {
     private Expression<Func<T, bool>> expression;
@@ -81,7 +68,8 @@ public class PredicateBuilder<T>
     }
 }
 <#
-    tables = "T1";
+    var count = 16;
+    var tables = "T1";
     for (int i = 2; i <= count; i++)
     {
         tables += $", T{i}";
@@ -97,21 +85,9 @@ public class PredicateBuilder<<#=tables#>>
     public PredicateBuilder<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate) => this.Merge(Expression.AndAlso, predicate);
     public PredicateBuilder<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
         => this.Merge(condition, Expression.AndAlso, ifPredicate, elsePredicate);
-    public PredicateBuilder<<#=tables#>> AndMerge(Func<PredicateBuilder<<#=tables#>>, PredicateBuilder<<#=tables#>>> mergePredicate)
-    {
-        if (mergePredicate == null) throw new ArgumentNullException(nameof(mergePredicate));
-        var builder = mergePredicate.Invoke(new PredicateBuilder<<#=tables#>>());
-        return this.Merge(Expression.AndAlso, builder.Build());
-    }
     public PredicateBuilder<<#=tables#>> Or(Expression<Func<<#=tables#>, bool>> predicate) => this.Merge(Expression.OrElse, predicate);
     public PredicateBuilder<<#=tables#>> Or(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
         => this.Merge(condition, Expression.OrElse, ifPredicate, elsePredicate);
-    public PredicateBuilder<<#=tables#>> OrMerge(Func<PredicateBuilder<<#=tables#>>, PredicateBuilder<<#=tables#>>> mergePredicate)
-    {
-        if (mergePredicate == null) throw new ArgumentNullException(nameof(mergePredicate));
-        var builder = mergePredicate.Invoke(new PredicateBuilder<<#=tables#>>());
-        return this.Merge(Expression.OrElse, builder.Build());
-    }
     public PredicateBuilder<<#=tables#>> Not()
     {
         if (this.expression == null) throw new NotSupportedException("当前表达式为null，不支持Not操作");

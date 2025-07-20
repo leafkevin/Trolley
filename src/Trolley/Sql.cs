@@ -89,28 +89,29 @@ public static class Sql
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
     public static bool Exists<TTarget>(Func<IFromQuery, IQuery<TTarget>> subQuery) => throw new NotImplementedException();
-    public static bool Exists<T>(Expression<Func<T, bool>> predicate) => throw new NotImplementedException();
-    public static bool Exists<T1, T2>(Expression<Func<T1, T2, bool>> predicate) => throw new NotImplementedException();
-    public static bool Exists<T1, T2, T3>(Expression<Func<T1, T2, T3, bool>> predicate) => throw new NotImplementedException();
-    public static bool Exists<T1, T2, T3, T4>(Expression<Func<T1, T2, T3, T4, bool>> predicate) => throw new NotImplementedException();
-    public static bool Exists<T1, T2, T3, T4, T5>(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate) => throw new NotImplementedException();
-    public static bool Exists<T1, T2, T3, T4, T5, T6>(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate) => throw new NotImplementedException();
+    public static bool Exists<T>(Func<T, bool> predicate) => throw new NotImplementedException();
+    public static bool Exists<T1, T2>(Func<T1, T2, bool> predicate) => throw new NotImplementedException();
+    public static bool Exists<T1, T2, T3>(Func<T1, T2, T3, bool> predicate) => throw new NotImplementedException();
+    public static bool Exists<T1, T2, T3, T4>(Func<T1, T2, T3, T4, bool> predicate) => throw new NotImplementedException();
+    public static bool Exists<T1, T2, T3, T4, T5>(Func<T1, T2, T3, T4, T5, bool> predicate) => throw new NotImplementedException();
+    public static bool Exists<T1, T2, T3, T4, T5, T6>(Func<T1, T2, T3, T4, T5, T6, bool> predicate) => throw new NotImplementedException();
 
-    public static PredicateBuilder<T> From<T>() => throw new NotImplementedException();
-    public static PredicateBuilder<T1, T2> From<T1, T2>() => throw new NotImplementedException();
-    public static PredicateBuilder<T1, T2, T3> From<T1, T2, T3>() => throw new NotImplementedException();
-    public static PredicateBuilder<T1, T2, T3, T4> From<T1, T2, T3, T4>() => throw new NotImplementedException();
-    public static PredicateBuilder<T1, T2, T3, T4, T5> From<T1, T2, T3, T4, T5>() => throw new NotImplementedException();
-    public static PredicateBuilder<T1, T2, T3, T4, T5, T6> From<T1, T2, T3, T4, T5, T6>() => throw new NotImplementedException();
-    public static PredicateBuilder<T1, T2, T3, T4, T5, T6, T7> From<T1, T2, T3, T4, T5, T6, T7>() => throw new NotImplementedException();
-    public static PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8> From<T1, T2, T3, T4, T5, T6, T7, T8>() => throw new NotImplementedException();
-    public static PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9> From<T1, T2, T3, T4, T5, T6, T7, T8, T9>() => throw new NotImplementedException();
-    public static PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>() => throw new NotImplementedException();
-    public static PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>() => throw new NotImplementedException();
-    public static PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>() => throw new NotImplementedException();
-    public static PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>() => throw new NotImplementedException();
-    public static PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>() => throw new NotImplementedException();
-    public static PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> From<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>() => throw new NotImplementedException();
+    public static PredicateBuilder<T> Where<T>() => new PredicateBuilder<T>();
+    public static PredicateBuilder<T1, T2> Where<T1, T2>() => new PredicateBuilder<T1, T2>();
+    public static PredicateBuilder<T1, T2, T3> Where<T1, T2, T3>() => new PredicateBuilder<T1, T2, T3>();
+    public static PredicateBuilder<T1, T2, T3, T4> Where<T1, T2, T3, T4>() => new PredicateBuilder<T1, T2, T3, T4>();
+    public static PredicateBuilder<T1, T2, T3, T4, T5> Where<T1, T2, T3, T4, T5>() => new PredicateBuilder<T1, T2, T3, T4, T5>();
+    public static PredicateBuilder<T1, T2, T3, T4, T5, T6> Where<T1, T2, T3, T4, T5, T6>() => new PredicateBuilder<T1, T2, T3, T4, T5, T6>();
+    public static PredicateBuilder<T1, T2, T3, T4, T5, T6, T7> Where<T1, T2, T3, T4, T5, T6, T7>() => new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7>();
+    public static PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8> Where<T1, T2, T3, T4, T5, T6, T7, T8>() => new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8>();
+    public static PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9> Where<T1, T2, T3, T4, T5, T6, T7, T8, T9>() => new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9>();
+    public static PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Where<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>() => new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>();
+    public static PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Where<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>() => new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>();
+    public static PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Where<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>() => new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>();
+    public static PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Where<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>() => new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>();
+    public static PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Where<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>() => new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>();
+    public static PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Where<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>() => new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>();
+    public static PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Where<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>() => new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>();
 
 
     public static IWindowFunction<int> Rank() => throw new NotImplementedException();

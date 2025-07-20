@@ -569,12 +569,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 IsMaster = true
             });
         }
-        //if (this.IsFromQuery && string.IsNullOrEmpty(this.firstFromQueryOperation))
-        //{
-        //    //如果是从子查询中来的，设置第一个From操作
-        //    this.firstFromQueryOperation = "From";
-        //    this.isNewFromQuery = true;
-        //}
     }
     public virtual void AddTable(params Type[] entityTypes)
     {
@@ -593,21 +587,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             });
         }
     }
-    //public TableSegment UseCteQuery(Type targetType, ICteQuery cteQueryObj)
-    //{
-    //    var readerFields = new List<SqlFieldSegment>();
-    //    cteQueryObj.ReaderFields.ForEach(f => readerFields.Add(f.Clone()));
-    //    var tableSegment = this.AddJoinTable(targetType, null, TableType.CteSelfRef, cteQueryObj.TableName, readerFields);
-    //    //添加子查询对象引用
-    //    if (!this.RefQueries.Contains(cteQueryObj))
-    //        this.RefQueries.Add(cteQueryObj);
-    //    this.InitUseQueryReaderFields(tableSegment, readerFields);
-    //    this.CopyShardingFromQueryVisitor(cteQueryObj.Visitor);
-    //    //如果是在递归CTE的第二个Union解析中，引用了自身，此时不需要拷贝参数，因为这些参数，就是前一个Union的这些参数的引用
-    //    if (!(this.IsSecondUnion && this.IsRecursive))
-    //        this.CopyRefParametersFromQueryVisitor(cteQueryObj.Visitor);
-    //    return tableSegment;
-    //}
     public TableSegment UseNewQuery(Type targetType, Expression subQueryExpr, bool isFirstTable)
     {
         //repository.FromQuery(f => ... ) 或是 repository.WithQuery(f => ... )，具体参数如下：

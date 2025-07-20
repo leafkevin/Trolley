@@ -1140,13 +1140,14 @@ public class SqlVisitor : ISqlVisitor
                 }
                 else
                 {
-                    if (typeof(IQuery<>).MakeGenericType(elementType).IsAssignableFrom(type))
+                    var predicateExpr = methodCallExpr.Arguments[1];
+                    if (typeof(IQuery).IsAssignableFrom(type))
                     {
-                        int tableIndex = this.TableAsStart + this.Tables.Count;
-                        var subQueryObj = this.Evaluate(methodCallExpr.Arguments[1]) as IQuery;
-                        inSql = this.VisitUseQuery(elementType, subQueryObj, (char)tableIndex);
+                        var funcType = typeof(Func<,>).MakeGenericType(typeof(IFromQuery), type);
+                        var parameterExpr = Expression.Parameter(typeof(IFromQuery), "f");
+                        predicateExpr = Expression.Lambda(funcType, methodCallExpr.Arguments[1], parameterExpr);
                     }
-                    else (inSql, _, _) = this.VisitFromQuery(methodCallExpr.Arguments[1]);
+                    (inSql, _, _) = this.VisitFromQuery(predicateExpr);
                 }
                 var fieldArgument = this.GetQuotedValue(fieldSegment);
                 if (sqlSegment.HasDeferrdNot())
@@ -1158,22 +1159,9 @@ public class SqlVisitor : ISqlVisitor
                 string existsSql = null;
                 if (methodCallExpr.Method.DeclaringType == typeof(Sql))
                 {
-                    //Sql.Exists<TTarget>(Func<IFromQuery, IQuery<TTarget>> subQuery)
                     var argsType = methodCallExpr.Arguments[0].Type;
-                    var genericArguments = methodCallExpr.Method.GetGenericArguments();
-                    if (typeof(MulticastDelegate).IsAssignableFrom(argsType))
-                    {
-                        //Exists<TTarget>(Func<IFromQuery, IQuery<TTarget>> subQuery)
-                        (existsSql, _, _) = this.VisitFromQuery(methodCallExpr.Arguments[0]);
-                    }
-                    else if (typeof(IQuery).IsAssignableFrom(argsType))
-                    {
-                        //Exists<TTarget>(IQuery<TTarget> subQuery)
-                        int tableIndex = this.TableAsStart + this.Tables.Count;
-                        var subQueryObj = this.Evaluate(methodCallExpr.Arguments[0]) as IQuery;
-                        existsSql = this.VisitUseQuery(genericArguments[0], subQueryObj, (char)tableIndex);
-                    }
-                    else
+                    var lastReturnType = argsType.GenericTypeArguments.Last();
+                    if (lastReturnType == typeof(bool))
                     {
                         //Sql.Exists<T1, T2>(Expression<Func<T1, T2, bool>> predicate)                      
                         //保存现场，临时添加这几个新表及别名，解析之后再删除
@@ -1181,6 +1169,7 @@ public class SqlVisitor : ISqlVisitor
                         var builder = new StringBuilder("SELECT * FROM ");
                         int index = 0;
                         lambdaExpr = this.EnsureLambda(methodCallExpr.Arguments[0]);
+                        var genericArguments = methodCallExpr.Method.GetGenericArguments();
                         foreach (var tableType in genericArguments)
                         {
                             var aliasName = lambdaExpr.Parameters[index].Name;
@@ -1211,6 +1200,19 @@ public class SqlVisitor : ISqlVisitor
                             this.TableAliases.Remove(f.AliasName);
                         });
                         existsSql = builder.ToString();
+                    }
+                    else
+                    {
+                        if (typeof(IQuery).IsAssignableFrom(argsType))
+                        {
+                            //Exists<TTarget>(IQuery<TTarget> subQuery)
+                            var funcType = typeof(Func<,>).MakeGenericType(typeof(IFromQuery), argsType);
+                            var parameterExpr = Expression.Parameter(typeof(IFromQuery), "f");
+                            var predicateExpr = Expression.Lambda(funcType, methodCallExpr.Arguments[0], parameterExpr);
+                            (existsSql, _, _) = this.VisitFromQuery(predicateExpr);
+                        }
+                        //Exists<TTarget>(Func<IFromQuery, IQuery<TTarget>> subQuery)
+                        (existsSql, _, _) = this.VisitFromQuery(methodCallExpr.Arguments[0]);
                     }
                 }
                 else if (methodCallExpr.GetParameters(out var parameters))
@@ -1977,56 +1979,6 @@ public class SqlVisitor : ISqlVisitor
         sql = queryVisitor.BuildSql(false, out var readerFields);
         return (sql, tableSegment, readerFields);
     }
-    private string VisitUseQuery(Type targetType, IQuery subQueryObj, char tableAsStart)
-    {
-        IQueryVisitor queryVisitor = null;
-        if (subQueryObj is ICteQuery cteQueryObj)
-        {
-            queryVisitor = this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart, this.DbParameters);
-            if (!this.RefQueries.Contains(cteQueryObj))
-                this.RefQueries.Add(cteQueryObj);
-            queryVisitor.Tables.Add(new TableSegment
-            {
-                TableType = TableType.CteSelfRef,
-                EntityType = targetType,
-                IsMaster = true,
-                AliasName = $"{tableAsStart}",
-                Body = cteQueryObj.TableName,
-                Fields = cteQueryObj.ReaderFields
-            });
-        }
-        else
-        {
-            //IN/EXISTS子查询，都将生成临时SQL拼接到最后的SQL中，中间使用的各种状态变量都是拷贝引用子查询的现场，
-            //以免破坏引用子查询的现场状态变量
-            queryVisitor = subQueryObj.Visitor.Clone() as IQueryVisitor;
-            subQueryObj.Visitor.Tables.ForEach(f => queryVisitor.Tables.Add(f));
-        }
-        //添加子查询对象引用
-        if (!this.RefQueries.Contains(subQueryObj))
-            this.RefQueries.Add(subQueryObj);
-
-        // 把subQueryObj的Visitor状态属性拷贝到当前Visitor中
-        // 因为会生成新的子查询SQL，subQueryObj的Visitor状态已经通过新表更新到tableSegment.Body中，无需同步
-        // 所以，只需要同步Sharding分表信息和IncludeTables表信息，这两个会影响到后面SQL的生成
-        if (subQueryObj.Visitor.IsNeedFetchShardingTables)
-            this.IsNeedFetchShardingTables = true;
-        if (subQueryObj.Visitor.IsNeedUnionShardingTables)
-            this.IsNeedUnionShardingTables = true;
-        if (subQueryObj.Visitor.IsNeedFormatShardingTables)
-            this.IsNeedFormatShardingTables = true;
-        if (subQueryObj.Visitor.IsManyShardingTables)
-            this.IsManyShardingTables = true;
-        if (subQueryObj.Visitor.ShardingTables != null && subQueryObj.Visitor.ShardingTables.Count > 0)
-        {
-            this.ShardingTables ??= new();
-            this.ShardingTables.AddRange(subQueryObj.Visitor.ShardingTables);
-        }
-
-        if (queryVisitor.ReaderFields == null || queryVisitor.ReaderFields.Count == 0)
-            queryVisitor.Select("*");
-        return queryVisitor.BuildSql(false, out _);
-    }
     public virtual string GetQuotedValue(SqlFieldSegment sqlSegment, bool isNeedExprWrap = false)
     {
         //默认只要是变量就设置为参数
@@ -2585,12 +2537,10 @@ public class SqlVisitor : ISqlVisitor
         sqlSegment.IsMethodCall = true;
         return sqlSegment;
     }
-
-
     public TableSegment UseQuery(Type targetType, IQuery subQueryObj, bool isCopyRefParameters)
     {
         TableSegment tableSegment = null;
-        List<SqlFieldSegment> readerFields = null;
+        var readerFields = new List<SqlFieldSegment>();
         if (subQueryObj is ICteQuery cteQueryObj)
         {
             readerFields = new List<SqlFieldSegment>();
@@ -2601,7 +2551,8 @@ public class SqlVisitor : ISqlVisitor
         }
         else
         {
-            var sql = subQueryObj.Visitor.BuildSql(false, out readerFields);
+            var sql = subQueryObj.Visitor.BuildSql(false, out var myReaderFields);
+            myReaderFields.ForEach(f => readerFields.Add(f.Clone()));
             tableSegment = this.AddJoinTable(targetType, null, TableType.FromQuery, $"({sql})", readerFields);
         }
         if (isCopyRefParameters)
@@ -2644,8 +2595,6 @@ public class SqlVisitor : ISqlVisitor
         this.Tables[0].TableType = TableType.FromQuery;
         this.UnionSql = null;
     }
-
-
     public void InitUseQueryReaderFields(TableSegment tableSegment, List<SqlFieldSegment> readerFields)
     {
         foreach (var readerField in readerFields)

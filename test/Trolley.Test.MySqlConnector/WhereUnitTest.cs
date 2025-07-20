@@ -196,16 +196,14 @@ public class WhereUnitTest : UnitTestBase
             .ToSql(out _);
         Assert.Equal("SELECT * FROM `sys_order` a,`sys_user` b WHERE ((a.`BuyerId`=b.`Id` AND (a.`SellerId` IS NULL OR a.`ProductCount` IS NULL) AND a.`Products` IS NOT NULL) OR b.`Age`<20) AND (a.`Products` IS NULL OR a.`Disputes` IS NULL)", sql);
 
-		var filterExpr = Sql.From<Order, User>()
-            .Where((x, y) => x.BuyerId <= 10 && x.ProductCount > 5 && y.SourceType == UserSourceType.Douyin)
-            .Or((x, y) => x.BuyerId > 10 && x.ProductCount <= 5 && y.SourceType == UserSourceType.Website)
-            .Or((x, y) => x.BuyerSource == UserSourceType.Taobao)
-            .AndMerge(f => f.Where((x, y) => x.IsEnabled).And((x, y) => x.BuyerId == y.Id))
-            .Build();
         sql = repository.From<Order, User>()
             .Where((a, b) => a.BuyerId == b.Id || b.SourceType == UserSourceType.Douyin)
             .And(true, (a, b) => (a.BuyerSource == UserSourceType.Taobao || a.SellerId.IsNull() && !a.ProductCount.HasValue) || a.ProductCount > 1 || a.TotalAmount > 500 && a.BuyerSource == UserSourceType.Website)
-            .And(filterExpr != null, filterExpr)
+            .AndPredicae(t => t
+                .Where((x, y) => x.BuyerId <= 10 && x.ProductCount > 5 && y.SourceType == UserSourceType.Douyin)
+                .Or(true, (x, y) => x.BuyerId > 10 && x.ProductCount <= 5 && y.SourceType == UserSourceType.Website)
+                .Or((x, y) => x.BuyerSource == UserSourceType.Taobao)
+                .AndMerge(f => f.Where((x, y) => x.IsEnabled).And((x, y) => x.BuyerId == y.Id)))
             .And(true, (a, b) => a.Products == null || a.Disputes == null)
             .Select((a, b) => "*")
             .ToSql(out _);

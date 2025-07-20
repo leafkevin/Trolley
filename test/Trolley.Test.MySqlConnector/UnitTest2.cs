@@ -1383,7 +1383,7 @@ SELECT a.`MenuId`,a.`ParentId`,a.`Url` FROM `menuPageList` a WHERE a.`ParentId`<
 
         var sql = repository.From<User>()
             .InnerJoin<Company>((a, b) => a.CompanyId == b.Id)
-            .Where((x, y) => Sql.Exists(f => myOrders.Where(f => f.BuyerId == x.Id)))
+            .Where((x, y) => Sql.Exists(myOrders.Where(f => f.BuyerId == x.Id)))
             .Select((a, b) => new { a.Id, a.Name, CompanyName = b.Name })
             .ToSql(out _);
         Assert.Equal(@"WITH `myOrders`(`OrderId`,`BuyerId`) AS 
@@ -1393,6 +1393,24 @@ SELECT a.`OrderId`,b.`BuyerId` FROM `sys_order_detail` a,`sys_order` b WHERE a.`
 SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `sys_company` b ON a.`CompanyId`=b.`Id` WHERE EXISTS(SELECT * FROM `myOrders` c WHERE c.`BuyerId`=a.`Id`)", sql);
 
         var result = repository.From<User>()
+            .InnerJoin<Company>((a, b) => a.CompanyId == b.Id)
+            .Where((x, y) => Sql.Exists(t => myOrders.Where(f => f.BuyerId == x.Id)))
+            .Select((a, b) => new { a.Id, a.Name, CompanyName = b.Name })
+            .First();
+        Assert.NotNull(result);
+
+        sql = repository.From<User>()
+            .InnerJoin<Company>((a, b) => a.CompanyId == b.Id)
+            .Where((x, y) => Sql.Exists(myOrders.Where(f => f.BuyerId == x.Id)))
+            .Select((a, b) => new { a.Id, a.Name, CompanyName = b.Name })
+            .ToSql(out _);
+        Assert.Equal(@"WITH `myOrders`(`OrderId`,`BuyerId`) AS 
+(
+SELECT a.`OrderId`,b.`BuyerId` FROM `sys_order_detail` a,`sys_order` b WHERE a.`OrderId`=b.`Id` GROUP BY a.`OrderId`,b.`BuyerId` HAVING COUNT(DISTINCT a.`ProductId`)>1
+)
+SELECT a.`Id`,a.`Name`,b.`Name` AS `CompanyName` FROM `sys_user` a INNER JOIN `sys_company` b ON a.`CompanyId`=b.`Id` WHERE EXISTS(SELECT * FROM `myOrders` c WHERE c.`BuyerId`=a.`Id`)", sql);
+
+        result = repository.From<User>()
             .InnerJoin<Company>((a, b) => a.CompanyId == b.Id)
             .Where((x, y) => Sql.Exists(t => myOrders.Where(f => f.BuyerId == x.Id)))
             .Select((a, b) => new { a.Id, a.Name, CompanyName = b.Name })

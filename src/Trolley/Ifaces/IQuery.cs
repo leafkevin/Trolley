@@ -1235,6 +1235,8 @@ public interface IQuery<T1, T2> : IQueryBase
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2> And(bool condition, Expression<Func<T1, T2, bool>> ifPredicate = null, Expression<Func<T1, T2, bool>> elsePredicate = null);
+
+    IQuery<T1, T2> AndPredicae(Action<PredicateBuilder<T1, T2>> predicate);
     #endregion
 
     #region Or
