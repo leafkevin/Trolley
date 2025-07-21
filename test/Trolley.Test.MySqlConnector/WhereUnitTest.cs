@@ -203,7 +203,7 @@ public class WhereUnitTest : UnitTestBase
                 .Where((x, y) => x.BuyerId <= 10 && x.ProductCount > 5 && y.SourceType == UserSourceType.Douyin)
                 .Or(true, (x, y) => x.BuyerId > 10 && x.ProductCount <= 5 && y.SourceType == UserSourceType.Website)
                 .Or((x, y) => x.BuyerSource == UserSourceType.Taobao)
-                .AndMerge(f => f.Where((x, y) => x.IsEnabled).And((x, y) => x.BuyerId == y.Id)))
+                .And((x, y) => x.IsEnabled && x.BuyerId == y.Id))
             .And(true, (a, b) => a.Products == null || a.Disputes == null)
             .Select((a, b) => "*")
             .ToSql(out _);

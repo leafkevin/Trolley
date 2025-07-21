@@ -1394,16 +1394,20 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (!string.IsNullOrEmpty(sqlFormat))
         {
             //单值操作，SELECT COUNT(1)/*等
-            this.ReaderFields ??= new();
-            //单值操作，SELECT COUNT(DISTINCT b.Id),MAX(b.Amount),COUNT(1)等
-            if (this.ReaderFields != null && this.ReaderFields.Count > 0
-                && !(this.IsNeedFormatShardingTables && this.AggFieldAlias == "AVG_VALUE"))
+            if (this.ReaderFields == null)
+                this.ReaderFields = new List<SqlFieldSegment> { new SqlFieldSegment { Body = sqlFormat } };
+            else
             {
-                //当有多分表并且是AVG场景时，UNION之后，再做AVG操作
+                //单值操作，SELECT COUNT(DISTINCT b.Id),MAX(b.Amount),COUNT(1)等
                 var readerField = this.ReaderFields[0];
-                readerField.Body = string.Format(sqlFormat, readerField.Body);
+                if (this.IsNeedFormatShardingTables && this.AggFieldAlias == "AVG_VALUE")
+                {
+                    readerField.Body = $"SUM({readerField.Body})";
+                    this.ReaderFields.Add(new SqlFieldSegment { Body = "COUNT(*) AS AVG_COUNT" });
+                }
+                //当有多分表并且是AVG场景时，UNION之后，再做AVG操作
+                else readerField.Body = string.Format(sqlFormat, readerField.Body);
             }
-            else this.ReaderFields.Add(new SqlFieldSegment { Body = sqlFormat });
         }
         this.IsSelect = false;
     }

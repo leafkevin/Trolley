@@ -1203,16 +1203,16 @@ public class SqlVisitor : ISqlVisitor
                     }
                     else
                     {
+                        var predicateExpr = methodCallExpr.Arguments[0];
                         if (typeof(IQuery).IsAssignableFrom(argsType))
                         {
                             //Exists<TTarget>(IQuery<TTarget> subQuery)
                             var funcType = typeof(Func<,>).MakeGenericType(typeof(IFromQuery), argsType);
                             var parameterExpr = Expression.Parameter(typeof(IFromQuery), "f");
-                            var predicateExpr = Expression.Lambda(funcType, methodCallExpr.Arguments[0], parameterExpr);
-                            (existsSql, _, _) = this.VisitFromQuery(predicateExpr);
+                            predicateExpr = Expression.Lambda(funcType, methodCallExpr.Arguments[0], parameterExpr);
                         }
                         //Exists<TTarget>(Func<IFromQuery, IQuery<TTarget>> subQuery)
-                        (existsSql, _, _) = this.VisitFromQuery(methodCallExpr.Arguments[0]);
+                        (existsSql, _, _) = this.VisitFromQuery(predicateExpr);
                     }
                 }
                 else if (methodCallExpr.GetParameters(out var parameters))
@@ -1695,20 +1695,18 @@ public class SqlVisitor : ISqlVisitor
 
         if (currentExpr.NodeType == ExpressionType.MemberAccess && typeof(IQuery).IsAssignableFrom(currentExpr.Type))
         {
-            subQueryObj = this.Evaluate(currentExpr) as IQuery;
+            subQueryObj = this.Evaluate(currentExpr) as IQuery;            
             if (callStack.Count == 0)
             {
+                if (this.IsWhere)
+                {
+                    sql = subQueryObj.Visitor.BuildSql(false, out _);
+                    return (sql, tableSegment, readyReaderFields);
+                }
+
                 //直接引用，无任何操作
                 var targetType = currentExpr.Type.GenericTypeArguments[0];
                 tableSegment = queryVisitor.UseQuery(targetType, subQueryObj, true);
-
-                //拷贝到当前引用queryVisitor对象的queryVisitor对象中
-                //this.CopyRefParametersFromQueryVisitor(subQueryObj.Visitor);
-                //后续工作：
-                //this.AddJoinTable(targetType, null, TableType.CteSelfRef, queryVisiter.CteQueryObj.TableName, readerFields);
-                //this.CopyRefParametersFromQueryVisitor(subQueryObj.Visitor);
-                //this.InitUseQueryReaderFields(tableSegment, readerFields);
-                //this.CopyShardingFromQueryVisitor(queryVisiter); 
                 return (sql, tableSegment, readyReaderFields);
             }
 

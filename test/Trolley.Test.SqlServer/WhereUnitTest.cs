@@ -193,7 +193,7 @@ public class WhereUnitTest : UnitTestBase
             .ToSql(out _);
         Assert.Equal("SELECT * FROM [sys_order] a,[sys_user] b WHERE a.[BuyerId]=b.[Id] AND (a.[SellerId] IS NULL OR a.[ProductCount] IS NULL) AND a.[Products] IS NOT NULL AND (a.[Products] IS NULL OR a.[Disputes] IS NULL)", sql);
 
-        var filterExpr = PredicateBuilder.Create<Order, User>()
+        var filterExpr = Sql.Where<Order, User>()
             .And((x, y) => x.BuyerId <= 10 && x.ProductCount > 5 && y.SourceType == UserSourceType.Douyin)
             .Or((x, y) => x.BuyerId > 10 && x.ProductCount <= 5 && y.SourceType == UserSourceType.Website)
             .Or((x, y) => x.BuyerSource == UserSourceType.Taobao)
