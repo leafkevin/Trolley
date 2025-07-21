@@ -434,7 +434,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             }
             return fieldName;
         };
-        if (this.GroupByFields != null)
+        if (this.GroupByFields != null && this.GroupByFields.Count > 0)
         {
             for (int i = 0; i < this.GroupByFields.Count; i++)
             {
@@ -467,7 +467,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             }
             selectSql = builder.ToString();
         }
-        if (this.OrderByFields != null)
+        if (this.OrderByFields != null && this.OrderByFields.Count > 0)
         {
             builder.Clear();
             for (int i = 0; i < this.OrderByFields.Count; i++)

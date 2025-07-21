@@ -1695,7 +1695,7 @@ public class SqlVisitor : ISqlVisitor
 
         if (currentExpr.NodeType == ExpressionType.MemberAccess && typeof(IQuery).IsAssignableFrom(currentExpr.Type))
         {
-            subQueryObj = this.Evaluate(currentExpr) as IQuery;            
+            subQueryObj = this.Evaluate(currentExpr) as IQuery;
             if (callStack.Count == 0)
             {
                 if (this.IsWhere)
@@ -1922,16 +1922,39 @@ public class SqlVisitor : ISqlVisitor
                 case "Page":
                     queryVisitor.Page(this.Evaluate<int>(callExpr.Arguments[0]), this.Evaluate<int>(callExpr.Arguments[1]));
                     break;
+                case "UseTableSchema":
+                    queryVisitor.UseTableSchema(false, this.Evaluate<string>(callExpr.Arguments[0]));
+                    break;
                 case "UseTable":
                     entityType = methodInfo.DeclaringType.GetGenericArguments().Last();
                     var parameterInfos = methodInfo.GetParameters();
-                    //仅支持UseTable(params string[] tableNames)
                     if (parameterInfos[0].ParameterType.IsArray)
                     {
                         var tableNames = this.Evaluate<string[]>(callExpr.Arguments[0]);
                         queryVisitor.UseTable(false, tableNames);
                     }
-                    else throw new NotSupportedException("不支持的方法调用");
+                    else
+                    {
+                        var tableNameGetter = this.Evaluate<Func<string, bool>>(callExpr.Arguments[0]);
+                        queryVisitor.UseTable(false, tableNameGetter);
+                    }
+                    break;
+                case "UseTableByRange":
+                    switch (callExpr.Arguments.Count)
+                    {
+                        case 2:
+                            queryVisitor.UseTableByRange(false, this.Evaluate(callExpr.Arguments[0]),
+                                this.Evaluate(callExpr.Arguments[1]));
+                            break;
+                        case 3:
+                            queryVisitor.UseTableByRange(false, this.Evaluate(callExpr.Arguments[0]),
+                                this.Evaluate(callExpr.Arguments[1]), this.Evaluate(callExpr.Arguments[2]));
+                            break;
+                        case 4:
+                            queryVisitor.UseTableByRange(false, this.Evaluate(callExpr.Arguments[0]),
+                                this.Evaluate(callExpr.Arguments[1]), this.Evaluate(callExpr.Arguments[2]), this.Evaluate(callExpr.Arguments[3]));
+                            break;
+                    }
                     break;
                 case "UseTableBy":
                     var fieldValues = (object[])this.Evaluate(callExpr.Arguments[0]);
@@ -1939,9 +1962,9 @@ public class SqlVisitor : ISqlVisitor
                     queryVisitor.UseTableBy(false, fieldValues);
                     break;
                 case "UseTableMap":
-                    var tableNameGetter = (Func<string, string, string, string>)this.Evaluate(callExpr.Arguments[0]);
+                    var tableNameMapGetter = (Func<string, string, string, string>)this.Evaluate(callExpr.Arguments[0]);
                     var masterEntityType = methodInfo.GetGenericArguments().Last();
-                    queryVisitor.UseTableMap(false, masterEntityType, tableNameGetter);
+                    queryVisitor.UseTableMap(false, masterEntityType, tableNameMapGetter);
                     break;
                 case "Exists":
                 case "ExistsAsync":
