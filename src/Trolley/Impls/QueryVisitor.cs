@@ -151,8 +151,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
 
         this.AddSelectFieldsSql(builder, this.ReaderFields);
-        if (this.IsManyShardingTables && this.AggFieldAlias != null)
-            builder.Append($" AS {this.AggFieldAlias}");
+        if (this.IsManyShardingTables && this.IsNeedFormatShardingTables && this.AggFieldAlias != null)
+            builder.Append($" AS {this.AggFieldAlias},COUNT(*) AS AVG_COUNT");
 
         string selectSql = null;
         if (this.IsDistinct)
@@ -349,8 +349,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
 
         this.AddSelectFieldsSql(builder, this.ReaderFields);
-        if (this.IsManyShardingTables && this.AggFieldAlias != null)
-            builder.Append($" AS {this.AggFieldAlias}");
+        if (this.IsManyShardingTables && this.IsNeedFormatShardingTables && this.AggFieldAlias != null)
+            builder.Append($" AS {this.AggFieldAlias},COUNT(*) AS AVG_COUNT");
 
         string selectSql = null;
         if (this.IsDistinct)
@@ -1401,10 +1401,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 //单值操作，SELECT COUNT(DISTINCT b.Id),MAX(b.Amount),COUNT(1)等
                 var readerField = this.ReaderFields[0];
                 if (this.IsNeedFormatShardingTables && this.AggFieldAlias == "AVG_VALUE")
-                {
                     readerField.Body = $"SUM({readerField.Body})";
-                    this.ReaderFields.Add(new SqlFieldSegment { Body = "COUNT(*) AS AVG_COUNT" });
-                }
                 //当有多分表并且是AVG场景时，UNION之后，再做AVG操作
                 else readerField.Body = string.Format(sqlFormat, readerField.Body);
             }

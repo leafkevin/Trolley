@@ -758,7 +758,7 @@ public sealed class DbContext
                     aggFields = "SUM(SUM_VALUE)";
                     break;
                 case "AVG_VALUE":
-                    aggFields = "AVG(AVG_VALUE)";
+                    aggFields = "SUM(AVG_VALUE)/SUM(AVG_COUNT)";
                     break;
                 case "MAX_VALUE":
                     aggFields = "MAX(MAX_VALUE)";
