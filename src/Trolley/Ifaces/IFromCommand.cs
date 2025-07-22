@@ -223,7 +223,7 @@ public interface IFromCommand<T> : IFromCommand
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询</param>
+    /// <param name="subQueryExpr">子查询</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<T, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
@@ -643,7 +643,6 @@ public interface IFromCommand<T1, T2> : IFromCommand
     IFromCommand<T1, T2, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
-
     #region InnerJoin
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
@@ -1036,7 +1035,6 @@ public interface IFromCommand<T1, T2, T3> : IFromCommand
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2, T3, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
-
 
     #region InnerJoin
     /// <summary>
@@ -1431,7 +1429,6 @@ public interface IFromCommand<T1, T2, T3, T4> : IFromCommand
     IFromCommand<T1, T2, T3, T4, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
-
     #region InnerJoin
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
@@ -1824,7 +1821,6 @@ public interface IFromCommand<T1, T2, T3, T4, T5> : IFromCommand
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2, T3, T4, T5, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
-
 
     #region InnerJoin
     /// <summary>

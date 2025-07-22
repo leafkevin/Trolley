@@ -48,7 +48,7 @@ public static class FasterEvaluator
     }
     public static object Evaluate(this ListInitExpression expression)
     {
-        var list = Activator.CreateInstance(expression.Type);
+        var list = RepositoryHelper.CreateInstance(expression.Type);
         foreach (var item in expression.Initializers)
         {
             item.AddMethod.Invoke(list, new[] { item.Arguments.FirstOrDefault().Evaluate() });
@@ -57,9 +57,11 @@ public static class FasterEvaluator
     }
     public static object Evaluate(this NewExpression expression)
     {
+
         if (expression.Arguments.Count > 0)
-            return Activator.CreateInstance(expression.Type, expression.Arguments.Select(arg => arg.Evaluate()).ToArray());
-        else return Activator.CreateInstance(expression.Type);
+            return RepositoryHelper.CreateInstance(expression.Type, expression.Arguments.Select(f => f.Type).ToArray(),
+                expression.Arguments.Select(arg => arg.Evaluate()).ToArray());
+        else return RepositoryHelper.CreateInstance(expression.Type);
     }
     public static object Evaluate(this MemberInitExpression expression)
     {
@@ -80,11 +82,11 @@ public static class FasterEvaluator
     public static object Evaluate(this ParameterExpression expression, object target)
     {
         if (expression.Type.GetConstructors().Any(e => e.GetParameters().Length == 0))
-            return Activator.CreateInstance(expression.Type);
+            return RepositoryHelper.CreateInstance(expression.Type);
         return target;
         //throw new InvalidExpressionException($"The default constructor for expression '{expression}' is not found.");
     }
-    public static object Evaluate(this DefaultExpression expression) => expression.Type.IsValueType ? Activator.CreateInstance(expression.Type) : null;
+    public static object Evaluate(this DefaultExpression expression) => expression.Type.IsValueType ? RepositoryHelper.CreateInstance(expression.Type) : null;
     public static object Evaluate(this MemberInfo member, object obj, object[] parameters = null)
     {
         return member switch

@@ -79,7 +79,6 @@ public class Query<T1, T2> : QueryBase, IQuery<T1, T2>
         base.WithQueryInternal(subQueryExpr);
         return this.OrmProvider.NewQuery<T1, T2, TOther>(this.DbContext, this.Visitor);
     }
-
     #endregion
 
     #region InnerJoin
@@ -175,12 +174,10 @@ public class Query<T1, T2> : QueryBase, IQuery<T1, T2>
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
-    public virtual IQuery<T1, T2> AndPredicae(Action<PredicateBuilder<T1, T2>> predicate)
+    public virtual IQuery<T1, T2> WherePredicate(Func<PredicateBuilder<T1, T2>, Expression<Func<T1, T2, bool>>> predicateInitializer)
     {
         var builder = new PredicateBuilder<T1, T2>();
-        predicate.Invoke(builder);
-        base.WhereInternal(builder.Build());
-        return this;
+        return this.Where(predicateInitializer.Invoke(builder));
     }
     #endregion
 
@@ -195,6 +192,11 @@ public class Query<T1, T2> : QueryBase, IQuery<T1, T2>
         base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IQuery<T1, T2> AndPredicate(Func<PredicateBuilder<T1, T2>, Expression<Func<T1, T2, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2>();
+        return this.And(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region Or
@@ -207,6 +209,11 @@ public class Query<T1, T2> : QueryBase, IQuery<T1, T2>
     {
         base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
+    }
+    public virtual IQuery<T1, T2> OrPredicate(Func<PredicateBuilder<T1, T2>, Expression<Func<T1, T2, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2>();
+        return this.Or(predicateInitializer.Invoke(builder));
     }
     #endregion
 
@@ -379,7 +386,6 @@ public class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
         base.WithQueryInternal(subQueryExpr);
         return this.OrmProvider.NewQuery<T1, T2, T3, TOther>(this.DbContext, this.Visitor);
     }
-
     #endregion
 
     #region InnerJoin
@@ -475,6 +481,11 @@ public class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IQuery<T1, T2, T3> WherePredicate(Func<PredicateBuilder<T1, T2, T3>, Expression<Func<T1, T2, T3, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3>();
+        return this.Where(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region And
@@ -488,6 +499,11 @@ public class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
         base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IQuery<T1, T2, T3> AndPredicate(Func<PredicateBuilder<T1, T2, T3>, Expression<Func<T1, T2, T3, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3>();
+        return this.And(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region Or
@@ -500,6 +516,11 @@ public class Query<T1, T2, T3> : QueryBase, IQuery<T1, T2, T3>
     {
         base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
+    }
+    public virtual IQuery<T1, T2, T3> OrPredicate(Func<PredicateBuilder<T1, T2, T3>, Expression<Func<T1, T2, T3, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3>();
+        return this.Or(predicateInitializer.Invoke(builder));
     }
     #endregion
 
@@ -672,7 +693,6 @@ public class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
         base.WithQueryInternal(subQueryExpr);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, TOther>(this.DbContext, this.Visitor);
     }
-
     #endregion
 
     #region InnerJoin
@@ -768,6 +788,11 @@ public class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IQuery<T1, T2, T3, T4> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4>, Expression<Func<T1, T2, T3, T4, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4>();
+        return this.Where(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region And
@@ -781,6 +806,11 @@ public class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
         base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IQuery<T1, T2, T3, T4> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4>, Expression<Func<T1, T2, T3, T4, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4>();
+        return this.And(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region Or
@@ -793,6 +823,11 @@ public class Query<T1, T2, T3, T4> : QueryBase, IQuery<T1, T2, T3, T4>
     {
         base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4>, Expression<Func<T1, T2, T3, T4, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4>();
+        return this.Or(predicateInitializer.Invoke(builder));
     }
     #endregion
 
@@ -965,7 +1000,6 @@ public class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
         base.WithQueryInternal(subQueryExpr);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, TOther>(this.DbContext, this.Visitor);
     }
-
     #endregion
 
     #region InnerJoin
@@ -1061,6 +1095,11 @@ public class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IQuery<T1, T2, T3, T4, T5> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5>, Expression<Func<T1, T2, T3, T4, T5, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5>();
+        return this.Where(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region And
@@ -1074,6 +1113,11 @@ public class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
         base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IQuery<T1, T2, T3, T4, T5> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5>, Expression<Func<T1, T2, T3, T4, T5, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5>();
+        return this.And(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region Or
@@ -1086,6 +1130,11 @@ public class Query<T1, T2, T3, T4, T5> : QueryBase, IQuery<T1, T2, T3, T4, T5>
     {
         base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5>, Expression<Func<T1, T2, T3, T4, T5, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5>();
+        return this.Or(predicateInitializer.Invoke(builder));
     }
     #endregion
 
@@ -1258,7 +1307,6 @@ public class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T
         base.WithQueryInternal(subQueryExpr);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, TOther>(this.DbContext, this.Visitor);
     }
-
     #endregion
 
     #region InnerJoin
@@ -1354,6 +1402,11 @@ public class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6>, Expression<Func<T1, T2, T3, T4, T5, T6, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6>();
+        return this.Where(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region And
@@ -1367,6 +1420,11 @@ public class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T
         base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6>, Expression<Func<T1, T2, T3, T4, T5, T6, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6>();
+        return this.And(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region Or
@@ -1379,6 +1437,11 @@ public class Query<T1, T2, T3, T4, T5, T6> : QueryBase, IQuery<T1, T2, T3, T4, T
     {
         base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6>, Expression<Func<T1, T2, T3, T4, T5, T6, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6>();
+        return this.Or(predicateInitializer.Invoke(builder));
     }
     #endregion
 
@@ -1551,7 +1614,6 @@ public class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T
         base.WithQueryInternal(subQueryExpr);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, TOther>(this.DbContext, this.Visitor);
     }
-
     #endregion
 
     #region InnerJoin
@@ -1647,6 +1709,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7>();
+        return this.Where(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region And
@@ -1660,6 +1727,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T
         base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7>();
+        return this.And(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region Or
@@ -1672,6 +1744,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7> : QueryBase, IQuery<T1, T2, T3, T
     {
         base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7>();
+        return this.Or(predicateInitializer.Invoke(builder));
     }
     #endregion
 
@@ -1844,7 +1921,6 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T
         base.WithQueryInternal(subQueryExpr);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>(this.DbContext, this.Visitor);
     }
-
     #endregion
 
     #region InnerJoin
@@ -1940,6 +2016,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8>();
+        return this.Where(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region And
@@ -1953,6 +2034,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T
         base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8>();
+        return this.And(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region Or
@@ -1965,6 +2051,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8> : QueryBase, IQuery<T1, T2, T
     {
         base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8>();
+        return this.Or(predicateInitializer.Invoke(builder));
     }
     #endregion
 
@@ -2137,7 +2228,6 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T
         base.WithQueryInternal(subQueryExpr);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>(this.DbContext, this.Visitor);
     }
-
     #endregion
 
     #region InnerJoin
@@ -2233,6 +2323,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9>();
+        return this.Where(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region And
@@ -2246,6 +2341,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T
         base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9>();
+        return this.And(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region Or
@@ -2258,6 +2358,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9> : QueryBase, IQuery<T1, T
     {
         base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9>();
+        return this.Or(predicateInitializer.Invoke(builder));
     }
     #endregion
 
@@ -2430,7 +2535,6 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<
         base.WithQueryInternal(subQueryExpr);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>(this.DbContext, this.Visitor);
     }
-
     #endregion
 
     #region InnerJoin
@@ -2526,6 +2630,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>();
+        return this.Where(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region And
@@ -2539,6 +2648,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<
         base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>();
+        return this.And(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region Or
@@ -2551,6 +2665,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : QueryBase, IQuery<
     {
         base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>();
+        return this.Or(predicateInitializer.Invoke(builder));
     }
     #endregion
 
@@ -2723,7 +2842,6 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQ
         base.WithQueryInternal(subQueryExpr);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>(this.DbContext, this.Visitor);
     }
-
     #endregion
 
     #region InnerJoin
@@ -2819,6 +2937,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQ
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>();
+        return this.Where(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region And
@@ -2832,6 +2955,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQ
         base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>();
+        return this.And(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region Or
@@ -2844,6 +2972,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : QueryBase, IQ
     {
         base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>();
+        return this.Or(predicateInitializer.Invoke(builder));
     }
     #endregion
 
@@ -3016,7 +3149,6 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBas
         base.WithQueryInternal(subQueryExpr);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>(this.DbContext, this.Visitor);
     }
-
     #endregion
 
     #region InnerJoin
@@ -3112,6 +3244,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBas
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>();
+        return this.Where(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region And
@@ -3125,6 +3262,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBas
         base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>();
+        return this.And(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region Or
@@ -3137,6 +3279,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : QueryBas
     {
         base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>();
+        return this.Or(predicateInitializer.Invoke(builder));
     }
     #endregion
 
@@ -3309,7 +3456,6 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Que
         base.WithQueryInternal(subQueryExpr);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>(this.DbContext, this.Visitor);
     }
-
     #endregion
 
     #region InnerJoin
@@ -3405,6 +3551,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Que
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>();
+        return this.Where(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region And
@@ -3418,6 +3569,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Que
         base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>();
+        return this.And(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region Or
@@ -3430,6 +3586,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> : Que
     {
         base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>();
+        return this.Or(predicateInitializer.Invoke(builder));
     }
     #endregion
 
@@ -3602,7 +3763,6 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> 
         base.WithQueryInternal(subQueryExpr);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>(this.DbContext, this.Visitor);
     }
-
     #endregion
 
     #region InnerJoin
@@ -3698,6 +3858,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> 
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>();
+        return this.Where(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region And
@@ -3711,6 +3876,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> 
         base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>();
+        return this.And(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region Or
@@ -3723,6 +3893,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> 
     {
         base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>();
+        return this.Or(predicateInitializer.Invoke(builder));
     }
     #endregion
 
@@ -3895,7 +4070,6 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
         base.WithQueryInternal(subQueryExpr);
         return this.OrmProvider.NewQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>(this.DbContext, this.Visitor);
     }
-
     #endregion
 
     #region InnerJoin
@@ -3991,6 +4165,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>();
+        return this.Where(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region And
@@ -4004,6 +4183,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
         base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>();
+        return this.And(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region Or
@@ -4016,6 +4200,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
     {
         base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>();
+        return this.Or(predicateInitializer.Invoke(builder));
     }
     #endregion
 
@@ -4169,7 +4358,6 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
     }
     #endregion
 
-
     #region InnerJoin
     public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> joinOn)
     {
@@ -4218,6 +4406,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>();
+        return this.Where(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region And
@@ -4231,6 +4424,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
         base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>();
+        return this.And(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region Or
@@ -4243,6 +4441,11 @@ public class Query<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, 
     {
         base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
+    }
+    public virtual IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>();
+        return this.Or(predicateInitializer.Invoke(builder));
     }
     #endregion
 

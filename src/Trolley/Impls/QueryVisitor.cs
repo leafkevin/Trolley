@@ -15,12 +15,12 @@ namespace Trolley;
 public class QueryVisitor : SqlVisitor, IQueryVisitor
 {
     protected static readonly ConcurrentDictionary<int, (string, Action<StringBuilder, IOrmProvider, object>)> includeSqlGetterCache = new();
-    protected static readonly ConcurrentDictionary<Type, Action<object, ITheaDataReader, DbContext>> typedReaderElementSetters = new();
     protected static readonly ConcurrentDictionary<int, Action<object, object>> targetIncludeValuesSetters = new();
     private bool isDisposed;
 
-    protected int? skip;
+    protected int? offset;
     protected int? limit;
+    protected int pageNumber;
 
     protected string GroupBySql { get; set; }
     protected string HavingSql { get; set; }
@@ -33,8 +33,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public List<SqlFieldSegment> GroupByFields { get; set; }
     public List<OrderByField> OrderByFields { get; set; }
     public bool IsCteTable { get; set; }
-    public int PageNumber { get; set; }
-    public int PageSize { get; set; }
+    public int PageNumber => this.pageNumber;
+    public int PageSize => this.limit ?? 0;
     public bool IsNeedPaging { get; set; }
 
     public QueryVisitor(DbContext dbContext) => this.DbContext = dbContext;
@@ -175,10 +175,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         string orderBy = null;
         if (!string.IsNullOrEmpty(this.OrderBySql) && (!this.IsManyShardingTables
-            || (this.IsManyShardingTables && !this.skip.HasValue && this.limit.HasValue)))
+            || (this.IsManyShardingTables && !this.offset.HasValue && this.limit.HasValue)))
         {
             orderBy = $"ORDER BY {this.OrderBySql}";
-            if (!this.skip.HasValue && !this.limit.HasValue)
+            if (!this.offset.HasValue && !this.limit.HasValue)
                 builder.Append(" " + orderBy);
         }
         string others = builder.ToString();
@@ -187,16 +187,16 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (!string.IsNullOrEmpty(headSql))
             builder.Append(headSql);
 
-        if (!this.IsManyShardingTables && (this.skip.HasValue || this.limit.HasValue)
-            || (this.IsManyShardingTables && !this.skip.HasValue && this.limit.HasValue))
+        if (!this.IsManyShardingTables && (this.offset.HasValue || this.limit.HasValue)
+            || (this.IsManyShardingTables && !this.offset.HasValue && this.limit.HasValue))
         {
             //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ /**others**/
-            var pageSql = this.OrmProvider.GetPagingTemplate(this.skip, this.limit, orderBy);
+            var pageSql = this.OrmProvider.GetPagingTemplate(this.offset, this.limit, orderBy);
             pageSql = pageSql.Replace("/**fields**/", selectSql);
             pageSql = pageSql.Replace("/**tables**/", tableSql);
             pageSql = pageSql.Replace(" /**others**/", others);
 
-            if (this.IsNeedPaging && this.skip.HasValue && this.limit.HasValue)
+            if (this.IsNeedPaging && this.offset.HasValue && this.limit.HasValue)
             {
                 var myTableSql = $"{tableSql}{others}";
                 if (this.IsNeedFullFieldsPagingCount)
@@ -207,12 +207,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
 
-        if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.GroupBySql) || !string.IsNullOrEmpty(this.OrderBySql) || this.skip.HasValue || this.limit.HasValue))
+        if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.GroupBySql) || !string.IsNullOrEmpty(this.OrderBySql) || this.offset.HasValue || this.limit.HasValue))
             this.IsNeedUnionShardingTables = true;
 
         //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不正确
         bool isNeedWrap = ((this.IsUnion || this.IsSecondUnion) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue))
-            || (this.IsManyShardingTables && !this.skip.HasValue && this.limit.HasValue);
+            || (this.IsManyShardingTables && !this.offset.HasValue && this.limit.HasValue);
         if (isNeedWrap)
         {
             builder.Insert(0, "SELECT * FROM (");
@@ -368,10 +368,10 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         string orderBy = null;
         if (!string.IsNullOrEmpty(this.OrderBySql) && (!this.IsManyShardingTables
-            || (this.IsManyShardingTables && !this.skip.HasValue && this.limit.HasValue)))
+            || (this.IsManyShardingTables && !this.offset.HasValue && this.limit.HasValue)))
         {
             orderBy = $"ORDER BY {this.OrderBySql}";
-            if (!this.skip.HasValue && !this.limit.HasValue)
+            if (!this.offset.HasValue && !this.limit.HasValue)
                 builder.Append(" " + orderBy);
         }
         string others = builder.ToString();
@@ -380,11 +380,11 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (!string.IsNullOrEmpty(headSql))
             builder.Append(headSql);
 
-        if (!this.IsManyShardingTables && (this.skip.HasValue || this.limit.HasValue)
-            || (this.IsManyShardingTables && !this.skip.HasValue && this.limit.HasValue))
+        if (!this.IsManyShardingTables && (this.offset.HasValue || this.limit.HasValue)
+            || (this.IsManyShardingTables && !this.offset.HasValue && this.limit.HasValue))
         {
             //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ /**others**/
-            var pageSql = this.OrmProvider.GetPagingTemplate(this.skip, this.limit, orderBy);
+            var pageSql = this.OrmProvider.GetPagingTemplate(this.offset, this.limit, orderBy);
             pageSql = pageSql.Replace("/**fields**/", selectSql);
             pageSql = pageSql.Replace("/**tables**/", tableSql);
             pageSql = pageSql.Replace(" /**others**/", others);
@@ -392,12 +392,12 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
 
-        if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.GroupBySql) || !string.IsNullOrEmpty(this.OrderBySql) || this.skip.HasValue || this.limit.HasValue))
+        if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.GroupBySql) || !string.IsNullOrEmpty(this.OrderBySql) || this.offset.HasValue || this.limit.HasValue))
             this.IsNeedUnionShardingTables = true;
 
         //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不正确
         bool isNeedWrap = ((this.IsUnion || this.IsSecondUnion) && (!string.IsNullOrEmpty(this.OrderBySql) || this.limit.HasValue))
-            || (this.IsManyShardingTables && !this.skip.HasValue && this.limit.HasValue);
+            || (this.IsManyShardingTables && !this.offset.HasValue && this.limit.HasValue);
         if (isNeedWrap)
         {
             builder.Insert(0, "SELECT * FROM (");
@@ -494,16 +494,16 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             isFormated = true;
         }
         //TODO:此处的ReaderFields的字段，如果有join表，需要添加alias表名前缀
-        if (this.skip.HasValue || this.limit.HasValue)
+        if (this.offset.HasValue || this.limit.HasValue)
         {
             //SQL TEMPLATE:SELECT /**fields**/ FROM /**tables**/ /**others**/
-            var pageSql = this.OrmProvider.GetPagingTemplate(this.skip, this.limit, orderBy);
+            var pageSql = this.OrmProvider.GetPagingTemplate(this.offset, this.limit, orderBy);
             pageSql = pageSql.Replace("/**fields**/", "*");
             pageSql = pageSql.Replace("/**tables**/", $"({sql}) b");
             pageSql = pageSql.Replace(" /**others**/", "");
 
             builder.Clear();
-            if (this.IsNeedPaging && this.skip.HasValue && this.limit.HasValue)
+            if (this.IsNeedPaging && this.offset.HasValue && this.limit.HasValue)
                 builder.Append($"SELECT COUNT(*) FROM ({sql}) a;");
             builder.Append($"{pageSql}");
             sql = builder.ToString();
@@ -648,7 +648,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.UnionSql = rawSql;
         this.IsUnion = false;
     }
-    public virtual void UnionRecursive(string union, ICteQuery selfQueryObj, Expression selfSubQueryExpr)
+    public virtual void UnionRecursive(string union, ICteQuery selfQueryObj, Expression subQueryExpr)
     {
         this.IsUnion = true;
         var rawSql = this.BuildSql(false, out var readerFields);
@@ -665,7 +665,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var visitor = this.CreateQueryVisitor();
         var fromQuery = new FromQuery(this.DbContext, visitor);
         visitor.IsSecondUnion = true;
-        (var sql, _, _) = this.VisitFromQuery(selfSubQueryExpr, fromQuery, selfQueryObj);
+        (var sql, _, _) = this.VisitFromQuery(subQueryExpr, fromQuery, selfQueryObj);
         rawSql += union + Environment.NewLine + sql;
         //先放到UnionSql中，在AsCteTable方法中，BuildCteTableSql时能得到这个SQL
         this.UnionSql = rawSql;
@@ -679,7 +679,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         => this.Join(joinType, joinOn, f => { this.UseQuery(newEntityType, subQuery, true); return this.InitTableAlias(f); });
     public virtual void Join(string joinType, Type newEntityType, Expression subQueryExpr, Expression joinOn)
         => this.Join(joinType, joinOn, f => { this.UseNewQuery(newEntityType, subQueryExpr, false); return this.InitTableAlias(f); });
-    public virtual void Join(string joinType, Expression joinOn, Func<LambdaExpression, TableSegment> joinTableSegmentGetter = null)
+    private void Join(string joinType, Expression joinOn, Func<LambdaExpression, TableSegment> joinTableSegmentGetter = null)
     {
         var lambdaExpr = joinOn as LambdaExpression;
         if (!lambdaExpr.Body.GetParameters(out var parameters))
@@ -1500,21 +1500,24 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
     public virtual void Distinct() => this.IsDistinct = true;
     public virtual void Page(int pageNumber, int pageSize)
     {
-        this.PageNumber = pageNumber;
-        this.PageSize = pageSize;
+        this.pageNumber = pageNumber;
         if (pageNumber > 0) pageNumber--;
-        this.skip = pageNumber * pageSize;
+        this.offset = pageNumber * pageSize;
         this.limit = pageSize;
         this.ClearUnionSql();
     }
     public virtual void Skip(int skip)
     {
-        this.skip = skip;
+        this.offset = skip;
+        if (this.limit.HasValue && this.limit.Value > 0)
+            this.pageNumber = (int)Math.Ceiling((double)offset / this.limit.Value) + 1;
         this.ClearUnionSql();
     }
     public virtual void Take(int limit)
     {
         this.limit = limit;
+        if (this.offset.HasValue && this.offset.Value > 0)
+            this.pageNumber = (int)Math.Ceiling((double)offset / this.limit.Value) + 1;
         this.ClearUnionSql();
     }
     public override SqlFieldSegment VisitMemberAccess(SqlFieldSegment sqlSegment)
@@ -1900,7 +1903,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (this.CteQueryObj == null)
         {
             var cteQueryType = typeof(CteQuery<>).MakeGenericType(targetType);
-            this.CteQueryObj = Activator.CreateInstance(cteQueryType, this.DbContext, this) as ICteQuery;
+            this.CteQueryObj = RepositoryHelper.CreateInstance(cteQueryType, 
+                [typeof(DbContext), typeof(IQueryVisitor)], this.DbContext, this) as ICteQuery;
         }
         this.CteQueryObj.Body = this.BuildCteTableSql(tableName, out var readerFields);
         this.CteQueryObj.ReaderFields = readerFields;
@@ -2112,7 +2116,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         this.WhereSql = null;
         this.TableAsStart = 'a';
 
-        this.skip = null;
+        this.offset = null;
         this.limit = null;
         this.UnionSql = null;
         this.GroupBySql = null;
@@ -2164,8 +2168,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
 
         queryVisitor.IsRecursive = this.IsRecursive;
         queryVisitor.CteQueryObj = this.CteQueryObj;
-        queryVisitor.PageNumber = this.PageNumber;
-        queryVisitor.PageSize = this.PageSize;
         queryVisitor.IsNeedPaging = this.IsNeedPaging;
 
         if (this.DbParameters != null && this.DbParameters.Count > 0)

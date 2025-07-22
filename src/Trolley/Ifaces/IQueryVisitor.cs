@@ -42,8 +42,8 @@ public interface IQueryVisitor : ICloneable, IDisposable
 
     bool IsSecondUnion { get; set; }
     char TableAsStart { get; set; }
-    int PageNumber { get; set; }
-    int PageSize { get; set; }
+    int PageNumber { get; }
+    int PageSize { get; }
     bool IsNeedCommandTableAlias { get; set; }
     bool IsNeedFetchShardingTables { get; }
     bool IsNeedFormatShardingTables { get; }

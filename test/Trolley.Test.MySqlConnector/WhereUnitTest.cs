@@ -199,11 +199,12 @@ public class WhereUnitTest : UnitTestBase
         sql = repository.From<Order, User>()
             .Where((a, b) => a.BuyerId == b.Id || b.SourceType == UserSourceType.Douyin)
             .And(true, (a, b) => (a.BuyerSource == UserSourceType.Taobao || a.SellerId.IsNull() && !a.ProductCount.HasValue) || a.ProductCount > 1 || a.TotalAmount > 500 && a.BuyerSource == UserSourceType.Website)
-            .AndPredicae(t => t
+            .AndPredicate(t => t
                 .Where((x, y) => x.BuyerId <= 10 && x.ProductCount > 5 && y.SourceType == UserSourceType.Douyin)
                 .Or(true, (x, y) => x.BuyerId > 10 && x.ProductCount <= 5 && y.SourceType == UserSourceType.Website)
                 .Or((x, y) => x.BuyerSource == UserSourceType.Taobao)
-                .And((x, y) => x.IsEnabled && x.BuyerId == y.Id))
+                .And((x, y) => x.IsEnabled && x.BuyerId == y.Id)
+                .Build())
             .And(true, (a, b) => a.Products == null || a.Disputes == null)
             .Select((a, b) => "*")
             .ToSql(out _);

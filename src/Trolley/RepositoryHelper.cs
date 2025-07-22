@@ -51,6 +51,9 @@ public static class RepositoryHelper
     private static readonly ConcurrentDictionary<int, Delegate> readerDeserializerGetters = new();
     private static readonly ConcurrentDictionary<int, Delegate> readerDeserializerAsyncGetters = new();
 
+    private static readonly ConcurrentDictionary<Type, Func<object>> creatorCache = new();
+    private static readonly ConcurrentDictionary<Type, Func<object[], object>> parameterizedCreatorCache = new();
+
     public static void AddValueParameter(DbContext dbContext, Expression dbParametersExpr, Expression ormProviderExpr,
         Expression parameterNameExpr, Type fieldValueType, Expression fieldValueExpr, MemberMap memberMapper, List<Expression> blockBodies)
     {
@@ -1621,6 +1624,25 @@ public static class RepositoryHelper
             }
         });
         return tableNameGetter.Invoke(tableName, parameter);
+    }
+    public static object CreateInstance(Type targetType)
+    {
+        var creator = creatorCache.GetOrAdd(targetType, f =>
+        {
+            var constructor = f.GetConstructor(Type.EmptyTypes);
+            return Expression.Lambda<Func<object>>(Expression.New(constructor)).Compile();
+        });
+        return creator.Invoke();
+    }
+    public static object CreateInstance(Type targetType, Type[] parameterTypes, params object[] parameters)
+    {
+        var creator = parameterizedCreatorCache.GetOrAdd(targetType, f =>
+        {
+            var parameterExprs = parameterTypes.Select((t, i) => Expression.Parameter(t, $"param{i}")).ToArray();
+            var constructor = f.GetConstructor(parameterTypes);
+            return Expression.Lambda<Func<object[], object>>(Expression.New(constructor), parameterExprs).Compile();
+        });
+        return creator.Invoke(parameters);
     }
     public static object ReadList(Type entityType, ITheaDataReader reader, DbContext dbContext)
     {

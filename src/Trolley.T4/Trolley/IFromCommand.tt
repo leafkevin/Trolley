@@ -178,7 +178,7 @@ public interface IFromCommand<T> : IFromCommand
     /// <code>f.From&lt;Menu&gt;().Where(x =&gt; ... ).Select(x =&gt; new { ... })</code>
     /// </param>
     /// <returns>返回查询对象</returns>
-    IFromCommand<T> UnionRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQueryExpr);
+    IFromCommand<T> UnionRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr);
     /// <summary>
     /// 递归CTE子查询中的UnionAll操作，表达式subQuery中的第二参数是自身引用，用法：
     /// <code>
@@ -198,7 +198,7 @@ public interface IFromCommand<T> : IFromCommand
     /// <code>f.From&lt;Menu&gt;() .Where(x =&gt; ... ) .Select(x =&gt; new { ... })</code>
     /// </param>
     /// <returns>返回查询对象</returns>
-    IFromCommand<T> UnionAllRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQueryExpr);
+    IFromCommand<T> UnionAllRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr);
     #endregion
 
     #region WithTable
@@ -664,7 +664,6 @@ public interface IFromCommand<<#=tables#>> : IFromCommand
     /// <returns>返回查询对象</returns>
     IFromCommand<<#=tables#>, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
-
 <#      }#>
 
     #region InnerJoin

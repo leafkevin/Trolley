@@ -30,13 +30,6 @@ public interface IGroupingQueryBase<TGrouping>
     /// </summary>
     /// <returns>返回分组后对象</returns>
     IQuery<TGrouping> Select();
-    /// <summary>
-    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型</typeparam>
-    /// <param name="fields">原始字段字符串，默认值*</param>
-    /// <returns>返回查询对象</returns>
-    IQuery<TTarget> Select<TTarget>(string fields = "*");
 }
 /// <summary>
 /// 分组查询对象

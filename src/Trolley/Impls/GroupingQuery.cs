@@ -19,11 +19,6 @@ public class GroupingQueryBase<TGrouping> : QueryInternal, IGroupingQueryBase<TG
         this.Visitor.SelectGrouping();
         return this.OrmProvider.NewQuery<TGrouping>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<TTarget> Select<TTarget>(string fields = "*")
-    {
-        base.SelectInternal(fields);
-        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
-    }
     #endregion
 }
 public class GroupingQuery<T, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T, TGrouping>

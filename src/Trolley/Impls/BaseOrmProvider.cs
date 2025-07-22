@@ -21,8 +21,8 @@ public abstract partial class BaseOrmProvider : IOrmProvider
     protected static readonly ConcurrentDictionary<int, Func<object, object>> readerValueGetters = new();
     static BaseOrmProvider()
     {
-        typeHandlers.TryAdd(typeof(JsonTypeHandler), Activator.CreateInstance(typeof(JsonTypeHandler)) as ITypeHandler);
-        typeHandlers.TryAdd(typeof(ToStringTypeHandler), Activator.CreateInstance(typeof(ToStringTypeHandler)) as ITypeHandler);
+        typeHandlers.TryAdd(typeof(JsonTypeHandler), new JsonTypeHandler());
+        typeHandlers.TryAdd(typeof(ToStringTypeHandler), new ToStringTypeHandler());
     }
     public virtual OrmProviderType OrmProviderType => OrmProviderType.Basic;
     public virtual string ParameterPrefix => "@";
@@ -1910,7 +1910,7 @@ public abstract partial class BaseOrmProvider : IOrmProvider
     public virtual ITypeHandler GetTypeHandler(Type typeHandlerType)
     {
         if (!typeHandlers.TryGetValue(typeHandlerType, out var typeHandler))
-            typeHandlers.TryAdd(typeHandlerType, typeHandler = Activator.CreateInstance(typeHandlerType) as ITypeHandler);
+            typeHandlers.TryAdd(typeHandlerType, typeHandler = RepositoryHelper.CreateInstance(typeHandlerType) as ITypeHandler);
         return typeHandler;
     }
     public abstract object MapNativeDbType(DbColumnInfo columnInfo);

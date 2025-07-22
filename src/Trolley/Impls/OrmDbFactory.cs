@@ -38,7 +38,7 @@ public sealed class OrmDbFactory : IOrmDbFactory
         if (!this.ormProviders.TryGetValue(ormProviderType, out var ormProvider))
         {
             var type = this.GetOrmProviderType(ormProviderType);
-            ormProvider = Activator.CreateInstance(type) as IOrmProvider;
+            ormProvider = RepositoryHelper.CreateInstance(type) as IOrmProvider;
             this.ormProviders.TryAdd(ormProviderType, ormProvider);
         }
 

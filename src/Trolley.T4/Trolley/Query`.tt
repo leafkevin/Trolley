@@ -101,10 +101,9 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
         base.WithQueryInternal(subQueryExpr);
         return this.OrmProvider.NewQuery<<#=tables#>, TOther>(this.DbContext, this.Visitor);
     }
-
     #endregion
-<#      }#>
 
+<#      }#>
     #region InnerJoin
     public virtual IQuery<<#=tables#>> InnerJoin(Expression<Func<<#=tables#>, bool>> joinOn)
     {
@@ -213,6 +212,11 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IQuery<<#=tables#>> WherePredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<<#=tables#>>();
+        return this.Where(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region And
@@ -226,6 +230,11 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
         base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IQuery<<#=tables#>> AndPredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<<#=tables#>>();
+        return this.And(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region Or
@@ -238,6 +247,11 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
     {
         base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
+    }
+    public virtual IQuery<<#=tables#>> OrPredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<<#=tables#>>();
+        return this.Or(predicateInitializer.Invoke(builder));
     }
     #endregion
 

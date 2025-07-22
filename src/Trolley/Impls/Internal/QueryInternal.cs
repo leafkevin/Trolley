@@ -5,12 +5,6 @@ namespace Trolley;
 
 public class QueryInternal
 {
-    #region Fields
-    protected int? offset;
-    protected int pageNumber;
-    protected int pageSize;
-    #endregion
-
     #region Properties
     public DbContext DbContext { get; set; }
     public IQueryVisitor Visitor { get; set; }
@@ -296,32 +290,10 @@ public class QueryInternal
     #endregion
 
     #region Skip/Take/Page
-    protected void SkipInternal(int offset)
-    {
-        this.offset = offset;
-        if (this.pageSize > 0)
-        {
-            this.pageNumber = (int)Math.Ceiling((double)offset / this.pageSize) + 1;
-            this.Visitor.Page(this.pageNumber, this.pageSize);
-        }
-        else this.Visitor.Skip(offset);
-    }
-    protected void TakeInternal(int limit)
-    {
-        this.pageSize = limit;
-        if (this.offset.HasValue)
-        {
-            this.pageNumber = (int)Math.Ceiling((double)offset / this.pageSize) + 1;
-            this.Visitor.Page(this.pageNumber, this.pageSize);
-        }
-        else this.Visitor.Take(limit);
-    }
-    protected void PageInternal(int pageNumber, int pageSize)
-    {
-        this.pageNumber = pageNumber;
-        this.pageSize = pageSize;
-        this.Visitor.Page(pageNumber, pageSize);
-    }
+    protected void SkipInternal(int offset) => this.Visitor.Skip(offset);
+    protected void TakeInternal(int limit) => this.Visitor.Take(limit);
+    protected void PageInternal(int pageNumber, int pageSize) 
+        => this.Visitor.Page(pageNumber, pageSize);
     #endregion
 
     #region Select

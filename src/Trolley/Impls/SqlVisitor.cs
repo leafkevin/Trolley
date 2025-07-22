@@ -1745,12 +1745,6 @@ public class SqlVisitor : ISqlVisitor
             LambdaExpression lambdaArgsExpr = null;
             switch (methodInfo.Name)
             {
-                case "From":
-                    var tableAsStart = queryVisitor.TableAsStart;
-                    if (callExpr.Arguments.Count > 0)
-                        tableAsStart = this.Evaluate<char>(callExpr.Arguments[0]);
-                    queryVisitor.From(tableAsStart, genericArguments);
-                    break;
                 case "Use":
                     subQueryObj = this.Evaluate(callExpr.Arguments[0]) as IQuery;
                     if (subQueryObj is ICteQuery cteQueryObj)
@@ -1763,7 +1757,6 @@ public class SqlVisitor : ISqlVisitor
                     }
                     else
                     {
-                        //TODO:一些引用类型的拷贝是不对的，比如：排序，分组等不能引用，也需要拷贝，否则会更改之前的内容
                         //如果子查询有排序、分组、分页，此处再次更改，则需要包装一下子查询，再做排序、分组、分页
                         //如果子查询没有排序、分组、分页，则不需要包装子查询，直接继续做排序、分组、分页
                         //如果是where条件，也不需要包装子查询，直接继续做where条件
@@ -1788,6 +1781,67 @@ public class SqlVisitor : ISqlVisitor
                         }
                     }
                     break;
+                case "UseTable":
+                    entityType = methodInfo.DeclaringType.GetGenericArguments().Last();
+                    var parameterInfos = methodInfo.GetParameters();
+                    if (parameterInfos[0].ParameterType.IsArray)
+                    {
+                        var tableNames = this.Evaluate<string[]>(callExpr.Arguments[0]);
+                        queryVisitor.UseTable(false, tableNames);
+                    }
+                    else
+                    {
+                        var tableNameGetter = this.Evaluate<Func<string, bool>>(callExpr.Arguments[0]);
+                        queryVisitor.UseTable(false, tableNameGetter);
+                    }
+                    break;
+                case "UseTableMap":
+                    var tableNameMapGetter = this.Evaluate<Func<string, string, string, string>>(callExpr.Arguments[0]);
+                    var masterEntityType = methodInfo.GetGenericArguments().Last();
+                    queryVisitor.UseTableMap(false, masterEntityType, tableNameMapGetter);
+                    break;
+                case "UseTableBy":
+                    var fieldValues = (object[])this.Evaluate(callExpr.Arguments[0]);
+                    entityType = methodInfo.DeclaringType.GetGenericArguments().Last();
+                    queryVisitor.UseTableBy(false, fieldValues);
+                    break;
+                case "UseTableByRange":
+                    switch (callExpr.Arguments.Count)
+                    {
+                        case 2:
+                            queryVisitor.UseTableByRange(false, this.Evaluate(callExpr.Arguments[0]),
+                                this.Evaluate(callExpr.Arguments[1]));
+                            break;
+                        case 3:
+                            queryVisitor.UseTableByRange(false, this.Evaluate(callExpr.Arguments[0]),
+                                this.Evaluate(callExpr.Arguments[1]), this.Evaluate(callExpr.Arguments[2]));
+                            break;
+                        case 4:
+                            queryVisitor.UseTableByRange(false, this.Evaluate(callExpr.Arguments[0]),
+                                this.Evaluate(callExpr.Arguments[1]), this.Evaluate(callExpr.Arguments[2]), this.Evaluate(callExpr.Arguments[3]));
+                            break;
+                    }
+                    break;
+                case "UseTableSchema":
+                    queryVisitor.UseTableSchema(false, this.Evaluate<string>(callExpr.Arguments[0]));
+                    break;
+                case "From":
+                    if (callExpr.Arguments.Count > 0)
+                    {
+                        var tableAsStart = this.Evaluate<char>(callExpr.Arguments[0]);
+                        queryVisitor.From(tableAsStart, genericArguments);
+                    }
+                    else queryVisitor.AddTable(genericArguments);
+                    break;
+                case "WithTable":
+                    queryVisitor.AddTable(genericArguments);
+                    break;
+                case "WithQuery":
+                    entityType = genericArguments[0];
+                    if (typeof(IQuery).IsAssignableFrom(callExpr.Arguments[0].Type))
+                        queryVisitor.UseQuery(entityType, this.Evaluate(callExpr.Arguments[0]) as IQuery, true);
+                    else queryVisitor.UseNewQuery(entityType, callExpr.Arguments[0], false);
+                    break;
                 case "Union":
                 case "UnionAll":
                     entityType = callExpr.Object.Type.GenericTypeArguments[0];
@@ -1804,7 +1858,8 @@ public class SqlVisitor : ISqlVisitor
                     entityType = callExpr.Object.Type.GenericTypeArguments[0];
                     unionType = methodInfo.Name == "UnionRecursive" ? " UNION" : " UNION ALL";
                     entityType = typeof(CteQuery<>).MakeGenericType(entityType);
-                    cteQueryObj = Activator.CreateInstance(entityType, this.DbContext, queryVisitor) as ICteQuery;
+                    cteQueryObj = RepositoryHelper.CreateInstance(entityType,
+                        [typeof(DbContext), typeof(IQueryVisitor)], this.DbContext, queryVisitor) as ICteQuery;
                     queryVisitor.UnionRecursive(unionType, cteQueryObj, callExpr.Arguments[0]);
                     break;
                 case "InnerJoin":
@@ -1841,6 +1896,7 @@ public class SqlVisitor : ISqlVisitor
                     break;
                 case "Where":
                 case "And":
+                case "Or":
                     if (callExpr.Arguments.Count > 1)
                     {
                         if (this.Evaluate<bool>(callExpr.Arguments[0]))
@@ -1851,11 +1907,31 @@ public class SqlVisitor : ISqlVisitor
                     if (lambdaArgsExpr != null)
                     {
                         queryVisitor.RefTableAliases = this.TableAliases;
-                        if (methodInfo.Name == "Where")
-                            queryVisitor.Where(lambdaArgsExpr);
-                        else queryVisitor.And(lambdaArgsExpr);
+                        switch (methodInfo.Name)
+                        {
+                            case "Where": queryVisitor.Where(lambdaArgsExpr); break;
+                            case "And": queryVisitor.And(lambdaArgsExpr); break;
+                            case "Or": queryVisitor.And(lambdaArgsExpr); break;
+                        }
                         queryVisitor.RefTableAliases = null;
                     }
+                    break;
+                case "WherePredicate":
+                case "AndPredicate":
+                case "OrPredicate":
+                    var builderType = callExpr.Arguments[0].Type.GenericTypeArguments[0];
+                    var initializer = this.Evaluate(callExpr.Arguments[0]) as Delegate;
+                    var builder = RepositoryHelper.CreateInstance(builderType);
+                    var predicateExpr = initializer.DynamicInvoke(builder) as Expression;
+                    lambdaArgsExpr = this.EnsureLambda(predicateExpr);
+                    queryVisitor.RefTableAliases = this.TableAliases;
+                    switch (methodInfo.Name)
+                    {
+                        case "WherePredicate": queryVisitor.Where(lambdaArgsExpr); break;
+                        case "AndPredicate": queryVisitor.And(lambdaArgsExpr); break;
+                        case "OrPredicate": queryVisitor.And(lambdaArgsExpr); break;
+                    }
+                    queryVisitor.RefTableAliases = null;
                     break;
                 case "GroupBy":
                     lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
@@ -1877,11 +1953,25 @@ public class SqlVisitor : ISqlVisitor
                     lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
                     queryVisitor.OrderBy("DESC", lambdaArgsExpr);
                     break;
+                case "Skip":
+                    queryVisitor.Skip(this.Evaluate<int>(callExpr.Arguments[0]));
+                    break;
+                case "Take":
+                    queryVisitor.Take(this.Evaluate<int>(callExpr.Arguments[0]));
+                    break;
+                case "Page":
+                    queryVisitor.Page(this.Evaluate<int>(callExpr.Arguments[0]), this.Evaluate<int>(callExpr.Arguments[1]));
+                    break;
                 case "Select":
                     if (callExpr.Arguments.Count > 0)
                     {
-                        lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
-                        queryVisitor.Select(null, lambdaArgsExpr);
+                        if (callExpr.Arguments[0].Type == typeof(string))
+                            queryVisitor.Select(this.Evaluate<string>(callExpr.Arguments[0]));
+                        else
+                        {
+                            lambdaArgsExpr = this.EnsureLambda(callExpr.Arguments[0]);
+                            queryVisitor.Select(null, lambdaArgsExpr);
+                        }
                     }
                     else
                     {
@@ -1895,8 +1985,8 @@ public class SqlVisitor : ISqlVisitor
                             var genericType = declaringTypeGenericArguments[0];
                             var funcType = typeof(Func<,>).MakeGenericType(genericType, genericType);
                             var parameterExpr = Expression.Parameter(genericType, "f");
-                            var predicateExpr = Expression.Lambda(funcType, parameterExpr, parameterExpr);
-                            lambdaArgsExpr = this.EnsureLambda(predicateExpr);
+                            var defaultExpr = Expression.Lambda(funcType, parameterExpr, parameterExpr);
+                            lambdaArgsExpr = this.EnsureLambda(defaultExpr);
                             queryVisitor.Select(null, lambdaArgsExpr);
                         }
                     }
@@ -1912,59 +2002,6 @@ public class SqlVisitor : ISqlVisitor
                     break;
                 case "Distinct":
                     queryVisitor.Distinct();
-                    break;
-                case "Skip":
-                    queryVisitor.Skip(this.Evaluate<int>(callExpr.Arguments[0]));
-                    break;
-                case "Take":
-                    queryVisitor.Take(this.Evaluate<int>(callExpr.Arguments[0]));
-                    break;
-                case "Page":
-                    queryVisitor.Page(this.Evaluate<int>(callExpr.Arguments[0]), this.Evaluate<int>(callExpr.Arguments[1]));
-                    break;
-                case "UseTableSchema":
-                    queryVisitor.UseTableSchema(false, this.Evaluate<string>(callExpr.Arguments[0]));
-                    break;
-                case "UseTable":
-                    entityType = methodInfo.DeclaringType.GetGenericArguments().Last();
-                    var parameterInfos = methodInfo.GetParameters();
-                    if (parameterInfos[0].ParameterType.IsArray)
-                    {
-                        var tableNames = this.Evaluate<string[]>(callExpr.Arguments[0]);
-                        queryVisitor.UseTable(false, tableNames);
-                    }
-                    else
-                    {
-                        var tableNameGetter = this.Evaluate<Func<string, bool>>(callExpr.Arguments[0]);
-                        queryVisitor.UseTable(false, tableNameGetter);
-                    }
-                    break;
-                case "UseTableByRange":
-                    switch (callExpr.Arguments.Count)
-                    {
-                        case 2:
-                            queryVisitor.UseTableByRange(false, this.Evaluate(callExpr.Arguments[0]),
-                                this.Evaluate(callExpr.Arguments[1]));
-                            break;
-                        case 3:
-                            queryVisitor.UseTableByRange(false, this.Evaluate(callExpr.Arguments[0]),
-                                this.Evaluate(callExpr.Arguments[1]), this.Evaluate(callExpr.Arguments[2]));
-                            break;
-                        case 4:
-                            queryVisitor.UseTableByRange(false, this.Evaluate(callExpr.Arguments[0]),
-                                this.Evaluate(callExpr.Arguments[1]), this.Evaluate(callExpr.Arguments[2]), this.Evaluate(callExpr.Arguments[3]));
-                            break;
-                    }
-                    break;
-                case "UseTableBy":
-                    var fieldValues = (object[])this.Evaluate(callExpr.Arguments[0]);
-                    entityType = methodInfo.DeclaringType.GetGenericArguments().Last();
-                    queryVisitor.UseTableBy(false, fieldValues);
-                    break;
-                case "UseTableMap":
-                    var tableNameMapGetter = (Func<string, string, string, string>)this.Evaluate(callExpr.Arguments[0]);
-                    var masterEntityType = methodInfo.GetGenericArguments().Last();
-                    queryVisitor.UseTableMap(false, masterEntityType, tableNameMapGetter);
                     break;
                 case "Exists":
                 case "ExistsAsync":

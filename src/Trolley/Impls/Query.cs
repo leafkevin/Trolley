@@ -382,6 +382,11 @@ public class Query<T> : QueryBase, IQuery<T>
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IQuery<T> WherePredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T>();
+        return this.Where(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region And
@@ -395,6 +400,11 @@ public class Query<T> : QueryBase, IQuery<T>
         base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IQuery<T> AndPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T>();
+        return this.And(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region Or
@@ -407,6 +417,11 @@ public class Query<T> : QueryBase, IQuery<T>
     {
         base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
+    }
+    public virtual IQuery<T> OrPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T>();
+        return this.Or(predicateInitializer.Invoke(builder));
     }
     #endregion
 

@@ -242,7 +242,7 @@ public interface IQuery<T> : IQueryBase
     /// SELECT ... FROM `sys_order` WHERE `Id`&gt;1
     /// </code>
     /// </summary>
-    /// <param name="subQuery">子查询，需要有Select语句，如：
+    /// <param name="subQueryExpr">子查询，需要有Select语句，如：
     /// <code>f.From&lt;Order&gt;() ... .Select(x =&gt; new { ... })</code>
     /// <returns>返回查询对象</returns>
     IQuery<T> Union(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
@@ -275,7 +275,7 @@ public interface IQuery<T> : IQueryBase
     /// SELECT ... FROM `sys_order` WHERE `Id`&gt;1
     /// </code>
     /// </summary>
-    /// <param name="subQuery">子查询，需要有Select语句，如：
+    /// <param name="subQueryExpr">子查询，需要有Select语句，如：
     /// <code>f.From&lt;Order&gt;() ... .Select(x =&gt; new { ... })</code>
     /// <returns>返回查询对象</returns>
     IQuery<T> UnionAll(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
@@ -299,7 +299,7 @@ public interface IQuery<T> : IQueryBase
     /// <code>f.From&lt;Menu&gt;().Where(x =&gt; ... ).Select(x =&gt; new { ... })</code>
     /// </param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> UnionRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQueryExpr);
+    IQuery<T> UnionRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr);
     /// <summary>
     /// 递归CTE子查询中的UnionAll操作，表达式subQueryExpr中的第二参数是自身引用，用法：
     /// <code>
@@ -319,7 +319,7 @@ public interface IQuery<T> : IQueryBase
     /// <code>f.From&lt;Menu&gt;() .Where(x =&gt; ... ) .Select(x =&gt; new { ... })</code>
     /// </param>
     /// <returns>返回查询对象</returns>
-    IQuery<T> UnionAllRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQueryExpr);
+    IQuery<T> UnionAllRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr);
     #endregion
 
     #region WithTable
@@ -354,7 +354,7 @@ public interface IQuery<T> : IQueryBase
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询</param>
+    /// <param name="subQueryExpr">子查询</param>
     /// <returns>返回查询对象</returns>
     IQuery<T, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
@@ -542,6 +542,12 @@ public interface IQuery<T> : IQueryBase
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
     /// <returns>返回查询对象</returns>
     IQuery<T> Where(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成Where条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T> WherePredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer);
     #endregion
 
     #region And
@@ -560,6 +566,12 @@ public interface IQuery<T> : IQueryBase
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     IQuery<T> And(bool condition, Expression<Func<T, bool>> ifPredicate = null, Expression<Func<T, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成And条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T> AndPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer);
     #endregion
 
     #region Or
@@ -578,6 +590,12 @@ public interface IQuery<T> : IQueryBase
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     IQuery<T> Or(bool condition, Expression<Func<T, bool>> ifPredicate = null, Expression<Func<T, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成Or条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T> OrPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer);
     #endregion
 
     #region GroupBy
@@ -1268,6 +1286,12 @@ public interface IQuery<<#=tables#>> : IQueryBase
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
     /// <returns>返回查询对象</returns>
     IQuery<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成Where条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<<#=tables#>> WherePredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer);
     #endregion
 
     #region And
@@ -1286,6 +1310,12 @@ public interface IQuery<<#=tables#>> : IQueryBase
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     IQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate = null, Expression<Func<<#=tables#>, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成And条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<<#=tables#>> AndPredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer);
     #endregion
 
     #region Or
@@ -1304,6 +1334,12 @@ public interface IQuery<<#=tables#>> : IQueryBase
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     IQuery<<#=tables#>> Or(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate = null, Expression<Func<<#=tables#>, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成Or条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<<#=tables#>> OrPredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer);
     #endregion
 
     #region GroupBy
