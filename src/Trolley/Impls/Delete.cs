@@ -89,6 +89,11 @@ public class Delete<TEntity> : IDelete<TEntity>
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this.OrmProvider.NewContinuedDelete<TEntity>(this.DbContext, this.Visitor);
     }
+    public virtual IContinuedDelete<TEntity> WherePredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<TEntity>();
+        return this.Where(predicateInitializer.Invoke(builder));
+    }
     #endregion
 }
 public class Deleted<TEntity> : IDeleted<TEntity>
@@ -187,6 +192,11 @@ public class ContinuedDelete<TEntity> : Deleted<TEntity>, IContinuedDelete<TEnti
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
+    public virtual IContinuedDelete<TEntity> AndPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<TEntity>();
+        return this.And(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region Or
@@ -202,6 +212,11 @@ public class ContinuedDelete<TEntity> : Deleted<TEntity>, IContinuedDelete<TEnti
         }
         else if (elsePredicate != null) this.Visitor.Or(elsePredicate);
         return this;
+    }
+    public virtual IContinuedDelete<TEntity> OrPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<TEntity>();
+        return this.Or(predicateInitializer.Invoke(builder));
     }
     #endregion
 }

@@ -98,8 +98,8 @@ public class MultiQuery<<#=tables#>> : MultiQueryBase, IMultiQuery<<#=tables#>>
         return this.OrmProvider.NewMultiQuery<<#=tables#>, TOther>(this.MultipleQuery, this.Visitor);
     }
     #endregion
-<#      }#>
 
+<#      }#>
     #region InnerJoin
     public virtual IMultiQuery<<#=tables#>> InnerJoin(Expression<Func<<#=tables#>, bool>> joinOn)
     {
@@ -208,6 +208,11 @@ public class MultiQuery<<#=tables#>> : MultiQueryBase, IMultiQuery<<#=tables#>>
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IMultiQuery<<#=tables#>> WherePredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<<#=tables#>>();
+        return this.Where(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region And
@@ -220,6 +225,11 @@ public class MultiQuery<<#=tables#>> : MultiQueryBase, IMultiQuery<<#=tables#>>
     {
         base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
+    }
+    public virtual IMultiQuery<<#=tables#>> AndPredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<<#=tables#>>();
+        return this.And(predicateInitializer.Invoke(builder));
     }
     #endregion
 
@@ -234,6 +244,11 @@ public class MultiQuery<<#=tables#>> : MultiQueryBase, IMultiQuery<<#=tables#>>
         base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IMultiQuery<<#=tables#>> OrPredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<<#=tables#>>();
+        return this.Or(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region GroupBy
@@ -247,7 +262,6 @@ public class MultiQuery<<#=tables#>> : MultiQueryBase, IMultiQuery<<#=tables#>>
     #region OrderBy
     public virtual IMultiQuery<<#=tables#>> OrderBy<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr)
         => this.OrderBy(true, fieldsExpr);
-
     public virtual IMultiQuery<<#=tables#>> OrderBy<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr)
     {
         base.OrderByInternal(condition, fieldsExpr);
@@ -255,7 +269,6 @@ public class MultiQuery<<#=tables#>> : MultiQueryBase, IMultiQuery<<#=tables#>>
     }
     public virtual IMultiQuery<<#=tables#>> OrderByDescending<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-
     public virtual IMultiQuery<<#=tables#>> OrderByDescending<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr)
     {
         base.OrderByDescendingInternal(condition, fieldsExpr);

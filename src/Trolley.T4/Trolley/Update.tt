@@ -531,6 +531,11 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
+    public virtual IContinuedUpdate<TEntity> WherePredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<TEntity>();
+        return this.Where(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region And
@@ -547,6 +552,11 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
+    public virtual IContinuedUpdate<TEntity> AndPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<TEntity>();
+        return this.And(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region Or
@@ -562,6 +572,11 @@ public class ContinuedUpdate<TEntity> : Updated<TEntity>, IContinuedUpdate<TEnti
         }
         else if (elsePredicate != null) this.Visitor.Or(elsePredicate);
         return this;
+    }
+    public virtual IContinuedUpdate<TEntity> OrPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<TEntity>();
+        return this.Or(predicateInitializer.Invoke(builder));
     }
     #endregion
 }
@@ -682,6 +697,11 @@ public class BulkContinuedUpdate<TEntity> : Updated<TEntity>, IBulkContinuedUpda
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
+    public virtual IBulkContinuedUpdate<TEntity> WherePredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<TEntity>();
+        return this.Where(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region And
@@ -698,6 +718,11 @@ public class BulkContinuedUpdate<TEntity> : Updated<TEntity>, IBulkContinuedUpda
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
+    public virtual IBulkContinuedUpdate<TEntity> AndPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<TEntity>();
+        return this.And(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region Or
@@ -713,6 +738,11 @@ public class BulkContinuedUpdate<TEntity> : Updated<TEntity>, IBulkContinuedUpda
         }
         else if (elsePredicate != null) this.Visitor.Or(elsePredicate);
         return this;
+    }
+    public virtual IBulkContinuedUpdate<TEntity> OrPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<TEntity>();
+        return this.Or(predicateInitializer.Invoke(builder));
     }
     #endregion
 }
@@ -910,6 +940,11 @@ public class UpdateJoin<<#=tables#>> : Updated<TEntity>, IUpdateJoin<<#=tables#>
         else if (elsePredicate != null) this.Visitor.Where(elsePredicate);
         return this;
     }
+    public virtual IUpdateJoin<<#=tables#>> WherePredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<<#=tables#>>();
+        return this.Where(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region And
@@ -926,6 +961,11 @@ public class UpdateJoin<<#=tables#>> : Updated<TEntity>, IUpdateJoin<<#=tables#>
         else if (elsePredicate != null) this.Visitor.And(elsePredicate);
         return this;
     }
+    public virtual IUpdateJoin<<#=tables#>> AndPredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<<#=tables#>>();
+        return this.And(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region Or
@@ -941,6 +981,11 @@ public class UpdateJoin<<#=tables#>> : Updated<TEntity>, IUpdateJoin<<#=tables#>
         }
         else if (elsePredicate != null) this.Visitor.Or(elsePredicate);
         return this;
+    }
+    public virtual IUpdateJoin<<#=tables#>> OrPredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<<#=tables#>>();
+        return this.Or(predicateInitializer.Invoke(builder));
     }
     #endregion
 }

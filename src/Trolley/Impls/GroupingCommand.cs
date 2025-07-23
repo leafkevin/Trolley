@@ -19,11 +19,6 @@ public class GroupingCommandBase<TGrouping> : QueryInternal, IGroupingCommandBas
         this.Visitor.SelectGrouping();
         return this.OrmProvider.NewFromCommand<TGrouping>(this.DbContext, this.Visitor);
     }
-    public virtual IFromCommand<TTarget> Select<TTarget>(string fields = "*")
-    {
-        base.SelectInternal(fields);
-        return this.OrmProvider.NewFromCommand<TTarget>(this.DbContext, this.Visitor);
-    }
     #endregion
 }
 public class GroupingCommand<T, TGrouping> : GroupingCommandBase<TGrouping>, IGroupingCommand<T, TGrouping>

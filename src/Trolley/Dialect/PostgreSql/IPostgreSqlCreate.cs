@@ -150,13 +150,14 @@ public interface IPostgreSqlCreate<TEntity> : ICreate<TEntity>
     /// 使用子查询subQuery作为创建子查询对象，子查询subQuery也可以是CTE表，用法：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
-    /// repository.Create&lt;Function&gt;(subQuery).Select( ... )
+    /// repository.Create&lt;Menu&gt;(f =&gt; f.UseQuery(subQuery)).Select( ... )
+    /// repository.Create&lt;Menu&gt;(f =&gt; f.From&lt;Page, Menu&gt;('o').Where(...)...)
     /// SQL: INSERT INTO `sys_menu` SELECT ... FROM ( ... )
     /// </code>
     /// </summary>
     /// <typeparam name="T">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询</param>
+    /// <param name="subQueryExpr">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlFromCommand<T> From<T>(IQuery<T> subQuery);
+    new IPostgreSqlFromCommand<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
     #endregion
 }

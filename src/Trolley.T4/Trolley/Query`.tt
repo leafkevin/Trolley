@@ -266,7 +266,6 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
     #region OrderBy
     public virtual IQuery<<#=tables#>> OrderBy<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr)
         => this.OrderBy(true, fieldsExpr);
-
     public virtual IQuery<<#=tables#>> OrderBy<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr)
     {
         base.OrderByInternal(condition, fieldsExpr);
@@ -274,7 +273,6 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
     }
     public virtual IQuery<<#=tables#>> OrderByDescending<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-
     public virtual IQuery<<#=tables#>> OrderByDescending<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr)
     {
         base.OrderByDescendingInternal(condition, fieldsExpr);

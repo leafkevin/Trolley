@@ -22,7 +22,7 @@ public class MultiQueryBase : QueryInternal, IMultiQueryBase
     #endregion
 
     #region Select
-    public IMultiQuery<TTarget> Select<TTarget>(string fields = "*")
+    public virtual IMultiQuery<TTarget> Select<TTarget>(string fields = "*")
     {
         base.SelectInternal(fields);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
@@ -30,8 +30,8 @@ public class MultiQueryBase : QueryInternal, IMultiQueryBase
     #endregion
 
     #region Count
-    public IMultipleQuery Count() => this.QueryFirstValue<int>("COUNT(1)", "COUNT_VALUE");
-    public IMultipleQuery LongCount() => this.QueryFirstValue<long>("COUNT(1)", "COUNT_VALUE");
+    public virtual IMultipleQuery Count() => this.QueryFirstValue<int>("COUNT(1)", "COUNT_VALUE");
+    public virtual IMultipleQuery LongCount() => this.QueryFirstValue<long>("COUNT(1)", "COUNT_VALUE");
     protected IMultipleQuery CountInternal(Expression fieldExpr)
         => this.QueryFirstValue<int>("COUNT({0})", "COUNT_VALUE", fieldExpr);
     protected IMultipleQuery CountDistinctInternal(Expression fieldExpr)
@@ -181,7 +181,7 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
     #endregion
 
     #region WithTable
-    public IMultiQuery<T, TOther> WithTable<TOther>()
+    public virtual IMultiQuery<T, TOther> WithTable<TOther>()
     {
         this.Visitor.AddTable(typeof(TOther));
         return this.OrmProvider.NewMultiQuery<T, TOther>(this.MultipleQuery, this.Visitor);
@@ -202,17 +202,17 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
     #endregion
 
     #region InnerJoin
-    public IMultiQuery<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
+    public virtual IMultiQuery<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
     {
         base.InnerJoinInternal(typeof(TOther), joinOn);
         return this.OrmProvider.NewMultiQuery<T, TOther>(this.MultipleQuery, this.Visitor);
     }
-    public IMultiQuery<T, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+    public virtual IMultiQuery<T, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
     {
         base.InnerJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewMultiQuery<T, TOther>(this.MultipleQuery, this.Visitor);
     }
-    public IMultiQuery<T, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
+    public virtual IMultiQuery<T, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
     {
         base.InnerJoinInternal(subQueryExpr, joinOn);
         return this.OrmProvider.NewMultiQuery<T, TOther>(this.MultipleQuery, this.Visitor);
@@ -220,17 +220,17 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
     #endregion
 
     #region LeftJoin
-    public IMultiQuery<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
+    public virtual IMultiQuery<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
     {
         base.LeftJoinInternal(typeof(TOther), joinOn);
         return this.OrmProvider.NewMultiQuery<T, TOther>(this.MultipleQuery, this.Visitor);
     }
-    public IMultiQuery<T, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+    public virtual IMultiQuery<T, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
     {
         base.LeftJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewMultiQuery<T, TOther>(this.MultipleQuery, this.Visitor);
     }
-    public IMultiQuery<T, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
+    public virtual IMultiQuery<T, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
     {
         base.LeftJoinInternal(subQueryExpr, joinOn);
         return this.OrmProvider.NewMultiQuery<T, TOther>(this.MultipleQuery, this.Visitor);
@@ -238,17 +238,17 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
     #endregion
 
     #region RightJoin
-    public IMultiQuery<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
+    public virtual IMultiQuery<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
     {
         base.RightJoinInternal(typeof(TOther), joinOn);
         return this.OrmProvider.NewMultiQuery<T, TOther>(this.MultipleQuery, this.Visitor);
     }
-    public IMultiQuery<T, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+    public virtual IMultiQuery<T, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
     {
         base.RightJoinInternal(subQuery, joinOn);
         return this.OrmProvider.NewMultiQuery<T, TOther>(this.MultipleQuery, this.Visitor);
     }
-    public IMultiQuery<T, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
+    public virtual IMultiQuery<T, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
     {
         base.RightJoinInternal(subQueryExpr, joinOn);
         return this.OrmProvider.NewMultiQuery<T, TOther>(this.MultipleQuery, this.Visitor);
@@ -256,12 +256,12 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
     #endregion
 
     #region Include
-    public IMultiIncludableQuery<T, TMember> Include<TMember>(Expression<Func<T, TMember>> memberSelector)
+    public virtual IMultiIncludableQuery<T, TMember> Include<TMember>(Expression<Func<T, TMember>> memberSelector)
     {
         var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
         return this.OrmProvider.NewMultiIncludableQuery<T, TMember>(this.MultipleQuery, this.Visitor, isIncludeMany);
     }
-    public IMultiIncludableQuery<T, TElment> IncludeMany<TElment>(Expression<Func<T, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
+    public virtual IMultiIncludableQuery<T, TElment> IncludeMany<TElment>(Expression<Func<T, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
     {
         base.IncludeManyInternal<TElment>(memberSelector);
         return this.OrmProvider.NewMultiIncludableQuery<T, TElment>(this.MultipleQuery, this.Visitor, true);
@@ -269,46 +269,61 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
     #endregion
 
     #region Where
-    public IMultiQuery<T> Where(Expression<Func<T, bool>> predicate)
+    public virtual IMultiQuery<T> Where(Expression<Func<T, bool>> predicate)
     {
         base.WhereInternal(predicate);
         return this;
     }
-    public IMultiQuery<T> Where(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
+    public virtual IMultiQuery<T> Where(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
     {
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IMultiQuery<T> WherePredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T>();
+        return this.Where(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region And
-    public IMultiQuery<T> And(Expression<Func<T, bool>> predicate)
+    public virtual IMultiQuery<T> And(Expression<Func<T, bool>> predicate)
     {
         base.AndInternal(predicate);
         return this;
     }
-    public IMultiQuery<T> And(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
+    public virtual IMultiQuery<T> And(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
     {
         base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IMultiQuery<T> AndPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T>();
+        return this.And(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region Or
-    public IMultiQuery<T> Or(Expression<Func<T, bool>> predicate)
+    public virtual IMultiQuery<T> Or(Expression<Func<T, bool>> predicate)
     {
         base.OrInternal(predicate);
         return this;
     }
-    public IMultiQuery<T> Or(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
+    public virtual IMultiQuery<T> Or(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
     {
         base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IMultiQuery<T> OrPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T>();
+        return this.Or(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region GroupBy
-    public IMultiGroupingQuery<T, TGrouping> GroupBy<TGrouping>(Expression<Func<T, TGrouping>> groupingExpr)
+    public virtual IMultiGroupingQuery<T, TGrouping> GroupBy<TGrouping>(Expression<Func<T, TGrouping>> groupingExpr)
     {
         base.GroupByInternal(groupingExpr);
         return this.OrmProvider.NewMultiGroupingQuery<T, TGrouping>(this.MultipleQuery, this.Visitor);
@@ -316,16 +331,16 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
     #endregion
 
     #region OrderBy
-    public IMultiQuery<T> OrderBy<TFields>(Expression<Func<T, TFields>> fieldsExpr)
+    public virtual IMultiQuery<T> OrderBy<TFields>(Expression<Func<T, TFields>> fieldsExpr)
         => this.OrderBy(true, fieldsExpr);
-    public IMultiQuery<T> OrderBy<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr)
+    public virtual IMultiQuery<T> OrderBy<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr)
     {
         base.OrderByInternal(condition, fieldsExpr);
         return this;
     }
-    public IMultiQuery<T> OrderByDescending<TFields>(Expression<Func<T, TFields>> fieldsExpr)
+    public virtual IMultiQuery<T> OrderByDescending<TFields>(Expression<Func<T, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-    public IMultiQuery<T> OrderByDescending<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr)
+    public virtual IMultiQuery<T> OrderByDescending<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr)
     {
         base.OrderByDescendingInternal(condition, fieldsExpr);
         return this;
@@ -333,23 +348,23 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
     #endregion
 
     #region Select
-    public IMultiQuery<T> Select()
+    public virtual IMultiQuery<T> Select()
     {
         Expression<Func<T, T>> defaultExpr = f => f;
         this.Visitor.Select(null, defaultExpr);
         return this;
     }
-    public IMultiQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T, TTarget>> specialMemberSelector = null)
+    public virtual IMultiQuery<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T, TTarget>> specialMemberSelector = null)
     {
         this.Visitor.SelectFlattenTo(typeof(TTarget), specialMemberSelector);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
-    public IMultiQuery<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr)
+    public virtual IMultiQuery<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr)
     {
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
     }
-    public IMultiQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr)
+    public virtual IMultiQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr)
     {
         base.SelectInternal(fieldsExpr);
         return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
@@ -357,7 +372,7 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
     #endregion
 
     #region Distinct
-    public IMultiQuery<T> Distinct()
+    public virtual IMultiQuery<T> Distinct()
     {
         this.Visitor.Distinct();
         return this;
@@ -365,17 +380,17 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
     #endregion
 
     #region Skip/Take/Page
-    public IMultiQuery<T> Skip(int offset)
+    public virtual IMultiQuery<T> Skip(int offset)
     {
         base.SkipInternal(offset);
         return this;
     }
-    public IMultiQuery<T> Take(int limit)
+    public virtual IMultiQuery<T> Take(int limit)
     {
-       base.TakeInternal(limit);
+        base.TakeInternal(limit);
         return this;
     }
-    public IMultiQuery<T> Page(int pageNumber, int pageSize)
+    public virtual IMultiQuery<T> Page(int pageNumber, int pageSize)
     {
         base.PageInternal(pageNumber, pageSize);
         return this;
@@ -383,32 +398,32 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
     #endregion
 
     #region Count
-    public IMultipleQuery Count<TField>(Expression<Func<T, TField>> fieldExpr)
+    public virtual IMultipleQuery Count<TField>(Expression<Func<T, TField>> fieldExpr)
         => base.CountInternal(fieldExpr);
-    public IMultipleQuery CountDistinct<TField>(Expression<Func<T, TField>> fieldExpr)
+    public virtual IMultipleQuery CountDistinct<TField>(Expression<Func<T, TField>> fieldExpr)
         => base.CountDistinctInternal(fieldExpr);
-    public IMultipleQuery LongCount<TField>(Expression<Func<T, TField>> fieldExpr)
+    public virtual IMultipleQuery LongCount<TField>(Expression<Func<T, TField>> fieldExpr)
         => base.LongCountInternal(fieldExpr);
-    public IMultipleQuery LongCountDistinct<TField>(Expression<Func<T, TField>> fieldExpr)
+    public virtual IMultipleQuery LongCountDistinct<TField>(Expression<Func<T, TField>> fieldExpr)
         => base.LongCountDistinctInternal(fieldExpr);
     #endregion
 
     #region Aggregate
-    public IMultipleQuery Sum<TField>(Expression<Func<T, TField>> fieldExpr)
+    public virtual IMultipleQuery Sum<TField>(Expression<Func<T, TField>> fieldExpr)
         => base.SumInternal<TField>(fieldExpr);
-    public IMultipleQuery Avg<TField>(Expression<Func<T, TField>> fieldExpr)
+    public virtual IMultipleQuery Avg<TField>(Expression<Func<T, TField>> fieldExpr)
         => base.AvgInternal<TField>(fieldExpr);
-    public IMultipleQuery Max<TField>(Expression<Func<T, TField>> fieldExpr)
+    public virtual IMultipleQuery Max<TField>(Expression<Func<T, TField>> fieldExpr)
         => base.MaxInternal<TField>(fieldExpr);
-    public IMultipleQuery Min<TField>(Expression<Func<T, TField>> fieldExpr)
+    public virtual IMultipleQuery Min<TField>(Expression<Func<T, TField>> fieldExpr)
         => base.MinInternal<TField>(fieldExpr);
     #endregion
 
     #region First/ToList/ToPageList/ToDictionary
-    public IMultipleQuery First() => this.QueryResult(true);
-    public IMultipleQuery ToList() => this.QueryResult(false);
-    public IMultipleQuery ToPageList() => this.QueryResult(false);
-    public IMultipleQuery ToDictionary<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector) where TKey : notnull
+    public virtual IMultipleQuery First() => this.QueryResult(true);
+    public virtual IMultipleQuery ToList() => this.QueryResult(false);
+    public virtual IMultipleQuery ToPageList() => this.QueryResult(false);
+    public virtual IMultipleQuery ToDictionary<TKey, TValue>(Func<T, TKey> keySelector, Func<T, TValue> valueSelector) where TKey : notnull
     {
         if (keySelector == null)
             throw new ArgumentNullException(nameof(keySelector));

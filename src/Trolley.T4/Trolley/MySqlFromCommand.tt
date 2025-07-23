@@ -236,11 +236,17 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
     {
         var createVisiter = new MySqlCreateVisitor(this.DbContext, this.Visitor.TableAsStart);
         createVisiter.Tables = this.Visitor.Tables;
-        createVisiter.IsMultiple = this.Visitor.IsMultiple;
-        createVisiter.CommandIndex = this.Visitor.CommandIndex;
-        createVisiter.RefQueries = this.Visitor.RefQueries;
-        createVisiter.ShardingTables = this.Visitor.ShardingTables;
         createVisiter.DbParameters = this.Visitor.DbParameters;
+        createVisiter.IsMultiple = this.IsMultiple;
+        createVisiter.CommandIndex = this.CommandIndex;
+        createVisiter.RefQueries = this.RefQueries;
+        createVisiter.ShardingTables = this.ShardingTables;
+        createVisiter.RefTableAliases = this.RefTableAliases;
+        createVisiter.IncludeTables = this.IncludeTables;
+        createVisiter.NextDbParameters = this.NextDbParameters;
+        createVisiter.IsRecursive = this.IsRecursive;
+        createVisiter.CteQueryObj = this.CteQueryObj;
+        createVisiter.RefFrom = this;
         createVisiter.FromSql = fromSql;
         return createVisiter;
     }
@@ -280,6 +286,7 @@ public class MySqlFromCommand<<#=tables#>> : FromCommand<<#=tables#>>, IMySqlFro
     public new IMySqlFromCommand<<#=tables#>> UseTableSchema(string tableSchema)
         => base.UseTableSchema(tableSchema) as IMySqlFromCommand<<#=tables#>>;
     #endregion
+
 <#
         if(i < count)
         {
@@ -294,7 +301,6 @@ public class MySqlFromCommand<<#=tables#>> : FromCommand<<#=tables#>>, IMySqlFro
         => base.WithQuery(subQuery) as IMySqlFromCommand<<#=tables#>, TOther>;
     public new IMySqlFromCommand<<#=tables#>, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
         => base.WithQuery(subQueryExpr) as IMySqlFromCommand<<#=tables#>, TOther>;
-
     #endregion
 <#      }#>
 

@@ -39,7 +39,7 @@ public class FromCommand : QueryInternal, IFromCommand
     {
         if (this.Visitor.IsNeedFetchShardingTables)
             this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
-        var sql = this.Visitor.BuildCommandSql(out var dbDataParameters);
+        var sql = this.Visitor.BuildCommandSql(true, out var dbDataParameters);
         if (this.Visitor.IsNeedFetchShardingTables)
         {
             var builder = new StringBuilder(this.Visitor.BuildTableShardingsSql());
@@ -129,12 +129,12 @@ public class FromCommand<T> : QueryInternal, IFromCommand<T>
         base.UnionAllInternal(subQueryExpr);
         return this;
     }
-    public virtual IFromCommand<T> UnionRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQueryExpr)
+    public virtual IFromCommand<T> UnionRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr)
     {
         base.UnionRecursiveInternal(subQueryExpr);
         return this;
     }
-    public virtual IFromCommand<T> UnionAllRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQueryExpr)
+    public virtual IFromCommand<T> UnionAllRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr)
     {
         base.UnionAllRecursiveInternal(subQueryExpr);
         return this;
@@ -227,6 +227,11 @@ public class FromCommand<T> : QueryInternal, IFromCommand<T>
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IFromCommand<T> WherePredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T>();
+        return this.Where(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region And
@@ -240,6 +245,11 @@ public class FromCommand<T> : QueryInternal, IFromCommand<T>
         base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IFromCommand<T> AndPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T>();
+        return this.And(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region Or
@@ -252,6 +262,11 @@ public class FromCommand<T> : QueryInternal, IFromCommand<T>
     {
         base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
+    }
+    public virtual IFromCommand<T> OrPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T>();
+        return this.Or(predicateInitializer.Invoke(builder));
     }
     #endregion
 
@@ -335,7 +350,7 @@ public class FromCommand<T> : QueryInternal, IFromCommand<T>
         if (this.Visitor.IsNeedFetchShardingTables)
             this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        command.CommandText = this.Visitor.BuildCommandSql(out var dbParameters);
+        command.CommandText = this.Visitor.BuildCommandSql(true, out var dbParameters);
         dbParameters.CopyTo(command.Parameters);
         connection.Open();
         var result = command.ExecuteNonQuery(CommandSqlType.Insert);
@@ -349,7 +364,7 @@ public class FromCommand<T> : QueryInternal, IFromCommand<T>
             await this.DbContext.FetchShardingTablesAsync(this.Visitor as SqlVisitor, cancellationToken);
 
         (var isNeedClose, var connection, var command) = this.DbContext.UseMasterCommand();
-        command.CommandText = this.Visitor.BuildCommandSql(out var dbParameters);
+        command.CommandText = this.Visitor.BuildCommandSql(true, out var dbParameters);
         dbParameters.CopyTo(command.Parameters);
         await connection.OpenAsync(cancellationToken);
         var result = await command.ExecuteNonQueryAsync(CommandSqlType.Insert, cancellationToken);
@@ -364,7 +379,7 @@ public class FromCommand<T> : QueryInternal, IFromCommand<T>
     {
         if (this.Visitor.IsNeedFetchShardingTables)
             this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
-        var sql = this.Visitor.BuildCommandSql(out var dbDataParameters);
+        var sql = this.Visitor.BuildCommandSql(true, out var dbDataParameters);
         if (this.Visitor.IsNeedFetchShardingTables)
         {
             var builder = new StringBuilder(this.Visitor.BuildTableShardingsSql());
@@ -560,6 +575,11 @@ public class FromCommand<<#=tables#>> : FromCommand, IFromCommand<<#=tables#>>
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IFromCommand<<#=tables#>> WherePredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<<#=tables#>>();
+        return this.Where(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region And
@@ -573,6 +593,11 @@ public class FromCommand<<#=tables#>> : FromCommand, IFromCommand<<#=tables#>>
         base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public virtual IFromCommand<<#=tables#>> AndPredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<<#=tables#>>();
+        return this.And(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region Or
@@ -585,6 +610,11 @@ public class FromCommand<<#=tables#>> : FromCommand, IFromCommand<<#=tables#>>
     {
         base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
+    }
+    public virtual IFromCommand<<#=tables#>> OrPredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<<#=tables#>>();
+        return this.Or(predicateInitializer.Invoke(builder));
     }
     #endregion
 

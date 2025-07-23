@@ -63,20 +63,6 @@ public interface IPostgreSqlDelete<TEntity> : IDelete<TEntity>
 
     #region Where
     /// <summary>
-    /// 根据主键删除数据，可以删除一条也可以删除多条记录，keys可以是主键值也可以是包含主键值的匿名对象，用法：
-    /// <code>
-    /// 单个删除,下面两个方法等效
-    /// repository.Delete&lt;User&gt;(1);
-    /// repository.Delete&lt;User&gt;(new { Id = 1});
-    /// 批量删除,下面两个方法等效
-    /// repository.Delete&lt;User&gt;(new[] { 1, 2 });
-    /// repository.Delete&lt;User&gt;(new[] { new { Id = 1 }, new { Id = 2 } });
-    /// </code>
-    /// </summary>
-    /// <param name="keys">主键值，可以是一个值或是一个匿名对象，也可以是多个值或是多个匿名对象</param>
-    /// <returns>返回删除对象</returns>
-    new IPostgreSqlContinuedDelete<TEntity> Where(object keys);
-    /// <summary>
     /// 删除满足表达式predicate条件的数据，不局限于主键条件，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
@@ -92,5 +78,11 @@ public interface IPostgreSqlDelete<TEntity> : IDelete<TEntity>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，则不生成Where条件</param>
     /// <returns>返回删除对象</returns>
     new IPostgreSqlContinuedDelete<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成Where条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回删除对象</returns>
+    new IPostgreSqlContinuedDelete<TEntity> WherePredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer);
     #endregion
 }

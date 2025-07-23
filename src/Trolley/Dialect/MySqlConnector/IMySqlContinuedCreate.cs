@@ -175,7 +175,6 @@ public interface IMySqlBulkContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     /// SQL: INSERT INTO [sys_user] ([Name],[Age],[Gender], ... ) VALUES(@Name,@Age,@Gender, ... )
     /// </summary>
     /// <typeparam name="TField">字段类型</typeparam>
-    /// <param name="condition">判断条件</param>
     /// <param name="fieldSelector">字段选择表达式，只能选择单个字段</param>
     /// <param name="fieldValue">字段值</param>
     /// <returns>返回插入对象</returns>
