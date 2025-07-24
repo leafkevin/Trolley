@@ -63,15 +63,31 @@ public class MySqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IMySqlCon
         => base.OnlyFields(fieldsSelector) as IMySqlContinuedUpdate<TEntity>;
     #endregion
 
-    #region Where/And
+    #region Where
     public new IMySqlContinuedUpdate<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
         => this.Where(true, predicate);
     public new IMySqlContinuedUpdate<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
         => base.Where(condition, ifPredicate, elsePredicate) as IMySqlContinuedUpdate<TEntity>;
+    public new IMySqlContinuedUpdate<TEntity> WherePredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
+        => this.WherePredicate(predicateInitializer);
+    #endregion
+
+    #region And
     public new IMySqlContinuedUpdate<TEntity> And(Expression<Func<TEntity, bool>> predicate)
         => this.And(true, predicate);
     public new IMySqlContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
         => base.And(condition, ifPredicate, elsePredicate) as IMySqlContinuedUpdate<TEntity>;
+    public new IMySqlContinuedUpdate<TEntity> AndPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
+        => this.AndPredicate(predicateInitializer);
+    #endregion
+
+    #region Or
+    public new IMySqlContinuedUpdate<TEntity> Or(Expression<Func<TEntity, bool>> predicate)
+        => this.Or(true, predicate);
+    public new IMySqlContinuedUpdate<TEntity> Or(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
+        => base.Or(condition, ifPredicate, elsePredicate) as IMySqlContinuedUpdate<TEntity>;
+    public new IMySqlContinuedUpdate<TEntity> OrPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
+        => this.OrPredicate(predicateInitializer);
     #endregion
 
     #region Execute
@@ -544,15 +560,31 @@ public class MySqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity>, I
         => base.OnlyFields(fieldsSelector) as IMySqlBulkContinuedUpdate<TEntity>;
     #endregion
 
-    #region Where/And
+    #region Where
     public new IMySqlBulkContinuedUpdate<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
-         => this.Where(true, predicate);
+        => this.Where(true, predicate);
     public new IMySqlBulkContinuedUpdate<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
         => base.Where(condition, ifPredicate, elsePredicate) as IMySqlBulkContinuedUpdate<TEntity>;
+    public new IMySqlBulkContinuedUpdate<TEntity> WherePredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
+        => this.WherePredicate(predicateInitializer);
+    #endregion
+
+    #region And
     public new IMySqlBulkContinuedUpdate<TEntity> And(Expression<Func<TEntity, bool>> predicate)
         => this.And(true, predicate);
     public new IMySqlBulkContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
         => base.And(condition, ifPredicate, elsePredicate) as IMySqlBulkContinuedUpdate<TEntity>;
+    public new IMySqlBulkContinuedUpdate<TEntity> AndPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
+        => this.AndPredicate(predicateInitializer);
+    #endregion
+
+    #region Or
+    public new IMySqlBulkContinuedUpdate<TEntity> Or(Expression<Func<TEntity, bool>> predicate)
+        => this.Or(true, predicate);
+    public new IMySqlBulkContinuedUpdate<TEntity> Or(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
+        => base.Or(condition, ifPredicate, elsePredicate) as IMySqlBulkContinuedUpdate<TEntity>;
+    public new IMySqlBulkContinuedUpdate<TEntity> OrPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
+        => this.OrPredicate(predicateInitializer);
     #endregion
 
     #region Execute

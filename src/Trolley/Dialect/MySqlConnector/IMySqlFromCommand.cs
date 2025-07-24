@@ -522,7 +522,7 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// <param name="fieldsExpr">字段选择表达式，单个或多个聚合字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IMySqlFromCommand<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr);
-    #endregion    
+    #endregion
 
     #region Distinct
     /// <summary>
@@ -539,14 +539,14 @@ public interface IMySqlFromCommand<T> : IFromCommand<T>
     /// <typeparam name="TUpdateFields">要更新的字段类型</typeparam>
     /// <param name="updateObj">更新实体对象</param>
     /// <returns>返回插入对象</returns>
-    IMySqlFromContinuedCreate<T> OnDuplicateKeyUpdate<TUpdateFields>(TUpdateFields updateObj);
+    IMySqlFromCommand<T> OnDuplicateKeyUpdate<TUpdateFields>(TUpdateFields updateObj);
     /// <summary>
     /// 相同主键或唯一索引存在时执行更新动作，INSERT INTO ... ON DUPLICATE KEY UPDATE
     /// </summary>
     /// <typeparam name="TUpdateFields">要更新的字段类型</typeparam>
     /// <param name="fieldsAssignment">要更新的字段赋值表达式</param>
     /// <returns>返回插入对象</returns>
-    IMySqlFromContinuedCreate<T> OnDuplicateKeyUpdate<TUpdateFields>(Expression<Func<IMySqlCreateDuplicateKeyUpdate<T>, TUpdateFields>> fieldsAssignment);
+    IMySqlFromCommand<T> OnDuplicateKeyUpdate<TUpdateFields>(Expression<Func<IMySqlCreateDuplicateKeyUpdate<T>, TUpdateFields>> fieldsAssignment);
     #endregion
 
     #region Returning

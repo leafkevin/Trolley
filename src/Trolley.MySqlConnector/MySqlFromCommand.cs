@@ -113,6 +113,11 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public new IMySqlFromCommand<T> WherePredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T>();
+        return this.Where(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region And
@@ -126,6 +131,11 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
         base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public new IMySqlFromCommand<T> AndPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T>();
+        return this.And(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region Or
@@ -138,6 +148,11 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
     {
         base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
+    }
+    public new IMySqlFromCommand<T> OrPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T>();
+        return this.Or(predicateInitializer.Invoke(builder));
     }
     #endregion
 
@@ -192,19 +207,19 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
     #endregion
 
     #region OnDuplicateKeyUpdate
-    public IMySqlFromContinuedCreate<T> OnDuplicateKeyUpdate<TUpdateFields>(TUpdateFields updateObj)
+    public IMySqlFromCommand<T> OnDuplicateKeyUpdate<TUpdateFields>(TUpdateFields updateObj)
     {
         var sql = this.Visitor.BuildCommandSql(true, out _);
         var visitor = this.NewCreateVisitor(sql);
         visitor.OnDuplicateKeyUpdate(updateObj);
-        return new MySqlFromContinuedCreate<T>(this.DbContext, visitor);
+        return this;
     }
-    public IMySqlFromContinuedCreate<T> OnDuplicateKeyUpdate<TUpdateFields>(Expression<Func<IMySqlCreateDuplicateKeyUpdate<T>, TUpdateFields>> fieldsAssignment)
+    public IMySqlFromCommand<T> OnDuplicateKeyUpdate<TUpdateFields>(Expression<Func<IMySqlCreateDuplicateKeyUpdate<T>, TUpdateFields>> fieldsAssignment)
     {
         var sql = this.Visitor.BuildCommandSql(true, out _);
         var visitor = this.NewCreateVisitor(sql);
         visitor.OnDuplicateKeyUpdate(fieldsAssignment);
-        return new MySqlFromContinuedCreate<T>(this.DbContext, visitor);
+        return this;
     }
     #endregion
 
@@ -229,11 +244,15 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
     {
         var createVisiter = new MySqlCreateVisitor(this.DbContext, this.Visitor.TableAsStart);
         createVisiter.Tables = this.Visitor.Tables;
+        createVisiter.DbParameters = this.Visitor.DbParameters;
         createVisiter.IsMultiple = this.Visitor.IsMultiple;
         createVisiter.CommandIndex = this.Visitor.CommandIndex;
         createVisiter.RefQueries = this.Visitor.RefQueries;
         createVisiter.ShardingTables = this.Visitor.ShardingTables;
-        createVisiter.DbParameters = this.Visitor.DbParameters;
+        createVisiter.RefTableAliases = this.Visitor.RefTableAliases;
+        createVisiter.IsRecursive = this.Visitor.IsRecursive;
+        createVisiter.CteQueryObj = this.Visitor.CteQueryObj;
+        createVisiter.RefFrom = this;
         createVisiter.FromSql = fromSql;
         return createVisiter;
     }
@@ -264,6 +283,7 @@ public class MySqlFromCommand<T1, T2> : FromCommand<T1, T2>, IMySqlFromCommand<T
     public new IMySqlFromCommand<T1, T2> UseTableSchema(string tableSchema)
         => base.UseTableSchema(tableSchema) as IMySqlFromCommand<T1, T2>;
     #endregion
+
     #region WithTable
     public new IMySqlFromCommand<T1, T2, TOther> WithTable<TOther>()
         => base.WithTable<TOther>() as IMySqlFromCommand<T1, T2, TOther>;
@@ -274,7 +294,6 @@ public class MySqlFromCommand<T1, T2> : FromCommand<T1, T2>, IMySqlFromCommand<T
         => base.WithQuery(subQuery) as IMySqlFromCommand<T1, T2, TOther>;
     public new IMySqlFromCommand<T1, T2, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
         => base.WithQuery(subQueryExpr) as IMySqlFromCommand<T1, T2, TOther>;
-
     #endregion
 
     #region InnerJoin
@@ -321,6 +340,11 @@ public class MySqlFromCommand<T1, T2> : FromCommand<T1, T2>, IMySqlFromCommand<T
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public new IMySqlFromCommand<T1, T2> WherePredicate(Func<PredicateBuilder<T1, T2>, Expression<Func<T1, T2, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2>();
+        return this.Where(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region And
@@ -334,6 +358,11 @@ public class MySqlFromCommand<T1, T2> : FromCommand<T1, T2>, IMySqlFromCommand<T
         base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public new IMySqlFromCommand<T1, T2> AndPredicate(Func<PredicateBuilder<T1, T2>, Expression<Func<T1, T2, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2>();
+        return this.And(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region Or
@@ -346,6 +375,11 @@ public class MySqlFromCommand<T1, T2> : FromCommand<T1, T2>, IMySqlFromCommand<T
     {
         base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
+    }
+    public new IMySqlFromCommand<T1, T2> OrPredicate(Func<PredicateBuilder<T1, T2>, Expression<Func<T1, T2, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2>();
+        return this.Or(predicateInitializer.Invoke(builder));
     }
     #endregion
 
@@ -422,6 +456,7 @@ public class MySqlFromCommand<T1, T2, T3> : FromCommand<T1, T2, T3>, IMySqlFromC
     public new IMySqlFromCommand<T1, T2, T3> UseTableSchema(string tableSchema)
         => base.UseTableSchema(tableSchema) as IMySqlFromCommand<T1, T2, T3>;
     #endregion
+
     #region WithTable
     public new IMySqlFromCommand<T1, T2, T3, TOther> WithTable<TOther>()
         => base.WithTable<TOther>() as IMySqlFromCommand<T1, T2, T3, TOther>;
@@ -432,7 +467,6 @@ public class MySqlFromCommand<T1, T2, T3> : FromCommand<T1, T2, T3>, IMySqlFromC
         => base.WithQuery(subQuery) as IMySqlFromCommand<T1, T2, T3, TOther>;
     public new IMySqlFromCommand<T1, T2, T3, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
         => base.WithQuery(subQueryExpr) as IMySqlFromCommand<T1, T2, T3, TOther>;
-
     #endregion
 
     #region InnerJoin
@@ -479,6 +513,11 @@ public class MySqlFromCommand<T1, T2, T3> : FromCommand<T1, T2, T3>, IMySqlFromC
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public new IMySqlFromCommand<T1, T2, T3> WherePredicate(Func<PredicateBuilder<T1, T2, T3>, Expression<Func<T1, T2, T3, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3>();
+        return this.Where(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region And
@@ -492,6 +531,11 @@ public class MySqlFromCommand<T1, T2, T3> : FromCommand<T1, T2, T3>, IMySqlFromC
         base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public new IMySqlFromCommand<T1, T2, T3> AndPredicate(Func<PredicateBuilder<T1, T2, T3>, Expression<Func<T1, T2, T3, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3>();
+        return this.And(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region Or
@@ -504,6 +548,11 @@ public class MySqlFromCommand<T1, T2, T3> : FromCommand<T1, T2, T3>, IMySqlFromC
     {
         base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
+    }
+    public new IMySqlFromCommand<T1, T2, T3> OrPredicate(Func<PredicateBuilder<T1, T2, T3>, Expression<Func<T1, T2, T3, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3>();
+        return this.Or(predicateInitializer.Invoke(builder));
     }
     #endregion
 
@@ -580,6 +629,7 @@ public class MySqlFromCommand<T1, T2, T3, T4> : FromCommand<T1, T2, T3, T4>, IMy
     public new IMySqlFromCommand<T1, T2, T3, T4> UseTableSchema(string tableSchema)
         => base.UseTableSchema(tableSchema) as IMySqlFromCommand<T1, T2, T3, T4>;
     #endregion
+
     #region WithTable
     public new IMySqlFromCommand<T1, T2, T3, T4, TOther> WithTable<TOther>()
         => base.WithTable<TOther>() as IMySqlFromCommand<T1, T2, T3, T4, TOther>;
@@ -590,7 +640,6 @@ public class MySqlFromCommand<T1, T2, T3, T4> : FromCommand<T1, T2, T3, T4>, IMy
         => base.WithQuery(subQuery) as IMySqlFromCommand<T1, T2, T3, T4, TOther>;
     public new IMySqlFromCommand<T1, T2, T3, T4, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
         => base.WithQuery(subQueryExpr) as IMySqlFromCommand<T1, T2, T3, T4, TOther>;
-
     #endregion
 
     #region InnerJoin
@@ -637,6 +686,11 @@ public class MySqlFromCommand<T1, T2, T3, T4> : FromCommand<T1, T2, T3, T4>, IMy
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public new IMySqlFromCommand<T1, T2, T3, T4> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4>, Expression<Func<T1, T2, T3, T4, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4>();
+        return this.Where(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region And
@@ -650,6 +704,11 @@ public class MySqlFromCommand<T1, T2, T3, T4> : FromCommand<T1, T2, T3, T4>, IMy
         base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public new IMySqlFromCommand<T1, T2, T3, T4> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4>, Expression<Func<T1, T2, T3, T4, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4>();
+        return this.And(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region Or
@@ -662,6 +721,11 @@ public class MySqlFromCommand<T1, T2, T3, T4> : FromCommand<T1, T2, T3, T4>, IMy
     {
         base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
+    }
+    public new IMySqlFromCommand<T1, T2, T3, T4> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4>, Expression<Func<T1, T2, T3, T4, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4>();
+        return this.Or(predicateInitializer.Invoke(builder));
     }
     #endregion
 
@@ -738,6 +802,7 @@ public class MySqlFromCommand<T1, T2, T3, T4, T5> : FromCommand<T1, T2, T3, T4, 
     public new IMySqlFromCommand<T1, T2, T3, T4, T5> UseTableSchema(string tableSchema)
         => base.UseTableSchema(tableSchema) as IMySqlFromCommand<T1, T2, T3, T4, T5>;
     #endregion
+
     #region WithTable
     public new IMySqlFromCommand<T1, T2, T3, T4, T5, TOther> WithTable<TOther>()
         => base.WithTable<TOther>() as IMySqlFromCommand<T1, T2, T3, T4, T5, TOther>;
@@ -748,7 +813,6 @@ public class MySqlFromCommand<T1, T2, T3, T4, T5> : FromCommand<T1, T2, T3, T4, 
         => base.WithQuery(subQuery) as IMySqlFromCommand<T1, T2, T3, T4, T5, TOther>;
     public new IMySqlFromCommand<T1, T2, T3, T4, T5, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
         => base.WithQuery(subQueryExpr) as IMySqlFromCommand<T1, T2, T3, T4, T5, TOther>;
-
     #endregion
 
     #region InnerJoin
@@ -795,6 +859,11 @@ public class MySqlFromCommand<T1, T2, T3, T4, T5> : FromCommand<T1, T2, T3, T4, 
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5>, Expression<Func<T1, T2, T3, T4, T5, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5>();
+        return this.Where(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region And
@@ -808,6 +877,11 @@ public class MySqlFromCommand<T1, T2, T3, T4, T5> : FromCommand<T1, T2, T3, T4, 
         base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5>, Expression<Func<T1, T2, T3, T4, T5, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5>();
+        return this.And(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region Or
@@ -820,6 +894,11 @@ public class MySqlFromCommand<T1, T2, T3, T4, T5> : FromCommand<T1, T2, T3, T4, 
     {
         base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
+    }
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5>, Expression<Func<T1, T2, T3, T4, T5, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5>();
+        return this.Or(predicateInitializer.Invoke(builder));
     }
     #endregion
 
@@ -923,6 +1002,11 @@ public class MySqlFromCommand<T1, T2, T3, T4, T5, T6> : FromCommand<T1, T2, T3, 
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6>, Expression<Func<T1, T2, T3, T4, T5, T6, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6>();
+        return this.Where(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region And
@@ -936,6 +1020,11 @@ public class MySqlFromCommand<T1, T2, T3, T4, T5, T6> : FromCommand<T1, T2, T3, 
         base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6>, Expression<Func<T1, T2, T3, T4, T5, T6, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6>();
+        return this.And(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region Or
@@ -948,6 +1037,11 @@ public class MySqlFromCommand<T1, T2, T3, T4, T5, T6> : FromCommand<T1, T2, T3, 
     {
         base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
+    }
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6>, Expression<Func<T1, T2, T3, T4, T5, T6, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6>();
+        return this.Or(predicateInitializer.Invoke(builder));
     }
     #endregion
 

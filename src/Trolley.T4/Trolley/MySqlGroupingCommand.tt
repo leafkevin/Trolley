@@ -47,8 +47,6 @@ public class MySqlGroupingCommand<T, TGrouping> : GroupingCommand<T, TGrouping>,
     #region Select
     public new IMySqlFromContinuedCreate<TGrouping> Select()
         => base.Select() as IMySqlFromContinuedCreate<TGrouping>;
-    public new IMySqlFromContinuedCreate<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>(fields) as IMySqlFromContinuedCreate<TTarget>;
     public new IMySqlFromContinuedCreate<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T, TTarget>> fieldsExpr)
         => base.Select<TTarget>(fieldsExpr) as IMySqlFromContinuedCreate<TTarget>;
     #endregion
@@ -99,8 +97,6 @@ public class MySqlGroupingCommand<<#=tables#>, TGrouping> : GroupingCommand<<#=t
     #region Select
     public new IMySqlFromContinuedCreate<TGrouping> Select()
         => base.Select() as IMySqlFromContinuedCreate<TGrouping>;
-    public new IMySqlFromContinuedCreate<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>(fields) as IMySqlFromContinuedCreate<TTarget>;
     public new IMySqlFromContinuedCreate<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TTarget>> fieldsExpr)
         => base.Select<TTarget>(fieldsExpr) as IMySqlFromContinuedCreate<TTarget>;
     #endregion

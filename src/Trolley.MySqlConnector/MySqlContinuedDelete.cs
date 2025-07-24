@@ -21,10 +21,18 @@ public class MySqlContinuedDelete<TEntity> : ContinuedDelete<TEntity>, IMySqlCon
     public new IMySqlContinuedDelete<TEntity> And(Expression<Func<TEntity, bool>> predicate)
         => this.And(true, predicate);
     public new IMySqlContinuedDelete<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
-    {
-        base.And(condition, ifPredicate, elsePredicate);
-        return this;
-    }
+        => base.And(condition, ifPredicate, elsePredicate) as IMySqlContinuedDelete<TEntity>;
+    public new IMySqlContinuedDelete<TEntity> AndPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
+        => this.AndPredicate(predicateInitializer);
+    #endregion
+
+    #region Or
+    public new IMySqlContinuedDelete<TEntity> Or(Expression<Func<TEntity, bool>> predicate)
+        => this.Or(true, predicate);
+    public new IMySqlContinuedDelete<TEntity> Or(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
+        => base.Or(condition, ifPredicate, elsePredicate) as IMySqlContinuedDelete<TEntity>;
+    public new IMySqlContinuedDelete<TEntity> OrPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
+        => this.OrPredicate(predicateInitializer);
     #endregion
 
     #region Returnning

@@ -40,10 +40,8 @@ public class MySqlGroupingCommand<T, TGrouping> : GroupingCommand<T, TGrouping>,
     #region Select
     public new IMySqlFromCommand<TGrouping> Select()
         => base.Select() as IMySqlFromCommand<TGrouping>;
-    public new IMySqlFromCommand<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>(fields) as IMySqlFromCommand<TTarget>;
     public new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T, TTarget>> fieldsExpr)
-        => base.Select(fieldsExpr) as IMySqlFromCommand<TTarget>;
+        => base.Select<TTarget>(fieldsExpr) as IMySqlFromCommand<TTarget>;
     #endregion
 }
 public class MySqlGroupingCommand<T1, T2, TGrouping> : GroupingCommand<T1, T2, TGrouping>, IMySqlGroupingCommand<T1, T2, TGrouping>
@@ -83,10 +81,8 @@ public class MySqlGroupingCommand<T1, T2, TGrouping> : GroupingCommand<T1, T2, T
     #region Select
     public new IMySqlFromCommand<TGrouping> Select()
         => base.Select() as IMySqlFromCommand<TGrouping>;
-    public new IMySqlFromCommand<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>(fields) as IMySqlFromCommand<TTarget>;
     public new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TTarget>> fieldsExpr)
-        => base.Select(fieldsExpr) as IMySqlFromCommand<TTarget>;
+        => base.Select<TTarget>(fieldsExpr) as IMySqlFromCommand<TTarget>;
     #endregion
 }
 public class MySqlGroupingCommand<T1, T2, T3, TGrouping> : GroupingCommand<T1, T2, T3, TGrouping>, IMySqlGroupingCommand<T1, T2, T3, TGrouping>
@@ -126,10 +122,8 @@ public class MySqlGroupingCommand<T1, T2, T3, TGrouping> : GroupingCommand<T1, T
     #region Select
     public new IMySqlFromCommand<TGrouping> Select()
         => base.Select() as IMySqlFromCommand<TGrouping>;
-    public new IMySqlFromCommand<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>(fields) as IMySqlFromCommand<TTarget>;
     public new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TTarget>> fieldsExpr)
-        => base.Select(fieldsExpr) as IMySqlFromCommand<TTarget>;
+        => base.Select<TTarget>(fieldsExpr) as IMySqlFromCommand<TTarget>;
     #endregion
 }
 public class MySqlGroupingCommand<T1, T2, T3, T4, TGrouping> : GroupingCommand<T1, T2, T3, T4, TGrouping>, IMySqlGroupingCommand<T1, T2, T3, T4, TGrouping>
@@ -169,10 +163,8 @@ public class MySqlGroupingCommand<T1, T2, T3, T4, TGrouping> : GroupingCommand<T
     #region Select
     public new IMySqlFromCommand<TGrouping> Select()
         => base.Select() as IMySqlFromCommand<TGrouping>;
-    public new IMySqlFromCommand<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>(fields) as IMySqlFromCommand<TTarget>;
     public new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TTarget>> fieldsExpr)
-        => base.Select(fieldsExpr) as IMySqlFromCommand<TTarget>;
+        => base.Select<TTarget>(fieldsExpr) as IMySqlFromCommand<TTarget>;
     #endregion
 }
 public class MySqlGroupingCommand<T1, T2, T3, T4, T5, TGrouping> : GroupingCommand<T1, T2, T3, T4, T5, TGrouping>, IMySqlGroupingCommand<T1, T2, T3, T4, T5, TGrouping>
@@ -212,10 +204,8 @@ public class MySqlGroupingCommand<T1, T2, T3, T4, T5, TGrouping> : GroupingComma
     #region Select
     public new IMySqlFromCommand<TGrouping> Select()
         => base.Select() as IMySqlFromCommand<TGrouping>;
-    public new IMySqlFromCommand<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>(fields) as IMySqlFromCommand<TTarget>;
     public new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TTarget>> fieldsExpr)
-        => base.Select(fieldsExpr) as IMySqlFromCommand<TTarget>;
+        => base.Select<TTarget>(fieldsExpr) as IMySqlFromCommand<TTarget>;
     #endregion
 }
 public class MySqlGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> : GroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping>, IMySqlGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping>
@@ -255,9 +245,7 @@ public class MySqlGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> : GroupingC
     #region Select
     public new IMySqlFromCommand<TGrouping> Select()
         => base.Select() as IMySqlFromCommand<TGrouping>;
-    public new IMySqlFromCommand<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>(fields) as IMySqlFromCommand<TTarget>;
     public new IMySqlFromCommand<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr)
-        => base.Select(fieldsExpr) as IMySqlFromCommand<TTarget>;
+        => base.Select<TTarget>(fieldsExpr) as IMySqlFromCommand<TTarget>;
     #endregion
 }

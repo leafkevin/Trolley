@@ -14,13 +14,6 @@ public interface IMySqlGroupingCommandBase<TGrouping> : IGroupingCommandBase<TGr
     /// </summary>
     /// <returns>返回分组后对象</returns>
     new IMySqlFromCommand<TGrouping> Select();
-    /// <summary>
-    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型</typeparam>
-    /// <param name="fields">原始字段字符串，默认值*</param>
-    /// <returns>返回查询对象</returns>
-    new IMySqlFromCommand<TTarget> Select<TTarget>(string fields = "*");
 }
 /// <summary>
 /// 分组查询对象
@@ -156,7 +149,7 @@ public interface IMySqlGroupingCommand<T1, T2, TGrouping> : IGroupingCommand<T1,
 /// <typeparam name="T2">表T2实体类型</typeparam>
 /// <typeparam name="T3">表T3实体类型</typeparam>
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
-public interface IMySqlGroupingCommand<T1, T2, T3, TGrouping> : IGroupingCommand<T1, T2, T3, TGrouping>, IMySqlGroupingCommandBase<TGrouping>
+public interface IMySqlGroupingCommand<T1, T2, T3, TGrouping> : IGroupingCommand<T1, T2, T3, TGrouping>, IGroupingCommandBase<TGrouping>
 {
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
@@ -222,7 +215,7 @@ public interface IMySqlGroupingCommand<T1, T2, T3, TGrouping> : IGroupingCommand
 /// <typeparam name="T3">表T3实体类型</typeparam>
 /// <typeparam name="T4">表T4实体类型</typeparam>
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
-public interface IMySqlGroupingCommand<T1, T2, T3, T4, TGrouping> : IGroupingCommand<T1, T2, T3, T4, TGrouping>, IMySqlGroupingCommandBase<TGrouping>
+public interface IMySqlGroupingCommand<T1, T2, T3, T4, TGrouping> : IGroupingCommand<T1, T2, T3, T4, TGrouping>, IGroupingCommandBase<TGrouping>
 {
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
@@ -289,7 +282,7 @@ public interface IMySqlGroupingCommand<T1, T2, T3, T4, TGrouping> : IGroupingCom
 /// <typeparam name="T4">表T4实体类型</typeparam>
 /// <typeparam name="T5">表T5实体类型</typeparam>
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
-public interface IMySqlGroupingCommand<T1, T2, T3, T4, T5, TGrouping> : IGroupingCommand<T1, T2, T3, T4, T5, TGrouping>, IMySqlGroupingCommandBase<TGrouping>
+public interface IMySqlGroupingCommand<T1, T2, T3, T4, T5, TGrouping> : IGroupingCommand<T1, T2, T3, T4, T5, TGrouping>, IGroupingCommandBase<TGrouping>
 {
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
@@ -357,7 +350,7 @@ public interface IMySqlGroupingCommand<T1, T2, T3, T4, T5, TGrouping> : IGroupin
 /// <typeparam name="T5">表T5实体类型</typeparam>
 /// <typeparam name="T6">表T6实体类型</typeparam>
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
-public interface IMySqlGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> : IGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping>, IMySqlGroupingCommandBase<TGrouping>
+public interface IMySqlGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> : IGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping>, IGroupingCommandBase<TGrouping>
 {
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)

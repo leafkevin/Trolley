@@ -58,12 +58,12 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
         base.UnionAllInternal(subQueryExpr);
         return this;
     }
-    public new IMySqlFromCommand<T> UnionRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQueryExpr)
+    public new IMySqlFromCommand<T> UnionRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr)
     {
         base.UnionRecursiveInternal(subQueryExpr);
         return this;
     }
-    public new IMySqlFromCommand<T> UnionAllRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQueryExpr)
+    public new IMySqlFromCommand<T> UnionAllRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr)
     {
         base.UnionAllRecursiveInternal(subQueryExpr);
         return this;
@@ -120,6 +120,11 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public new IMySqlFromCommand<T> WherePredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T>();
+        return this.Where(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region And
@@ -133,6 +138,11 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
         base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public new IMySqlFromCommand<T> AndPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T>();
+        return this.And(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region Or
@@ -145,6 +155,11 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
     {
         base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
+    }
+    public new IMySqlFromCommand<T> OrPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<T>();
+        return this.Or(predicateInitializer.Invoke(builder));
     }
     #endregion
 
@@ -201,14 +216,14 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
     #region OnDuplicateKeyUpdate
     public IMySqlFromContinuedCreate<T> OnDuplicateKeyUpdate<TUpdateFields>(TUpdateFields updateObj)
     {
-        var sql = this.Visitor.BuildCommandSql(out _);
+        var sql = this.Visitor.BuildCommandSql(true, out _);
         var visitor = this.NewCreateVisitor(sql);
         visitor.OnDuplicateKeyUpdate(updateObj);
         return new MySqlFromContinuedCreate<T>(this.DbContext, visitor);
     }
     public IMySqlFromContinuedCreate<T> OnDuplicateKeyUpdate<TUpdateFields>(Expression<Func<IMySqlCreateDuplicateKeyUpdate<T>, TUpdateFields>> fieldsAssignment)
     {
-        var sql = this.Visitor.BuildCommandSql(out _);
+        var sql = this.Visitor.BuildCommandSql(true, out _);
         var visitor = this.NewCreateVisitor(sql);
         visitor.OnDuplicateKeyUpdate(fieldsAssignment);
         return new MySqlFromContinuedCreate<T>(this.DbContext, visitor);
@@ -218,14 +233,14 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
     #region Returnning
     public IMySqlBulkCreated<T, TResult> Returning<TResult>(string fieldNames)
     {
-        var sql = this.Visitor.BuildCommandSql(out _);
+        var sql = this.Visitor.BuildCommandSql(true, out _);
         var visitor = this.NewCreateVisitor(sql);
         visitor.Returning(fieldNames);
         return new MySqlBulkCreated<T, TResult>(this.DbContext, visitor);
     }
     public IMySqlBulkCreated<T, TResult> Returning<TResult>(Expression<Func<T, TResult>> fieldsSelector)
     {
-        var sql = this.Visitor.BuildCommandSql(out _);
+        var sql = this.Visitor.BuildCommandSql(true, out _);
         var visitor = this.NewCreateVisitor(sql);
         visitor.Returning(fieldsSelector);
         return new MySqlBulkCreated<T, TResult>(this.DbContext, visitor);
@@ -302,8 +317,8 @@ public class MySqlFromCommand<<#=tables#>> : FromCommand<<#=tables#>>, IMySqlFro
     public new IMySqlFromCommand<<#=tables#>, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
         => base.WithQuery(subQueryExpr) as IMySqlFromCommand<<#=tables#>, TOther>;
     #endregion
-<#      }#>
 
+<#      }#>
     #region InnerJoin
     public new IMySqlFromCommand<<#=tables#>> InnerJoin(Expression<Func<<#=tables#>, bool>> joinOn)
         => base.InnerJoin(joinOn) as IMySqlFromCommand<<#=tables#>>;
@@ -363,6 +378,11 @@ public class MySqlFromCommand<<#=tables#>> : FromCommand<<#=tables#>>, IMySqlFro
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public new IMySqlFromCommand<<#=tables#>> WherePredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<<#=tables#>>();
+        return this.Where(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region And
@@ -376,6 +396,11 @@ public class MySqlFromCommand<<#=tables#>> : FromCommand<<#=tables#>>, IMySqlFro
         base.AndInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    public new IMySqlFromCommand<<#=tables#>> AndPredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<<#=tables#>>();
+        return this.And(predicateInitializer.Invoke(builder));
+    }
     #endregion
 
     #region Or
@@ -388,6 +413,11 @@ public class MySqlFromCommand<<#=tables#>> : FromCommand<<#=tables#>>, IMySqlFro
     {
         base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
+    }
+    public new IMySqlFromCommand<<#=tables#>> OrPredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer)
+    {
+        var builder = new PredicateBuilder<<#=tables#>>();
+        return this.Or(predicateInitializer.Invoke(builder));
     }
     #endregion
 

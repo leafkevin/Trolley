@@ -45,7 +45,7 @@ public interface IIncludableQuery<T, TMember> : IIncludableQueryBase, IQuery<T>
     /// 如：分表sys_user_105，按租户分表，原始表sys_user，第三个参数是当前从表分表的原始名称，第四个参数是主表的分表名称，返回值是当前从表的分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
     /// <code>
     /// repository.From&lt;Order&gt;()
-    ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
+    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
     ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
