@@ -70,13 +70,6 @@ public interface IPostgreSqlGroupingQuery<T, TGrouping> : IGroupingQuery<T, TGro
     /// <returns>返回分组后对象</returns>
     new IPostgreSqlQuery<TGrouping> Select();
     /// <summary>
-    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型</typeparam>
-    /// <param name="fields">原始字段字符串，默认值*</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*");
-    /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select(x =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select(x =&gt; a.Id)</code>
     /// </summary>
@@ -148,18 +141,6 @@ public interface IPostgreSqlGroupingQuery<T1, T2, TGrouping> : IGroupingQuery<T1
     #endregion
 
     #region Select
-    /// <summary>
-    /// 使用分组后对象直接返回
-    /// </summary>
-    /// <returns>返回分组后对象</returns>
-    new IPostgreSqlQuery<TGrouping> Select();
-    /// <summary>
-    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型</typeparam>
-    /// <param name="fields">原始字段字符串，默认值*</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*");
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -233,18 +214,6 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, TGrouping> : IGroupingQuer
     #endregion
 
     #region Select
-    /// <summary>
-    /// 使用分组后对象直接返回
-    /// </summary>
-    /// <returns>返回分组后对象</returns>
-    new IPostgreSqlQuery<TGrouping> Select();
-    /// <summary>
-    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型</typeparam>
-    /// <param name="fields">原始字段字符串，默认值*</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*");
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -320,18 +289,6 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, TGrouping> : IGrouping
 
     #region Select
     /// <summary>
-    /// 使用分组后对象直接返回
-    /// </summary>
-    /// <returns>返回分组后对象</returns>
-    new IPostgreSqlQuery<TGrouping> Select();
-    /// <summary>
-    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型</typeparam>
-    /// <param name="fields">原始字段字符串，默认值*</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*");
-    /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
     /// </summary>
@@ -406,18 +363,6 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, TGrouping> : IGrou
     #endregion
 
     #region Select
-    /// <summary>
-    /// 使用分组后对象直接返回
-    /// </summary>
-    /// <returns>返回分组后对象</returns>
-    new IPostgreSqlQuery<TGrouping> Select();
-    /// <summary>
-    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型</typeparam>
-    /// <param name="fields">原始字段字符串，默认值*</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*");
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -495,18 +440,6 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> : I
 
     #region Select
     /// <summary>
-    /// 使用分组后对象直接返回
-    /// </summary>
-    /// <returns>返回分组后对象</returns>
-    new IPostgreSqlQuery<TGrouping> Select();
-    /// <summary>
-    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型</typeparam>
-    /// <param name="fields">原始字段字符串，默认值*</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*");
-    /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
     /// </summary>
@@ -583,18 +516,6 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping>
     #endregion
 
     #region Select
-    /// <summary>
-    /// 使用分组后对象直接返回
-    /// </summary>
-    /// <returns>返回分组后对象</returns>
-    new IPostgreSqlQuery<TGrouping> Select();
-    /// <summary>
-    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型</typeparam>
-    /// <param name="fields">原始字段字符串，默认值*</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*");
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -674,18 +595,6 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGroup
 
     #region Select
     /// <summary>
-    /// 使用分组后对象直接返回
-    /// </summary>
-    /// <returns>返回分组后对象</returns>
-    new IPostgreSqlQuery<TGrouping> Select();
-    /// <summary>
-    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型</typeparam>
-    /// <param name="fields">原始字段字符串，默认值*</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*");
-    /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
     /// </summary>
@@ -764,18 +673,6 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TG
     #endregion
 
     #region Select
-    /// <summary>
-    /// 使用分组后对象直接返回
-    /// </summary>
-    /// <returns>返回分组后对象</returns>
-    new IPostgreSqlQuery<TGrouping> Select();
-    /// <summary>
-    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型</typeparam>
-    /// <param name="fields">原始字段字符串，默认值*</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*");
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -857,18 +754,6 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
 
     #region Select
     /// <summary>
-    /// 使用分组后对象直接返回
-    /// </summary>
-    /// <returns>返回分组后对象</returns>
-    new IPostgreSqlQuery<TGrouping> Select();
-    /// <summary>
-    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型</typeparam>
-    /// <param name="fields">原始字段字符串，默认值*</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*");
-    /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
     /// </summary>
@@ -949,18 +834,6 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
     #endregion
 
     #region Select
-    /// <summary>
-    /// 使用分组后对象直接返回
-    /// </summary>
-    /// <returns>返回分组后对象</returns>
-    new IPostgreSqlQuery<TGrouping> Select();
-    /// <summary>
-    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型</typeparam>
-    /// <param name="fields">原始字段字符串，默认值*</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*");
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -1044,18 +917,6 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
 
     #region Select
     /// <summary>
-    /// 使用分组后对象直接返回
-    /// </summary>
-    /// <returns>返回分组后对象</returns>
-    new IPostgreSqlQuery<TGrouping> Select();
-    /// <summary>
-    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型</typeparam>
-    /// <param name="fields">原始字段字符串，默认值*</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*");
-    /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
     /// </summary>
@@ -1138,18 +999,6 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
     #endregion
 
     #region Select
-    /// <summary>
-    /// 使用分组后对象直接返回
-    /// </summary>
-    /// <returns>返回分组后对象</returns>
-    new IPostgreSqlQuery<TGrouping> Select();
-    /// <summary>
-    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型</typeparam>
-    /// <param name="fields">原始字段字符串，默认值*</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*");
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -1235,18 +1084,6 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
 
     #region Select
     /// <summary>
-    /// 使用分组后对象直接返回
-    /// </summary>
-    /// <returns>返回分组后对象</returns>
-    new IPostgreSqlQuery<TGrouping> Select();
-    /// <summary>
-    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型</typeparam>
-    /// <param name="fields">原始字段字符串，默认值*</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*");
-    /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
     /// </summary>
@@ -1331,18 +1168,6 @@ public interface IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T1
     #endregion
 
     #region Select
-    /// <summary>
-    /// 使用分组后对象直接返回
-    /// </summary>
-    /// <returns>返回分组后对象</returns>
-    new IPostgreSqlQuery<TGrouping> Select();
-    /// <summary>
-    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型</typeparam>
-    /// <param name="fields">原始字段字符串，默认值*</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*");
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>

@@ -267,7 +267,7 @@ public interface IPostgreSqlContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
     /// </summary>
     /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
     /// <returns>返回更新对象</returns>
-    new IMySqlContinuedUpdate<TEntity> OrPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer);
+    new IPostgreSqlContinuedUpdate<TEntity> OrPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer);
     #endregion
 
     #region Returning

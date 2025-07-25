@@ -10,7 +10,7 @@ namespace Trolley.PostgreSql;
 public interface IDistinctOnObject<TDistinctOn>
 {
     /// <summary>
-    /// 去重分组对象字段集合
+    /// 去重分组对象字段
     /// </summary>
     TDistinctOn DistinctOn { get; set; }
 }
@@ -25,16 +25,9 @@ public interface IPostgreSqlDistinctOnQueryBase<TDistinctOn>
     /// </summary>
     /// <returns>返回分组后对象</returns>
     IPostgreSqlQuery<TDistinctOn> Select();
-    /// <summary>
-    /// 使用原始字段返回查询结果，用法：Select&lt;Order&gt;("*") 或是 Select&lt;int&gt;("1")
-    /// </summary>
-    /// <typeparam name="TTarget">返回实体的类型</typeparam>
-    /// <param name="fields">原始字段字符串，默认值*</param>
-    /// <returns>返回查询对象</returns>
-    IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*");
 }
 /// <summary>
-/// 去重分组查询对象
+/// 分组查询对象
 /// </summary>
 /// <typeparam name="T">原始表类型</typeparam>
 /// <typeparam name="TDistinctOn">分组后对象类型</typeparam>

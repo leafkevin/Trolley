@@ -24,27 +24,27 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 使用TMasterSharding主表分表名与当前表分表映射关系表名获取委托获取当前表分表表名，只需要指定主表分表的分表范围或条件即可，从表分表不需要指定分表名，会根据这个委托执行结果确定分表名称，通常适用于主表和从表都分表且一次查询多个分表的场景。第一个参数：dbKey，第二个参数是主表分表的原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第三个参数是当前从表分表的原始名称，第四个参数是主表的分表名称，返回值是当前从表的分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据TMasterSharding主表分表名与当前T表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
+    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前T表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前T表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
     /// <code>
     /// repository.From&lt;Order&gt;()
-    ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
+    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
     ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
-    ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
+    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
     ///         return tableName.Substring(0, tableName.Length - 7);
     ///     })
     ///     ...
     /// SQL:
-    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// SELECT ... FROM "sys_order_104_202405" a INNER JOIN "sys_user_104" b ON a."BuyerId"=b."Id" ...
     /// UNION ALL
-    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
+    /// SELECT ... FROM "sys_order_105_202405" a INNER JOIN "sys_user_105" b ON a."BuyerId"=b."Id" ...
     /// </code>
     /// </summary>
-    /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
-    /// <param name="tableNameGetter">当前表分表名获取委托</param>
+    /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
+    /// <param name="tableNameGetter">T表分表名获取委托</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
@@ -86,7 +86,7 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// 切换TableSchema，非默认TableSchema才有效
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
-    /// <returns>返回插入对象</returns>
+    /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T> UseTableSchema(string tableSchema);
     #endregion
 
@@ -156,12 +156,12 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// SELECT ... FROM "sys_order" WHERE "Id"&gt;1
     /// </code>
     /// </summary>
-    /// <param name="subQuery">子查询，需要有Select语句，如：
+    /// <param name="subQueryExpr">子查询，需要有Select语句，如：
     /// <code>f.From&lt;Order&gt;() ... .Select(x =&gt; new { ... })</code>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T> UnionAll(Func<IFromQuery, IQuery<T>> subQuery);
+    new IPostgreSqlQuery<T> UnionAll(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
     /// <summary>
-    /// 递归CTE子查询中的Union操作，表达式subQuery中的第二参数是自身引用，用法：
+    /// 递归CTE子查询中的Union操作，表达式subQueryExpr中的第二参数是自身引用，用法：
     /// <code>
     /// f.FromQuery(f =&gt; f.From&lt;Menu&gt;() ...
     ///         .Select(x =&gt; new { ... })
@@ -176,13 +176,13 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// ) ...
     /// </code>
     /// </summary>
-    /// <param name="subQuery">子查询，需要有Select语句，如：
+    /// <param name="subQueryExpr">子查询，需要有Select语句，如：
     /// <code>f.From&lt;Menu&gt;().Where(x =&gt; ... ).Select(x =&gt; new { ... })</code>
     /// </param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T> UnionRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQuery);
+    new IPostgreSqlQuery<T> UnionRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr);
     /// <summary>
-    /// 递归CTE子查询中的UnionAll操作，表达式subQuery中的第二参数是自身引用，用法：
+    /// 递归CTE子查询中的UnionAll操作，表达式subQueryExpr中的第二参数是自身引用，用法：
     /// <code>
     /// f.FromQuery(f =&gt; f.From&lt;Menu&gt;() ...
     ///         .Select(x =&gt; new { ... })
@@ -196,40 +196,48 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// SELECT ... FROM "sys_menu" a INNER JOIN "myCteTable" b ON a."ParentId"=b."Id" ...
     /// ) ...
     /// </summary>
-    /// <param name="subQuery">子查询，需要有Select语句，如：
+    /// <param name="subQueryExpr">子查询，需要有Select语句，如：
     /// <code>f.From&lt;Menu&gt;() .Where(x =&gt; ... ) .Select(x =&gt; new { ... })</code>
     /// </param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T> UnionAllRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQuery);
+    new IPostgreSqlQuery<T> UnionAllRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr);
     #endregion
 
     #region WithTable
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做关联查询，用法：
+    /// <code>
+    /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T, TOther> WithTable<TOther>();
+    #endregion
+
+    #region WithQuery
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
-    /// repository.From&lt;Menu&gt;()
-    ///     .WithTable(subQuery)
-    /// SQL: ... FROM "sys_menu" a,(SELECT ... FROM ...) b ...
+    /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
+    new IPostgreSqlQuery<T, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做关联查询，用法：
     /// <code>
     /// repository.From&lt;Menu&gt;()
-    ///     .WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )
-    ///     ...
-    /// SQL: ... FROM "sys_menu" a,(SELECT ... FROM "sys_page" c,"sys_menu" d ...) b ...
+    ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询</param>
+    /// <param name="subQueryExpr">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    new IPostgreSqlQuery<T, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -262,7 +270,7 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     new IPostgreSqlIncludableQuery<T, TElment> IncludeMany<TElment>(Expression<Func<T, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
     #endregion
 
-    #region Join
+    #region InnerJoin
     /// <summary>
     /// 添加TOther表，与现有表T做INNER JOIN关联，用法:
     /// <code>
@@ -274,28 +282,6 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加TOther表，与现有表T做LEFT JOIN关联，用法:
-    /// <code>
-    /// repository.From&lt;User&gt;()
-    ///     .LeftJoin&lt;Order&gt;((x, y) =&gt; x.Id == y.BuyerId)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加TOther表，与现有表T做RIGHT JOIN关联，用法:
-    /// <code>
-    /// repository.From&lt;User&gt;()
-    ///     .RightJoin&lt;Order&gt;((x, y) =&gt; x.Id == y.BuyerId)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
     /// 添加子查询subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
@@ -320,52 +306,6 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
-    /// <code>
-    /// repository
-    ///     .FromQuery(f =&gt; f.From&lt;Menu&gt;()
-    ///             .Where(x =&gt; x.Id == 1)
-    ///             .Select(x =&gt; new { x.Id, x.Name, x.ParentId })
-    ///         .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///             .LeftJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///             .Select((a, b) =&gt; new { a.Id, a.Name, a.ParentId }))) ...
-    /// SQL:
-    /// WITH RECURSIVE MyCte1(Id,Name,ParentId) AS
-    /// (
-    ///     SELECT "Id","Name","ParentId" FROM "sys_menu" WHERE "Id"=1 UNION ALL
-    ///     SELECT a."Id",a."Name",a."ParentId" FROM "sys_menu" a LEFT JOIN MyCte1 b ON a."ParentId"=b."Id"
-    /// ) ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
-    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
-    /// <code>
-    /// repository
-    ///     .FromQuery(f =&gt; f.From&lt;Menu&gt;()
-    ///             .Where(x =&gt; x.Id == 1)
-    ///             .Select(x =&gt; new { x.Id, x.Name, x.ParentId })
-    ///         .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
-    ///             .RightJoin(self, (a, b) =&gt; a.ParentId == b.Id)
-    ///             .Select((a, b) =&gt; new { a.Id, a.Name, a.ParentId }))) ...
-    /// SQL:
-    /// WITH RECURSIVE MyCte1(Id,Name,ParentId) AS
-    /// (
-    ///     SELECT "Id","Name","ParentId" FROM "sys_menu" WHERE "Id"=1 UNION ALL
-    ///     SELECT a."Id",a."Name",a."ParentId" FROM "sys_menu" a RIGHT JOIN MyCte1 b ON a."ParentId"=b."Id"
-    /// ) ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
-    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn);
-    /// <summary>
     /// 添加subQuery子查询，并与现有表T做INNER JOIN关联，用法:
     /// <code>
     /// await repository.From&lt;User&gt;()
@@ -382,52 +322,92 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// <param name="subQuery">子查询对象</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn);
+    new IPostgreSqlQuery<T, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn);
+    #endregion
+
+    #region LeftJoin
+    /// <summary>
+    /// 添加TOther表，与现有表T做LEFT JOIN关联，用法:
+    /// <code>
+    /// repository.From&lt;User&gt;()
+    ///     .LeftJoin&lt;Order&gt;((x, y) =&gt; x.Id == y.BuyerId)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// <code>
+    /// var subQuery = repository.From&lt;Menu&gt;()
+    ///     .Where(x =&gt; x.Id == 1).Select(x =&gt; new { x.Id, x.Name, x.ParentId });
+    /// ... .LeftJoin(subQuery, (a, b) =&gt; a.ParentId == b.Id)
+    /// SQL: ...LEFT JOIN (SELECT "Id","Name","ParentId" FROM "sys_menu" WHERE "Id"=1) b ON a."ParentId"=b."Id" ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
+    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
     /// 添加subQuery子查询，并与现有表T做LEFT JOIN关联，用法:
     /// <code>
-    /// ... ...
     /// .LeftJoin(f =&gt; f.From&lt;OrderDetail&gt;()
     ///     ...
-    ///     .Select((x, y) =&gt; new
-    ///     {
-    ///         ...
-    ///     }), (a, b, c) =&gt; b.Id == c.OrderId)
-    ///     ...
-    /// SQL：
-    /// ... LEFT JOIN (SELECT ... FROM "sys_order_detail" a ...) c ON b."Id"=c."OrderId" ...
+    ///     .Select((x, y) =&gt; ...), (a, b, c) =&gt; b.Id == c.OrderId)
+    /// SQL：... LEFT JOIN (SELECT ... FROM "sys_order_detail" a ...) c ON b."Id"=c."OrderId" ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn);
+    new IPostgreSqlQuery<T, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn);
+    #endregion
+
+    #region RightJoin
+    /// <summary>
+    /// 添加TOther表，与现有表T做RIGHT JOIN关联，用法:
+    /// <code>
+    /// .From&lt;User&gt;().RightJoin&lt;Order&gt;((x, y) =&gt; x.Id == y.BuyerId)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn);
+    /// <summary>
+    /// 添加子查询subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
+    /// <code>
+    /// var subQuery = repository.From&lt;Menu&gt;()
+    ///     .Where(x =&gt; x.Id == 1).Select(x =&gt; new { x.Id, x.Name, x.ParentId });
+    /// ... .RightJoin(subQuery, (a, b) =&gt; a.ParentId == b.Id)
+    /// SQL: ...RIGHT JOIN (SELECT "Id","Name","ParentId" FROM "sys_menu" WHERE "Id"=1) b ON a."ParentId"=b."Id" ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
+    /// <param name="subQuery">子查询对象，也可以CTE表的自我引用</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn);
     /// <summary>
     /// 添加subQuery子查询，并与现有表T做RIGHT JOIN关联，用法:
     /// <code>
-    /// ... ...
-    /// .RightJoin(f =&gt; f.From&lt;OrderDetail&gt;()
-    ///     .GroupBy(x =&gt; x.OrderId)
-    ///     .Select((x, y) =&gt; new
-    ///     {
-    ///         ...
-    ///     }), (a, b, c) =&gt; b.Id == c.OrderId)
-    /// ... ...
-    /// </code>
-    /// 生成的SQL：
-    /// <code>
-    /// ... ... RIGHT JOIN (SELECT a."OrderId",COUNT(DISTINCT a."ProductId") AS ProductCount FROM "sys_order_detail" a GROUP BY a."OrderId") ... ...
+    /// .RightJoin(f =&gt; f.From&lt;OrderDetail&gt;() ...
+    ///     .Select( ... ), (a, b, c) =&gt; b.Id == c.OrderId)
+    /// SQL：... RIGHT JOIN (SELECT ... FROM ...) ...
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的<paramref name="TOther"/>类型是一个匿名类</typeparam>
     /// <param name="subQuery">子查询对象</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T, TOther, bool>> joinOn);
+    new IPostgreSqlQuery<T, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn);
     #endregion
 
-    #region Where/And
+    #region Where
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -444,13 +424,22 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T> Where(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null);
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 构造表达式断言predicateInitializer生成Where条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T> WherePredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer);
+    #endregion
+
+    #region And
+    /// <summary>
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T> And(Expression<Func<T, bool>> predicate);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成And条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成And条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
@@ -458,6 +447,36 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T> And(bool condition, Expression<Func<T, bool>> ifPredicate = null, Expression<Func<T, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成And条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T> AndPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer);
+    #endregion
+
+    #region Or
+    /// <summary>
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T> Or(Expression<Func<T, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Or条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Or条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T> Or(bool condition, Expression<Func<T, bool>> ifPredicate = null, Expression<Func<T, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成Or条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T> OrPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer);
     #endregion
 
     #region GroupBy
@@ -482,7 +501,6 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .DistinctOn(f =&gt; new { f.Id, f.Name, f.CreatedAt.Date })
-    ///    ...
     /// SQL: SELECT DISTINCT ON (a."Id",a."Name",CAST(a."CreatedAt" AS DATE)) ... FROM "sys_user" a ... 
     /// </code>
     /// </summary>
@@ -492,7 +510,7 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     IPostgreSqlDistinctOnQuery<T, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<T, TDistinctOn>> distinctOnExpr);
     #endregion
 
-    #region OrderBy
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，用法：
     /// OrderBy(f =&gt; new { f.Id, f.OtherId }) 或是 OrderBy(x =&gt; x.CreatedAt.Date)
@@ -527,14 +545,6 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T> OrderByDescending<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr);
-    #endregion
-
-    #region Distinct
-    /// <summary>
-    /// 生成DISTINCT语句，去掉重复数据
-    /// </summary>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T> Distinct();
     #endregion
 
     #region Skip/Take/Page
@@ -598,6 +608,14 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// <param name="fieldsExpr">字段选择表达式，单个聚合字段或多个聚合字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr);
+    #endregion	
+
+    #region Distinct
+    /// <summary>
+    /// 生成DISTINCT语句，去掉重复数据
+    /// </summary>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T> Distinct();
     #endregion
 }
 /// <summary>
@@ -621,27 +639,27 @@ public interface IPostgreSqlQuery<T1, T2> : IQuery<T1, T2>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 使用TMasterSharding主表分表名与当前表分表映射关系表名获取委托获取当前表分表表名，只需要指定主表分表的分表范围或条件即可，从表分表不需要指定分表名，会根据这个委托执行结果确定分表名称，通常适用于主表和从表都分表且一次查询多个分表的场景。第一个参数：dbKey，第二个参数是主表分表的原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第三个参数是当前从表分表的原始名称，第四个参数是主表的分表名称，返回值是当前从表的分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据TMasterSharding主表分表名与当前T2表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
+    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前T2表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前T2表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
     /// <code>
     /// repository.From&lt;Order&gt;()
-    ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
+    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
     ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
-    ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
+    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
     ///         return tableName.Substring(0, tableName.Length - 7);
     ///     })
     ///     ...
     /// SQL:
-    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// SELECT ... FROM "sys_order_104_202405" a INNER JOIN "sys_user_104" b ON a."BuyerId"=b."Id" ...
     /// UNION ALL
-    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
+    /// SELECT ... FROM "sys_order_105_202405" a INNER JOIN "sys_user_105" b ON a."BuyerId"=b."Id" ...
     /// </code>
     /// </summary>
-    /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
-    /// <param name="tableNameGetter">当前表分表名获取委托</param>
+    /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
+    /// <param name="tableNameGetter">T2表分表名获取委托</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
@@ -683,38 +701,45 @@ public interface IPostgreSqlQuery<T1, T2> : IQuery<T1, T2>
     /// 切换TableSchema，非默认TableSchema才有效
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
-    /// <returns>返回插入对象</returns>
+    /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2> UseTableSchema(string tableSchema);
     #endregion
 
     #region WithTable
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做关联查询，用法：
+    /// <code>
+    /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, TOther> WithTable<TOther>();
+    #endregion
+
+    #region WithQuery
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
-    /// repository.From&lt;Menu&gt;()
-    ///     .WithTable(subQuery)
-    /// SQL: ... FROM "sys_menu" a,(SELECT ... FROM ...) b ...
+    /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
+    new IPostgreSqlQuery<T1, T2, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做关联查询，用法：
     /// <code>
-    /// repository
-    ///     .From&lt;Menu&gt;()
-    ///     .WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )
-    ///     ...
-    /// SQL: ... FROM "sys_menu" a,(SELECT ... FROM "sys_page" c,"sys_menu" d ...) b ...
+    /// repository.From&lt;Menu&gt;()
+    ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询</param>
+    /// <param name="subQueryExpr">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    new IPostgreSqlQuery<T1, T2, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -749,32 +774,14 @@ public interface IPostgreSqlQuery<T1, T2> : IQuery<T1, T2>
     new IPostgreSqlIncludableQuery<T1, T2, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
     #endregion
 
-    #region Join
+    #region InnerJoin
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .InnerJoin((a, b) =&gt; ...)
-    /// </code>
+    /// <code>.InnerJoin((a, b) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2> InnerJoin(Expression<Func<T1, T2, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.LeftJoin((a, b) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2> LeftJoin(Expression<Func<T1, T2, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .RightJoin((a, b) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2> RightJoin(Expression<Func<T1, T2, bool>> joinOn);
     /// <summary>
     /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
     /// <code>
@@ -786,29 +793,9 @@ public interface IPostgreSqlQuery<T1, T2> : IQuery<T1, T2>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
-    /// <code>
-    /// .LeftJoin&lt;TOther&gt;((a, b) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">表实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
-    /// <code>
-    /// .RightJoin&lt;TOther&gt;((a, b) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">表TOther实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, TOther> RightJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn);
-    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -820,9 +807,43 @@ public interface IPostgreSqlQuery<T1, T2> : IQuery<T1, T2>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn);
     /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// <code>
+    /// .InnerJoin((a, b) =&gt; f.From&lt;OrderDetail&gt;() ...
+    ///     .Select((x, y) =&gt; new { ... }), (a, b) =&gt; ...) ...
+    /// SQL:
+    /// ... INNER JOIN (SELECT ... FROM "sys_order_detail" ...) c ON ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询语句</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, TOther, bool>> joinOn);
+    #endregion
+
+    #region LeftJoin
+    /// <summary>
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.LeftJoin((a, b) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2> LeftJoin(Expression<Func<T1, T2, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin&lt;TOther&gt;((a, b) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn);
+    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .LeftJoin(self, (a, b) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -834,9 +855,43 @@ public interface IPostgreSqlQuery<T1, T2> : IQuery<T1, T2>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn);
     /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin((a, b) =&gt; f.From&lt;OrderDetail&gt;() ...
+    ///     .Select((x, y) =&gt; new { ... }), (a, b) =&gt; ...) ...
+    /// SQL:
+    /// ... LEFT JOIN (SELECT ... FROM "sys_order_detail" ...) c ON ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询语句</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, TOther, bool>> joinOn);
+    #endregion
+
+    #region RightJoin
+    /// <summary>
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.RightJoin((a, b) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2> RightJoin(Expression<Func<T1, T2, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// <code>
+    /// .RightJoin&lt;TOther&gt;((a, b) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表TOther实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, TOther> RightJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn);
+    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .RightJoin(self, (a, b) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -848,35 +903,7 @@ public interface IPostgreSqlQuery<T1, T2> : IQuery<T1, T2>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQuery子查询，并与现有表做INNER JOIN关联，用法:
-    /// <code>
-    /// .InnerJoin((a, b) =&gt; f.From&lt;OrderDetail&gt;() ...
-    ///     .Select((x, y) =&gt; new { ... }), (a, b) =&gt; ...) ...
-    /// SQL:
-    /// ... INNER JOIN (SELECT ... FROM "sys_order_detail" ...) c ON ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询，并与现有表做LEFT JOIN关联，与.WithTable(...).LeftJoin(...)等效，用法:
-    /// <code>
-    /// .LeftJoin((a, b) =&gt; f.From&lt;OrderDetail&gt;() ...
-    ///     .Select((x, y) =&gt; new { ... }), (a, b) =&gt; ...) ...
-    /// SQL:
-    /// ... LEFT JOIN (SELECT ... FROM "sys_order_detail" ...) c ON ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询，并与现有表做RIGHT JOIN关联，与.WithTable(...).RightJoin(...)等效，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
     /// <code>
     /// .RightJoin((a, b) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b) =&gt; ...) ...
@@ -885,13 +912,13 @@ public interface IPostgreSqlQuery<T1, T2> : IQuery<T1, T2>
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn);
+    new IPostgreSqlQuery<T1, T2, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, TOther, bool>> joinOn);
     #endregion
 
-    #region Where/And
+    #region Where
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -908,13 +935,22 @@ public interface IPostgreSqlQuery<T1, T2> : IQuery<T1, T2>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2> Where(bool condition, Expression<Func<T1, T2, bool>> ifPredicate, Expression<Func<T1, T2, bool>> elsePredicate = null);
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 构造表达式断言predicateInitializer生成Where条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2> WherePredicate(Func<PredicateBuilder<T1, T2>, Expression<Func<T1, T2, bool>>> predicateInitializer);
+    #endregion
+
+    #region And
+    /// <summary>
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2> And(Expression<Func<T1, T2, bool>> predicate);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成And条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成And条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
@@ -922,6 +958,36 @@ public interface IPostgreSqlQuery<T1, T2> : IQuery<T1, T2>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2> And(bool condition, Expression<Func<T1, T2, bool>> ifPredicate = null, Expression<Func<T1, T2, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成And条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2> AndPredicate(Func<PredicateBuilder<T1, T2>, Expression<Func<T1, T2, bool>>> predicateInitializer);
+    #endregion
+
+    #region Or
+    /// <summary>
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2> Or(Expression<Func<T1, T2, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Or条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Or条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2> Or(bool condition, Expression<Func<T1, T2, bool>> ifPredicate = null, Expression<Func<T1, T2, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成Or条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2> OrPredicate(Func<PredicateBuilder<T1, T2>, Expression<Func<T1, T2, bool>>> predicateInitializer);
     #endregion
 
     #region GroupBy
@@ -953,7 +1019,6 @@ public interface IPostgreSqlQuery<T1, T2> : IQuery<T1, T2>
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .DistinctOn((a, b, ...) =&gt; new { a.Id, a.Name, a.CreatedAt.Date })
-    ///    ...
     /// SQL: SELECT DISTINCT ON (a."Id",a."Name",CAST(a."CreatedAt" AS DATE)) ... FROM "sys_user" a ... 
     /// </code>
     /// </summary>
@@ -1000,6 +1065,28 @@ public interface IPostgreSqlQuery<T1, T2> : IQuery<T1, T2>
     new IPostgreSqlQuery<T1, T2> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, TFields>> fieldsExpr);
     #endregion
 
+    #region Skip/Take/Page
+    /// <summary>
+    /// 跳过offset条数据
+    /// </summary>
+    /// <param name="offset">要跳过查询的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2> Skip(int offset);
+    /// <summary>
+    /// 只返回limit条数据
+    /// </summary>
+    /// <param name="limit">返回的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2> Take(int limit);
+    /// <summary>
+    /// 分页查询，pageNumber从1开始，如：第1页pageNumber=1
+    /// </summary>
+    /// <param name="pageNumber">第几页，从1开始，第1页pageNumber=1</param>
+    /// <param name="pageSize">每页显示条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2> Page(int pageNumber, int pageSize);
+    #endregion
+
     #region Select
     /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
@@ -1041,27 +1128,27 @@ public interface IPostgreSqlQuery<T1, T2, T3> : IQuery<T1, T2, T3>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 使用TMasterSharding主表分表名与当前表分表映射关系表名获取委托获取当前表分表表名，只需要指定主表分表的分表范围或条件即可，从表分表不需要指定分表名，会根据这个委托执行结果确定分表名称，通常适用于主表和从表都分表且一次查询多个分表的场景。第一个参数：dbKey，第二个参数是主表分表的原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第三个参数是当前从表分表的原始名称，第四个参数是主表的分表名称，返回值是当前从表的分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据TMasterSharding主表分表名与当前T3表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
+    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前T3表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前T3表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
     /// <code>
     /// repository.From&lt;Order&gt;()
-    ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
+    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
     ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
-    ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
+    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
     ///         return tableName.Substring(0, tableName.Length - 7);
     ///     })
     ///     ...
     /// SQL:
-    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// SELECT ... FROM "sys_order_104_202405" a INNER JOIN "sys_user_104" b ON a."BuyerId"=b."Id" ...
     /// UNION ALL
-    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
+    /// SELECT ... FROM "sys_order_105_202405" a INNER JOIN "sys_user_105" b ON a."BuyerId"=b."Id" ...
     /// </code>
     /// </summary>
-    /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
-    /// <param name="tableNameGetter">当前表分表名获取委托</param>
+    /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
+    /// <param name="tableNameGetter">T3表分表名获取委托</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
@@ -1103,38 +1190,45 @@ public interface IPostgreSqlQuery<T1, T2, T3> : IQuery<T1, T2, T3>
     /// 切换TableSchema，非默认TableSchema才有效
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
-    /// <returns>返回插入对象</returns>
+    /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3> UseTableSchema(string tableSchema);
     #endregion
 
     #region WithTable
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做关联查询，用法：
+    /// <code>
+    /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, TOther> WithTable<TOther>();
+    #endregion
+
+    #region WithQuery
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
-    /// repository.From&lt;Menu&gt;()
-    ///     .WithTable(subQuery)
-    /// SQL: ... FROM "sys_menu" a,(SELECT ... FROM ...) b ...
+    /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
+    new IPostgreSqlQuery<T1, T2, T3, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做关联查询，用法：
     /// <code>
-    /// repository
-    ///     .From&lt;Menu&gt;()
-    ///     .WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )
-    ///     ...
-    /// SQL: ... FROM "sys_menu" a,(SELECT ... FROM "sys_page" c,"sys_menu" d ...) b ...
+    /// repository.From&lt;Menu&gt;()
+    ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询</param>
+    /// <param name="subQueryExpr">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    new IPostgreSqlQuery<T1, T2, T3, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -1169,32 +1263,14 @@ public interface IPostgreSqlQuery<T1, T2, T3> : IQuery<T1, T2, T3>
     new IPostgreSqlIncludableQuery<T1, T2, T3, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
     #endregion
 
-    #region Join
+    #region InnerJoin
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .InnerJoin((a, b, c) =&gt; ...)
-    /// </code>
+    /// <code>.InnerJoin((a, b, c) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3> InnerJoin(Expression<Func<T1, T2, T3, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.LeftJoin((a, b, c) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3> LeftJoin(Expression<Func<T1, T2, T3, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .RightJoin((a, b, c) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3> RightJoin(Expression<Func<T1, T2, T3, bool>> joinOn);
     /// <summary>
     /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
     /// <code>
@@ -1206,29 +1282,9 @@ public interface IPostgreSqlQuery<T1, T2, T3> : IQuery<T1, T2, T3>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
-    /// <code>
-    /// .LeftJoin&lt;TOther&gt;((a, b, c) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">表实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
-    /// <code>
-    /// .RightJoin&lt;TOther&gt;((a, b, c) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">表TOther实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
-    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b, c) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -1240,9 +1296,43 @@ public interface IPostgreSqlQuery<T1, T2, T3> : IQuery<T1, T2, T3>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
     /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// <code>
+    /// .InnerJoin((a, b, c) =&gt; f.From&lt;OrderDetail&gt;() ...
+    ///     .Select((x, y) =&gt; new { ... }), (a, b, c) =&gt; ...) ...
+    /// SQL:
+    /// ... INNER JOIN (SELECT ... FROM "sys_order_detail" ...) d ON ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询语句</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
+    #endregion
+
+    #region LeftJoin
+    /// <summary>
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.LeftJoin((a, b, c) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3> LeftJoin(Expression<Func<T1, T2, T3, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin&lt;TOther&gt;((a, b, c) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
+    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .LeftJoin(self, (a, b, c) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -1254,9 +1344,43 @@ public interface IPostgreSqlQuery<T1, T2, T3> : IQuery<T1, T2, T3>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
     /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin((a, b, c) =&gt; f.From&lt;OrderDetail&gt;() ...
+    ///     .Select((x, y) =&gt; new { ... }), (a, b, c) =&gt; ...) ...
+    /// SQL:
+    /// ... LEFT JOIN (SELECT ... FROM "sys_order_detail" ...) d ON ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询语句</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
+    #endregion
+
+    #region RightJoin
+    /// <summary>
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.RightJoin((a, b, c) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3> RightJoin(Expression<Func<T1, T2, T3, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// <code>
+    /// .RightJoin&lt;TOther&gt;((a, b, c) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表TOther实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
+    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .RightJoin(self, (a, b, c) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -1268,35 +1392,7 @@ public interface IPostgreSqlQuery<T1, T2, T3> : IQuery<T1, T2, T3>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQuery子查询，并与现有表做INNER JOIN关联，用法:
-    /// <code>
-    /// .InnerJoin((a, b, c) =&gt; f.From&lt;OrderDetail&gt;() ...
-    ///     .Select((x, y) =&gt; new { ... }), (a, b, c) =&gt; ...) ...
-    /// SQL:
-    /// ... INNER JOIN (SELECT ... FROM "sys_order_detail" ...) d ON ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询，并与现有表做LEFT JOIN关联，与.WithTable(...).LeftJoin(...)等效，用法:
-    /// <code>
-    /// .LeftJoin((a, b, c) =&gt; f.From&lt;OrderDetail&gt;() ...
-    ///     .Select((x, y) =&gt; new { ... }), (a, b, c) =&gt; ...) ...
-    /// SQL:
-    /// ... LEFT JOIN (SELECT ... FROM "sys_order_detail" ...) d ON ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询，并与现有表做RIGHT JOIN关联，与.WithTable(...).RightJoin(...)等效，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
     /// <code>
     /// .RightJoin((a, b, c) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c) =&gt; ...) ...
@@ -1305,13 +1401,13 @@ public interface IPostgreSqlQuery<T1, T2, T3> : IQuery<T1, T2, T3>
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
+    new IPostgreSqlQuery<T1, T2, T3, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, TOther, bool>> joinOn);
     #endregion
 
-    #region Where/And
+    #region Where
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -1328,13 +1424,22 @@ public interface IPostgreSqlQuery<T1, T2, T3> : IQuery<T1, T2, T3>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3> Where(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate, Expression<Func<T1, T2, T3, bool>> elsePredicate = null);
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 构造表达式断言predicateInitializer生成Where条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3> WherePredicate(Func<PredicateBuilder<T1, T2, T3>, Expression<Func<T1, T2, T3, bool>>> predicateInitializer);
+    #endregion
+
+    #region And
+    /// <summary>
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3> And(Expression<Func<T1, T2, T3, bool>> predicate);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成And条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成And条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
@@ -1342,6 +1447,36 @@ public interface IPostgreSqlQuery<T1, T2, T3> : IQuery<T1, T2, T3>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3> And(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成And条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3> AndPredicate(Func<PredicateBuilder<T1, T2, T3>, Expression<Func<T1, T2, T3, bool>>> predicateInitializer);
+    #endregion
+
+    #region Or
+    /// <summary>
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3> Or(Expression<Func<T1, T2, T3, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Or条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Or条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3> Or(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成Or条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3> OrPredicate(Func<PredicateBuilder<T1, T2, T3>, Expression<Func<T1, T2, T3, bool>>> predicateInitializer);
     #endregion
 
     #region GroupBy
@@ -1373,7 +1508,6 @@ public interface IPostgreSqlQuery<T1, T2, T3> : IQuery<T1, T2, T3>
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .DistinctOn((a, b, ...) =&gt; new { a.Id, a.Name, a.CreatedAt.Date })
-    ///    ...
     /// SQL: SELECT DISTINCT ON (a."Id",a."Name",CAST(a."CreatedAt" AS DATE)) ... FROM "sys_user" a ... 
     /// </code>
     /// </summary>
@@ -1420,6 +1554,28 @@ public interface IPostgreSqlQuery<T1, T2, T3> : IQuery<T1, T2, T3>
     new IPostgreSqlQuery<T1, T2, T3> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, TFields>> fieldsExpr);
     #endregion
 
+    #region Skip/Take/Page
+    /// <summary>
+    /// 跳过offset条数据
+    /// </summary>
+    /// <param name="offset">要跳过查询的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3> Skip(int offset);
+    /// <summary>
+    /// 只返回limit条数据
+    /// </summary>
+    /// <param name="limit">返回的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3> Take(int limit);
+    /// <summary>
+    /// 分页查询，pageNumber从1开始，如：第1页pageNumber=1
+    /// </summary>
+    /// <param name="pageNumber">第几页，从1开始，第1页pageNumber=1</param>
+    /// <param name="pageSize">每页显示条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3> Page(int pageNumber, int pageSize);
+    #endregion
+
     #region Select
     /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
@@ -1462,27 +1618,27 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 使用TMasterSharding主表分表名与当前表分表映射关系表名获取委托获取当前表分表表名，只需要指定主表分表的分表范围或条件即可，从表分表不需要指定分表名，会根据这个委托执行结果确定分表名称，通常适用于主表和从表都分表且一次查询多个分表的场景。第一个参数：dbKey，第二个参数是主表分表的原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第三个参数是当前从表分表的原始名称，第四个参数是主表的分表名称，返回值是当前从表的分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据TMasterSharding主表分表名与当前T4表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
+    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前T4表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前T4表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
     /// <code>
     /// repository.From&lt;Order&gt;()
-    ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
+    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
     ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
-    ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
+    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
     ///         return tableName.Substring(0, tableName.Length - 7);
     ///     })
     ///     ...
     /// SQL:
-    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// SELECT ... FROM "sys_order_104_202405" a INNER JOIN "sys_user_104" b ON a."BuyerId"=b."Id" ...
     /// UNION ALL
-    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
+    /// SELECT ... FROM "sys_order_105_202405" a INNER JOIN "sys_user_105" b ON a."BuyerId"=b."Id" ...
     /// </code>
     /// </summary>
-    /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
-    /// <param name="tableNameGetter">当前表分表名获取委托</param>
+    /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
+    /// <param name="tableNameGetter">T4表分表名获取委托</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
@@ -1524,38 +1680,45 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
     /// 切换TableSchema，非默认TableSchema才有效
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
-    /// <returns>返回插入对象</returns>
+    /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4> UseTableSchema(string tableSchema);
     #endregion
 
     #region WithTable
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做关联查询，用法：
+    /// <code>
+    /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, TOther> WithTable<TOther>();
+    #endregion
+
+    #region WithQuery
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
-    /// repository.From&lt;Menu&gt;()
-    ///     .WithTable(subQuery)
-    /// SQL: ... FROM "sys_menu" a,(SELECT ... FROM ...) b ...
+    /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
+    new IPostgreSqlQuery<T1, T2, T3, T4, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做关联查询，用法：
     /// <code>
-    /// repository
-    ///     .From&lt;Menu&gt;()
-    ///     .WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )
-    ///     ...
-    /// SQL: ... FROM "sys_menu" a,(SELECT ... FROM "sys_page" c,"sys_menu" d ...) b ...
+    /// repository.From&lt;Menu&gt;()
+    ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询</param>
+    /// <param name="subQueryExpr">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    new IPostgreSqlQuery<T1, T2, T3, T4, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -1590,32 +1753,14 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
     new IPostgreSqlIncludableQuery<T1, T2, T3, T4, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
     #endregion
 
-    #region Join
+    #region InnerJoin
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .InnerJoin((a, b, c, d) =&gt; ...)
-    /// </code>
+    /// <code>.InnerJoin((a, b, c, d) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4> InnerJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.LeftJoin((a, b, c, d) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4> LeftJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .RightJoin((a, b, c, d) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4> RightJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn);
     /// <summary>
     /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
     /// <code>
@@ -1627,29 +1772,9 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
-    /// <code>
-    /// .LeftJoin&lt;TOther&gt;((a, b, c, d) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">表实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
-    /// <code>
-    /// .RightJoin&lt;TOther&gt;((a, b, c, d) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">表TOther实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
-    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b, c, d) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -1661,9 +1786,43 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
     /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// <code>
+    /// .InnerJoin((a, b, c, d) =&gt; f.From&lt;OrderDetail&gt;() ...
+    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d) =&gt; ...) ...
+    /// SQL:
+    /// ... INNER JOIN (SELECT ... FROM "sys_order_detail" ...) e ON ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询语句</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
+    #endregion
+
+    #region LeftJoin
+    /// <summary>
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.LeftJoin((a, b, c, d) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4> LeftJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin&lt;TOther&gt;((a, b, c, d) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
+    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .LeftJoin(self, (a, b, c, d) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -1675,9 +1834,43 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
     /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin((a, b, c, d) =&gt; f.From&lt;OrderDetail&gt;() ...
+    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d) =&gt; ...) ...
+    /// SQL:
+    /// ... LEFT JOIN (SELECT ... FROM "sys_order_detail" ...) e ON ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询语句</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
+    #endregion
+
+    #region RightJoin
+    /// <summary>
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.RightJoin((a, b, c, d) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4> RightJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// <code>
+    /// .RightJoin&lt;TOther&gt;((a, b, c, d) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表TOther实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
+    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .RightJoin(self, (a, b, c, d) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -1689,35 +1882,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQuery子查询，并与现有表做INNER JOIN关联，用法:
-    /// <code>
-    /// .InnerJoin((a, b, c, d) =&gt; f.From&lt;OrderDetail&gt;() ...
-    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d) =&gt; ...) ...
-    /// SQL:
-    /// ... INNER JOIN (SELECT ... FROM "sys_order_detail" ...) e ON ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询，并与现有表做LEFT JOIN关联，与.WithTable(...).LeftJoin(...)等效，用法:
-    /// <code>
-    /// .LeftJoin((a, b, c, d) =&gt; f.From&lt;OrderDetail&gt;() ...
-    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d) =&gt; ...) ...
-    /// SQL:
-    /// ... LEFT JOIN (SELECT ... FROM "sys_order_detail" ...) e ON ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询，并与现有表做RIGHT JOIN关联，与.WithTable(...).RightJoin(...)等效，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
     /// <code>
     /// .RightJoin((a, b, c, d) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d) =&gt; ...) ...
@@ -1726,13 +1891,13 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
+    new IPostgreSqlQuery<T1, T2, T3, T4, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn);
     #endregion
 
-    #region Where/And
+    #region Where
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -1749,13 +1914,22 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4> Where(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null);
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 构造表达式断言predicateInitializer生成Where条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4>, Expression<Func<T1, T2, T3, T4, bool>>> predicateInitializer);
+    #endregion
+
+    #region And
+    /// <summary>
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4> And(Expression<Func<T1, T2, T3, T4, bool>> predicate);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成And条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成And条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
@@ -1763,6 +1937,36 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4> And(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成And条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4>, Expression<Func<T1, T2, T3, T4, bool>>> predicateInitializer);
+    #endregion
+
+    #region Or
+    /// <summary>
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4> Or(Expression<Func<T1, T2, T3, T4, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Or条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Or条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4> Or(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成Or条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4>, Expression<Func<T1, T2, T3, T4, bool>>> predicateInitializer);
     #endregion
 
     #region GroupBy
@@ -1794,7 +1998,6 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .DistinctOn((a, b, ...) =&gt; new { a.Id, a.Name, a.CreatedAt.Date })
-    ///    ...
     /// SQL: SELECT DISTINCT ON (a."Id",a."Name",CAST(a."CreatedAt" AS DATE)) ... FROM "sys_user" a ... 
     /// </code>
     /// </summary>
@@ -1841,6 +2044,28 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4> : IQuery<T1, T2, T3, T4>
     new IPostgreSqlQuery<T1, T2, T3, T4> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr);
     #endregion
 
+    #region Skip/Take/Page
+    /// <summary>
+    /// 跳过offset条数据
+    /// </summary>
+    /// <param name="offset">要跳过查询的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4> Skip(int offset);
+    /// <summary>
+    /// 只返回limit条数据
+    /// </summary>
+    /// <param name="limit">返回的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4> Take(int limit);
+    /// <summary>
+    /// 分页查询，pageNumber从1开始，如：第1页pageNumber=1
+    /// </summary>
+    /// <param name="pageNumber">第几页，从1开始，第1页pageNumber=1</param>
+    /// <param name="pageSize">每页显示条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4> Page(int pageNumber, int pageSize);
+    #endregion
+
     #region Select
     /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
@@ -1884,27 +2109,27 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 使用TMasterSharding主表分表名与当前表分表映射关系表名获取委托获取当前表分表表名，只需要指定主表分表的分表范围或条件即可，从表分表不需要指定分表名，会根据这个委托执行结果确定分表名称，通常适用于主表和从表都分表且一次查询多个分表的场景。第一个参数：dbKey，第二个参数是主表分表的原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第三个参数是当前从表分表的原始名称，第四个参数是主表的分表名称，返回值是当前从表的分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据TMasterSharding主表分表名与当前T5表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
+    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前T5表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前T5表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
     /// <code>
     /// repository.From&lt;Order&gt;()
-    ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
+    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
     ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
-    ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
+    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
     ///         return tableName.Substring(0, tableName.Length - 7);
     ///     })
     ///     ...
     /// SQL:
-    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// SELECT ... FROM "sys_order_104_202405" a INNER JOIN "sys_user_104" b ON a."BuyerId"=b."Id" ...
     /// UNION ALL
-    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
+    /// SELECT ... FROM "sys_order_105_202405" a INNER JOIN "sys_user_105" b ON a."BuyerId"=b."Id" ...
     /// </code>
     /// </summary>
-    /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
-    /// <param name="tableNameGetter">当前表分表名获取委托</param>
+    /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
+    /// <param name="tableNameGetter">T5表分表名获取委托</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
@@ -1946,38 +2171,45 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T
     /// 切换TableSchema，非默认TableSchema才有效
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
-    /// <returns>返回插入对象</returns>
+    /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5> UseTableSchema(string tableSchema);
     #endregion
 
     #region WithTable
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做关联查询，用法：
+    /// <code>
+    /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> WithTable<TOther>();
+    #endregion
+
+    #region WithQuery
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
-    /// repository.From&lt;Menu&gt;()
-    ///     .WithTable(subQuery)
-    /// SQL: ... FROM "sys_menu" a,(SELECT ... FROM ...) b ...
+    /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做关联查询，用法：
     /// <code>
-    /// repository
-    ///     .From&lt;Menu&gt;()
-    ///     .WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )
-    ///     ...
-    /// SQL: ... FROM "sys_menu" a,(SELECT ... FROM "sys_page" c,"sys_menu" d ...) b ...
+    /// repository.From&lt;Menu&gt;()
+    ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询</param>
+    /// <param name="subQueryExpr">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -2012,32 +2244,14 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T
     new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
     #endregion
 
-    #region Join
+    #region InnerJoin
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .InnerJoin((a, b, c, d, e) =&gt; ...)
-    /// </code>
+    /// <code>.InnerJoin((a, b, c, d, e) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.LeftJoin((a, b, c, d, e) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .RightJoin((a, b, c, d, e) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5> RightJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn);
     /// <summary>
     /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
     /// <code>
@@ -2049,29 +2263,9 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
-    /// <code>
-    /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">表实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
-    /// <code>
-    /// .RightJoin&lt;TOther&gt;((a, b, c, d, e) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">表TOther实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
-    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b, c, d, e) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -2083,9 +2277,43 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
     /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// <code>
+    /// .InnerJoin((a, b, c, d, e) =&gt; f.From&lt;OrderDetail&gt;() ...
+    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e) =&gt; ...) ...
+    /// SQL:
+    /// ... INNER JOIN (SELECT ... FROM "sys_order_detail" ...) f ON ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询语句</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
+    #endregion
+
+    #region LeftJoin
+    /// <summary>
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.LeftJoin((a, b, c, d, e) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
+    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .LeftJoin(self, (a, b, c, d, e) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -2097,9 +2325,43 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
     /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin((a, b, c, d, e) =&gt; f.From&lt;OrderDetail&gt;() ...
+    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e) =&gt; ...) ...
+    /// SQL:
+    /// ... LEFT JOIN (SELECT ... FROM "sys_order_detail" ...) f ON ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询语句</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
+    #endregion
+
+    #region RightJoin
+    /// <summary>
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.RightJoin((a, b, c, d, e) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5> RightJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// <code>
+    /// .RightJoin&lt;TOther&gt;((a, b, c, d, e) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表TOther实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
+    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .RightJoin(self, (a, b, c, d, e) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -2111,35 +2373,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQuery子查询，并与现有表做INNER JOIN关联，用法:
-    /// <code>
-    /// .InnerJoin((a, b, c, d, e) =&gt; f.From&lt;OrderDetail&gt;() ...
-    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e) =&gt; ...) ...
-    /// SQL:
-    /// ... INNER JOIN (SELECT ... FROM "sys_order_detail" ...) f ON ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询，并与现有表做LEFT JOIN关联，与.WithTable(...).LeftJoin(...)等效，用法:
-    /// <code>
-    /// .LeftJoin((a, b, c, d, e) =&gt; f.From&lt;OrderDetail&gt;() ...
-    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e) =&gt; ...) ...
-    /// SQL:
-    /// ... LEFT JOIN (SELECT ... FROM "sys_order_detail" ...) f ON ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询，并与现有表做RIGHT JOIN关联，与.WithTable(...).RightJoin(...)等效，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
     /// <code>
     /// .RightJoin((a, b, c, d, e) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e) =&gt; ...) ...
@@ -2148,13 +2382,13 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn);
     #endregion
 
-    #region Where/And
+    #region Where
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -2171,13 +2405,22 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null);
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 构造表达式断言predicateInitializer生成Where条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5>, Expression<Func<T1, T2, T3, T4, T5, bool>>> predicateInitializer);
+    #endregion
+
+    #region And
+    /// <summary>
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5> And(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成And条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成And条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
@@ -2185,6 +2428,36 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成And条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5>, Expression<Func<T1, T2, T3, T4, T5, bool>>> predicateInitializer);
+    #endregion
+
+    #region Or
+    /// <summary>
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5> Or(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Or条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Or条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成Or条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5>, Expression<Func<T1, T2, T3, T4, T5, bool>>> predicateInitializer);
     #endregion
 
     #region GroupBy
@@ -2216,7 +2489,6 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .DistinctOn((a, b, ...) =&gt; new { a.Id, a.Name, a.CreatedAt.Date })
-    ///    ...
     /// SQL: SELECT DISTINCT ON (a."Id",a."Name",CAST(a."CreatedAt" AS DATE)) ... FROM "sys_user" a ... 
     /// </code>
     /// </summary>
@@ -2263,6 +2535,28 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5> : IQuery<T1, T2, T3, T4, T
     new IPostgreSqlQuery<T1, T2, T3, T4, T5> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr);
     #endregion
 
+    #region Skip/Take/Page
+    /// <summary>
+    /// 跳过offset条数据
+    /// </summary>
+    /// <param name="offset">要跳过查询的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5> Skip(int offset);
+    /// <summary>
+    /// 只返回limit条数据
+    /// </summary>
+    /// <param name="limit">返回的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5> Take(int limit);
+    /// <summary>
+    /// 分页查询，pageNumber从1开始，如：第1页pageNumber=1
+    /// </summary>
+    /// <param name="pageNumber">第几页，从1开始，第1页pageNumber=1</param>
+    /// <param name="pageSize">每页显示条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5> Page(int pageNumber, int pageSize);
+    #endregion
+
     #region Select
     /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
@@ -2307,27 +2601,27 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 使用TMasterSharding主表分表名与当前表分表映射关系表名获取委托获取当前表分表表名，只需要指定主表分表的分表范围或条件即可，从表分表不需要指定分表名，会根据这个委托执行结果确定分表名称，通常适用于主表和从表都分表且一次查询多个分表的场景。第一个参数：dbKey，第二个参数是主表分表的原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第三个参数是当前从表分表的原始名称，第四个参数是主表的分表名称，返回值是当前从表的分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据TMasterSharding主表分表名与当前T6表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
+    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前T6表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前T6表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
     /// <code>
     /// repository.From&lt;Order&gt;()
-    ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
+    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
     ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
-    ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
+    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
     ///         return tableName.Substring(0, tableName.Length - 7);
     ///     })
     ///     ...
     /// SQL:
-    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// SELECT ... FROM "sys_order_104_202405" a INNER JOIN "sys_user_104" b ON a."BuyerId"=b."Id" ...
     /// UNION ALL
-    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
+    /// SELECT ... FROM "sys_order_105_202405" a INNER JOIN "sys_user_105" b ON a."BuyerId"=b."Id" ...
     /// </code>
     /// </summary>
-    /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
-    /// <param name="tableNameGetter">当前表分表名获取委托</param>
+    /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
+    /// <param name="tableNameGetter">T6表分表名获取委托</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
@@ -2369,38 +2663,45 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T
     /// 切换TableSchema，非默认TableSchema才有效
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
-    /// <returns>返回插入对象</returns>
+    /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> UseTableSchema(string tableSchema);
     #endregion
 
     #region WithTable
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做关联查询，用法：
+    /// <code>
+    /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> WithTable<TOther>();
+    #endregion
+
+    #region WithQuery
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
-    /// repository.From&lt;Menu&gt;()
-    ///     .WithTable(subQuery)
-    /// SQL: ... FROM "sys_menu" a,(SELECT ... FROM ...) b ...
+    /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做关联查询，用法：
     /// <code>
-    /// repository
-    ///     .From&lt;Menu&gt;()
-    ///     .WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )
-    ///     ...
-    /// SQL: ... FROM "sys_menu" a,(SELECT ... FROM "sys_page" c,"sys_menu" d ...) b ...
+    /// repository.From&lt;Menu&gt;()
+    ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询</param>
+    /// <param name="subQueryExpr">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -2435,32 +2736,14 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T
     new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
     #endregion
 
-    #region Join
+    #region InnerJoin
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .InnerJoin((a, b, c, d, e, f) =&gt; ...)
-    /// </code>
+    /// <code>.InnerJoin((a, b, c, d, e, f) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.LeftJoin((a, b, c, d, e, f) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .RightJoin((a, b, c, d, e, f) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> joinOn);
     /// <summary>
     /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
     /// <code>
@@ -2472,29 +2755,9 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
-    /// <code>
-    /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">表实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
-    /// <code>
-    /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">表TOther实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
-    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b, c, d, e, f) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -2506,9 +2769,43 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
     /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// <code>
+    /// .InnerJoin((a, b, c, d, e, f) =&gt; f.From&lt;OrderDetail&gt;() ...
+    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f) =&gt; ...) ...
+    /// SQL:
+    /// ... INNER JOIN (SELECT ... FROM "sys_order_detail" ...) g ON ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询语句</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
+    #endregion
+
+    #region LeftJoin
+    /// <summary>
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.LeftJoin((a, b, c, d, e, f) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
+    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .LeftJoin(self, (a, b, c, d, e, f) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -2520,9 +2817,43 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
     /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin((a, b, c, d, e, f) =&gt; f.From&lt;OrderDetail&gt;() ...
+    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f) =&gt; ...) ...
+    /// SQL:
+    /// ... LEFT JOIN (SELECT ... FROM "sys_order_detail" ...) g ON ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询语句</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
+    #endregion
+
+    #region RightJoin
+    /// <summary>
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.RightJoin((a, b, c, d, e, f) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// <code>
+    /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表TOther实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
+    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .RightJoin(self, (a, b, c, d, e, f) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -2534,35 +2865,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQuery子查询，并与现有表做INNER JOIN关联，用法:
-    /// <code>
-    /// .InnerJoin((a, b, c, d, e, f) =&gt; f.From&lt;OrderDetail&gt;() ...
-    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f) =&gt; ...) ...
-    /// SQL:
-    /// ... INNER JOIN (SELECT ... FROM "sys_order_detail" ...) g ON ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询，并与现有表做LEFT JOIN关联，与.WithTable(...).LeftJoin(...)等效，用法:
-    /// <code>
-    /// .LeftJoin((a, b, c, d, e, f) =&gt; f.From&lt;OrderDetail&gt;() ...
-    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f) =&gt; ...) ...
-    /// SQL:
-    /// ... LEFT JOIN (SELECT ... FROM "sys_order_detail" ...) g ON ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询，并与现有表做RIGHT JOIN关联，与.WithTable(...).RightJoin(...)等效，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
     /// <code>
     /// .RightJoin((a, b, c, d, e, f) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f) =&gt; ...) ...
@@ -2571,13 +2874,13 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn);
     #endregion
 
-    #region Where/And
+    #region Where
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -2594,13 +2897,22 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> elsePredicate = null);
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 构造表达式断言predicateInitializer生成Where条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6>, Expression<Func<T1, T2, T3, T4, T5, T6, bool>>> predicateInitializer);
+    #endregion
+
+    #region And
+    /// <summary>
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> And(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成And条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成And条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
@@ -2608,6 +2920,36 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成And条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6>, Expression<Func<T1, T2, T3, T4, T5, T6, bool>>> predicateInitializer);
+    #endregion
+
+    #region Or
+    /// <summary>
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> Or(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Or条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Or条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成Or条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6>, Expression<Func<T1, T2, T3, T4, T5, T6, bool>>> predicateInitializer);
     #endregion
 
     #region GroupBy
@@ -2639,7 +2981,6 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .DistinctOn((a, b, ...) =&gt; new { a.Id, a.Name, a.CreatedAt.Date })
-    ///    ...
     /// SQL: SELECT DISTINCT ON (a."Id",a."Name",CAST(a."CreatedAt" AS DATE)) ... FROM "sys_user" a ... 
     /// </code>
     /// </summary>
@@ -2684,6 +3025,28 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> : IQuery<T1, T2, T3, T
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr);
+    #endregion
+
+    #region Skip/Take/Page
+    /// <summary>
+    /// 跳过offset条数据
+    /// </summary>
+    /// <param name="offset">要跳过查询的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> Skip(int offset);
+    /// <summary>
+    /// 只返回limit条数据
+    /// </summary>
+    /// <param name="limit">返回的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> Take(int limit);
+    /// <summary>
+    /// 分页查询，pageNumber从1开始，如：第1页pageNumber=1
+    /// </summary>
+    /// <param name="pageNumber">第几页，从1开始，第1页pageNumber=1</param>
+    /// <param name="pageSize">每页显示条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> Page(int pageNumber, int pageSize);
     #endregion
 
     #region Select
@@ -2731,27 +3094,27 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 使用TMasterSharding主表分表名与当前表分表映射关系表名获取委托获取当前表分表表名，只需要指定主表分表的分表范围或条件即可，从表分表不需要指定分表名，会根据这个委托执行结果确定分表名称，通常适用于主表和从表都分表且一次查询多个分表的场景。第一个参数：dbKey，第二个参数是主表分表的原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第三个参数是当前从表分表的原始名称，第四个参数是主表的分表名称，返回值是当前从表的分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据TMasterSharding主表分表名与当前T7表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
+    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前T7表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前T7表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
     /// <code>
     /// repository.From&lt;Order&gt;()
-    ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
+    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
     ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
-    ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
+    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
     ///         return tableName.Substring(0, tableName.Length - 7);
     ///     })
     ///     ...
     /// SQL:
-    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// SELECT ... FROM "sys_order_104_202405" a INNER JOIN "sys_user_104" b ON a."BuyerId"=b."Id" ...
     /// UNION ALL
-    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
+    /// SELECT ... FROM "sys_order_105_202405" a INNER JOIN "sys_user_105" b ON a."BuyerId"=b."Id" ...
     /// </code>
     /// </summary>
-    /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
-    /// <param name="tableNameGetter">当前表分表名获取委托</param>
+    /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
+    /// <param name="tableNameGetter">T7表分表名获取委托</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
@@ -2793,38 +3156,45 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T
     /// 切换TableSchema，非默认TableSchema才有效
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
-    /// <returns>返回插入对象</returns>
+    /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> UseTableSchema(string tableSchema);
     #endregion
 
     #region WithTable
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做关联查询，用法：
+    /// <code>
+    /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> WithTable<TOther>();
+    #endregion
+
+    #region WithQuery
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
-    /// repository.From&lt;Menu&gt;()
-    ///     .WithTable(subQuery)
-    /// SQL: ... FROM "sys_menu" a,(SELECT ... FROM ...) b ...
+    /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做关联查询，用法：
     /// <code>
-    /// repository
-    ///     .From&lt;Menu&gt;()
-    ///     .WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )
-    ///     ...
-    /// SQL: ... FROM "sys_menu" a,(SELECT ... FROM "sys_page" c,"sys_menu" d ...) b ...
+    /// repository.From&lt;Menu&gt;()
+    ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询</param>
+    /// <param name="subQueryExpr">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -2859,32 +3229,14 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T
     new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
     #endregion
 
-    #region Join
+    #region InnerJoin
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .InnerJoin((a, b, c, d, e, f, g) =&gt; ...)
-    /// </code>
+    /// <code>.InnerJoin((a, b, c, d, e, f, g) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.LeftJoin((a, b, c, d, e, f, g) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .RightJoin((a, b, c, d, e, f, g) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> joinOn);
     /// <summary>
     /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
     /// <code>
@@ -2896,29 +3248,9 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
-    /// <code>
-    /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">表实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
-    /// <code>
-    /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">表TOther实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
-    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b, c, d, e, f, g) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -2930,9 +3262,43 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
     /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// <code>
+    /// .InnerJoin((a, b, c, d, e, f, g) =&gt; f.From&lt;OrderDetail&gt;() ...
+    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g) =&gt; ...) ...
+    /// SQL:
+    /// ... INNER JOIN (SELECT ... FROM "sys_order_detail" ...) h ON ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询语句</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
+    #endregion
+
+    #region LeftJoin
+    /// <summary>
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.LeftJoin((a, b, c, d, e, f, g) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
+    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .LeftJoin(self, (a, b, c, d, e, f, g) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -2944,9 +3310,43 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
     /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin((a, b, c, d, e, f, g) =&gt; f.From&lt;OrderDetail&gt;() ...
+    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g) =&gt; ...) ...
+    /// SQL:
+    /// ... LEFT JOIN (SELECT ... FROM "sys_order_detail" ...) h ON ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询语句</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
+    #endregion
+
+    #region RightJoin
+    /// <summary>
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.RightJoin((a, b, c, d, e, f, g) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// <code>
+    /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表TOther实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
+    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .RightJoin(self, (a, b, c, d, e, f, g) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -2958,35 +3358,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQuery子查询，并与现有表做INNER JOIN关联，用法:
-    /// <code>
-    /// .InnerJoin((a, b, c, d, e, f, g) =&gt; f.From&lt;OrderDetail&gt;() ...
-    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g) =&gt; ...) ...
-    /// SQL:
-    /// ... INNER JOIN (SELECT ... FROM "sys_order_detail" ...) h ON ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询，并与现有表做LEFT JOIN关联，与.WithTable(...).LeftJoin(...)等效，用法:
-    /// <code>
-    /// .LeftJoin((a, b, c, d, e, f, g) =&gt; f.From&lt;OrderDetail&gt;() ...
-    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g) =&gt; ...) ...
-    /// SQL:
-    /// ... LEFT JOIN (SELECT ... FROM "sys_order_detail" ...) h ON ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询，并与现有表做RIGHT JOIN关联，与.WithTable(...).RightJoin(...)等效，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
     /// <code>
     /// .RightJoin((a, b, c, d, e, f, g) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g) =&gt; ...) ...
@@ -2995,13 +3367,13 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn);
     #endregion
 
-    #region Where/And
+    #region Where
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -3018,13 +3390,22 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> elsePredicate = null);
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 构造表达式断言predicateInitializer生成Where条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>>> predicateInitializer);
+    #endregion
+
+    #region And
+    /// <summary>
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> predicate);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成And条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成And条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
@@ -3032,6 +3413,36 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成And条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>>> predicateInitializer);
+    #endregion
+
+    #region Or
+    /// <summary>
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Or条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Or条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成Or条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>>> predicateInitializer);
     #endregion
 
     #region GroupBy
@@ -3063,7 +3474,6 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .DistinctOn((a, b, ...) =&gt; new { a.Id, a.Name, a.CreatedAt.Date })
-    ///    ...
     /// SQL: SELECT DISTINCT ON (a."Id",a."Name",CAST(a."CreatedAt" AS DATE)) ... FROM "sys_user" a ... 
     /// </code>
     /// </summary>
@@ -3108,6 +3518,28 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> : IQuery<T1, T2, T
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr);
+    #endregion
+
+    #region Skip/Take/Page
+    /// <summary>
+    /// 跳过offset条数据
+    /// </summary>
+    /// <param name="offset">要跳过查询的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> Skip(int offset);
+    /// <summary>
+    /// 只返回limit条数据
+    /// </summary>
+    /// <param name="limit">返回的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> Take(int limit);
+    /// <summary>
+    /// 分页查询，pageNumber从1开始，如：第1页pageNumber=1
+    /// </summary>
+    /// <param name="pageNumber">第几页，从1开始，第1页pageNumber=1</param>
+    /// <param name="pageSize">每页显示条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> Page(int pageNumber, int pageSize);
     #endregion
 
     #region Select
@@ -3156,27 +3588,27 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 使用TMasterSharding主表分表名与当前表分表映射关系表名获取委托获取当前表分表表名，只需要指定主表分表的分表范围或条件即可，从表分表不需要指定分表名，会根据这个委托执行结果确定分表名称，通常适用于主表和从表都分表且一次查询多个分表的场景。第一个参数：dbKey，第二个参数是主表分表的原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第三个参数是当前从表分表的原始名称，第四个参数是主表的分表名称，返回值是当前从表的分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据TMasterSharding主表分表名与当前T8表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
+    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前T8表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前T8表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
     /// <code>
     /// repository.From&lt;Order&gt;()
-    ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
+    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
     ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
-    ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
+    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
     ///         return tableName.Substring(0, tableName.Length - 7);
     ///     })
     ///     ...
     /// SQL:
-    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// SELECT ... FROM "sys_order_104_202405" a INNER JOIN "sys_user_104" b ON a."BuyerId"=b."Id" ...
     /// UNION ALL
-    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
+    /// SELECT ... FROM "sys_order_105_202405" a INNER JOIN "sys_user_105" b ON a."BuyerId"=b."Id" ...
     /// </code>
     /// </summary>
-    /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
-    /// <param name="tableNameGetter">当前表分表名获取委托</param>
+    /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
+    /// <param name="tableNameGetter">T8表分表名获取委托</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
@@ -3218,38 +3650,45 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T
     /// 切换TableSchema，非默认TableSchema才有效
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
-    /// <returns>返回插入对象</returns>
+    /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> UseTableSchema(string tableSchema);
     #endregion
 
     #region WithTable
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做关联查询，用法：
+    /// <code>
+    /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithTable<TOther>();
+    #endregion
+
+    #region WithQuery
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
-    /// repository.From&lt;Menu&gt;()
-    ///     .WithTable(subQuery)
-    /// SQL: ... FROM "sys_menu" a,(SELECT ... FROM ...) b ...
+    /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做关联查询，用法：
     /// <code>
-    /// repository
-    ///     .From&lt;Menu&gt;()
-    ///     .WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )
-    ///     ...
-    /// SQL: ... FROM "sys_menu" a,(SELECT ... FROM "sys_page" c,"sys_menu" d ...) b ...
+    /// repository.From&lt;Menu&gt;()
+    ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询</param>
+    /// <param name="subQueryExpr">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -3284,32 +3723,14 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T
     new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
     #endregion
 
-    #region Join
+    #region InnerJoin
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .InnerJoin((a, b, c, d, e, f, g, h) =&gt; ...)
-    /// </code>
+    /// <code>.InnerJoin((a, b, c, d, e, f, g, h) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.LeftJoin((a, b, c, d, e, f, g, h) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .RightJoin((a, b, c, d, e, f, g, h) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> joinOn);
     /// <summary>
     /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
     /// <code>
@@ -3321,29 +3742,9 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
-    /// <code>
-    /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">表实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
-    /// <code>
-    /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">表TOther实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
-    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b, c, d, e, f, g, h) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -3355,9 +3756,43 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
     /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// <code>
+    /// .InnerJoin((a, b, c, d, e, f, g, h) =&gt; f.From&lt;OrderDetail&gt;() ...
+    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h) =&gt; ...) ...
+    /// SQL:
+    /// ... INNER JOIN (SELECT ... FROM "sys_order_detail" ...) i ON ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询语句</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
+    #endregion
+
+    #region LeftJoin
+    /// <summary>
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.LeftJoin((a, b, c, d, e, f, g, h) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
+    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .LeftJoin(self, (a, b, c, d, e, f, g, h) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -3369,9 +3804,43 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
     /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin((a, b, c, d, e, f, g, h) =&gt; f.From&lt;OrderDetail&gt;() ...
+    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h) =&gt; ...) ...
+    /// SQL:
+    /// ... LEFT JOIN (SELECT ... FROM "sys_order_detail" ...) i ON ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询语句</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
+    #endregion
+
+    #region RightJoin
+    /// <summary>
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.RightJoin((a, b, c, d, e, f, g, h) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// <code>
+    /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表TOther实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
+    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .RightJoin(self, (a, b, c, d, e, f, g, h) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -3383,35 +3852,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQuery子查询，并与现有表做INNER JOIN关联，用法:
-    /// <code>
-    /// .InnerJoin((a, b, c, d, e, f, g, h) =&gt; f.From&lt;OrderDetail&gt;() ...
-    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h) =&gt; ...) ...
-    /// SQL:
-    /// ... INNER JOIN (SELECT ... FROM "sys_order_detail" ...) i ON ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询，并与现有表做LEFT JOIN关联，与.WithTable(...).LeftJoin(...)等效，用法:
-    /// <code>
-    /// .LeftJoin((a, b, c, d, e, f, g, h) =&gt; f.From&lt;OrderDetail&gt;() ...
-    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h) =&gt; ...) ...
-    /// SQL:
-    /// ... LEFT JOIN (SELECT ... FROM "sys_order_detail" ...) i ON ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询，并与现有表做RIGHT JOIN关联，与.WithTable(...).RightJoin(...)等效，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
     /// <code>
     /// .RightJoin((a, b, c, d, e, f, g, h) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h) =&gt; ...) ...
@@ -3420,13 +3861,13 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn);
     #endregion
 
-    #region Where/And
+    #region Where
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -3443,13 +3884,22 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> elsePredicate = null);
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 构造表达式断言predicateInitializer生成Where条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>>> predicateInitializer);
+    #endregion
+
+    #region And
+    /// <summary>
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成And条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成And条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
@@ -3457,6 +3907,36 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成And条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>>> predicateInitializer);
+    #endregion
+
+    #region Or
+    /// <summary>
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Or条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Or条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成Or条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>>> predicateInitializer);
     #endregion
 
     #region GroupBy
@@ -3488,7 +3968,6 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .DistinctOn((a, b, ...) =&gt; new { a.Id, a.Name, a.CreatedAt.Date })
-    ///    ...
     /// SQL: SELECT DISTINCT ON (a."Id",a."Name",CAST(a."CreatedAt" AS DATE)) ... FROM "sys_user" a ... 
     /// </code>
     /// </summary>
@@ -3533,6 +4012,28 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQuery<T1, T
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr);
+    #endregion
+
+    #region Skip/Take/Page
+    /// <summary>
+    /// 跳过offset条数据
+    /// </summary>
+    /// <param name="offset">要跳过查询的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> Skip(int offset);
+    /// <summary>
+    /// 只返回limit条数据
+    /// </summary>
+    /// <param name="limit">返回的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> Take(int limit);
+    /// <summary>
+    /// 分页查询，pageNumber从1开始，如：第1页pageNumber=1
+    /// </summary>
+    /// <param name="pageNumber">第几页，从1开始，第1页pageNumber=1</param>
+    /// <param name="pageSize">每页显示条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> Page(int pageNumber, int pageSize);
     #endregion
 
     #region Select
@@ -3582,27 +4083,27 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 使用TMasterSharding主表分表名与当前表分表映射关系表名获取委托获取当前表分表表名，只需要指定主表分表的分表范围或条件即可，从表分表不需要指定分表名，会根据这个委托执行结果确定分表名称，通常适用于主表和从表都分表且一次查询多个分表的场景。第一个参数：dbKey，第二个参数是主表分表的原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第三个参数是当前从表分表的原始名称，第四个参数是主表的分表名称，返回值是当前从表的分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据TMasterSharding主表分表名与当前T9表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
+    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前T9表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前T9表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
     /// <code>
     /// repository.From&lt;Order&gt;()
-    ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
+    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
     ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
-    ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
+    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
     ///         return tableName.Substring(0, tableName.Length - 7);
     ///     })
     ///     ...
     /// SQL:
-    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// SELECT ... FROM "sys_order_104_202405" a INNER JOIN "sys_user_104" b ON a."BuyerId"=b."Id" ...
     /// UNION ALL
-    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
+    /// SELECT ... FROM "sys_order_105_202405" a INNER JOIN "sys_user_105" b ON a."BuyerId"=b."Id" ...
     /// </code>
     /// </summary>
-    /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
-    /// <param name="tableNameGetter">当前表分表名获取委托</param>
+    /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
+    /// <param name="tableNameGetter">T9表分表名获取委托</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
@@ -3644,38 +4145,45 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T
     /// 切换TableSchema，非默认TableSchema才有效
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
-    /// <returns>返回插入对象</returns>
+    /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> UseTableSchema(string tableSchema);
     #endregion
 
     #region WithTable
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做关联查询，用法：
+    /// <code>
+    /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> WithTable<TOther>();
+    #endregion
+
+    #region WithQuery
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
-    /// repository.From&lt;Menu&gt;()
-    ///     .WithTable(subQuery)
-    /// SQL: ... FROM "sys_menu" a,(SELECT ... FROM ...) b ...
+    /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做关联查询，用法：
     /// <code>
-    /// repository
-    ///     .From&lt;Menu&gt;()
-    ///     .WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )
-    ///     ...
-    /// SQL: ... FROM "sys_menu" a,(SELECT ... FROM "sys_page" c,"sys_menu" d ...) b ...
+    /// repository.From&lt;Menu&gt;()
+    ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询</param>
+    /// <param name="subQueryExpr">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -3710,32 +4218,14 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T
     new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
     #endregion
 
-    #region Join
+    #region InnerJoin
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .InnerJoin((a, b, c, d, e, f, g, h, i) =&gt; ...)
-    /// </code>
+    /// <code>.InnerJoin((a, b, c, d, e, f, g, h, i) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .RightJoin((a, b, c, d, e, f, g, h, i) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> joinOn);
     /// <summary>
     /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
     /// <code>
@@ -3747,29 +4237,9 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
-    /// <code>
-    /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">表实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
-    /// <code>
-    /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">表TOther实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
-    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b, c, d, e, f, g, h, i) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -3781,9 +4251,43 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
     /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// <code>
+    /// .InnerJoin((a, b, c, d, e, f, g, h, i) =&gt; f.From&lt;OrderDetail&gt;() ...
+    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i) =&gt; ...) ...
+    /// SQL:
+    /// ... INNER JOIN (SELECT ... FROM "sys_order_detail" ...) j ON ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询语句</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
+    #endregion
+
+    #region LeftJoin
+    /// <summary>
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
+    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .LeftJoin(self, (a, b, c, d, e, f, g, h, i) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -3795,9 +4299,43 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
     /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin((a, b, c, d, e, f, g, h, i) =&gt; f.From&lt;OrderDetail&gt;() ...
+    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i) =&gt; ...) ...
+    /// SQL:
+    /// ... LEFT JOIN (SELECT ... FROM "sys_order_detail" ...) j ON ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询语句</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
+    #endregion
+
+    #region RightJoin
+    /// <summary>
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.RightJoin((a, b, c, d, e, f, g, h, i) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// <code>
+    /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表TOther实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
+    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .RightJoin(self, (a, b, c, d, e, f, g, h, i) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -3809,35 +4347,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQuery子查询，并与现有表做INNER JOIN关联，用法:
-    /// <code>
-    /// .InnerJoin((a, b, c, d, e, f, g, h, i) =&gt; f.From&lt;OrderDetail&gt;() ...
-    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i) =&gt; ...) ...
-    /// SQL:
-    /// ... INNER JOIN (SELECT ... FROM "sys_order_detail" ...) j ON ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询，并与现有表做LEFT JOIN关联，与.WithTable(...).LeftJoin(...)等效，用法:
-    /// <code>
-    /// .LeftJoin((a, b, c, d, e, f, g, h, i) =&gt; f.From&lt;OrderDetail&gt;() ...
-    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i) =&gt; ...) ...
-    /// SQL:
-    /// ... LEFT JOIN (SELECT ... FROM "sys_order_detail" ...) j ON ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询，并与现有表做RIGHT JOIN关联，与.WithTable(...).RightJoin(...)等效，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
     /// <code>
     /// .RightJoin((a, b, c, d, e, f, g, h, i) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i) =&gt; ...) ...
@@ -3846,13 +4356,13 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn);
     #endregion
 
-    #region Where/And
+    #region Where
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -3869,13 +4379,22 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> elsePredicate = null);
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 构造表达式断言predicateInitializer生成Where条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>>> predicateInitializer);
+    #endregion
+
+    #region And
+    /// <summary>
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成And条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成And条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
@@ -3883,6 +4402,36 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成And条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>>> predicateInitializer);
+    #endregion
+
+    #region Or
+    /// <summary>
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Or条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Or条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成Or条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>>> predicateInitializer);
     #endregion
 
     #region GroupBy
@@ -3914,7 +4463,6 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .DistinctOn((a, b, ...) =&gt; new { a.Id, a.Name, a.CreatedAt.Date })
-    ///    ...
     /// SQL: SELECT DISTINCT ON (a."Id",a."Name",CAST(a."CreatedAt" AS DATE)) ... FROM "sys_user" a ... 
     /// </code>
     /// </summary>
@@ -3959,6 +4507,28 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQuery<T
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr);
+    #endregion
+
+    #region Skip/Take/Page
+    /// <summary>
+    /// 跳过offset条数据
+    /// </summary>
+    /// <param name="offset">要跳过查询的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Skip(int offset);
+    /// <summary>
+    /// 只返回limit条数据
+    /// </summary>
+    /// <param name="limit">返回的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Take(int limit);
+    /// <summary>
+    /// 分页查询，pageNumber从1开始，如：第1页pageNumber=1
+    /// </summary>
+    /// <param name="pageNumber">第几页，从1开始，第1页pageNumber=1</param>
+    /// <param name="pageSize">每页显示条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Page(int pageNumber, int pageSize);
     #endregion
 
     #region Select
@@ -4009,27 +4579,27 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQu
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 使用TMasterSharding主表分表名与当前表分表映射关系表名获取委托获取当前表分表表名，只需要指定主表分表的分表范围或条件即可，从表分表不需要指定分表名，会根据这个委托执行结果确定分表名称，通常适用于主表和从表都分表且一次查询多个分表的场景。第一个参数：dbKey，第二个参数是主表分表的原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第三个参数是当前从表分表的原始名称，第四个参数是主表的分表名称，返回值是当前从表的分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据TMasterSharding主表分表名与当前T10表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
+    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前T10表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前T10表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
     /// <code>
     /// repository.From&lt;Order&gt;()
-    ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
+    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
     ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
-    ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
+    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
     ///         return tableName.Substring(0, tableName.Length - 7);
     ///     })
     ///     ...
     /// SQL:
-    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// SELECT ... FROM "sys_order_104_202405" a INNER JOIN "sys_user_104" b ON a."BuyerId"=b."Id" ...
     /// UNION ALL
-    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
+    /// SELECT ... FROM "sys_order_105_202405" a INNER JOIN "sys_user_105" b ON a."BuyerId"=b."Id" ...
     /// </code>
     /// </summary>
-    /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
-    /// <param name="tableNameGetter">当前表分表名获取委托</param>
+    /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
+    /// <param name="tableNameGetter">T10表分表名获取委托</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
@@ -4071,38 +4641,45 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQu
     /// 切换TableSchema，非默认TableSchema才有效
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
-    /// <returns>返回插入对象</returns>
+    /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> UseTableSchema(string tableSchema);
     #endregion
 
     #region WithTable
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做关联查询，用法：
+    /// <code>
+    /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithTable<TOther>();
+    #endregion
+
+    #region WithQuery
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
-    /// repository.From&lt;Menu&gt;()
-    ///     .WithTable(subQuery)
-    /// SQL: ... FROM "sys_menu" a,(SELECT ... FROM ...) b ...
+    /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做关联查询，用法：
     /// <code>
-    /// repository
-    ///     .From&lt;Menu&gt;()
-    ///     .WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )
-    ///     ...
-    /// SQL: ... FROM "sys_menu" a,(SELECT ... FROM "sys_page" c,"sys_menu" d ...) b ...
+    /// repository.From&lt;Menu&gt;()
+    ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询</param>
+    /// <param name="subQueryExpr">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -4137,32 +4714,14 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQu
     new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
     #endregion
 
-    #region Join
+    #region InnerJoin
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .InnerJoin((a, b, c, d, e, f, g, h, i, j) =&gt; ...)
-    /// </code>
+    /// <code>.InnerJoin((a, b, c, d, e, f, g, h, i, j) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .RightJoin((a, b, c, d, e, f, g, h, i, j) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> joinOn);
     /// <summary>
     /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
     /// <code>
@@ -4174,29 +4733,9 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQu
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
-    /// <code>
-    /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">表实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
-    /// <code>
-    /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">表TOther实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
-    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b, c, d, e, f, g, h, i, j) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -4208,9 +4747,43 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQu
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
     /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// <code>
+    /// .InnerJoin((a, b, c, d, e, f, g, h, i, j) =&gt; f.From&lt;OrderDetail&gt;() ...
+    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j) =&gt; ...) ...
+    /// SQL:
+    /// ... INNER JOIN (SELECT ... FROM "sys_order_detail" ...) k ON ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询语句</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
+    #endregion
+
+    #region LeftJoin
+    /// <summary>
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
+    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .LeftJoin(self, (a, b, c, d, e, f, g, h, i, j) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -4222,9 +4795,43 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQu
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
     /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin((a, b, c, d, e, f, g, h, i, j) =&gt; f.From&lt;OrderDetail&gt;() ...
+    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j) =&gt; ...) ...
+    /// SQL:
+    /// ... LEFT JOIN (SELECT ... FROM "sys_order_detail" ...) k ON ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询语句</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
+    #endregion
+
+    #region RightJoin
+    /// <summary>
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.RightJoin((a, b, c, d, e, f, g, h, i, j) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// <code>
+    /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表TOther实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
+    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .RightJoin(self, (a, b, c, d, e, f, g, h, i, j) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -4236,35 +4843,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQu
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQuery子查询，并与现有表做INNER JOIN关联，用法:
-    /// <code>
-    /// .InnerJoin((a, b, c, d, e, f, g, h, i, j) =&gt; f.From&lt;OrderDetail&gt;() ...
-    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j) =&gt; ...) ...
-    /// SQL:
-    /// ... INNER JOIN (SELECT ... FROM "sys_order_detail" ...) k ON ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询，并与现有表做LEFT JOIN关联，与.WithTable(...).LeftJoin(...)等效，用法:
-    /// <code>
-    /// .LeftJoin((a, b, c, d, e, f, g, h, i, j) =&gt; f.From&lt;OrderDetail&gt;() ...
-    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j) =&gt; ...) ...
-    /// SQL:
-    /// ... LEFT JOIN (SELECT ... FROM "sys_order_detail" ...) k ON ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询，并与现有表做RIGHT JOIN关联，与.WithTable(...).RightJoin(...)等效，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
     /// <code>
     /// .RightJoin((a, b, c, d, e, f, g, h, i, j) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j) =&gt; ...) ...
@@ -4273,13 +4852,13 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQu
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn);
     #endregion
 
-    #region Where/And
+    #region Where
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -4296,13 +4875,22 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQu
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> elsePredicate = null);
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 构造表达式断言predicateInitializer生成Where条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>>> predicateInitializer);
+    #endregion
+
+    #region And
+    /// <summary>
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成And条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成And条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
@@ -4310,6 +4898,36 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQu
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成And条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>>> predicateInitializer);
+    #endregion
+
+    #region Or
+    /// <summary>
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Or条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Or条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成Or条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>>> predicateInitializer);
     #endregion
 
     #region GroupBy
@@ -4341,7 +4959,6 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQu
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .DistinctOn((a, b, ...) =&gt; new { a.Id, a.Name, a.CreatedAt.Date })
-    ///    ...
     /// SQL: SELECT DISTINCT ON (a."Id",a."Name",CAST(a."CreatedAt" AS DATE)) ... FROM "sys_user" a ... 
     /// </code>
     /// </summary>
@@ -4386,6 +5003,28 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQu
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr);
+    #endregion
+
+    #region Skip/Take/Page
+    /// <summary>
+    /// 跳过offset条数据
+    /// </summary>
+    /// <param name="offset">要跳过查询的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Skip(int offset);
+    /// <summary>
+    /// 只返回limit条数据
+    /// </summary>
+    /// <param name="limit">返回的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Take(int limit);
+    /// <summary>
+    /// 分页查询，pageNumber从1开始，如：第1页pageNumber=1
+    /// </summary>
+    /// <param name="pageNumber">第几页，从1开始，第1页pageNumber=1</param>
+    /// <param name="pageSize">每页显示条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Page(int pageNumber, int pageSize);
     #endregion
 
     #region Select
@@ -4437,27 +5076,27 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> 
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 使用TMasterSharding主表分表名与当前表分表映射关系表名获取委托获取当前表分表表名，只需要指定主表分表的分表范围或条件即可，从表分表不需要指定分表名，会根据这个委托执行结果确定分表名称，通常适用于主表和从表都分表且一次查询多个分表的场景。第一个参数：dbKey，第二个参数是主表分表的原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第三个参数是当前从表分表的原始名称，第四个参数是主表的分表名称，返回值是当前从表的分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据TMasterSharding主表分表名与当前T11表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
+    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前T11表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前T11表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
     /// <code>
     /// repository.From&lt;Order&gt;()
-    ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
+    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
     ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
-    ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
+    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
     ///         return tableName.Substring(0, tableName.Length - 7);
     ///     })
     ///     ...
     /// SQL:
-    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// SELECT ... FROM "sys_order_104_202405" a INNER JOIN "sys_user_104" b ON a."BuyerId"=b."Id" ...
     /// UNION ALL
-    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
+    /// SELECT ... FROM "sys_order_105_202405" a INNER JOIN "sys_user_105" b ON a."BuyerId"=b."Id" ...
     /// </code>
     /// </summary>
-    /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
-    /// <param name="tableNameGetter">当前表分表名获取委托</param>
+    /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
+    /// <param name="tableNameGetter">T11表分表名获取委托</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
@@ -4499,38 +5138,45 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> 
     /// 切换TableSchema，非默认TableSchema才有效
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
-    /// <returns>返回插入对象</returns>
+    /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> UseTableSchema(string tableSchema);
     #endregion
 
     #region WithTable
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做关联查询，用法：
+    /// <code>
+    /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> WithTable<TOther>();
+    #endregion
+
+    #region WithQuery
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
-    /// repository.From&lt;Menu&gt;()
-    ///     .WithTable(subQuery)
-    /// SQL: ... FROM "sys_menu" a,(SELECT ... FROM ...) b ...
+    /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做关联查询，用法：
     /// <code>
-    /// repository
-    ///     .From&lt;Menu&gt;()
-    ///     .WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )
-    ///     ...
-    /// SQL: ... FROM "sys_menu" a,(SELECT ... FROM "sys_page" c,"sys_menu" d ...) b ...
+    /// repository.From&lt;Menu&gt;()
+    ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询</param>
+    /// <param name="subQueryExpr">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -4565,32 +5211,14 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> 
     new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
     #endregion
 
-    #region Join
+    #region InnerJoin
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .InnerJoin((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)
-    /// </code>
+    /// <code>.InnerJoin((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .RightJoin((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> joinOn);
     /// <summary>
     /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
     /// <code>
@@ -4602,29 +5230,9 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> 
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
-    /// <code>
-    /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">表实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
-    /// <code>
-    /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">表TOther实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
-    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b, c, d, e, f, g, h, i, j, k) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -4636,9 +5244,43 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> 
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
     /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// <code>
+    /// .InnerJoin((a, b, c, d, e, f, g, h, i, j, k) =&gt; f.From&lt;OrderDetail&gt;() ...
+    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k) =&gt; ...) ...
+    /// SQL:
+    /// ... INNER JOIN (SELECT ... FROM "sys_order_detail" ...) l ON ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询语句</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
+    #endregion
+
+    #region LeftJoin
+    /// <summary>
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
+    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .LeftJoin(self, (a, b, c, d, e, f, g, h, i, j, k) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -4650,9 +5292,43 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> 
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
     /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin((a, b, c, d, e, f, g, h, i, j, k) =&gt; f.From&lt;OrderDetail&gt;() ...
+    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k) =&gt; ...) ...
+    /// SQL:
+    /// ... LEFT JOIN (SELECT ... FROM "sys_order_detail" ...) l ON ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询语句</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
+    #endregion
+
+    #region RightJoin
+    /// <summary>
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.RightJoin((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// <code>
+    /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表TOther实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
+    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .RightJoin(self, (a, b, c, d, e, f, g, h, i, j, k) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -4664,35 +5340,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> 
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQuery子查询，并与现有表做INNER JOIN关联，用法:
-    /// <code>
-    /// .InnerJoin((a, b, c, d, e, f, g, h, i, j, k) =&gt; f.From&lt;OrderDetail&gt;() ...
-    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k) =&gt; ...) ...
-    /// SQL:
-    /// ... INNER JOIN (SELECT ... FROM "sys_order_detail" ...) l ON ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询，并与现有表做LEFT JOIN关联，与.WithTable(...).LeftJoin(...)等效，用法:
-    /// <code>
-    /// .LeftJoin((a, b, c, d, e, f, g, h, i, j, k) =&gt; f.From&lt;OrderDetail&gt;() ...
-    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k) =&gt; ...) ...
-    /// SQL:
-    /// ... LEFT JOIN (SELECT ... FROM "sys_order_detail" ...) l ON ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询，并与现有表做RIGHT JOIN关联，与.WithTable(...).RightJoin(...)等效，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
     /// <code>
     /// .RightJoin((a, b, c, d, e, f, g, h, i, j, k) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k) =&gt; ...) ...
@@ -4701,13 +5349,13 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> 
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn);
     #endregion
 
-    #region Where/And
+    #region Where
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -4724,13 +5372,22 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> 
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> elsePredicate = null);
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 构造表达式断言predicateInitializer生成Where条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>>> predicateInitializer);
+    #endregion
+
+    #region And
+    /// <summary>
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成And条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成And条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
@@ -4738,6 +5395,36 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> 
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成And条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>>> predicateInitializer);
+    #endregion
+
+    #region Or
+    /// <summary>
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Or条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Or条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成Or条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>>> predicateInitializer);
     #endregion
 
     #region GroupBy
@@ -4769,7 +5456,6 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> 
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .DistinctOn((a, b, ...) =&gt; new { a.Id, a.Name, a.CreatedAt.Date })
-    ///    ...
     /// SQL: SELECT DISTINCT ON (a."Id",a."Name",CAST(a."CreatedAt" AS DATE)) ... FROM "sys_user" a ... 
     /// </code>
     /// </summary>
@@ -4814,6 +5500,28 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> 
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr);
+    #endregion
+
+    #region Skip/Take/Page
+    /// <summary>
+    /// 跳过offset条数据
+    /// </summary>
+    /// <param name="offset">要跳过查询的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Skip(int offset);
+    /// <summary>
+    /// 只返回limit条数据
+    /// </summary>
+    /// <param name="limit">返回的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Take(int limit);
+    /// <summary>
+    /// 分页查询，pageNumber从1开始，如：第1页pageNumber=1
+    /// </summary>
+    /// <param name="pageNumber">第几页，从1开始，第1页pageNumber=1</param>
+    /// <param name="pageSize">每页显示条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Page(int pageNumber, int pageSize);
     #endregion
 
     #region Select
@@ -4866,27 +5574,27 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 使用TMasterSharding主表分表名与当前表分表映射关系表名获取委托获取当前表分表表名，只需要指定主表分表的分表范围或条件即可，从表分表不需要指定分表名，会根据这个委托执行结果确定分表名称，通常适用于主表和从表都分表且一次查询多个分表的场景。第一个参数：dbKey，第二个参数是主表分表的原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第三个参数是当前从表分表的原始名称，第四个参数是主表的分表名称，返回值是当前从表的分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据TMasterSharding主表分表名与当前T12表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
+    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前T12表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前T12表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
     /// <code>
     /// repository.From&lt;Order&gt;()
-    ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
+    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
     ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
-    ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
+    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
     ///         return tableName.Substring(0, tableName.Length - 7);
     ///     })
     ///     ...
     /// SQL:
-    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// SELECT ... FROM "sys_order_104_202405" a INNER JOIN "sys_user_104" b ON a."BuyerId"=b."Id" ...
     /// UNION ALL
-    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
+    /// SELECT ... FROM "sys_order_105_202405" a INNER JOIN "sys_user_105" b ON a."BuyerId"=b."Id" ...
     /// </code>
     /// </summary>
-    /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
-    /// <param name="tableNameGetter">当前表分表名获取委托</param>
+    /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
+    /// <param name="tableNameGetter">T12表分表名获取委托</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
@@ -4928,38 +5636,45 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// 切换TableSchema，非默认TableSchema才有效
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
-    /// <returns>返回插入对象</returns>
+    /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> UseTableSchema(string tableSchema);
     #endregion
 
     #region WithTable
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做关联查询，用法：
+    /// <code>
+    /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithTable<TOther>();
+    #endregion
+
+    #region WithQuery
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
-    /// repository.From&lt;Menu&gt;()
-    ///     .WithTable(subQuery)
-    /// SQL: ... FROM "sys_menu" a,(SELECT ... FROM ...) b ...
+    /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做关联查询，用法：
     /// <code>
-    /// repository
-    ///     .From&lt;Menu&gt;()
-    ///     .WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )
-    ///     ...
-    /// SQL: ... FROM "sys_menu" a,(SELECT ... FROM "sys_page" c,"sys_menu" d ...) b ...
+    /// repository.From&lt;Menu&gt;()
+    ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询</param>
+    /// <param name="subQueryExpr">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -4994,32 +5709,14 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
     #endregion
 
-    #region Join
+    #region InnerJoin
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)
-    /// </code>
+    /// <code>.InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .RightJoin((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> joinOn);
     /// <summary>
     /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
     /// <code>
@@ -5031,29 +5728,9 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
-    /// <code>
-    /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">表实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
-    /// <code>
-    /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">表TOther实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
-    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b, c, d, e, f, g, h, i, j, k, l) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -5065,9 +5742,43 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
     /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// <code>
+    /// .InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; f.From&lt;OrderDetail&gt;() ...
+    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...) ...
+    /// SQL:
+    /// ... INNER JOIN (SELECT ... FROM "sys_order_detail" ...) m ON ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询语句</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
+    #endregion
+
+    #region LeftJoin
+    /// <summary>
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
+    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .LeftJoin(self, (a, b, c, d, e, f, g, h, i, j, k, l) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -5079,9 +5790,43 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
     /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; f.From&lt;OrderDetail&gt;() ...
+    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...) ...
+    /// SQL:
+    /// ... LEFT JOIN (SELECT ... FROM "sys_order_detail" ...) m ON ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询语句</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
+    #endregion
+
+    #region RightJoin
+    /// <summary>
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.RightJoin((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// <code>
+    /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表TOther实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
+    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .RightJoin(self, (a, b, c, d, e, f, g, h, i, j, k, l) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -5093,35 +5838,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQuery子查询，并与现有表做INNER JOIN关联，用法:
-    /// <code>
-    /// .InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; f.From&lt;OrderDetail&gt;() ...
-    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...) ...
-    /// SQL:
-    /// ... INNER JOIN (SELECT ... FROM "sys_order_detail" ...) m ON ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询，并与现有表做LEFT JOIN关联，与.WithTable(...).LeftJoin(...)等效，用法:
-    /// <code>
-    /// .LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; f.From&lt;OrderDetail&gt;() ...
-    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...) ...
-    /// SQL:
-    /// ... LEFT JOIN (SELECT ... FROM "sys_order_detail" ...) m ON ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询，并与现有表做RIGHT JOIN关联，与.WithTable(...).RightJoin(...)等效，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
     /// <code>
     /// .RightJoin((a, b, c, d, e, f, g, h, i, j, k, l) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l) =&gt; ...) ...
@@ -5130,13 +5847,13 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn);
     #endregion
 
-    #region Where/And
+    #region Where
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -5153,13 +5870,22 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> elsePredicate = null);
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 构造表达式断言predicateInitializer生成Where条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>>> predicateInitializer);
+    #endregion
+
+    #region And
+    /// <summary>
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成And条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成And条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
@@ -5167,6 +5893,36 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成And条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>>> predicateInitializer);
+    #endregion
+
+    #region Or
+    /// <summary>
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Or条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Or条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成Or条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>>> predicateInitializer);
     #endregion
 
     #region GroupBy
@@ -5198,7 +5954,6 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .DistinctOn((a, b, ...) =&gt; new { a.Id, a.Name, a.CreatedAt.Date })
-    ///    ...
     /// SQL: SELECT DISTINCT ON (a."Id",a."Name",CAST(a."CreatedAt" AS DATE)) ... FROM "sys_user" a ... 
     /// </code>
     /// </summary>
@@ -5243,6 +5998,28 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr);
+    #endregion
+
+    #region Skip/Take/Page
+    /// <summary>
+    /// 跳过offset条数据
+    /// </summary>
+    /// <param name="offset">要跳过查询的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Skip(int offset);
+    /// <summary>
+    /// 只返回limit条数据
+    /// </summary>
+    /// <param name="limit">返回的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Take(int limit);
+    /// <summary>
+    /// 分页查询，pageNumber从1开始，如：第1页pageNumber=1
+    /// </summary>
+    /// <param name="pageNumber">第几页，从1开始，第1页pageNumber=1</param>
+    /// <param name="pageSize">每页显示条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Page(int pageNumber, int pageSize);
     #endregion
 
     #region Select
@@ -5296,27 +6073,27 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 使用TMasterSharding主表分表名与当前表分表映射关系表名获取委托获取当前表分表表名，只需要指定主表分表的分表范围或条件即可，从表分表不需要指定分表名，会根据这个委托执行结果确定分表名称，通常适用于主表和从表都分表且一次查询多个分表的场景。第一个参数：dbKey，第二个参数是主表分表的原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第三个参数是当前从表分表的原始名称，第四个参数是主表的分表名称，返回值是当前从表的分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据TMasterSharding主表分表名与当前T13表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
+    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前T13表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前T13表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
     /// <code>
     /// repository.From&lt;Order&gt;()
-    ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
+    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
     ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
-    ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
+    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
     ///         return tableName.Substring(0, tableName.Length - 7);
     ///     })
     ///     ...
     /// SQL:
-    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// SELECT ... FROM "sys_order_104_202405" a INNER JOIN "sys_user_104" b ON a."BuyerId"=b."Id" ...
     /// UNION ALL
-    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
+    /// SELECT ... FROM "sys_order_105_202405" a INNER JOIN "sys_user_105" b ON a."BuyerId"=b."Id" ...
     /// </code>
     /// </summary>
-    /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
-    /// <param name="tableNameGetter">当前表分表名获取委托</param>
+    /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
+    /// <param name="tableNameGetter">T13表分表名获取委托</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
@@ -5358,38 +6135,45 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// 切换TableSchema，非默认TableSchema才有效
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
-    /// <returns>返回插入对象</returns>
+    /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> UseTableSchema(string tableSchema);
     #endregion
 
     #region WithTable
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做关联查询，用法：
+    /// <code>
+    /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> WithTable<TOther>();
+    #endregion
+
+    #region WithQuery
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
-    /// repository.From&lt;Menu&gt;()
-    ///     .WithTable(subQuery)
-    /// SQL: ... FROM "sys_menu" a,(SELECT ... FROM ...) b ...
+    /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做关联查询，用法：
     /// <code>
-    /// repository
-    ///     .From&lt;Menu&gt;()
-    ///     .WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )
-    ///     ...
-    /// SQL: ... FROM "sys_menu" a,(SELECT ... FROM "sys_page" c,"sys_menu" d ...) b ...
+    /// repository.From&lt;Menu&gt;()
+    ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询</param>
+    /// <param name="subQueryExpr">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -5424,32 +6208,14 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
     #endregion
 
-    #region Join
+    #region InnerJoin
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)
-    /// </code>
+    /// <code>.InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .RightJoin((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> joinOn);
     /// <summary>
     /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
     /// <code>
@@ -5461,29 +6227,9 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
-    /// <code>
-    /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">表实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
-    /// <code>
-    /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">表TOther实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
-    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -5495,9 +6241,43 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
     /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// <code>
+    /// .InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; f.From&lt;OrderDetail&gt;() ...
+    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...) ...
+    /// SQL:
+    /// ... INNER JOIN (SELECT ... FROM "sys_order_detail" ...) n ON ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询语句</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
+    #endregion
+
+    #region LeftJoin
+    /// <summary>
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
+    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .LeftJoin(self, (a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -5509,9 +6289,43 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
     /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; f.From&lt;OrderDetail&gt;() ...
+    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...) ...
+    /// SQL:
+    /// ... LEFT JOIN (SELECT ... FROM "sys_order_detail" ...) n ON ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询语句</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
+    #endregion
+
+    #region RightJoin
+    /// <summary>
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.RightJoin((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// <code>
+    /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表TOther实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
+    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .RightJoin(self, (a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -5523,35 +6337,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQuery子查询，并与现有表做INNER JOIN关联，用法:
-    /// <code>
-    /// .InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; f.From&lt;OrderDetail&gt;() ...
-    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...) ...
-    /// SQL:
-    /// ... INNER JOIN (SELECT ... FROM "sys_order_detail" ...) n ON ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询，并与现有表做LEFT JOIN关联，与.WithTable(...).LeftJoin(...)等效，用法:
-    /// <code>
-    /// .LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; f.From&lt;OrderDetail&gt;() ...
-    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...) ...
-    /// SQL:
-    /// ... LEFT JOIN (SELECT ... FROM "sys_order_detail" ...) n ON ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询，并与现有表做RIGHT JOIN关联，与.WithTable(...).RightJoin(...)等效，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
     /// <code>
     /// .RightJoin((a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m) =&gt; ...) ...
@@ -5560,13 +6346,13 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn);
     #endregion
 
-    #region Where/And
+    #region Where
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -5583,13 +6369,22 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> elsePredicate = null);
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 构造表达式断言predicateInitializer生成Where条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>>> predicateInitializer);
+    #endregion
+
+    #region And
+    /// <summary>
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成And条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成And条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
@@ -5597,6 +6392,36 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成And条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>>> predicateInitializer);
+    #endregion
+
+    #region Or
+    /// <summary>
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Or条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Or条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成Or条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>>> predicateInitializer);
     #endregion
 
     #region GroupBy
@@ -5628,7 +6453,6 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .DistinctOn((a, b, ...) =&gt; new { a.Id, a.Name, a.CreatedAt.Date })
-    ///    ...
     /// SQL: SELECT DISTINCT ON (a."Id",a."Name",CAST(a."CreatedAt" AS DATE)) ... FROM "sys_user" a ... 
     /// </code>
     /// </summary>
@@ -5673,6 +6497,28 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr);
+    #endregion
+
+    #region Skip/Take/Page
+    /// <summary>
+    /// 跳过offset条数据
+    /// </summary>
+    /// <param name="offset">要跳过查询的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Skip(int offset);
+    /// <summary>
+    /// 只返回limit条数据
+    /// </summary>
+    /// <param name="limit">返回的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Take(int limit);
+    /// <summary>
+    /// 分页查询，pageNumber从1开始，如：第1页pageNumber=1
+    /// </summary>
+    /// <param name="pageNumber">第几页，从1开始，第1页pageNumber=1</param>
+    /// <param name="pageSize">每页显示条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Page(int pageNumber, int pageSize);
     #endregion
 
     #region Select
@@ -5727,27 +6573,27 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 使用TMasterSharding主表分表名与当前表分表映射关系表名获取委托获取当前表分表表名，只需要指定主表分表的分表范围或条件即可，从表分表不需要指定分表名，会根据这个委托执行结果确定分表名称，通常适用于主表和从表都分表且一次查询多个分表的场景。第一个参数：dbKey，第二个参数是主表分表的原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第三个参数是当前从表分表的原始名称，第四个参数是主表的分表名称，返回值是当前从表的分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据TMasterSharding主表分表名与当前T14表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
+    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前T14表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前T14表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
     /// <code>
     /// repository.From&lt;Order&gt;()
-    ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
+    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
     ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
-    ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
+    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
     ///         return tableName.Substring(0, tableName.Length - 7);
     ///     })
     ///     ...
     /// SQL:
-    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// SELECT ... FROM "sys_order_104_202405" a INNER JOIN "sys_user_104" b ON a."BuyerId"=b."Id" ...
     /// UNION ALL
-    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
+    /// SELECT ... FROM "sys_order_105_202405" a INNER JOIN "sys_user_105" b ON a."BuyerId"=b."Id" ...
     /// </code>
     /// </summary>
-    /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
-    /// <param name="tableNameGetter">当前表分表名获取委托</param>
+    /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
+    /// <param name="tableNameGetter">T14表分表名获取委托</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
@@ -5789,38 +6635,45 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// 切换TableSchema，非默认TableSchema才有效
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
-    /// <returns>返回插入对象</returns>
+    /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> UseTableSchema(string tableSchema);
     #endregion
 
     #region WithTable
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做关联查询，用法：
+    /// <code>
+    /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithTable<TOther>();
+    #endregion
+
+    #region WithQuery
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
-    /// repository.From&lt;Menu&gt;()
-    ///     .WithTable(subQuery)
-    /// SQL: ... FROM "sys_menu" a,(SELECT ... FROM ...) b ...
+    /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做关联查询，用法：
     /// <code>
-    /// repository
-    ///     .From&lt;Menu&gt;()
-    ///     .WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )
-    ///     ...
-    /// SQL: ... FROM "sys_menu" a,(SELECT ... FROM "sys_page" c,"sys_menu" d ...) b ...
+    /// repository.From&lt;Menu&gt;()
+    ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询</param>
+    /// <param name="subQueryExpr">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -5855,32 +6708,14 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
     #endregion
 
-    #region Join
+    #region InnerJoin
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)
-    /// </code>
+    /// <code>.InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .RightJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> joinOn);
     /// <summary>
     /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
     /// <code>
@@ -5892,29 +6727,9 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
-    /// <code>
-    /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">表实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
-    /// <code>
-    /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">表TOther实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
-    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -5926,9 +6741,43 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
     /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// <code>
+    /// .InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; f.From&lt;OrderDetail&gt;() ...
+    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...) ...
+    /// SQL:
+    /// ... INNER JOIN (SELECT ... FROM "sys_order_detail" ...) o ON ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询语句</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
+    #endregion
+
+    #region LeftJoin
+    /// <summary>
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
+    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .LeftJoin(self, (a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -5940,9 +6789,43 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
     /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; f.From&lt;OrderDetail&gt;() ...
+    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...) ...
+    /// SQL:
+    /// ... LEFT JOIN (SELECT ... FROM "sys_order_detail" ...) o ON ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询语句</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
+    #endregion
+
+    #region RightJoin
+    /// <summary>
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.RightJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// <code>
+    /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表TOther实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
+    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .RightJoin(self, (a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -5954,35 +6837,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQuery子查询，并与现有表做INNER JOIN关联，用法:
-    /// <code>
-    /// .InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; f.From&lt;OrderDetail&gt;() ...
-    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...) ...
-    /// SQL:
-    /// ... INNER JOIN (SELECT ... FROM "sys_order_detail" ...) o ON ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询，并与现有表做LEFT JOIN关联，与.WithTable(...).LeftJoin(...)等效，用法:
-    /// <code>
-    /// .LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; f.From&lt;OrderDetail&gt;() ...
-    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...) ...
-    /// SQL:
-    /// ... LEFT JOIN (SELECT ... FROM "sys_order_detail" ...) o ON ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询，并与现有表做RIGHT JOIN关联，与.WithTable(...).RightJoin(...)等效，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
     /// <code>
     /// .RightJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m, n) =&gt; ...) ...
@@ -5991,13 +6846,13 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn);
     #endregion
 
-    #region Where/And
+    #region Where
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -6014,13 +6869,22 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> elsePredicate = null);
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 构造表达式断言predicateInitializer生成Where条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>>> predicateInitializer);
+    #endregion
+
+    #region And
+    /// <summary>
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成And条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成And条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
@@ -6028,6 +6892,36 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成And条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>>> predicateInitializer);
+    #endregion
+
+    #region Or
+    /// <summary>
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Or条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Or条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成Or条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>>> predicateInitializer);
     #endregion
 
     #region GroupBy
@@ -6059,7 +6953,6 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .DistinctOn((a, b, ...) =&gt; new { a.Id, a.Name, a.CreatedAt.Date })
-    ///    ...
     /// SQL: SELECT DISTINCT ON (a."Id",a."Name",CAST(a."CreatedAt" AS DATE)) ... FROM "sys_user" a ... 
     /// </code>
     /// </summary>
@@ -6104,6 +6997,28 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr);
+    #endregion
+
+    #region Skip/Take/Page
+    /// <summary>
+    /// 跳过offset条数据
+    /// </summary>
+    /// <param name="offset">要跳过查询的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Skip(int offset);
+    /// <summary>
+    /// 只返回limit条数据
+    /// </summary>
+    /// <param name="limit">返回的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Take(int limit);
+    /// <summary>
+    /// 分页查询，pageNumber从1开始，如：第1页pageNumber=1
+    /// </summary>
+    /// <param name="pageNumber">第几页，从1开始，第1页pageNumber=1</param>
+    /// <param name="pageSize">每页显示条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Page(int pageNumber, int pageSize);
     #endregion
 
     #region Select
@@ -6159,27 +7074,27 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 使用TMasterSharding主表分表名与当前表分表映射关系表名获取委托获取当前表分表表名，只需要指定主表分表的分表范围或条件即可，从表分表不需要指定分表名，会根据这个委托执行结果确定分表名称，通常适用于主表和从表都分表且一次查询多个分表的场景。第一个参数：dbKey，第二个参数是主表分表的原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第三个参数是当前从表分表的原始名称，第四个参数是主表的分表名称，返回值是当前从表的分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据TMasterSharding主表分表名与当前T15表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
+    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前T15表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前T15表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
     /// <code>
     /// repository.From&lt;Order&gt;()
-    ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
+    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
     ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
-    ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
+    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
     ///         return tableName.Substring(0, tableName.Length - 7);
     ///     })
     ///     ...
     /// SQL:
-    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// SELECT ... FROM "sys_order_104_202405" a INNER JOIN "sys_user_104" b ON a."BuyerId"=b."Id" ...
     /// UNION ALL
-    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
+    /// SELECT ... FROM "sys_order_105_202405" a INNER JOIN "sys_user_105" b ON a."BuyerId"=b."Id" ...
     /// </code>
     /// </summary>
-    /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
-    /// <param name="tableNameGetter">当前表分表名获取委托</param>
+    /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
+    /// <param name="tableNameGetter">T15表分表名获取委托</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
@@ -6221,38 +7136,45 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// 切换TableSchema，非默认TableSchema才有效
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
-    /// <returns>返回插入对象</returns>
+    /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> UseTableSchema(string tableSchema);
     #endregion
 
     #region WithTable
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加实体表，方便后面做关联查询，用法：
+    /// <code>
+    /// repository.From&lt;Menu&gt;().WithTable&lt;Page&gt;()
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> WithTable<TOther>();
+    #endregion
+
+    #region WithQuery
+    /// <summary>
+    /// 添加子查询，方便后面做关联查询，用法：
     /// <code>
     /// var subQuery = repository.From&lt;Menu&gt;() ... .Select( ...);
-    /// repository.From&lt;Menu&gt;()
-    ///     .WithTable(subQuery)
-    /// SQL: ... FROM "sys_menu" a,(SELECT ... FROM ...) b ...
+    /// repository.From&lt;Menu&gt;().WithQuery(subQuery)
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
     /// <param name="subQuery">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> WithTable<TOther>(IQuery<TOther> subQuery);
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> WithQuery<TOther>(IQuery<TOther> subQuery);
     /// <summary>
-    /// 使用子查询作为临时表，方便后面做关联查询，用法：
+    /// 添加子查询，方便后面做关联查询，用法：
     /// <code>
-    /// repository
-    ///     .From&lt;Menu&gt;()
-    ///     .WithTable(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )
-    ///     ...
-    /// SQL: ... FROM "sys_menu" a,(SELECT ... FROM "sys_page" c,"sys_menu" d ...) b ...
+    /// repository.From&lt;Menu&gt;()
+    ///     .WithQuery(f =&gt; f.From&lt;Page, Menu&gt;('c') ... )  
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询</param>
+    /// <param name="subQueryExpr">子查询</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> WithTable<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery);
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr);
     #endregion
 
     #region Include
@@ -6287,32 +7209,14 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
     #endregion
 
-    #region Join
+    #region InnerJoin
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)
-    /// </code>
+    /// <code>.InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)</code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .RightJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn);
     /// <summary>
     /// 在现有表中，添加TOther表，并指定1个表与其进行INNER JOIN关联，用法:
     /// <code>
@@ -6324,29 +7228,9 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
     /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
-    /// <code>
-    /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">表实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
-    /// <summary>
-    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
-    /// <code>
-    /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">表TOther实体类型</typeparam>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
-    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做INNER JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .InnerJoin(self, (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -6358,9 +7242,43 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
     /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做INNER JOIN关联，用法:
+    /// <code>
+    /// .InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; f.From&lt;OrderDetail&gt;() ...
+    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...) ...
+    /// SQL:
+    /// ... INNER JOIN (SELECT ... FROM "sys_order_detail" ...) p ON ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询语句</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
+    #endregion
+
+    #region LeftJoin
+    /// <summary>
+    /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
+    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .LeftJoin(self, (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -6372,9 +7290,43 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
     /// <summary>
+    /// 添加subQueryExpr子查询，并与现有表做LEFT JOIN关联，用法:
+    /// <code>
+    /// .LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; f.From&lt;OrderDetail&gt;() ...
+    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...) ...
+    /// SQL:
+    /// ... LEFT JOIN (SELECT ... FROM "sys_order_detail" ...) p ON ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
+    /// <param name="subQueryExpr">子查询语句</param>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
+    #endregion
+
+    #region RightJoin
+    /// <summary>
+    /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
+    /// <code>.RightJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)</code>
+    /// </summary>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn);
+    /// <summary>
+    /// 在现有表中，添加TOther表，并指定1个表与其做RIGHT JOIN关联，用法:
+    /// <code>
+    /// .RightJoin&lt;TOther&gt;((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...)
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TOther">表TOther实体类型</typeparam>
+    /// <param name="joinOn">关联条件表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
+    /// <summary>
     /// 添加子查询临时表subQuery，并与现有表T做LEFT JOIN关联，可以用在CTE子句中自我引用，用法:
     /// <code>
-    /// repository.FromQuery(...).NextWith(...)
+    /// repository.FromQuery(...
     ///     .UnionAllRecursive((x, self) =&gt; x.From&lt;Menu&gt;()
     ///         .RightJoin(self, (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; a.ParentId == b.Id)
     ///         .Select(...)) ...
@@ -6386,35 +7338,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
     /// <summary>
-    /// 添加subQuery子查询，并与现有表做INNER JOIN关联，用法:
-    /// <code>
-    /// .InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; f.From&lt;OrderDetail&gt;() ...
-    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...) ...
-    /// SQL:
-    /// ... INNER JOIN (SELECT ... FROM "sys_order_detail" ...) p ON ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> InnerJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询，并与现有表做LEFT JOIN关联，与.WithTable(...).LeftJoin(...)等效，用法:
-    /// <code>
-    /// .LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; f.From&lt;OrderDetail&gt;() ...
-    ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...) ...
-    /// SQL:
-    /// ... LEFT JOIN (SELECT ... FROM "sys_order_detail" ...) p ON ...
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
-    /// <param name="joinOn">关联条件表达式</param>
-    /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> LeftJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
-    /// <summary>
-    /// 添加subQuery子查询，并与现有表做RIGHT JOIN关联，与.WithTable(...).RightJoin(...)等效，用法:
+    /// 添加subQueryExpr子查询，并与现有表做RIGHT JOIN关联，用法:
     /// <code>
     /// .RightJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; f.From&lt;OrderDetail&gt;() ...
     ///     .Select((x, y) =&gt; new { ... }), (a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) =&gt; ...) ...
@@ -6423,13 +7347,13 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型</typeparam>
-    /// <param name="subQuery">子查询语句</param>
+    /// <param name="subQueryExpr">子查询语句</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
-    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> RightJoin<TOther>(Func<IFromQuery, IQuery<TOther>> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn);
     #endregion
 
-    #region Where/And
+    #region Where
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -6446,13 +7370,22 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> elsePredicate = null);
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 构造表达式断言predicateInitializer生成Where条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>>> predicateInitializer);
+    #endregion
+
+    #region And
+    /// <summary>
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> predicate);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成And条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成And条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
@@ -6460,6 +7393,36 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成And条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>>> predicateInitializer);
+    #endregion
+
+    #region Or
+    /// <summary>
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Or条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Or条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成Or条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>>> predicateInitializer);
     #endregion
 
     #region GroupBy
@@ -6491,7 +7454,6 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .DistinctOn((a, b, ...) =&gt; new { a.Id, a.Name, a.CreatedAt.Date })
-    ///    ...
     /// SQL: SELECT DISTINCT ON (a."Id",a."Name",CAST(a."CreatedAt" AS DATE)) ... FROM "sys_user" a ... 
     /// </code>
     /// </summary>
@@ -6536,6 +7498,28 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr);
+    #endregion
+
+    #region Skip/Take/Page
+    /// <summary>
+    /// 跳过offset条数据
+    /// </summary>
+    /// <param name="offset">要跳过查询的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Skip(int offset);
+    /// <summary>
+    /// 只返回limit条数据
+    /// </summary>
+    /// <param name="limit">返回的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Take(int limit);
+    /// <summary>
+    /// 分页查询，pageNumber从1开始，如：第1页pageNumber=1
+    /// </summary>
+    /// <param name="pageNumber">第几页，从1开始，第1页pageNumber=1</param>
+    /// <param name="pageSize">每页显示条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Page(int pageNumber, int pageSize);
     #endregion
 
     #region Select
@@ -6592,27 +7576,27 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
-    /// 使用TMasterSharding主表分表名与当前表分表映射关系表名获取委托获取当前表分表表名，只需要指定主表分表的分表范围或条件即可，从表分表不需要指定分表名，会根据这个委托执行结果确定分表名称，通常适用于主表和从表都分表且一次查询多个分表的场景。第一个参数：dbKey，第二个参数是主表分表的原始名称，
-    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第三个参数是当前从表分表的原始名称，第四个参数是主表的分表名称，返回值是当前从表的分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// 根据TMasterSharding主表分表名与当前T16表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
+    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前T16表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前T16表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
     /// <code>
     /// repository.From&lt;Order&gt;()
-    ///     .UseTable(f =&gt; (f.Contains("_104_") || f.Contains("_105_")) &amp;&amp; int.Parse(f.Substring(f.Length - 6)) &gt; 202001)
+    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
     ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
-    ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
+    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
     ///         return tableName.Substring(0, tableName.Length - 7);
     ///     })
     ///     ...
     /// SQL:
-    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// SELECT ... FROM "sys_order_104_202405" a INNER JOIN "sys_user_104" b ON a."BuyerId"=b."Id" ...
     /// UNION ALL
-    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
+    /// SELECT ... FROM "sys_order_105_202405" a INNER JOIN "sys_user_105" b ON a."BuyerId"=b."Id" ...
     /// </code>
     /// </summary>
-    /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
-    /// <param name="tableNameGetter">当前表分表名获取委托</param>
+    /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
+    /// <param name="tableNameGetter">T16表分表名获取委托</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
@@ -6654,7 +7638,7 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// 切换TableSchema，非默认TableSchema才有效
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
-    /// <returns>返回插入对象</returns>
+    /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> UseTableSchema(string tableSchema);
     #endregion
 
@@ -6690,16 +7674,17 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null);
     #endregion
 
-    #region Join
+    #region InnerJoin
     /// <summary>
     /// 在现有表中，指定2个表进行INNER JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) =&gt; ...)
-    /// </code>
+    /// <code>.InnerJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> joinOn);
+    #endregion
+
+    #region LeftJoin
     /// <summary>
     /// 在现有表中，指定2个表进行LEFT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
     /// <code>.LeftJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) =&gt; ...)</code>
@@ -6707,18 +7692,19 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> joinOn);
+    #endregion
+
+    #region RightJoin
     /// <summary>
     /// 在现有表中，指定2个表进行RIGHT JOIN关联，一次只能指定2个表，但可以多次使用本方法关联，用法:
-    /// <code>
-    /// .RightJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) =&gt; ...)
-    /// </code>
+    /// <code>.RightJoin((a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) =&gt; ...)</code>
     /// </summary>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> joinOn);
     #endregion
 
-    #region Where/And
+    #region Where
     /// <summary>
     /// 使用predicate表达式生成Where条件，表达式predicate不能为null
     /// </summary>
@@ -6735,13 +7721,22 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> elsePredicate = null);
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 构造表达式断言predicateInitializer生成Where条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>>> predicateInitializer);
+    #endregion
+
+    #region And
+    /// <summary>
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
     /// </summary>
     /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> predicate);
     /// <summary>
-    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Where条件，并添加到已有的Where条件末尾
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成And条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成And条件，并添加到已有的Where条件末尾
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
     /// </summary>
     /// <param name="condition">根据condition的值进行判断使用表达式</param>
@@ -6749,6 +7744,36 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成And条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>>> predicateInitializer);
+    #endregion
+
+    #region Or
+    /// <summary>
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// </summary>
+    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> predicate);
+    /// <summary>
+    /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Or条件，并添加到已有的Where条件末尾，否则使用表达式elsePredicate生成Or条件，并添加到已有的Where条件末尾
+    /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，将不生成追加的Where条件
+    /// </summary>
+    /// <param name="condition">根据condition的值进行判断使用表达式</param>
+    /// <param name="ifPredicate">condition为true时，使用的表达式，不可为null</param>
+    /// <param name="elsePredicate">condition为false时，使用的表达式，值可为null，condition为false且elsePredicate为null时，将不生成追加的Where条件</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> elsePredicate = null);
+    /// <summary>
+    /// 构造表达式断言predicateInitializer生成Or条件，predicateInitializer不能为null
+    /// </summary>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>>> predicateInitializer);
     #endregion
 
     #region GroupBy
@@ -6780,7 +7805,6 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <code>
     /// repository.From&lt;User&gt;() ...
     ///    .DistinctOn((a, b, ...) =&gt; new { a.Id, a.Name, a.CreatedAt.Date })
-    ///    ...
     /// SQL: SELECT DISTINCT ON (a."Id",a."Name",CAST(a."CreatedAt" AS DATE)) ... FROM "sys_user" a ... 
     /// </code>
     /// </summary>
@@ -6825,6 +7849,28 @@ public interface IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, 
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TFields>> fieldsExpr);
+    #endregion
+
+    #region Skip/Take/Page
+    /// <summary>
+    /// 跳过offset条数据
+    /// </summary>
+    /// <param name="offset">要跳过查询的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Skip(int offset);
+    /// <summary>
+    /// 只返回limit条数据
+    /// </summary>
+    /// <param name="limit">返回的数据条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Take(int limit);
+    /// <summary>
+    /// 分页查询，pageNumber从1开始，如：第1页pageNumber=1
+    /// </summary>
+    /// <param name="pageNumber">第几页，从1开始，第1页pageNumber=1</param>
+    /// <param name="pageSize">每页显示条数</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Page(int pageNumber, int pageSize);
     #endregion
 
     #region Select

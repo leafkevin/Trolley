@@ -45,7 +45,7 @@ public class PostgreSqlFromCommand<T> : FromCommand<T>, IPostgreSqlFromCommand<T
     }
     public new IPostgreSqlFromCommand<T> Union(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
     {
-        base.UnionInternal(subQuery);
+        base.UnionInternal(subQueryExpr);
         return this;
     }
     public new IPostgreSqlFromCommand<T> UnionAll(IQuery<T> subQuery)
@@ -55,33 +55,61 @@ public class PostgreSqlFromCommand<T> : FromCommand<T>, IPostgreSqlFromCommand<T
     }
     public new IPostgreSqlFromCommand<T> UnionAll(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
     {
-        base.UnionAllInternal(subQuery);
+        base.UnionAllInternal(subQueryExpr);
+        return this;
+    }
+    public new IPostgreSqlFromCommand<T> UnionRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQueryExpr)
+    {
+        base.UnionRecursiveInternal(subQueryExpr);
+        return this;
+    }
+    public new IPostgreSqlFromCommand<T> UnionAllRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQueryExpr)
+    {
+        base.UnionAllRecursiveInternal(subQueryExpr);
         return this;
     }
     #endregion
 
-    #region Join   
-    public new IPostgreSqlFromCommand<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
-        => base.InnerJoin(joinOn) as IPostgreSqlFromCommand<T, TOther>;
-    public new IPostgreSqlFromCommand<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlFromCommand<T, TOther>;
-    public new IPostgreSqlFromCommand<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlFromCommand<T, TOther>;
-    public new IPostgreSqlFromCommand<T, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
-        => base.InnerJoin(joinOn) as IPostgreSqlFromCommand<T, TOther>;
-    public new IPostgreSqlFromCommand<T, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlFromCommand<T, TOther>;
-    public new IPostgreSqlFromCommand<T, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlFromCommand<T, TOther>;
-    public new IPostgreSqlFromCommand<T, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
-        => base.InnerJoin(joinOn) as IPostgreSqlFromCommand<T, TOther>;
-    public new IPostgreSqlFromCommand<T, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlFromCommand<T, TOther>;
-    public new IPostgreSqlFromCommand<T, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlFromCommand<T, TOther>;
+    #region WithTable
+    public new IPostgreSqlFromCommand<T, TOther> WithTable<TOther>()
+        => base.WithTable<TOther>() as IPostgreSqlFromCommand<T, TOther>;
     #endregion
 
-    #region Where/And
+    #region WithQuery
+    public new IPostgreSqlFromCommand<T, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
+        => base.WithQuery(subQuery) as IPostgreSqlFromCommand<T, TOther>;
+    public new IPostgreSqlFromCommand<T, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+        => base.WithQuery(subQueryExpr) as IPostgreSqlFromCommand<T, TOther>;
+    #endregion
+
+    #region InnerJoin
+    public new IPostgreSqlFromCommand<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
+        => base.InnerJoin(joinOn) as IPostgreSqlFromCommand<T, TOther>;
+    public new IPostgreSqlFromCommand<T, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+        => base.InnerJoin(subQuery, joinOn) as IPostgreSqlFromCommand<T, TOther>;
+    public new IPostgreSqlFromCommand<T, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
+        => base.InnerJoin(subQueryExpr, joinOn) as IPostgreSqlFromCommand<T, TOther>;
+    #endregion
+
+    #region LeftJoin
+    public new IPostgreSqlFromCommand<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IPostgreSqlFromCommand<T, TOther>;
+    public new IPostgreSqlFromCommand<T, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+        => base.LeftJoin(subQuery, joinOn) as IPostgreSqlFromCommand<T, TOther>;
+    public new IPostgreSqlFromCommand<T, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
+        => base.LeftJoin(subQueryExpr, joinOn) as IPostgreSqlFromCommand<T, TOther>;
+    #endregion
+
+    #region RightJoin
+    public new IPostgreSqlFromCommand<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
+        => base.RightJoin(joinOn) as IPostgreSqlFromCommand<T, TOther>; 
+    public new IPostgreSqlFromCommand<T, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
+        => base.RightJoin(subQuery, joinOn) as IPostgreSqlFromCommand<T, TOther>; 
+    public new IPostgreSqlFromCommand<T, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
+        => base.RightJoin(subQueryExpr, joinOn) as IPostgreSqlFromCommand<T, TOther>;
+    #endregion
+
+    #region Where
     public new IPostgreSqlFromCommand<T> Where(Expression<Func<T, bool>> predicate)
     {
         base.WhereInternal(predicate);
@@ -92,14 +120,30 @@ public class PostgreSqlFromCommand<T> : FromCommand<T>, IPostgreSqlFromCommand<T
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    #endregion
+
+    #region And
     public new IPostgreSqlFromCommand<T> And(Expression<Func<T, bool>> predicate)
     {
         base.AndInternal(predicate);
         return this;
     }
-    public new IPostgreSqlFromCommand<T> And(bool condition, Expression<Func<T, bool>> ifPredicate = null, Expression<Func<T, bool>> elsePredicate = null)
+    public new IPostgreSqlFromCommand<T> And(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
     {
         base.AndInternal(condition, ifPredicate, elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region Or
+    public new IPostgreSqlFromCommand<T> Or(Expression<Func<T, bool>> predicate)
+    {
+        base.OrInternal(predicate);
+        return this;
+    }
+    public new IPostgreSqlFromCommand<T> Or(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
+    {
+        base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
     #endregion
@@ -126,11 +170,22 @@ public class PostgreSqlFromCommand<T> : FromCommand<T>, IPostgreSqlFromCommand<T
     }
     #endregion
 
+    #region Skip/Take/Page
+    public new IPostgreSqlFromCommand<T> Skip(int offset)
+        => base.Skip(offset) as IPostgreSqlFromCommand<T>;
+    public new IPostgreSqlFromCommand<T> Take(int limit)
+        => base.Take(limit) as IPostgreSqlFromCommand<T>;
+    public new IPostgreSqlFromCommand<T> Page(int pageNumber, int pageSize)
+        => base.Page(pageNumber, pageSize) as IPostgreSqlFromCommand<T>;
+    #endregion
+
     #region Select
-    public new IPostgreSqlFromCommand<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>(fields) as IPostgreSqlFromCommand<TTarget>;
+    public new IPostgreSqlFromCommand<T> Select(string fields = "*")
+        => base.Select(fields) as IPostgreSqlFromCommand<T>;
     public new IPostgreSqlFromCommand<TTarget> Select<TTarget>(Expression<Func<T, TTarget>> fieldsExpr)
-        => base.Select(fieldsExpr) as IPostgreSqlFromCommand<TTarget>;
+        => base.Select(fieldsExpr) as IPostgreSqlFromCommand<TTarget>;    
+    public new IPostgreSqlFromCommand<TTarget> SelectFlattenTo<TTarget>(Expression<Func<T, TTarget>> specialMemberSelector = null)
+        => base.SelectFlattenTo(specialMemberSelector) as IPostgreSqlFromCommand<TTarget>;
     public new IPostgreSqlFromCommand<TTarget> SelectAggregate<TTarget>(Expression<Func<IAggregateSelect, T, TTarget>> fieldsExpr)
         => base.SelectAggregate(fieldsExpr) as IPostgreSqlFromCommand<TTarget>;
     #endregion
@@ -143,26 +198,19 @@ public class PostgreSqlFromCommand<T> : FromCommand<T>, IPostgreSqlFromCommand<T
     }
     #endregion
 
-    #region Skip/Take
-    public new IPostgreSqlFromCommand<T> Skip(int offset)
+    #region OnDuplicateKeyUpdate
+    public IPostgreSqlFromContinuedCreate<T> OnDuplicateKeyUpdate<TUpdateFields>(TUpdateFields updateObj)
     {
-        this.Visitor.Skip(offset);
-        return this;
+        var sql = this.Visitor.BuildCommandSql(out _);
+        var visitor = this.NewCreateVisitor(sql);
+        visitor.OnDuplicateKeyUpdate(updateObj);
+        return new PostgreSqlFromContinuedCreate<T>(this.DbContext, visitor);
     }
-    public new IPostgreSqlFromCommand<T> Take(int limit)
+    public IPostgreSqlFromContinuedCreate<T> OnDuplicateKeyUpdate<TUpdateFields>(Expression<Func<IPostgreSqlCreateDuplicateKeyUpdate<T>, TUpdateFields>> fieldsAssignment)
     {
-        this.Visitor.Take(limit);
-        return this;
-    }
-    #endregion
-
-    #region OnConflict
-    public IPostgreSqlFromContinuedCreate<T> OnConflict<TUpdateFields>(Expression<Func<IPostgreSqlCreateConflictDoUpdate<T>, TUpdateFields>> fieldsAssignment)
-    {
-        var visitor = this.NewCreateVisitor();
-        visitor.VisitSetExpression(fieldsAssignment);
-        this.Visitor.IsNeedCommandTableAlias = visitor.IsUseTableAlias;
-        visitor.FromSql = this.Visitor.BuildCommandSql(out _);
+        var sql = this.Visitor.BuildCommandSql(out _);
+        var visitor = this.NewCreateVisitor(sql);
+        visitor.OnDuplicateKeyUpdate(fieldsAssignment);
         return new PostgreSqlFromContinuedCreate<T>(this.DbContext, visitor);
     }
     #endregion
@@ -171,30 +219,35 @@ public class PostgreSqlFromCommand<T> : FromCommand<T>, IPostgreSqlFromCommand<T
     public IPostgreSqlBulkCreated<T, TResult> Returning<TResult>(string fieldNames)
     {
         var sql = this.Visitor.BuildCommandSql(out _);
-        var visitor = this.NewCreateVisitor();
-        visitor.FromSql = sql;
+        var visitor = this.NewCreateVisitor(sql);
         visitor.Returning(fieldNames);
         return new PostgreSqlBulkCreated<T, TResult>(this.DbContext, visitor);
     }
     public IPostgreSqlBulkCreated<T, TResult> Returning<TResult>(Expression<Func<T, TResult>> fieldsSelector)
     {
         var sql = this.Visitor.BuildCommandSql(out _);
-        var visitor = this.NewCreateVisitor();
-        visitor.FromSql = sql;
+        var visitor = this.NewCreateVisitor(sql);
         visitor.Returning(fieldsSelector);
         return new PostgreSqlBulkCreated<T, TResult>(this.DbContext, visitor);
     }
     #endregion
 
-    protected virtual PostgreSqlCreateVisitor NewCreateVisitor()
+    protected virtual PostgreSqlCreateVisitor NewCreateVisitor(string fromSql)
     {
         var createVisiter = new PostgreSqlCreateVisitor(this.DbContext, this.Visitor.TableAsStart);
         createVisiter.Tables = this.Visitor.Tables;
-        createVisiter.IsMultiple = this.Visitor.IsMultiple;
-        createVisiter.CommandIndex = this.Visitor.CommandIndex;
-        createVisiter.RefQueries = this.Visitor.RefQueries;
-        createVisiter.ShardingTables = this.Visitor.ShardingTables;
         createVisiter.DbParameters = this.Visitor.DbParameters;
+        createVisiter.IsMultiple = this.IsMultiple;
+        createVisiter.CommandIndex = this.CommandIndex;
+        createVisiter.RefQueries = this.RefQueries;
+        createVisiter.ShardingTables = this.ShardingTables;
+        createVisiter.RefTableAliases = this.RefTableAliases;
+        createVisiter.IncludeTables = this.IncludeTables;
+        createVisiter.NextDbParameters = this.NextDbParameters;
+        createVisiter.IsRecursive = this.IsRecursive;
+        createVisiter.CteQueryObj = this.CteQueryObj;
+        createVisiter.RefFrom = this;
+        createVisiter.FromSql = fromSql;
         return createVisiter;
     }
 }
@@ -234,39 +287,72 @@ public class PostgreSqlFromCommand<<#=tables#>> : FromCommand<<#=tables#>>, IPos
         => base.UseTableSchema(tableSchema) as IPostgreSqlFromCommand<<#=tables#>>;
     #endregion
 
-    #region Join
+<#
+        if(i < count)
+        {
+#>
+    #region WithTable
+    public new IPostgreSqlFromCommand<<#=tables#>, TOther> WithTable<TOther>()
+        => base.WithTable<TOther>() as IPostgreSqlFromCommand<<#=tables#>, TOther>;
+    #endregion
+
+    #region WithQuery
+    public new IPostgreSqlFromCommand<<#=tables#>, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
+        => base.WithQuery(subQuery) as IPostgreSqlFromCommand<<#=tables#>, TOther>;
+    public new IPostgreSqlFromCommand<<#=tables#>, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+        => base.WithQuery(subQueryExpr) as IPostgreSqlFromCommand<<#=tables#>, TOther>;
+    #endregion
+<#      }#>
+
+    #region InnerJoin
     public new IPostgreSqlFromCommand<<#=tables#>> InnerJoin(Expression<Func<<#=tables#>, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlFromCommand<<#=tables#>>;
-    public new IPostgreSqlFromCommand<<#=tables#>> LeftJoin(Expression<Func<<#=tables#>, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlFromCommand<<#=tables#>>;
-    public new IPostgreSqlFromCommand<<#=tables#>> RightJoin(Expression<Func<<#=tables#>, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlFromCommand<<#=tables#>>;
 <#
         if( i < count)
         {
 #>
     public new IPostgreSqlFromCommand<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlFromCommand<<#=tables#>, TOther>;
-    public new IPostgreSqlFromCommand<<#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlFromCommand<<#=tables#>, TOther>;
-    public new IPostgreSqlFromCommand<<#=tables#>, TOther> RightJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlFromCommand<<#=tables#>, TOther>;
     public new IPostgreSqlFromCommand<<#=tables#>, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
         => base.InnerJoin(subQuery, joinOn) as IPostgreSqlFromCommand<<#=tables#>, TOther>;
-    public new IPostgreSqlFromCommand<<#=tables#>, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
-        => base.LeftJoin(subQuery, joinOn) as IPostgreSqlFromCommand<<#=tables#>, TOther>;
-    public new IPostgreSqlFromCommand<<#=tables#>, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
-        => base.RightJoin(subQuery, joinOn) as IPostgreSqlFromCommand<<#=tables#>, TOther>;
     public new IPostgreSqlFromCommand<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
-        => base.InnerJoin(subQuery, joinOn) as IPostgreSqlFromCommand<<#=tables#>, TOther>;
-    public new IPostgreSqlFromCommand<<#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
-        => base.LeftJoin(subQuery, joinOn) as IPostgreSqlFromCommand<<#=tables#>, TOther>;
-    public new IPostgreSqlFromCommand<<#=tables#>, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
-        => base.RightJoin(subQuery, joinOn) as IPostgreSqlFromCommand<<#=tables#>, TOther>;
+        => base.InnerJoin(subQueryExpr, joinOn) as IPostgreSqlFromCommand<<#=tables#>, TOther>;
 <#      }#>
     #endregion
 
-    #region Where/And
+    #region LeftJoin
+    public new IPostgreSqlFromCommand<<#=tables#>> LeftJoin(Expression<Func<<#=tables#>, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IPostgreSqlFromCommand<<#=tables#>>;
+<#
+        if( i < count)
+        {
+#>
+    public new IPostgreSqlFromCommand<<#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IPostgreSqlFromCommand<<#=tables#>, TOther>;
+    public new IPostgreSqlFromCommand<<#=tables#>, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+        => base.LeftJoin(subQuery, joinOn) as IPostgreSqlFromCommand<<#=tables#>, TOther>;
+    public new IPostgreSqlFromCommand<<#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+        => base.LeftJoin(subQueryExpr, joinOn) as IPostgreSqlFromCommand<<#=tables#>, TOther>;
+<#      }#>
+    #endregion
+
+    #region RightJoin
+    public new IPostgreSqlFromCommand<<#=tables#>> RightJoin(Expression<Func<<#=tables#>, bool>> joinOn)
+        => base.RightJoin(joinOn) as IPostgreSqlFromCommand<<#=tables#>>;
+<#
+        if( i < count)
+        {
+#>
+    public new IPostgreSqlFromCommand<<#=tables#>, TOther> RightJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+        => base.RightJoin(joinOn) as IPostgreSqlFromCommand<<#=tables#>, TOther>;
+    public new IPostgreSqlFromCommand<<#=tables#>, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+        => base.RightJoin(subQuery, joinOn) as IPostgreSqlFromCommand<<#=tables#>, TOther>;
+    public new IPostgreSqlFromCommand<<#=tables#>, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+        => base.RightJoin(subQueryExpr, joinOn) as IPostgreSqlFromCommand<<#=tables#>, TOther>;
+<#      }#>
+    #endregion
+
+    #region Where
     public new IPostgreSqlFromCommand<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate)
     {
         base.WhereInternal(predicate);
@@ -277,6 +363,9 @@ public class PostgreSqlFromCommand<<#=tables#>> : FromCommand<<#=tables#>>, IPos
         base.WhereInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
+    #endregion
+
+    #region And
     public new IPostgreSqlFromCommand<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate)
     {
         base.AndInternal(predicate);
@@ -285,6 +374,19 @@ public class PostgreSqlFromCommand<<#=tables#>> : FromCommand<<#=tables#>>, IPos
     public new IPostgreSqlFromCommand<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate = null, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
     {
         base.AndInternal(condition, ifPredicate, elsePredicate);
+        return this;
+    }
+    #endregion
+
+    #region Or
+    public new IPostgreSqlFromCommand<<#=tables#>> Or(Expression<Func<<#=tables#>, bool>> predicate)
+    {
+        base.OrInternal(predicate);
+        return this;
+    }
+    public new IPostgreSqlFromCommand<<#=tables#>> Or(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate = null, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
+    {
+        base.OrInternal(condition, ifPredicate, elsePredicate);
         return this;
     }
     #endregion
@@ -311,24 +413,29 @@ public class PostgreSqlFromCommand<<#=tables#>> : FromCommand<<#=tables#>>, IPos
     }
     #endregion
 
-    #region Select
-    public new IPostgreSqlFromCommand<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>(fields) as IPostgreSqlFromCommand<TTarget>;
-    public new IPostgreSqlFromCommand<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr)
-        => base.Select(fieldsExpr) as IPostgreSqlFromCommand<TTarget>;
-    #endregion
-
-    #region Skip/Take
+    #region Skip/Take/Page
     public new IPostgreSqlFromCommand<<#=tables#>> Skip(int offset)
     {
-        this.Visitor.Skip(offset);
+        base.SkipInternal(offset);
         return this;
     }
     public new IPostgreSqlFromCommand<<#=tables#>> Take(int limit)
     {
-        this.Visitor.Take(limit);
+        base.TakeInternal(limit);
         return this;
     }
+    public new IPostgreSqlFromCommand<<#=tables#>> Page(int pageNumber, int pageSize)
+    {
+        base.PageInternal(pageNumber, pageSize);
+        return this;
+    }
+    #endregion
+
+    #region Select
+    public new IPostgreSqlFromCommand<TTarget> Select<TTarget>(Expression<Func<<#=tables#>, TTarget>> fieldsExpr)
+        => base.Select(fieldsExpr) as IPostgreSqlFromCommand<TTarget>;
+    public new IPostgreSqlFromCommand<TTarget> SelectFlattenTo<TTarget>(Expression<Func<<#=tables#>, TTarget>> specialMemberSelector = null)
+        => base.SelectFlattenTo(specialMemberSelector) as IPostgreSqlFromCommand<TTarget>;
     #endregion
 }
 <#  }#>
