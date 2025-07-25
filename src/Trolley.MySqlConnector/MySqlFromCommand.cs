@@ -32,35 +32,17 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
 
     #region Union/UnionAll
     public new IMySqlFromCommand<T> Union(IQuery<T> subQuery)
-    {
-        base.UnionInternal(subQuery);
-        return this;
-    }
+        => base.Union(subQuery) as IMySqlFromCommand<T>;
     public new IMySqlFromCommand<T> Union(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
-    {
-        base.UnionInternal(subQueryExpr);
-        return this;
-    }
+        => base.Union(subQueryExpr) as IMySqlFromCommand<T>;
     public new IMySqlFromCommand<T> UnionAll(IQuery<T> subQuery)
-    {
-        base.UnionAllInternal(subQuery);
-        return this;
-    }
+        => base.UnionAll(subQuery) as IMySqlFromCommand<T>;
     public new IMySqlFromCommand<T> UnionAll(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
-    {
-        base.UnionAllInternal(subQueryExpr);
-        return this;
-    }
+        => base.UnionAll(subQueryExpr) as IMySqlFromCommand<T>;
     public new IMySqlFromCommand<T> UnionRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr)
-    {
-        base.UnionRecursiveInternal(subQueryExpr);
-        return this;
-    }
+        => base.UnionRecursive(subQueryExpr) as IMySqlFromCommand<T>;
     public new IMySqlFromCommand<T> UnionAllRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr)
-    {
-        base.UnionAllRecursiveInternal(subQueryExpr);
-        return this;
-    }
+        => base.UnionAllRecursive(subQueryExpr) as IMySqlFromCommand<T>;
     #endregion
 
     #region WithTable
@@ -104,56 +86,29 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
 
     #region Where
     public new IMySqlFromCommand<T> Where(Expression<Func<T, bool>> predicate)
-    {
-        base.WhereInternal(predicate);
-        return this;
-    }
+       => this.Where(true, predicate);
     public new IMySqlFromCommand<T> Where(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
-    {
-        base.WhereInternal(condition, ifPredicate, elsePredicate);
-        return this;
-    }
+        => base.Where(condition, ifPredicate, elsePredicate) as IMySqlFromCommand<T>;
     public new IMySqlFromCommand<T> WherePredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
-    {
-        var builder = new PredicateBuilder<T>();
-        return this.Where(predicateInitializer.Invoke(builder));
-    }
+        => base.WherePredicate(predicateInitializer) as IMySqlFromCommand<T>;
     #endregion
 
     #region And
     public new IMySqlFromCommand<T> And(Expression<Func<T, bool>> predicate)
-    {
-        base.AndInternal(predicate);
-        return this;
-    }
+        => this.And(true, predicate);
     public new IMySqlFromCommand<T> And(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
-    {
-        base.AndInternal(condition, ifPredicate, elsePredicate);
-        return this;
-    }
+        => base.And(condition, ifPredicate, elsePredicate) as IMySqlFromCommand<T>;
     public new IMySqlFromCommand<T> AndPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
-    {
-        var builder = new PredicateBuilder<T>();
-        return this.And(predicateInitializer.Invoke(builder));
-    }
+        => base.AndPredicate(predicateInitializer) as IMySqlFromCommand<T>;
     #endregion
 
     #region Or
     public new IMySqlFromCommand<T> Or(Expression<Func<T, bool>> predicate)
-    {
-        base.OrInternal(predicate);
-        return this;
-    }
+        => this.Or(true, predicate);
     public new IMySqlFromCommand<T> Or(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
-    {
-        base.OrInternal(condition, ifPredicate, elsePredicate);
-        return this;
-    }
+        => base.Or(condition, ifPredicate, elsePredicate) as IMySqlFromCommand<T>;
     public new IMySqlFromCommand<T> OrPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
-    {
-        var builder = new PredicateBuilder<T>();
-        return this.Or(predicateInitializer.Invoke(builder));
-    }
+        => base.AndPredicate(predicateInitializer) as IMySqlFromCommand<T>;
     #endregion
 
     #region GroupBy
@@ -163,19 +118,13 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
 
     #region OrderBy
     public new IMySqlFromCommand<T> OrderBy<TFields>(Expression<Func<T, TFields>> fieldsExpr)
-         => this.OrderBy(true, fieldsExpr);
+        => this.OrderBy(true, fieldsExpr);
     public new IMySqlFromCommand<T> OrderBy<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr)
-    {
-        base.OrderByInternal(condition, fieldsExpr);
-        return this;
-    }
+        => base.OrderBy(condition, fieldsExpr) as IMySqlFromCommand<T>;
     public new IMySqlFromCommand<T> OrderByDescending<TFields>(Expression<Func<T, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
     public new IMySqlFromCommand<T> OrderByDescending<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr)
-    {
-        base.OrderByDescendingInternal(condition, fieldsExpr);
-        return this;
-    }
+        => base.OrderByDescending(condition, fieldsExpr) as IMySqlFromCommand<T>;
     #endregion
 
     #region Skip/Take/Page
@@ -200,10 +149,7 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
 
     #region Distinct
     public new IMySqlFromCommand<T> Distinct()
-    {
-        this.Visitor.Distinct();
-        return this;
-    }
+        => base.Distinct() as IMySqlFromCommand<T>;
     #endregion
 
     #region OnDuplicateKeyUpdate

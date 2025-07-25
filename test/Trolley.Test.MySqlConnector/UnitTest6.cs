@@ -1689,10 +1689,10 @@ public class UnitTest6 : UnitTestBase
 
         var result = repository
             .FromQuery(f => f.From<Order>()
-                .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f.Slice(-6,0)) > 202001)
+                .UseTable(f => (f.Contains("_104_") || f.Contains("_105_")) && int.Parse(f.Slice(-6, 0)) > 202001)
                 .InnerJoin<User>((a, b) => a.BuyerId == b.Id)
                 .UseTableMap<Order>((orderOrigName, userOrigName, orderTableName)
-                    => orderTableName.Replace(orderOrigName, userOrigName).Slice(0,-7))
+                    => orderTableName.Replace(orderOrigName, userOrigName).Slice(0, -7))
                 .LeftJoin<OrderDetail>((a, b, c) => a.Id == c.OrderId)
                 .UseTableMap<Order>((orderOrigName, orderDetailOrigName, orderTableName)
                     => orderTableName.Replace(orderOrigName, orderDetailOrigName))

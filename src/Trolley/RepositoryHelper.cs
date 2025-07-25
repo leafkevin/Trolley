@@ -52,7 +52,7 @@ public static class RepositoryHelper
     private static readonly ConcurrentDictionary<int, Delegate> readerDeserializerAsyncGetters = new();
 
     private static readonly ConcurrentDictionary<Type, Func<object>> creatorCache = new();
-    private static readonly ConcurrentDictionary<Type, Func<object[], object>> parameterizedCreatorCache = new();
+    private static readonly ConcurrentDictionary<int, Func<object[], object>> parameterizedCreatorCache = new();
 
     public static void AddValueParameter(DbContext dbContext, Expression dbParametersExpr, Expression ormProviderExpr,
         Expression parameterNameExpr, Type fieldValueType, Expression fieldValueExpr, MemberMap memberMapper, List<Expression> blockBodies)
@@ -1636,11 +1636,29 @@ public static class RepositoryHelper
     }
     public static object CreateInstance(Type targetType, Type[] parameterTypes, params object[] parameters)
     {
-        var creator = parameterizedCreatorCache.GetOrAdd(targetType, f =>
+        var keyParameterTypes = new List<object> { targetType, "args" };
+        keyParameterTypes.AddRange(parameterTypes);
+        var cacheKey = GetCacheKey(keyParameterTypes.ToArray());
+        var creator = parameterizedCreatorCache.GetOrAdd(cacheKey, f =>
         {
-            var parameterExprs = parameterTypes.Select((t, i) => Expression.Parameter(t, $"param{i}")).ToArray();
-            var constructor = f.GetConstructor(parameterTypes);
-            return Expression.Lambda<Func<object[], object>>(Expression.New(constructor), parameterExprs).Compile();
+            var parametersExprs = Expression.Parameter(typeof(object[]), "parameters");
+            var constructor = targetType.GetConstructor(parameterTypes);
+            var argsExprs = new List<Expression>();
+            for (int i = 0; i < parameterTypes.Length; i++)
+            {
+                var type = parameterTypes[i];
+                if (type == typeof(object))
+                    argsExprs.Add(Expression.ArrayIndex(parametersExprs, Expression.Constant(i)));
+                else
+                {
+                    var paramExpr = Expression.ArrayIndex(parametersExprs, Expression.Constant(i));
+                    argsExprs.Add(Expression.Convert(paramExpr, type));
+                }
+            }
+            Expression bodyExpr = Expression.New(constructor, argsExprs);
+            if (targetType != typeof(object))
+                bodyExpr = Expression.Convert(bodyExpr, typeof(object));
+            return Expression.Lambda<Func<object[], object>>(bodyExpr, parametersExprs).Compile();
         });
         return creator.Invoke(parameters);
     }

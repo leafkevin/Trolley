@@ -69,7 +69,7 @@ public class MySqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IMySqlCon
     public new IMySqlContinuedUpdate<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
         => base.Where(condition, ifPredicate, elsePredicate) as IMySqlContinuedUpdate<TEntity>;
     public new IMySqlContinuedUpdate<TEntity> WherePredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
-        => this.WherePredicate(predicateInitializer);
+        => base.WherePredicate(predicateInitializer) as IMySqlContinuedUpdate<TEntity>;
     #endregion
 
     #region And
@@ -78,7 +78,7 @@ public class MySqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IMySqlCon
     public new IMySqlContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
         => base.And(condition, ifPredicate, elsePredicate) as IMySqlContinuedUpdate<TEntity>;
     public new IMySqlContinuedUpdate<TEntity> AndPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
-        => this.AndPredicate(predicateInitializer);
+        => base.AndPredicate(predicateInitializer) as IMySqlContinuedUpdate<TEntity>;
     #endregion
 
     #region Or
@@ -87,7 +87,7 @@ public class MySqlContinuedUpdate<TEntity> : ContinuedUpdate<TEntity>, IMySqlCon
     public new IMySqlContinuedUpdate<TEntity> Or(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
         => base.Or(condition, ifPredicate, elsePredicate) as IMySqlContinuedUpdate<TEntity>;
     public new IMySqlContinuedUpdate<TEntity> OrPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
-        => this.OrPredicate(predicateInitializer);
+        => base.OrPredicate(predicateInitializer) as IMySqlContinuedUpdate<TEntity>;
     #endregion
 
     #region Execute
@@ -566,7 +566,7 @@ public class MySqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity>, I
     public new IMySqlBulkContinuedUpdate<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
         => base.Where(condition, ifPredicate, elsePredicate) as IMySqlBulkContinuedUpdate<TEntity>;
     public new IMySqlBulkContinuedUpdate<TEntity> WherePredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
-        => this.WherePredicate(predicateInitializer);
+        => base.WherePredicate(predicateInitializer) as IMySqlBulkContinuedUpdate<TEntity>;
     #endregion
 
     #region And
@@ -575,7 +575,7 @@ public class MySqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity>, I
     public new IMySqlBulkContinuedUpdate<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
         => base.And(condition, ifPredicate, elsePredicate) as IMySqlBulkContinuedUpdate<TEntity>;
     public new IMySqlBulkContinuedUpdate<TEntity> AndPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
-        => this.AndPredicate(predicateInitializer);
+        => base.AndPredicate(predicateInitializer) as IMySqlBulkContinuedUpdate<TEntity>;
     #endregion
 
     #region Or
@@ -584,7 +584,7 @@ public class MySqlBulkContinuedUpdate<TEntity> : BulkContinuedUpdate<TEntity>, I
     public new IMySqlBulkContinuedUpdate<TEntity> Or(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
         => base.Or(condition, ifPredicate, elsePredicate) as IMySqlBulkContinuedUpdate<TEntity>;
     public new IMySqlBulkContinuedUpdate<TEntity> OrPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
-        => this.OrPredicate(predicateInitializer);
+        => base.OrPredicate(predicateInitializer) as IMySqlBulkContinuedUpdate<TEntity>;
     #endregion
 
     #region Execute

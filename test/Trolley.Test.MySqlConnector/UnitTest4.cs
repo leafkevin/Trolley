@@ -326,14 +326,14 @@ public class UnitTest4 : UnitTestBase
         this.Initialize(1);
         var repository = this.dbFactory.Create();
         var sql = repository.Delete<User>()
-            .Where(1)
+            .Where(f => f.Id == 1)
             .Returning(f => new { f.Id, f.TenantId, Info = $"{f.Gender}-{f.Age}-{f.Name.ToUpper()}" })
             .ToSql(out _);
         Assert.Equal("DELETE FROM `sys_user` WHERE `Id`=@Id RETURNING `Id`,`TenantId`,CONCAT(`Gender`,'-',CAST(`Age` AS CHAR),'-',UPPER(`Name`)) AS `Info`", sql);
 
         var user = await repository.GetByIdAsync<User>(1);
         var result1 = await repository.Delete<User>()
-            .Where(1)
+            .Where(f => f.Id == 1)
             .Returning(f => new { f.Id, f.TenantId, Info = $"{f.Gender}-{f.Age}-{f.Name.ToUpper()}" })
             .ExecuteAsync();
         result1.Sort((x, y) => x.Id.CompareTo(y.Id));
@@ -342,7 +342,7 @@ public class UnitTest4 : UnitTestBase
         Assert.Equal($"{user.Gender}-{user.Age}-{user.Name.ToUpper()}", result1[0].Info);
 
         var sql2 = repository.Delete<User>()
-            .Where(1)
+            .Where(f => f.Id == 1)
             .Returning<User>("*")
             .ToSql(out _);
         Assert.Equal("DELETE FROM `sys_user` WHERE `Id`=@Id RETURNING *", sql2);
@@ -367,7 +367,7 @@ public class UnitTest4 : UnitTestBase
 
         user = await repository.GetByIdAsync<User>(1);
         var users = await repository.Delete<User>()
-            .Where(1)
+            .Where(f => f.Id == 1)
             .Returning<User>("*")
             .ExecuteAsync();
         Assert.Equal(user.Id, users[0].Id);
@@ -376,14 +376,14 @@ public class UnitTest4 : UnitTestBase
         this.Initialize(1);
         var userIds = new int[] { 1, 2, 3 };
         sql = repository.Delete<User>()
-          .Where(userIds)
+          .Where(f => userIds.Contains(f.Id))
           .Returning(f => new { f.Id, f.TenantId, Info = $"{f.Gender}-{f.Age}-{f.Name.ToUpper()}" })
           .ToSql(out _);
         Assert.Equal("DELETE FROM `sys_user` WHERE `Id` IN (@Id0,@Id1,@Id2) RETURNING `Id`,`TenantId`,CONCAT(`Gender`,'-',CAST(`Age` AS CHAR),'-',UPPER(`Name`)) AS `Info`", sql);
 
         users = await repository.GetByIdsAsync<User>(userIds);
         result1 = await repository.Delete<User>()
-            .Where(userIds)
+            .Where(f => userIds.Contains(f.Id))
             .Returning(f => new { f.Id, f.TenantId, Info = $"{f.Gender}-{f.Age}-{f.Name.ToUpper()}" })
             .ExecuteAsync();
         users.Sort((x, y) => x.Id.CompareTo(y.Id));

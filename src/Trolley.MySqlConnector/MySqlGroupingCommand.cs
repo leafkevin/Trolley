@@ -14,27 +14,18 @@ public class MySqlGroupingCommand<T, TGrouping> : GroupingCommand<T, TGrouping>,
     public new IMySqlGroupingCommand<T, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate)
         => this.Having(true, predicate);
     public new IMySqlGroupingCommand<T, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate)
-    {
-        base.HavingInternal(condition, predicate);
-        return this;
-    }
+        => base.Having(condition, predicate) as IMySqlGroupingCommand<T, TGrouping>;
     #endregion
 
     #region OrderBy/OrderByDescending
     public new IMySqlGroupingCommand<T, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
         => this.OrderBy(true, fieldsExpr);
     public new IMySqlGroupingCommand<T, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
-    {
-        this.OrderByInternal(condition, fieldsExpr);
-        return this;
-    }
+        => this.OrderBy(condition, fieldsExpr) as IMySqlGroupingCommand<T, TGrouping>;
     public new IMySqlGroupingCommand<T, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
     public new IMySqlGroupingCommand<T, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
-    {
-        this.OrderByDescendingInternal(condition, fieldsExpr);
-        return this;
-    }
+        => this.OrderByDescending(condition, fieldsExpr) as IMySqlGroupingCommand<T, TGrouping>;
     #endregion
 
     #region Select
@@ -55,27 +46,18 @@ public class MySqlGroupingCommand<T1, T2, TGrouping> : GroupingCommand<T1, T2, T
     public new IMySqlGroupingCommand<T1, T2, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, bool>> predicate)
         => this.Having(true, predicate);
     public new IMySqlGroupingCommand<T1, T2, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, bool>> predicate)
-    {
-        base.HavingInternal(condition, predicate);
-        return this;
-    }
+        => base.Having(condition, predicate) as IMySqlGroupingCommand<T1, T2, TGrouping>;
     #endregion
 
     #region OrderBy/OrderByDescending
     public new IMySqlGroupingCommand<T1, T2, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TFields>> fieldsExpr)
         => this.OrderBy(true, fieldsExpr);
     public new IMySqlGroupingCommand<T1, T2, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TFields>> fieldsExpr)
-    {
-        base.OrderByInternal(condition, fieldsExpr);
-        return this;
-    }
+        => base.OrderBy(condition, fieldsExpr) as IMySqlGroupingCommand<T1, T2, TGrouping>;
     public new IMySqlGroupingCommand<T1, T2, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
     public new IMySqlGroupingCommand<T1, T2, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TFields>> fieldsExpr)
-    {
-        base.OrderByDescendingInternal(condition, fieldsExpr);
-        return this;
-    }
+        => base.OrderByDescending(condition, fieldsExpr) as IMySqlGroupingCommand<T1, T2, TGrouping>;
     #endregion
 
     #region Select
@@ -96,27 +78,18 @@ public class MySqlGroupingCommand<T1, T2, T3, TGrouping> : GroupingCommand<T1, T
     public new IMySqlGroupingCommand<T1, T2, T3, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, bool>> predicate)
         => this.Having(true, predicate);
     public new IMySqlGroupingCommand<T1, T2, T3, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, bool>> predicate)
-    {
-        base.HavingInternal(condition, predicate);
-        return this;
-    }
+        => base.Having(condition, predicate) as IMySqlGroupingCommand<T1, T2, T3, TGrouping>;
     #endregion
 
     #region OrderBy/OrderByDescending
     public new IMySqlGroupingCommand<T1, T2, T3, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TFields>> fieldsExpr)
         => this.OrderBy(true, fieldsExpr);
     public new IMySqlGroupingCommand<T1, T2, T3, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TFields>> fieldsExpr)
-    {
-        base.OrderByInternal(condition, fieldsExpr);
-        return this;
-    }
+        => base.OrderBy(condition, fieldsExpr) as IMySqlGroupingCommand<T1, T2, T3, TGrouping>;
     public new IMySqlGroupingCommand<T1, T2, T3, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
     public new IMySqlGroupingCommand<T1, T2, T3, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TFields>> fieldsExpr)
-    {
-        base.OrderByDescendingInternal(condition, fieldsExpr);
-        return this;
-    }
+        => base.OrderByDescending(condition, fieldsExpr) as IMySqlGroupingCommand<T1, T2, T3, TGrouping>;
     #endregion
 
     #region Select
@@ -137,27 +110,18 @@ public class MySqlGroupingCommand<T1, T2, T3, T4, TGrouping> : GroupingCommand<T
     public new IMySqlGroupingCommand<T1, T2, T3, T4, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, bool>> predicate)
         => this.Having(true, predicate);
     public new IMySqlGroupingCommand<T1, T2, T3, T4, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, bool>> predicate)
-    {
-        base.HavingInternal(condition, predicate);
-        return this;
-    }
+        => base.Having(condition, predicate) as IMySqlGroupingCommand<T1, T2, T3, T4, TGrouping>;
     #endregion
 
     #region OrderBy/OrderByDescending
     public new IMySqlGroupingCommand<T1, T2, T3, T4, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TFields>> fieldsExpr)
         => this.OrderBy(true, fieldsExpr);
     public new IMySqlGroupingCommand<T1, T2, T3, T4, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TFields>> fieldsExpr)
-    {
-        base.OrderByInternal(condition, fieldsExpr);
-        return this;
-    }
+        => base.OrderBy(condition, fieldsExpr) as IMySqlGroupingCommand<T1, T2, T3, T4, TGrouping>;
     public new IMySqlGroupingCommand<T1, T2, T3, T4, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
     public new IMySqlGroupingCommand<T1, T2, T3, T4, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TFields>> fieldsExpr)
-    {
-        base.OrderByDescendingInternal(condition, fieldsExpr);
-        return this;
-    }
+        => base.OrderByDescending(condition, fieldsExpr) as IMySqlGroupingCommand<T1, T2, T3, T4, TGrouping>;
     #endregion
 
     #region Select
@@ -178,27 +142,18 @@ public class MySqlGroupingCommand<T1, T2, T3, T4, T5, TGrouping> : GroupingComma
     public new IMySqlGroupingCommand<T1, T2, T3, T4, T5, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, bool>> predicate)
         => this.Having(true, predicate);
     public new IMySqlGroupingCommand<T1, T2, T3, T4, T5, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, bool>> predicate)
-    {
-        base.HavingInternal(condition, predicate);
-        return this;
-    }
+        => base.Having(condition, predicate) as IMySqlGroupingCommand<T1, T2, T3, T4, T5, TGrouping>;
     #endregion
 
     #region OrderBy/OrderByDescending
     public new IMySqlGroupingCommand<T1, T2, T3, T4, T5, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TFields>> fieldsExpr)
         => this.OrderBy(true, fieldsExpr);
     public new IMySqlGroupingCommand<T1, T2, T3, T4, T5, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TFields>> fieldsExpr)
-    {
-        base.OrderByInternal(condition, fieldsExpr);
-        return this;
-    }
+        => base.OrderBy(condition, fieldsExpr) as IMySqlGroupingCommand<T1, T2, T3, T4, T5, TGrouping>;
     public new IMySqlGroupingCommand<T1, T2, T3, T4, T5, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
     public new IMySqlGroupingCommand<T1, T2, T3, T4, T5, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TFields>> fieldsExpr)
-    {
-        base.OrderByDescendingInternal(condition, fieldsExpr);
-        return this;
-    }
+        => base.OrderByDescending(condition, fieldsExpr) as IMySqlGroupingCommand<T1, T2, T3, T4, T5, TGrouping>;
     #endregion
 
     #region Select
@@ -219,27 +174,18 @@ public class MySqlGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> : GroupingC
     public new IMySqlGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, bool>> predicate)
         => this.Having(true, predicate);
     public new IMySqlGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, bool>> predicate)
-    {
-        base.HavingInternal(condition, predicate);
-        return this;
-    }
+        => base.Having(condition, predicate) as IMySqlGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping>;
     #endregion
 
     #region OrderBy/OrderByDescending
     public new IMySqlGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
         => this.OrderBy(true, fieldsExpr);
     public new IMySqlGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
-    {
-        base.OrderByInternal(condition, fieldsExpr);
-        return this;
-    }
+        => base.OrderBy(condition, fieldsExpr) as IMySqlGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping>;
     public new IMySqlGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
     public new IMySqlGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
-    {
-        base.OrderByDescendingInternal(condition, fieldsExpr);
-        return this;
-    }
+        => base.OrderByDescending(condition, fieldsExpr) as IMySqlGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping>;
     #endregion
 
     #region Select

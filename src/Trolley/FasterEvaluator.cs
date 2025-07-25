@@ -57,7 +57,6 @@ public static class FasterEvaluator
     }
     public static object Evaluate(this NewExpression expression)
     {
-
         if (expression.Arguments.Count > 0)
             return RepositoryHelper.CreateInstance(expression.Type, expression.Arguments.Select(f => f.Type).ToArray(),
                 expression.Arguments.Select(arg => arg.Evaluate()).ToArray());

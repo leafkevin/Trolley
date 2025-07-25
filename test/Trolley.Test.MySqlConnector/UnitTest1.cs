@@ -959,7 +959,7 @@ public class UnitTest1 : UnitTestBase
             .FromQuery(ordersQuery)
             .ExecuteAsync();
         await repository.CommitAsync();
-        Assert.Equal(orderIds.Count, result);      
+        Assert.Equal(orderIds.Count, result);
 
         sql = repository.Create<Order>()
             .From<OrderDetail>()
@@ -980,6 +980,29 @@ public class UnitTest1 : UnitTestBase
                 UpdatedAt = DateTime.Now,
                 UpdatedBy = 1
             })
+            .Union(f => f
+                .From<OrderDetail>()
+                .GroupBy(f => f.OrderId)
+                .Select((x, f) => new
+                {
+                    Id = f.OrderId,
+                    TenantId = "1",
+                    OrderNo = $"ON-{f.OrderId}",
+                    BuyerId = 1,
+                    SellerId = 1,
+                    BuyerSource = UserSourceType.Taobao.ToString(),
+                    ProductCount = 2,
+                    TotalAmount = x.Sum(f.Amount),
+                    IsEnabled = true,
+                    CreatedAt = DateTime.Now,
+                    CreatedBy = 1,
+                    UpdatedAt = DateTime.Now,
+                    UpdatedBy = 1
+                }))
+            .Where(f => f.OrderNo.Length > 3)
+            .AndPredicate(t => t.And(f => f.BuyerId > 0).Build())
+            .OrderBy(f=>f.Id)
+            .Distinct()
             .ToSql(out parameters);
         Assert.Equal("INSERT INTO `sys_order` (`Id`,`TenantId`,`OrderNo`,`BuyerId`,`SellerId`,`BuyerSource`,`ProductCount`,`TotalAmount`,`IsEnabled`,`CreatedAt`,`CreatedBy`,`UpdatedAt`,`UpdatedBy`) SELECT b.`OrderId`,'1',CONCAT('ON-',b.`OrderId`),1,1,'Taobao',2,SUM(b.`Amount`),1,NOW(),1,NOW(),1 FROM `sys_order_detail` b GROUP BY b.`OrderId`", sql);
         await repository.BeginTransactionAsync();

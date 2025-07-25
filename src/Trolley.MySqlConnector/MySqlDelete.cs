@@ -44,6 +44,6 @@ public class MySqlDelete<TEntity> : Delete<TEntity>, IMySqlDelete<TEntity>
     public new IMySqlContinuedDelete<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null)
         => base.Where(condition, ifPredicate, elsePredicate) as IMySqlContinuedDelete<TEntity>;
     public new IMySqlContinuedDelete<TEntity> WherePredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer)
-        => this.WherePredicate(predicateInitializer);
+        => base.WherePredicate(predicateInitializer) as IMySqlContinuedDelete<TEntity>;
     #endregion
 }

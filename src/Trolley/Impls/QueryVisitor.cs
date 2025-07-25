@@ -632,8 +632,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         var fromQuery = new FromQuery(this.DbContext, visitor);
         visitor.IsSecondUnion = true;
         (var sql, _, _) = this.VisitFromQuery(subQueryExpr, fromQuery);
-        //if (visitor.IsRecursive && visitor.CteQueryObj != null)
-        //    throw new NotSupportedException("调用UnionRecursive/UnionAllRecursive方法后，必须调用AsCteTable方法，生成CTE表");
         this.Union(union, targetType, sql);
     }
     private void Union(string union, Type targetType, string subQuerySql)

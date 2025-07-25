@@ -422,7 +422,6 @@ public class MySqlCreateVisitor : CreateVisitor
         queryVisitor.ShardingTables = this.ShardingTables;
         queryVisitor.RefTableAliases = this.RefTableAliases;
         queryVisitor.IncludeTables = this.IncludeTables;
-        queryVisitor.NextDbParameters = this.NextDbParameters;
         queryVisitor.IsRecursive = this.IsRecursive;
         queryVisitor.CteQueryObj = this.CteQueryObj;
         queryVisitor.RefFrom = this;
