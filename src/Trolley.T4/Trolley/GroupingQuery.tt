@@ -26,11 +26,6 @@ public class GroupingQueryBase<TGrouping> :QueryInternal, IGroupingQueryBase<TGr
         this.Visitor.SelectGrouping();
         return this.OrmProvider.NewQuery<TGrouping>(this.DbContext, this.Visitor);
     }
-    public virtual IQuery<TTarget> Select<TTarget>(string fields = "*")
-    {
-        base.SelectInternal(fields);
-        return this.OrmProvider.NewQuery<TTarget>(this.DbContext, this.Visitor);
-    }
     #endregion
 }
 public class GroupingQuery<T, TGrouping> : GroupingQueryBase<TGrouping>, IGroupingQuery<T, TGrouping>
@@ -63,6 +58,13 @@ public class GroupingQuery<T, TGrouping> : GroupingQueryBase<TGrouping>, IGroupi
     public virtual IGroupingQuery<T, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
     {
         base.OrderByDescendingInternal(condition, fieldsExpr);
+        return this;
+    }
+    public virtual IGroupingQuery<T, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T>, Expression> fieldsGetter)
+    {
+        var builder = new OrderByBuilder<IGroupingAggregate<TGrouping>, T>();
+        var fieldsExpr = fieldsGetter.Invoke(builder);
+        base.OrderByDynamic(builder.IsAscending, fieldsExpr);
         return this;
     }
     #endregion
@@ -116,6 +118,13 @@ public class GroupingQuery<<#=tables#>, TGrouping> : GroupingQueryBase<TGrouping
     public virtual IGroupingQuery<<#=tables#>, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr)
     {
         base.OrderByDescendingInternal(condition, fieldsExpr);
+        return this;
+    }
+    public virtual IGroupingQuery<<#=tables#>, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, <#=tables#>>, Expression> fieldsGetter)
+    {
+        var builder = new OrderByBuilder<IGroupingAggregate<TGrouping>, <#=tables#>>();
+        var fieldsExpr = fieldsGetter.Invoke(builder);
+        base.OrderByDynamic(builder.IsAscending, fieldsExpr);
         return this;
     }
     #endregion

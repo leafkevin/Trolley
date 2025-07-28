@@ -278,6 +278,13 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
         base.OrderByDescendingInternal(condition, fieldsExpr);
         return this;
     }
+    public virtual IQuery<<#=tables#>> OrderByDynamic(Func<OrderByBuilder<<#=tables#>>, Expression> fieldsGetter)
+    {
+        var builder = new OrderByBuilder<<#=tables#>>();
+        var fieldsExpr = fieldsGetter.Invoke(builder);
+        base.OrderByDynamic(builder.IsAscending, fieldsExpr);
+        return this;
+    }
     #endregion
 
     #region Skip/Take/Page

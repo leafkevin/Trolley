@@ -448,6 +448,13 @@ public class Query<T> : QueryBase, IQuery<T>
         base.OrderByDescendingInternal(condition, fieldsExpr);
         return this;
     }
+    public virtual IQuery<T> OrderByDynamic(Func<OrderByBuilder<T>, Expression> fieldsGetter)
+    {
+        var builder = new OrderByBuilder<T>();
+        var fieldsExpr = fieldsGetter.Invoke(builder);
+        base.OrderByDynamic(builder.IsAscending, fieldsExpr);
+        return this;
+    }
     #endregion
 
     #region Skip/Take/Page

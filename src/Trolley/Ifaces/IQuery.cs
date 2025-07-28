@@ -431,7 +431,7 @@ public interface IQuery<T> : IQueryBase
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
-    /// <param name="subQuery">子查询对象</param>
+    /// <param name="subQueryExpr">子查询对象</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn);
@@ -473,7 +473,7 @@ public interface IQuery<T> : IQueryBase
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的类型是一个匿名类</typeparam>
-    /// <param name="subQuery">子查询对象</param>
+    /// <param name="subQueryExpr">子查询对象</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn);
@@ -513,7 +513,7 @@ public interface IQuery<T> : IQueryBase
     /// </code>
     /// </summary>
     /// <typeparam name="TOther">子查询返回的实体类型，子查询中通常会有SELECT操作，返回的<paramref name="TOther"/>类型是一个匿名类</typeparam>
-    /// <param name="subQuery">子查询对象</param>
+    /// <param name="subQueryExpr">子查询对象</param>
     /// <param name="joinOn">关联条件表达式</param>
     /// <returns>返回查询对象</returns>
     IQuery<T, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn);
@@ -642,6 +642,14 @@ public interface IQuery<T> : IQueryBase
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IQuery<T> OrderByDescending<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr);
+    /// <summary>
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// <code>string orderFields = "Name";bool isAsc = true;
+    /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", f =&lt; f.Name).When("Gender", f =&lt; f.Gender).Build()</code>)
+    /// </summary>
+    /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T> OrderByDynamic(Func<OrderByBuilder<T>, Expression> fieldsGetter);
     #endregion    
 
     #region Skip/Take/Page
@@ -1349,6 +1357,14 @@ public interface IQuery<T1, T2> : IQueryBase
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, TFields>> fieldsExpr);
+    /// <summary>
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// <code>string orderFields = "Name";bool isAsc = true;
+    /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
+    /// </summary>
+    /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T1, T2> OrderByDynamic(Func<OrderByBuilder<T1, T2>, Expression> fieldsGetter);
     #endregion
 
     #region Skip/Take/Page
@@ -1965,6 +1981,14 @@ public interface IQuery<T1, T2, T3> : IQueryBase
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, TFields>> fieldsExpr);
+    /// <summary>
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// <code>string orderFields = "Name";bool isAsc = true;
+    /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
+    /// </summary>
+    /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T1, T2, T3> OrderByDynamic(Func<OrderByBuilder<T1, T2, T3>, Expression> fieldsGetter);
     #endregion
 
     #region Skip/Take/Page
@@ -2582,6 +2606,14 @@ public interface IQuery<T1, T2, T3, T4> : IQueryBase
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr);
+    /// <summary>
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// <code>string orderFields = "Name";bool isAsc = true;
+    /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
+    /// </summary>
+    /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T1, T2, T3, T4> OrderByDynamic(Func<OrderByBuilder<T1, T2, T3, T4>, Expression> fieldsGetter);
     #endregion
 
     #region Skip/Take/Page
@@ -3200,6 +3232,14 @@ public interface IQuery<T1, T2, T3, T4, T5> : IQueryBase
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr);
+    /// <summary>
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// <code>string orderFields = "Name";bool isAsc = true;
+    /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
+    /// </summary>
+    /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T1, T2, T3, T4, T5> OrderByDynamic(Func<OrderByBuilder<T1, T2, T3, T4, T5>, Expression> fieldsGetter);
     #endregion
 
     #region Skip/Take/Page
@@ -3819,6 +3859,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6> : IQueryBase
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr);
+    /// <summary>
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// <code>string orderFields = "Name";bool isAsc = true;
+    /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
+    /// </summary>
+    /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T1, T2, T3, T4, T5, T6> OrderByDynamic(Func<OrderByBuilder<T1, T2, T3, T4, T5, T6>, Expression> fieldsGetter);
     #endregion
 
     #region Skip/Take/Page
@@ -4439,6 +4487,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7> : IQueryBase
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr);
+    /// <summary>
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// <code>string orderFields = "Name";bool isAsc = true;
+    /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
+    /// </summary>
+    /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T1, T2, T3, T4, T5, T6, T7> OrderByDynamic(Func<OrderByBuilder<T1, T2, T3, T4, T5, T6, T7>, Expression> fieldsGetter);
     #endregion
 
     #region Skip/Take/Page
@@ -5060,6 +5116,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8> : IQueryBase
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr);
+    /// <summary>
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// <code>string orderFields = "Name";bool isAsc = true;
+    /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
+    /// </summary>
+    /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8> OrderByDynamic(Func<OrderByBuilder<T1, T2, T3, T4, T5, T6, T7, T8>, Expression> fieldsGetter);
     #endregion
 
     #region Skip/Take/Page
@@ -5682,6 +5746,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : IQueryBase
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr);
+    /// <summary>
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// <code>string orderFields = "Name";bool isAsc = true;
+    /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
+    /// </summary>
+    /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> OrderByDynamic(Func<OrderByBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9>, Expression> fieldsGetter);
     #endregion
 
     #region Skip/Take/Page
@@ -6305,6 +6377,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : IQueryBase
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr);
+    /// <summary>
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// <code>string orderFields = "Name";bool isAsc = true;
+    /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
+    /// </summary>
+    /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> OrderByDynamic(Func<OrderByBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>, Expression> fieldsGetter);
     #endregion
 
     #region Skip/Take/Page
@@ -6929,6 +7009,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : IQueryBa
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr);
+    /// <summary>
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// <code>string orderFields = "Name";bool isAsc = true;
+    /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
+    /// </summary>
+    /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> OrderByDynamic(Func<OrderByBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>, Expression> fieldsGetter);
     #endregion
 
     #region Skip/Take/Page
@@ -7554,6 +7642,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> : IQu
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr);
+    /// <summary>
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// <code>string orderFields = "Name";bool isAsc = true;
+    /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
+    /// </summary>
+    /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> OrderByDynamic(Func<OrderByBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>, Expression> fieldsGetter);
     #endregion
 
     #region Skip/Take/Page
@@ -8180,6 +8276,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> 
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr);
+    /// <summary>
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// <code>string orderFields = "Name";bool isAsc = true;
+    /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
+    /// </summary>
+    /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> OrderByDynamic(Func<OrderByBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>, Expression> fieldsGetter);
     #endregion
 
     #region Skip/Take/Page
@@ -8807,6 +8911,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr);
+    /// <summary>
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// <code>string orderFields = "Name";bool isAsc = true;
+    /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
+    /// </summary>
+    /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> OrderByDynamic(Func<OrderByBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>, Expression> fieldsGetter);
     #endregion
 
     #region Skip/Take/Page
@@ -9435,6 +9547,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr);
+    /// <summary>
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// <code>string orderFields = "Name";bool isAsc = true;
+    /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
+    /// </summary>
+    /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> OrderByDynamic(Func<OrderByBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>, Expression> fieldsGetter);
     #endregion
 
     #region Skip/Take/Page
@@ -9913,6 +10033,14 @@ public interface IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, 
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TFields>> fieldsExpr);
+    /// <summary>
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// <code>string orderFields = "Name";bool isAsc = true;
+    /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
+    /// </summary>
+    /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
+    /// <returns>返回查询对象</returns>
+    IQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> OrderByDynamic(Func<OrderByBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>, Expression> fieldsGetter);
     #endregion
 
     #region Skip/Take/Page

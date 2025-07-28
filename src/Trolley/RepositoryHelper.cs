@@ -869,8 +869,9 @@ public static class RepositoryHelper
         }
         return BuildWhereSqlParametersPart(dbContext, entityType, whereObjType, 1, true, isUseKey, false, isInExpr, isMultiple, isBulk, headSql);
     }
-    public static object BuildQueryWhereObjSqlParameters(DbContext dbContext, Type entityType, Type whereObjType, object whereObjs, bool isMultiple, bool isBulk)
+    public static object BuildQueryWhereObjSqlParameters(DbContext dbContext, Type entityType, object whereObjs, bool isMultiple, bool isBulk)
     {
+        Type whereObjType = null;
         if (isBulk)
         {
             var parameters = whereObjs as IEnumerable;
@@ -880,6 +881,10 @@ public static class RepositoryHelper
                 break;
             }
         }
+        else whereObjType = whereObjs.GetType();
+        if (!whereObjType.IsEntityType(out _))
+            throw new NotSupportedException("不支持的参数类型，whereObj参数，支持实体类型参数，命名、匿名对象或是字典对象");
+
         var cacheKey = GetCacheKey(dbContext.OrmProvider.OrmProviderType, dbContext.MapProvider, entityType, whereObjType);
         var commandInitializerCache = isBulk ? queryBulkWhereObjCommandInitializerCache : isMultiple ? queryMultiWhereObjCommandInitializerCache : queryWhereObjCommandInitializerCache;
         return commandInitializerCache.GetOrAdd(cacheKey, BuildQueryWhereSqlParameters(dbContext, entityType, whereObjType, false, false, isMultiple, isBulk));
@@ -901,8 +906,9 @@ public static class RepositoryHelper
         var commandInitializerCache = isBulk ? queryBulkWhereObjByKeyCommandInitializerCache : isMultiple ? queryMultiWhereObjByKeyCommandInitializerCache : queryWhereObjByKeyCommandInitializerCache;
         return commandInitializerCache.GetOrAdd(cacheKey, BuildQueryWhereSqlParameters(dbContext, entityType, whereObjType, false, true, isMultiple, isBulk));
     }
-    public static object BuildExistsSqlParameters(DbContext dbContext, Type entityType, Type whereObjType, object whereObjs, bool isMultiple, bool isBulk)
+    public static object BuildExistsSqlParameters(DbContext dbContext, Type entityType, object whereObjs, bool isMultiple, bool isBulk)
     {
+        Type whereObjType = null;
         if (isBulk)
         {
             var parameters = whereObjs as IEnumerable;
@@ -912,6 +918,7 @@ public static class RepositoryHelper
                 break;
             }
         }
+        else whereObjType = whereObjs.GetType();
         var cacheKey = GetCacheKey(dbContext.OrmProvider.OrmProviderType, dbContext.MapProvider, entityType, whereObjType);
         var commandInitializerCache = isBulk ? queryBulkExistsCommandInitializerCache : isMultiple ? queryMultiExistsCommandInitializerCache : queryExistsCommandInitializerCache;
         return commandInitializerCache.GetOrAdd(cacheKey, BuildQueryWhereSqlParameters(dbContext, entityType, whereObjType, true, false, isMultiple, isBulk));

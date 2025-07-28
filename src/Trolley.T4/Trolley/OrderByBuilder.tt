@@ -1,0 +1,63 @@
+﻿<#@ template debug="false" hostspecific="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="Microsoft.VisualStudio.TextTemplating"#>
+<#@ output extension=".cs" #>
+using System;
+using System.Linq.Expressions;
+
+namespace Trolley;
+
+public class OrderByBuilder
+{
+    private Expression expression = null;
+    private string switchField;
+    public bool IsAscending { get; set; }
+    public void SwitchInternal(string switchValue, bool isAscending)
+    {
+        this.switchField = switchValue;
+        this.IsAscending = isAscending;
+    }
+    public void WhenInternal(string whenValue, Expression fieldsSelector)
+    {
+        if (this.switchField != whenValue) return;
+        this.expression = fieldsSelector;
+    }
+    public Expression Build() => this.expression;
+}
+public class OrderByBuilder<T> : OrderByBuilder
+{
+    public OrderByBuilder<T> Switch(string switchValue, bool isAscending)
+    {
+        base.SwitchInternal(switchValue, isAscending);
+        return this;
+    }
+    public OrderByBuilder<T> When<TFields>(string value, Expression<Func<T, TFields>> fieldsSelector)
+    {
+        base.WhenInternal(value, fieldsSelector);
+        return this;
+    }
+}
+<#
+    var count = 16;
+    var tables = "T1";
+    for (int i = 2; i <= count; i++)
+    {
+        tables += $", T{i}";
+#>
+public class OrderByBuilder<<#=tables#>> : OrderByBuilder
+{
+    public OrderByBuilder<<#=tables#>> Switch(string switchValue, bool isAscending)
+    {
+        base.SwitchInternal(switchValue, isAscending);
+        return this;
+    }
+    public OrderByBuilder<<#=tables#>> When<TFields>(string value, Expression<Func<<#=tables#>, TFields>> fieldsSelector)
+    {
+        base.WhenInternal(value, fieldsSelector);
+        return this;
+    }
+}
+<#  }#>

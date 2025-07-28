@@ -100,7 +100,39 @@ public sealed class DbContext
     #endregion
 
     #region Query
-    public List<TEntity> Query<TEntity>(string rawSql, object parameters = null, CommandType commandType = CommandType.Text)
+    public TResult Query<TEntity, TResult>(string rawSql, bool isSingle, object parameters,
+        Func<ITheaDataReader, Func<ITheaDataReader, object>, TResult> readerInitializer, CommandType commandType = CommandType.Text)
+    {
+        (var isNeedClose, var connection, var command) = this.CreateRawSqlCommand(rawSql, parameters, commandType);
+
+        connection.Open();
+        var behavior = isSingle ? CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow : CommandBehavior.SequentialAccess;
+        using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
+        var deserializer = reader.GetReaderDeserializer(typeof(TEntity), this);
+        var result = readerInitializer.Invoke(reader, deserializer);
+        reader.Dispose();
+
+        command.Dispose();
+        if (isNeedClose) connection.Close();
+        return result;
+    }
+    public async Task<TResult> QueryAsync<TEntity, TResult>(string rawSql, bool isSingle, object parameters,
+        Func<ITheaDataReader, Func<ITheaDataReader, object>, CancellationToken, Task<TResult>> readerInitializer, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
+    {
+        (var isNeedClose, var connection, var command) = this.CreateRawSqlCommand(rawSql, parameters, commandType);
+
+        await connection.OpenAsync(cancellationToken);
+        var behavior = isSingle ? CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow : CommandBehavior.SequentialAccess;
+        using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
+        var deserializer = reader.GetReaderDeserializer(typeof(TEntity), this);
+        var result = await readerInitializer.Invoke(reader, deserializer, cancellationToken);
+        await reader.DisposeAsync();
+
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
+        return result;
+    }
+    private (bool, ITheaConnection, ITheaCommand) CreateRawSqlCommand(string rawSql, object parameters, CommandType commandType)
     {
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
@@ -108,7 +140,7 @@ public sealed class DbContext
         {
             var whereObjType = parameters.GetType();
             if (!whereObjType.IsEntityType(out _))
-                throw new NotSupportedException("不支持的参数类型，Query方法的parameters参数，支持实体类型参数，命名、匿名对象或是字典对象");
+                throw new NotSupportedException("不支持的参数类型，QueryFirst方法的parameters参数，支持实体类型参数，命名、匿名对象或是字典对象");
         }
 
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
@@ -119,68 +151,96 @@ public sealed class DbContext
         }
         command.CommandText = rawSql;
         command.CommandType = commandType;
+        return (isNeedClose, connection, command);
+    }
+
+    public TResult Query<TEntity, TResult>(string rawSql, bool isSingle, List<IDbDataParameter> parameters,
+        Func<ITheaDataReader, Func<ITheaDataReader, object>, TResult> readerInitializer, CommandType commandType = CommandType.Text)
+    {
+        (var isNeedClose, var connection, var command) = this.CreateRawSqlDbParametersCommand(rawSql, parameters, commandType);
 
         connection.Open();
-        var behavior = CommandBehavior.SequentialAccess;
+        var behavior = isSingle ? CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow : CommandBehavior.SequentialAccess;
         using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
-        var result = new List<TEntity>();
         var deserializer = reader.GetReaderDeserializer(typeof(TEntity), this);
-        while (reader.Read())
-            result.Add((TEntity)deserializer.Invoke(reader));
+        var result = readerInitializer.Invoke(reader, deserializer);
+        reader.Dispose();
+
+        command.Dispose();
+        if (isNeedClose) connection.Close();
+        return result;
+    }
+    public async Task<TResult> QueryAsync<TEntity, TResult>(string rawSql, bool isSingle, List<IDbDataParameter> parameters,
+        Func<ITheaDataReader, Func<ITheaDataReader, object>, CancellationToken, Task<TResult>> readerInitializer, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
+    {
+        (var isNeedClose, var connection, var command) = this.CreateRawSqlDbParametersCommand(rawSql, parameters, commandType);
+
+        await connection.OpenAsync(cancellationToken);
+        TResult result = default;
+        var behavior = isSingle ? CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow : CommandBehavior.SequentialAccess;
+        using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
+        var deserializer = reader.GetReaderDeserializer(typeof(TEntity), this);
+        result = await readerInitializer.Invoke(reader, deserializer, cancellationToken);
+        await reader.DisposeAsync();
+
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
+        return result;
+    }
+    private (bool, ITheaConnection, ITheaCommand) CreateRawSqlDbParametersCommand(string rawSql, List<IDbDataParameter> parameters, CommandType commandType)
+    {
+        if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
+        if (parameters == null)
+            throw new ArgumentNullException(nameof(parameters));
+
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
+        command.CommandText = rawSql;
+        command.CommandType = commandType;
+        parameters.ForEach(f => command.Parameters.Add(f));
+        return (isNeedClose, connection, command);
+    }
+
+    public TResult Query<TEntity, TResult>(object whereObj, bool isSingle, Func<ITheaDataReader, Func<ITheaDataReader, object>, TResult> readerInitializer)
+    {
+        (var isNeedClose, var connection, var command) = this.CreateQueryWhereObjsCommand(typeof(TEntity), whereObj);
+
+        connection.Open();
+        var behavior = isSingle ? CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow : CommandBehavior.SequentialAccess;
+        using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
+        var deserializer = reader.GetReaderDeserializer(typeof(TEntity), this);
+        var result = readerInitializer.Invoke(reader, deserializer);
 
         reader.Dispose();
         command.Dispose();
         if (isNeedClose) connection.Close();
         return result;
     }
-    public async Task<List<TEntity>> QueryAsync<TEntity>(string rawSql, object parameters = null, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
+    public async Task<TResult> QueryAsync<TEntity, TResult>(object whereObj, bool isSingle, Func<ITheaDataReader, Func<ITheaDataReader, object>, CancellationToken, Task<TResult>> readerInitializer, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrEmpty(rawSql))
-            throw new ArgumentNullException(nameof(rawSql));
-        if (parameters != null)
-        {
-            var whereObjType = parameters.GetType();
-            if (!whereObjType.IsEntityType(out _))
-                throw new NotSupportedException("不支持的参数类型，QueryAsync方法的parameters参数，支持实体类型参数，命名、匿名对象或是字典对象");
-        }
-
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
-        if (parameters != null)
-        {
-            var commandInitializer = RepositoryHelper.BuildQueryRawSqlParameters(this.OrmProvider, rawSql, parameters);
-            commandInitializer.Invoke(command.Parameters, this.OrmProvider, parameters);
-        }
-        command.CommandText = rawSql;
-        command.CommandType = commandType;
+        (var isNeedClose, var connection, var command) = this.CreateQueryWhereObjsCommand(typeof(TEntity), whereObj);
 
         await connection.OpenAsync(cancellationToken);
-        var behavior = CommandBehavior.SequentialAccess;
+        var behavior = isSingle ? CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow : CommandBehavior.SequentialAccess;
         using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
-        var result = new List<TEntity>();
         var deserializer = reader.GetReaderDeserializer(typeof(TEntity), this);
-        while (await reader.ReadAsync(cancellationToken))
-            result.Add((TEntity)deserializer.Invoke(reader));
+        var result = await readerInitializer.Invoke(reader, deserializer, cancellationToken);
 
         await reader.DisposeAsync();
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         return result;
     }
-
-    public TResult Query<TEntity, TResult>(object whereObj, bool isSingle, Func<ITheaDataReader, TResult> readerInitializer)
+    private (bool, ITheaConnection, ITheaCommand) CreateQueryWhereObjsCommand(Type entityType, object whereObj)
     {
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
-        var whereObjType = whereObj.GetType();
-        if (!whereObjType.IsEntityType(out _))
-            throw new NotSupportedException("不支持的参数类型，Query方法的whereObj参数，支持实体类型参数，命名、匿名对象或是字典对象");
         bool isBulk = whereObj is IEnumerable && whereObj is not string && whereObj is not IDictionary<string, object>;
 
-        var entityType = typeof(TEntity);
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
         if (isBulk)
         {
-            (var isInExpr, var headSql, var commandInitializer) = ((bool, string, object))RepositoryHelper.BuildQueryWhereObjSqlParameters(this, entityType, whereObjType, whereObj, false, isBulk);
+            (var isInExpr, var headSql, var commandInitializer) = ((bool, string, object))RepositoryHelper.BuildQueryWhereObjSqlParameters(this, entityType, whereObj, false, isBulk);
             var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
             var parameters = whereObj as IEnumerable;
             int index = 0;
@@ -197,72 +257,49 @@ public sealed class DbContext
         }
         else
         {
-            var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this, entityType, whereObjType, whereObj, false, isBulk);
+            var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this, entityType, whereObj, false, isBulk);
             var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
             command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this, whereObj);
         }
+        return (isNeedClose, connection, command);
+    }
+    #endregion
+
+    #region QueryById
+    public TResult QueryById<TEntity, TResult>(object whereKeys, bool isSingle, Func<ITheaDataReader, Func<ITheaDataReader, object>, TResult> readerInitializer)
+    {
+        (var isNeedClose, var connection, var command) = this.CreateQueryWhereKeysCommand(typeof(TEntity), whereKeys);
 
         connection.Open();
         var behavior = isSingle ? CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow : CommandBehavior.SequentialAccess;
         using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
-        var result = readerInitializer.Invoke(reader);
+        var deserializer = reader.GetReaderDeserializer(typeof(TEntity), this);
+        var result = readerInitializer.Invoke(reader, deserializer);
 
         reader.Dispose();
         command.Dispose();
         if (isNeedClose) connection.Close();
         return result;
     }
-    public async Task<TResult> QueryAsync<TEntity, TResult>(object whereObj, bool isSingle, Func<ITheaDataReader, CancellationToken, Task<TResult>> readerInitializer, CancellationToken cancellationToken = default)
+    public async Task<TResult> QueryByIdAsync<TEntity, TResult>(object whereKeys, bool isSingle, Func<ITheaDataReader, Func<ITheaDataReader, object>, CancellationToken, Task<TResult>> readerInitializer, CancellationToken cancellationToken = default)
     {
-        if (whereObj == null)
-            throw new ArgumentNullException(nameof(whereObj));
-        var whereObjType = whereObj.GetType();
-        if (!whereObjType.IsEntityType(out _))
-            throw new NotSupportedException("不支持的参数类型，Query方法的whereObj参数，支持实体类型参数，命名、匿名对象或是字典对象");
-        bool isBulk = whereObj is IEnumerable && whereObj is not string && whereObj is not IDictionary<string, object>;
-
-        var entityType = typeof(TEntity);
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
-
-        if (isBulk)
-        {
-            (var isInExpr, var headSql, var commandInitializer) = ((bool, string, object))RepositoryHelper.BuildQueryWhereObjSqlParameters(this, entityType, whereObjType, whereObj, false, isBulk);
-            var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
-            var parameters = whereObj as IEnumerable;
-            int index = 0;
-            var builder = new StringBuilder(headSql);
-            var jointMark = isInExpr ? "," : " OR ";
-            foreach (var parameter in parameters)
-            {
-                if (index > 0) builder.Append(jointMark);
-                typedCommandInitializer.Invoke(command.Parameters, builder, this, parameter, index.ToString());
-                index++;
-            }
-            if (isInExpr) builder.Append(')');
-            command.CommandText = builder.ToString();
-        }
-        else
-        {
-            var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this, entityType, whereObjType, whereObj, false, isBulk);
-            var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
-            command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this, whereObj);
-        }
+        (var isNeedClose, var connection, var command) = this.CreateQueryWhereKeysCommand(typeof(TEntity), whereKeys);
 
         await connection.OpenAsync(cancellationToken);
         var behavior = isSingle ? CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow : CommandBehavior.SequentialAccess;
         using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
-        var result = await readerInitializer.Invoke(reader, cancellationToken);
+        var deserializer = reader.GetReaderDeserializer(typeof(TEntity), this);
+        var result = await readerInitializer.Invoke(reader, deserializer, cancellationToken);
 
         await reader.DisposeAsync();
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         return result;
     }
-    public TResult QueryById<TEntity, TResult>(object whereKeys, bool isSingle, Func<ITheaDataReader, TResult> readerInitializer)
+    private (bool, ITheaConnection, ITheaCommand) CreateQueryWhereKeysCommand(Type entityType, object whereKeys)
     {
         if (whereKeys == null)
             throw new ArgumentNullException(nameof(whereKeys));
-        var entityType = typeof(TEntity);
         bool isBulk = whereKeys is IEnumerable && whereKeys is not string && whereKeys is not IDictionary<string, object>;
         (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
 
@@ -289,55 +326,63 @@ public sealed class DbContext
             var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
             command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this, whereKeys);
         }
+        return (isNeedClose, connection, command);
+    }
+    #endregion
+
+    #region QueryScalar
+    public TValue QueryScalar<TValue>(string rawSql, object parameters = null, CommandType commandType = CommandType.Text)
+    {
+        (var isNeedClose, var connection, var command) = this.CreateRawSqlCommand(rawSql, parameters, commandType);
 
         connection.Open();
-        var behavior = isSingle ? CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow : CommandBehavior.SequentialAccess;
-        using var reader = command.ExecuteReader(CommandSqlType.Select, behavior);
-        var result = readerInitializer.Invoke(reader);
+        TValue result = default;
+        var objResult = command.ExecuteScalar(CommandSqlType.Select);
+        if (objResult != null && objResult is not DBNull)
+            result = (TValue)Convert.ChangeType(objResult, typeof(TValue));
 
-        reader.Dispose();
         command.Dispose();
         if (isNeedClose) connection.Close();
         return result;
     }
-    public async Task<TResult> QueryByIdAsync<TEntity, TResult>(object whereKeys, bool isSingle, Func<ITheaDataReader, CancellationToken, Task<TResult>> readerInitializer, CancellationToken cancellationToken = default)
+    public async Task<TValue> QueryScalarAsync<TValue>(string rawSql, object parameters = null, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
     {
-        if (whereKeys == null)
-            throw new ArgumentNullException(nameof(whereKeys));
-        bool isBulk = whereKeys is IEnumerable && whereKeys is not string && whereKeys is not IDictionary<string, object>;
-        var entityType = typeof(TEntity);
-        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
-
-        if (isBulk)
-        {
-            (var isInExpr, var headSql, var commandInitializer) = ((bool, string, object))RepositoryHelper.BuildQueryWhereObjByKeySqlParameters(this, entityType, whereKeys, false, isBulk);
-            var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
-            var parameters = whereKeys as IEnumerable;
-            int index = 0;
-            var builder = new StringBuilder(headSql);
-            var jointMark = isInExpr ? "," : " OR ";
-            foreach (var parameter in parameters)
-            {
-                if (index > 0) builder.Append(jointMark);
-                typedCommandInitializer.Invoke(command.Parameters, builder, this, parameter, index.ToString());
-                index++;
-            }
-            if (isInExpr) builder.Append(')');
-            command.CommandText = builder.ToString();
-        }
-        else
-        {
-            var commandInitializer = RepositoryHelper.BuildQueryWhereObjByKeySqlParameters(this, entityType, whereKeys, false, isBulk);
-            var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
-            command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this, whereKeys);
-        }
+        (var isNeedClose, var connection, var command) = this.CreateRawSqlCommand(rawSql, parameters, commandType);
 
         await connection.OpenAsync(cancellationToken);
-        var behavior = isSingle ? CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow : CommandBehavior.SequentialAccess;
-        using var reader = await command.ExecuteReaderAsync(CommandSqlType.Select, behavior, cancellationToken);
-        var result = await readerInitializer.Invoke(reader, cancellationToken);
+        TValue result = default;
+        var objResult = await command.ExecuteScalarAsync(CommandSqlType.Select, cancellationToken);
+        if (objResult != null && objResult is not DBNull)
+            result = (TValue)Convert.ChangeType(objResult, typeof(TValue));
 
-        await reader.DisposeAsync();
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
+        return result;
+    }
+    public TValue QueryScalar<TValue>(string rawSql, List<IDbDataParameter> parameters, CommandType commandType = CommandType.Text)
+    {
+        (var isNeedClose, var connection, var command) = this.CreateRawSqlDbParametersCommand(rawSql, parameters, commandType);
+
+        connection.Open();
+        TValue result = default;
+        var objResult = command.ExecuteScalar(CommandSqlType.Select);
+        if (objResult != null && objResult is not DBNull)
+            result = (TValue)Convert.ChangeType(objResult, typeof(TValue));
+
+        command.Dispose();
+        if (isNeedClose) connection.Close();
+        return result;
+    }
+    public async Task<TValue> QueryScalarAsync<TValue>(string rawSql, List<IDbDataParameter> parameters, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
+    {
+        (var isNeedClose, var connection, var command) = this.CreateRawSqlDbParametersCommand(rawSql, parameters, commandType);
+
+        await connection.OpenAsync(cancellationToken);
+        TValue result = default;
+        var objResult = await command.ExecuteScalarAsync(CommandSqlType.Select, cancellationToken);
+        if (objResult != null && objResult is not DBNull)
+            result = (TValue)Convert.ChangeType(objResult, typeof(TValue));
+
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         return result;
@@ -384,6 +429,9 @@ public sealed class DbContext
         visitor.Dispose();
         return result;
     }
+    #endregion
+
+    #region QueryVisitor
     public TResult QueryFrom<TEntity, TResult>(IQueryVisitor visitor, bool isSingle, Func<Type, ITheaDataReader, List<SqlFieldSegment>, TResult> readerInitializer)
     {
         var entityType = typeof(TEntity);
@@ -449,9 +497,6 @@ public sealed class DbContext
         visitor.Dispose();
         return result;
     }
-    #endregion
-
-    #region QueryPage
     public IPagedList<TResult> QueryPage<TResult>(IQueryVisitor visitor)
     {
         var result = new PagedList<TResult> { Data = new List<TResult>() };
@@ -540,19 +585,131 @@ public sealed class DbContext
     }
     #endregion
 
+    #region Exists
+    public bool Exists<TEntity>(object whereObjs)
+    {
+        (var isNeedClose, var connection, var command) = this.CreateExistsCommand(typeof(TEntity), whereObjs);
+
+        int result = 0;
+        connection.Open();
+        var objResult = command.ExecuteScalar(CommandSqlType.Select);
+        if (objResult != null && objResult is not DBNull)
+            result = (int)Convert.ChangeType(objResult, typeof(int));
+
+        command.Dispose();
+        if (isNeedClose) connection.Close();
+        return result > 0;
+    }
+    public async Task<bool> ExistsAsync<TEntity>(object whereObjs, CancellationToken cancellationToken = default)
+    {
+        (var isNeedClose, var connection, var command) = this.CreateExistsCommand(typeof(TEntity), whereObjs);
+
+        int result = 0;
+        await connection.OpenAsync(cancellationToken);
+        var objResult = await command.ExecuteScalarAsync(CommandSqlType.Select, cancellationToken);
+        if (objResult != null && objResult is not DBNull)
+            result = (int)Convert.ChangeType(objResult, typeof(int));
+
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
+        return result > 0;
+    }
+    private (bool, ITheaConnection, ITheaCommand) CreateExistsCommand(Type entityType, object whereObjs)
+    {
+        if (whereObjs == null)
+            throw new ArgumentNullException(nameof(whereObjs));
+        var isBulk = whereObjs is IEnumerable && whereObjs is not string && whereObjs is not IDictionary<string, object>;
+        (var isNeedClose, var connection, var command) = this.UseSlaveCommand();
+        if (isBulk)
+        {
+            (var isInExpr, var headSql, var commandInitializer) = ((bool, string, object))RepositoryHelper.BuildExistsSqlParameters(this, entityType, whereObjs, false, isBulk);
+            var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
+            var parameters = whereObjs as IEnumerable;
+            int index = 0;
+            var builder = new StringBuilder(headSql);
+            var jointMark = isInExpr ? "," : " OR ";
+            foreach (var parameter in parameters)
+            {
+                if (index > 0) builder.Append(jointMark);
+                typedCommandInitializer.Invoke(command.Parameters, builder, this, parameter, index.ToString());
+                index++;
+            }
+            if (isInExpr) builder.Append(')');
+            command.CommandText = builder.ToString();
+        }
+        else
+        {
+            var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this, entityType, whereObjs, false, isBulk);
+            var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
+            command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this, whereObjs);
+        }
+        return (isNeedClose, connection, command);
+    }
+
+    #endregion
+
     #region Create
+    public int Create<TEntity>(object insertObjs, int bulkCount = 500)
+    {
+        if (insertObjs == null)
+            throw new ArgumentNullException(nameof(insertObjs));
+
+        int result = 0;
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
+        bool isBulk = insertObjs is IEnumerable && insertObjs is not string && insertObjs is not IDictionary<string, object>;
+        var entityType = typeof(TEntity);
+        if (isBulk)
+        {
+            var entities = insertObjs as IEnumerable;
+            var commandExecutor = RepositoryHelper.BuildCreateBulkCommandExecutor(this, entityType, entities);
+            connection.Open();
+            result = commandExecutor.Invoke(this, command, entities, bulkCount);
+        }
+        else
+        {
+            var commandInitializer = RepositoryHelper.BuildCreateCommandInitializer(this, entityType, insertObjs, false);
+            commandInitializer.Invoke(this, command, insertObjs);
+            connection.Open();
+            result = command.ExecuteNonQuery(CommandSqlType.Insert);
+        }
+
+        command.Dispose();
+        if (isNeedClose) connection.Close();
+        return result;
+    }
+    public async Task<int> CreateAsync<TEntity>(object insertObjs, int bulkCount = 500, CancellationToken cancellationToken = default)
+    {
+        if (insertObjs == null)
+            throw new ArgumentNullException(nameof(insertObjs));
+
+        int result = 0;
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
+        bool isBulk = insertObjs is IEnumerable && insertObjs is not string && insertObjs is not IDictionary<string, object>;
+        var entityType = typeof(TEntity);
+        if (isBulk)
+        {
+            var entities = insertObjs as IEnumerable;
+            var commandExecutor = RepositoryHelper.BuildCreateBulkAsyncCommandExecutor(this, entityType, entities);
+            await connection.OpenAsync(cancellationToken);
+            result = await commandExecutor.Invoke(this, command, entities, bulkCount, cancellationToken);
+        }
+        else
+        {
+            var commandInitializer = RepositoryHelper.BuildCreateCommandInitializer(this, entityType, insertObjs, false);
+            commandInitializer.Invoke(this, command, insertObjs);
+            await connection.OpenAsync(cancellationToken);
+            result = await command.ExecuteNonQueryAsync(CommandSqlType.Insert, cancellationToken);
+        }
+
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
+        return result;
+    }
+
     public TResult CreateIdentity<TEntity, TResult>(object insertObj)
     {
-        if (insertObj == null)
-            throw new ArgumentNullException(nameof(insertObj));
-        bool isBulk = insertObj is IEnumerable && insertObj is not string && insertObj is not IDictionary<string, object>;
-        if (isBulk) throw new NotSupportedException("CreateIdentity方法只支持单条数据插入，不支持批量插入返回Identity");
-
         TResult result = default;
-        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
-        var entityType = typeof(TEntity);
-        var commandInitializer = RepositoryHelper.BuildCreateCommandInitializer(this, entityType, insertObj, true);
-        commandInitializer.Invoke(this, command, insertObj);
+        (var isNeedClose, var connection, var command) = this.CreateSingleInsertCommand(typeof(TEntity), insertObj);
 
         connection.Open();
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
@@ -566,16 +723,8 @@ public sealed class DbContext
     }
     public async Task<TResult> CreateIdentityAsync<TEntity, TResult>(object insertObj, CancellationToken cancellationToken = default)
     {
-        if (insertObj == null)
-            throw new ArgumentNullException(nameof(insertObj));
-        bool isBulk = insertObj is IEnumerable && insertObj is not string && insertObj is not IDictionary<string, object>;
-        if (isBulk) throw new NotSupportedException("CreateIdentityAsync方法只支持单条数据插入，不支持批量插入返回Identity");
-
         TResult result = default;
-        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
-        var entityType = typeof(TEntity);
-        var commandInitializer = RepositoryHelper.BuildCreateCommandInitializer(this, entityType, insertObj, true);
-        commandInitializer.Invoke(this, command, insertObj);
+        (var isNeedClose, var connection, var command) = this.CreateSingleInsertCommand(typeof(TEntity), insertObj);
 
         await connection.OpenAsync(cancellationToken);
         var behavior = CommandBehavior.SequentialAccess | CommandBehavior.SingleResult | CommandBehavior.SingleRow;
@@ -587,6 +736,19 @@ public sealed class DbContext
         if (isNeedClose) await connection.CloseAsync();
         return result;
     }
+    private (bool, ITheaConnection, ITheaCommand) CreateSingleInsertCommand(Type entityType, object insertObj)
+    {
+        if (insertObj == null)
+            throw new ArgumentNullException(nameof(insertObj));
+        bool isBulk = insertObj is IEnumerable && insertObj is not string && insertObj is not IDictionary<string, object>;
+        if (isBulk) throw new NotSupportedException("此方法只支持单条数据插入，不支持批量插入返回Identity");
+
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
+        var commandInitializer = RepositoryHelper.BuildCreateCommandInitializer(this, entityType, insertObj, true);
+        commandInitializer.Invoke(this, command, insertObj);
+        return (isNeedClose, connection, command);
+    }
+
     public TResult CreateIdentity<TResult>(ICreateVisitor visitor)
     {
         TResult result = default;
@@ -621,7 +783,6 @@ public sealed class DbContext
         visitor.Dispose();
         return result;
     }
-
     public TResult CreateResult<TResult>(ICreateVisitor visitor)
     {
         TResult result = default;
@@ -656,6 +817,244 @@ public sealed class DbContext
         await command.DisposeAsync();
         if (isNeedClose) await connection.CloseAsync();
         visitor.Dispose();
+        return result;
+    }
+    #endregion
+
+    #region Update
+    public int Update<TEntity>(object updateObjs, int bulkCount = 500)
+    {
+        if (updateObjs == null)
+            throw new ArgumentNullException(nameof(updateObjs));
+
+        int result = 0;
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
+        bool isBulk = updateObjs is IEnumerable && updateObjs is not string && updateObjs is not IDictionary<string, object>;
+        var entityType = typeof(TEntity);
+
+        if (isBulk)
+        {
+            int index = 0;
+            var entities = updateObjs as IEnumerable;
+            Type updateObjType = null;
+            foreach (var updateObj in entities)
+            {
+                updateObjType = updateObj.GetType();
+                break;
+            }
+
+            var commandInitializer = RepositoryHelper.BuildUpdateCommandInitializer(this, entityType, updateObjType, true, false);
+            var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
+            var builder = new StringBuilder();
+
+            connection.Open();
+            foreach (var updateObj in entities)
+            {
+                if (index > 0) builder.Append(';');
+                typedCommandInitializer.Invoke(command.Parameters, builder, this, updateObj, index.ToString());
+                index++;
+
+                if (index >= bulkCount)
+                {
+                    command.CommandText = builder.ToString();
+                    result += command.ExecuteNonQuery(CommandSqlType.BulkUpdate);
+                    command.Parameters.Clear();
+                    builder.Clear();
+                    index = 0;
+                }
+            }
+            if (index > 0)
+            {
+                command.CommandText = builder.ToString();
+                result += command.ExecuteNonQuery(CommandSqlType.BulkUpdate);
+            }
+            builder.Clear();
+        }
+        else
+        {
+            var updateObjType = updateObjs.GetType();
+            var commandInitializer = RepositoryHelper.BuildUpdateCommandInitializer(this, entityType, updateObjType, false, false);
+            var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
+            command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this, updateObjs);
+            connection.Open();
+            result = command.ExecuteNonQuery(CommandSqlType.Update);
+        }
+
+        command.Dispose();
+        if (isNeedClose) connection.Close();
+        return result;
+    }
+    public async Task<int> UpdateAsync<TEntity>(object updateObjs, int bulkCount = 500, CancellationToken cancellationToken = default)
+    {
+        if (updateObjs == null)
+            throw new ArgumentNullException(nameof(updateObjs));
+
+        int result = 0;
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
+        bool isBulk = updateObjs is IEnumerable && updateObjs is not string && updateObjs is not IDictionary<string, object>;
+        var entityType = typeof(TEntity);
+
+        if (isBulk)
+        {
+            int index = 0;
+            var entities = updateObjs as IEnumerable;
+            Type updateObjType = null;
+            foreach (var updateObj in entities)
+            {
+                updateObjType = updateObj.GetType();
+                break;
+            }
+            var commandInitializer = RepositoryHelper.BuildUpdateCommandInitializer(this, entityType, updateObjType, true, false);
+            var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
+            var builder = new StringBuilder();
+
+            await connection.OpenAsync(cancellationToken);
+            foreach (var updateObj in entities)
+            {
+                if (index > 0) builder.Append(';');
+                typedCommandInitializer.Invoke(command.Parameters, builder, this, updateObj, index.ToString());
+                index++;
+
+                if (index >= bulkCount)
+                {
+                    command.CommandText = builder.ToString();
+                    result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkUpdate, cancellationToken);
+                    command.Parameters.Clear();
+                    builder.Clear();
+                    index = 0;
+                }
+            }
+            if (index > 0)
+            {
+                command.CommandText = builder.ToString();
+                result += await command.ExecuteNonQueryAsync(CommandSqlType.BulkUpdate, cancellationToken);
+            }
+            builder.Clear();
+        }
+        else
+        {
+            var updateObjType = updateObjs.GetType();
+            var commandInitializer = RepositoryHelper.BuildUpdateCommandInitializer(this, entityType, updateObjType, false, false);
+            var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string>;
+            command.CommandText = typedCommandInitializer.Invoke(command.Parameters, this, updateObjs);
+
+            await connection.OpenAsync(cancellationToken);
+            result = await command.ExecuteNonQueryAsync(CommandSqlType.Update, cancellationToken);
+        }
+
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
+        return result;
+    }
+    #endregion
+
+    #region Delete
+    public int Delete<TEntity>(object whereKeys)
+    {
+        (var isNeedClose, var connection, var command) = this.CreateDeleteCommand(typeof(TEntity), whereKeys);
+        connection.Open();
+        var result = command.ExecuteNonQuery(CommandSqlType.Delete);
+
+        command.Dispose();
+        if (isNeedClose) connection.Close();
+        return result;
+    }
+    public async Task<int> DeleteAsync<TEntity>(object whereKeys, CancellationToken cancellationToken = default)
+    {
+        (var isNeedClose, var connection, var command) = this.CreateDeleteCommand(typeof(TEntity), whereKeys);
+        await connection.OpenAsync(cancellationToken);
+        var result = await command.ExecuteNonQueryAsync(CommandSqlType.Delete, cancellationToken);
+
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
+        return result;
+    }
+    private (bool, ITheaConnection, ITheaCommand) CreateDeleteCommand(Type entityType, object whereKeys)
+    {
+        if (whereKeys == null)
+            throw new ArgumentNullException(nameof(whereKeys));
+
+        var isBulk = whereKeys is IEnumerable && whereKeys is not string && whereKeys is not IDictionary<string, object>;
+        IEnumerable entities = null;
+        Type whereObjType = null;
+        if (isBulk)
+        {
+            entities = whereKeys as IEnumerable;
+            foreach (var entity in entities)
+            {
+                whereObjType = entity.GetType();
+                break;
+            }
+        }
+        else whereObjType = whereKeys.GetType();
+        (var isMultiKeys, var tableName, var headSqlSetter, var whereSqlParametersSetter) = RepositoryHelper.BuildDeleteCommandInitializer(this, entityType, whereObjType, false, isBulk);
+
+        int index = 0;
+        var builder = new StringBuilder();
+        var whereSqlBuilder = new StringBuilder();
+        (var isNeedClose, var connection, var command) = this.UseMasterCommand();
+        if (isBulk)
+        {
+            var jointMark = isMultiKeys ? " OR " : ",";
+            var typedWhereSqlParametersSetter = whereSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
+
+            foreach (var entity in entities)
+            {
+                if (index > 0) whereSqlBuilder.Append(jointMark);
+                typedWhereSqlParametersSetter.Invoke(command.Parameters, whereSqlBuilder, this, entity, $"{index}");
+                index++;
+            }
+            if (!isMultiKeys) whereSqlBuilder.Append(')');
+        }
+        else
+        {
+            var typedWhereSqlParametersSetter = whereSqlParametersSetter as Action<IDataParameterCollection, StringBuilder, DbContext, object>;
+            typedWhereSqlParametersSetter.Invoke(command.Parameters, whereSqlBuilder, this, whereKeys);
+        }
+        headSqlSetter.Invoke(builder, tableName);
+        builder.Append(whereSqlBuilder);
+        command.CommandText = builder.ToString();
+        builder.Clear();
+        whereSqlBuilder.Clear();
+        return (isNeedClose, connection, command);
+    }
+    #endregion
+
+    #region Execute
+    public int Execute(string rawSql, object parameters = null, CommandType commandType = CommandType.Text)
+    {
+        (var isNeedClose, var connection, var command) = this.CreateRawSqlCommand(rawSql, parameters, commandType);
+        connection.Open();
+        var result = command.ExecuteNonQuery(CommandSqlType.RawExecute);
+        command.Dispose();
+        if (isNeedClose) connection.Close();
+        return result;
+    }
+    public async Task<int> ExecuteAsync(string rawSql, object parameters = null, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
+    {
+        (var isNeedClose, var connection, var command) = this.CreateRawSqlCommand(rawSql, parameters, commandType);
+        await connection.OpenAsync(cancellationToken);
+        var result = await command.ExecuteNonQueryAsync(CommandSqlType.RawExecute, cancellationToken);
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
+        return result;
+    }
+    public int Execute(string rawSql, List<IDbDataParameter> parameters, CommandType commandType = CommandType.Text)
+    {
+        (var isNeedClose, var connection, var command) = this.CreateRawSqlDbParametersCommand(rawSql, parameters, commandType);
+        connection.Open();
+        var result = command.ExecuteNonQuery(CommandSqlType.RawExecute);
+        command.Dispose();
+        if (isNeedClose) connection.Close();
+        return result;
+    }
+    public async Task<int> ExecuteAsync(string rawSql, List<IDbDataParameter> parameters, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
+    {
+        (var isNeedClose, var connection, var command) = this.CreateRawSqlDbParametersCommand(rawSql, parameters, commandType);
+        await connection.OpenAsync(cancellationToken);
+        var result = await command.ExecuteNonQueryAsync(CommandSqlType.RawExecute, cancellationToken);
+        await command.DisposeAsync();
+        if (isNeedClose) await connection.CloseAsync();
         return result;
     }
     #endregion

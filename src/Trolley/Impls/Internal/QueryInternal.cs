@@ -277,6 +277,12 @@ public class QueryInternal
             throw new ArgumentNullException(nameof(fieldsExpr));
         this.Visitor.OrderBy("DESC", fieldsExpr);
     }
+    protected void OrderByDynamic(bool isAscending, Expression fieldsExpr)
+    {
+        if (fieldsExpr == null)
+            throw new ArgumentNullException(nameof(fieldsExpr));
+        this.Visitor.OrderBy(isAscending ? "ASC" : "DESC", fieldsExpr);
+    }
     #endregion
 
     #region Having
@@ -292,7 +298,7 @@ public class QueryInternal
     #region Skip/Take/Page
     protected void SkipInternal(int offset) => this.Visitor.Skip(offset);
     protected void TakeInternal(int limit) => this.Visitor.Take(limit);
-    protected void PageInternal(int pageNumber, int pageSize) 
+    protected void PageInternal(int pageNumber, int pageSize)
         => this.Visitor.Page(pageNumber, pageSize);
     #endregion
 

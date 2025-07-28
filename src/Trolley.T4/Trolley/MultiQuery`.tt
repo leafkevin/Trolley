@@ -274,6 +274,13 @@ public class MultiQuery<<#=tables#>> : MultiQueryBase, IMultiQuery<<#=tables#>>
         base.OrderByDescendingInternal(condition, fieldsExpr);
         return this;
     }
+    public virtual IMultiQuery<<#=tables#>> OrderByDynamic(Func<OrderByBuilder<<#=tables#>>, Expression> fieldsGetter)
+    {
+        var builder = new OrderByBuilder<<#=tables#>>();
+        var fieldsExpr = fieldsGetter.Invoke(builder);
+        base.OrderByDynamic(builder.IsAscending, fieldsExpr);
+        return this;
+    }
     #endregion
 
     #region Skip/Take/Page

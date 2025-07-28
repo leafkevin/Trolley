@@ -21,7 +21,6 @@ public class MultipleQuery : IMultipleQuery
     #endregion
 
     #region Properties
-    public bool IsUserMaster { get; private set; }
     public DbContext DbContext { get; protected set; }
     public IOrmProvider OrmProvider => this.DbContext.OrmProvider;
     public IEntityMapProvider MapProvider => this.DbContext.MapProvider;
@@ -35,14 +34,6 @@ public class MultipleQuery : IMultipleQuery
         this.DbContext = dbContext;
         this.ReaderAfters = new();
         this.Command = this.OrmProvider.CreateCommand();
-    }
-    #endregion   
-
-    #region UseMaster
-    public IMultipleQuery UseMaster()
-    {
-        this.IsUserMaster = true;
-        return this;
     }
     #endregion
 
@@ -75,12 +66,67 @@ public class MultipleQuery : IMultipleQuery
 <#  }#>
     #endregion
 	
-    #region From SubQuery
-    public IMultiQuery<T> From<T>(Func<IFromQuery, IQuery<T>> subQuery, char tableAsStart = 'a')
+    #region FromQuery
+    public virtual IMultiQuery<T> FromQuery<T>(IQuery<T> subQuery)
     {
-        var visitor = this.CreateQueryVisitor(tableAsStart);
-        visitor.From(typeof(T), this.DbContext, subQuery);
+        var visitor = this.CreateQueryVisitor();
+        visitor.UseQuery(typeof(T), subQuery, false);
         return this.OrmProvider.NewMultiQuery<T>(this, visitor);
+    }
+    public virtual IMultiQuery<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
+    {
+        var visitor = this.CreateQueryVisitor();
+        visitor.UseNewQuery(typeof(T), subQueryExpr, true);
+        return this.OrmProvider.NewMultiQuery<T>(this, visitor);
+    }
+    #endregion
+
+    #region GetById
+    public IMultipleQuery GetById<TEntity>(object whereObj)
+    {
+        if (whereObj == null)
+            throw new ArgumentNullException(nameof(whereObj));
+
+        var entityType = typeof(TEntity);
+        var whereObjType = whereObj.GetType();
+        bool isBulk = whereObj is IEnumerable && whereObj is not string && whereObj is not IDictionary<string, object>;
+        var commandInitializer = RepositoryHelper.BuildQueryWhereObjByKeySqlParameters(this.DbContext, entityType, whereObj, true, isBulk);
+        var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string, string>;
+        var sql = typedCommandInitializer.Invoke(this.Command.Parameters, this.DbContext, whereObj, $"_m{this.ReaderAfters.Count}");
+        this.AddReader(entityType, sql, false);
+        return this;
+    }
+    #endregion
+
+    #region GetByIds
+    public IMultipleQuery GetByIds<TEntity>(IEnumerable whereObjs)
+    {
+        if (whereObjs == null)
+            throw new ArgumentNullException(nameof(whereObjs));
+        var entityType = typeof(TEntity);
+        bool isEmpty = true;
+        foreach (var whereObj in whereObjs)
+        {
+            isEmpty = false;
+            break;
+        }
+        if (isEmpty) throw new Exception("多主键ID查询，whereObjs参数至少要有一条数据");
+
+        (var isInExpr, var headSql, var commandInitializer) = ((bool, string, object))RepositoryHelper.BuildQueryWhereObjByKeySqlParameters(this.DbContext, entityType, whereObjs, true, true);
+        var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
+        int index = 0;
+        var builder = new StringBuilder(headSql);
+        var jointMark = isInExpr ? "," : " OR ";
+        foreach (var whereObj in whereObjs)
+        {
+            if (index > 0) builder.Append(jointMark);
+            typedCommandInitializer.Invoke(this.Command.Parameters, builder, this.DbContext, whereObj, $"_m{this.ReaderAfters.Count}{index}");
+            index++;
+        }
+        if (isInExpr) builder.Append(')');
+        var sql = builder.ToString();
+        this.AddReader(entityType, sql, false);
+        return this;
     }
     #endregion
 
@@ -159,56 +205,7 @@ public class MultipleQuery : IMultipleQuery
         this.AddReader(targetType, sql, false);
         return this;
     }
-    #endregion
-
-    #region GetById
-    public IMultipleQuery GetById<TEntity>(object whereObj)
-    {
-        if (whereObj == null)
-            throw new ArgumentNullException(nameof(whereObj));
-
-        var entityType = typeof(TEntity);
-        var whereObjType = whereObj.GetType();
-        bool isBulk = whereObj is IEnumerable && whereObj is not string && whereObj is not IDictionary<string, object>;
-        var commandInitializer = RepositoryHelper.BuildQueryWhereObjByKeySqlParameters(this.DbContext, entityType, whereObj, true, isBulk);
-        var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string, string>;
-        var sql = typedCommandInitializer.Invoke(this.Command.Parameters, this.DbContext, whereObj, $"_m{this.ReaderAfters.Count}");
-        this.AddReader(entityType, sql, false);
-        return this;
-    }
-    #endregion
-
-    #region GetByIds
-    public IMultipleQuery GetByIds<TEntity>(IEnumerable whereObjs)
-    {
-        if (whereObjs == null)
-            throw new ArgumentNullException(nameof(whereObjs));
-        var entityType = typeof(TEntity);
-        bool isEmpty = true;
-        foreach (var whereObj in whereObjs)
-        {
-            isEmpty = false;
-            break;
-        }
-        if (isEmpty) throw new Exception("多主键ID查询，whereObjs参数至少要有一条数据");
-
-        (var isInExpr, var headSql, var commandInitializer) = ((bool, string, object))RepositoryHelper.BuildQueryWhereObjByKeySqlParameters(this.DbContext, entityType, whereObjs, true, true);
-        var typedCommandInitializer = commandInitializer as Action<IDataParameterCollection, StringBuilder, DbContext, object, string>;
-        int index = 0;
-        var builder = new StringBuilder(headSql);
-        var jointMark = isInExpr ? "," : " OR ";
-        foreach (var whereObj in whereObjs)
-        {
-            if (index > 0) builder.Append(jointMark);
-            typedCommandInitializer.Invoke(this.Command.Parameters, builder, this.DbContext, whereObj, $"_m{this.ReaderAfters.Count}{index}");
-            index++;
-        }
-        if (isInExpr) builder.Append(')');
-        var sql = builder.ToString();
-        this.AddReader(entityType, sql, false);
-        return this;
-    }
-    #endregion
+    #endregion    
 
     #region Exists
     public IMultipleQuery Exists<TEntity>(object whereObj)
@@ -270,6 +267,6 @@ public class MultipleQuery : IMultipleQuery
     }
     #endregion
 
-    private IQueryVisitor CreateQueryVisitor(char tableAsStart)
+    private IQueryVisitor CreateQueryVisitor(char tableAsStart = 'a')
         => this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart, this.Command.Parameters);
 }

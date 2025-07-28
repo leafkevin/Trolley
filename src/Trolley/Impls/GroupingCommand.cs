@@ -53,6 +53,13 @@ public class GroupingCommand<T, TGrouping> : GroupingCommandBase<TGrouping>, IGr
         this.OrderByDescendingInternal(condition, fieldsExpr);
         return this;
     }
+    public virtual IGroupingCommand<T, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T>, Expression> fieldsGetter)
+    {
+        var builder = new OrderByBuilder<IGroupingAggregate<TGrouping>, T>();
+        var fieldsExpr = fieldsGetter.Invoke(builder);
+        base.OrderByDynamic(builder.IsAscending, fieldsExpr);
+        return this;
+    }
     #endregion
 
     #region Select
@@ -93,6 +100,13 @@ public class GroupingCommand<T1, T2, TGrouping> : GroupingCommandBase<TGrouping>
     public virtual IGroupingCommand<T1, T2, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TFields>> fieldsExpr)
     {
         base.OrderByDescendingInternal(condition, fieldsExpr);
+        return this;
+    }
+    public virtual IGroupingCommand<T1, T2, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2>, Expression> fieldsGetter)
+    {
+        var builder = new OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2>();
+        var fieldsExpr = fieldsGetter.Invoke(builder);
+        base.OrderByDynamic(builder.IsAscending, fieldsExpr);
         return this;
     }
     #endregion
@@ -137,6 +151,13 @@ public class GroupingCommand<T1, T2, T3, TGrouping> : GroupingCommandBase<TGroup
         base.OrderByDescendingInternal(condition, fieldsExpr);
         return this;
     }
+    public virtual IGroupingCommand<T1, T2, T3, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3>, Expression> fieldsGetter)
+    {
+        var builder = new OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3>();
+        var fieldsExpr = fieldsGetter.Invoke(builder);
+        base.OrderByDynamic(builder.IsAscending, fieldsExpr);
+        return this;
+    }
     #endregion
 
     #region Select
@@ -177,6 +198,13 @@ public class GroupingCommand<T1, T2, T3, T4, TGrouping> : GroupingCommandBase<TG
     public virtual IGroupingCommand<T1, T2, T3, T4, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TFields>> fieldsExpr)
     {
         base.OrderByDescendingInternal(condition, fieldsExpr);
+        return this;
+    }
+    public virtual IGroupingCommand<T1, T2, T3, T4, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4>, Expression> fieldsGetter)
+    {
+        var builder = new OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4>();
+        var fieldsExpr = fieldsGetter.Invoke(builder);
+        base.OrderByDynamic(builder.IsAscending, fieldsExpr);
         return this;
     }
     #endregion
@@ -221,6 +249,13 @@ public class GroupingCommand<T1, T2, T3, T4, T5, TGrouping> : GroupingCommandBas
         base.OrderByDescendingInternal(condition, fieldsExpr);
         return this;
     }
+    public virtual IGroupingCommand<T1, T2, T3, T4, T5, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5>, Expression> fieldsGetter)
+    {
+        var builder = new OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5>();
+        var fieldsExpr = fieldsGetter.Invoke(builder);
+        base.OrderByDynamic(builder.IsAscending, fieldsExpr);
+        return this;
+    }
     #endregion
 
     #region Select
@@ -261,6 +296,13 @@ public class GroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> : GroupingComman
     public virtual IGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
     {
         base.OrderByDescendingInternal(condition, fieldsExpr);
+        return this;
+    }
+    public virtual IGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6>, Expression> fieldsGetter)
+    {
+        var builder = new OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6>();
+        var fieldsExpr = fieldsGetter.Invoke(builder);
+        base.OrderByDynamic(builder.IsAscending, fieldsExpr);
         return this;
     }
     #endregion

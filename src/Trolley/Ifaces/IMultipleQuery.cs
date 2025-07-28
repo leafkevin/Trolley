@@ -181,59 +181,23 @@ public interface IMultipleQuery : IDisposable
     IMultiQuery<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
     #endregion
 
-    #region QueryFirst/Query
+    #region QueryScalar
     /// <summary>
-    /// 使用原始SQL语句rawSql查询数据，并返回满足条件的第一条记录，记录不存在时返回TEntity类型的默认值
+    /// 指定原始SQL语句，查询单个值
     /// </summary>
-    /// <typeparam name="TEntity">实体TEntity类型</typeparam>
-    /// <param name="rawSql">原始SQL</param>
-    /// <returns>返回查询对象</returns>
-    IMultipleQuery QueryFirst<TEntity>(string rawSql);
+    /// <typeparam name="TValue">返回值类型</typeparam>
+    /// <param name="rawSql">原始SQL语句</param>
+    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象</param>
+    /// <returns>返回单个值</returns>
+    IMultipleQuery QueryScalar<TValue>(string rawSql, object parameters = null);
     /// <summary>
-    /// 使用原始SQL语句rawSql和参数parameters查询数据，并返回满足条件的第一条记录，记录不存在时返回TEntity类型的默认值
+    /// 指定原始SQL语句，查询单个值
     /// </summary>
-    /// <typeparam name="TEntity">实体TEntity类型</typeparam>
-    /// <param name="rawSql">原始SQL</param>
-    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象，parameters不可为null</param>
-    /// <returns>返回查询对象</returns>
-    IMultipleQuery QueryFirst<TEntity>(string rawSql, object parameters);
-    /// <summary>
-    ///从表TEntity中，查询与whereObj对象各属性值都相等的第一条记录，记录不存在时返回TEntity类型的默认值，用法：
-    /// <code>
-    /// f.QueryFirst&lt;User&gt;(new { Id = 1, IsEnabled = true })
-    /// SQL: SELECT `Id`,`Name`,`Gender`,`Age`,`CompanyId`,`GuidField`,`SomeTimes`,`SourceType`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_user` WHERE `Id`=@Id AND `IsEnabled`=@IsEnabled
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TEntity">实体TEntity类型</typeparam>
-    /// <param name="whereObj">参数，可以是命名对象、匿名对象或是Dictionary类型对象</param>
-    /// <returns>返回查询对象</returns>
-    IMultipleQuery QueryFirst<TEntity>(object whereObj);
-    /// <summary>
-    /// 使用原始SQL语句rawSql查询数据，并返回满足条件的所有TEntity实体记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表
-    /// </summary>
-    /// <typeparam name="TEntity">实体TEntity类型</typeparam>
-    /// <param name="rawSql">原始SQL</param>
-    /// <returns>返回查询对象</returns>
-    IMultipleQuery Query<TEntity>(string rawSql);
-    /// <summary>
-    /// 使用原始SQL语句rawSql和参数parameters查询数据，并返回满足条件的所有TEntity实体记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表
-    /// </summary>
-    /// <typeparam name="TEntity">实体TEntity类型</typeparam>
-    /// <param name="rawSql">原始SQL</param>
-    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象，参数parameters不能为null</param>
-    /// <returns>返回查询对象</returns>
-    IMultipleQuery Query<TEntity>(string rawSql, object parameters);
-    /// <summary>
-    /// 从表TEntity中，查询与whereObj对象各属性值都相等的所有记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，用法：
-    /// <code>
-    /// f.Query&lt;User&gt;(new { Id = 1, IsEnabled = true })
-    /// SQL: SELECT `Id`,`Name`,`Gender`,`Age`,`CompanyId`,`GuidField`,`SomeTimes`,`SourceType`,`IsEnabled`,`CreatedBy`,`CreatedAt`,`UpdatedBy`,`UpdatedAt` FROM `sys_user` WHERE `Id`=@Id AND `IsEnabled`=@IsEnabled
-    /// </code>
-    /// </summary>
-    /// <typeparam name="TEntity">实体TEntity类型</typeparam>
-    /// <param name="whereObj">参数，可以是命名对象、匿名对象或是Dictionary类型对象，不能为null</param>
-    /// <returns>返回查询对象</returns>
-    IMultipleQuery Query<TEntity>(object whereObj);
+    /// <typeparam name="TValue">返回值类型</typeparam>
+    /// <param name="rawSql">原始SQL语句</param>
+    /// <param name="parameters">参数数组</param>
+    /// <returns>返回单个值</returns>
+    IMultipleQuery QueryScalar<TValue>(string rawSql, List<IDbDataParameter> parameters);
     #endregion
 
     #region GetById
@@ -268,6 +232,64 @@ public interface IMultipleQuery : IDisposable
     /// <param name="whereKeys">主键值或是包含主键的匿名对象或是已有对象，如：1，2或new { Id = 1}或是已有对象userInfo(包含主键栏位Id) </param>
     /// <returns>返回查询对象</returns>
     IMultipleQuery GetByIds<TEntity>(IEnumerable whereKeys);
+    #endregion    
+
+    #region QueryFirst
+    /// <summary>
+    /// 使用原始SQL语句rawSql和参数parameters查询数据，并返回满足条件的第一条记录，记录不存在时返回TEntity类型的默认值，不支持分表
+    /// </summary>
+    /// <typeparam name="TEntity">实体TEntity类型</typeparam>
+    /// <param name="rawSql">原始SQL</param>
+    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象，parameters可以为null</param>
+    /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
+    IMultipleQuery QueryFirst<TEntity>(string rawSql, object parameters = null);
+    /// <summary>
+    /// 执行原始SQL，并返回影响行数
+    /// </summary>
+    /// <param name="rawSql">要执行的SQL</param>
+    /// <param name="parameters">参数列表</param>
+    /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
+    IMultipleQuery QueryFirst<TEntity>(string rawSql, List<IDbDataParameter> parameters);
+    /// <summary>
+    /// 从表TEntity中，查询与whereObj对象各属性值都相等的第一条记录，记录不存在时返回TEntity类型的默认值，不支持分表，用法：
+    /// <code>
+    /// repository.QueryFirst&lt;User&gt;(new { Id = 1, IsEnabled = true })
+    /// SQL: SELECT a.`Id`,a.`Name`, ... FROM `sys_user` a WHERE a.`Id`=@Id AND a.`IsEnabled`=@IsEnabled
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TEntity">实体TEntity类型</typeparam>
+    /// <param name="whereObj">参数，可以是命名对象、匿名对象或是Dictionary类型对象，不能为null</param>
+    /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
+    IMultipleQuery QueryFirst<TEntity>(object whereObj);
+    #endregion
+
+    #region Query
+    /// <summary>
+    /// 使用原始SQL语句rawSql和参数parameters查询数据，并返回满足条件的所有TEntity实体记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，不支持分表
+    /// </summary>
+    /// <typeparam name="TEntity">实体TEntity类型</typeparam>
+    /// <param name="rawSql">原始SQL</param>
+    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象</param>
+    /// <returns>返回查询结果，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表</returns>
+    IMultipleQuery Query<TEntity>(string rawSql, object parameters = null);
+    /// <summary>
+    /// 执行原始SQL，并返回影响行数
+    /// </summary>
+    /// <param name="rawSql">要执行的SQL</param>
+    /// <param name="parameters">参数列表</param>
+    /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
+    IMultipleQuery Query<TEntity>(string rawSql, List<IDbDataParameter> parameters);
+    /// <summary>
+    /// 从表TEntity中，查询与whereObj对象各属性值都相等的所有记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，不支持分表，用法：
+    /// <code>
+    /// repository.Query&lt;User&gt;(new { Id = 1, IsEnabled = true })
+    /// SQL: SELECT a.`Id`,a.`Name`, ... FROM `sys_user` a WHERE a.`Id`=@Id AND a.`IsEnabled`=@IsEnabled
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TEntity">实体TEntity类型</typeparam>
+    /// <param name="whereObj">参数，可以是命名对象、匿名对象或是Dictionary类型对象，不能为null</param>
+    /// <returns>返回查询结果，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表</returns>
+    IMultipleQuery Query<TEntity>(object whereObj);
     #endregion
 
     #region Exists
@@ -288,7 +310,7 @@ public interface IMultipleQuery : IDisposable
     /// <typeparam name="TEntity">实体对象类型</typeparam>
     /// <param name="predicate">where条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultipleQuery Exists<TEntity>(Expression<Func<TEntity, bool>> predicate);
+    IMultipleQuery Exists<TEntity>(Expression<Func<TEntity, bool>> predicate = null);
     #endregion
 
     #region AddReader/BuildSql

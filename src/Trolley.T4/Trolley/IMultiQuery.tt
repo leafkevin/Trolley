@@ -23,11 +23,14 @@ public interface IMultiQueryBase : IQuery
     /// <param name="result">返回数据条数</param>
     /// <returns>返回查询对象</returns>
     IMultipleQuery Count();
+    #endregion
+
+    #region Exists
     /// <summary>
-    /// 返回long类型数据条数
+    /// 判断数据是否存在，存在为true，否则为false
     /// </summary>
     /// <returns>返回查询对象</returns>
-    IMultipleQuery LongCount();
+    IMultipleQuery Exists();
     #endregion
 }
 /// <summary>
@@ -217,7 +220,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <code>f.From&lt;Menu&gt;().Where(x =&gt; ... ).Select(x =&gt; new { ... })</code>
     /// </param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T> UnionRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQueryExpr);
+    IMultiQuery<T> UnionRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr);
     /// <summary>
     /// 递归CTE子查询中的UnionAll操作，表达式subQueryExpr中的第二参数是自身引用，用法：
     /// <code>
@@ -237,7 +240,7 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <code>f.From&lt;Menu&gt;() .Where(x =&gt; ... ) .Select(x =&gt; new { ... })</code>
     /// </param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T> UnionAllRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQueryExpr);
+    IMultiQuery<T> UnionAllRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr);
     #endregion
 
     #region WithTable
@@ -547,6 +550,14 @@ public interface IMultiQuery<T> : IMultiQueryBase
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<T> OrderByDescending<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr);
+    /// <summary>
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// <code>string orderFields = "Name";bool isAsc = true;
+    /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", f =&lt; f.Name).When("Gender", f =&lt; f.Gender).Build()</code>)
+    /// </summary>
+    /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T> OrderByDynamic(Func<OrderByBuilder<T>, Expression> fieldsGetter);
     #endregion    
 
     #region Skip/Take/Page
@@ -1171,6 +1182,14 @@ public interface IMultiQuery<<#=tables#>> : IMultiQueryBase
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IMultiQuery<<#=tables#>> OrderByDescending<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr);
+    /// <summary>
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// <code>string orderFields = "Name";bool isAsc = true;
+    /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("Name", (a, b, ...) =&lt; a.Name).When("Gender", (a, b, ...) =&lt; a.Gender).Build()</code>)
+    /// </summary>
+    /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<<#=tables#>> OrderByDynamic(Func<OrderByBuilder<<#=tables#>>, Expression> fieldsGetter);
     #endregion
 
     #region Select

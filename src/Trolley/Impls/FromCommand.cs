@@ -286,6 +286,13 @@ public class FromCommand<T> : QueryInternal, IFromCommand<T>
         base.OrderByDescendingInternal(condition, fieldsExpr);
         return this;
     }
+    public virtual IFromCommand<T> OrderByDynamic(Func<OrderByBuilder<T>, Expression> fieldsGetter)
+    {
+        var builder = new OrderByBuilder<T>();
+        var fieldsExpr = fieldsGetter.Invoke(builder);
+        base.OrderByDynamic(builder.IsAscending, fieldsExpr);
+        return this;
+    }
     #endregion
 
     #region Skip/Take/Page
@@ -605,6 +612,13 @@ public class FromCommand<T1, T2> : FromCommand, IFromCommand<T1, T2>
         base.OrderByDescendingInternal(condition, fieldsExpr);
         return this;
     }
+    public virtual IFromCommand<T1, T2> OrderByDynamic(Func<OrderByBuilder<T1, T2>, Expression> fieldsGetter)
+    {
+        var builder = new OrderByBuilder<T1, T2>();
+        var fieldsExpr = fieldsGetter.Invoke(builder);
+        base.OrderByDynamic(builder.IsAscending, fieldsExpr);
+        return this;
+    }
     #endregion
 
     #region Skip/Take/Page
@@ -851,6 +865,13 @@ public class FromCommand<T1, T2, T3> : FromCommand, IFromCommand<T1, T2, T3>
     public virtual IFromCommand<T1, T2, T3> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, TFields>> fieldsExpr)
     {
         base.OrderByDescendingInternal(condition, fieldsExpr);
+        return this;
+    }
+    public virtual IFromCommand<T1, T2, T3> OrderByDynamic(Func<OrderByBuilder<T1, T2, T3>, Expression> fieldsGetter)
+    {
+        var builder = new OrderByBuilder<T1, T2, T3>();
+        var fieldsExpr = fieldsGetter.Invoke(builder);
+        base.OrderByDynamic(builder.IsAscending, fieldsExpr);
         return this;
     }
     #endregion
@@ -1101,6 +1122,13 @@ public class FromCommand<T1, T2, T3, T4> : FromCommand, IFromCommand<T1, T2, T3,
         base.OrderByDescendingInternal(condition, fieldsExpr);
         return this;
     }
+    public virtual IFromCommand<T1, T2, T3, T4> OrderByDynamic(Func<OrderByBuilder<T1, T2, T3, T4>, Expression> fieldsGetter)
+    {
+        var builder = new OrderByBuilder<T1, T2, T3, T4>();
+        var fieldsExpr = fieldsGetter.Invoke(builder);
+        base.OrderByDynamic(builder.IsAscending, fieldsExpr);
+        return this;
+    }
     #endregion
 
     #region Skip/Take/Page
@@ -1349,6 +1377,13 @@ public class FromCommand<T1, T2, T3, T4, T5> : FromCommand, IFromCommand<T1, T2,
         base.OrderByDescendingInternal(condition, fieldsExpr);
         return this;
     }
+    public virtual IFromCommand<T1, T2, T3, T4, T5> OrderByDynamic(Func<OrderByBuilder<T1, T2, T3, T4, T5>, Expression> fieldsGetter)
+    {
+        var builder = new OrderByBuilder<T1, T2, T3, T4, T5>();
+        var fieldsExpr = fieldsGetter.Invoke(builder);
+        base.OrderByDynamic(builder.IsAscending, fieldsExpr);
+        return this;
+    }
     #endregion
 
     #region Skip/Take/Page
@@ -1529,6 +1564,13 @@ public class FromCommand<T1, T2, T3, T4, T5, T6> : FromCommand, IFromCommand<T1,
     public virtual IFromCommand<T1, T2, T3, T4, T5, T6> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
     {
         base.OrderByDescendingInternal(condition, fieldsExpr);
+        return this;
+    }
+    public virtual IFromCommand<T1, T2, T3, T4, T5, T6> OrderByDynamic(Func<OrderByBuilder<T1, T2, T3, T4, T5, T6>, Expression> fieldsGetter)
+    {
+        var builder = new OrderByBuilder<T1, T2, T3, T4, T5, T6>();
+        var fieldsExpr = fieldsGetter.Invoke(builder);
+        base.OrderByDynamic(builder.IsAscending, fieldsExpr);
         return this;
     }
     #endregion

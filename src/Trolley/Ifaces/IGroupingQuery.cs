@@ -89,6 +89,14 @@ public interface IGroupingQuery<T, TGrouping> : IGroupingQueryBase<TGrouping>
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IGroupingQuery<T, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr);
+    /// <summary>
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// <code>string orderFields = "Amount";bool isAsc = true;
+    /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("BuyerId", (x, f) =&lt; f.BuyerId).When("Amount", (x, f) =&lt; x.Sum(f.Amount)).Build()</code>)
+    /// </summary>
+    /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
+    /// <returns>返回查询对象</returns>
+    IGroupingQuery<T, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T>, Expression> fieldsGetter);
     #endregion
 
     #region Select
@@ -161,6 +169,14 @@ public interface IGroupingQuery<T1, T2, TGrouping> : IGroupingQueryBase<TGroupin
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IGroupingQuery<T1, T2, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TFields>> fieldsExpr);
+    /// <summary>
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// <code>string orderFields = "Amount";bool isAsc = true;
+    /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("BuyerId", (x, a, b, ...) =&lt; a.BuyerId).When("Amount", (x, a, b, ...) =&lt; x.Sum(a.Amount)).Build()</code>)
+    /// </summary>
+    /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
+    /// <returns>返回查询对象</returns>
+    IGroupingQuery<T1, T2, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2>, Expression> fieldsGetter);
     #endregion
 
     #region Select
@@ -234,6 +250,14 @@ public interface IGroupingQuery<T1, T2, T3, TGrouping> : IGroupingQueryBase<TGro
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IGroupingQuery<T1, T2, T3, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TFields>> fieldsExpr);
+    /// <summary>
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// <code>string orderFields = "Amount";bool isAsc = true;
+    /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("BuyerId", (x, a, b, ...) =&lt; a.BuyerId).When("Amount", (x, a, b, ...) =&lt; x.Sum(a.Amount)).Build()</code>)
+    /// </summary>
+    /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
+    /// <returns>返回查询对象</returns>
+    IGroupingQuery<T1, T2, T3, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3>, Expression> fieldsGetter);
     #endregion
 
     #region Select
@@ -308,6 +332,14 @@ public interface IGroupingQuery<T1, T2, T3, T4, TGrouping> : IGroupingQueryBase<
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IGroupingQuery<T1, T2, T3, T4, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TFields>> fieldsExpr);
+    /// <summary>
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// <code>string orderFields = "Amount";bool isAsc = true;
+    /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("BuyerId", (x, a, b, ...) =&lt; a.BuyerId).When("Amount", (x, a, b, ...) =&lt; x.Sum(a.Amount)).Build()</code>)
+    /// </summary>
+    /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
+    /// <returns>返回查询对象</returns>
+    IGroupingQuery<T1, T2, T3, T4, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4>, Expression> fieldsGetter);
     #endregion
 
     #region Select
@@ -383,6 +415,14 @@ public interface IGroupingQuery<T1, T2, T3, T4, T5, TGrouping> : IGroupingQueryB
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IGroupingQuery<T1, T2, T3, T4, T5, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TFields>> fieldsExpr);
+    /// <summary>
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// <code>string orderFields = "Amount";bool isAsc = true;
+    /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("BuyerId", (x, a, b, ...) =&lt; a.BuyerId).When("Amount", (x, a, b, ...) =&lt; x.Sum(a.Amount)).Build()</code>)
+    /// </summary>
+    /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
+    /// <returns>返回查询对象</returns>
+    IGroupingQuery<T1, T2, T3, T4, T5, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5>, Expression> fieldsGetter);
     #endregion
 
     #region Select
@@ -459,6 +499,14 @@ public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> : IGroupingQu
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr);
+    /// <summary>
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// <code>string orderFields = "Amount";bool isAsc = true;
+    /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("BuyerId", (x, a, b, ...) =&lt; a.BuyerId).When("Amount", (x, a, b, ...) =&lt; x.Sum(a.Amount)).Build()</code>)
+    /// </summary>
+    /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
+    /// <returns>返回查询对象</returns>
+    IGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6>, Expression> fieldsGetter);
     #endregion
 
     #region Select
@@ -536,6 +584,14 @@ public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> : IGroupi
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr);
+    /// <summary>
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// <code>string orderFields = "Amount";bool isAsc = true;
+    /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("BuyerId", (x, a, b, ...) =&lt; a.BuyerId).When("Amount", (x, a, b, ...) =&lt; x.Sum(a.Amount)).Build()</code>)
+    /// </summary>
+    /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
+    /// <returns>返回查询对象</returns>
+    IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7>, Expression> fieldsGetter);
     #endregion
 
     #region Select
@@ -614,6 +670,14 @@ public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> : IGr
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr);
+    /// <summary>
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// <code>string orderFields = "Amount";bool isAsc = true;
+    /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("BuyerId", (x, a, b, ...) =&lt; a.BuyerId).When("Amount", (x, a, b, ...) =&lt; x.Sum(a.Amount)).Build()</code>)
+    /// </summary>
+    /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
+    /// <returns>返回查询对象</returns>
+    IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8>, Expression> fieldsGetter);
     #endregion
 
     #region Select
@@ -693,6 +757,14 @@ public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> :
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr);
+    /// <summary>
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// <code>string orderFields = "Amount";bool isAsc = true;
+    /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("BuyerId", (x, a, b, ...) =&lt; a.BuyerId).When("Amount", (x, a, b, ...) =&lt; x.Sum(a.Amount)).Build()</code>)
+    /// </summary>
+    /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
+    /// <returns>返回查询对象</returns>
+    IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9>, Expression> fieldsGetter);
     #endregion
 
     #region Select
@@ -773,6 +845,14 @@ public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGroupi
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr);
+    /// <summary>
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// <code>string orderFields = "Amount";bool isAsc = true;
+    /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("BuyerId", (x, a, b, ...) =&lt; a.BuyerId).When("Amount", (x, a, b, ...) =&lt; x.Sum(a.Amount)).Build()</code>)
+    /// </summary>
+    /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
+    /// <returns>返回查询对象</returns>
+    IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>, Expression> fieldsGetter);
     #endregion
 
     #region Select
@@ -854,6 +934,14 @@ public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TG
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr);
+    /// <summary>
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// <code>string orderFields = "Amount";bool isAsc = true;
+    /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("BuyerId", (x, a, b, ...) =&lt; a.BuyerId).When("Amount", (x, a, b, ...) =&lt; x.Sum(a.Amount)).Build()</code>)
+    /// </summary>
+    /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
+    /// <returns>返回查询对象</returns>
+    IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>, Expression> fieldsGetter);
     #endregion
 
     #region Select
@@ -936,6 +1024,14 @@ public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr);
+    /// <summary>
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// <code>string orderFields = "Amount";bool isAsc = true;
+    /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("BuyerId", (x, a, b, ...) =&lt; a.BuyerId).When("Amount", (x, a, b, ...) =&lt; x.Sum(a.Amount)).Build()</code>)
+    /// </summary>
+    /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
+    /// <returns>返回查询对象</returns>
+    IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>, Expression> fieldsGetter);
     #endregion
 
     #region Select
@@ -1019,6 +1115,14 @@ public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr);
+    /// <summary>
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// <code>string orderFields = "Amount";bool isAsc = true;
+    /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("BuyerId", (x, a, b, ...) =&lt; a.BuyerId).When("Amount", (x, a, b, ...) =&lt; x.Sum(a.Amount)).Build()</code>)
+    /// </summary>
+    /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
+    /// <returns>返回查询对象</returns>
+    IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>, Expression> fieldsGetter);
     #endregion
 
     #region Select
@@ -1103,6 +1207,14 @@ public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr);
+    /// <summary>
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// <code>string orderFields = "Amount";bool isAsc = true;
+    /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("BuyerId", (x, a, b, ...) =&lt; a.BuyerId).When("Amount", (x, a, b, ...) =&lt; x.Sum(a.Amount)).Build()</code>)
+    /// </summary>
+    /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
+    /// <returns>返回查询对象</returns>
+    IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>, Expression> fieldsGetter);
     #endregion
 
     #region Select
@@ -1188,6 +1300,14 @@ public interface IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T1
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr);
+    /// <summary>
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// <code>string orderFields = "Amount";bool isAsc = true;
+    /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("BuyerId", (x, a, b, ...) =&lt; a.BuyerId).When("Amount", (x, a, b, ...) =&lt; x.Sum(a.Amount)).Build()</code>)
+    /// </summary>
+    /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
+    /// <returns>返回查询对象</returns>
+    IGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>, Expression> fieldsGetter);
     #endregion
 
     #region Select

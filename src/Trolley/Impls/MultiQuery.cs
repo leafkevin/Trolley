@@ -21,33 +21,29 @@ public class MultiQueryBase : QueryInternal, IMultiQueryBase
     }
     #endregion
 
-    #region Select
-    public virtual IMultiQuery<TTarget> Select<TTarget>(string fields = "*")
-    {
-        base.SelectInternal(fields);
-        return this.OrmProvider.NewMultiQuery<TTarget>(this.MultipleQuery, this.Visitor);
-    }
+    #region Exists
+    public virtual IMultipleQuery Exists() => this.QueryScalar<bool>("COUNT(1)", "COUNT_VALUE");
     #endregion
 
     #region Count
-    public virtual IMultipleQuery Count() => this.QueryFirstValue<int>("COUNT(1)", "COUNT_VALUE");
-    public virtual IMultipleQuery LongCount() => this.QueryFirstValue<long>("COUNT(1)", "COUNT_VALUE");
+    public virtual IMultipleQuery Count() => this.QueryScalar<int>("COUNT(1)", "COUNT_VALUE");
+    public virtual IMultipleQuery LongCount() => this.QueryScalar<long>("COUNT(1)", "COUNT_VALUE");
     protected IMultipleQuery CountInternal(Expression fieldExpr)
-        => this.QueryFirstValue<int>("COUNT({0})", "COUNT_VALUE", fieldExpr);
+        => this.QueryScalar<int>("COUNT({0})", "COUNT_VALUE", fieldExpr);
     protected IMultipleQuery CountDistinctInternal(Expression fieldExpr)
-        => this.QueryFirstValue<int>("COUNT(DISTINCT {0})", "COUNT_VALUE", fieldExpr);
+        => this.QueryScalar<int>("COUNT(DISTINCT {0})", "COUNT_VALUE", fieldExpr);
     protected IMultipleQuery LongCountInternal(Expression fieldExpr)
-        => this.QueryFirstValue<long>("COUNT({0})", "COUNT_VALUE", fieldExpr);
+        => this.QueryScalar<long>("COUNT({0})", "COUNT_VALUE", fieldExpr);
     protected IMultipleQuery LongCountDistinctInternal(Expression fieldExpr)
-        => this.QueryFirstValue<long>("COUNT(DISTINCT {0})", "COUNT_VALUE", fieldExpr);
+        => this.QueryScalar<long>("COUNT(DISTINCT {0})", "COUNT_VALUE", fieldExpr);
     protected IMultipleQuery SumInternal<TField>(Expression fieldExpr)
-        => this.QueryFirstValue<TField>("SUM({0})", "SUM_VALUE", fieldExpr);
+        => this.QueryScalar<TField>("SUM({0})", "SUM_VALUE", fieldExpr);
     protected IMultipleQuery AvgInternal<TField>(Expression fieldExpr)
-        => this.QueryFirstValue<TField>("AVG({0})", "AVG_VALUE", fieldExpr);
+        => this.QueryScalar<TField>("AVG({0})", "AVG_VALUE", fieldExpr);
     protected IMultipleQuery MaxInternal<TField>(Expression fieldExpr)
-        => this.QueryFirstValue<TField>("MAX({0})", "MAX_VALUE", fieldExpr);
+        => this.QueryScalar<TField>("MAX({0})", "MAX_VALUE", fieldExpr);
     protected IMultipleQuery MinInternal<TField>(Expression fieldExpr)
-        => this.QueryFirstValue<TField>("MIN({0})", "MIN_VALUE", fieldExpr);
+        => this.QueryScalar<TField>("MIN({0})", "MIN_VALUE", fieldExpr);
     #endregion
 
     #region ToSql
@@ -58,8 +54,8 @@ public class MultiQueryBase : QueryInternal, IMultiQueryBase
     }
     #endregion
 
-    #region QueryFirstValue
-    protected IMultipleQuery QueryFirstValue<TTarget>(string sqlFormat, string shardingFieldAlias)
+    #region QueryScalar
+    protected IMultipleQuery QueryScalar<TTarget>(string sqlFormat, string shardingFieldAlias)
     {
         if (string.IsNullOrEmpty(sqlFormat))
             throw new ArgumentNullException(nameof(sqlFormat));
@@ -70,7 +66,7 @@ public class MultiQueryBase : QueryInternal, IMultiQueryBase
         this.MultipleQuery.AddReader(typeof(TTarget), sql, true);
         return this.MultipleQuery;
     }
-    protected IMultipleQuery QueryFirstValue<TTarget>(string sqlFormat, string shardingFieldAlias, Expression fieldExpr)
+    protected IMultipleQuery QueryScalar<TTarget>(string sqlFormat, string shardingFieldAlias, Expression fieldExpr)
     {
         if (string.IsNullOrEmpty(sqlFormat))
             throw new ArgumentNullException(nameof(sqlFormat));
@@ -343,6 +339,13 @@ public class MultiQuery<T> : MultiQueryBase, IMultiQuery<T>
     public virtual IMultiQuery<T> OrderByDescending<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr)
     {
         base.OrderByDescendingInternal(condition, fieldsExpr);
+        return this;
+    }
+    public virtual IMultiQuery<T> OrderByDynamic(Func<OrderByBuilder<T>, Expression> fieldsGetter)
+    {
+        var builder = new OrderByBuilder<T>();
+        var fieldsExpr = fieldsGetter.Invoke(builder);
+        base.OrderByDynamic(builder.IsAscending, fieldsExpr);
         return this;
     }
     #endregion

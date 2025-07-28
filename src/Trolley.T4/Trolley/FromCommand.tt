@@ -293,6 +293,13 @@ public class FromCommand<T> : QueryInternal, IFromCommand<T>
         base.OrderByDescendingInternal(condition, fieldsExpr);
         return this;
     }
+    public virtual IFromCommand<T> OrderByDynamic(Func<OrderByBuilder<T>, Expression> fieldsGetter)
+    {
+        var builder = new OrderByBuilder<T>();
+        var fieldsExpr = fieldsGetter.Invoke(builder);
+        base.OrderByDynamic(builder.IsAscending, fieldsExpr);
+        return this;
+    }
     #endregion
 
     #region Skip/Take/Page
@@ -639,6 +646,12 @@ public class FromCommand<<#=tables#>> : FromCommand, IFromCommand<<#=tables#>>
     public virtual IFromCommand<<#=tables#>> OrderByDescending<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr)
     {
         base.OrderByDescendingInternal(condition, fieldsExpr);
+        return this;
+    }public virtual IFromCommand<<#=tables#>> OrderByDynamic(Func<OrderByBuilder<<#=tables#>>, Expression> fieldsGetter)
+    {
+        var builder = new OrderByBuilder<<#=tables#>>();
+        var fieldsExpr = fieldsGetter.Invoke(builder);
+        base.OrderByDynamic(builder.IsAscending, fieldsExpr);
         return this;
     }
     #endregion
