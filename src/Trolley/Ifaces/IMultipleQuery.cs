@@ -187,15 +187,22 @@ public interface IMultipleQuery : IDisposable
     /// </summary>
     /// <typeparam name="TValue">返回值类型</typeparam>
     /// <param name="rawSql">原始SQL语句</param>
-    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象</param>
     /// <returns>返回单个值</returns>
-    IMultipleQuery QueryScalar<TValue>(string rawSql, object parameters = null);
+    IMultipleQuery QueryScalar<TValue>(string rawSql);
     /// <summary>
     /// 指定原始SQL语句，查询单个值
     /// </summary>
     /// <typeparam name="TValue">返回值类型</typeparam>
     /// <param name="rawSql">原始SQL语句</param>
-    /// <param name="parameters">参数数组</param>
+    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象，不可为null</param>
+    /// <returns>返回单个值</returns>
+    IMultipleQuery QueryScalar<TValue>(string rawSql, object parameters);
+    /// <summary>
+    /// 指定原始SQL语句，查询单个值
+    /// </summary>
+    /// <typeparam name="TValue">返回值类型</typeparam>
+    /// <param name="rawSql">原始SQL语句</param>
+    /// <param name="parameters">参数列表，不可为null</param>
     /// <returns>返回单个值</returns>
     IMultipleQuery QueryScalar<TValue>(string rawSql, List<IDbDataParameter> parameters);
     #endregion
@@ -232,7 +239,7 @@ public interface IMultipleQuery : IDisposable
     /// <param name="whereKeys">主键值或是包含主键的匿名对象或是已有对象，如：1，2或new { Id = 1}或是已有对象userInfo(包含主键栏位Id) </param>
     /// <returns>返回查询对象</returns>
     IMultipleQuery GetByIds<TEntity>(IEnumerable whereKeys);
-    #endregion    
+    #endregion
 
     #region QueryFirst
     /// <summary>
@@ -240,9 +247,16 @@ public interface IMultipleQuery : IDisposable
     /// </summary>
     /// <typeparam name="TEntity">实体TEntity类型</typeparam>
     /// <param name="rawSql">原始SQL</param>
-    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象，parameters可以为null</param>
     /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
-    IMultipleQuery QueryFirst<TEntity>(string rawSql, object parameters = null);
+    IMultipleQuery QueryFirst<TEntity>(string rawSql);
+    /// <summary>
+    /// 使用原始SQL语句rawSql和参数parameters查询数据，并返回满足条件的第一条记录，记录不存在时返回TEntity类型的默认值，不支持分表
+    /// </summary>
+    /// <typeparam name="TEntity">实体TEntity类型</typeparam>
+    /// <param name="rawSql">原始SQL</param>
+    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象，不可为null</param>
+    /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
+    IMultipleQuery QueryFirst<TEntity>(string rawSql, object parameters);
     /// <summary>
     /// 执行原始SQL，并返回影响行数
     /// </summary>
@@ -269,14 +283,21 @@ public interface IMultipleQuery : IDisposable
     /// </summary>
     /// <typeparam name="TEntity">实体TEntity类型</typeparam>
     /// <param name="rawSql">原始SQL</param>
-    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象</param>
     /// <returns>返回查询结果，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表</returns>
-    IMultipleQuery Query<TEntity>(string rawSql, object parameters = null);
+    IMultipleQuery Query<TEntity>(string rawSql);
+    /// <summary>
+    /// 使用原始SQL语句rawSql和参数parameters查询数据，并返回满足条件的所有TEntity实体记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，不支持分表
+    /// </summary>
+    /// <typeparam name="TEntity">实体TEntity类型</typeparam>
+    /// <param name="rawSql">原始SQL</param>
+    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象，不可为null</param>
+    /// <returns>返回查询结果，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表</returns>
+    IMultipleQuery Query<TEntity>(string rawSql, object parameters);
     /// <summary>
     /// 执行原始SQL，并返回影响行数
     /// </summary>
     /// <param name="rawSql">要执行的SQL</param>
-    /// <param name="parameters">参数列表</param>
+    /// <param name="parameters">参数列表，不可为null</param>
     /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
     IMultipleQuery Query<TEntity>(string rawSql, List<IDbDataParameter> parameters);
     /// <summary>
@@ -308,9 +329,9 @@ public interface IMultipleQuery : IDisposable
     /// 判断TEntity表是否存在满足predicate条件的记录，存在返回true，否则返回false。
     /// </summary>
     /// <typeparam name="TEntity">实体对象类型</typeparam>
-    /// <param name="predicate">where条件表达式</param>
+    /// <param name="wherePredicate">where条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultipleQuery Exists<TEntity>(Expression<Func<TEntity, bool>> predicate = null);
+    IMultipleQuery Exists<TEntity>(Expression<Func<TEntity, bool>> wherePredicate = null);
     #endregion
 
     #region AddReader/BuildSql

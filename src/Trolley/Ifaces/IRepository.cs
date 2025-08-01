@@ -261,6 +261,64 @@ public interface IRepository
     IQuery<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
     #endregion
 
+    #region QueryScalar
+    /// <summary>
+    /// 指定原始SQL语句，查询单个值
+    /// </summary>
+    /// <typeparam name="TValue">返回值类型</typeparam>
+    /// <param name="commandType">rawSql原始语句的类型，默认是CommandType.Text</param>
+    /// <param name="rawSql">原始SQL语句</param>
+    /// <returns>返回单个值</returns>
+    TValue QueryScalar<TValue>(string rawSql, CommandType commandType = CommandType.Text);
+    /// <summary>
+    /// 指定原始SQL语句，查询单个值
+    /// </summary>
+    /// <typeparam name="TValue">返回值类型</typeparam>
+    /// <param name="rawSql">原始SQL语句</param>
+    /// <param name="commandType">rawSql原始语句的类型，默认是CommandType.Text</param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回单个值</returns>
+    Task<TValue> QueryScalarAsync<TValue>(string rawSql, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// 指定原始SQL语句，查询单个值
+    /// </summary>
+    /// <typeparam name="TValue">返回值类型</typeparam>
+    /// <param name="rawSql">原始SQL语句</param>
+    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象，不可为null</param>
+    /// <param name="commandType">rawSql原始语句的类型，默认是CommandType.Text</param>
+    /// <returns>返回单个值</returns>
+    TValue QueryScalar<TValue>(string rawSql, object parameters, CommandType commandType = CommandType.Text);
+    /// <summary>
+    /// 指定原始SQL语句，查询单个值
+    /// </summary>
+    /// <typeparam name="TValue">返回值类型</typeparam>
+    /// <param name="rawSql">原始SQL语句</param>
+    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象，不可为null</param>
+    /// <param name="commandType">rawSql原始语句的类型，默认是CommandType.Text</param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回单个值</returns>
+    Task<TValue> QueryScalarAsync<TValue>(string rawSql, object parameters, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// 指定原始SQL语句，查询单个值
+    /// </summary>
+    /// <typeparam name="TValue">返回值类型</typeparam>
+    /// <param name="rawSql">原始SQL语句</param>
+    /// <param name="parameters">参数数组</param>
+    /// <param name="commandType">rawSql原始语句的类型</param>
+    /// <returns>返回单个值</returns>
+    TValue QueryScalar<TValue>(string rawSql, List<IDbDataParameter> parameters, CommandType commandType = CommandType.Text);
+    /// <summary>
+    /// 指定原始SQL语句，查询单个值
+    /// </summary>
+    /// <typeparam name="TValue">返回值类型</typeparam>   
+    /// <param name="rawSql">原始SQL语句</param>
+    /// <param name="parameters">参数列表，不可为null</param>
+    /// <param name="commandType">rawSql原始语句的类型</param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回单个值</returns>
+    Task<TValue> QueryScalarAsync<TValue>(string rawSql, List<IDbDataParameter> parameters, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default);
+    #endregion
+
     #region GetById
     /// <summary>
     /// 根据主键信息查询表TEntity中数据，记录不存在时返回TEntity类型的默认值，不支持分表，用法：
@@ -325,81 +383,57 @@ public interface IRepository
     Task<List<TEntity>> GetByIdsAsync<TEntity>(IEnumerable whereKeys, CancellationToken cancellationToken = default);
     #endregion
 
-    #region QueryScalar
-    /// <summary>
-    /// 指定原始SQL语句，查询单个值
-    /// </summary>
-    /// <typeparam name="TValue">返回值类型</typeparam>
-    /// <param name="rawSql">原始SQL语句</param>
-    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象</param>
-    /// <param name="commandType">rawSql原始语句的类型，默认是CommandType.Text</param>
-    /// <returns>返回单个值</returns>
-    TValue QueryScalar<TValue>(string rawSql, object parameters = null, CommandType commandType = CommandType.Text);
-    /// <summary>
-    /// 指定原始SQL语句，查询单个值
-    /// </summary>
-    /// <typeparam name="TValue">返回值类型</typeparam>
-    /// <param name="rawSql">原始SQL语句</param>
-    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象</param>
-    /// <param name="commandType">rawSql原始语句的类型，默认是CommandType.Text</param>
-    /// <param name="cancellationToken">取消Token</param>
-    /// <returns>返回单个值</returns>
-    Task<TValue> QueryScalarAsync<TValue>(string rawSql, object parameters = null, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default);
-    /// <summary>
-    /// 指定原始SQL语句，查询单个值
-    /// </summary>
-    /// <typeparam name="TValue">返回值类型</typeparam>
-    /// <param name="commandType">rawSql原始语句的类型</param>
-    /// <param name="rawSql">原始SQL语句</param>
-    /// <param name="parameters">参数数组</param>
-    /// <returns>返回单个值</returns>
-    TValue QueryScalar<TValue>(string rawSql, List<IDbDataParameter> parameters, CommandType commandType = CommandType.Text);
-    /// <summary>
-    /// 指定原始SQL语句，查询单个值
-    /// </summary>
-    /// <typeparam name="TValue">返回值类型</typeparam>
-    /// <param name="commandType">rawSql原始语句的类型</param>
-    /// <param name="rawSql">原始SQL语句</param>
-    /// <param name="parameters">参数数组</param>
-    /// <param name="cancellationToken">取消Token</param>
-    /// <returns>返回单个值</returns>
-    Task<TValue> QueryScalarAsync<TValue>(string rawSql, List<IDbDataParameter> parameters, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default);
-    #endregion
-
     #region QueryFirst
+    /// <summary>
+    /// 使用原始SQL语句rawSql查询数据，并返回满足条件的第一条记录，记录不存在时返回TEntity类型的默认值，不支持分表
+    /// </summary>
+    /// <typeparam name="TEntity">实体TEntity类型</typeparam>
+    /// <param name="rawSql">原始SQL</param>
+    /// <param name="commandType">命令类型，默认是文本</param>
+    /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
+    TEntity QueryFirst<TEntity>(string rawSql, CommandType commandType = CommandType.Text);
+    /// <summary>
+    /// 使用原始SQL语句rawSql查询数据，并返回满足条件的第一条记录，记录不存在时返回TEntity类型的默认值，不支持分表
+    /// </summary>
+    /// <typeparam name="TEntity">返回的实体类型</typeparam>
+    /// <param name="rawSql">查询SQL</param>
+    /// <param name="commandType">命令类型，默认是文本</param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
+    Task<TEntity> QueryFirstAsync<TEntity>(string rawSql, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default);
     /// <summary>
     /// 使用原始SQL语句rawSql和参数parameters查询数据，并返回满足条件的第一条记录，记录不存在时返回TEntity类型的默认值，不支持分表
     /// </summary>
     /// <typeparam name="TEntity">实体TEntity类型</typeparam>
     /// <param name="rawSql">原始SQL</param>
-    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象，parameters可以为null</param>
+    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象，不可为null</param>
     /// <param name="commandType">命令类型，默认是文本</param>
     /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
-    TEntity QueryFirst<TEntity>(string rawSql, object parameters = null, CommandType commandType = CommandType.Text);
+    TEntity QueryFirst<TEntity>(string rawSql, object parameters, CommandType commandType = CommandType.Text);
     /// <summary>
     /// 使用原始SQL语句rawSql和参数parameters查询数据，并返回满足条件的第一条记录，记录不存在时返回TEntity类型的默认值，不支持分表
     /// </summary>
     /// <typeparam name="TEntity">返回的实体类型</typeparam>
     /// <param name="rawSql">查询SQL</param>
-    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象，可以为null</param>
+    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象，不可为null</param>
     /// <param name="commandType">命令类型，默认是文本</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
-    Task<TEntity> QueryFirstAsync<TEntity>(string rawSql, object parameters = null, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default);
+    Task<TEntity> QueryFirstAsync<TEntity>(string rawSql, object parameters, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default);
     /// <summary>
     /// 执行原始SQL，并返回影响行数
     /// </summary>
-    /// <param name="commandType">命令类型</param>
     /// <param name="rawSql">要执行的SQL</param>
-    /// <param name="parameters">参数数组</param>
+    /// <param name="parameters">参数列表，不可为null</param>
+    /// <param name="commandType">rawSql原始语句的类型</param>
     /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
     TEntity QueryFirst<TEntity>(string rawSql, List<IDbDataParameter> parameters, CommandType commandType = CommandType.Text);
     /// <summary>
     /// 执行原始SQL，并返回影响行数
     /// </summary>
-    /// <param name="commandType">命令类型</param>
     /// <param name="rawSql">要执行的SQL</param>
     /// <param name="parameters">参数数组</param>
+    /// <param name="commandType">rawSql原始语句的类型</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
     Task<TEntity> QueryFirstAsync<TEntity>(string rawSql, List<IDbDataParameter> parameters, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default);
@@ -430,38 +464,55 @@ public interface IRepository
 
     #region Query
     /// <summary>
-    /// 使用原始SQL语句rawSql和参数parameters查询数据，并返回满足条件的所有TEntity实体记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，不支持分表
+    /// 使用原始SQL语句rawSql查询数据，并返回满足条件的所有TEntity实体记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，不支持分表
     /// </summary>
     /// <typeparam name="TEntity">实体TEntity类型</typeparam>
     /// <param name="rawSql">原始SQL</param>
-    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象</param>
     /// <param name="commandType">命令类型，默认是文本</param>
     /// <returns>返回查询结果，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表</returns>
-    List<TEntity> Query<TEntity>(string rawSql, object parameters = null, CommandType commandType = CommandType.Text);
+    List<TEntity> Query<TEntity>(string rawSql, CommandType commandType = CommandType.Text);
     /// <summary>
-    /// 使用原始SQL语句rawSql和参数parameters查询数据，并返回满足条件的所有TEntity实体记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，不支持分表
+    /// 使用原始SQL语句rawSql查询数据，并返回满足条件的所有TEntity实体记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，不支持分表
     /// </summary>
     /// <typeparam name="TEntity">实体TEntity类型</typeparam>
     /// <param name="rawSql">原始SQL</param>
-    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象</param>
     /// <param name="commandType">命令类型，默认是文本</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回查询结果，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表</returns>
-    Task<List<TEntity>> QueryAsync<TEntity>(string rawSql, object parameters = null, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default);
+    Task<List<TEntity>> QueryAsync<TEntity>(string rawSql, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// 使用原始SQL语句rawSql和参数parameters查询数据，并返回满足条件的所有TEntity实体记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，不支持分表
+    /// </summary>
+    /// <typeparam name="TEntity">实体TEntity类型</typeparam>
+    /// <param name="rawSql">原始SQL</param>
+    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象，不可为null</param>
+    /// <param name="commandType">命令类型，默认是文本</param>
+    /// <returns>返回查询结果，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表</returns>
+    List<TEntity> Query<TEntity>(string rawSql, object parameters, CommandType commandType = CommandType.Text);
+    /// <summary>
+    /// 使用原始SQL语句rawSql和参数parameters查询数据，并返回满足条件的所有TEntity实体记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表，不支持分表
+    /// </summary>
+    /// <typeparam name="TEntity">实体TEntity类型</typeparam>
+    /// <param name="rawSql">原始SQL</param>
+    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象，不可为null</param>
+    /// <param name="commandType">命令类型，默认是文本</param>
+    /// <param name="cancellationToken">取消Token</param>
+    /// <returns>返回查询结果，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表</returns>
+    Task<List<TEntity>> QueryAsync<TEntity>(string rawSql, object parameters, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default);
     /// <summary>
     /// 执行原始SQL，并返回影响行数
     /// </summary>
-    /// <param name="commandType">命令类型</param>
     /// <param name="rawSql">要执行的SQL</param>
     /// <param name="parameters">参数数组</param>
+    /// <param name="commandType">rawSql原始语句的类型</param>
     /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
     List<TEntity> Query<TEntity>(string rawSql, List<IDbDataParameter> parameters, CommandType commandType = CommandType.Text);
     /// <summary>
     /// 执行原始SQL，并返回影响行数
     /// </summary>
-    /// <param name="commandType">命令类型</param>
     /// <param name="rawSql">要执行的SQL</param>
     /// <param name="parameters">参数数组</param>
+    /// <param name="commandType">rawSql原始语句的类型</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
     Task<List<TEntity>> QueryAsync<TEntity>(string rawSql, List<IDbDataParameter> parameters, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default);

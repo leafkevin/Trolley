@@ -42,7 +42,7 @@ public class MultipleQuery : IMultipleQuery
     #endregion
 
     #region From
-    public IMultiQuery<T> From<T>(char tableAsStart = 'a')
+    public virtual IMultiQuery<T> From<T>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, typeof(T));
@@ -57,7 +57,7 @@ public class MultipleQuery : IMultipleQuery
         tables += $", T{i}";
         typeOfTables += $", typeof(T{i})";
 #>
-    public IMultiQuery<<#=tables#>> From<<#=tables#>>(char tableAsStart = 'a')
+    public virtual IMultiQuery<<#=tables#>> From<<#=tables#>>(char tableAsStart = 'a')
     {
         var visitor = this.CreateQueryVisitor(tableAsStart);
         visitor.From(tableAsStart, <#=typeOfTables#>);
@@ -80,15 +80,24 @@ public class MultipleQuery : IMultipleQuery
         return this.OrmProvider.NewMultiQuery<T>(this, visitor);
     }
     #endregion
+    
+    #region QueryScalar
+    public virtual IMultipleQuery QueryScalar<TValue>(string rawSql)
+    {
+         if (string.IsNullOrEmpty(rawSql))
+            throw new ArgumentNullException(nameof(rawSql));
+        this.AddReader(typeof(TValue), rawSql, false);
+        return this;
+    }
+    #endregion
 
     #region GetById
-    public IMultipleQuery GetById<TEntity>(object whereObj)
+    public virtual IMultipleQuery GetById<TEntity>(object whereObj)
     {
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
 
         var entityType = typeof(TEntity);
-        var whereObjType = whereObj.GetType();
         bool isBulk = whereObj is IEnumerable && whereObj is not string && whereObj is not IDictionary<string, object>;
         var commandInitializer = RepositoryHelper.BuildQueryWhereObjByKeySqlParameters(this.DbContext, entityType, whereObj, true, isBulk);
         var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string, string>;
@@ -99,7 +108,7 @@ public class MultipleQuery : IMultipleQuery
     #endregion
 
     #region GetByIds
-    public IMultipleQuery GetByIds<TEntity>(IEnumerable whereObjs)
+    public virtual IMultipleQuery GetByIds<TEntity>(IEnumerable whereObjs)
     {
         if (whereObjs == null)
             throw new ArgumentNullException(nameof(whereObjs));
@@ -130,8 +139,8 @@ public class MultipleQuery : IMultipleQuery
     }
     #endregion
 
-    #region QueryFirst/Query
-    public IMultipleQuery QueryFirst<TEntity>(string rawSql)
+    #region QueryFirst
+    public virtual IMultipleQuery QueryFirst<TEntity>(string rawSql)
     {
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
@@ -160,16 +169,18 @@ public class MultipleQuery : IMultipleQuery
             throw new ArgumentNullException(nameof(whereObj));
 
         var targetType = typeof(TEntity);
-        var whereObjType = whereObj.GetType();
         bool isBulk = whereObj is IEnumerable && whereObj is not string && whereObj is not IDictionary<string, object>;
-        var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.DbContext, targetType, whereObjType, whereObj, true, isBulk);
+        var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.DbContext, targetType, whereObj, true, isBulk);
         var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string, string>;
         var sql = typedCommandInitializer.Invoke(this.Command.Parameters, this.DbContext, whereObj, $"_m{this.ReaderAfters.Count}");
 
         this.AddReader(targetType, sql, true);
         return this;
     }
-    public IMultipleQuery Query<TEntity>(string rawSql)
+    #endregion
+
+    #region Query    
+    public virtual IMultipleQuery Query<TEntity>(string rawSql)
     {
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
@@ -178,7 +189,7 @@ public class MultipleQuery : IMultipleQuery
         this.AddReader(targetType, rawSql, false);
         return this;
     }
-    public IMultipleQuery Query<TEntity>(string rawSql, object parameters)
+    public virtual IMultipleQuery Query<TEntity>(string rawSql, object parameters)
     {
         if (string.IsNullOrEmpty(rawSql))
             throw new ArgumentNullException(nameof(rawSql));
@@ -191,15 +202,14 @@ public class MultipleQuery : IMultipleQuery
         this.AddReader(targetType, rawSql, false);
         return this;
     }
-    public IMultipleQuery Query<TEntity>(object whereObj)
+    public virtual IMultipleQuery Query<TEntity>(object whereObj)
     {
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
 
         var targetType = typeof(TEntity);
-        var whereObjType = whereObj.GetType();
         bool isBulk = whereObj is IEnumerable && whereObj is not string && whereObj is not IDictionary<string, object>;
-        var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.DbContext, targetType, whereObjType, whereObj, true, isBulk);
+        var commandInitializer = RepositoryHelper.BuildQueryWhereObjSqlParameters(this.DbContext, targetType, whereObj, true, isBulk);
         var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string, string>;
         var sql = typedCommandInitializer.Invoke(this.Command.Parameters, this.DbContext, whereObj, $"_m{this.ReaderAfters.Count}");
         this.AddReader(targetType, sql, false);
@@ -208,34 +218,33 @@ public class MultipleQuery : IMultipleQuery
     #endregion    
 
     #region Exists
-    public IMultipleQuery Exists<TEntity>(object whereObj)
+    public virtual IMultipleQuery Exists<TEntity>(object whereObj)
     {
         if (whereObj == null)
             throw new ArgumentNullException(nameof(whereObj));
 
         var entityType = typeof(TEntity);
-        var whereObjType = whereObj.GetType();
         bool isBulk = whereObj is IEnumerable && whereObj is not string && whereObj is not IDictionary<string, object>;
-        var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.DbContext, entityType, whereObjType, whereObj, true, isBulk);
+        var commandInitializer = RepositoryHelper.BuildExistsSqlParameters(this.DbContext, entityType, whereObj, true, isBulk);
         var typedCommandInitializer = commandInitializer as Func<IDataParameterCollection, DbContext, object, string, string>;
         var sql = typedCommandInitializer.Invoke(this.Command.Parameters, this.DbContext, whereObj, $"_m{this.ReaderAfters.Count}");
-        this.AddReader(typeof(bool), sql, true);
+        this.AddReader(typeof(bool), sql, false);
         return this;
     }
-    public IMultipleQuery Exists<TEntity>(Expression<Func<TEntity, bool>> wherePredicate)
+    public virtual IMultipleQuery Exists<TEntity>(Expression<Func<TEntity, bool>> wherePredicate = null)
     {
         if (wherePredicate == null)
             throw new ArgumentNullException(nameof(wherePredicate));
 
         var sql = this.From<TEntity>().Where(wherePredicate)
             .SelectAggregate((x, f) => x.Count()).ToSql(out _);
-        this.AddReader(typeof(bool), sql, true);
+        this.AddReader(typeof(bool), sql, false);
         return this;
     }
     #endregion
 
     #region AddReader/BuildSql
-    public void AddReader(Type targetType, string sql, bool isSingle, IQueryVisitor queryVisitor = null, int pageNumber = 0, int pageSize = 0)
+    public virtual void AddReader(Type targetType, string sql, bool isSingle, IQueryVisitor queryVisitor = null, int pageNumber = 0, int pageSize = 0)
     {
         if (this.sqlBuilder.Length > 0)
             this.sqlBuilder.Append(';');
@@ -249,7 +258,7 @@ public class MultipleQuery : IMultipleQuery
             PageSize = pageSize
         });
     }
-    public string BuildSql(out List<ReaderAfter> readerAfters)
+    public virtual string BuildSql(out List<ReaderAfter> readerAfters)
     {
         var sql = this.sqlBuilder.ToString();
         this.sqlBuilder.Clear();
@@ -259,7 +268,7 @@ public class MultipleQuery : IMultipleQuery
     #endregion
 
     #region Dispose
-    public void Dispose()
+    public virtual void Dispose()
     {
         this.sqlBuilder = null;
         this.ReaderAfters = null;
@@ -267,6 +276,8 @@ public class MultipleQuery : IMultipleQuery
     }
     #endregion
 
+    #region Others
     private IQueryVisitor CreateQueryVisitor(char tableAsStart = 'a')
         => this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart, this.Command.Parameters);
+    #endregion
 }

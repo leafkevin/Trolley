@@ -152,7 +152,11 @@ public class Repository : IRepository
     #endregion
 
     #region QueryScalar
-    public virtual TValue QueryScalar<TValue>(string rawSql, object parameters = null, CommandType commandType = CommandType.Text)
+    public virtual TValue QueryScalar<TValue>(string rawSql, CommandType commandType = CommandType.Text)
+        => this.DbContext.QueryScalar<TValue>(rawSql, commandType);
+    public virtual async Task<TValue> QueryScalarAsync<TValue>(string rawSql, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
+        => await this.DbContext.QueryScalarAsync<TValue>(rawSql, commandType, cancellationToken);
+    public virtual TValue QueryScalar<TValue>(string rawSql, object parameters, CommandType commandType = CommandType.Text)
         => this.DbContext.QueryScalar<TValue>(rawSql, parameters, commandType);
     public virtual async Task<TValue> QueryScalarAsync<TValue>(string rawSql, object parameters = null, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
         => await this.DbContext.QueryScalarAsync<TValue>(rawSql, parameters, commandType, cancellationToken);
@@ -193,9 +197,13 @@ public class Repository : IRepository
     #endregion 
 
     #region QueryFirst
-    public virtual TEntity QueryFirst<TEntity>(string rawSql, object parameters = null, CommandType commandType = CommandType.Text)
+    public virtual TEntity QueryFirst<TEntity>(string rawSql, CommandType commandType = CommandType.Text)
+        => this.DbContext.Query<TEntity, TEntity>(rawSql, true, (reader, deserializer) => reader.Read() ? (TEntity)reader.GetValue(0) : default, commandType);
+    public virtual async Task<TEntity> QueryFirstAsync<TEntity>(string rawSql, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
+        => await this.DbContext.QueryAsync<TEntity, TEntity>(rawSql, true, async (reader, deserializer, cancellationToken) => (await reader.ReadAsync(cancellationToken)) ? (TEntity)deserializer.Invoke(reader) : default, commandType, cancellationToken);
+    public virtual TEntity QueryFirst<TEntity>(string rawSql, object parameters, CommandType commandType = CommandType.Text)
         => this.DbContext.Query<TEntity, TEntity>(rawSql, true, parameters, (reader, deserializer) => reader.Read() ? (TEntity)deserializer.Invoke(reader) : default, commandType);
-    public virtual async Task<TEntity> QueryFirstAsync<TEntity>(string rawSql, object parameters = null, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
+    public virtual async Task<TEntity> QueryFirstAsync<TEntity>(string rawSql, object parameters, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
         => await this.DbContext.QueryAsync<TEntity, TEntity>(rawSql, true, parameters, async (reader, deserializer, cancellationToken) => (await reader.ReadAsync(cancellationToken)) ? (TEntity)deserializer.Invoke(reader) : default, commandType, cancellationToken);
     public virtual TEntity QueryFirst<TEntity>(string rawSql, List<IDbDataParameter> parameters, CommandType commandType = CommandType.Text)
         => this.DbContext.Query<TEntity, TEntity>(rawSql, true, parameters, (reader, deserializer) => reader.Read() ? (TEntity)deserializer.Invoke(reader) : default, commandType);
@@ -208,7 +216,23 @@ public class Repository : IRepository
     #endregion
 
     #region Query
-    public virtual List<TEntity> Query<TEntity>(string rawSql, object parameters = null, CommandType commandType = CommandType.Text)
+    public virtual List<TEntity> Query<TEntity>(string rawSql, CommandType commandType = CommandType.Text)
+        => this.DbContext.Query<TEntity, List<TEntity>>(rawSql, false, (reader, deserializer) =>
+        {
+            var result = new List<TEntity>();
+            while (reader.Read())
+                result.Add((TEntity)deserializer.Invoke(reader));
+            return result;
+        }, commandType);
+    public virtual async Task<List<TEntity>> QueryAsync<TEntity>(string rawSql, CommandType commandType = CommandType.Text, CancellationToken cancellationToken = default)
+        => await this.DbContext.QueryAsync<TEntity, List<TEntity>>(rawSql, false, async (reader, deserializer, cancellationToken) =>
+        {
+            var result = new List<TEntity>();
+            while (await reader.ReadAsync(cancellationToken))
+                result.Add((TEntity)deserializer.Invoke(reader));
+            return result;
+        }, commandType, cancellationToken);
+    public virtual List<TEntity> Query<TEntity>(string rawSql, object parameters, CommandType commandType = CommandType.Text)
         => this.DbContext.Query<TEntity, List<TEntity>>(rawSql, false, parameters, (reader, deserializer) =>
         {
             var result = new List<TEntity>();

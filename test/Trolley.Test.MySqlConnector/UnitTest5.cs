@@ -122,7 +122,7 @@ public class UnitTest5 : UnitTestBase
     {
         this.Initialize(1);
         var repository = this.dbFactory.Create().UseMaster();
-        using var reader = await repository.QueryMultipleAsync(f => f            
+        using var reader = await repository.QueryMultipleAsync(f => f
             .GetById<User>(new { Id = 1 })
             .GetByIds<User>(new int[] { 1, 2, 3 })
             .Exists<Order>(f => f.BuyerId.IsNull())

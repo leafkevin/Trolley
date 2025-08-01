@@ -8,7 +8,7 @@ namespace Trolley;
 
 public static class OrmExtensions
 {
-    #region QueryFirst/Query/QueryDictionary
+    #region QueryFirst
     /// <summary>
     /// 查询TEntity实体表满足表达式wherePredicate条件的第一条记录，条件表达式wherePredicate可以为null，为null时，查询所有记录的第一条
     /// </summary>
@@ -17,12 +17,7 @@ public static class OrmExtensions
     /// <param name="wherePredicate">条件表达式</param>
     /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
     public static TEntity QueryFirst<TEntity>(this IRepository repository, Expression<Func<TEntity, bool>> wherePredicate = null)
-    {
-        var query = repository.From<TEntity>();
-        if (wherePredicate != null)
-            query.Where(wherePredicate);
-        return query.First();
-    }
+        => repository.From<TEntity>().Where(wherePredicate).First();
     /// <summary>
     /// 查询TEntity实体表满足表达式wherePredicate条件的第一条记录，条件表达式wherePredicate可以为null，为null时，查询所有记录的第一条
     /// </summary>
@@ -31,12 +26,7 @@ public static class OrmExtensions
     /// <param name="wherePredicate">条件表达式</param>
     /// <returns>返回多语句查询对象，将TEntity类型值添加到Reader中</returns>
     public static IMultipleQuery QueryFirst<TEntity>(this IMultipleQuery multiQuery, Expression<Func<TEntity, bool>> wherePredicate = null)
-    {
-        var query = multiQuery.From<TEntity>();
-        if (wherePredicate != null)
-            query.Where(wherePredicate);
-        return query.First();
-    }
+        => multiQuery.From<TEntity>().Where(wherePredicate).First();
     /// <summary>
     /// 查询TEntity实体表满足表达式wherePredicate条件的第一条记录，条件表达式wherePredicate可以为null，为null时，查询所有记录的第一条
     /// </summary>
@@ -46,12 +36,10 @@ public static class OrmExtensions
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回查询结果，记录不存在时返回TEntity类型的默认值</returns>
     public static async Task<TEntity> QueryFirstAsync<TEntity>(this IRepository repository, Expression<Func<TEntity, bool>> wherePredicate = null, CancellationToken cancellationToken = default)
-    {
-        var query = repository.From<TEntity>();
-        if (wherePredicate != null)
-            query.Where(wherePredicate);
-        return await query.FirstAsync(cancellationToken);
-    }
+        => await repository.From<TEntity>().Where(wherePredicate).FirstAsync(cancellationToken);
+    #endregion
+
+    #region Query
     /// <summary>
     /// 查询TEntity实体表满足表达式wherePredicate条件的所有记录，条件表达式wherePredicate可以为null，为null时，查询所有记录
     /// </summary>
@@ -60,12 +48,7 @@ public static class OrmExtensions
     /// <param name="wherePredicate">条件表达式</param>
     /// <returns>返回查询结果，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表</returns>
     public static List<TEntity> Query<TEntity>(this IRepository repository, Expression<Func<TEntity, bool>> wherePredicate = null)
-    {
-        var query = repository.From<TEntity>();
-        if (wherePredicate != null)
-            query.Where(wherePredicate);
-        return query.ToList();
-    }
+        => repository.From<TEntity>().Where(wherePredicate).ToList();
     /// <summary>
     /// 查询TEntity实体表满足表达式wherePredicate条件的所有记录，条件表达式wherePredicate可以为null，为null时，查询所有记录
     /// </summary>
@@ -74,12 +57,7 @@ public static class OrmExtensions
     /// <param name="wherePredicate">条件表达式</param>
     /// <returns>返回多语句查询对象，将TEntity类型列表添加到Reader中</returns>
     public static IMultipleQuery Query<TEntity>(this IMultipleQuery multiQuery, Expression<Func<TEntity, bool>> wherePredicate = null)
-    {
-        var query = multiQuery.From<TEntity>();
-        if (wherePredicate != null)
-            query.Where(wherePredicate);
-        return query.ToList();
-    }
+        => multiQuery.From<TEntity>().Where(wherePredicate).ToList();
     /// <summary>
     /// 查询TEntity实体表满足表达式wherePredicate条件的所有记录，条件表达式wherePredicate可以为null，为null时，查询所有记录，记录不存在时返回没有任何元素的空列表
     /// </summary>
@@ -89,12 +67,10 @@ public static class OrmExtensions
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回查询结果，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表</returns>
     public static async Task<List<TEntity>> QueryAsync<TEntity>(this IRepository repository, Expression<Func<TEntity, bool>> wherePredicate = null, CancellationToken cancellationToken = default)
-    {
-        var query = repository.From<TEntity>();
-        if (wherePredicate != null)
-            query.Where(wherePredicate);
-        return await query.ToListAsync(cancellationToken);
-    }
+        => await repository.From<TEntity>().Where(wherePredicate).ToListAsync(cancellationToken);
+    #endregion
+
+    #region QueryDictionary
     /// <summary>
     /// 查询TEntity实体表满足表达式wherePredicate条件的所有记录，返回TEntity实体所有字段的记录并转化为Dictionary&lt;TKey, TValue&gt;字典，记录不存在时返回没有任何元素的Dictionary&lt;TKey, TValue&gt;空字典，条件表达式wherePredicate可以为null，为null时，查询所有记录
     /// </summary>
@@ -107,12 +83,7 @@ public static class OrmExtensions
     /// <param name="valueSelector">字典Value选择委托</param>
     /// <returns>返回Dictionary&lt;TKey, TValue&gt;字典或没有任何元素的Dictionary&lt;TKey, TValue&gt;空字典</returns>
     public static Dictionary<TKey, TValue> QueryDictionary<TEntity, TKey, TValue>(this IRepository repository, Expression<Func<TEntity, bool>> wherePredicate, Func<TEntity, TKey> keySelector, Func<TEntity, TValue> valueSelector) where TKey : notnull
-    {
-        var query = repository.From<TEntity>();
-        if (wherePredicate != null)
-            query.Where(wherePredicate);
-        return query.ToDictionary(keySelector, valueSelector);
-    }
+        => repository.From<TEntity>().Where(wherePredicate).ToDictionary(keySelector, valueSelector);
     /// <summary>
     /// 查询TEntity实体表满足表达式wherePredicate条件的所有记录，返回TEntity实体所有字段的记录并转化为Dictionary&lt;TKey, TValue&gt;字典，记录不存在时返回没有任何元素的Dictionary&lt;TKey, TValue&gt;空字典，条件表达式wherePredicate可以为null，为null时，查询所有记录
     /// </summary>
@@ -125,12 +96,7 @@ public static class OrmExtensions
     /// <param name="valueSelector">字典Value选择委托</param>
     /// <returns>返回多语句查询对象，将Dictionary&lt;TKey, TValue&gt;字典添加到Reader中 </returns>
     public static IMultipleQuery QueryDictionary<TEntity, TKey, TValue>(this IMultipleQuery multiQuery, Expression<Func<TEntity, bool>> wherePredicate, Func<TEntity, TKey> keySelector, Func<TEntity, TValue> valueSelector) where TKey : notnull
-    {
-        var query = multiQuery.From<TEntity>();
-        if (wherePredicate != null)
-            query.Where(wherePredicate);
-        return query.ToDictionary(keySelector, valueSelector);
-    }
+        => multiQuery.From<TEntity>().Where(wherePredicate).ToDictionary(keySelector, valueSelector);
     /// <summary>
     /// 查询TEntity实体表满足表达式wherePredicate条件的所有记录，返回TEntity实体所有字段的记录并转化为Dictionary&lt;TKey, TValue&gt;字典，记录不存在时返回没有任何元素的Dictionary&lt;TKey, TValue&gt;空字典，条件表达式wherePredicate可以为null，为null时，查询所有记录
     /// </summary>
@@ -144,13 +110,8 @@ public static class OrmExtensions
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回Dictionary&lt;TKey, TValue&gt;字典或没有任何元素的Dictionary&lt;TKey, TValue&gt;空字典</returns>
     public static async Task<Dictionary<TKey, TValue>> QueryDictionaryAsync<TEntity, TKey, TValue>(this IRepository repository, Expression<Func<TEntity, bool>> wherePredicate, Func<TEntity, TKey> keySelector, Func<TEntity, TValue> valueSelector, CancellationToken cancellationToken = default) where TKey : notnull
-    {
-        var query = repository.From<TEntity>();
-        if (wherePredicate != null)
-            query.Where(wherePredicate);
-        return await query.ToDictionaryAsync(keySelector, valueSelector, cancellationToken);
-    }
-    #endregion    
+        => await repository.From<TEntity>().Where(wherePredicate).ToDictionaryAsync(keySelector, valueSelector, cancellationToken);
+    #endregion
 
     #region Update
     /// <summary>

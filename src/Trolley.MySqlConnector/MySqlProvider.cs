@@ -496,7 +496,13 @@ public partial class MySqlProvider : BaseOrmProvider
         if (string.IsNullOrEmpty(tableSchema))
             tableSchema = this.GetSchemaName(dbContext.Database.MasterConnectionStrings.First());
         var sql = $"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_NAME LIKE '{orgTableName}_%' AND TABLE_SCHEMA='{tableSchema}'";
-        var tableNames = dbContext.Query<string>(sql);
+        var tableNames = dbContext.Query<string, List<string>>(sql, false, (reader, deserializer) =>
+        {
+            var result = new List<string>();
+            while (reader.Read())
+                result.Add((string)deserializer.Invoke(reader));
+            return result;
+        });
         if (tableNameSelector != null)
             return tableNames.FindAll(f => tableNameSelector(f));
         return tableNames;
@@ -508,7 +514,13 @@ public partial class MySqlProvider : BaseOrmProvider
         if (string.IsNullOrEmpty(tableSchema))
             tableSchema = this.GetSchemaName(dbContext.Database.MasterConnectionStrings.First());
         var sql = $"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_NAME LIKE '{orgTableName}_%' AND TABLE_SCHEMA='{tableSchema}'";
-        var tableNames = await dbContext.QueryAsync<string>(sql, cancellationToken: cancellationToken);
+        var tableNames = await dbContext.QueryAsync<string, List<string>>(sql, false, async (reader, deserializer, cancellationToken) =>
+        {
+            var result = new List<string>();
+            while (await reader.ReadAsync(cancellationToken))
+                result.Add((string)deserializer.Invoke(reader));
+            return result;
+        }, cancellationToken);
         if (tableNameSelector != null)
             return tableNames.FindAll(f => tableNameSelector(f));
         return tableNames;

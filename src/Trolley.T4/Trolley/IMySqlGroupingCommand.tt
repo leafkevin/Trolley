@@ -20,7 +20,7 @@ public interface IMySqlGroupingCommandBase<TGrouping> : IGroupingCommandBase<TGr
     /// 使用分组后对象直接返回
     /// </summary>
     /// <returns>返回分组后对象</returns>
-    new IMySqlFromContinuedCreate<TGrouping> Select();
+    new IMySqlFromCommand<TGrouping> Select();
 }
 /// <summary>
 /// 分组查询对象
@@ -76,6 +76,14 @@ public interface IMySqlGroupingCommand<T, TGrouping> : IGroupingCommand<T, TGrou
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IMySqlGroupingCommand<T, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr);
+    /// <summary>
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// <code>string orderFields = "Amount";bool isAsc = true;
+    /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("BuyerId", (x, f) =&lt; f.BuyerId).When("Amount", (x, f) =&lt; x.Sum(f.Amount)).Build()</code>)
+    /// </summary>
+    /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IMySqlGroupingCommand<T, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T>, Expression> fieldsGetter);
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select(x =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select(x =&gt; a.Id)</code>
@@ -159,6 +167,14 @@ public interface IMySqlGroupingCommand<<#=tables#>, TGrouping> : IGroupingComman
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     new IMySqlGroupingCommand<<#=tables#>, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr);
+    /// <summary>
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// <code>string orderFields = "Amount";bool isAsc = true;
+    /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("BuyerId", (x, a, b, ...) =&lt; a.BuyerId).When("Amount", (x, a, b, ...) =&lt; x.Sum(a.Amount)).Build()</code>)
+    /// </summary>
+    /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IMySqlGroupingCommand<<#=tables#>, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, <#=tables#>>, Expression> fieldsGetter);
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>

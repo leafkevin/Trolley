@@ -192,7 +192,7 @@ SELECT a.`Id`,a.`Name`,a.`ParentId` FROM `sys_menu` a INNER JOIN `MenuList` b ON
 )
 SELECT a.`Id`,a.`Name`,a.`ParentId`,b.`Url` FROM `MenuList` a INNER JOIN (SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `sys_menu` b ON a.`Id`=b.`PageId` WHERE a.`Id`=@p1 UNION ALL
 SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `MenuList` b ON a.`Id`=b.`Id` WHERE a.`Id`>@p2) b ON a.`Id`=b.`Id`", sql);
-        var result2 = repository
+        var result2 =await  repository
             .FromQuery(f =>  menuList)
             .WithQuery(x => x.From<Page>()
                     .InnerJoin<Menu>((a, b) => a.Id == b.PageId)
@@ -204,7 +204,7 @@ SELECT b.`Id`,a.`Url` FROM `sys_page` a INNER JOIN `MenuList` b ON a.`Id`=b.`Id`
                     .Select((x, y) => new { y.Id, x.Url })))
             .InnerJoin((a, b) => a.Id == b.Id)
             .Select((a, b) => new { a.Id, a.Name, a.ParentId, b.Url })
-            .ToList();
+            .ToListAsync();
         Assert.NotNull(result2);
         Assert.True(result2.Count > 0);
 

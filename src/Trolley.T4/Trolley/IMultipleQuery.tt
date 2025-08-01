@@ -16,19 +16,9 @@ namespace Trolley;
 public interface IMultipleQuery : IDisposable
 {
     #region Properties
-    bool IsUserMaster { get; }
     DbContext DbContext { get; }
     IDbCommand Command { get; }
     List<ReaderAfter> ReaderAfters { get; }
-    #endregion
-
-    #region UseMaster
-    /// <summary>
-    /// 使用主库查询
-    /// </summary>
-    /// <param name="isUseMaster">使用主库为true，默认值为true</param>
-    /// <returns>返回查询对象</returns>
-    IMultipleQuery UseMaster();
     #endregion
 
     #region GetShardingTableNames
@@ -80,7 +70,22 @@ public interface IMultipleQuery : IDisposable
 <#  }#>
     #endregion
 
-    #region From SubQuery
+    #region FromQuery
+    /// <summary>
+    /// 从SQL子查询中查询数据，用法：
+    /// <code>
+    /// var subQuery = f.From&lt;Page, Menu&gt;('o')
+    ///     .Where((a, b) =&gt; a.Id == b.PageId)
+    ///     .Select((x, y) =&gt; new { y.Id, y.ParentId, x.Url });
+    /// f.FromQuery(subQuery) ...
+    /// SQL:
+    /// ... FROM (SELECT p.`Id`,p.`ParentId`,o.`Url` FROM `sys_page` o,`sys_menu` p WHERE o.`Id`=p.`PageId`) ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="T">表T实体类型</typeparam>
+    /// <param name="subQuery">子查询</param>
+    /// <returns>返回查询对象</returns>
+    IMultiQuery<T> FromQuery<T>(IQuery<T> subQuery);
     /// <summary>
     /// 从SQL子查询中查询数据，用法：
     /// <code>
@@ -92,15 +97,40 @@ public interface IMultipleQuery : IDisposable
     /// </code>
     /// </summary>
     /// <typeparam name="T">表T实体类型</typeparam>
-    /// <param name="subQuery">子查询</param>
-    /// <param name="tableAsStart">表别名起始字母，默认值从字母a开始</param>
+    /// <param name="subQueryExpr">子查询</param>
     /// <returns>返回查询对象</returns>
-    IMultiQuery<T> From<T>(Func<IFromQuery, IQuery<T>> subQuery, char tableAsStart = 'a');
+    IMultiQuery<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr);
     #endregion
 
-    #region QueryFirst/Query
+    #region QueryScalar
     /// <summary>
-    /// 使用原始SQL语句rawSql查询数据，并返回满足条件的第一条记录，记录不存在时返回TEntity类型的默认值
+    /// 指定原始SQL语句，查询单个值
+    /// </summary>
+    /// <typeparam name="TValue">返回值类型</typeparam>
+    /// <param name="rawSql">原始SQL语句</param>
+    /// <returns>返回单个值</returns>
+    IMultipleQuery QueryScalar<TValue>(string rawSql);
+    /// <summary>
+    /// 指定原始SQL语句，查询单个值
+    /// </summary>
+    /// <typeparam name="TValue">返回值类型</typeparam>
+    /// <param name="rawSql">原始SQL语句</param>
+    /// <param name="parameters">参数，可以是命名对象、匿名对象或是Dictionary类型对象</param>
+    /// <returns>返回单个值</returns>
+    IMultipleQuery QueryScalar<TValue>(string rawSql, object parameters);
+    /// <summary>
+    /// 指定原始SQL语句，查询单个值
+    /// </summary>
+    /// <typeparam name="TValue">返回值类型</typeparam>
+    /// <param name="rawSql">原始SQL语句</param>
+    /// <param name="parameters">参数数组</param>
+    /// <returns>返回单个值</returns>
+    IMultipleQuery QueryScalar<TValue>(string rawSql, List<IDbDataParameter> parameters);
+    #endregion
+
+    #region QueryFirst
+    /// <summary>
+    /// 指定原始SQL语句，查询单个值
     /// </summary>
     /// <typeparam name="TEntity">实体TEntity类型</typeparam>
     /// <param name="rawSql">原始SQL</param>
@@ -125,6 +155,9 @@ public interface IMultipleQuery : IDisposable
     /// <param name="whereObj">参数，可以是命名对象、匿名对象或是Dictionary类型对象</param>
     /// <returns>返回查询对象</returns>
     IMultipleQuery QueryFirst<TEntity>(object whereObj);
+	#endregion
+
+    #region Query
     /// <summary>
     /// 使用原始SQL语句rawSql查询数据，并返回满足条件的所有TEntity实体记录，记录不存在时返回没有任何元素的List&lt;TEntity&gt;类型空列表
     /// </summary>
@@ -203,9 +236,9 @@ public interface IMultipleQuery : IDisposable
     /// 判断TEntity表是否存在满足predicate条件的记录，存在返回true，否则返回false。
     /// </summary>
     /// <typeparam name="TEntity">实体对象类型</typeparam>
-    /// <param name="predicate">where条件表达式</param>
+    /// <param name="wherePredicate">where条件表达式</param>
     /// <returns>返回查询对象</returns>
-    IMultipleQuery Exists<TEntity>(Expression<Func<TEntity, bool>> predicate);
+    IMultipleQuery Exists<TEntity>(Expression<Func<TEntity, bool>> wherePredicate = null);
     #endregion
 
     #region AddReader/BuildSql

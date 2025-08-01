@@ -21,11 +21,13 @@ public class MySqlGroupingCommand<T, TGrouping> : GroupingCommand<T, TGrouping>,
     public new IMySqlGroupingCommand<T, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
         => this.OrderBy(true, fieldsExpr);
     public new IMySqlGroupingCommand<T, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
-        => this.OrderBy(condition, fieldsExpr) as IMySqlGroupingCommand<T, TGrouping>;
+        => base.OrderBy(condition, fieldsExpr) as IMySqlGroupingCommand<T, TGrouping>;
     public new IMySqlGroupingCommand<T, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
     public new IMySqlGroupingCommand<T, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
-        => this.OrderByDescending(condition, fieldsExpr) as IMySqlGroupingCommand<T, TGrouping>;
+        => base.OrderByDescending(condition, fieldsExpr) as IMySqlGroupingCommand<T, TGrouping>;
+    public new IMySqlGroupingCommand<T, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IMySqlGroupingCommand<T, TGrouping>;
     #endregion
 
     #region Select
@@ -58,6 +60,8 @@ public class MySqlGroupingCommand<T1, T2, TGrouping> : GroupingCommand<T1, T2, T
         => this.OrderByDescending(true, fieldsExpr);
     public new IMySqlGroupingCommand<T1, T2, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IMySqlGroupingCommand<T1, T2, TGrouping>;
+    public new IMySqlGroupingCommand<T1, T2, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IMySqlGroupingCommand<T1, T2, TGrouping>;
     #endregion
 
     #region Select
@@ -90,6 +94,8 @@ public class MySqlGroupingCommand<T1, T2, T3, TGrouping> : GroupingCommand<T1, T
         => this.OrderByDescending(true, fieldsExpr);
     public new IMySqlGroupingCommand<T1, T2, T3, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IMySqlGroupingCommand<T1, T2, T3, TGrouping>;
+    public new IMySqlGroupingCommand<T1, T2, T3, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IMySqlGroupingCommand<T1, T2, T3, TGrouping>;
     #endregion
 
     #region Select
@@ -122,6 +128,8 @@ public class MySqlGroupingCommand<T1, T2, T3, T4, TGrouping> : GroupingCommand<T
         => this.OrderByDescending(true, fieldsExpr);
     public new IMySqlGroupingCommand<T1, T2, T3, T4, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IMySqlGroupingCommand<T1, T2, T3, T4, TGrouping>;
+    public new IMySqlGroupingCommand<T1, T2, T3, T4, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IMySqlGroupingCommand<T1, T2, T3, T4, TGrouping>;
     #endregion
 
     #region Select
@@ -154,6 +162,8 @@ public class MySqlGroupingCommand<T1, T2, T3, T4, T5, TGrouping> : GroupingComma
         => this.OrderByDescending(true, fieldsExpr);
     public new IMySqlGroupingCommand<T1, T2, T3, T4, T5, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IMySqlGroupingCommand<T1, T2, T3, T4, T5, TGrouping>;
+    public new IMySqlGroupingCommand<T1, T2, T3, T4, T5, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IMySqlGroupingCommand<T1, T2, T3, T4, T5, TGrouping>;
     #endregion
 
     #region Select
@@ -186,6 +196,8 @@ public class MySqlGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> : GroupingC
         => this.OrderByDescending(true, fieldsExpr);
     public new IMySqlGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IMySqlGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping>;
+    public new IMySqlGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IMySqlGroupingCommand<T1, T2, T3, T4, T5, T6, TGrouping>;
     #endregion
 
     #region Select

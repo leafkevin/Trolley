@@ -28,11 +28,13 @@ public class MySqlGroupingCommand<T, TGrouping> : GroupingCommand<T, TGrouping>,
     public new IMySqlGroupingCommand<T, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
         => this.OrderBy(true, fieldsExpr);
     public new IMySqlGroupingCommand<T, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
-        => this.OrderBy(condition, fieldsExpr) as IMySqlGroupingCommand<T, TGrouping>;
+        => base.OrderBy(condition, fieldsExpr) as IMySqlGroupingCommand<T, TGrouping>;
     public new IMySqlGroupingCommand<T, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
     public new IMySqlGroupingCommand<T, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
-        => this.OrderByDescending(condition, fieldsExpr) as IMySqlGroupingCommand<T, TGrouping>;
+        => base.OrderByDescending(condition, fieldsExpr) as IMySqlGroupingCommand<T, TGrouping>;
+    public new IMySqlGroupingCommand<T, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IMySqlGroupingCommand<T, TGrouping>;
     #endregion
 
     #region Select
@@ -74,6 +76,8 @@ public class MySqlGroupingCommand<<#=tables#>, TGrouping> : GroupingCommand<<#=t
         => this.OrderByDescending(true, fieldsExpr);
     public new IMySqlGroupingCommand<<#=tables#>, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IMySqlGroupingCommand<<#=tables#>, TGrouping>;
+    public new IMySqlGroupingCommand<<#=tables#>, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, <#=tables#>>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IMySqlGroupingCommand<<#=tables#>, TGrouping>;
     #endregion
 
     #region Select

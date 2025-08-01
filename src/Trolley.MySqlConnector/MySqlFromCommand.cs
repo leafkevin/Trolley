@@ -86,7 +86,7 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
 
     #region Where
     public new IMySqlFromCommand<T> Where(Expression<Func<T, bool>> predicate)
-       => this.Where(true, predicate);
+        => this.Where(true, predicate);
     public new IMySqlFromCommand<T> Where(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
         => base.Where(condition, ifPredicate, elsePredicate) as IMySqlFromCommand<T>;
     public new IMySqlFromCommand<T> WherePredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
@@ -108,7 +108,7 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
     public new IMySqlFromCommand<T> Or(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
         => base.Or(condition, ifPredicate, elsePredicate) as IMySqlFromCommand<T>;
     public new IMySqlFromCommand<T> OrPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
-        => base.AndPredicate(predicateInitializer) as IMySqlFromCommand<T>;
+        => base.OrPredicate(predicateInitializer) as IMySqlFromCommand<T>;
     #endregion
 
     #region GroupBy
@@ -125,6 +125,8 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
         => this.OrderByDescending(true, fieldsExpr);
     public new IMySqlFromCommand<T> OrderByDescending<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IMySqlFromCommand<T>;
+    public new IMySqlFromCommand<T> OrderByDynamic(Func<OrderByBuilder<T>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IMySqlFromCommand<T>;
     #endregion
 
     #region Skip/Take/Page
@@ -277,56 +279,29 @@ public class MySqlFromCommand<T1, T2> : FromCommand<T1, T2>, IMySqlFromCommand<T
 
     #region Where
     public new IMySqlFromCommand<T1, T2> Where(Expression<Func<T1, T2, bool>> predicate)
-    {
-        base.WhereInternal(predicate);
-        return this;
-    }
+        => this.Where(true, predicate);
     public new IMySqlFromCommand<T1, T2> Where(bool condition, Expression<Func<T1, T2, bool>> ifPredicate, Expression<Func<T1, T2, bool>> elsePredicate = null)
-    {
-        base.WhereInternal(condition, ifPredicate, elsePredicate);
-        return this;
-    }
+        => base.Where(condition, ifPredicate, elsePredicate) as IMySqlFromCommand<T1, T2>;
     public new IMySqlFromCommand<T1, T2> WherePredicate(Func<PredicateBuilder<T1, T2>, Expression<Func<T1, T2, bool>>> predicateInitializer)
-    {
-        var builder = new PredicateBuilder<T1, T2>();
-        return this.Where(predicateInitializer.Invoke(builder));
-    }
+        => base.WherePredicate(predicateInitializer) as IMySqlFromCommand<T1, T2>;
     #endregion
 
     #region And
     public new IMySqlFromCommand<T1, T2> And(Expression<Func<T1, T2, bool>> predicate)
-    {
-        base.AndInternal(predicate);
-        return this;
-    }
+        => this.And(true, predicate);
     public new IMySqlFromCommand<T1, T2> And(bool condition, Expression<Func<T1, T2, bool>> ifPredicate = null, Expression<Func<T1, T2, bool>> elsePredicate = null)
-    {
-        base.AndInternal(condition, ifPredicate, elsePredicate);
-        return this;
-    }
+        => base.And(condition, ifPredicate, elsePredicate) as IMySqlFromCommand<T1, T2>;
     public new IMySqlFromCommand<T1, T2> AndPredicate(Func<PredicateBuilder<T1, T2>, Expression<Func<T1, T2, bool>>> predicateInitializer)
-    {
-        var builder = new PredicateBuilder<T1, T2>();
-        return this.And(predicateInitializer.Invoke(builder));
-    }
+        => base.AndPredicate(predicateInitializer) as IMySqlFromCommand<T1, T2>;
     #endregion
 
     #region Or
     public new IMySqlFromCommand<T1, T2> Or(Expression<Func<T1, T2, bool>> predicate)
-    {
-        base.OrInternal(predicate);
-        return this;
-    }
+        => this.Or(true, predicate);
     public new IMySqlFromCommand<T1, T2> Or(bool condition, Expression<Func<T1, T2, bool>> ifPredicate = null, Expression<Func<T1, T2, bool>> elsePredicate = null)
-    {
-        base.OrInternal(condition, ifPredicate, elsePredicate);
-        return this;
-    }
+        => base.Or(condition, ifPredicate, elsePredicate) as IMySqlFromCommand<T1, T2>;
     public new IMySqlFromCommand<T1, T2> OrPredicate(Func<PredicateBuilder<T1, T2>, Expression<Func<T1, T2, bool>>> predicateInitializer)
-    {
-        var builder = new PredicateBuilder<T1, T2>();
-        return this.Or(predicateInitializer.Invoke(builder));
-    }
+        => base.OrPredicate(predicateInitializer) as IMySqlFromCommand<T1, T2>;
     #endregion
 
     #region GroupBy
@@ -338,35 +313,22 @@ public class MySqlFromCommand<T1, T2> : FromCommand<T1, T2>, IMySqlFromCommand<T
     public new IMySqlFromCommand<T1, T2> OrderBy<TFields>(Expression<Func<T1, T2, TFields>> fieldsExpr)
         => this.OrderBy(true, fieldsExpr);
     public new IMySqlFromCommand<T1, T2> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, TFields>> fieldsExpr)
-    {
-        base.OrderByInternal(condition, fieldsExpr);
-        return this;
-    }
+        => base.OrderBy(condition, fieldsExpr) as IMySqlFromCommand<T1, T2>;
     public new IMySqlFromCommand<T1, T2> OrderByDescending<TFields>(Expression<Func<T1, T2, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
     public new IMySqlFromCommand<T1, T2> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, TFields>> fieldsExpr)
-    {
-        base.OrderByDescendingInternal(condition, fieldsExpr);
-        return this;
-    }
+        => base.OrderByDescending(condition, fieldsExpr) as IMySqlFromCommand<T1, T2>;
+    public new IMySqlFromCommand<T1, T2> OrderByDynamic(Func<OrderByBuilder<T1, T2>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IMySqlFromCommand<T1, T2>;
     #endregion
 
     #region Skip/Take/Page
     public new IMySqlFromCommand<T1, T2> Skip(int offset)
-    {
-        base.SkipInternal(offset);
-        return this;
-    }
+        => base.Skip(offset) as IMySqlFromCommand<T1, T2>;
     public new IMySqlFromCommand<T1, T2> Take(int limit)
-    {
-        base.TakeInternal(limit);
-        return this;
-    }
+        => base.Take(limit) as IMySqlFromCommand<T1, T2>;
     public new IMySqlFromCommand<T1, T2> Page(int pageNumber, int pageSize)
-    {
-        base.PageInternal(pageNumber, pageSize);
-        return this;
-    }
+        => base.Page(pageNumber, pageSize) as IMySqlFromCommand<T1, T2>;
     #endregion
 
     #region Select
@@ -450,56 +412,29 @@ public class MySqlFromCommand<T1, T2, T3> : FromCommand<T1, T2, T3>, IMySqlFromC
 
     #region Where
     public new IMySqlFromCommand<T1, T2, T3> Where(Expression<Func<T1, T2, T3, bool>> predicate)
-    {
-        base.WhereInternal(predicate);
-        return this;
-    }
+        => this.Where(true, predicate);
     public new IMySqlFromCommand<T1, T2, T3> Where(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate, Expression<Func<T1, T2, T3, bool>> elsePredicate = null)
-    {
-        base.WhereInternal(condition, ifPredicate, elsePredicate);
-        return this;
-    }
+        => base.Where(condition, ifPredicate, elsePredicate) as IMySqlFromCommand<T1, T2, T3>;
     public new IMySqlFromCommand<T1, T2, T3> WherePredicate(Func<PredicateBuilder<T1, T2, T3>, Expression<Func<T1, T2, T3, bool>>> predicateInitializer)
-    {
-        var builder = new PredicateBuilder<T1, T2, T3>();
-        return this.Where(predicateInitializer.Invoke(builder));
-    }
+        => base.WherePredicate(predicateInitializer) as IMySqlFromCommand<T1, T2, T3>;
     #endregion
 
     #region And
     public new IMySqlFromCommand<T1, T2, T3> And(Expression<Func<T1, T2, T3, bool>> predicate)
-    {
-        base.AndInternal(predicate);
-        return this;
-    }
+        => this.And(true, predicate);
     public new IMySqlFromCommand<T1, T2, T3> And(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, bool>> elsePredicate = null)
-    {
-        base.AndInternal(condition, ifPredicate, elsePredicate);
-        return this;
-    }
+        => base.And(condition, ifPredicate, elsePredicate) as IMySqlFromCommand<T1, T2, T3>;
     public new IMySqlFromCommand<T1, T2, T3> AndPredicate(Func<PredicateBuilder<T1, T2, T3>, Expression<Func<T1, T2, T3, bool>>> predicateInitializer)
-    {
-        var builder = new PredicateBuilder<T1, T2, T3>();
-        return this.And(predicateInitializer.Invoke(builder));
-    }
+        => base.AndPredicate(predicateInitializer) as IMySqlFromCommand<T1, T2, T3>;
     #endregion
 
     #region Or
     public new IMySqlFromCommand<T1, T2, T3> Or(Expression<Func<T1, T2, T3, bool>> predicate)
-    {
-        base.OrInternal(predicate);
-        return this;
-    }
+        => this.Or(true, predicate);
     public new IMySqlFromCommand<T1, T2, T3> Or(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, bool>> elsePredicate = null)
-    {
-        base.OrInternal(condition, ifPredicate, elsePredicate);
-        return this;
-    }
+        => base.Or(condition, ifPredicate, elsePredicate) as IMySqlFromCommand<T1, T2, T3>;
     public new IMySqlFromCommand<T1, T2, T3> OrPredicate(Func<PredicateBuilder<T1, T2, T3>, Expression<Func<T1, T2, T3, bool>>> predicateInitializer)
-    {
-        var builder = new PredicateBuilder<T1, T2, T3>();
-        return this.Or(predicateInitializer.Invoke(builder));
-    }
+        => base.OrPredicate(predicateInitializer) as IMySqlFromCommand<T1, T2, T3>;
     #endregion
 
     #region GroupBy
@@ -511,35 +446,22 @@ public class MySqlFromCommand<T1, T2, T3> : FromCommand<T1, T2, T3>, IMySqlFromC
     public new IMySqlFromCommand<T1, T2, T3> OrderBy<TFields>(Expression<Func<T1, T2, T3, TFields>> fieldsExpr)
         => this.OrderBy(true, fieldsExpr);
     public new IMySqlFromCommand<T1, T2, T3> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, TFields>> fieldsExpr)
-    {
-        base.OrderByInternal(condition, fieldsExpr);
-        return this;
-    }
+        => base.OrderBy(condition, fieldsExpr) as IMySqlFromCommand<T1, T2, T3>;
     public new IMySqlFromCommand<T1, T2, T3> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
     public new IMySqlFromCommand<T1, T2, T3> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, TFields>> fieldsExpr)
-    {
-        base.OrderByDescendingInternal(condition, fieldsExpr);
-        return this;
-    }
+        => base.OrderByDescending(condition, fieldsExpr) as IMySqlFromCommand<T1, T2, T3>;
+    public new IMySqlFromCommand<T1, T2, T3> OrderByDynamic(Func<OrderByBuilder<T1, T2, T3>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IMySqlFromCommand<T1, T2, T3>;
     #endregion
 
     #region Skip/Take/Page
     public new IMySqlFromCommand<T1, T2, T3> Skip(int offset)
-    {
-        base.SkipInternal(offset);
-        return this;
-    }
+        => base.Skip(offset) as IMySqlFromCommand<T1, T2, T3>;
     public new IMySqlFromCommand<T1, T2, T3> Take(int limit)
-    {
-        base.TakeInternal(limit);
-        return this;
-    }
+        => base.Take(limit) as IMySqlFromCommand<T1, T2, T3>;
     public new IMySqlFromCommand<T1, T2, T3> Page(int pageNumber, int pageSize)
-    {
-        base.PageInternal(pageNumber, pageSize);
-        return this;
-    }
+        => base.Page(pageNumber, pageSize) as IMySqlFromCommand<T1, T2, T3>;
     #endregion
 
     #region Select
@@ -623,56 +545,29 @@ public class MySqlFromCommand<T1, T2, T3, T4> : FromCommand<T1, T2, T3, T4>, IMy
 
     #region Where
     public new IMySqlFromCommand<T1, T2, T3, T4> Where(Expression<Func<T1, T2, T3, T4, bool>> predicate)
-    {
-        base.WhereInternal(predicate);
-        return this;
-    }
+        => this.Where(true, predicate);
     public new IMySqlFromCommand<T1, T2, T3, T4> Where(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null)
-    {
-        base.WhereInternal(condition, ifPredicate, elsePredicate);
-        return this;
-    }
+        => base.Where(condition, ifPredicate, elsePredicate) as IMySqlFromCommand<T1, T2, T3, T4>;
     public new IMySqlFromCommand<T1, T2, T3, T4> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4>, Expression<Func<T1, T2, T3, T4, bool>>> predicateInitializer)
-    {
-        var builder = new PredicateBuilder<T1, T2, T3, T4>();
-        return this.Where(predicateInitializer.Invoke(builder));
-    }
+        => base.WherePredicate(predicateInitializer) as IMySqlFromCommand<T1, T2, T3, T4>;
     #endregion
 
     #region And
     public new IMySqlFromCommand<T1, T2, T3, T4> And(Expression<Func<T1, T2, T3, T4, bool>> predicate)
-    {
-        base.AndInternal(predicate);
-        return this;
-    }
+        => this.And(true, predicate);
     public new IMySqlFromCommand<T1, T2, T3, T4> And(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null)
-    {
-        base.AndInternal(condition, ifPredicate, elsePredicate);
-        return this;
-    }
+        => base.And(condition, ifPredicate, elsePredicate) as IMySqlFromCommand<T1, T2, T3, T4>;
     public new IMySqlFromCommand<T1, T2, T3, T4> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4>, Expression<Func<T1, T2, T3, T4, bool>>> predicateInitializer)
-    {
-        var builder = new PredicateBuilder<T1, T2, T3, T4>();
-        return this.And(predicateInitializer.Invoke(builder));
-    }
+        => base.AndPredicate(predicateInitializer) as IMySqlFromCommand<T1, T2, T3, T4>;
     #endregion
 
     #region Or
     public new IMySqlFromCommand<T1, T2, T3, T4> Or(Expression<Func<T1, T2, T3, T4, bool>> predicate)
-    {
-        base.OrInternal(predicate);
-        return this;
-    }
+        => this.Or(true, predicate);
     public new IMySqlFromCommand<T1, T2, T3, T4> Or(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null)
-    {
-        base.OrInternal(condition, ifPredicate, elsePredicate);
-        return this;
-    }
+        => base.Or(condition, ifPredicate, elsePredicate) as IMySqlFromCommand<T1, T2, T3, T4>;
     public new IMySqlFromCommand<T1, T2, T3, T4> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4>, Expression<Func<T1, T2, T3, T4, bool>>> predicateInitializer)
-    {
-        var builder = new PredicateBuilder<T1, T2, T3, T4>();
-        return this.Or(predicateInitializer.Invoke(builder));
-    }
+        => base.OrPredicate(predicateInitializer) as IMySqlFromCommand<T1, T2, T3, T4>;
     #endregion
 
     #region GroupBy
@@ -684,35 +579,22 @@ public class MySqlFromCommand<T1, T2, T3, T4> : FromCommand<T1, T2, T3, T4>, IMy
     public new IMySqlFromCommand<T1, T2, T3, T4> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr)
         => this.OrderBy(true, fieldsExpr);
     public new IMySqlFromCommand<T1, T2, T3, T4> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr)
-    {
-        base.OrderByInternal(condition, fieldsExpr);
-        return this;
-    }
+        => base.OrderBy(condition, fieldsExpr) as IMySqlFromCommand<T1, T2, T3, T4>;
     public new IMySqlFromCommand<T1, T2, T3, T4> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
     public new IMySqlFromCommand<T1, T2, T3, T4> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr)
-    {
-        base.OrderByDescendingInternal(condition, fieldsExpr);
-        return this;
-    }
+        => base.OrderByDescending(condition, fieldsExpr) as IMySqlFromCommand<T1, T2, T3, T4>;
+    public new IMySqlFromCommand<T1, T2, T3, T4> OrderByDynamic(Func<OrderByBuilder<T1, T2, T3, T4>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IMySqlFromCommand<T1, T2, T3, T4>;
     #endregion
 
     #region Skip/Take/Page
     public new IMySqlFromCommand<T1, T2, T3, T4> Skip(int offset)
-    {
-        base.SkipInternal(offset);
-        return this;
-    }
+        => base.Skip(offset) as IMySqlFromCommand<T1, T2, T3, T4>;
     public new IMySqlFromCommand<T1, T2, T3, T4> Take(int limit)
-    {
-        base.TakeInternal(limit);
-        return this;
-    }
+        => base.Take(limit) as IMySqlFromCommand<T1, T2, T3, T4>;
     public new IMySqlFromCommand<T1, T2, T3, T4> Page(int pageNumber, int pageSize)
-    {
-        base.PageInternal(pageNumber, pageSize);
-        return this;
-    }
+        => base.Page(pageNumber, pageSize) as IMySqlFromCommand<T1, T2, T3, T4>;
     #endregion
 
     #region Select
@@ -796,56 +678,29 @@ public class MySqlFromCommand<T1, T2, T3, T4, T5> : FromCommand<T1, T2, T3, T4, 
 
     #region Where
     public new IMySqlFromCommand<T1, T2, T3, T4, T5> Where(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
-    {
-        base.WhereInternal(predicate);
-        return this;
-    }
+        => this.Where(true, predicate);
     public new IMySqlFromCommand<T1, T2, T3, T4, T5> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null)
-    {
-        base.WhereInternal(condition, ifPredicate, elsePredicate);
-        return this;
-    }
+        => base.Where(condition, ifPredicate, elsePredicate) as IMySqlFromCommand<T1, T2, T3, T4, T5>;
     public new IMySqlFromCommand<T1, T2, T3, T4, T5> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5>, Expression<Func<T1, T2, T3, T4, T5, bool>>> predicateInitializer)
-    {
-        var builder = new PredicateBuilder<T1, T2, T3, T4, T5>();
-        return this.Where(predicateInitializer.Invoke(builder));
-    }
+        => base.WherePredicate(predicateInitializer) as IMySqlFromCommand<T1, T2, T3, T4, T5>;
     #endregion
 
     #region And
     public new IMySqlFromCommand<T1, T2, T3, T4, T5> And(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
-    {
-        base.AndInternal(predicate);
-        return this;
-    }
+        => this.And(true, predicate);
     public new IMySqlFromCommand<T1, T2, T3, T4, T5> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null)
-    {
-        base.AndInternal(condition, ifPredicate, elsePredicate);
-        return this;
-    }
+        => base.And(condition, ifPredicate, elsePredicate) as IMySqlFromCommand<T1, T2, T3, T4, T5>;
     public new IMySqlFromCommand<T1, T2, T3, T4, T5> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5>, Expression<Func<T1, T2, T3, T4, T5, bool>>> predicateInitializer)
-    {
-        var builder = new PredicateBuilder<T1, T2, T3, T4, T5>();
-        return this.And(predicateInitializer.Invoke(builder));
-    }
+        => base.AndPredicate(predicateInitializer) as IMySqlFromCommand<T1, T2, T3, T4, T5>;
     #endregion
 
     #region Or
     public new IMySqlFromCommand<T1, T2, T3, T4, T5> Or(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
-    {
-        base.OrInternal(predicate);
-        return this;
-    }
+        => this.Or(true, predicate);
     public new IMySqlFromCommand<T1, T2, T3, T4, T5> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null)
-    {
-        base.OrInternal(condition, ifPredicate, elsePredicate);
-        return this;
-    }
+        => base.Or(condition, ifPredicate, elsePredicate) as IMySqlFromCommand<T1, T2, T3, T4, T5>;
     public new IMySqlFromCommand<T1, T2, T3, T4, T5> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5>, Expression<Func<T1, T2, T3, T4, T5, bool>>> predicateInitializer)
-    {
-        var builder = new PredicateBuilder<T1, T2, T3, T4, T5>();
-        return this.Or(predicateInitializer.Invoke(builder));
-    }
+        => base.OrPredicate(predicateInitializer) as IMySqlFromCommand<T1, T2, T3, T4, T5>;
     #endregion
 
     #region GroupBy
@@ -857,35 +712,22 @@ public class MySqlFromCommand<T1, T2, T3, T4, T5> : FromCommand<T1, T2, T3, T4, 
     public new IMySqlFromCommand<T1, T2, T3, T4, T5> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr)
         => this.OrderBy(true, fieldsExpr);
     public new IMySqlFromCommand<T1, T2, T3, T4, T5> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr)
-    {
-        base.OrderByInternal(condition, fieldsExpr);
-        return this;
-    }
+        => base.OrderBy(condition, fieldsExpr) as IMySqlFromCommand<T1, T2, T3, T4, T5>;
     public new IMySqlFromCommand<T1, T2, T3, T4, T5> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
     public new IMySqlFromCommand<T1, T2, T3, T4, T5> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr)
-    {
-        base.OrderByDescendingInternal(condition, fieldsExpr);
-        return this;
-    }
+        => base.OrderByDescending(condition, fieldsExpr) as IMySqlFromCommand<T1, T2, T3, T4, T5>;
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5> OrderByDynamic(Func<OrderByBuilder<T1, T2, T3, T4, T5>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IMySqlFromCommand<T1, T2, T3, T4, T5>;
     #endregion
 
     #region Skip/Take/Page
     public new IMySqlFromCommand<T1, T2, T3, T4, T5> Skip(int offset)
-    {
-        base.SkipInternal(offset);
-        return this;
-    }
+        => base.Skip(offset) as IMySqlFromCommand<T1, T2, T3, T4, T5>;
     public new IMySqlFromCommand<T1, T2, T3, T4, T5> Take(int limit)
-    {
-        base.TakeInternal(limit);
-        return this;
-    }
+        => base.Take(limit) as IMySqlFromCommand<T1, T2, T3, T4, T5>;
     public new IMySqlFromCommand<T1, T2, T3, T4, T5> Page(int pageNumber, int pageSize)
-    {
-        base.PageInternal(pageNumber, pageSize);
-        return this;
-    }
+        => base.Page(pageNumber, pageSize) as IMySqlFromCommand<T1, T2, T3, T4, T5>;
     #endregion
 
     #region Select
@@ -939,56 +781,29 @@ public class MySqlFromCommand<T1, T2, T3, T4, T5, T6> : FromCommand<T1, T2, T3, 
 
     #region Where
     public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> Where(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate)
-    {
-        base.WhereInternal(predicate);
-        return this;
-    }
+        => this.Where(true, predicate);
     public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> elsePredicate = null)
-    {
-        base.WhereInternal(condition, ifPredicate, elsePredicate);
-        return this;
-    }
+        => base.Where(condition, ifPredicate, elsePredicate) as IMySqlFromCommand<T1, T2, T3, T4, T5, T6>;
     public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6>, Expression<Func<T1, T2, T3, T4, T5, T6, bool>>> predicateInitializer)
-    {
-        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6>();
-        return this.Where(predicateInitializer.Invoke(builder));
-    }
+        => base.WherePredicate(predicateInitializer) as IMySqlFromCommand<T1, T2, T3, T4, T5, T6>;
     #endregion
 
     #region And
     public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> And(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate)
-    {
-        base.AndInternal(predicate);
-        return this;
-    }
+        => this.And(true, predicate);
     public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> elsePredicate = null)
-    {
-        base.AndInternal(condition, ifPredicate, elsePredicate);
-        return this;
-    }
+        => base.And(condition, ifPredicate, elsePredicate) as IMySqlFromCommand<T1, T2, T3, T4, T5, T6>;
     public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6>, Expression<Func<T1, T2, T3, T4, T5, T6, bool>>> predicateInitializer)
-    {
-        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6>();
-        return this.And(predicateInitializer.Invoke(builder));
-    }
+        => base.AndPredicate(predicateInitializer) as IMySqlFromCommand<T1, T2, T3, T4, T5, T6>;
     #endregion
 
     #region Or
     public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> Or(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate)
-    {
-        base.OrInternal(predicate);
-        return this;
-    }
+        => this.Or(true, predicate);
     public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> elsePredicate = null)
-    {
-        base.OrInternal(condition, ifPredicate, elsePredicate);
-        return this;
-    }
+        => base.Or(condition, ifPredicate, elsePredicate) as IMySqlFromCommand<T1, T2, T3, T4, T5, T6>;
     public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6>, Expression<Func<T1, T2, T3, T4, T5, T6, bool>>> predicateInitializer)
-    {
-        var builder = new PredicateBuilder<T1, T2, T3, T4, T5, T6>();
-        return this.Or(predicateInitializer.Invoke(builder));
-    }
+        => base.OrPredicate(predicateInitializer) as IMySqlFromCommand<T1, T2, T3, T4, T5, T6>;
     #endregion
 
     #region GroupBy
@@ -1000,35 +815,22 @@ public class MySqlFromCommand<T1, T2, T3, T4, T5, T6> : FromCommand<T1, T2, T3, 
     public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> OrderBy<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
         => this.OrderBy(true, fieldsExpr);
     public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> OrderBy<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
-    {
-        base.OrderByInternal(condition, fieldsExpr);
-        return this;
-    }
+        => base.OrderBy(condition, fieldsExpr) as IMySqlFromCommand<T1, T2, T3, T4, T5, T6>;
     public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
     public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
-    {
-        base.OrderByDescendingInternal(condition, fieldsExpr);
-        return this;
-    }
+        => base.OrderByDescending(condition, fieldsExpr) as IMySqlFromCommand<T1, T2, T3, T4, T5, T6>;
+    public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> OrderByDynamic(Func<OrderByBuilder<T1, T2, T3, T4, T5, T6>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IMySqlFromCommand<T1, T2, T3, T4, T5, T6>;
     #endregion
 
     #region Skip/Take/Page
     public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> Skip(int offset)
-    {
-        base.SkipInternal(offset);
-        return this;
-    }
+        => base.Skip(offset) as IMySqlFromCommand<T1, T2, T3, T4, T5, T6>;
     public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> Take(int limit)
-    {
-        base.TakeInternal(limit);
-        return this;
-    }
+        => base.Take(limit) as IMySqlFromCommand<T1, T2, T3, T4, T5, T6>;
     public new IMySqlFromCommand<T1, T2, T3, T4, T5, T6> Page(int pageNumber, int pageSize)
-    {
-        base.PageInternal(pageNumber, pageSize);
-        return this;
-    }
+        => base.Page(pageNumber, pageSize) as IMySqlFromCommand<T1, T2, T3, T4, T5, T6>;
     #endregion
 
     #region Select
