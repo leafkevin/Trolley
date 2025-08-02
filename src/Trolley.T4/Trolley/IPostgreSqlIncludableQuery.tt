@@ -23,13 +23,13 @@ public interface IPostgreSqlIncludableQuery<T, TMember> : IIncludableQuery<T, TM
     /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象</returns>
     new IPostgreSqlIncludableQuery<T, TMember> UseTable(params string[] tableNames);
     /// <summary>
     /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象</returns>
     new IPostgreSqlIncludableQuery<T, TMember> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
     /// 使用TMasterSharding主表分表名与当前表TMember分表映射关系表名获取委托获取当前表TMember分表表名，只需要指定主表分表的分表范围或条件即可，从表分表不需要指定分表名，会根据这个委托执行结果确定分表名称，通常适用于主表和从表都分表且一次查询多个分表的场景。第一个参数：dbKey，第二个参数是主表分表的原始名称，
@@ -40,7 +40,7 @@ public interface IPostgreSqlIncludableQuery<T, TMember> : IIncludableQuery<T, TM
     ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
     ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
     ///     {
-    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
+    ///         //sys_order_105_202001 -&gt; sys_user_105, sys_order_106_202002 -&gt; sys_user_106
     ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
     ///         return tableName.Substring(0, tableName.Length - 7);
     ///     })
@@ -53,39 +53,39 @@ public interface IPostgreSqlIncludableQuery<T, TMember> : IIncludableQuery<T, TM
     /// </summary>
     /// <typeparam name="TMasterSharding">主表分表实体类型</typeparam>
     /// <param name="tableNameGetter">当前表分表名获取委托</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象</returns>
     new IPostgreSqlIncludableQuery<T, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值，手动指定TMember表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象</returns>
     new IPostgreSqlIncludableQuery<T, TMember> UseTableBy(params object[] fieldValues);
-    /// <summary>
-    /// 根据1个字段范围值，手动指定T表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
+    //// <summary>
+    /// 根据1个字段范围值，手动指定TMember表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象</returns>
     new IPostgreSqlIncludableQuery<T, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
-    /// 根据1个固定字段值和1个字段值范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据1个固定字段值和1个字段值范围值，手动指定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象</returns>
     new IPostgreSqlIncludableQuery<T, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
-    /// 根据2个固定字段值和1个字段范围值，手动指定T表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
+    /// 根据2个固定字段值和1个字段范围值，手动指定TMember表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
     /// .UseTableByRange(1, DateTime.Now.AddDays(-7), DateTime.Now)//商户+时间分表，商户1，最近一周的订单
     /// </summary>
     /// <param name="field1Value">字段1值</param>
     /// <param name="field2Value">字段2值</param>
     /// <param name="beginField3Value">字段3范围起始值</param>
     /// <param name="endField3Value">字段3范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象</returns>
     new IPostgreSqlIncludableQuery<T, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
@@ -94,7 +94,7 @@ public interface IPostgreSqlIncludableQuery<T, TMember> : IIncludableQuery<T, TM
     /// 切换TableSchema，非默认TableSchema才有效
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象</returns>
     new IPostgreSqlIncludableQuery<T, TMember> UseTableSchema(string tableSchema);
     #endregion
 
@@ -111,7 +111,7 @@ public interface IPostgreSqlIncludableQuery<T, TMember> : IIncludableQuery<T, TM
     /// </summary>
     /// <typeparam name="TNavigation">导航属性实体类型</typeparam>
     /// <param name="member">导航属性选择表达式，1:1,1:N关系都可以选择，如：f =&gt; f.Brand，f =&gt; f.Products</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象</returns>
     new IPostgreSqlIncludableQuery<T, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member);
     /// <summary>
     /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
@@ -126,7 +126,7 @@ public interface IPostgreSqlIncludableQuery<T, TMember> : IIncludableQuery<T, TM
     /// <typeparam name="TElment">导航属性泛型类型</typeparam>
     /// <param name="member">导航属性选择表达式，只能选择1:N关系，如：f =&gt; f.Products</param>
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象</returns>
     new IPostgreSqlIncludableQuery<T, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null);
     #endregion
 }
@@ -158,16 +158,16 @@ public interface IPostgreSqlIncludableQuery<<#=tables#>, TMember> : IIncludableQ
 #>
     #region Sharding
     /// <summary>
-    /// 直接指定1个或多个<#=currentTable#>表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
+    /// 直接指定1个或多个TMember表分表名执行查询，完整的表名，如：.UseTable("sys_order_202001")，.UseTable("sys_order_202001", "sys_order_202002")，按月分表
     /// </summary>
     /// <param name="tableNames">多个表名，完整的表名，如：sys_order_202001，按月分表</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象</returns>
     new IPostgreSqlIncludableQuery<<#=tables#>, TMember> UseTable(params string[] tableNames);
     /// <summary>
-    /// 使用表名断言确定<#=currentTable#>表1个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
+    /// 使用表名断言确定TMember表一个或多个分表执行查询，如：.UseTable(f =&gt; f.Contains("202001"))，按月分表
     /// </summary>
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象</returns>
     new IPostgreSqlIncludableQuery<<#=tables#>, TMember> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
     /// 根据TMasterSharding主表分表名与当前<#=currentTable#>表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
@@ -191,20 +191,20 @@ public interface IPostgreSqlIncludableQuery<<#=tables#>, TMember> : IIncludableQ
     /// </summary>
     /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
     /// <param name="tableNameGetter"><#=currentTable#>表分表名获取委托</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象</returns>
     new IPostgreSqlIncludableQuery<<#=tables#>, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值，手动指定<#=currentTable#>表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象</returns>
     new IPostgreSqlIncludableQuery<<#=tables#>, TMember> UseTableBy(params object[] fieldValues);
     /// <summary>
     /// 根据1个字段范围值，手动指定<#=currentTable#>表分表名执行查询，通常是日期规则分表使用，如：.UseTableByRange(DateTime.Now.AddDays(-7), DateTime.Now)//时间分表，最近一周的订单
     /// </summary>
     /// <param name="beginFieldValue">字段范围起始值</param>
     /// <param name="endFieldValue">字段范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象</returns>
     new IPostgreSqlIncludableQuery<<#=tables#>, TMember> UseTableByRange(object beginFieldValue, object endFieldValue);
     /// <summary>
     /// 根据1个固定字段值和1个字段值范围值，手动指定<#=currentTable#>表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
@@ -213,7 +213,7 @@ public interface IPostgreSqlIncludableQuery<<#=tables#>, TMember> : IIncludableQ
     /// <param name="field1Value">字段1值</param>
     /// <param name="beginField2Value">字段2范围起始值</param>
     /// <param name="endField2Value">字段2范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象</returns>
     new IPostgreSqlIncludableQuery<<#=tables#>, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value);
     /// <summary>
     /// 根据2个固定字段值和1个字段范围值，手动指定<#=currentTable#>表分表名执行查询，字段值的顺序与配置的字段顺序保持一致，通常是日期规则分表使用，
@@ -223,7 +223,7 @@ public interface IPostgreSqlIncludableQuery<<#=tables#>, TMember> : IIncludableQ
     /// <param name="field2Value">字段2值</param>
     /// <param name="beginField3Value">字段3范围起始值</param>
     /// <param name="endField3Value">字段3范围结束值</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象</returns>
     new IPostgreSqlIncludableQuery<<#=tables#>, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value);
     #endregion
 
@@ -232,7 +232,7 @@ public interface IPostgreSqlIncludableQuery<<#=tables#>, TMember> : IIncludableQ
     /// 切换TableSchema，非默认TableSchema才有效
     /// </summary>
     /// <param name="tableSchema">指定TableSchema</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象</returns>
     new IPostgreSqlIncludableQuery<<#=tables#>, TMember> UseTableSchema(string tableSchema);
     #endregion
 
@@ -249,7 +249,7 @@ public interface IPostgreSqlIncludableQuery<<#=tables#>, TMember> : IIncludableQ
     /// </summary>
     /// <typeparam name="TNavigation">导航属性实体类型</typeparam>
     /// <param name="member">导航属性选择表达式，1:1,1:N关系都可以选择，如：f =&gt; f.Brand，f =&gt; f.Products</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象</returns>
     new IPostgreSqlIncludableQuery<<#=tables#>, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member);
     /// <summary>
     /// 贪婪加载集合类导航属性，可继续贪婪加载元素类型中的导航属性，默认使用LeftJoin方式，使用导航属性配置的关联关系生成JOIN ON子句。
@@ -261,10 +261,10 @@ public interface IPostgreSqlIncludableQuery<<#=tables#>, TMember> : IIncludableQ
     ///   ...
     /// </code>
     /// </summary>
-    /// <typeparam name="TElment">导航属性泛型类型</typeparam>
+    /// <typeparam name="TElement">导航属性泛型类型</typeparam>
     /// <param name="member">导航属性选择表达式，只能选择1:N关系，如：f =&gt; f.Products</param>
     /// <param name="filter">导航属性过滤条件，对1:N关联方式的集合属性有效</param>
-    /// <returns>返回导航属性查询对象</returns>
+    /// <returns>返回查询对象</returns>
     new IPostgreSqlIncludableQuery<<#=tables#>, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null);
     #endregion
 <#      }#>

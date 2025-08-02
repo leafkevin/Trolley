@@ -150,13 +150,13 @@ public class PostgreSqlFromCommand<T> : FromCommand<T>, IPostgreSqlFromCommand<T
     #endregion
 
     #region OnConflict
-    public IPostgreSqlFromContinuedCreate<T> OnConflict<TUpdateFields>(Expression<Func<IPostgreSqlCreateConflictDoUpdate<T>, TUpdateFields>> fieldsAssignment)
+    public IPostgreSqlFromCommand<T> OnConflict<TUpdateFields>(Expression<Func<IPostgreSqlCreateConflictDoUpdate<T>, TUpdateFields>> fieldsAssignment)
     {
         var visitor = this.NewCreateVisitor();
         visitor.VisitSetExpression(fieldsAssignment);
         this.Visitor.IsNeedCommandTableAlias = visitor.IsUseTableAlias;
-        visitor.FromSql = this.Visitor.BuildCommandSql(out _);
-        return new PostgreSqlFromContinuedCreate<T>(this.DbContext, visitor);
+        visitor.FromSql = this.Visitor.BuildCommandSql(false, out _);
+        return this;
     }
     #endregion
 

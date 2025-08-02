@@ -92,7 +92,7 @@ public interface IPostgreSqlGroupingCommand<T, TGrouping> : IGroupingCommand<T, 
 /// <typeparam name="T1">表T1实体类型</typeparam>
 /// <typeparam name="T2">表T2实体类型</typeparam>
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
-public interface IPostgreSqlGroupingCommand<T1, T2, TGrouping> : IGroupingCommand<T1, T2, TGrouping>, IGroupingCommandBase<TGrouping>
+public interface IPostgreSqlGroupingCommand<T1, T2, TGrouping> : IGroupingCommand<T1, T2, TGrouping>, IPostgreSqlGroupingCommandBase<TGrouping>
 {
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
