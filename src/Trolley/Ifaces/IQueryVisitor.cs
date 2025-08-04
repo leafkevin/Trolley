@@ -54,7 +54,7 @@ public interface IQueryVisitor : ICloneable, IDisposable
     bool IsFromQuery { get; set; }
     bool IsFromCommand { get; set; }
     bool IsNeedPaging { get; set; }
-    bool IsNeedFullFieldsPagingCount { get; set; }
+    bool HasAggFields { get; set; }
 
     string BuildSql(bool isBuildCteSql, out List<SqlFieldSegment> readerFields);
     string BuildCommandSql(bool isBuildCteSql, out IDataParameterCollection dbParameters);

@@ -2538,7 +2538,7 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
                 cacheKey = RepositoryHelper.GetCacheKey(typeof(Sql), methodInfo.GetGenericMethodDefinition());
                 formatter = methodCallSqlFormatterCache.GetOrAdd(cacheKey, (visitor, orgExpr, target, deferExprs, args) =>
                 {
-                    var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0] });
+                    var targetSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[0], IsNullFields = true });
                     var rightSegment = visitor.VisitAndDeferred(new SqlFieldSegment { Expression = args[1] });
                     var targetArgument = visitor.GetQuotedValue(targetSegment);
                     var rightArgument = visitor.GetQuotedValue(rightSegment);
