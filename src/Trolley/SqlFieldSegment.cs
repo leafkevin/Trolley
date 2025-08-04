@@ -165,6 +165,11 @@ public class SqlFieldSegment : ICloneable
     public bool IsAggField { get; set; }
     public string ShardingAggFunc { get; set; }
     /// <summary>
+    /// 是否调用了IsNull函数，SUM, COUNT,AVG,MAX,MIN等聚合函数需要调用IsNull函数来处理null值
+    /// </summary>
+    public bool IsNullFields { get; set; }
+
+    /// <summary>
     /// 常量、变量会调用此方法，默认是常量
     /// </summary>
     /// <param name="value"></param>

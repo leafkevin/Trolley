@@ -13,6 +13,7 @@ namespace Trolley;
 public class SqlVisitor : ISqlVisitor
 {
     private bool isDisposed;
+    private static MethodInfo IsNullMethodInfo = typeof(Sql).GetMethods().Where(f => f.Name == nameof(Sql.IsNull) && f.GetParameters().Length == 2).First();
 
     public DbContext DbContext { get; set; }
     public string DbKey => this.DbContext.DbKey;
@@ -80,7 +81,7 @@ public class SqlVisitor : ISqlVisitor
     /// <summary>
     /// 分页查询的Count操作，是否需要全部字段Count
     /// </summary>
-    public bool IsNeedFullFieldsPagingCount { get; set; }
+    public bool HasAggFields { get; set; }
     public List<TableSegment> ShardingTables { get; set; }
     /// <summary>
     /// 如果当前queryVisitor对象是在一个queryVisitor对象中创建的，这个值就是父queryVisitor对象，
@@ -1239,7 +1240,7 @@ public class SqlVisitor : ISqlVisitor
                 else sqlSegment.Change("COUNT(1)", false, true);
                 sqlSegment.IsAggField = true;
                 sqlSegment.ShardingAggFunc = "SUM";
-                this.IsNeedFullFieldsPagingCount = true;
+                this.HasAggFields = true;
                 break;
             case "CountDistinct":
             case "LongCountDistinct":
@@ -1251,48 +1252,76 @@ public class SqlVisitor : ISqlVisitor
                 sqlSegment.IsAggField = true;
                 //TODO:已知bug，分表后，count(distinct)，这个聚合结果是不准确的
                 sqlSegment.ShardingAggFunc = "COUNT";
-                this.IsNeedFullFieldsPagingCount = true;
+                this.HasAggFields = true;
                 break;
             case "Sum":
-                if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
+                if (sqlSegment.IsNullFields)
                 {
                     sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                     sqlSegment.Change($"SUM({sqlSegment.Body})", false, true);
+                    sqlSegment.IsAggField = true;
+                    sqlSegment.ShardingAggFunc = "SUM";
+                    this.HasAggFields = true;
                 }
-                sqlSegment.IsAggField = true;
-                sqlSegment.ShardingAggFunc = "SUM";
-                this.IsNeedFullFieldsPagingCount = true;
+                else
+                {
+                    var myMethodInfo = IsNullMethodInfo.MakeGenericMethod(methodCallExpr.Type);
+                    var nullValueExpr = Expression.Constant(Convert.ChangeType(0, methodCallExpr.Type), methodCallExpr.Type);
+                    var isNullCallExpr = Expression.Call(myMethodInfo, methodCallExpr, nullValueExpr);
+                    sqlSegment = this.Visit(sqlSegment.Next(isNullCallExpr));
+                }
                 break;
             case "Avg":
-                if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
+                if (sqlSegment.IsNullFields)
                 {
                     sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                     sqlSegment.Change($"AVG({sqlSegment.Body})", false, true);
+                    sqlSegment.IsAggField = true;
+                    //TODO:分表后，avg()，这个聚合结果是不准确的
+                    sqlSegment.ShardingAggFunc = "AVG";
+                    this.HasAggFields = true;
                 }
-                sqlSegment.IsAggField = true;
-                //TODO:分表后，avg()，这个聚合结果是不准确的
-                sqlSegment.ShardingAggFunc = "AVG";
-                this.IsNeedFullFieldsPagingCount = true;
+                else
+                {
+                    var myMethodInfo = IsNullMethodInfo.MakeGenericMethod(methodCallExpr.Type);
+                    var nullValueExpr = Expression.Constant(Convert.ChangeType(0, methodCallExpr.Type), methodCallExpr.Type);
+                    var isNullCallExpr = Expression.Call(myMethodInfo, methodCallExpr, nullValueExpr);
+                    this.Visit(sqlSegment.Next(isNullCallExpr));
+                }
                 break;
             case "Max":
-                if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
+                if (sqlSegment.IsNullFields)
                 {
                     sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                     sqlSegment.Change($"MAX({sqlSegment.Body})", false, true);
+                    sqlSegment.IsAggField = true;
+                    sqlSegment.ShardingAggFunc = "MAX";
+                    this.HasAggFields = true;
                 }
-                sqlSegment.IsAggField = true;
-                sqlSegment.ShardingAggFunc = "MAX";
-                this.IsNeedFullFieldsPagingCount = true;
+                else
+                {
+                    var myMethodInfo = IsNullMethodInfo.MakeGenericMethod(methodCallExpr.Type);
+                    var nullValueExpr = Expression.Constant(Convert.ChangeType(0, methodCallExpr.Type), methodCallExpr.Type);
+                    var isNullCallExpr = Expression.Call(myMethodInfo, methodCallExpr, nullValueExpr);
+                    this.Visit(sqlSegment.Next(isNullCallExpr));
+                }
                 break;
             case "Min":
-                if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
+                if (sqlSegment.IsNullFields)
                 {
                     sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                     sqlSegment.Change($"MIN({sqlSegment.Body})", false, true);
+                    sqlSegment.IsAggField = true;
+                    sqlSegment.ShardingAggFunc = "MIN";
+                    this.HasAggFields = true;
                 }
-                sqlSegment.IsAggField = true;
-                sqlSegment.ShardingAggFunc = "MIN";
-                this.IsNeedFullFieldsPagingCount = true;
+                else
+                {
+                    var myMethodInfo = IsNullMethodInfo.MakeGenericMethod(methodCallExpr.Type);
+                    var nullValueExpr = Expression.Constant(Convert.ChangeType(0, methodCallExpr.Type), methodCallExpr.Type);
+                    var isNullCallExpr = Expression.Call(myMethodInfo, methodCallExpr, nullValueExpr);
+                    this.Visit(sqlSegment.Next(isNullCallExpr));
+                }
                 break;
         }
         return sqlSegment;
@@ -1397,58 +1426,84 @@ public class SqlVisitor : ISqlVisitor
                     else builder.Append("COUNT(*)");
                     sqlSegment.IsAggField = true;
                     sqlSegment.ShardingAggFunc = "COUNT";
-                    this.IsNeedFullFieldsPagingCount = true;
+                    this.HasAggFields = true;
                     break;
                 case "CountDistinct":
                 case "LongCountDistinct":
-                    if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
-                    {
-                        sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
-                        builder.Append($"COUNT(DISTINCT {sqlSegment.Body})");
-                    }
+                    sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
+                    builder.Append($"COUNT(DISTINCT {sqlSegment.Body})");
                     sqlSegment.IsAggField = true;
-                    sqlSegment.ShardingAggFunc = "COUNT_VALUE";
-                    this.IsNeedFullFieldsPagingCount = true;
+                    //TODO:已知bug，分表后，count(distinct)，这个聚合结果是不准确的
+                    sqlSegment.ShardingAggFunc = "COUNT";
+                    this.HasAggFields = true;
                     break;
                 case "Sum":
-                    if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
+                    if (sqlSegment.IsNullFields)
                     {
                         sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                         builder.Append($"SUM({sqlSegment.Body})");
+                        sqlSegment.IsAggField = true;
+                        sqlSegment.ShardingAggFunc = "SUM";
+                        this.HasAggFields = true;
                     }
-                    sqlSegment.IsAggField = true;
-                    sqlSegment.ShardingAggFunc = "SUM";
-                    this.IsNeedFullFieldsPagingCount = true;
+                    else
+                    {
+                        var myMethodInfo = IsNullMethodInfo.MakeGenericMethod(methodCallExpr.Type);
+                        var nullValueExpr = Expression.Constant(Convert.ChangeType(0, methodCallExpr.Type), methodCallExpr.Type);
+                        var isNullCallExpr = Expression.Call(myMethodInfo, methodCallExpr, nullValueExpr);
+                        sqlSegment = this.Visit(sqlSegment.Next(isNullCallExpr));
+                    }
                     break;
                 case "Avg":
                     if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
                     {
                         sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                         builder.Append($"AVG({sqlSegment.Body})");
+                        sqlSegment.IsAggField = true;
+                        sqlSegment.ShardingAggFunc = "AVG";
+                        this.HasAggFields = true;
                     }
-                    sqlSegment.IsAggField = true;
-                    sqlSegment.ShardingAggFunc = "AVG";
-                    this.IsNeedFullFieldsPagingCount = true;
+                    else
+                    {
+                        var myMethodInfo = IsNullMethodInfo.MakeGenericMethod(methodCallExpr.Type);
+                        var nullValueExpr = Expression.Constant(Convert.ChangeType(0, methodCallExpr.Type), methodCallExpr.Type);
+                        var isNullCallExpr = Expression.Call(myMethodInfo, methodCallExpr, nullValueExpr);
+                        sqlSegment = this.Visit(sqlSegment.Next(isNullCallExpr));
+                    }
                     break;
                 case "Max":
                     if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
                     {
                         sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                         builder.Append($"MAX({sqlSegment.Body})");
+                        sqlSegment.IsAggField = true;
+                        sqlSegment.ShardingAggFunc = "MAX";
+                        this.HasAggFields = true;
                     }
-                    sqlSegment.IsAggField = true;
-                    sqlSegment.ShardingAggFunc = "MAX";
-                    this.IsNeedFullFieldsPagingCount = true;
+                    else
+                    {
+                        var myMethodInfo = IsNullMethodInfo.MakeGenericMethod(methodCallExpr.Type);
+                        var nullValueExpr = Expression.Constant(Convert.ChangeType(0, methodCallExpr.Type), methodCallExpr.Type);
+                        var isNullCallExpr = Expression.Call(myMethodInfo, methodCallExpr, nullValueExpr);
+                        sqlSegment = this.Visit(sqlSegment.Next(isNullCallExpr));
+                    }
                     break;
                 case "Min":
                     if (methodCallExpr.Arguments != null && methodCallExpr.Arguments.Count == 1)
                     {
                         sqlSegment = this.Visit(sqlSegment.Next(methodCallExpr.Arguments[0]));
                         builder.Append($"MIN({sqlSegment.Body})");
+                        sqlSegment.IsAggField = true;
+                        sqlSegment.ShardingAggFunc = "MIN";
+                        this.HasAggFields = true;
                     }
-                    sqlSegment.IsAggField = true;
-                    sqlSegment.ShardingAggFunc = "MIN";
-                    this.IsNeedFullFieldsPagingCount = true;
+                    else
+                    {
+                        var myMethodInfo = IsNullMethodInfo.MakeGenericMethod(methodCallExpr.Type);
+                        var nullValueExpr = Expression.Constant(Convert.ChangeType(0, methodCallExpr.Type), methodCallExpr.Type);
+                        var isNullCallExpr = Expression.Call(myMethodInfo, methodCallExpr, nullValueExpr);
+                        sqlSegment = this.Visit(sqlSegment.Next(isNullCallExpr));
+                    }
                     break;
             }
         }

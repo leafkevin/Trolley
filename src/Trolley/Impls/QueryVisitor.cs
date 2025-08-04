@@ -199,7 +199,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             if (this.IsNeedPaging && this.offset.HasValue && this.limit.HasValue)
             {
                 var myTableSql = $"{tableSql}{others}";
-                if (this.IsNeedFullFieldsPagingCount)
+                if (this.HasAggFields || !string.IsNullOrEmpty(this.GroupBySql))
                     myTableSql = $"(SELECT {selectSql} FROM {tableSql}{others}) a";
                 builder.Append($"SELECT COUNT(*) FROM {myTableSql};");
             }
@@ -207,7 +207,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
 
-        if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.GroupBySql) || !string.IsNullOrEmpty(this.OrderBySql) || this.offset.HasValue || this.limit.HasValue))
+        if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.GroupBySql)
+            || !string.IsNullOrEmpty(this.OrderBySql) || this.offset.HasValue || this.limit.HasValue || this.HasAggFields))
             this.IsNeedUnionShardingTables = true;
 
         //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不正确
@@ -392,7 +393,8 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         }
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
 
-        if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.GroupBySql) || !string.IsNullOrEmpty(this.OrderBySql) || this.offset.HasValue || this.limit.HasValue))
+        if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.GroupBySql)
+            || !string.IsNullOrEmpty(this.OrderBySql) || this.offset.HasValue || this.limit.HasValue || this.HasAggFields))
             this.IsNeedUnionShardingTables = true;
 
         //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不正确
@@ -514,6 +516,27 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
             if (isFormated) builder.Append(sql);
             else builder.Append($"SELECT * FROM ({sql}) a");
             builder.Append($" {orderBy}");
+            sql = builder.ToString();
+        }
+        else if (this.HasAggFields)
+        {
+            builder.Clear();
+            for (int i = 0; i < this.ReaderFields.Count; i++)
+            {
+                var readerField = this.ReaderFields[i];
+                string fieldName = null;
+                if (readerField.IsAggField)
+                {
+                    fieldName = FieldNameFetcher(readerField);
+                    fieldName = $"{readerField.ShardingAggFunc}({fieldName}) AS {fieldName}";
+                }
+                else fieldName = readerField.Body;
+                if (i > 0) builder.Append(',');
+                builder.Append(fieldName);
+            }
+            selectSql = builder.ToString();
+            builder.Clear();
+            builder.Append($"SELECT {selectSql} FROM ({sql}) a");
             sql = builder.ToString();
         }
         builder.Clear();
@@ -1191,7 +1214,6 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
                 }
                 break;
         }
-        this.IsNeedFullFieldsPagingCount = this.GroupBySql != null;
     }
     public virtual void OrderBy(string orderType, Expression expr)
     {
@@ -1901,7 +1923,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         if (this.CteQueryObj == null)
         {
             var cteQueryType = typeof(CteQuery<>).MakeGenericType(targetType);
-            this.CteQueryObj = RepositoryHelper.CreateInstance(cteQueryType, 
+            this.CteQueryObj = RepositoryHelper.CreateInstance(cteQueryType,
                 [typeof(DbContext), typeof(IQueryVisitor)], this.DbContext, this) as ICteQuery;
         }
         this.CteQueryObj.Body = this.BuildCteTableSql(tableName, out var readerFields);
@@ -2149,7 +2171,7 @@ public class QueryVisitor : SqlVisitor, IQueryVisitor
         queryVisitor.IsNeedFormatShardingTables = this.IsNeedFormatShardingTables;
         queryVisitor.IsManyShardingTables = this.IsManyShardingTables;
         queryVisitor.AggFieldAlias = this.AggFieldAlias;
-        queryVisitor.IsNeedFullFieldsPagingCount = this.IsNeedFullFieldsPagingCount;
+        queryVisitor.HasAggFields = this.HasAggFields;
         queryVisitor.ShardingTables = this.ShardingTables;
         queryVisitor.GroupByFields = this.GroupByFields;
         queryVisitor.OrderByFields = this.OrderByFields;
