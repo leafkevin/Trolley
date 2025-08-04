@@ -209,6 +209,8 @@ public class SqlServerFromCommand<<#=tables#>> : FromCommand<<#=tables#>>, ISqlS
         => base.UseTable(tableNames) as ISqlServerFromCommand<<#=tables#>>;
     public new ISqlServerFromCommand<<#=tables#>> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as ISqlServerFromCommand<<#=tables#>>;
+    public new ISqlServerFromCommand<<#=tables#>> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+        => base.UseTableMap(tableNameGetter) as ISqlServerFromCommand<<#=tables#>>;
     public new ISqlServerFromCommand<<#=tables#>> UseTableBy(params object[] fieldValues)
         => base.UseTableBy(fieldValues) as ISqlServerFromCommand<<#=tables#>>;
     public new ISqlServerFromCommand<<#=tables#>> UseTableByRange(object beginFieldValue, object endFieldValue)

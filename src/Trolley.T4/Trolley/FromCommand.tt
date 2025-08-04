@@ -431,6 +431,12 @@ public class FromCommand<<#=tables#>> : FromCommand, IFromCommand<<#=tables#>>
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
+    public virtual IFromCommand<<#=tables#>> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+    {
+        var masterEntityType = typeof(TMasterSharding);
+        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
+        return this;
+    }
     public virtual IFromCommand<<#=tables#>> UseTableBy(params object[] fieldValues)
     {
         this.Visitor.UseTableBy(false, fieldValues);

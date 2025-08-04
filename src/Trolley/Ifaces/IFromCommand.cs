@@ -513,11 +513,12 @@ public interface IFromCommand<T> : IFromCommand
     #region Select
     // <summary>
     /// 选择指定字段返回实体，一个字段或多个字段，用法：
-    /// Select() 或是 Select("*") 或是 Select("Id, Name ...")
+    /// Select&lt;TTarget&gt;() 或是 Select&lt;TTarget&gt;("*") 或是 Select("Id, Name ...")
     /// </summary>
+    /// <typeparam name="TTarget"></typeparam>
     /// <param name="fields">原始字段字符串，默认值*</param>
     /// <returns>返回查询对象</returns>
-    IFromCommand<T> Select(string fields = "*");
+    IFromCommand<TTarget> Select<TTarget>(string fields = "*");
     /// <summary>
     /// 选择指定字段返回实体，一个字段或多个字段的匿名对象，用法：
     /// Select((a, b) =&gt; new { a.Id, a.Name, ... }) 或是 Select((a, b) =&gt; x.CreatedAt.Date)
@@ -589,6 +590,30 @@ public interface IFromCommand<T1, T2> : IFromCommand
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2> UseTable(Func<string, bool> tableNamePredicate);
+    /// <summary>
+    /// 根据TMasterSharding主表分表名与当前T2表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
+    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前T2表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前T2表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// <code>
+    /// repository.From&lt;Order&gt;()
+    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
+    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     {
+    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
+    ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+    ///         return tableName.Substring(0, tableName.Length - 7);
+    ///     })
+    ///     ...
+    /// SQL:
+    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// UNION ALL
+    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
+    /// <param name="tableNameGetter">T2表分表名获取委托</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值，手动指定T2表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
@@ -1009,6 +1034,30 @@ public interface IFromCommand<T1, T2, T3> : IFromCommand
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2, T3> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
+    /// 根据TMasterSharding主表分表名与当前T3表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
+    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前T3表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前T3表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// <code>
+    /// repository.From&lt;Order&gt;()
+    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
+    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     {
+    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
+    ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+    ///         return tableName.Substring(0, tableName.Length - 7);
+    ///     })
+    ///     ...
+    /// SQL:
+    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// UNION ALL
+    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
+    /// <param name="tableNameGetter">T3表分表名获取委托</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2, T3> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    /// <summary>
     /// 根据字段值，手动指定T3表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值</param>
@@ -1427,6 +1476,30 @@ public interface IFromCommand<T1, T2, T3, T4> : IFromCommand
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2, T3, T4> UseTable(Func<string, bool> tableNamePredicate);
+    /// <summary>
+    /// 根据TMasterSharding主表分表名与当前T4表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
+    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前T4表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前T4表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// <code>
+    /// repository.From&lt;Order&gt;()
+    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
+    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     {
+    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
+    ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+    ///         return tableName.Substring(0, tableName.Length - 7);
+    ///     })
+    ///     ...
+    /// SQL:
+    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// UNION ALL
+    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
+    /// <param name="tableNameGetter">T4表分表名获取委托</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2, T3, T4> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值，手动指定T4表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
@@ -1847,6 +1920,30 @@ public interface IFromCommand<T1, T2, T3, T4, T5> : IFromCommand
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2, T3, T4, T5> UseTable(Func<string, bool> tableNamePredicate);
     /// <summary>
+    /// 根据TMasterSharding主表分表名与当前T5表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
+    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前T5表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前T5表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// <code>
+    /// repository.From&lt;Order&gt;()
+    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
+    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     {
+    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
+    ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+    ///         return tableName.Substring(0, tableName.Length - 7);
+    ///     })
+    ///     ...
+    /// SQL:
+    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// UNION ALL
+    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
+    /// <param name="tableNameGetter">T5表分表名获取委托</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2, T3, T4, T5> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
+    /// <summary>
     /// 根据字段值，手动指定T5表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>
     /// <param name="fieldValues">字段值</param>
@@ -2265,6 +2362,30 @@ public interface IFromCommand<T1, T2, T3, T4, T5, T6> : IFromCommand
     /// <param name="tableNamePredicate">表名断言，如：f =&gt; f.Contains("202001")</param>
     /// <returns>返回查询对象</returns>
     IFromCommand<T1, T2, T3, T4, T5, T6> UseTable(Func<string, bool> tableNamePredicate);
+    /// <summary>
+    /// 根据TMasterSharding主表分表名与当前T6表分表名的映射关系，设置T表分表名获取委托确定分表名。第一个参数是TMasterSharding主表原始名称，
+    /// 如：分表sys_user_105，按租户分表，原始表sys_user，第二个参数是当前T6表原始名称，第三个参数是TMasterSharding主表分表名称，返回值是当前T6表分表名称，如：查询104，105租户的2020年1月以后的订单信息和买家信息，订单表按照租户+时间(年月)分表，用户按照租户分表
+    /// <code>
+    /// repository.From&lt;Order&gt;()
+    ///     .UseTable("sys_order_104_202405", "sys_order_105_202405")
+    ///     .InnerJoin&lt;User&gt;((x, y) =&gt; x.BuyerId == y.Id)
+    ///     .UseTableMap&lt;Order&gt;((orderOrigName, userOrigName, orderTableName) =&gt;
+    ///     {
+    ///         //sys_order_104_202405 -&gt; sys_user_104, sys_order_105_202405 -&gt; sys_user_105
+    ///         var tableName = orderTableName.Replace(orderOrigName, userOrigName);
+    ///         return tableName.Substring(0, tableName.Length - 7);
+    ///     })
+    ///     ...
+    /// SQL:
+    /// SELECT ... FROM `sys_order_104_202405` a INNER JOIN `sys_user_104` b ON a.`BuyerId`=b.`Id` ...
+    /// UNION ALL
+    /// SELECT ... FROM `sys_order_105_202405` a INNER JOIN `sys_user_105` b ON a.`BuyerId`=b.`Id` ...
+    /// </code>
+    /// </summary>
+    /// <typeparam name="TMasterSharding">TMasterSharding主表分表实体类型</typeparam>
+    /// <param name="tableNameGetter">T6表分表名获取委托</param>
+    /// <returns>返回查询对象</returns>
+    IFromCommand<T1, T2, T3, T4, T5, T6> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter);
     /// <summary>
     /// 根据字段值，手动指定T6表分表名，可多次调用，字段值的顺序与配置的分表规则字段顺序保持一致，至少包含1个字段值，最多支持3个字段值，如：.UseTableBy(DateTime.Now)，.UseTableBy(1, 6, DateTime.Now)等
     /// </summary>

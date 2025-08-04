@@ -50,14 +50,11 @@ public class FromCommand : QueryInternal, IFromCommand
     public void Dispose() => this.Visitor.Dispose();
     #endregion
 }
-public class FromCommand<T> : QueryInternal, IFromCommand<T>
+public class FromCommand<T> : FromCommand, IFromCommand<T>
 {
     #region Constructor
     public FromCommand(DbContext dbContext, IQueryVisitor visitor)
-    {
-        this.DbContext = dbContext;
-        this.Visitor = visitor;
-    }
+        : base(dbContext, visitor) { }
     #endregion
 
     #region Sharding
@@ -415,6 +412,12 @@ public class FromCommand<T1, T2> : FromCommand, IFromCommand<T1, T2>
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
+    public virtual IFromCommand<T1, T2> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+    {
+        var masterEntityType = typeof(TMasterSharding);
+        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
+        return this;
+    }
     public virtual IFromCommand<T1, T2> UseTableBy(params object[] fieldValues)
     {
         this.Visitor.UseTableBy(false, fieldValues);
@@ -668,6 +671,12 @@ public class FromCommand<T1, T2, T3> : FromCommand, IFromCommand<T1, T2, T3>
     public virtual IFromCommand<T1, T2, T3> UseTable(Func<string, bool> tableNamePredicate)
     {
         this.Visitor.UseTable(false, tableNamePredicate);
+        return this;
+    }
+    public virtual IFromCommand<T1, T2, T3> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+    {
+        var masterEntityType = typeof(TMasterSharding);
+        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
         return this;
     }
     public virtual IFromCommand<T1, T2, T3> UseTableBy(params object[] fieldValues)
@@ -925,6 +934,12 @@ public class FromCommand<T1, T2, T3, T4> : FromCommand, IFromCommand<T1, T2, T3,
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
+    public virtual IFromCommand<T1, T2, T3, T4> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+    {
+        var masterEntityType = typeof(TMasterSharding);
+        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
+        return this;
+    }
     public virtual IFromCommand<T1, T2, T3, T4> UseTableBy(params object[] fieldValues)
     {
         this.Visitor.UseTableBy(false, fieldValues);
@@ -1180,6 +1195,12 @@ public class FromCommand<T1, T2, T3, T4, T5> : FromCommand, IFromCommand<T1, T2,
         this.Visitor.UseTable(false, tableNamePredicate);
         return this;
     }
+    public virtual IFromCommand<T1, T2, T3, T4, T5> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+    {
+        var masterEntityType = typeof(TMasterSharding);
+        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
+        return this;
+    }
     public virtual IFromCommand<T1, T2, T3, T4, T5> UseTableBy(params object[] fieldValues)
     {
         this.Visitor.UseTableBy(false, fieldValues);
@@ -1433,6 +1454,12 @@ public class FromCommand<T1, T2, T3, T4, T5, T6> : FromCommand, IFromCommand<T1,
     public virtual IFromCommand<T1, T2, T3, T4, T5, T6> UseTable(Func<string, bool> tableNamePredicate)
     {
         this.Visitor.UseTable(false, tableNamePredicate);
+        return this;
+    }
+    public virtual IFromCommand<T1, T2, T3, T4, T5, T6> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+    {
+        var masterEntityType = typeof(TMasterSharding);
+        this.Visitor.UseTableMap(false, masterEntityType, tableNameGetter);
         return this;
     }
     public virtual IFromCommand<T1, T2, T3, T4, T5, T6> UseTableBy(params object[] fieldValues)

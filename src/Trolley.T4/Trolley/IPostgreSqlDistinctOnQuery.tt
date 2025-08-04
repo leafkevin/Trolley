@@ -75,6 +75,14 @@ public interface IPostgreSqlDistinctOnQuery<T, TDistinctOn> : IPostgreSqlDistinc
     /// <param name="fieldsExpr">字段表达式，可以是单个字段或多个字段的匿名对象</param>
     /// <returns>返回查询对象</returns>
     IPostgreSqlDistinctOnQuery<T, TDistinctOn> OrderByDescending<TFields>(bool condition, Expression<Func<IDistinctOnObject<TDistinctOn>, T, TFields>> fieldsExpr);
+    /// <summary>
+    /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
+    /// <code>string orderFields = "Amount";bool isAsc = true;
+    /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("BuyerId", (x, f) =&lt; f.BuyerId).When("Amount", (x, f) =&lt; x.Sum(f.Amount)).Build()</code>)
+    /// </summary>
+    /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
+    /// <returns>返回查询对象</returns>
+    new IPostgreSqlDistinctOnQuery<T, TDistinctOn> OrderByDynamic(Func<OrderByBuilder<IDistinctOnObject<TDistinctOn>, T>, Expression> fieldsGetter);
     #endregion
 
     #region Select

@@ -21,7 +21,7 @@ public class MySqlFromCommand<T> : FromCommand<T>, IMySqlFromCommand<T>
     public new IMySqlFromCommand<T> UseTable(params string[] tableNames)
         => base.UseTable(tableNames) as IMySqlFromCommand<T>;
     public new IMySqlFromCommand<T> UseTable(Func<string, bool> tableNamePredicate)
-        => base.UseTable(tableNamePredicate) as IMySqlFromCommand<T>;
+        => base.UseTable(tableNamePredicate) as IMySqlFromCommand<T>;    
     public new IMySqlFromCommand<T> UseTableBy(params object[] fieldValues)
         => base.UseTableBy(fieldValues) as IMySqlFromCommand<T>;
     public new IMySqlFromCommand<T> UseTableByRange(object beginFieldValue, object endFieldValue)
@@ -233,6 +233,8 @@ public class MySqlFromCommand<<#=tables#>> : FromCommand<<#=tables#>>, IMySqlFro
         => base.UseTable(tableNames) as IMySqlFromCommand<<#=tables#>>;
     public new IMySqlFromCommand<<#=tables#>> UseTable(Func<string, bool> tableNamePredicate)
         => base.UseTable(tableNamePredicate) as IMySqlFromCommand<<#=tables#>>;
+    public new IMySqlFromCommand<<#=tables#>> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+        => base.UseTableMap<TMasterSharding>(tableNameGetter) as IMySqlFromCommand<<#=tables#>>;
     public new IMySqlFromCommand<<#=tables#>> UseTableBy(params object[] fieldValues)
         => base.UseTableBy(fieldValues) as IMySqlFromCommand<<#=tables#>>;
     public new IMySqlFromCommand<<#=tables#>> UseTableByRange(object beginFieldValue, object endFieldValue)
