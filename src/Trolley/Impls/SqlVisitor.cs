@@ -1286,7 +1286,7 @@ public class SqlVisitor : ISqlVisitor
                     var myMethodInfo = IsNullMethodInfo.MakeGenericMethod(methodCallExpr.Type);
                     var nullValueExpr = Expression.Constant(Convert.ChangeType(0, methodCallExpr.Type), methodCallExpr.Type);
                     var isNullCallExpr = Expression.Call(myMethodInfo, methodCallExpr, nullValueExpr);
-                    this.Visit(sqlSegment.Next(isNullCallExpr));
+                    sqlSegment = this.Visit(sqlSegment.Next(isNullCallExpr));
                 }
                 break;
             case "Max":
@@ -1303,7 +1303,7 @@ public class SqlVisitor : ISqlVisitor
                     var myMethodInfo = IsNullMethodInfo.MakeGenericMethod(methodCallExpr.Type);
                     var nullValueExpr = Expression.Constant(Convert.ChangeType(0, methodCallExpr.Type), methodCallExpr.Type);
                     var isNullCallExpr = Expression.Call(myMethodInfo, methodCallExpr, nullValueExpr);
-                    this.Visit(sqlSegment.Next(isNullCallExpr));
+                    sqlSegment = this.Visit(sqlSegment.Next(isNullCallExpr));
                 }
                 break;
             case "Min":
@@ -1320,7 +1320,7 @@ public class SqlVisitor : ISqlVisitor
                     var myMethodInfo = IsNullMethodInfo.MakeGenericMethod(methodCallExpr.Type);
                     var nullValueExpr = Expression.Constant(Convert.ChangeType(0, methodCallExpr.Type), methodCallExpr.Type);
                     var isNullCallExpr = Expression.Call(myMethodInfo, methodCallExpr, nullValueExpr);
-                    this.Visit(sqlSegment.Next(isNullCallExpr));
+                    sqlSegment = this.Visit(sqlSegment.Next(isNullCallExpr));
                 }
                 break;
         }
