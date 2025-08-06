@@ -416,9 +416,9 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
 
     #region Where
     /// <summary>
-    /// 使用predicate表达式生成Where条件，表达式predicate不能为null
+    /// 使用predicate表达式生成Where条件，表达式predicate不可为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不可为null</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T> Where(Expression<Func<T, bool>> predicate);
     /// <summary>
@@ -431,18 +431,18 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T> Where(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成Where条件，predicateInitializer不能为null
+    /// 构造表达式断言predicateInitializer生成Where条件，predicateInitializer不可为null
     /// </summary>
-    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T> WherePredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer);
     #endregion
 
     #region And
     /// <summary>
-    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不可为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不可为null</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T> And(Expression<Func<T, bool>> predicate);
     /// <summary>
@@ -455,18 +455,18 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T> And(bool condition, Expression<Func<T, bool>> ifPredicate = null, Expression<Func<T, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成And条件，predicateInitializer不能为null
+    /// 构造表达式断言predicateInitializer生成And条件，predicateInitializer不可为null
     /// </summary>
-    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T> AndPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer);
     #endregion
 
     #region Or
     /// <summary>
-    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不可为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不可为null</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T> Or(Expression<Func<T, bool>> predicate);
     /// <summary>
@@ -479,9 +479,9 @@ public interface IPostgreSqlQuery<T> : IQuery<T>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T> Or(bool condition, Expression<Func<T, bool>> ifPredicate = null, Expression<Func<T, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成Or条件，predicateInitializer不能为null
+    /// 构造表达式断言predicateInitializer生成Or条件，predicateInitializer不可为null
     /// </summary>
-    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<T> OrPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer);
     #endregion
@@ -971,9 +971,9 @@ public interface IPostgreSqlQuery<<#=tables#>> : IQuery<<#=tables#>>
 
     #region Where
     /// <summary>
-    /// 使用predicate表达式生成Where条件，表达式predicate不能为null
+    /// 使用predicate表达式生成Where条件，表达式predicate不可为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不可为null</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate);
     /// <summary>
@@ -986,18 +986,18 @@ public interface IPostgreSqlQuery<<#=tables#>> : IQuery<<#=tables#>>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成Where条件，predicateInitializer不能为null
+    /// 构造表达式断言predicateInitializer生成Where条件，predicateInitializer不可为null
     /// </summary>
-    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<<#=tables#>> WherePredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer);
     #endregion
 
     #region And
     /// <summary>
-    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不可为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不可为null</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate);
     /// <summary>
@@ -1010,18 +1010,18 @@ public interface IPostgreSqlQuery<<#=tables#>> : IQuery<<#=tables#>>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate = null, Expression<Func<<#=tables#>, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成And条件，predicateInitializer不能为null
+    /// 构造表达式断言predicateInitializer生成And条件，predicateInitializer不可为null
     /// </summary>
-    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<<#=tables#>> AndPredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer);
     #endregion
 
     #region Or
     /// <summary>
-    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不可为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不可为null</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<<#=tables#>> Or(Expression<Func<<#=tables#>, bool>> predicate);
     /// <summary>
@@ -1034,9 +1034,9 @@ public interface IPostgreSqlQuery<<#=tables#>> : IQuery<<#=tables#>>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<<#=tables#>> Or(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate = null, Expression<Func<<#=tables#>, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成Or条件，predicateInitializer不能为null
+    /// 构造表达式断言predicateInitializer生成Or条件，predicateInitializer不可为null
     /// </summary>
-    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回查询对象</returns>
     new IPostgreSqlQuery<<#=tables#>> OrPredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer);
     #endregion

@@ -306,9 +306,9 @@ public interface IUpdateJoin<<#=tables#>> : IUpdated<TEntity>
 
     #region Where
     /// <summary>
-    /// 使用predicate表达式生成Where条件，表达式predicate不能为null
+    /// 使用predicate表达式生成Where条件，表达式predicate不可为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不可为null</param>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate);
     /// <summary>
@@ -321,18 +321,18 @@ public interface IUpdateJoin<<#=tables#>> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成Where条件，predicateInitializer不能为null
+    /// 构造表达式断言predicateInitializer生成Where条件，predicateInitializer不可为null
     /// </summary>
-    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<<#=tables#>> WherePredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer);
     #endregion
 
     #region And
     /// <summary>
-    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不可为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不可为null</param>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate);
     /// <summary>
@@ -345,18 +345,18 @@ public interface IUpdateJoin<<#=tables#>> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate = null, Expression<Func<<#=tables#>, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成And条件，predicateInitializer不能为null
+    /// 构造表达式断言predicateInitializer生成And条件，predicateInitializer不可为null
     /// </summary>
-    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<<#=tables#>> AndPredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer);
     #endregion
 
     #region Or
     /// <summary>
-    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不可为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不可为null</param>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<<#=tables#>> Or(Expression<Func<<#=tables#>, bool>> predicate);
     /// <summary>
@@ -369,9 +369,9 @@ public interface IUpdateJoin<<#=tables#>> : IUpdated<TEntity>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<<#=tables#>> Or(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate = null, Expression<Func<<#=tables#>, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成Or条件，predicateInitializer不能为null
+    /// 构造表达式断言predicateInitializer生成Or条件，predicateInitializer不可为null
     /// </summary>
-    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回更新对象</returns>
     IUpdateJoin<<#=tables#>> OrPredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer);
     #endregion

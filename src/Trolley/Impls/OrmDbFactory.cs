@@ -170,7 +170,7 @@ public sealed class OrmDbFactory : IOrmDbFactory
         //如果有指定dbKey，就是使用指定的dbKey创建IRepository对象,如果也没有指定，就使用配置的默认dbKey
         var localDbKey = dbKey ?? this.defaultDatabase?.DbKey;
         if (string.IsNullOrEmpty(localDbKey))
-            throw new ArgumentNullException(nameof(dbKey), "dbKey不能为null，未配置dbKey，也没有配置默认数据库");
+            throw new ArgumentNullException(nameof(dbKey), "dbKey不可为null，未配置dbKey，也没有配置默认数据库");
 
         var database = this.GetDatabase(localDbKey);
         if (!this.complexMapProviders.TryGetValue(localDbKey, out var mapProvider))

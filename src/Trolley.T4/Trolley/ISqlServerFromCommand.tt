@@ -206,9 +206,9 @@ public interface ISqlServerFromCommand<T> : IFromCommand<T>, ISqlServerFromComma
 
     #region Where/And
     /// <summary>
-    /// 使用predicate表达式生成Where条件，表达式predicate不能为null
+    /// 使用predicate表达式生成Where条件，表达式predicate不可为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不可为null</param>
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<T> Where(Expression<Func<T, bool>> predicate);
     /// <summary>
@@ -221,9 +221,9 @@ public interface ISqlServerFromCommand<T> : IFromCommand<T>, ISqlServerFromComma
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<T> Where(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null);
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不可为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不可为null</param>
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<T> And(Expression<Func<T, bool>> predicate);
     /// <summary>
@@ -587,9 +587,9 @@ public interface ISqlServerFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>,
 
     #region Where/And
     /// <summary>
-    /// 使用predicate表达式生成Where条件，表达式predicate不能为null
+    /// 使用predicate表达式生成Where条件，表达式predicate不可为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不可为null</param>
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate);
     /// <summary>
@@ -602,9 +602,9 @@ public interface ISqlServerFromCommand<<#=tables#>> : IFromCommand<<#=tables#>>,
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null);
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不可为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不可为null</param>
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate);
     /// <summary>

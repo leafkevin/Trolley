@@ -199,9 +199,9 @@ public interface ISqlServerFromCommand<T> : IFromCommand<T>, ISqlServerFromComma
 
     #region Where/And
     /// <summary>
-    /// 使用predicate表达式生成Where条件，表达式predicate不能为null
+    /// 使用predicate表达式生成Where条件，表达式predicate不可为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不可为null</param>
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<T> Where(Expression<Func<T, bool>> predicate);
     /// <summary>
@@ -214,9 +214,9 @@ public interface ISqlServerFromCommand<T> : IFromCommand<T>, ISqlServerFromComma
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<T> Where(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null);
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不可为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不可为null</param>
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<T> And(Expression<Func<T, bool>> predicate);
     /// <summary>
@@ -540,9 +540,9 @@ public interface ISqlServerFromCommand<T1, T2> : IFromCommand<T1, T2>, ISqlServe
 
     #region Where/And
     /// <summary>
-    /// 使用predicate表达式生成Where条件，表达式predicate不能为null
+    /// 使用predicate表达式生成Where条件，表达式predicate不可为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不可为null</param>
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<T1, T2> Where(Expression<Func<T1, T2, bool>> predicate);
     /// <summary>
@@ -555,9 +555,9 @@ public interface ISqlServerFromCommand<T1, T2> : IFromCommand<T1, T2>, ISqlServe
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<T1, T2> Where(bool condition, Expression<Func<T1, T2, bool>> ifPredicate, Expression<Func<T1, T2, bool>> elsePredicate = null);
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不可为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不可为null</param>
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<T1, T2> And(Expression<Func<T1, T2, bool>> predicate);
     /// <summary>
@@ -844,9 +844,9 @@ public interface ISqlServerFromCommand<T1, T2, T3> : IFromCommand<T1, T2, T3>, I
 
     #region Where/And
     /// <summary>
-    /// 使用predicate表达式生成Where条件，表达式predicate不能为null
+    /// 使用predicate表达式生成Where条件，表达式predicate不可为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不可为null</param>
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<T1, T2, T3> Where(Expression<Func<T1, T2, T3, bool>> predicate);
     /// <summary>
@@ -859,9 +859,9 @@ public interface ISqlServerFromCommand<T1, T2, T3> : IFromCommand<T1, T2, T3>, I
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<T1, T2, T3> Where(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate, Expression<Func<T1, T2, T3, bool>> elsePredicate = null);
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不可为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不可为null</param>
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<T1, T2, T3> And(Expression<Func<T1, T2, T3, bool>> predicate);
     /// <summary>
@@ -1148,9 +1148,9 @@ public interface ISqlServerFromCommand<T1, T2, T3, T4> : IFromCommand<T1, T2, T3
 
     #region Where/And
     /// <summary>
-    /// 使用predicate表达式生成Where条件，表达式predicate不能为null
+    /// 使用predicate表达式生成Where条件，表达式predicate不可为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不可为null</param>
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<T1, T2, T3, T4> Where(Expression<Func<T1, T2, T3, T4, bool>> predicate);
     /// <summary>
@@ -1163,9 +1163,9 @@ public interface ISqlServerFromCommand<T1, T2, T3, T4> : IFromCommand<T1, T2, T3
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<T1, T2, T3, T4> Where(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null);
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不可为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不可为null</param>
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<T1, T2, T3, T4> And(Expression<Func<T1, T2, T3, T4, bool>> predicate);
     /// <summary>
@@ -1452,9 +1452,9 @@ public interface ISqlServerFromCommand<T1, T2, T3, T4, T5> : IFromCommand<T1, T2
 
     #region Where/And
     /// <summary>
-    /// 使用predicate表达式生成Where条件，表达式predicate不能为null
+    /// 使用predicate表达式生成Where条件，表达式predicate不可为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不可为null</param>
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<T1, T2, T3, T4, T5> Where(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate);
     /// <summary>
@@ -1467,9 +1467,9 @@ public interface ISqlServerFromCommand<T1, T2, T3, T4, T5> : IFromCommand<T1, T2
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<T1, T2, T3, T4, T5> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null);
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不可为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不可为null</param>
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<T1, T2, T3, T4, T5> And(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate);
     /// <summary>
@@ -1642,9 +1642,9 @@ public interface ISqlServerFromCommand<T1, T2, T3, T4, T5, T6> : IFromCommand<T1
 
     #region Where/And
     /// <summary>
-    /// 使用predicate表达式生成Where条件，表达式predicate不能为null
+    /// 使用predicate表达式生成Where条件，表达式predicate不可为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不可为null</param>
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<T1, T2, T3, T4, T5, T6> Where(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate);
     /// <summary>
@@ -1657,9 +1657,9 @@ public interface ISqlServerFromCommand<T1, T2, T3, T4, T5, T6> : IFromCommand<T1
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<T1, T2, T3, T4, T5, T6> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> elsePredicate = null);
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不可为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不可为null</param>
     /// <returns>返回查询对象</returns>
     new ISqlServerFromCommand<T1, T2, T3, T4, T5, T6> And(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate);
     /// <summary>

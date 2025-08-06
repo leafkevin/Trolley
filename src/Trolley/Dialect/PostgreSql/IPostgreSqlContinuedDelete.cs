@@ -7,9 +7,9 @@ public interface IPostgreSqlContinuedDelete<TEntity> : IContinuedDelete<TEntity>
 {
      #region And
     /// <summary>
-    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 使用predicate表达式生成And条件，并添加到已有的Where条件末尾，表达式predicate不可为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不可为null</param>
     /// <returns>返回删除对象</returns>
     new IPostgreSqlContinuedDelete<TEntity> And(Expression<Func<TEntity, bool>> predicate);
     /// <summary>
@@ -22,18 +22,18 @@ public interface IPostgreSqlContinuedDelete<TEntity> : IContinuedDelete<TEntity>
     /// <returns>返回删除对象</returns>
     new IPostgreSqlContinuedDelete<TEntity> And(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成And条件，predicateInitializer不能为null
+    /// 构造表达式断言predicateInitializer生成And条件，predicateInitializer不可为null
     /// </summary>
-    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回删除对象</returns>
     new IPostgreSqlContinuedDelete<TEntity> AndPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer);
     #endregion
 
     #region Or
     /// <summary>
-    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 使用predicate表达式生成Or条件，并添加到已有的Where条件末尾，表达式predicate不可为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不可为null</param>
     /// <returns>返回删除对象</returns>
     new IPostgreSqlContinuedDelete<TEntity> Or(Expression<Func<TEntity, bool>> predicate);
     /// <summary>
@@ -46,9 +46,9 @@ public interface IPostgreSqlContinuedDelete<TEntity> : IContinuedDelete<TEntity>
     /// <returns>返回删除对象</returns>
     new IPostgreSqlContinuedDelete<TEntity> Or(bool condition, Expression<Func<TEntity, bool>> ifPredicate = null, Expression<Func<TEntity, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成Or条件，predicateInitializer不能为null
+    /// 构造表达式断言predicateInitializer生成Or条件，predicateInitializer不可为null
     /// </summary>
-    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回删除对象</returns>
     new IPostgreSqlContinuedDelete<TEntity> OrPredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer);
     #endregion

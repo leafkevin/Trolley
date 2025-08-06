@@ -22,6 +22,7 @@ public interface IMultiGroupingQueryBase<TGrouping>
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
 public interface IMultiGroupingQuery<T, TGrouping> : IMultiGroupingQueryBase<TGrouping>
 {
+    #region Having
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
@@ -35,6 +36,9 @@ public interface IMultiGroupingQuery<T, TGrouping> : IMultiGroupingQueryBase<TGr
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     IMultiGroupingQuery<T, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate);
+    #endregion
+
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
     /// OrderBy(x =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy(x =&gt; x.Grouping.Date)
@@ -70,7 +74,6 @@ public interface IMultiGroupingQuery<T, TGrouping> : IMultiGroupingQueryBase<TGr
     /// <returns>返回查询对象</returns>
     IMultiGroupingQuery<T, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr);
     /// <summary>
-    /// <summary>
     /// 动态排序，使用OrderByBuilder构建排序字段选择器，fieldsGetter可以是单个字段或多个字段的匿名对象，用法：
     /// <code>string orderFields = "Amount";bool isAsc = true;
     /// .OrderByDynamic(t =&gt; t.Switch(orderFields, isAsc).When("BuyerId", (x, f) =&lt; f.BuyerId).When("Amount", (x, f) =&lt; x.Sum(f.Amount)).Build()</code>)
@@ -78,6 +81,9 @@ public interface IMultiGroupingQuery<T, TGrouping> : IMultiGroupingQueryBase<TGr
     /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiGroupingQuery<T, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T>, Expression> fieldsGetter);
+    #endregion
+
+    #region Select
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select(x =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select(x =&gt; a.Id)</code>
@@ -86,6 +92,7 @@ public interface IMultiGroupingQuery<T, TGrouping> : IMultiGroupingQueryBase<TGr
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组查询对象
@@ -95,6 +102,7 @@ public interface IMultiGroupingQuery<T, TGrouping> : IMultiGroupingQueryBase<TGr
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
 public interface IMultiGroupingQuery<T1, T2, TGrouping> : IMultiGroupingQueryBase<TGrouping>
 {
+    #region Having
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
@@ -108,6 +116,9 @@ public interface IMultiGroupingQuery<T1, T2, TGrouping> : IMultiGroupingQueryBas
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     IMultiGroupingQuery<T1, T2, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, bool>> predicate);
+    #endregion
+
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
@@ -150,6 +161,9 @@ public interface IMultiGroupingQuery<T1, T2, TGrouping> : IMultiGroupingQueryBas
     /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiGroupingQuery<T1, T2, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2>, Expression> fieldsGetter);
+    #endregion
+
+    #region Select
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -158,6 +172,7 @@ public interface IMultiGroupingQuery<T1, T2, TGrouping> : IMultiGroupingQueryBas
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组查询对象
@@ -168,6 +183,7 @@ public interface IMultiGroupingQuery<T1, T2, TGrouping> : IMultiGroupingQueryBas
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
 public interface IMultiGroupingQuery<T1, T2, T3, TGrouping> : IMultiGroupingQueryBase<TGrouping>
 {
+    #region Having
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
@@ -181,6 +197,9 @@ public interface IMultiGroupingQuery<T1, T2, T3, TGrouping> : IMultiGroupingQuer
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, bool>> predicate);
+    #endregion
+
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
@@ -223,6 +242,9 @@ public interface IMultiGroupingQuery<T1, T2, T3, TGrouping> : IMultiGroupingQuer
     /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3>, Expression> fieldsGetter);
+    #endregion
+
+    #region Select
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -231,6 +253,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, TGrouping> : IMultiGroupingQuer
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组查询对象
@@ -242,6 +265,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, TGrouping> : IMultiGroupingQuer
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
 public interface IMultiGroupingQuery<T1, T2, T3, T4, TGrouping> : IMultiGroupingQueryBase<TGrouping>
 {
+    #region Having
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
@@ -255,6 +279,9 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, TGrouping> : IMultiGrouping
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, T4, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, bool>> predicate);
+    #endregion
+
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
@@ -297,6 +324,9 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, TGrouping> : IMultiGrouping
     /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, T4, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4>, Expression> fieldsGetter);
+    #endregion
+
+    #region Select
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -305,6 +335,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, TGrouping> : IMultiGrouping
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组查询对象
@@ -317,6 +348,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, TGrouping> : IMultiGrouping
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
 public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, TGrouping> : IMultiGroupingQueryBase<TGrouping>
 {
+    #region Having
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
@@ -330,6 +362,9 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, TGrouping> : IMultiGrou
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, T4, T5, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, bool>> predicate);
+    #endregion
+
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
@@ -372,6 +407,9 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, TGrouping> : IMultiGrou
     /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, T4, T5, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5>, Expression> fieldsGetter);
+    #endregion
+
+    #region Select
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -380,6 +418,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, TGrouping> : IMultiGrou
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组查询对象
@@ -393,6 +432,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, TGrouping> : IMultiGrou
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
 public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> : IMultiGroupingQueryBase<TGrouping>
 {
+    #region Having
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
@@ -406,6 +446,9 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> : IMulti
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, bool>> predicate);
+    #endregion
+
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
@@ -448,6 +491,9 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> : IMulti
     /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6>, Expression> fieldsGetter);
+    #endregion
+
+    #region Select
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -456,6 +502,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> : IMulti
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组查询对象
@@ -470,6 +517,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> : IMulti
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
 public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> : IMultiGroupingQueryBase<TGrouping>
 {
+    #region Having
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
@@ -483,6 +531,9 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> : IM
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, bool>> predicate);
+    #endregion
+
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
@@ -525,6 +576,9 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> : IM
     /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7>, Expression> fieldsGetter);
+    #endregion
+
+    #region Select
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -533,6 +587,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> : IM
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组查询对象
@@ -548,6 +603,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> : IM
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
 public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> : IMultiGroupingQueryBase<TGrouping>
 {
+    #region Having
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
@@ -561,6 +617,9 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> 
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate);
+    #endregion
+
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
@@ -603,6 +662,9 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> 
     /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8>, Expression> fieldsGetter);
+    #endregion
+
+    #region Select
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -611,6 +673,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> 
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组查询对象
@@ -627,6 +690,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> 
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
 public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> : IMultiGroupingQueryBase<TGrouping>
 {
+    #region Having
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
@@ -640,6 +704,9 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGroupi
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate);
+    #endregion
+
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
@@ -682,6 +749,9 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGroupi
     /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9>, Expression> fieldsGetter);
+    #endregion
+
+    #region Select
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -690,6 +760,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGroupi
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组查询对象
@@ -707,6 +778,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGroupi
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
 public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> : IMultiGroupingQueryBase<TGrouping>
 {
+    #region Having
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
@@ -720,6 +792,9 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TG
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate);
+    #endregion
+
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
@@ -762,6 +837,9 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TG
     /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>, Expression> fieldsGetter);
+    #endregion
+
+    #region Select
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -770,6 +848,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TG
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组查询对象
@@ -788,6 +867,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TG
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
 public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> : IMultiGroupingQueryBase<TGrouping>
 {
+    #region Having
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
@@ -801,6 +881,9 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T1
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate);
+    #endregion
+
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
@@ -843,6 +926,9 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T1
     /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>, Expression> fieldsGetter);
+    #endregion
+
+    #region Select
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -851,6 +937,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T1
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组查询对象
@@ -870,6 +957,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T1
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
 public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping> : IMultiGroupingQueryBase<TGrouping>
 {
+    #region Having
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
@@ -883,6 +971,9 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T1
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate);
+    #endregion
+
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
@@ -925,6 +1016,9 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T1
     /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>, Expression> fieldsGetter);
+    #endregion
+
+    #region Select
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -933,6 +1027,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T1
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组查询对象
@@ -953,6 +1048,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T1
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
 public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping> : IMultiGroupingQueryBase<TGrouping>
 {
+    #region Having
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
@@ -966,6 +1062,9 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T1
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate);
+    #endregion
+
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
@@ -1008,6 +1107,9 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T1
     /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>, Expression> fieldsGetter);
+    #endregion
+
+    #region Select
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -1016,6 +1118,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T1
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组查询对象
@@ -1037,6 +1140,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T1
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
 public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping> : IMultiGroupingQueryBase<TGrouping>
 {
+    #region Having
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
@@ -1050,6 +1154,9 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T1
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate);
+    #endregion
+
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
@@ -1092,6 +1199,9 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T1
     /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>, Expression> fieldsGetter);
+    #endregion
+
+    #region Select
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -1100,6 +1210,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T1
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组查询对象
@@ -1122,6 +1233,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T1
 /// <typeparam name="TGrouping">分组后对象类型</typeparam>
 public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> : IMultiGroupingQueryBase<TGrouping>
 {
+    #region Having
     /// <summary>
     /// Having操作，如: .Having((x, a, ...) => x.Sum(a.Amount) > 500)
     /// </summary>
@@ -1135,6 +1247,9 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T1
     /// <param name="predicate">Having条件表达式，如：x.Sum(a.Amount) > 500</param>
     /// <returns>返回分组查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> predicate);
+    #endregion
+
+    #region OrderBy/OrderByDescending
     /// <summary>
     /// ASC排序，fieldsExpr可以是单个字段或多个字段的匿名对象，可以使用分组对象Grouping，也可以使用原始表字段，用法：
     /// OrderBy((x, a, ...) =&gt; new { x.Grouping.Id, x.Grouping.OrderId }) 或是 OrderBy((x, a, ...) =&gt; x.Grouping.Date)
@@ -1177,6 +1292,9 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T1
     /// <param name="fieldsGetter">排序字段选择器，需调用Build方法，返回排序字段表达式</param>
     /// <returns>返回查询对象</returns>
     IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>, Expression> fieldsGetter);
+    #endregion
+
+    #region Select
     /// <summary>
     /// 选择指定字段返回，可以是一个或多个字段的匿名对象，用法：
     /// <code> ...Select((x, a, ...) =&gt; new { x.Grouping, TotalAmount = x.Sum(a.Amount) }) 或是 ...Select((x, a, ...) =&gt; a.Id)</code>
@@ -1185,6 +1303,7 @@ public interface IMultiGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T1
     /// <param name="fieldsExpr">字段选择表达式，单个字段或多个字段的匿名对象</param>
     /// <returns>返回分组查询对象</returns>
     IMultiQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> fieldsExpr);
+    #endregion
 }
 /// <summary>
 /// 分组查询对象

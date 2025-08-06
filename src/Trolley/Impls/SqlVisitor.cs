@@ -182,11 +182,11 @@ public class SqlVisitor : ISqlVisitor
         string tableName = null;
 
         if (fieldValues == null)
-            throw new ArgumentNullException($"实体{tableSegment.EntityType.FullName}表有配置分表规则依赖，字段值fieldValues不能为null");
+            throw new ArgumentNullException($"实体{tableSegment.EntityType.FullName}表有配置分表规则依赖，字段值fieldValues不可为null");
         for (int i = 0; i < fieldValues.Length; i++)
         {
             if (fieldValues[i] == null)
-                throw new ArgumentNullException($"实体{tableSegment.EntityType.FullName}表有配置分表规则依赖，字段值fieldValues[{i}]不能为null");
+                throw new ArgumentNullException($"实体{tableSegment.EntityType.FullName}表有配置分表规则依赖，字段值fieldValues[{i}]不可为null");
         }
 
         Delegate shardingRule = null;

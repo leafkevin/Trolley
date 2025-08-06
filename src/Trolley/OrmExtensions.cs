@@ -133,7 +133,7 @@ public static class OrmExtensions
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="repository">仓储对象</param>
     /// <param name="fieldsAssignment">更新字段表达式，一个或是多个字段成员访问表达式，同名字段省略赋值字段，如：parameter.TotalAmount</param>
-    /// <param name="wherePredicate">条件表达式，条件表达式wherePredicate不能为null</param>
+    /// <param name="wherePredicate">条件表达式，条件表达式wherePredicate不可为null</param>
     /// <returns>返回更新行数</returns>
     public static int Update<TEntity>(this IRepository repository, Expression<Func<TEntity, object>> fieldsAssignment, Expression<Func<TEntity, bool>> wherePredicate)
         => repository.Update<TEntity>().Set(fieldsAssignment).Where(wherePredicate).Execute();
@@ -156,7 +156,7 @@ public static class OrmExtensions
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="repository">仓储对象</param>
     /// <param name="fieldsAssignment">更新字段表达式，一个或是多个字段成员访问表达式，同名字段省略赋值字段，如：parameter.TotalAmount</param>
-    /// <param name="wherePredicate">条件表达式，条件表达式wherePredicate不能为null</param>
+    /// <param name="wherePredicate">条件表达式，条件表达式wherePredicate不可为null</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回更新行数</returns>
     public static async Task<int> UpdateAsync<TEntity>(this IRepository repository, Expression<Func<TEntity, object>> fieldsAssignment, Expression<Func<TEntity, bool>> wherePredicate, CancellationToken cancellationToken = default)
@@ -165,20 +165,20 @@ public static class OrmExtensions
 
     #region Delete
     /// <summary>
-    /// 删除满足表达式wherePredicate条件的数据，不局限于主键条件，表达式wherePredicate不能为null
+    /// 删除满足表达式wherePredicate条件的数据，不局限于主键条件，表达式wherePredicate不可为null
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="repository">仓储对象</param>
-    /// <param name="wherePredicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="wherePredicate">条件表达式，表达式predicate不可为null</param>
     /// <returns>返回删除行数</returns>
     public static int Delete<TEntity>(this IRepository repository, Expression<Func<TEntity, bool>> wherePredicate)
         => repository.Delete<TEntity>().Where(wherePredicate).Execute();
     /// <summary>
-    /// 删除满足表达式wherePredicate条件的数据，不局限于主键条件，表达式wherePredicate不能为null
+    /// 删除满足表达式wherePredicate条件的数据，不局限于主键条件，表达式wherePredicate不可为null
     /// </summary>
     /// <typeparam name="TEntity">实体类型</typeparam>
     /// <param name="repository">仓储对象</param>
-    /// <param name="wherePredicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="wherePredicate">条件表达式，表达式predicate不可为null</param>
     /// <param name="cancellationToken">取消Token</param>
     /// <returns>返回删除行数</returns>
     public static async Task<int> DeleteAsync<TEntity>(this IRepository repository, Expression<Func<TEntity, bool>> wherePredicate, CancellationToken cancellationToken = default)

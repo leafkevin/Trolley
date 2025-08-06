@@ -63,13 +63,13 @@ public interface IPostgreSqlDelete<TEntity> : IDelete<TEntity>
 
     #region Where
     /// <summary>
-    /// 删除满足表达式predicate条件的数据，不局限于主键条件，表达式predicate不能为null
+    /// 删除满足表达式predicate条件的数据，不局限于主键条件，表达式predicate不可为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不可为null</param>
     /// <returns>返回删除对象</returns>
     new IPostgreSqlContinuedDelete<TEntity> Where(Expression<Func<TEntity, bool>> predicate);
     /// <summary>
-    /// 删除满足表达式ifPredicate或elsePredicate条件的数据，不局限于主键条件，表达式ifPredicate不能为null。
+    /// 删除满足表达式ifPredicate或elsePredicate条件的数据，不局限于主键条件，表达式ifPredicate不可为null。
     /// 判断condition布尔值，如果为true，使用表达式ifPredicate生成Where条件，否则使用表达式elsePredicate生成Where条件
     /// 表达式elsePredicate值可为nul，condition布尔值为false且表达式elsePredicate为null时，不生成Where条件
     /// </summary>
@@ -79,9 +79,9 @@ public interface IPostgreSqlDelete<TEntity> : IDelete<TEntity>
     /// <returns>返回删除对象</returns>
     new IPostgreSqlContinuedDelete<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null);
     /// <summary>
-    /// 构造表达式断言predicateInitializer生成Where条件，predicateInitializer不能为null
+    /// 构造表达式断言predicateInitializer生成Where条件，predicateInitializer不可为null
     /// </summary>
-    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不能为null</param>
+    /// <param name="predicateInitializer">表达式断言predicateInitializer构造器，predicateInitializer不可为null</param>
     /// <returns>返回删除对象</returns>
     new IPostgreSqlContinuedDelete<TEntity> WherePredicate(Func<PredicateBuilder<TEntity>, Expression<Func<TEntity, bool>>> predicateInitializer);
     #endregion

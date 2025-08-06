@@ -200,16 +200,16 @@ public interface ISqlServerContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
 
     #region Where/And
     /// <summary>
-    /// 使用whereObj对象生成Where条件，whereObj对象内所有与当前实体表TEntity名称相同的栏位都将参与where条件过滤，whereObj对象可以是匿名对象、命名对象或是字典，推荐使用匿名对象，不能为null
+    /// 使用whereObj对象生成Where条件，whereObj对象内所有与当前实体表TEntity名称相同的栏位都将参与where条件过滤，whereObj对象可以是匿名对象、命名对象或是字典，推荐使用匿名对象，不可为null
     /// </summary>
     /// <typeparam name="TWhereObj">where条件对象类型</typeparam>
-    /// <param name="whereObj">where条件对象，whereObj对象内所有与当前实体表TEntity名称相同的栏位都将参与where条件过滤，可以是匿名对象、命名对象或是字典，推荐使用匿名对象，不能为null</param>
+    /// <param name="whereObj">where条件对象，whereObj对象内所有与当前实体表TEntity名称相同的栏位都将参与where条件过滤，可以是匿名对象、命名对象或是字典，推荐使用匿名对象，不可为null</param>
     /// <returns>返回更新对象</returns>
     new IUpdated<TEntity> Where<TWhereObj>(TWhereObj whereObj);
     /// <summary>
-    /// 使用predicate表达式生成Where条件，表达式predicate不能为null
+    /// 使用predicate表达式生成Where条件，表达式predicate不可为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不可为null</param>
     /// <returns>返回更新对象</returns>
     new ISqlServerContinuedUpdate<TEntity> Where(Expression<Func<TEntity, bool>> predicate);
     /// <summary>
@@ -222,9 +222,9 @@ public interface ISqlServerContinuedUpdate<TEntity> : IContinuedUpdate<TEntity>
     /// <returns>返回更新对象</returns>
     new ISqlServerContinuedUpdate<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null);
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不可为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不可为null</param>
     /// <returns>返回更新对象</returns>
     new ISqlServerContinuedUpdate<TEntity> And(Expression<Func<TEntity, bool>> predicate);
     /// <summary>
@@ -377,16 +377,16 @@ public interface ISqlServerBulkContinuedUpdate<TEntity> : IBulkContinuedUpdate<T
 
     #region Where/And
     /// <summary>
-    /// 使用whereObj对象生成Where条件，whereObj对象内所有与当前实体表TEntity名称相同的栏位都将参与where条件过滤，whereObj对象可以是匿名对象、命名对象或是字典，推荐使用匿名对象，不能为null
+    /// 使用whereObj对象生成Where条件，whereObj对象内所有与当前实体表TEntity名称相同的栏位都将参与where条件过滤，whereObj对象可以是匿名对象、命名对象或是字典，推荐使用匿名对象，不可为null
     /// </summary>
     /// <typeparam name="TWhereObj">where条件对象类型</typeparam>
-    /// <param name="whereObj">where条件对象，whereObj对象内所有与当前实体表TEntity名称相同的栏位都将参与where条件过滤，可以是匿名对象、命名对象或是字典，推荐使用匿名对象，不能为null</param>
+    /// <param name="whereObj">where条件对象，whereObj对象内所有与当前实体表TEntity名称相同的栏位都将参与where条件过滤，可以是匿名对象、命名对象或是字典，推荐使用匿名对象，不可为null</param>
     /// <returns>返回更新对象</returns>
     new IUpdated<TEntity> Where<TWhereObj>(TWhereObj whereObj);
     /// <summary>
-    /// 使用predicate表达式生成Where条件，表达式predicate不能为null
+    /// 使用predicate表达式生成Where条件，表达式predicate不可为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不可为null</param>
     /// <returns>返回更新对象</returns>
     new ISqlServerBulkContinuedUpdate<TEntity> Where(Expression<Func<TEntity, bool>> predicate);
     /// <summary>
@@ -399,9 +399,9 @@ public interface ISqlServerBulkContinuedUpdate<TEntity> : IBulkContinuedUpdate<T
     /// <returns>返回更新对象</returns>
     new ISqlServerBulkContinuedUpdate<TEntity> Where(bool condition, Expression<Func<TEntity, bool>> ifPredicate, Expression<Func<TEntity, bool>> elsePredicate = null);
     /// <summary>
-    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不能为null
+    /// 使用predicate表达式生成Where条件，并添加到已有的Where条件末尾，表达式predicate不可为null
     /// </summary>
-    /// <param name="predicate">条件表达式，表达式predicate不能为null</param>
+    /// <param name="predicate">条件表达式，表达式predicate不可为null</param>
     /// <returns>返回更新对象</returns>
     new ISqlServerBulkContinuedUpdate<TEntity> And(Expression<Func<TEntity, bool>> predicate);
     /// <summary>

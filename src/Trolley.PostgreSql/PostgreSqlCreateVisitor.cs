@@ -292,7 +292,7 @@ public class PostgreSqlCreateVisitor : CreateVisitor
                 case "UseConstraint":
                     var constraintName = this.Evaluate<string>(callExpr.Arguments[0]);
                     if (string.IsNullOrEmpty(constraintName))
-                        throw new ArgumentNullException("参数constraintName不能为null");
+                        throw new ArgumentNullException("参数constraintName不可为null");
                     builder.Append($" {constraintName} DO UPDATE SET ");
                     break;
                 case "Set":

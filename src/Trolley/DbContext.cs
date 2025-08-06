@@ -1361,12 +1361,12 @@ public sealed class DbContext
         var origTableName = entityMappper.TableName;
         string tableName = null;
         if (field1Value == null)
-            throw new ArgumentNullException($"实体{entityType.FullName}的分表规则依赖字段，字段值field1Value不能为null");
+            throw new ArgumentNullException($"实体{entityType.FullName}的分表规则依赖字段，字段值field1Value不可为null");
 
         if (shardingTable.DependOnMembers.Count > 1)
         {
             if (field2Value == null)
-                throw new ArgumentNullException($"实体{entityType.FullName}的分表规则依赖2个字段，字段值field2Value不能为null");
+                throw new ArgumentNullException($"实体{entityType.FullName}的分表规则依赖2个字段，字段值field2Value不可为null");
             var shardingRule = shardingTable.Rule as Func<string, object, object, string>;
             tableName = shardingRule.Invoke(origTableName, field1Value, field2Value);
         }

@@ -121,15 +121,15 @@ public interface IMySqlContinuedCreate<TEntity> : IContinuedCreate<TEntity>
     /// 返回结果，仅mariadb数据库支持
     /// </summary>
     /// <typeparam name="TResult">返回类型</typeparam>
-    /// <param name="fieldNames">返回字段名称列表, 如果有函数调用、表达式或是常量值需要带有AS子句</param>
-    /// <returns>返回插入的部分字段</returns>
+    /// <param name="fieldNames">返回字段列表, 如果有函数调用、表达式或是常量值需要带有AS子句</param>
+    /// <returns>返回插入的部分对象值</returns>
     IMySqlCreated<TEntity, TResult> Returning<TResult>(string fieldNames);
     /// <summary>
     /// 返回结果，仅mariadb数据库支持
     /// </summary>
     /// <typeparam name="TResult">返回类型</typeparam>
     /// <param name="fieldsSelector">返回字段名称列表</param>
-    /// <returns>返回插入的部分字段</returns>
+    /// <returns>返回插入的部分字段值</returns>
     IMySqlCreated<TEntity, TResult> Returning<TResult>(Expression<Func<TEntity, TResult>> fieldsSelector);
     #endregion
 }
