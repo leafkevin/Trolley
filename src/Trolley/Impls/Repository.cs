@@ -63,15 +63,7 @@ public class Repository : IRepository
         var tableName = this.DbContext.GetShardingTableBy(entityMapper, field1Value, field2Value);
         await this.CreateShardingTableAsync<TEntity>(tableName, tableSchema, fromTableSchema, cancellationToken);
     }
-    #endregion  
-
-    #region WithOptions
-    public IRepository WithTimeout(int seconds)
-    {
-        this.DbContext.CommandTimeout = seconds;
-        return this;
-    }
-    #endregion
+    #endregion     
 
     #region From
     public virtual IQuery<T> From<T>(char tableAsStart = 'a')
@@ -484,6 +476,11 @@ public class Repository : IRepository
     public virtual void Rollback() => this.DbContext.Rollback();
     public virtual async Task RollbackAsync(CancellationToken cancellationToken = default)
         => await this.DbContext.RollbackAsync(cancellationToken);
+    public virtual IRepository WithTimeout(int seconds)
+    {
+        this.DbContext.CommandTimeout = seconds;
+        return this;
+    }
     //抛异常的时候，会走到析构函数，但是Transaction，没有提交也没有回滚
     private IQueryVisitor CreateQueryVisitor(char tableAsStart = 'a')
         => this.OrmProvider.NewQueryVisitor(this.DbContext, tableAsStart);

@@ -173,8 +173,8 @@ public sealed class OrmDbFactory : IOrmDbFactory
             throw new ArgumentNullException(nameof(dbKey), "dbKey不可为null，未配置dbKey，也没有配置默认数据库");
 
         var database = this.GetDatabase(localDbKey);
-        if (!this.complexMapProviders.TryGetValue(localDbKey, out var mapProvider))
-            throw new Exception($"没有注册dbKey：{localDbKey}的IEntityMapProvider对象，也没有注册OrmProviderType：{database.OrmProviderType}的IEntityMapProvider对象");
+        //会不需要实体映射和分表规则的场景
+        this.complexMapProviders.TryGetValue(localDbKey, out var mapProvider);
         this.complexTableShardingProviders.TryGetValue(localDbKey, out var tableShardingProvider);
 
         return database.OrmProvider.CreateRepository(new DbContext
