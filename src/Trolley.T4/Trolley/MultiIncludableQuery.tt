@@ -25,6 +25,53 @@ public class MultiIncludableQuery<T, TMember> : MultiQuery<T>, IMultiIncludableQ
     }
     #endregion
 
+    #region Sharding
+    public new IMultiIncludableQuery<T, TMember> UseTable(params string[] tableNames)
+    {
+        this.Visitor.UseTable(this.IsIncludeMany, tableNames);
+        return this;
+    }
+    public new IMultiIncludableQuery<T, TMember> UseTable(Func<string, bool> tableNamePredicate)
+    {
+        this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
+        return this;
+    }
+    public new IMultiIncludableQuery<T, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+    {
+        var masterEntityType = typeof(TMasterSharding);
+        this.Visitor.UseTableMap(this.IsIncludeMany, masterEntityType, tableNameGetter);
+        return this;
+    }
+    public new IMultiIncludableQuery<T, TMember> UseTableBy(params object[] fieldValues)
+    {
+        this.Visitor.UseTableBy(false, fieldValues);
+        return this;
+    }
+    public new IMultiIncludableQuery<T, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
+    {
+        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
+        return this;
+    }
+    public new IMultiIncludableQuery<T, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
+    {
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public new IMultiIncludableQuery<T, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
+        return this;
+    }
+    #endregion
+
+    #region UseTableSchema
+    public new IMultiIncludableQuery<T, TMember> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(this.IsIncludeMany, tableSchema);
+        return this;
+    }
+    #endregion
+
     #region ThenInclude/ThenIncludeMany
     public virtual IMultiIncludableQuery<T, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
     {
@@ -62,6 +109,53 @@ public class MultiIncludableQuery<<#=tables#>, TMember> : MultiQuery<<#=tables#>
         if( i < count)
         {
 #>
+
+    #region Sharding
+    public new IMultiIncludableQuery<<#=tables#>, TMember> UseTable(params string[] tableNames)
+    {
+        this.Visitor.UseTable(this.IsIncludeMany, tableNames);
+        return this;
+    }
+    public new IMultiIncludableQuery<<#=tables#>, TMember> UseTable(Func<string, bool> tableNamePredicate)
+    {
+        this.Visitor.UseTable(this.IsIncludeMany, tableNamePredicate);
+        return this;
+    }
+    public new IMultiIncludableQuery<<#=tables#>, TMember> UseTableMap<TMasterSharding>(Func<string, string, string, string> tableNameGetter)
+    {
+        var masterEntityType = typeof(TMasterSharding);
+        this.Visitor.UseTableMap(this.IsIncludeMany, masterEntityType, tableNameGetter);
+        return this;
+    }
+    public new IMultiIncludableQuery<<#=tables#>, TMember> UseTableBy(params object[] fieldValues)
+    {
+        this.Visitor.UseTableBy(false, fieldValues);
+        return this;
+    }
+    public new IMultiIncludableQuery<<#=tables#>, TMember> UseTableByRange(object beginFieldValue, object endFieldValue)
+    {
+        this.Visitor.UseTableByRange(false, beginFieldValue, endFieldValue);
+        return this;
+    }
+    public new IMultiIncludableQuery<<#=tables#>, TMember> UseTableByRange(object field1Value, object beginField2Value, object endField2Value)
+    {
+        this.Visitor.UseTableByRange(false, field1Value, beginField2Value, endField2Value);
+        return this;
+    }
+    public new IMultiIncludableQuery<<#=tables#>, TMember> UseTableByRange(object field1Value, object field2Value, object beginField3Value, object endField3Value)
+    {
+        this.Visitor.UseTableByRange(false, field1Value, field2Value, beginField3Value, endField3Value);
+        return this;
+    }
+    #endregion
+
+    #region UseTableSchema
+    public new IMultiIncludableQuery<<#=tables#>, TMember> UseTableSchema(string tableSchema)
+    {
+        this.Visitor.UseTableSchema(this.IsIncludeMany, tableSchema);
+        return this;
+    }
+    #endregion
 
     #region ThenInclude/ThenIncludeMany
     public virtual IMultiIncludableQuery<<#=tables#>, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)

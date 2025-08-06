@@ -57,14 +57,11 @@ public class FromCommand : QueryInternal, IFromCommand
     public void Dispose() => this.Visitor.Dispose();
     #endregion
 }
-public class FromCommand<T> : QueryInternal, IFromCommand<T>
+public class FromCommand<T> : FromCommand, IFromCommand<T>
 {
     #region Constructor
     public FromCommand(DbContext dbContext, IQueryVisitor visitor)
-    {
-        this.DbContext = dbContext;
-        this.Visitor = visitor;
-    }
+        : base(dbContext, visitor) { }
     #endregion
 
     #region Sharding
@@ -379,29 +376,6 @@ public class FromCommand<T> : QueryInternal, IFromCommand<T>
         if (isNeedClose) await connection.CloseAsync();
         return result;
     }
-    #endregion
-
-    #region ToSql
-    public virtual string ToSql(out List<IDbDataParameter> dbParameters)
-    {
-        if (this.Visitor.IsNeedFetchShardingTables)
-            this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
-        var sql = this.Visitor.BuildCommandSql(true, out var dbDataParameters);
-        if (this.Visitor.IsNeedFetchShardingTables)
-        {
-            var builder = new StringBuilder(this.Visitor.BuildTableShardingsSql());
-            builder.Append(';');
-            builder.Append(sql);
-            sql = builder.ToString();
-        }
-        dbParameters = dbDataParameters.Cast<IDbDataParameter>().ToList();
-        this.Dispose();
-        return sql;
-    }
-    #endregion
-
-    #region Dispose
-    public void Dispose() => this.Visitor.Dispose();
     #endregion
 }
 <#

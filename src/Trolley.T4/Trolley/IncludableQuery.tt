@@ -75,13 +75,13 @@ public class IncludableQuery<T, TMember> : Query<T>, IIncludableQuery<T, TMember
     #region ThenInclude/ThenIncludeMany
     public virtual IIncludableQuery<T, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
     {
-        this.Visitor.ThenInclude(member);
-        return this.OrmProvider.NewIncludableQuery<T, TNavigation>(this.DbContext, this.Visitor);
+        var isIncludeMany = this.Visitor.ThenInclude(member);
+        return this.OrmProvider.NewIncludableQuery<T, TNavigation>(this.MultipleQuery, this.Visitor, isIncludeMany);
     }
     public virtual IIncludableQuery<T, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null)
     {
         this.Visitor.ThenInclude(member, filter);
-        return this.OrmProvider.NewIncludableQuery<T, TElment>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewIncludableQuery<T, TElment>(this.DbContext, this.Visitor, true);
     }
     #endregion
 }
@@ -160,13 +160,13 @@ public class IncludableQuery<<#=tables#>, TMember> : Query<<#=tables#>>, IInclud
     #region ThenInclude/ThenIncludeMany
     public virtual IIncludableQuery<<#=tables#>, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
     {
-        this.Visitor.ThenInclude(member);
-        return this.OrmProvider.NewIncludableQuery<<#=tables#>, TNavigation>(this.DbContext, this.Visitor);
+        var isIncludeMany = this.Visitor.ThenInclude(member);
+        return this.OrmProvider.NewIncludableQuery<<#=tables#>, TNavigation>(this.DbContext, this.Visitor, isIncludeMany);
     }
     public virtual IIncludableQuery<<#=tables#>, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null)
     {
         this.Visitor.ThenInclude(member, filter);
-        return this.OrmProvider.NewIncludableQuery<<#=tables#>, TElment>(this.DbContext, this.Visitor);
+        return this.OrmProvider.NewIncludableQuery<<#=tables#>, TElment>(this.DbContext, this.Visitor, true);
     }
     #endregion
 <#      }#>

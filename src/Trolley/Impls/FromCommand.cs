@@ -370,29 +370,6 @@ public class FromCommand<T> : FromCommand, IFromCommand<T>
         return result;
     }
     #endregion
-
-    #region ToSql
-    public virtual string ToSql(out List<IDbDataParameter> dbParameters)
-    {
-        if (this.Visitor.IsNeedFetchShardingTables)
-            this.DbContext.FetchShardingTables(this.Visitor as SqlVisitor);
-        var sql = this.Visitor.BuildCommandSql(true, out var dbDataParameters);
-        if (this.Visitor.IsNeedFetchShardingTables)
-        {
-            var builder = new StringBuilder(this.Visitor.BuildTableShardingsSql());
-            builder.Append(';');
-            builder.Append(sql);
-            sql = builder.ToString();
-        }
-        dbParameters = dbDataParameters.Cast<IDbDataParameter>().ToList();
-        this.Dispose();
-        return sql;
-    }
-    #endregion
-
-    #region Dispose
-    public void Dispose() => this.Visitor.Dispose();
-    #endregion
 }
 public class FromCommand<T1, T2> : FromCommand, IFromCommand<T1, T2>
 {
