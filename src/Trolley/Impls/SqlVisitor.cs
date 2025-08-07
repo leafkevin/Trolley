@@ -201,13 +201,18 @@ public class SqlVisitor : ISqlVisitor
         parameters.AddRange(fieldValues);
         tableName = (string)shardingRule.DynamicInvoke(parameters.ToArray());
         //单个分表，直接设置body表名，当作不分表处理
-        if (tableSegment.TableNames == null && !string.IsNullOrEmpty(tableSegment.Body))
+        if (!string.IsNullOrEmpty(tableSegment.Body))
         {
-            tableSegment.TableNames = new();
-            this.ShardingTables ??= new();
-            tableSegment.ShardingType = ShardingTableType.MultiTable;
-            if (!this.ShardingTables.Contains(tableSegment))
-                this.ShardingTables.Add(tableSegment);
+            if (tableName == tableSegment.Body)
+                return;
+            if (tableSegment.TableNames == null)
+            {
+                tableSegment.TableNames = new();
+                this.ShardingTables ??= new();
+                tableSegment.ShardingType = ShardingTableType.MultiTable;
+                if (!this.ShardingTables.Contains(tableSegment))
+                    this.ShardingTables.Add(tableSegment);
+            }
         }
         if (tableSegment.TableNames != null)
         {
@@ -216,7 +221,9 @@ public class SqlVisitor : ISqlVisitor
                 tableSegment.TableNames.Add(tableSegment.Body);
                 tableSegment.Body = null;
             }
-            tableSegment.TableNames.Add(tableName);
+            if (!tableSegment.TableNames.Contains(tableName))
+                tableSegment.TableNames.Add(tableName);
+            this.IsNeedFormatShardingTables = true;
         }
         else
         {
