@@ -188,7 +188,7 @@ public class QueryInternal
 
         return this.Visitor.Include(memberSelector);
     }
-    protected void IncludeManyInternal<TElment>(Expression memberSelector, Expression filter = null)
+    protected void IncludeManyInternal<TElement>(Expression memberSelector, Expression filter = null)
     {
         if (memberSelector == null)
             throw new ArgumentNullException(nameof(memberSelector));

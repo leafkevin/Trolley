@@ -26,13 +26,13 @@ public class PostgreSqlGroupingQuery<T, TGrouping> : GroupingQuery<T, TGrouping>
         => this.OrderByDescending(true, fieldsExpr);
     public new IPostgreSqlGroupingQuery<T, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IPostgreSqlGroupingQuery<T, TGrouping>;
+    public new IPostgreSqlGroupingQuery<T, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IPostgreSqlGroupingQuery<T, TGrouping>;
     #endregion
 
     #region Select
     public new IPostgreSqlQuery<TGrouping> Select()
         => base.Select() as IPostgreSqlQuery<TGrouping>;
-    public new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>("*") as IPostgreSqlQuery<TTarget>;
     public new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T, TTarget>> fieldsExpr)
         => base.Select(fieldsExpr) as IPostgreSqlQuery<TTarget>;
     #endregion
@@ -60,13 +60,13 @@ public class PostgreSqlGroupingQuery<T1, T2, TGrouping> : GroupingQuery<T1, T2, 
         => this.OrderByDescending(true, fieldsExpr);
     public new IPostgreSqlGroupingQuery<T1, T2, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IPostgreSqlGroupingQuery<T1, T2, TGrouping>;
+    public new IPostgreSqlGroupingQuery<T1, T2, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IPostgreSqlGroupingQuery<T1, T2, TGrouping>;
     #endregion
 
     #region Select
     public new IPostgreSqlQuery<TGrouping> Select()
         => base.Select() as IPostgreSqlQuery<TGrouping>;
-    public new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>(fields) as IPostgreSqlQuery<TTarget>;
     public new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, TTarget>> fieldsExpr)
         => base.Select(fieldsExpr) as IPostgreSqlQuery<TTarget>;
     #endregion
@@ -94,13 +94,13 @@ public class PostgreSqlGroupingQuery<T1, T2, T3, TGrouping> : GroupingQuery<T1, 
         => this.OrderByDescending(true, fieldsExpr);
     public new IPostgreSqlGroupingQuery<T1, T2, T3, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IPostgreSqlGroupingQuery<T1, T2, T3, TGrouping>;
+    public new IPostgreSqlGroupingQuery<T1, T2, T3, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IPostgreSqlGroupingQuery<T1, T2, T3, TGrouping>;
     #endregion
 
     #region Select
     public new IPostgreSqlQuery<TGrouping> Select()
         => base.Select() as IPostgreSqlQuery<TGrouping>;
-    public new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>("*") as IPostgreSqlQuery<TTarget>;
     public new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, TTarget>> fieldsExpr)
         => base.Select(fieldsExpr) as IPostgreSqlQuery<TTarget>;
     #endregion
@@ -128,13 +128,13 @@ public class PostgreSqlGroupingQuery<T1, T2, T3, T4, TGrouping> : GroupingQuery<
         => this.OrderByDescending(true, fieldsExpr);
     public new IPostgreSqlGroupingQuery<T1, T2, T3, T4, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IPostgreSqlGroupingQuery<T1, T2, T3, T4, TGrouping>;
+    public new IPostgreSqlGroupingQuery<T1, T2, T3, T4, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IPostgreSqlGroupingQuery<T1, T2, T3, T4, TGrouping>;
     #endregion
 
     #region Select
     public new IPostgreSqlQuery<TGrouping> Select()
         => base.Select() as IPostgreSqlQuery<TGrouping>;
-    public new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>("*") as IPostgreSqlQuery<TTarget>;
     public new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, TTarget>> fieldsExpr)
         => base.Select(fieldsExpr) as IPostgreSqlQuery<TTarget>;
     #endregion
@@ -162,13 +162,13 @@ public class PostgreSqlGroupingQuery<T1, T2, T3, T4, T5, TGrouping> : GroupingQu
         => this.OrderByDescending(true, fieldsExpr);
     public new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, TGrouping>;
+    public new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, TGrouping>;
     #endregion
 
     #region Select
     public new IPostgreSqlQuery<TGrouping> Select()
         => base.Select() as IPostgreSqlQuery<TGrouping>;
-    public new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>("*") as IPostgreSqlQuery<TTarget>;
     public new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, TTarget>> fieldsExpr)
         => base.Select(fieldsExpr) as IPostgreSqlQuery<TTarget>;
     #endregion
@@ -196,13 +196,13 @@ public class PostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> : Groupi
         => this.OrderByDescending(true, fieldsExpr);
     public new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping>;
+    public new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, TGrouping>;
     #endregion
 
     #region Select
     public new IPostgreSqlQuery<TGrouping> Select()
         => base.Select() as IPostgreSqlQuery<TGrouping>;
-    public new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>("*") as IPostgreSqlQuery<TTarget>;
     public new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, TTarget>> fieldsExpr)
         => base.Select(fieldsExpr) as IPostgreSqlQuery<TTarget>;
     #endregion
@@ -230,13 +230,13 @@ public class PostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> : Gr
         => this.OrderByDescending(true, fieldsExpr);
     public new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping>;
+    public new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, TGrouping>;
     #endregion
 
     #region Select
     public new IPostgreSqlQuery<TGrouping> Select()
         => base.Select() as IPostgreSqlQuery<TGrouping>;
-    public new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>("*") as IPostgreSqlQuery<TTarget>;
     public new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, TTarget>> fieldsExpr)
         => base.Select(fieldsExpr) as IPostgreSqlQuery<TTarget>;
     #endregion
@@ -264,13 +264,13 @@ public class PostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> 
         => this.OrderByDescending(true, fieldsExpr);
     public new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping>;
+    public new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, TGrouping>;
     #endregion
 
     #region Select
     public new IPostgreSqlQuery<TGrouping> Select()
         => base.Select() as IPostgreSqlQuery<TGrouping>;
-    public new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>("*") as IPostgreSqlQuery<TTarget>;
     public new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, TTarget>> fieldsExpr)
         => base.Select(fieldsExpr) as IPostgreSqlQuery<TTarget>;
     #endregion
@@ -298,13 +298,13 @@ public class PostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGroupi
         => this.OrderByDescending(true, fieldsExpr);
     public new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping>;
+    public new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TGrouping>;
     #endregion
 
     #region Select
     public new IPostgreSqlQuery<TGrouping> Select()
         => base.Select() as IPostgreSqlQuery<TGrouping>;
-    public new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>("*") as IPostgreSqlQuery<TTarget>;
     public new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, TTarget>> fieldsExpr)
         => base.Select(fieldsExpr) as IPostgreSqlQuery<TTarget>;
     #endregion
@@ -332,13 +332,13 @@ public class PostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TG
         => this.OrderByDescending(true, fieldsExpr);
     public new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping>;
+    public new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TGrouping>;
     #endregion
 
     #region Select
     public new IPostgreSqlQuery<TGrouping> Select()
         => base.Select() as IPostgreSqlQuery<TGrouping>;
-    public new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>("*") as IPostgreSqlQuery<TTarget>;
     public new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TTarget>> fieldsExpr)
         => base.Select(fieldsExpr) as IPostgreSqlQuery<TTarget>;
     #endregion
@@ -366,13 +366,13 @@ public class PostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T1
         => this.OrderByDescending(true, fieldsExpr);
     public new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping>;
+    public new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TGrouping>;
     #endregion
 
     #region Select
     public new IPostgreSqlQuery<TGrouping> Select()
         => base.Select() as IPostgreSqlQuery<TGrouping>;
-    public new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>("*") as IPostgreSqlQuery<TTarget>;
     public new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TTarget>> fieldsExpr)
         => base.Select(fieldsExpr) as IPostgreSqlQuery<TTarget>;
     #endregion
@@ -400,13 +400,13 @@ public class PostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T1
         => this.OrderByDescending(true, fieldsExpr);
     public new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping>;
+    public new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TGrouping>;
     #endregion
 
     #region Select
     public new IPostgreSqlQuery<TGrouping> Select()
         => base.Select() as IPostgreSqlQuery<TGrouping>;
-    public new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>("*") as IPostgreSqlQuery<TTarget>;
     public new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TTarget>> fieldsExpr)
         => base.Select(fieldsExpr) as IPostgreSqlQuery<TTarget>;
     #endregion
@@ -434,13 +434,13 @@ public class PostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T1
         => this.OrderByDescending(true, fieldsExpr);
     public new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping>;
+    public new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TGrouping>;
     #endregion
 
     #region Select
     public new IPostgreSqlQuery<TGrouping> Select()
         => base.Select() as IPostgreSqlQuery<TGrouping>;
-    public new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>("*") as IPostgreSqlQuery<TTarget>;
     public new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TTarget>> fieldsExpr)
         => base.Select(fieldsExpr) as IPostgreSqlQuery<TTarget>;
     #endregion
@@ -468,13 +468,13 @@ public class PostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T1
         => this.OrderByDescending(true, fieldsExpr);
     public new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping>;
+    public new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TGrouping>;
     #endregion
 
     #region Select
     public new IPostgreSqlQuery<TGrouping> Select()
         => base.Select() as IPostgreSqlQuery<TGrouping>;
-    public new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>("*") as IPostgreSqlQuery<TTarget>;
     public new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TTarget>> fieldsExpr)
         => base.Select(fieldsExpr) as IPostgreSqlQuery<TTarget>;
     #endregion
@@ -502,13 +502,13 @@ public class PostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T1
         => this.OrderByDescending(true, fieldsExpr);
     public new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>;
+    public new IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IPostgreSqlGroupingQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TGrouping>;
     #endregion
 
     #region Select
     public new IPostgreSqlQuery<TGrouping> Select()
         => base.Select() as IPostgreSqlQuery<TGrouping>;
-    public new IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>("*") as IPostgreSqlQuery<TTarget>;
     public new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TTarget>> fieldsExpr)
         => base.Select(fieldsExpr) as IPostgreSqlQuery<TTarget>;
     #endregion

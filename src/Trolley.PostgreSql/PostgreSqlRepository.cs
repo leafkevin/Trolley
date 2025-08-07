@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -43,8 +44,10 @@ public class PostgreSqlRepository : Repository, IPostgreSqlRepository
     #endregion
 
     #region From SubQuery  
-    public new IPostgreSqlQuery<T> FromQuery<T>(Func<IFromQuery, IQuery<T>> subQuery)
+    public new IPostgreSqlQuery<T> FromQuery<T>(IQuery<T> subQuery)
         => base.FromQuery(subQuery) as IPostgreSqlQuery<T>;
+    public new IPostgreSqlQuery<T> FromQuery<T>(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
+        => base.FromQuery(subQueryExpr) as IPostgreSqlQuery<T>;
     #endregion
 
     #region Create

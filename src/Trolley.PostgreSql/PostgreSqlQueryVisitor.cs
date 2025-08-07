@@ -18,10 +18,10 @@ public class PostgreSqlQueryVisitor : QueryVisitor
     public List<SqlFieldSegment> DistinctOnFields { get; set; }
     public string DistinctOnSql { get; set; }
 
-    public override string BuildSql(out List<SqlFieldSegment> readerFields)
+    public override string BuildSql(bool isBuildCteSql, out List<SqlFieldSegment> readerFields)
     {
         var builder = new StringBuilder();
-        if (this.IsUseCteTable && this.RefQueries != null && this.RefQueries.Count > 0)
+        if (isBuildCteSql && this.RefQueries != null && this.RefQueries.Count > 0)
         {
             bool isRecursive = false;
             var cteQueries = this.FlattenRefCteTables(this.RefQueries);
@@ -127,8 +127,8 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         }
 
         this.AddSelectFieldsSql(builder, this.ReaderFields);
-        if (this.IsManyShardingTables && this.AggFieldAlias != null)
-            builder.Append($" AS {this.AggFieldAlias}");
+        if (this.IsManyShardingTables && this.IsNeedFormatShardingTables && this.AggFieldAlias != null)
+            builder.Append($" AS {this.AggFieldAlias},COUNT(*) AS AVG_COUNT");
 
         string selectSql = null;
         if (this.IsDistinct)
@@ -175,7 +175,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
             if (this.IsNeedPaging && this.offset.HasValue && this.limit.HasValue)
             {
                 var myTableSql = $"{tableSql}{others}";
-                if (this.IsNeedFullFieldsPagingCount)
+                if (this.HasAggFields || !string.IsNullOrEmpty(this.GroupBySql))
                     myTableSql = $"(SELECT {selectSql} FROM {tableSql}{others}) a";
                 builder.Append($"SELECT COUNT(*) FROM {myTableSql};");
             }
@@ -183,7 +183,8 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         }
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
 
-        if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.GroupBySql) || !string.IsNullOrEmpty(this.OrderBySql) || this.offset.HasValue || this.limit.HasValue))
+        if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.GroupBySql)
+            || !string.IsNullOrEmpty(this.OrderBySql) || this.offset.HasValue || this.limit.HasValue || this.HasAggFields))
             this.IsNeedUnionShardingTables = true;
 
         //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不正确
@@ -198,7 +199,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         builder.Clear();
         return sql;
     }
-    public override string BuildCommandSql(out IDataParameterCollection dbParameters)
+    public override string BuildCommandSql(bool isBuildCteSql, out IDataParameterCollection dbParameters)
     {
         var builder = new StringBuilder("INSERT INTO");
         var entityMapper = this.Tables[0].Mapper;
@@ -206,6 +207,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         if (this.IsNeedCommandTableAlias) builder.Append($" AS {this.Tables[0].AliasName}");
         builder.Append(" (");
         int index = 0;
+        //如果ReaderFields没有设置，通常是从Query中来的，ReaderFields是从Query中获取的
         if (this.ReaderFields == null && this.IsFromQuery)
             this.ReaderFields = this.Tables[1].Fields;
         foreach (var readerField in this.ReaderFields)
@@ -222,7 +224,7 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         }
         builder.Append(") ");
         //有CTE表
-        if (this.IsUseCteTable && this.RefQueries != null && this.RefQueries.Count > 0)
+        if (isBuildCteSql && this.RefQueries != null && this.RefQueries.Count > 0)
         {
             var fieldsSql = builder.ToString();
             builder.Clear();
@@ -329,8 +331,8 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         }
 
         this.AddSelectFieldsSql(builder, this.ReaderFields);
-        if (this.IsManyShardingTables && this.AggFieldAlias != null)
-            builder.Append($" AS {this.AggFieldAlias}");
+        if (this.IsManyShardingTables && this.IsNeedFormatShardingTables && this.AggFieldAlias != null)
+            builder.Append($" AS {this.AggFieldAlias},COUNT(*) AS AVG_COUNT");
 
         string selectSql = null;
         if (this.IsDistinct)
@@ -372,7 +374,8 @@ public class PostgreSqlQueryVisitor : QueryVisitor
         }
         else builder.Append($"SELECT {selectSql} FROM {tableSql}{others}");
 
-        if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.GroupBySql) || !string.IsNullOrEmpty(this.OrderBySql) || this.offset.HasValue || this.limit.HasValue))
+        if (this.IsManyShardingTables && (!string.IsNullOrEmpty(this.GroupBySql)
+            || !string.IsNullOrEmpty(this.OrderBySql) || this.offset.HasValue || this.limit.HasValue || this.HasAggFields))
             this.IsNeedUnionShardingTables = true;
 
         //判断是否需要SELECT * FROM包装，UNION的子查询中有OrderBy或是Limit，就要包一下SELECT * FROM，否则数据结果不正确

@@ -194,10 +194,10 @@ public class Query<<#=tables#>> : QueryBase, IQuery<<#=tables#>>
         var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
         return this.OrmProvider.NewIncludableQuery<<#=tables#>, TMember>(this.DbContext, this.Visitor, isIncludeMany);
     }
-    public virtual IIncludableQuery<<#=tables#>, TElment> IncludeMany<TElment>(Expression<Func<<#=tables#>, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
+    public virtual IIncludableQuery<<#=tables#>, TElement> IncludeMany<TElement>(Expression<Func<<#=tables#>, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
     {
-        base.IncludeManyInternal<TElment>(memberSelector, filter);
-        return this.OrmProvider.NewIncludableQuery<<#=tables#>, TElment>(this.DbContext, this.Visitor, true);
+        base.IncludeManyInternal<TElement>(memberSelector, filter);
+        return this.OrmProvider.NewIncludableQuery<<#=tables#>, TElement>(this.DbContext, this.Visitor, true);
     }
     #endregion
 

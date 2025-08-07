@@ -190,10 +190,10 @@ public class MultiQuery<<#=tables#>> : MultiQueryBase, IMultiQuery<<#=tables#>>
         var isIncludeMany = base.IncludeInternal<TMember>(memberSelector);
         return this.OrmProvider.NewMultiIncludableQuery<<#=tables#>, TMember>(this.MultipleQuery, this.Visitor, isIncludeMany);
     }
-    public virtual IMultiIncludableQuery<<#=tables#>, TElment> IncludeMany<TElment>(Expression<Func<<#=tables#>, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
+    public virtual IMultiIncludableQuery<<#=tables#>, TElement> IncludeMany<TElement>(Expression<Func<<#=tables#>, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
     {
-        base.IncludeManyInternal<TElment>(memberSelector);
-        return this.OrmProvider.NewMultiIncludableQuery<<#=tables#>, TElment>(this.MultipleQuery, this.Visitor, true);
+        base.IncludeManyInternal<TElement>(memberSelector);
+        return this.OrmProvider.NewMultiIncludableQuery<<#=tables#>, TElement>(this.MultipleQuery, this.Visitor, true);
     }
     #endregion
 

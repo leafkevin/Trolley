@@ -78,10 +78,10 @@ public class MultiIncludableQuery<T, TMember> : MultiQuery<T>, IMultiIncludableQ
         var isIncludeMany = this.Visitor.ThenInclude(member);
         return this.OrmProvider.NewMultiIncludableQuery<T, TNavigation>(this.MultipleQuery, this.Visitor, isIncludeMany);
     }
-    public virtual IMultiIncludableQuery<T, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null)
+    public virtual IMultiIncludableQuery<T, TElement> ThenIncludeMany<TElement>(Expression<Func<TMember, IEnumerable<TElement>>> member, Expression<Func<TElement, bool>> filter = null)
     {
         this.Visitor.ThenInclude(member, filter);
-        return this.OrmProvider.NewMultiIncludableQuery<T, TElment>(this.MultipleQuery, this.Visitor, true);
+        return this.OrmProvider.NewMultiIncludableQuery<T, TElement>(this.MultipleQuery, this.Visitor, true);
     }
     #endregion
 }
@@ -163,10 +163,10 @@ public class MultiIncludableQuery<<#=tables#>, TMember> : MultiQuery<<#=tables#>
         var isIncludeMany = this.Visitor.ThenInclude(member);
         return this.OrmProvider.NewMultiIncludableQuery<<#=tables#>, TNavigation>(this.MultipleQuery, this.Visitor, isIncludeMany);
     }
-    public virtual IMultiIncludableQuery<<#=tables#>, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null)
+    public virtual IMultiIncludableQuery<<#=tables#>, TElement> ThenIncludeMany<TElement>(Expression<Func<TMember, IEnumerable<TElement>>> member, Expression<Func<TElement, bool>> filter = null)
     {
         this.Visitor.ThenInclude(member, filter);
-        return this.OrmProvider.NewMultiIncludableQuery<<#=tables#>, TElment>(this.MultipleQuery, this.Visitor, true);
+        return this.OrmProvider.NewMultiIncludableQuery<<#=tables#>, TElement>(this.MultipleQuery, this.Visitor, true);
     }
     #endregion
 <#      }#>

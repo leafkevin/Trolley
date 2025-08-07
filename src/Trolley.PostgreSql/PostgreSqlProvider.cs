@@ -2555,7 +2555,7 @@ AND c.attnum=h.refobjsubid WHERE a.relkind='r' AND {0} ORDER BY b.nspname,a.reln
         var orgTableName = entityMapper.TableName;
         tableSchema ??= dbContext.DefaultTableSchema;
         var sql = $"SELECT a.relname FROM pg_class a,pg_namespace b WHERE a.relnamespace=b.oid AND a.relkind='r' AND a.relname LIKE '{orgTableName}_%' AND b.nspname='{tableSchema}'";
-        var tableNames = dbContext.Query<string>(sql);
+        var tableNames = dbContext.Query<string, List<string>>(sql, false);
         if (tableNameSelector != null)
             return tableNames.FindAll(f => tableNameSelector(f));
         return tableNames;

@@ -43,8 +43,8 @@ public class PostgreSqlIncludableQuery<T, TMember> : IncludableQuery<T, TMember>
     #region ThenInclude/ThenIncludeMany
     public new IPostgreSqlIncludableQuery<T, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
         => base.ThenInclude(member) as IPostgreSqlIncludableQuery<T, TNavigation>;
-    public new IPostgreSqlIncludableQuery<T, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null)
-        => base.ThenIncludeMany(member, filter) as IPostgreSqlIncludableQuery<T, TElment>;
+    public new IPostgreSqlIncludableQuery<T, TElement> ThenIncludeMany<TElement>(Expression<Func<TMember, IEnumerable<TElement>>> member, Expression<Func<TElement, bool>> filter = null)
+        => base.ThenIncludeMany(member, filter) as IPostgreSqlIncludableQuery<T, TElement>;
     #endregion
 }
 <#
@@ -90,8 +90,8 @@ public class PostgreSqlIncludableQuery<<#=tables#>, TMember> : IncludableQuery<<
     #region ThenInclude/ThenIncludeMany
     public new IPostgreSqlIncludableQuery<<#=tables#>, TNavigation> ThenInclude<TNavigation>(Expression<Func<TMember, TNavigation>> member)
         => base.ThenInclude(member) as IPostgreSqlIncludableQuery<<#=tables#>, TNavigation>;
-    public new IPostgreSqlIncludableQuery<<#=tables#>, TElment> ThenIncludeMany<TElment>(Expression<Func<TMember, IEnumerable<TElment>>> member, Expression<Func<TElment, bool>> filter = null)
-        => base.ThenIncludeMany(member, filter) as IPostgreSqlIncludableQuery<<#=tables#>, TElment>;
+    public new IPostgreSqlIncludableQuery<<#=tables#>, TElement> ThenIncludeMany<TElement>(Expression<Func<TMember, IEnumerable<TElement>>> member, Expression<Func<TElement, bool>> filter = null)
+        => base.ThenIncludeMany(member, filter) as IPostgreSqlIncludableQuery<<#=tables#>, TElement>;
     #endregion
 <#      }#>
 }

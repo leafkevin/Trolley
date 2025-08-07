@@ -56,61 +56,88 @@ public class PostgreSqlQuery<T> : Query<T>, IPostgreSqlQuery<T>
     public new IPostgreSqlQuery<T> Union(IQuery<T> subQuery)
         => base.Union(subQuery) as IPostgreSqlQuery<T>;
     public new IPostgreSqlQuery<T> Union(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
-        => base.Union(subQuery) as IPostgreSqlQuery<T>;
+        => base.Union(subQueryExpr) as IPostgreSqlQuery<T>;
     public new IPostgreSqlQuery<T> UnionAll(IQuery<T> subQuery)
         => base.UnionAll(subQuery) as IPostgreSqlQuery<T>;
     public new IPostgreSqlQuery<T> UnionAll(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
-        => base.UnionAll(subQuery) as IPostgreSqlQuery<T>;
-    public new IPostgreSqlQuery<T> UnionRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQuery)
-        => base.UnionRecursive(subQuery) as IPostgreSqlQuery<T>;
-    public new IPostgreSqlQuery<T> UnionAllRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQuery)
-        => base.UnionAllRecursive(subQuery) as IPostgreSqlQuery<T>;
+        => base.UnionAll(subQueryExpr) as IPostgreSqlQuery<T>;
+    public new IPostgreSqlQuery<T> UnionRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr)
+        => base.UnionRecursive(subQueryExpr) as IPostgreSqlQuery<T>;
+    public new IPostgreSqlQuery<T> UnionAllRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr)
+        => base.UnionAllRecursive(subQueryExpr) as IPostgreSqlQuery<T>;
     #endregion
 
     #region WithTable
-    public new IPostgreSqlQuery<T, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
-        => base.WithTable(subQuery) as IPostgreSqlQuery<T, TOther>;
-    public new IPostgreSqlQuery<T, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
-        => base.WithQuery(subQuery) as IPostgreSqlQuery<T, TOther>;
+    public new IPostgreSqlQuery<T, TOther> WithTable<TOther>()
+        => base.WithTable<TOther>() as IPostgreSqlQuery<T, TOther>;
     #endregion
 
-    #region Join
+    #region WithQuery
+    public new IPostgreSqlQuery<T, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
+        => base.WithQuery(subQuery) as IPostgreSqlQuery<T, TOther>;
+    public new IPostgreSqlQuery<T, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+        => base.WithQuery(subQueryExpr) as IPostgreSqlQuery<T, TOther>;
+    #endregion
+
+    #region InnerJoin
     public new IPostgreSqlQuery<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlQuery<T, TOther>;
-    public new IPostgreSqlQuery<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T, TOther>;
-    public new IPostgreSqlQuery<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlQuery<T, TOther>;
     public new IPostgreSqlQuery<T, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
-        => base.InnerJoin(subQuery, joinOn) as IPostgreSqlQuery<T, TOther>;
+        => base.LeftJoin(subQuery, joinOn) as IPostgreSqlQuery<T, TOther>;
+    public new IPostgreSqlQuery<T, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
+        => base.RightJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T, TOther>;
+    #endregion
+
+    #region LeftJoin
+    public new IPostgreSqlQuery<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
+        => base.InnerJoin(joinOn) as IPostgreSqlQuery<T, TOther>;
     public new IPostgreSqlQuery<T, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
         => base.LeftJoin(subQuery, joinOn) as IPostgreSqlQuery<T, TOther>;
-    public new IPostgreSqlQuery<T, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
-        => base.RightJoin(subQuery, joinOn) as IPostgreSqlQuery<T, TOther>;
-    public new IPostgreSqlQuery<T, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
-        => base.InnerJoin(subQuery, joinOn) as IPostgreSqlQuery<T, TOther>;
     public new IPostgreSqlQuery<T, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
+        => base.RightJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T, TOther>;
+    #endregion
+
+    #region LeftJoin
+    public new IPostgreSqlQuery<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
+        => base.InnerJoin(joinOn) as IPostgreSqlQuery<T, TOther>;
+    public new IPostgreSqlQuery<T, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
         => base.LeftJoin(subQuery, joinOn) as IPostgreSqlQuery<T, TOther>;
     public new IPostgreSqlQuery<T, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
-        => base.RightJoin(subQuery, joinOn) as IPostgreSqlQuery<T, TOther>;
+        => base.RightJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T, TOther>;
     #endregion
 
     #region Include
     public new IPostgreSqlIncludableQuery<T, TMember> Include<TMember>(Expression<Func<T, TMember>> memberSelector)
         => base.Include(memberSelector) as IPostgreSqlIncludableQuery<T, TMember>;
-    public new IPostgreSqlIncludableQuery<T, TElment> IncludeMany<TElment>(Expression<Func<T, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
-        => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<T, TElment>;
+    public new IPostgreSqlIncludableQuery<T, TElement> IncludeMany<TElement>(Expression<Func<T, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
+        => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<T, TElement>;
     #endregion
 
-    #region Where/And
+    #region Where
     public new IPostgreSqlQuery<T> Where(Expression<Func<T, bool>> predicate)
-        => base.Where(predicate) as IPostgreSqlQuery<T>;
+        => this.Where(true, predicate);
     public new IPostgreSqlQuery<T> Where(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
         => base.Where(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T>;
+    public new IPostgreSqlQuery<T> WherePredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
+        => base.WherePredicate(predicateInitializer) as IPostgreSqlQuery<T>;
+    #endregion
+
+    #region And
     public new IPostgreSqlQuery<T> And(Expression<Func<T, bool>> predicate)
-        => base.And(predicate) as IPostgreSqlQuery<T>;
+        => this.And(true, predicate);
     public new IPostgreSqlQuery<T> And(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
         => base.And(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T>;
+    public new IPostgreSqlQuery<T> AndPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
+        => base.AndPredicate(predicateInitializer) as IPostgreSqlQuery<T>;
+    #endregion
+
+    #region Or
+    public new IPostgreSqlQuery<T> Or(Expression<Func<T, bool>> predicate)
+        => this.Or(true, predicate);
+    public new IPostgreSqlQuery<T> Or(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
+        => base.Or(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T>;
+    public new IPostgreSqlQuery<T> OrPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
+        => base.OrPredicate(predicateInitializer) as IPostgreSqlQuery<T>;
     #endregion
 
     #region GroupBy
@@ -119,7 +146,7 @@ public class PostgreSqlQuery<T> : Query<T>, IPostgreSqlQuery<T>
     #endregion
 
     #region DistinctOn
-    public virtual IPostgreSqlDistinctOnQuery<T, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<T, TDistinctOn>> fieldsSelector)
+    public IPostgreSqlDistinctOnQuery<T, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<T, TDistinctOn>> fieldsSelector)
     {
         var dialectVisitor = this.Visitor as PostgreSqlQueryVisitor;
         dialectVisitor.DistinctOn(fieldsSelector);
@@ -136,6 +163,17 @@ public class PostgreSqlQuery<T> : Query<T>, IPostgreSqlQuery<T>
         => this.OrderByDescending(true, fieldsExpr);
     public new IPostgreSqlQuery<T> OrderByDescending<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IPostgreSqlQuery<T>;
+    public new IPostgreSqlQuery<T> OrderByDynamic(Func<OrderByBuilder<T>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IPostgreSqlQuery<T>;
+    #endregion
+
+    #region Skip/Take/Page
+    public new IPostgreSqlQuery<T> Skip(int offset)
+        => base.Skip(offset) as IPostgreSqlQuery<T>;
+    public new IPostgreSqlQuery<T> Take(int limit)
+        => base.Take(limit) as IPostgreSqlQuery<T>;
+    public new IPostgreSqlQuery<T> Page(int pageNumber, int pageSize)
+        => base.Page(pageNumber, pageSize) as IPostgreSqlQuery<T>;
     #endregion
 
     #region Select
@@ -152,65 +190,6 @@ public class PostgreSqlQuery<T> : Query<T>, IPostgreSqlQuery<T>
     #region Distinct
     public new IPostgreSqlQuery<T> Distinct()
         => base.Distinct() as IPostgreSqlQuery<T>;
-    #endregion
-
-    #region Skip/Take/Page
-    public new IPostgreSqlQuery<T> Skip(int offset)
-        => base.Skip(offset) as IPostgreSqlQuery<T>;
-    public new IPostgreSqlQuery<T> Take(int limit)
-        => base.Take(limit) as IPostgreSqlQuery<T>;
-    public new IPostgreSqlQuery<T> Page(int pageNumber, int pageSize)
-        => base.Page(pageNumber, pageSize) as IPostgreSqlQuery<T>;
-    #endregion
-
-    #region First/ToList/ToPageList/ToDictionary
-    public override T First()
-    {
-        return this.DbContext.QueryFrom<T, T>(this.Visitor, true, (entityType, reader, readerFields) =>
-        {
-            T result = default;
-            var deserializer = reader.GetReaderDeserializer(typeof(T), this.DbContext, readerFields);
-            if (reader.Read())
-                result = (T)deserializer.Invoke(reader);
-            return result;
-        });
-    }
-    public override async Task<T> FirstAsync(CancellationToken cancellationToken = default)
-    {
-        return await this.DbContext.QueryFromAsync<T, T>(this.Visitor, true, async (entityType, reader, readerFields, cancellationToken) =>
-        {
-            T result = default;
-            var deserializer = reader.GetReaderDeserializer(typeof(T), this.DbContext, readerFields);
-            if (await reader.ReadAsync(cancellationToken))
-                result = (T)deserializer.Invoke(reader);
-            return result;
-        }, cancellationToken);
-    }
-    public override List<T> ToList()
-    {
-        return this.DbContext.QueryFrom<T, List<T>>(this.Visitor, false, (entityType, reader, readerFields) =>
-        {
-            var result = new List<T>();
-            var deserializer = reader.GetReaderDeserializer(typeof(T), this.DbContext, readerFields);
-            while (reader.Read())
-                result.Add((T)deserializer.Invoke(reader));
-            return result;
-        });
-    }
-    public override async Task<List<T>> ToListAsync(CancellationToken cancellationToken = default)
-    {
-        return await this.DbContext.QueryFromAsync<T, List<T>>(this.Visitor, false, async (entityType, reader, readerFields, cancellationToken) =>
-        {
-            var result = new List<T>();
-            var deserializer = reader.GetReaderDeserializer(typeof(T), this.DbContext, readerFields);
-            while (await reader.ReadAsync(cancellationToken))
-                result.Add((T)deserializer.Invoke(reader));
-            return result;
-        }, cancellationToken);
-    }
-    public override IPagedList<T> ToPageList() => this.DbContext.QueryPage<T>(this.Visitor);
-    public override async Task<IPagedList<T>> ToPageListAsync(CancellationToken cancellationToken = default)
-        => await this.DbContext.QueryPageAsync<T>(this.Visitor, cancellationToken);
     #endregion
 }
 public class PostgreSqlQuery<T1, T2> : Query<T1, T2>, IPostgreSqlQuery<T1, T2>
@@ -243,55 +222,82 @@ public class PostgreSqlQuery<T1, T2> : Query<T1, T2>, IPostgreSqlQuery<T1, T2>
     #endregion
 
     #region WithTable
-    public new IPostgreSqlQuery<T1, T2, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
-        => base.WithTable(subQuery) as IPostgreSqlQuery<T1, T2, TOther>;
-    public new IPostgreSqlQuery<T1, T2, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
-        => base.WithQuery(subQuery) as IPostgreSqlQuery<T1, T2, TOther>;
+    public new IPostgreSqlQuery<T1, T2, TOther> WithTable<TOther>()
+        => base.WithTable<TOther>() as IPostgreSqlQuery<T1, T2, TOther>;
     #endregion
 
-    #region Join
+    #region WithQuery
+    public new IPostgreSqlQuery<T1, T2, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
+        => base.WithQuery(subQuery) as IPostgreSqlQuery<T1, T2, TOther>;
+    public new IPostgreSqlQuery<T1, T2, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+        => base.WithQuery(subQueryExpr) as IPostgreSqlQuery<T1, T2, TOther>;
+    #endregion
+
+    #region InnerJoin
     public new IPostgreSqlQuery<T1, T2> InnerJoin(Expression<Func<T1, T2, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlQuery<T1, T2>;
-    public new IPostgreSqlQuery<T1, T2> LeftJoin(Expression<Func<T1, T2, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2>;
-    public new IPostgreSqlQuery<T1, T2> RightJoin(Expression<Func<T1, T2, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2>;
     public new IPostgreSqlQuery<T1, T2, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlQuery<T1, T2, TOther>;
-    public new IPostgreSqlQuery<T1, T2, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, TOther>;
-    public new IPostgreSqlQuery<T1, T2, TOther> RightJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, TOther>;
     public new IPostgreSqlQuery<T1, T2, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn)
         => base.InnerJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, TOther>;
+    public new IPostgreSqlQuery<T1, T2, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, TOther, bool>> joinOn)
+        => base.InnerJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, TOther>;
+    #endregion
+
+    #region LeftJoin
+    public new IPostgreSqlQuery<T1, T2> LeftJoin(Expression<Func<T1, T2, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2>;
+    public new IPostgreSqlQuery<T1, T2, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, TOther>;
     public new IPostgreSqlQuery<T1, T2, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn)
         => base.LeftJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, TOther>;
+    public new IPostgreSqlQuery<T1, T2, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, TOther, bool>> joinOn)
+        => base.LeftJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, TOther>;
+    #endregion
+
+    #region RightJoin
+    public new IPostgreSqlQuery<T1, T2> RightJoin(Expression<Func<T1, T2, bool>> joinOn)
+        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2>;
+    public new IPostgreSqlQuery<T1, T2, TOther> RightJoin<TOther>(Expression<Func<T1, T2, TOther, bool>> joinOn)
+        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, TOther>;
     public new IPostgreSqlQuery<T1, T2, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, TOther, bool>> joinOn)
         => base.RightJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, TOther>;
-    public new IPostgreSqlQuery<T1, T2, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, TOther, bool>> joinOn)
-        => base.InnerJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, TOther>;
-    public new IPostgreSqlQuery<T1, T2, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, TOther, bool>> joinOn)
-        => base.LeftJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, TOther>;
     public new IPostgreSqlQuery<T1, T2, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, TOther, bool>> joinOn)
-        => base.RightJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, TOther>;
+        => base.RightJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, TOther>;
     #endregion
 
     #region Include
     public new IPostgreSqlIncludableQuery<T1, T2, TMember> Include<TMember>(Expression<Func<T1, T2, TMember>> memberSelector)
         => base.Include(memberSelector) as IPostgreSqlIncludableQuery<T1, T2, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
-        => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<T1, T2, TElment>;
+    public new IPostgreSqlIncludableQuery<T1, T2, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
+        => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<T1, T2, TElement>;
     #endregion
 
-    #region Where/And
+    #region Where
     public new IPostgreSqlQuery<T1, T2> Where(Expression<Func<T1, T2, bool>> predicate)
-        => base.Where(predicate) as IPostgreSqlQuery<T1, T2>;
+        => this.Where(true, predicate);
     public new IPostgreSqlQuery<T1, T2> Where(bool condition, Expression<Func<T1, T2, bool>> ifPredicate, Expression<Func<T1, T2, bool>> elsePredicate = null)
         => base.Where(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2>;
+    public new IPostgreSqlQuery<T1, T2> WherePredicate(Func<PredicateBuilder<T1, T2>, Expression<Func<T1, T2, bool>>> predicateInitializer)
+        => base.WherePredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2>;
+    #endregion
+
+    #region And
     public new IPostgreSqlQuery<T1, T2> And(Expression<Func<T1, T2, bool>> predicate)
-        => base.And(predicate) as IPostgreSqlQuery<T1, T2>;
-    public new IPostgreSqlQuery<T1, T2> And(bool condition, Expression<Func<T1, T2, bool>> ifPredicate, Expression<Func<T1, T2, bool>> elsePredicate = null)
+        => this.And(true, predicate);
+    public new IPostgreSqlQuery<T1, T2> And(bool condition, Expression<Func<T1, T2, bool>> ifPredicate = null, Expression<Func<T1, T2, bool>> elsePredicate = null)
         => base.And(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2>;
+    public new IPostgreSqlQuery<T1, T2> AndPredicate(Func<PredicateBuilder<T1, T2>, Expression<Func<T1, T2, bool>>> predicateInitializer)
+        => base.AndPredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2>;
+    #endregion
+
+    #region Or
+    public new IPostgreSqlQuery<T1, T2> Or(Expression<Func<T1, T2, bool>> predicate)
+        => this.Or(true, predicate);
+    public new IPostgreSqlQuery<T1, T2> Or(bool condition, Expression<Func<T1, T2, bool>> ifPredicate = null, Expression<Func<T1, T2, bool>> elsePredicate = null)
+        => base.Or(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2>;
+    public new IPostgreSqlQuery<T1, T2> OrPredicate(Func<PredicateBuilder<T1, T2>, Expression<Func<T1, T2, bool>>> predicateInitializer)
+        => base.OrPredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2>;
     #endregion
 
     #region GroupBy
@@ -300,7 +306,7 @@ public class PostgreSqlQuery<T1, T2> : Query<T1, T2>, IPostgreSqlQuery<T1, T2>
     #endregion
 
     #region DistinctOn
-    public virtual IPostgreSqlDistinctOnQuery<T1, T2, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<T1, T2, TDistinctOn>> fieldsSelector)
+    public IPostgreSqlDistinctOnQuery<T1, T2, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<T1, T2, TDistinctOn>> fieldsSelector)
     {
         var dialectVisitor = this.Visitor as PostgreSqlQueryVisitor;
         dialectVisitor.DistinctOn(fieldsSelector);
@@ -315,9 +321,19 @@ public class PostgreSqlQuery<T1, T2> : Query<T1, T2>, IPostgreSqlQuery<T1, T2>
         => base.OrderBy(condition, fieldsExpr) as IPostgreSqlQuery<T1, T2>;
     public new IPostgreSqlQuery<T1, T2> OrderByDescending<TFields>(Expression<Func<T1, T2, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-
     public new IPostgreSqlQuery<T1, T2> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IPostgreSqlQuery<T1, T2>;
+    public new IPostgreSqlQuery<T1, T2> OrderByDynamic(Func<OrderByBuilder<T1, T2>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IPostgreSqlQuery<T1, T2>;
+    #endregion
+
+    #region Skip/Take/Page
+    public new IPostgreSqlQuery<T1, T2> Skip(int offset)
+        => base.Skip(offset) as IPostgreSqlQuery<T1, T2>;
+    public new IPostgreSqlQuery<T1, T2> Take(int limit)
+        => base.Take(limit) as IPostgreSqlQuery<T1, T2>;
+    public new IPostgreSqlQuery<T1, T2> Page(int pageNumber, int pageSize)
+        => base.Page(pageNumber, pageSize) as IPostgreSqlQuery<T1, T2>;
     #endregion
 
     #region Select 
@@ -357,55 +373,82 @@ public class PostgreSqlQuery<T1, T2, T3> : Query<T1, T2, T3>, IPostgreSqlQuery<T
     #endregion
 
     #region WithTable
-    public new IPostgreSqlQuery<T1, T2, T3, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
-        => base.WithTable(subQuery) as IPostgreSqlQuery<T1, T2, T3, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
-        => base.WithTable(subQuery) as IPostgreSqlQuery<T1, T2, T3, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, TOther> WithTable<TOther>()
+        => base.WithTable<TOther>() as IPostgreSqlQuery<T1, T2, T3, TOther>;
     #endregion
 
-    #region Join
+    #region WithQuery
+    public new IPostgreSqlQuery<T1, T2, T3, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
+        => base.WithQuery(subQuery) as IPostgreSqlQuery<T1, T2, T3, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+        => base.WithQuery(subQueryExpr) as IPostgreSqlQuery<T1, T2, T3, TOther>;
+    #endregion
+
+    #region InnerJoin
     public new IPostgreSqlQuery<T1, T2, T3> InnerJoin(Expression<Func<T1, T2, T3, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3>;
-    public new IPostgreSqlQuery<T1, T2, T3> LeftJoin(Expression<Func<T1, T2, T3, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3>;
-    public new IPostgreSqlQuery<T1, T2, T3> RightJoin(Expression<Func<T1, T2, T3, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3>;
     public new IPostgreSqlQuery<T1, T2, T3, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
         => base.InnerJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
+        => base.InnerJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, TOther>;
+    #endregion
+
+    #region LeftJoin
+    public new IPostgreSqlQuery<T1, T2, T3> LeftJoin(Expression<Func<T1, T2, T3, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3>;
+    public new IPostgreSqlQuery<T1, T2, T3, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
         => base.LeftJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
+        => base.LeftJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, TOther>;
+    #endregion
+
+    #region RightJoin
+    public new IPostgreSqlQuery<T1, T2, T3> RightJoin(Expression<Func<T1, T2, T3, bool>> joinOn)
+        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3>;
+    public new IPostgreSqlQuery<T1, T2, T3, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
+        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
         => base.RightJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
-        => base.InnerJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
-        => base.LeftJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, TOther, bool>> joinOn)
-        => base.RightJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, TOther>;
+        => base.RightJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, TOther>;
     #endregion
 
     #region Include
     public new IPostgreSqlIncludableQuery<T1, T2, T3, TMember> Include<TMember>(Expression<Func<T1, T2, T3, TMember>> memberSelector)
         => base.Include(memberSelector) as IPostgreSqlIncludableQuery<T1, T2, T3, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
-        => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<T1, T2, T3, TElment>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
+        => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<T1, T2, T3, TElement>;
     #endregion
 
-    #region Where/And
+    #region Where
     public new IPostgreSqlQuery<T1, T2, T3> Where(Expression<Func<T1, T2, T3, bool>> predicate)
-        => base.Where(predicate) as IPostgreSqlQuery<T1, T2, T3>;
+        => this.Where(true, predicate);
     public new IPostgreSqlQuery<T1, T2, T3> Where(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate, Expression<Func<T1, T2, T3, bool>> elsePredicate = null)
         => base.Where(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3>;
+    public new IPostgreSqlQuery<T1, T2, T3> WherePredicate(Func<PredicateBuilder<T1, T2, T3>, Expression<Func<T1, T2, T3, bool>>> predicateInitializer)
+        => base.WherePredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3>;
+    #endregion
+
+    #region And
     public new IPostgreSqlQuery<T1, T2, T3> And(Expression<Func<T1, T2, T3, bool>> predicate)
-        => base.And(predicate) as IPostgreSqlQuery<T1, T2, T3>;
-    public new IPostgreSqlQuery<T1, T2, T3> And(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate, Expression<Func<T1, T2, T3, bool>> elsePredicate = null)
+        => this.And(true, predicate);
+    public new IPostgreSqlQuery<T1, T2, T3> And(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, bool>> elsePredicate = null)
         => base.And(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3>;
+    public new IPostgreSqlQuery<T1, T2, T3> AndPredicate(Func<PredicateBuilder<T1, T2, T3>, Expression<Func<T1, T2, T3, bool>>> predicateInitializer)
+        => base.AndPredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3>;
+    #endregion
+
+    #region Or
+    public new IPostgreSqlQuery<T1, T2, T3> Or(Expression<Func<T1, T2, T3, bool>> predicate)
+        => this.Or(true, predicate);
+    public new IPostgreSqlQuery<T1, T2, T3> Or(bool condition, Expression<Func<T1, T2, T3, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, bool>> elsePredicate = null)
+        => base.Or(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3>;
+    public new IPostgreSqlQuery<T1, T2, T3> OrPredicate(Func<PredicateBuilder<T1, T2, T3>, Expression<Func<T1, T2, T3, bool>>> predicateInitializer)
+        => base.OrPredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3>;
     #endregion
 
     #region GroupBy
@@ -414,7 +457,7 @@ public class PostgreSqlQuery<T1, T2, T3> : Query<T1, T2, T3>, IPostgreSqlQuery<T
     #endregion
 
     #region DistinctOn
-    public virtual IPostgreSqlDistinctOnQuery<T1, T2, T3, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<T1, T2, T3, TDistinctOn>> fieldsSelector)
+    public IPostgreSqlDistinctOnQuery<T1, T2, T3, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<T1, T2, T3, TDistinctOn>> fieldsSelector)
     {
         var dialectVisitor = this.Visitor as PostgreSqlQueryVisitor;
         dialectVisitor.DistinctOn(fieldsSelector);
@@ -429,9 +472,19 @@ public class PostgreSqlQuery<T1, T2, T3> : Query<T1, T2, T3>, IPostgreSqlQuery<T
         => base.OrderBy(condition, fieldsExpr) as IPostgreSqlQuery<T1, T2, T3>;
     public new IPostgreSqlQuery<T1, T2, T3> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-
     public new IPostgreSqlQuery<T1, T2, T3> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IPostgreSqlQuery<T1, T2, T3>;
+    public new IPostgreSqlQuery<T1, T2, T3> OrderByDynamic(Func<OrderByBuilder<T1, T2, T3>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IPostgreSqlQuery<T1, T2, T3>;
+    #endregion
+
+    #region Skip/Take/Page
+    public new IPostgreSqlQuery<T1, T2, T3> Skip(int offset)
+        => base.Skip(offset) as IPostgreSqlQuery<T1, T2, T3>;
+    public new IPostgreSqlQuery<T1, T2, T3> Take(int limit)
+        => base.Take(limit) as IPostgreSqlQuery<T1, T2, T3>;
+    public new IPostgreSqlQuery<T1, T2, T3> Page(int pageNumber, int pageSize)
+        => base.Page(pageNumber, pageSize) as IPostgreSqlQuery<T1, T2, T3>;
     #endregion
 
     #region Select 
@@ -471,55 +524,82 @@ public class PostgreSqlQuery<T1, T2, T3, T4> : Query<T1, T2, T3, T4>, IPostgreSq
     #endregion
 
     #region WithTable
-    public new IPostgreSqlQuery<T1, T2, T3, T4, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
-        => base.WithTable(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
-        => base.WithTable(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, TOther> WithTable<TOther>()
+        => base.WithTable<TOther>() as IPostgreSqlQuery<T1, T2, T3, T4, TOther>;
     #endregion
 
-    #region Join
+    #region WithQuery
+    public new IPostgreSqlQuery<T1, T2, T3, T4, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
+        => base.WithQuery(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+        => base.WithQuery(subQueryExpr) as IPostgreSqlQuery<T1, T2, T3, T4, TOther>;
+    #endregion
+
+    #region InnerJoin
     public new IPostgreSqlQuery<T1, T2, T3, T4> InnerJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4> LeftJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4> RightJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
         => base.InnerJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
+        => base.InnerJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, TOther>;
+    #endregion
+
+    #region LeftJoin
+    public new IPostgreSqlQuery<T1, T2, T3, T4> LeftJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
         => base.LeftJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
+        => base.LeftJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, TOther>;
+    #endregion
+
+    #region RightJoin
+    public new IPostgreSqlQuery<T1, T2, T3, T4> RightJoin(Expression<Func<T1, T2, T3, T4, bool>> joinOn)
+        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
+        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
         => base.RightJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
-        => base.InnerJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
-        => base.LeftJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, TOther, bool>> joinOn)
-        => base.RightJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, TOther>;
+        => base.RightJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, TOther>;
     #endregion
 
     #region Include
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, TMember>> memberSelector)
         => base.Include(memberSelector) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
-        => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, TElment>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
+        => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, TElement>;
     #endregion
 
-    #region Where/And
+    #region Where
     public new IPostgreSqlQuery<T1, T2, T3, T4> Where(Expression<Func<T1, T2, T3, T4, bool>> predicate)
-        => base.Where(predicate) as IPostgreSqlQuery<T1, T2, T3, T4>;
+        => this.Where(true, predicate);
     public new IPostgreSqlQuery<T1, T2, T3, T4> Where(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null)
         => base.Where(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4>, Expression<Func<T1, T2, T3, T4, bool>>> predicateInitializer)
+        => base.WherePredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4>;
+    #endregion
+
+    #region And
     public new IPostgreSqlQuery<T1, T2, T3, T4> And(Expression<Func<T1, T2, T3, T4, bool>> predicate)
-        => base.And(predicate) as IPostgreSqlQuery<T1, T2, T3, T4>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4> And(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null)
+        => this.And(true, predicate);
+    public new IPostgreSqlQuery<T1, T2, T3, T4> And(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null)
         => base.And(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4>, Expression<Func<T1, T2, T3, T4, bool>>> predicateInitializer)
+        => base.AndPredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4>;
+    #endregion
+
+    #region Or
+    public new IPostgreSqlQuery<T1, T2, T3, T4> Or(Expression<Func<T1, T2, T3, T4, bool>> predicate)
+        => this.Or(true, predicate);
+    public new IPostgreSqlQuery<T1, T2, T3, T4> Or(bool condition, Expression<Func<T1, T2, T3, T4, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, bool>> elsePredicate = null)
+        => base.Or(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4>, Expression<Func<T1, T2, T3, T4, bool>>> predicateInitializer)
+        => base.OrPredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4>;
     #endregion
 
     #region GroupBy
@@ -528,7 +608,7 @@ public class PostgreSqlQuery<T1, T2, T3, T4> : Query<T1, T2, T3, T4>, IPostgreSq
     #endregion
 
     #region DistinctOn
-    public virtual IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<T1, T2, T3, T4, TDistinctOn>> fieldsSelector)
+    public IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<T1, T2, T3, T4, TDistinctOn>> fieldsSelector)
     {
         var dialectVisitor = this.Visitor as PostgreSqlQueryVisitor;
         dialectVisitor.DistinctOn(fieldsSelector);
@@ -543,9 +623,19 @@ public class PostgreSqlQuery<T1, T2, T3, T4> : Query<T1, T2, T3, T4>, IPostgreSq
         => base.OrderBy(condition, fieldsExpr) as IPostgreSqlQuery<T1, T2, T3, T4>;
     public new IPostgreSqlQuery<T1, T2, T3, T4> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-
     public new IPostgreSqlQuery<T1, T2, T3, T4> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IPostgreSqlQuery<T1, T2, T3, T4>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4> OrderByDynamic(Func<OrderByBuilder<T1, T2, T3, T4>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IPostgreSqlQuery<T1, T2, T3, T4>;
+    #endregion
+
+    #region Skip/Take/Page
+    public new IPostgreSqlQuery<T1, T2, T3, T4> Skip(int offset)
+        => base.Skip(offset) as IPostgreSqlQuery<T1, T2, T3, T4>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4> Take(int limit)
+        => base.Take(limit) as IPostgreSqlQuery<T1, T2, T3, T4>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4> Page(int pageNumber, int pageSize)
+        => base.Page(pageNumber, pageSize) as IPostgreSqlQuery<T1, T2, T3, T4>;
     #endregion
 
     #region Select 
@@ -585,55 +675,82 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5> : Query<T1, T2, T3, T4, T5>, IP
     #endregion
 
     #region WithTable
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
-        => base.WithTable(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
-        => base.WithTable(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> WithTable<TOther>()
+        => base.WithTable<TOther>() as IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther>;
     #endregion
 
-    #region Join
+    #region WithQuery
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
+        => base.WithQuery(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+        => base.WithQuery(subQueryExpr) as IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther>;
+    #endregion
+
+    #region InnerJoin
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5> RightJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
         => base.InnerJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
+        => base.InnerJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther>;
+    #endregion
+
+    #region LeftJoin
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
         => base.LeftJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
+        => base.LeftJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther>;
+    #endregion
+
+    #region RightJoin
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5> RightJoin(Expression<Func<T1, T2, T3, T4, T5, bool>> joinOn)
+        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
+        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
         => base.RightJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
-        => base.InnerJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
-        => base.LeftJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, TOther, bool>> joinOn)
-        => base.RightJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther>;
+        => base.RightJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, TOther>;
     #endregion
 
     #region Include
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, TMember>> memberSelector)
         => base.Include(memberSelector) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
-        => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, TElment>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, T5, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
+        => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, TElement>;
     #endregion
 
-    #region Where/And
+    #region Where
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5> Where(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
-        => base.Where(predicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5>;
+        => this.Where(true, predicate);
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null)
         => base.Where(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5>, Expression<Func<T1, T2, T3, T4, T5, bool>>> predicateInitializer)
+        => base.WherePredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4, T5>;
+    #endregion
+
+    #region And
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5> And(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
-        => base.And(predicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null)
+        => this.And(true, predicate);
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null)
         => base.And(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5>, Expression<Func<T1, T2, T3, T4, T5, bool>>> predicateInitializer)
+        => base.AndPredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4, T5>;
+    #endregion
+
+    #region Or
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5> Or(Expression<Func<T1, T2, T3, T4, T5, bool>> predicate)
+        => this.Or(true, predicate);
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, bool>> elsePredicate = null)
+        => base.Or(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5>, Expression<Func<T1, T2, T3, T4, T5, bool>>> predicateInitializer)
+        => base.OrPredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4, T5>;
     #endregion
 
     #region GroupBy
@@ -642,7 +759,7 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5> : Query<T1, T2, T3, T4, T5>, IP
     #endregion
 
     #region DistinctOn
-    public virtual IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<T1, T2, T3, T4, T5, TDistinctOn>> fieldsSelector)
+    public IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<T1, T2, T3, T4, T5, TDistinctOn>> fieldsSelector)
     {
         var dialectVisitor = this.Visitor as PostgreSqlQueryVisitor;
         dialectVisitor.DistinctOn(fieldsSelector);
@@ -657,9 +774,19 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5> : Query<T1, T2, T3, T4, T5>, IP
         => base.OrderBy(condition, fieldsExpr) as IPostgreSqlQuery<T1, T2, T3, T4, T5>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IPostgreSqlQuery<T1, T2, T3, T4, T5>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5> OrderByDynamic(Func<OrderByBuilder<T1, T2, T3, T4, T5>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IPostgreSqlQuery<T1, T2, T3, T4, T5>;
+    #endregion
+
+    #region Skip/Take/Page
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5> Skip(int offset)
+        => base.Skip(offset) as IPostgreSqlQuery<T1, T2, T3, T4, T5>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5> Take(int limit)
+        => base.Take(limit) as IPostgreSqlQuery<T1, T2, T3, T4, T5>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5> Page(int pageNumber, int pageSize)
+        => base.Page(pageNumber, pageSize) as IPostgreSqlQuery<T1, T2, T3, T4, T5>;
     #endregion
 
     #region Select 
@@ -699,55 +826,82 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6> : Query<T1, T2, T3, T4, T5,
     #endregion
 
     #region WithTable
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
-        => base.WithTable(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
-        => base.WithTable(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> WithTable<TOther>()
+        => base.WithTable<TOther>() as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther>;
     #endregion
 
-    #region Join
+    #region WithQuery
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
+        => base.WithQuery(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+        => base.WithQuery(subQueryExpr) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther>;
+    #endregion
+
+    #region InnerJoin
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
         => base.InnerJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
+        => base.InnerJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther>;
+    #endregion
+
+    #region LeftJoin
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
         => base.LeftJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
+        => base.LeftJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther>;
+    #endregion
+
+    #region RightJoin
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> joinOn)
+        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
+        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
         => base.RightJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
-        => base.InnerJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
-        => base.LeftJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, TOther, bool>> joinOn)
-        => base.RightJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther>;
+        => base.RightJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, TOther>;
     #endregion
 
     #region Include
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, TMember>> memberSelector)
         => base.Include(memberSelector) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
-        => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, TElment>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, T5, T6, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
+        => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, TElement>;
     #endregion
 
-    #region Where/And
+    #region Where
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> Where(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate)
-        => base.Where(predicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6>;
+        => this.Where(true, predicate);
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> elsePredicate = null)
         => base.Where(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6>, Expression<Func<T1, T2, T3, T4, T5, T6, bool>>> predicateInitializer)
+        => base.WherePredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6>;
+    #endregion
+
+    #region And
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> And(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate)
-        => base.And(predicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> elsePredicate = null)
+        => this.And(true, predicate);
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> elsePredicate = null)
         => base.And(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6>, Expression<Func<T1, T2, T3, T4, T5, T6, bool>>> predicateInitializer)
+        => base.AndPredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6>;
+    #endregion
+
+    #region Or
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> Or(Expression<Func<T1, T2, T3, T4, T5, T6, bool>> predicate)
+        => this.Or(true, predicate);
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, bool>> elsePredicate = null)
+        => base.Or(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6>, Expression<Func<T1, T2, T3, T4, T5, T6, bool>>> predicateInitializer)
+        => base.OrPredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6>;
     #endregion
 
     #region GroupBy
@@ -756,7 +910,7 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6> : Query<T1, T2, T3, T4, T5,
     #endregion
 
     #region DistinctOn
-    public virtual IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<T1, T2, T3, T4, T5, T6, TDistinctOn>> fieldsSelector)
+    public IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<T1, T2, T3, T4, T5, T6, TDistinctOn>> fieldsSelector)
     {
         var dialectVisitor = this.Visitor as PostgreSqlQueryVisitor;
         dialectVisitor.DistinctOn(fieldsSelector);
@@ -771,9 +925,19 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6> : Query<T1, T2, T3, T4, T5,
         => base.OrderBy(condition, fieldsExpr) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> OrderByDynamic(Func<OrderByBuilder<T1, T2, T3, T4, T5, T6>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6>;
+    #endregion
+
+    #region Skip/Take/Page
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> Skip(int offset)
+        => base.Skip(offset) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> Take(int limit)
+        => base.Take(limit) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6> Page(int pageNumber, int pageSize)
+        => base.Page(pageNumber, pageSize) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6>;
     #endregion
 
     #region Select 
@@ -813,55 +977,82 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> : Query<T1, T2, T3, T4,
     #endregion
 
     #region WithTable
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
-        => base.WithTable(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
-        => base.WithTable(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> WithTable<TOther>()
+        => base.WithTable<TOther>() as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther>;
     #endregion
 
-    #region Join
+    #region WithQuery
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
+        => base.WithQuery(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+        => base.WithQuery(subQueryExpr) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther>;
+    #endregion
+
+    #region InnerJoin
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
         => base.InnerJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
+        => base.InnerJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther>;
+    #endregion
+
+    #region LeftJoin
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
         => base.LeftJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
+        => base.LeftJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther>;
+    #endregion
+
+    #region RightJoin
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> joinOn)
+        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
+        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
         => base.RightJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
-        => base.InnerJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
-        => base.LeftJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TOther, bool>> joinOn)
-        => base.RightJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther>;
+        => base.RightJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, TOther>;
     #endregion
 
     #region Include
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TMember>> memberSelector)
         => base.Include(memberSelector) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
-        => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TElment>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
+        => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, TElement>;
     #endregion
 
-    #region Where/And
+    #region Where
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> predicate)
-        => base.Where(predicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7>;
+        => this.Where(true, predicate);
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> elsePredicate = null)
         => base.Where(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>>> predicateInitializer)
+        => base.WherePredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7>;
+    #endregion
+
+    #region And
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> predicate)
-        => base.And(predicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> elsePredicate = null)
+        => this.And(true, predicate);
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> elsePredicate = null)
         => base.And(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>>> predicateInitializer)
+        => base.AndPredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7>;
+    #endregion
+
+    #region Or
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> predicate)
+        => this.Or(true, predicate);
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>> elsePredicate = null)
+        => base.Or(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, bool>>> predicateInitializer)
+        => base.OrPredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7>;
     #endregion
 
     #region GroupBy
@@ -870,7 +1061,7 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> : Query<T1, T2, T3, T4,
     #endregion
 
     #region DistinctOn
-    public virtual IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TDistinctOn>> fieldsSelector)
+    public IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TDistinctOn>> fieldsSelector)
     {
         var dialectVisitor = this.Visitor as PostgreSqlQueryVisitor;
         dialectVisitor.DistinctOn(fieldsSelector);
@@ -885,9 +1076,19 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> : Query<T1, T2, T3, T4,
         => base.OrderBy(condition, fieldsExpr) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> OrderByDynamic(Func<OrderByBuilder<T1, T2, T3, T4, T5, T6, T7>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7>;
+    #endregion
+
+    #region Skip/Take/Page
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> Skip(int offset)
+        => base.Skip(offset) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> Take(int limit)
+        => base.Take(limit) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7> Page(int pageNumber, int pageSize)
+        => base.Page(pageNumber, pageSize) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7>;
     #endregion
 
     #region Select 
@@ -927,55 +1128,82 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> : Query<T1, T2, T3,
     #endregion
 
     #region WithTable
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
-        => base.WithTable(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
-        => base.WithTable(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithTable<TOther>()
+        => base.WithTable<TOther>() as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>;
     #endregion
 
-    #region Join
+    #region WithQuery
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
+        => base.WithQuery(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+        => base.WithQuery(subQueryExpr) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>;
+    #endregion
+
+    #region InnerJoin
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
         => base.InnerJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
+        => base.InnerJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>;
+    #endregion
+
+    #region LeftJoin
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
         => base.LeftJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
+        => base.LeftJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>;
+    #endregion
+
+    #region RightJoin
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> joinOn)
+        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
+        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
         => base.RightJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
-        => base.InnerJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
-        => base.LeftJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TOther, bool>> joinOn)
-        => base.RightJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>;
+        => base.RightJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, TOther>;
     #endregion
 
     #region Include
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TMember>> memberSelector)
         => base.Include(memberSelector) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
-        => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TElment>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
+        => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, TElement>;
     #endregion
 
-    #region Where/And
+    #region Where
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate)
-        => base.Where(predicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8>;
+        => this.Where(true, predicate);
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> elsePredicate = null)
         => base.Where(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>>> predicateInitializer)
+        => base.WherePredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8>;
+    #endregion
+
+    #region And
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate)
-        => base.And(predicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> elsePredicate = null)
+        => this.And(true, predicate);
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> elsePredicate = null)
         => base.And(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>>> predicateInitializer)
+        => base.AndPredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8>;
+    #endregion
+
+    #region Or
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> predicate)
+        => this.Or(true, predicate);
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>> elsePredicate = null)
+        => base.Or(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, bool>>> predicateInitializer)
+        => base.OrPredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8>;
     #endregion
 
     #region GroupBy
@@ -984,7 +1212,7 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> : Query<T1, T2, T3,
     #endregion
 
     #region DistinctOn
-    public virtual IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TDistinctOn>> fieldsSelector)
+    public IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TDistinctOn>> fieldsSelector)
     {
         var dialectVisitor = this.Visitor as PostgreSqlQueryVisitor;
         dialectVisitor.DistinctOn(fieldsSelector);
@@ -999,9 +1227,19 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> : Query<T1, T2, T3,
         => base.OrderBy(condition, fieldsExpr) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> OrderByDynamic(Func<OrderByBuilder<T1, T2, T3, T4, T5, T6, T7, T8>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8>;
+    #endregion
+
+    #region Skip/Take/Page
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> Skip(int offset)
+        => base.Skip(offset) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> Take(int limit)
+        => base.Take(limit) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8> Page(int pageNumber, int pageSize)
+        => base.Page(pageNumber, pageSize) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8>;
     #endregion
 
     #region Select 
@@ -1041,55 +1279,82 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : Query<T1, T2,
     #endregion
 
     #region WithTable
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
-        => base.WithTable(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
-        => base.WithTable(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> WithTable<TOther>()
+        => base.WithTable<TOther>() as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>;
     #endregion
 
-    #region Join
+    #region WithQuery
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
+        => base.WithQuery(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+        => base.WithQuery(subQueryExpr) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>;
+    #endregion
+
+    #region InnerJoin
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
         => base.InnerJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
+        => base.InnerJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>;
+    #endregion
+
+    #region LeftJoin
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
         => base.LeftJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
+        => base.LeftJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>;
+    #endregion
+
+    #region RightJoin
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> joinOn)
+        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
+        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
         => base.RightJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
-        => base.InnerJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
-        => base.LeftJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther, bool>> joinOn)
-        => base.RightJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>;
+        => base.RightJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TOther>;
     #endregion
 
     #region Include
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>> memberSelector)
         => base.Include(memberSelector) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
-        => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TElment>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
+        => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TElement>;
     #endregion
 
-    #region Where/And
+    #region Where
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate)
-        => base.Where(predicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>;
+        => this.Where(true, predicate);
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> elsePredicate = null)
         => base.Where(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>>> predicateInitializer)
+        => base.WherePredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>;
+    #endregion
+
+    #region And
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate)
-        => base.And(predicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> elsePredicate = null)
+        => this.And(true, predicate);
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> elsePredicate = null)
         => base.And(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>>> predicateInitializer)
+        => base.AndPredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>;
+    #endregion
+
+    #region Or
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> predicate)
+        => this.Or(true, predicate);
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>> elsePredicate = null)
+        => base.Or(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, bool>>> predicateInitializer)
+        => base.OrPredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>;
     #endregion
 
     #region GroupBy
@@ -1098,7 +1363,7 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : Query<T1, T2,
     #endregion
 
     #region DistinctOn
-    public virtual IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TDistinctOn>> fieldsSelector)
+    public IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TDistinctOn>> fieldsSelector)
     {
         var dialectVisitor = this.Visitor as PostgreSqlQueryVisitor;
         dialectVisitor.DistinctOn(fieldsSelector);
@@ -1113,9 +1378,19 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> : Query<T1, T2,
         => base.OrderBy(condition, fieldsExpr) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> OrderByDynamic(Func<OrderByBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>;
+    #endregion
+
+    #region Skip/Take/Page
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Skip(int offset)
+        => base.Skip(offset) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Take(int limit)
+        => base.Take(limit) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9> Page(int pageNumber, int pageSize)
+        => base.Page(pageNumber, pageSize) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9>;
     #endregion
 
     #region Select 
@@ -1155,55 +1430,82 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : Query<T1
     #endregion
 
     #region WithTable
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
-        => base.WithTable(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
-        => base.WithTable(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithTable<TOther>()
+        => base.WithTable<TOther>() as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>;
     #endregion
 
-    #region Join
+    #region WithQuery
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
+        => base.WithQuery(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+        => base.WithQuery(subQueryExpr) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>;
+    #endregion
+
+    #region InnerJoin
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
         => base.InnerJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
+        => base.InnerJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>;
+    #endregion
+
+    #region LeftJoin
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
         => base.LeftJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
+        => base.LeftJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>;
+    #endregion
+
+    #region RightJoin
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> joinOn)
+        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
+        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
         => base.RightJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
-        => base.InnerJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
-        => base.LeftJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther, bool>> joinOn)
-        => base.RightJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>;
+        => base.RightJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TOther>;
     #endregion
 
     #region Include
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>> memberSelector)
         => base.Include(memberSelector) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
-        => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TElment>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
+        => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TElement>;
     #endregion
 
-    #region Where/And
+    #region Where
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate)
-        => base.Where(predicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>;
+        => this.Where(true, predicate);
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> elsePredicate = null)
         => base.Where(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>>> predicateInitializer)
+        => base.WherePredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>;
+    #endregion
+
+    #region And
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate)
-        => base.And(predicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> elsePredicate = null)
+        => this.And(true, predicate);
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> elsePredicate = null)
         => base.And(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>>> predicateInitializer)
+        => base.AndPredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>;
+    #endregion
+
+    #region Or
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> predicate)
+        => this.Or(true, predicate);
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>> elsePredicate = null)
+        => base.Or(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, bool>>> predicateInitializer)
+        => base.OrPredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>;
     #endregion
 
     #region GroupBy
@@ -1212,7 +1514,7 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : Query<T1
     #endregion
 
     #region DistinctOn
-    public virtual IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TDistinctOn>> fieldsSelector)
+    public IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TDistinctOn>> fieldsSelector)
     {
         var dialectVisitor = this.Visitor as PostgreSqlQueryVisitor;
         dialectVisitor.DistinctOn(fieldsSelector);
@@ -1227,9 +1529,19 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : Query<T1
         => base.OrderBy(condition, fieldsExpr) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> OrderByDynamic(Func<OrderByBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>;
+    #endregion
+
+    #region Skip/Take/Page
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Skip(int offset)
+        => base.Skip(offset) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Take(int limit)
+        => base.Take(limit) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Page(int pageNumber, int pageSize)
+        => base.Page(pageNumber, pageSize) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>;
     #endregion
 
     #region Select 
@@ -1269,55 +1581,82 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : Que
     #endregion
 
     #region WithTable
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
-        => base.WithTable(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
-        => base.WithTable(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> WithTable<TOther>()
+        => base.WithTable<TOther>() as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>;
     #endregion
 
-    #region Join
+    #region WithQuery
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
+        => base.WithQuery(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+        => base.WithQuery(subQueryExpr) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>;
+    #endregion
+
+    #region InnerJoin
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
         => base.InnerJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
+        => base.InnerJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>;
+    #endregion
+
+    #region LeftJoin
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
         => base.LeftJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
+        => base.LeftJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>;
+    #endregion
+
+    #region RightJoin
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> joinOn)
+        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
+        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
         => base.RightJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
-        => base.InnerJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
-        => base.LeftJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther, bool>> joinOn)
-        => base.RightJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>;
+        => base.RightJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TOther>;
     #endregion
 
     #region Include
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>> memberSelector)
         => base.Include(memberSelector) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
-        => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TElment>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
+        => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TElement>;
     #endregion
 
-    #region Where/And
+    #region Where
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate)
-        => base.Where(predicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>;
+        => this.Where(true, predicate);
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> elsePredicate = null)
         => base.Where(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>>> predicateInitializer)
+        => base.WherePredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>;
+    #endregion
+
+    #region And
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate)
-        => base.And(predicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> elsePredicate = null)
+        => this.And(true, predicate);
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> elsePredicate = null)
         => base.And(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>>> predicateInitializer)
+        => base.AndPredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>;
+    #endregion
+
+    #region Or
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> predicate)
+        => this.Or(true, predicate);
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>> elsePredicate = null)
+        => base.Or(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, bool>>> predicateInitializer)
+        => base.OrPredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>;
     #endregion
 
     #region GroupBy
@@ -1326,7 +1665,7 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : Que
     #endregion
 
     #region DistinctOn
-    public virtual IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TDistinctOn>> fieldsSelector)
+    public IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TDistinctOn>> fieldsSelector)
     {
         var dialectVisitor = this.Visitor as PostgreSqlQueryVisitor;
         dialectVisitor.DistinctOn(fieldsSelector);
@@ -1341,9 +1680,19 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> : Que
         => base.OrderBy(condition, fieldsExpr) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> OrderByDynamic(Func<OrderByBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>;
+    #endregion
+
+    #region Skip/Take/Page
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Skip(int offset)
+        => base.Skip(offset) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Take(int limit)
+        => base.Take(limit) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> Page(int pageNumber, int pageSize)
+        => base.Page(pageNumber, pageSize) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>;
     #endregion
 
     #region Select 
@@ -1383,55 +1732,82 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     #endregion
 
     #region WithTable
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
-        => base.WithTable(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
-        => base.WithTable(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithTable<TOther>()
+        => base.WithTable<TOther>() as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>;
     #endregion
 
-    #region Join
+    #region WithQuery
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
+        => base.WithQuery(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+        => base.WithQuery(subQueryExpr) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>;
+    #endregion
+
+    #region InnerJoin
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
         => base.InnerJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
+        => base.InnerJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>;
+    #endregion
+
+    #region LeftJoin
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
         => base.LeftJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
+        => base.LeftJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>;
+    #endregion
+
+    #region RightJoin
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> joinOn)
+        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
+        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
         => base.RightJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
-        => base.InnerJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
-        => base.LeftJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther, bool>> joinOn)
-        => base.RightJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>;
+        => base.RightJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TOther>;
     #endregion
 
     #region Include
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>> memberSelector)
         => base.Include(memberSelector) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
-        => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TElment>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
+        => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TElement>;
     #endregion
 
-    #region Where/And
+    #region Where
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate)
-        => base.Where(predicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>;
+        => this.Where(true, predicate);
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> elsePredicate = null)
         => base.Where(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>>> predicateInitializer)
+        => base.WherePredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>;
+    #endregion
+
+    #region And
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate)
-        => base.And(predicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> elsePredicate = null)
+        => this.And(true, predicate);
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> elsePredicate = null)
         => base.And(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>>> predicateInitializer)
+        => base.AndPredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>;
+    #endregion
+
+    #region Or
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> predicate)
+        => this.Or(true, predicate);
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>> elsePredicate = null)
+        => base.Or(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, bool>>> predicateInitializer)
+        => base.OrPredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>;
     #endregion
 
     #region GroupBy
@@ -1440,7 +1816,7 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
     #endregion
 
     #region DistinctOn
-    public virtual IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TDistinctOn>> fieldsSelector)
+    public IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TDistinctOn>> fieldsSelector)
     {
         var dialectVisitor = this.Visitor as PostgreSqlQueryVisitor;
         dialectVisitor.DistinctOn(fieldsSelector);
@@ -1455,9 +1831,19 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> 
         => base.OrderBy(condition, fieldsExpr) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> OrderByDynamic(Func<OrderByBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>;
+    #endregion
+
+    #region Skip/Take/Page
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Skip(int offset)
+        => base.Skip(offset) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Take(int limit)
+        => base.Take(limit) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> Page(int pageNumber, int pageSize)
+        => base.Page(pageNumber, pageSize) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>;
     #endregion
 
     #region Select 
@@ -1497,55 +1883,82 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     #endregion
 
     #region WithTable
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
-        => base.WithTable(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
-        => base.WithTable(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> WithTable<TOther>()
+        => base.WithTable<TOther>() as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>;
     #endregion
 
-    #region Join
+    #region WithQuery
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
+        => base.WithQuery(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+        => base.WithQuery(subQueryExpr) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>;
+    #endregion
+
+    #region InnerJoin
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
         => base.InnerJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
+        => base.InnerJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>;
+    #endregion
+
+    #region LeftJoin
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
         => base.LeftJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
+        => base.LeftJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>;
+    #endregion
+
+    #region RightJoin
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> joinOn)
+        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
+        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
         => base.RightJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
-        => base.InnerJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
-        => base.LeftJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther, bool>> joinOn)
-        => base.RightJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>;
+        => base.RightJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TOther>;
     #endregion
 
     #region Include
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>> memberSelector)
         => base.Include(memberSelector) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
-        => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TElment>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
+        => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TElement>;
     #endregion
 
-    #region Where/And
+    #region Where
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate)
-        => base.Where(predicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>;
+        => this.Where(true, predicate);
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> elsePredicate = null)
         => base.Where(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>>> predicateInitializer)
+        => base.WherePredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>;
+    #endregion
+
+    #region And
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate)
-        => base.And(predicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> elsePredicate = null)
+        => this.And(true, predicate);
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> elsePredicate = null)
         => base.And(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>>> predicateInitializer)
+        => base.AndPredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>;
+    #endregion
+
+    #region Or
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> predicate)
+        => this.Or(true, predicate);
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>> elsePredicate = null)
+        => base.Or(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, bool>>> predicateInitializer)
+        => base.OrPredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>;
     #endregion
 
     #region GroupBy
@@ -1554,7 +1967,7 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     #endregion
 
     #region DistinctOn
-    public virtual IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TDistinctOn>> fieldsSelector)
+    public IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TDistinctOn>> fieldsSelector)
     {
         var dialectVisitor = this.Visitor as PostgreSqlQueryVisitor;
         dialectVisitor.DistinctOn(fieldsSelector);
@@ -1569,9 +1982,19 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
         => base.OrderBy(condition, fieldsExpr) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> OrderByDynamic(Func<OrderByBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>;
+    #endregion
+
+    #region Skip/Take/Page
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Skip(int offset)
+        => base.Skip(offset) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Take(int limit)
+        => base.Take(limit) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> Page(int pageNumber, int pageSize)
+        => base.Page(pageNumber, pageSize) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>;
     #endregion
 
     #region Select 
@@ -1611,55 +2034,82 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     #endregion
 
     #region WithTable
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
-        => base.WithTable(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
-        => base.WithTable(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithTable<TOther>()
+        => base.WithTable<TOther>() as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>;
     #endregion
 
-    #region Join
+    #region WithQuery
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
+        => base.WithQuery(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+        => base.WithQuery(subQueryExpr) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>;
+    #endregion
+
+    #region InnerJoin
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
         => base.InnerJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
+        => base.InnerJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>;
+    #endregion
+
+    #region LeftJoin
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
         => base.LeftJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
+        => base.LeftJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>;
+    #endregion
+
+    #region RightJoin
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> joinOn)
+        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
+        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
         => base.RightJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
-        => base.InnerJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
-        => base.LeftJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther, bool>> joinOn)
-        => base.RightJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>;
+        => base.RightJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TOther>;
     #endregion
 
     #region Include
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>> memberSelector)
         => base.Include(memberSelector) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
-        => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TElment>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
+        => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TElement>;
     #endregion
 
-    #region Where/And
+    #region Where
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate)
-        => base.Where(predicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>;
+        => this.Where(true, predicate);
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> elsePredicate = null)
         => base.Where(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>>> predicateInitializer)
+        => base.WherePredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>;
+    #endregion
+
+    #region And
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate)
-        => base.And(predicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> elsePredicate = null)
+        => this.And(true, predicate);
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> elsePredicate = null)
         => base.And(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>>> predicateInitializer)
+        => base.AndPredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>;
+    #endregion
+
+    #region Or
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> predicate)
+        => this.Or(true, predicate);
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>> elsePredicate = null)
+        => base.Or(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, bool>>> predicateInitializer)
+        => base.OrPredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>;
     #endregion
 
     #region GroupBy
@@ -1668,7 +2118,7 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     #endregion
 
     #region DistinctOn
-    public virtual IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TDistinctOn>> fieldsSelector)
+    public IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TDistinctOn>> fieldsSelector)
     {
         var dialectVisitor = this.Visitor as PostgreSqlQueryVisitor;
         dialectVisitor.DistinctOn(fieldsSelector);
@@ -1683,9 +2133,19 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
         => base.OrderBy(condition, fieldsExpr) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> OrderByDynamic(Func<OrderByBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>;
+    #endregion
+
+    #region Skip/Take/Page
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Skip(int offset)
+        => base.Skip(offset) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Take(int limit)
+        => base.Take(limit) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> Page(int pageNumber, int pageSize)
+        => base.Page(pageNumber, pageSize) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>;
     #endregion
 
     #region Select 
@@ -1725,55 +2185,82 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     #endregion
 
     #region WithTable
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
-        => base.WithTable(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
-        => base.WithTable(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> WithTable<TOther>()
+        => base.WithTable<TOther>() as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>;
     #endregion
 
-    #region Join
+    #region WithQuery
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
+        => base.WithQuery(subQuery) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+        => base.WithQuery(subQueryExpr) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>;
+    #endregion
+
+    #region InnerJoin
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> InnerJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
         => base.InnerJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
+        => base.InnerJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>;
+    #endregion
+
+    #region LeftJoin
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> LeftJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
         => base.LeftJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
+        => base.LeftJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>;
+    #endregion
+
+    #region RightJoin
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> joinOn)
+        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> RightJoin<TOther>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
+        => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
         => base.RightJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
-        => base.InnerJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
-        => base.LeftJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther, bool>> joinOn)
-        => base.RightJoin(subQuery, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>;
+        => base.RightJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TOther>;
     #endregion
 
     #region Include
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>> memberSelector)
         => base.Include(memberSelector) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
-        => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TElment>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
+        => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TElement>;
     #endregion
 
-    #region Where/And
+    #region Where
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> predicate)
-        => base.Where(predicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>;
+        => this.Where(true, predicate);
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> elsePredicate = null)
         => base.Where(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>>> predicateInitializer)
+        => base.WherePredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>;
+    #endregion
+
+    #region And
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> predicate)
-        => base.And(predicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> elsePredicate = null)
+        => this.And(true, predicate);
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> elsePredicate = null)
         => base.And(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>>> predicateInitializer)
+        => base.AndPredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>;
+    #endregion
+
+    #region Or
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> predicate)
+        => this.Or(true, predicate);
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>> elsePredicate = null)
+        => base.Or(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, bool>>> predicateInitializer)
+        => base.OrPredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>;
     #endregion
 
     #region GroupBy
@@ -1782,7 +2269,7 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     #endregion
 
     #region DistinctOn
-    public virtual IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TDistinctOn>> fieldsSelector)
+    public IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TDistinctOn>> fieldsSelector)
     {
         var dialectVisitor = this.Visitor as PostgreSqlQueryVisitor;
         dialectVisitor.DistinctOn(fieldsSelector);
@@ -1797,9 +2284,19 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
         => base.OrderBy(condition, fieldsExpr) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> OrderByDynamic(Func<OrderByBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>;
+    #endregion
+
+    #region Skip/Take/Page
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Skip(int offset)
+        => base.Skip(offset) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Take(int limit)
+        => base.Take(limit) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> Page(int pageNumber, int pageSize)
+        => base.Page(pageNumber, pageSize) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>;
     #endregion
 
     #region Select 
@@ -1838,11 +2335,17 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
         => base.UseTableSchema(tableSchema) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>;
     #endregion
 
-    #region Join
+    #region InnerJoin
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> InnerJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>;
+    #endregion
+
+    #region LeftJoin
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> LeftJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> joinOn)
         => base.LeftJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>;
+    #endregion
+
+    #region RightJoin
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> RightJoin(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> joinOn)
         => base.RightJoin(joinOn) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>;
     #endregion
@@ -1850,19 +2353,35 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     #region Include
     public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember> Include<TMember>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember>> memberSelector)
         => base.Include(memberSelector) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TMember>;
-    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TElment> IncludeMany<TElment>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
-        => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TElment>;
+    public new IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TElement> IncludeMany<TElement>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
+        => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TElement>;
     #endregion
 
-    #region Where/And
+    #region Where
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Where(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> predicate)
-        => base.Where(predicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>;
+        => this.Where(true, predicate);
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Where(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> elsePredicate = null)
         => base.Where(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> WherePredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>>> predicateInitializer)
+        => base.WherePredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>;
+    #endregion
+
+    #region And
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> And(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> predicate)
-        => base.And(predicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>;
-    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> ifPredicate, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> elsePredicate = null)
+        => this.And(true, predicate);
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> And(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> elsePredicate = null)
         => base.And(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> AndPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>>> predicateInitializer)
+        => base.AndPredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>;
+    #endregion
+
+    #region Or
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Or(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> predicate)
+        => this.Or(true, predicate);
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Or(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> ifPredicate = null, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>> elsePredicate = null)
+        => base.Or(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> OrPredicate(Func<PredicateBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, bool>>> predicateInitializer)
+        => base.OrPredicate(predicateInitializer) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>;
     #endregion
 
     #region GroupBy
@@ -1871,7 +2390,7 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
     #endregion
 
     #region DistinctOn
-    public virtual IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TDistinctOn>> fieldsSelector)
+    public IPostgreSqlDistinctOnQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TDistinctOn>> fieldsSelector)
     {
         var dialectVisitor = this.Visitor as PostgreSqlQueryVisitor;
         dialectVisitor.DistinctOn(fieldsSelector);
@@ -1886,9 +2405,19 @@ public class PostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, 
         => base.OrderBy(condition, fieldsExpr) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>;
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> OrderByDescending<TFields>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-
     public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> OrderByDescending<TFields>(bool condition, Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> OrderByDynamic(Func<OrderByBuilder<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>;
+    #endregion
+
+    #region Skip/Take/Page
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Skip(int offset)
+        => base.Skip(offset) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Take(int limit)
+        => base.Take(limit) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>;
+    public new IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> Page(int pageNumber, int pageSize)
+        => base.Page(pageNumber, pageSize) as IPostgreSqlQuery<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>;
     #endregion
 
     #region Select 

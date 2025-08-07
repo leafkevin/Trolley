@@ -199,6 +199,10 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>PostgreSqlFromCommand.cs</LastGenOutput>
     </Content>
+    <Content Include="Trolley\PostgreSqlGroupingCommand.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>PostgreSqlGroupingCommand.cs</LastGenOutput>
+    </Content>
     <Content Include="Trolley\PostgreSqlIncludableQuery.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>PostgreSqlIncludableQuery.cs</LastGenOutput>

@@ -18,29 +18,29 @@ public class PostgreSqlGroupingQuery<T, TGrouping> : GroupingQuery<T, TGrouping>
     #endregion
 
     #region Having
-    public override IPostgreSqlGroupingQuery<T, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate)
+    public new IPostgreSqlGroupingQuery<T, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate)
         => this.Having(true, predicate);
-    public override IPostgreSqlGroupingQuery<T, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate)
+    public new IPostgreSqlGroupingQuery<T, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, bool>> predicate)
         => base.Having(condition, predicate) as IPostgreSqlGroupingQuery<T, TGrouping>;
     #endregion
 
     #region OrderBy/OrderByDescending
-    public override IPostgreSqlGroupingQuery<T, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
+    public new IPostgreSqlGroupingQuery<T, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
         => this.OrderBy(true, fieldsExpr);
-    public override IPostgreSqlGroupingQuery<T, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
+    public new IPostgreSqlGroupingQuery<T, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
         => base.OrderBy(condition, fieldsExpr) as IPostgreSqlGroupingQuery<T, TGrouping>;
-    public override IPostgreSqlGroupingQuery<T, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
+    public new IPostgreSqlGroupingQuery<T, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-    public override IPostgreSqlGroupingQuery<T, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
+    public new IPostgreSqlGroupingQuery<T, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, T, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IPostgreSqlGroupingQuery<T, TGrouping>;
+    public new IPostgreSqlGroupingQuery<T, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, T>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IPostgreSqlGroupingQuery<T, TGrouping>;
     #endregion
 
     #region Select
-    public override IPostgreSqlQuery<TGrouping> Select()
+    public new IPostgreSqlQuery<TGrouping> Select()
         => base.Select() as IPostgreSqlQuery<TGrouping>;
-    public override IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>("*") as IPostgreSqlQuery<TTarget>;
-    public override IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T, TTarget>> fieldsExpr)
+    public new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, T, TTarget>> fieldsExpr)
         => base.Select(fieldsExpr) as IPostgreSqlQuery<TTarget>;
     #endregion
 }
@@ -63,29 +63,29 @@ public class PostgreSqlGroupingQuery<<#=tables#>, TGrouping> : GroupingQuery<<#=
 #>
 
     #region Having
-    public override IPostgreSqlGroupingQuery<<#=tables#>, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, bool>> predicate)
+    public new IPostgreSqlGroupingQuery<<#=tables#>, TGrouping> Having(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, bool>> predicate)
         => this.Having(true, predicate);
-    public override IPostgreSqlGroupingQuery<<#=tables#>, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, bool>> predicate)
+    public new IPostgreSqlGroupingQuery<<#=tables#>, TGrouping> Having(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, bool>> predicate)
         => base.Having(condition, predicate) as IPostgreSqlGroupingQuery<<#=tables#>, TGrouping>;
     #endregion
 
     #region OrderBy/OrderByDescending
-    public override IPostgreSqlGroupingQuery<<#=tables#>, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr)
+    public new IPostgreSqlGroupingQuery<<#=tables#>, TGrouping> OrderBy<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr)
         => this.OrderBy(true, fieldsExpr);
-    public override IPostgreSqlGroupingQuery<<#=tables#>, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr)
+    public new IPostgreSqlGroupingQuery<<#=tables#>, TGrouping> OrderBy<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr)
         => base.OrderBy(condition, fieldsExpr) as IPostgreSqlGroupingQuery<<#=tables#>, TGrouping>;
-    public override IPostgreSqlGroupingQuery<<#=tables#>, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr)
+    public new IPostgreSqlGroupingQuery<<#=tables#>, TGrouping> OrderByDescending<TFields>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-    public override IPostgreSqlGroupingQuery<<#=tables#>, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr)
+    public new IPostgreSqlGroupingQuery<<#=tables#>, TGrouping> OrderByDescending<TFields>(bool condition, Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IPostgreSqlGroupingQuery<<#=tables#>, TGrouping>;
+    public new IPostgreSqlGroupingQuery<<#=tables#>, TGrouping> OrderByDynamic(Func<OrderByBuilder<IGroupingAggregate<TGrouping>, <#=tables#>>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IPostgreSqlGroupingQuery<<#=tables#>, TGrouping>;
     #endregion
 
     #region Select
-    public override IPostgreSqlQuery<TGrouping> Select()
+    public new IPostgreSqlQuery<TGrouping> Select()
         => base.Select() as IPostgreSqlQuery<TGrouping>;
-    public override IPostgreSqlQuery<TTarget> Select<TTarget>(string fields = "*")
-        => base.Select<TTarget>("*") as IPostgreSqlQuery<TTarget>;
-    public override IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TTarget>> fieldsExpr)
+    public new IPostgreSqlQuery<TTarget> Select<TTarget>(Expression<Func<IGroupingAggregate<TGrouping>, <#=tables#>, TTarget>> fieldsExpr)
         => base.Select(fieldsExpr) as IPostgreSqlQuery<TTarget>;
     #endregion
 <#      }#>

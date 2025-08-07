@@ -8,6 +8,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace Trolley.PostgreSql;
 
@@ -61,61 +63,88 @@ public class PostgreSqlQuery<T> : Query<T>, IPostgreSqlQuery<T>
     public new IPostgreSqlQuery<T> Union(IQuery<T> subQuery)
         => base.Union(subQuery) as IPostgreSqlQuery<T>;
     public new IPostgreSqlQuery<T> Union(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
-        => base.Union(subQuery) as IPostgreSqlQuery<T>;
+        => base.Union(subQueryExpr) as IPostgreSqlQuery<T>;
     public new IPostgreSqlQuery<T> UnionAll(IQuery<T> subQuery)
         => base.UnionAll(subQuery) as IPostgreSqlQuery<T>;
     public new IPostgreSqlQuery<T> UnionAll(Expression<Func<IFromQuery, IQuery<T>>> subQueryExpr)
-        => base.UnionAll(subQuery) as IPostgreSqlQuery<T>;
-    public new IPostgreSqlQuery<T> UnionRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQuery)
-        => base.UnionRecursive(subQuery) as IPostgreSqlQuery<T>;
-    public new IPostgreSqlQuery<T> UnionAllRecursive(Func<IFromQuery, IQuery<T>, IQuery<T>> subQuery)
-        => base.UnionAllRecursive(subQuery) as IPostgreSqlQuery<T>;
+        => base.UnionAll(subQueryExpr) as IPostgreSqlQuery<T>;
+    public new IPostgreSqlQuery<T> UnionRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr)
+        => base.UnionRecursive(subQueryExpr) as IPostgreSqlQuery<T>;
+    public new IPostgreSqlQuery<T> UnionAllRecursive(Expression<Func<IFromQuery, IQuery<T>, IQuery<T>>> subQueryExpr)
+        => base.UnionAllRecursive(subQueryExpr) as IPostgreSqlQuery<T>;
     #endregion
 
     #region WithTable
-    public new IPostgreSqlQuery<T, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
-        => base.WithTable(subQuery) as IPostgreSqlQuery<T, TOther>;
-    public new IPostgreSqlQuery<T, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
-        => base.WithTable(subQuery) as IPostgreSqlQuery<T, TOther>;
+    public new IPostgreSqlQuery<T, TOther> WithTable<TOther>()
+        => base.WithTable<TOther>() as IPostgreSqlQuery<T, TOther>;
     #endregion
 
-    #region Join
+    #region WithQuery
+    public new IPostgreSqlQuery<T, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
+        => base.WithQuery(subQuery) as IPostgreSqlQuery<T, TOther>;
+    public new IPostgreSqlQuery<T, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+        => base.WithQuery(subQueryExpr) as IPostgreSqlQuery<T, TOther>;
+    #endregion
+
+    #region InnerJoin
     public new IPostgreSqlQuery<T, TOther> InnerJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlQuery<T, TOther>;
-    public new IPostgreSqlQuery<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlQuery<T, TOther>;
-    public new IPostgreSqlQuery<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlQuery<T, TOther>;
     public new IPostgreSqlQuery<T, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
-        => base.InnerJoin(subQuery, joinOn) as IPostgreSqlQuery<T, TOther>;
+        => base.LeftJoin(subQuery, joinOn) as IPostgreSqlQuery<T, TOther>;
+    public new IPostgreSqlQuery<T, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
+        => base.RightJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T, TOther>;
+    #endregion
+
+    #region LeftJoin
+    public new IPostgreSqlQuery<T, TOther> LeftJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
+        => base.InnerJoin(joinOn) as IPostgreSqlQuery<T, TOther>;
     public new IPostgreSqlQuery<T, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
         => base.LeftJoin(subQuery, joinOn) as IPostgreSqlQuery<T, TOther>;
-    public new IPostgreSqlQuery<T, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
-        => base.RightJoin(subQuery, joinOn) as IPostgreSqlQuery<T, TOther>;
-    public new IPostgreSqlQuery<T, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
-        => base.InnerJoin(subQuery, joinOn) as IPostgreSqlQuery<T, TOther>;
     public new IPostgreSqlQuery<T, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
+        => base.RightJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T, TOther>;
+    #endregion
+
+    #region LeftJoin
+    public new IPostgreSqlQuery<T, TOther> RightJoin<TOther>(Expression<Func<T, TOther, bool>> joinOn)
+        => base.InnerJoin(joinOn) as IPostgreSqlQuery<T, TOther>;
+    public new IPostgreSqlQuery<T, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<T, TOther, bool>> joinOn)
         => base.LeftJoin(subQuery, joinOn) as IPostgreSqlQuery<T, TOther>;
     public new IPostgreSqlQuery<T, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<T, TOther, bool>> joinOn)
-        => base.RightJoin(subQuery, joinOn) as IPostgreSqlQuery<T, TOther>;
+        => base.RightJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<T, TOther>;
     #endregion
 
     #region Include
     public new IPostgreSqlIncludableQuery<T, TMember> Include<TMember>(Expression<Func<T, TMember>> memberSelector)
         => base.Include(memberSelector) as IPostgreSqlIncludableQuery<T, TMember>;
-    public new IPostgreSqlIncludableQuery<T, TElment> IncludeMany<TElment>(Expression<Func<T, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
-        => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<T, TElment>;
+    public new IPostgreSqlIncludableQuery<T, TElement> IncludeMany<TElement>(Expression<Func<T, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
+        => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<T, TElement>;
     #endregion
 
-    #region Where/And
+    #region Where
     public new IPostgreSqlQuery<T> Where(Expression<Func<T, bool>> predicate)
-        => base.Where(predicate) as IPostgreSqlQuery<T>;
+        => this.Where(true, predicate);
     public new IPostgreSqlQuery<T> Where(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
         => base.Where(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T>;
+    public new IPostgreSqlQuery<T> WherePredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
+        => base.WherePredicate(predicateInitializer) as IPostgreSqlQuery<T>;
+    #endregion
+
+    #region And
     public new IPostgreSqlQuery<T> And(Expression<Func<T, bool>> predicate)
-        => base.And(predicate) as IPostgreSqlQuery<T>;
+        => this.And(true, predicate);
     public new IPostgreSqlQuery<T> And(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
         => base.And(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T>;
+    public new IPostgreSqlQuery<T> AndPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
+        => base.AndPredicate(predicateInitializer) as IPostgreSqlQuery<T>;
+    #endregion
+
+    #region Or
+    public new IPostgreSqlQuery<T> Or(Expression<Func<T, bool>> predicate)
+        => this.Or(true, predicate);
+    public new IPostgreSqlQuery<T> Or(bool condition, Expression<Func<T, bool>> ifPredicate, Expression<Func<T, bool>> elsePredicate = null)
+        => base.Or(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<T>;
+    public new IPostgreSqlQuery<T> OrPredicate(Func<PredicateBuilder<T>, Expression<Func<T, bool>>> predicateInitializer)
+        => base.OrPredicate(predicateInitializer) as IPostgreSqlQuery<T>;
     #endregion
 
     #region GroupBy
@@ -124,7 +153,7 @@ public class PostgreSqlQuery<T> : Query<T>, IPostgreSqlQuery<T>
     #endregion
 
     #region DistinctOn
-    public virtual IPostgreSqlDistinctOnQuery<T, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<T, TDistinctOn>> fieldsSelector)
+    public IPostgreSqlDistinctOnQuery<T, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<T, TDistinctOn>> fieldsSelector)
     {
         var dialectVisitor = this.Visitor as PostgreSqlQueryVisitor;
         dialectVisitor.DistinctOn(fieldsSelector);
@@ -141,6 +170,17 @@ public class PostgreSqlQuery<T> : Query<T>, IPostgreSqlQuery<T>
         => this.OrderByDescending(true, fieldsExpr);
     public new IPostgreSqlQuery<T> OrderByDescending<TFields>(bool condition, Expression<Func<T, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IPostgreSqlQuery<T>;
+    public new IPostgreSqlQuery<T> OrderByDynamic(Func<OrderByBuilder<T>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IPostgreSqlQuery<T>;
+    #endregion
+
+    #region Skip/Take/Page
+    public new IPostgreSqlQuery<T> Skip(int offset)
+        => base.Skip(offset) as IPostgreSqlQuery<T>;
+    public new IPostgreSqlQuery<T> Take(int limit)
+        => base.Take(limit) as IPostgreSqlQuery<T>;
+    public new IPostgreSqlQuery<T> Page(int pageNumber, int pageSize)
+        => base.Page(pageNumber, pageSize) as IPostgreSqlQuery<T>;
     #endregion
 
     #region Select
@@ -157,65 +197,6 @@ public class PostgreSqlQuery<T> : Query<T>, IPostgreSqlQuery<T>
     #region Distinct
     public new IPostgreSqlQuery<T> Distinct()
         => base.Distinct() as IPostgreSqlQuery<T>;
-    #endregion
-
-    #region Skip/Take/Page
-    public new IPostgreSqlQuery<T> Skip(int offset)
-        => base.Skip(offset) as IPostgreSqlQuery<T>;
-    public new IPostgreSqlQuery<T> Take(int limit)
-        => base.Take(limit) as IPostgreSqlQuery<T>;
-    public new IPostgreSqlQuery<T> Page(int pageNumber, int pageSize)
-        => base.Page(pageNumber, pageSize) as IPostgreSqlQuery<T>;
-    #endregion
-
-    #region First/ToList/ToPageList/ToDictionary
-    public override T First()
-    {
-        return this.DbContext.QueryFrom<T, T>(this.Visitor, true, (entityType, reader, readerFields) =>
-        {
-            T result = default;
-            var deserializer = reader.GetReaderDeserializer(typeof(T), this.DbContext, readerFields);
-            if (reader.Read())
-                result = (T)deserializer.Invoke(reader);
-            return result;
-        });
-    }
-    public override async Task<T> FirstAsync(CancellationToken cancellationToken = default)
-    {
-        return await this.DbContext.QueryFromAsync<T, T>(this.Visitor, true, async (entityType, reader, readerFields, cancellationToken) =>
-        {
-            T result = default;
-            var deserializer = reader.GetReaderDeserializer(typeof(T), this.DbContext, readerFields);
-            if (await reader.ReadAsync(cancellationToken))
-                result = (T)deserializer.Invoke(reader);
-            return result;
-        }, cancellationToken);
-    }
-    public override List<T> ToList()
-    {
-        return this.DbContext.QueryFrom<T, List<T>>(this.Visitor, false, (entityType, reader, readerFields) =>
-        {
-            var result = new List<T>();
-            var deserializer = reader.GetReaderDeserializer(typeof(T), this.DbContext, readerFields);
-            while (reader.Read())
-                result.Add((T)deserializer.Invoke(reader));
-            return result;
-        });
-    }
-    public override async Task<List<T>> ToListAsync(CancellationToken cancellationToken = default)
-    {
-        return await this.DbContext.QueryFromAsync<T, List<T>>(this.Visitor, false, async (entityType, reader, readerFields, cancellationToken) =>
-        {
-            var result = new List<T>();
-            var deserializer = reader.GetReaderDeserializer(typeof(T), this.DbContext, readerFields);
-            while (await reader.ReadAsync(cancellationToken))
-                result.Add((T)deserializer.Invoke(reader));
-            return result;
-        }, cancellationToken);
-    }
-    public override IPagedList<T> ToPageList() => this.DbContext.QueryPage<T>(this.Visitor);
-    public override async Task<IPagedList<T>> ToPageListAsync(CancellationToken cancellationToken = default)
-        => await this.DbContext.QueryPageAsync<T>(this.Visitor, cancellationToken);
     #endregion
 }
 <#
@@ -259,61 +240,98 @@ public class PostgreSqlQuery<<#=tables#>> : Query<<#=tables#>>, IPostgreSqlQuery
         {
 #>
     #region WithTable
-    public new IPostgreSqlQuery<<#=tables#>, TOther> WithTable<TOther>(IQuery<TOther> subQuery)
-        => base.WithTable(subQuery) as IPostgreSqlQuery<<#=tables#>, TOther>;
-    public new IPostgreSqlQuery<<#=tables#>, TOther> WithTable<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
-        => base.WithTable(subQuery) as IPostgreSqlQuery<<#=tables#>, TOther>;
+    public new IPostgreSqlQuery<<#=tables#>, TOther> WithTable<TOther>()
+        => base.WithTable<TOther>() as IPostgreSqlQuery<<#=tables#>, TOther>;
+    #endregion
+
+    #region WithQuery
+    public new IPostgreSqlQuery<<#=tables#>, TOther> WithQuery<TOther>(IQuery<TOther> subQuery)
+        => base.WithQuery(subQuery) as IPostgreSqlQuery<<#=tables#>, TOther>;
+    public new IPostgreSqlQuery<<#=tables#>, TOther> WithQuery<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr)
+        => base.WithQuery(subQueryExpr) as IPostgreSqlQuery<<#=tables#>, TOther>;
     #endregion
 
 <#      }#>
-    #region Join
+    #region InnerJoin
     public new IPostgreSqlQuery<<#=tables#>> InnerJoin(Expression<Func<<#=tables#>, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlQuery<<#=tables#>>;
-    public new IPostgreSqlQuery<<#=tables#>> LeftJoin(Expression<Func<<#=tables#>, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlQuery<<#=tables#>>;
-    public new IPostgreSqlQuery<<#=tables#>> RightJoin(Expression<Func<<#=tables#>, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlQuery<<#=tables#>>;
 <#
-        if(i < count)
+        if( i < count)
         {
 #>
     public new IPostgreSqlQuery<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
         => base.InnerJoin(joinOn) as IPostgreSqlQuery<<#=tables#>, TOther>;
-    public new IPostgreSqlQuery<<#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
-        => base.LeftJoin(joinOn) as IPostgreSqlQuery<<#=tables#>, TOther>;
-    public new IPostgreSqlQuery<<#=tables#>, TOther> RightJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
-        => base.RightJoin(joinOn) as IPostgreSqlQuery<<#=tables#>, TOther>;
     public new IPostgreSqlQuery<<#=tables#>, TOther> InnerJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
         => base.InnerJoin(subQuery, joinOn) as IPostgreSqlQuery<<#=tables#>, TOther>;
+    public new IPostgreSqlQuery<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+        => base.InnerJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<<#=tables#>, TOther>;
+<#      }#>
+    #endregion
+
+    #region LeftJoin
+    public new IPostgreSqlQuery<<#=tables#>> LeftJoin(Expression<Func<<#=tables#>, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IPostgreSqlQuery<<#=tables#>>;
+<#
+        if( i < count)
+        {
+#>
+    public new IPostgreSqlQuery<<#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+        => base.LeftJoin(joinOn) as IPostgreSqlQuery<<#=tables#>, TOther>;
     public new IPostgreSqlQuery<<#=tables#>, TOther> LeftJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
         => base.LeftJoin(subQuery, joinOn) as IPostgreSqlQuery<<#=tables#>, TOther>;
+    public new IPostgreSqlQuery<<#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+        => base.LeftJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<<#=tables#>, TOther>;
+<#      }#>
+    #endregion
+
+    #region RightJoin
+    public new IPostgreSqlQuery<<#=tables#>> RightJoin(Expression<Func<<#=tables#>, bool>> joinOn)
+        => base.RightJoin(joinOn) as IPostgreSqlQuery<<#=tables#>>;
+<#
+        if( i < count)
+        {
+#>
+    public new IPostgreSqlQuery<<#=tables#>, TOther> RightJoin<TOther>(Expression<Func<<#=tables#>, TOther, bool>> joinOn)
+        => base.RightJoin(joinOn) as IPostgreSqlQuery<<#=tables#>, TOther>;
     public new IPostgreSqlQuery<<#=tables#>, TOther> RightJoin<TOther>(IQuery<TOther> subQuery, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
         => base.RightJoin(subQuery, joinOn) as IPostgreSqlQuery<<#=tables#>, TOther>;
-    public new IPostgreSqlQuery<<#=tables#>, TOther> InnerJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
-        => base.InnerJoin(subQuery, joinOn) as IPostgreSqlQuery<<#=tables#>, TOther>;
-    public new IPostgreSqlQuery<<#=tables#>, TOther> LeftJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
-        => base.LeftJoin(subQuery, joinOn) as IPostgreSqlQuery<<#=tables#>, TOther>;
     public new IPostgreSqlQuery<<#=tables#>, TOther> RightJoin<TOther>(Expression<Func<IFromQuery, IQuery<TOther>>> subQueryExpr, Expression<Func<<#=tables#>, TOther, bool>> joinOn)
-        => base.RightJoin(subQuery, joinOn) as IPostgreSqlQuery<<#=tables#>, TOther>;
+        => base.RightJoin(subQueryExpr, joinOn) as IPostgreSqlQuery<<#=tables#>, TOther>;
 <#      }#>
     #endregion
 
     #region Include
     public new IPostgreSqlIncludableQuery<<#=tables#>, TMember> Include<TMember>(Expression<Func<<#=tables#>, TMember>> memberSelector)
         => base.Include(memberSelector) as IPostgreSqlIncludableQuery<<#=tables#>, TMember>;
-    public new IPostgreSqlIncludableQuery<<#=tables#>, TElment> IncludeMany<TElment>(Expression<Func<<#=tables#>, IEnumerable<TElment>>> memberSelector, Expression<Func<TElment, bool>> filter = null)
-        => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<<#=tables#>, TElment>;
+    public new IPostgreSqlIncludableQuery<<#=tables#>, TElement> IncludeMany<TElement>(Expression<Func<<#=tables#>, IEnumerable<TElement>>> memberSelector, Expression<Func<TElement, bool>> filter = null)
+        => base.IncludeMany(memberSelector, filter) as IPostgreSqlIncludableQuery<<#=tables#>, TElement>;
     #endregion
 
-    #region Where/And
+    #region Where
     public new IPostgreSqlQuery<<#=tables#>> Where(Expression<Func<<#=tables#>, bool>> predicate)
-        => base.Where(predicate) as IPostgreSqlQuery<<#=tables#>>;
+        => this.Where(true, predicate);
     public new IPostgreSqlQuery<<#=tables#>> Where(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
         => base.Where(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<<#=tables#>>;
+    public new IPostgreSqlQuery<<#=tables#>> WherePredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer)
+        => base.WherePredicate(predicateInitializer) as IPostgreSqlQuery<<#=tables#>>;
+    #endregion
+
+    #region And
     public new IPostgreSqlQuery<<#=tables#>> And(Expression<Func<<#=tables#>, bool>> predicate)
-        => base.And(predicate) as IPostgreSqlQuery<<#=tables#>>;
-    public new IPostgreSqlQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
+        => this.And(true, predicate);
+    public new IPostgreSqlQuery<<#=tables#>> And(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate = null, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
         => base.And(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<<#=tables#>>;
+    public new IPostgreSqlQuery<<#=tables#>> AndPredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer)
+        => base.AndPredicate(predicateInitializer) as IPostgreSqlQuery<<#=tables#>>;
+    #endregion
+
+    #region Or
+    public new IPostgreSqlQuery<<#=tables#>> Or(Expression<Func<<#=tables#>, bool>> predicate)
+        => this.Or(true, predicate);
+    public new IPostgreSqlQuery<<#=tables#>> Or(bool condition, Expression<Func<<#=tables#>, bool>> ifPredicate = null, Expression<Func<<#=tables#>, bool>> elsePredicate = null)
+        => base.Or(condition, ifPredicate, elsePredicate) as IPostgreSqlQuery<<#=tables#>>;
+    public new IPostgreSqlQuery<<#=tables#>> OrPredicate(Func<PredicateBuilder<<#=tables#>>, Expression<Func<<#=tables#>, bool>>> predicateInitializer)
+        => base.OrPredicate(predicateInitializer) as IPostgreSqlQuery<<#=tables#>>;
     #endregion
 
     #region GroupBy
@@ -322,7 +340,7 @@ public class PostgreSqlQuery<<#=tables#>> : Query<<#=tables#>>, IPostgreSqlQuery
     #endregion
 
     #region DistinctOn
-    public virtual IPostgreSqlDistinctOnQuery<<#=tables#>, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<<#=tables#>, TDistinctOn>> fieldsSelector)
+    public IPostgreSqlDistinctOnQuery<<#=tables#>, TDistinctOn> DistinctOn<TDistinctOn>(Expression<Func<<#=tables#>, TDistinctOn>> fieldsSelector)
     {
         var dialectVisitor = this.Visitor as PostgreSqlQueryVisitor;
         dialectVisitor.DistinctOn(fieldsSelector);
@@ -337,9 +355,19 @@ public class PostgreSqlQuery<<#=tables#>> : Query<<#=tables#>>, IPostgreSqlQuery
         => base.OrderBy(condition, fieldsExpr) as IPostgreSqlQuery<<#=tables#>>;
     public new IPostgreSqlQuery<<#=tables#>> OrderByDescending<TFields>(Expression<Func<<#=tables#>, TFields>> fieldsExpr)
         => this.OrderByDescending(true, fieldsExpr);
-
     public new IPostgreSqlQuery<<#=tables#>> OrderByDescending<TFields>(bool condition, Expression<Func<<#=tables#>, TFields>> fieldsExpr)
         => base.OrderByDescending(condition, fieldsExpr) as IPostgreSqlQuery<<#=tables#>>;
+    public new IPostgreSqlQuery<<#=tables#>> OrderByDynamic(Func<OrderByBuilder<<#=tables#>>, Expression> fieldsGetter)
+        => base.OrderByDynamic(fieldsGetter) as IPostgreSqlQuery<<#=tables#>>;
+    #endregion
+
+    #region Skip/Take/Page
+    public new IPostgreSqlQuery<<#=tables#>> Skip(int offset)
+        => base.Skip(offset) as IPostgreSqlQuery<<#=tables#>>;
+    public new IPostgreSqlQuery<<#=tables#>> Take(int limit)
+        => base.Take(limit) as IPostgreSqlQuery<<#=tables#>>;
+    public new IPostgreSqlQuery<<#=tables#>> Page(int pageNumber, int pageSize)
+        => base.Page(pageNumber, pageSize) as IPostgreSqlQuery<<#=tables#>>;
     #endregion
 
     #region Select 
